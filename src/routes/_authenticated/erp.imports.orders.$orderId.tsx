@@ -29,6 +29,7 @@ import { PIPELINE_STAGES, PipelineStrip } from "@/components/erp/imports/po-deta
 import { CartonRow } from "@/components/erp/imports/po-detail/carton-row";
 import { CartonsHeader } from "@/components/erp/imports/po-detail/cartons-header";
 import { ArrivedDialog, PaymentDialog, BulkReleaseDialog } from "@/components/erp/imports/po-detail/dialogs";
+import { QuantityReleaseCard } from "@/components/erp/imports/po-detail/quantity-release-card";
 
 export const Route = createFileRoute("/_authenticated/erp/imports/orders/$orderId")({
   head: () => ({ meta: [{ title: "Purchase Order — Imports" }] }),
@@ -90,6 +91,8 @@ function PoDetailPage() {
   const items: any[] = data.items;
   const cartons: any[] = data.cartons;
   const payments: any[] = data.payments;
+  const releases: any[] = (data as any).releases ?? [];
+  const isQtyMode = po.receive_mode === "quantity";
 
   const totalCartons = cartons.length;
   const totalPieces = cartons.reduce((s, c) => s + Number(c.expected_quantity || 0), 0);
@@ -111,6 +114,7 @@ function PoDetailPage() {
   const LANDED_PO_STATUSES = new Set(["arrived_bd", "partially_received", "completed"]);
   const LANDED_CARTON_STATUSES = new Set(["arrived_bd", "released", "in_stock"]);
   const showLandedCost =
+    isQtyMode ||
     LANDED_PO_STATUSES.has(po.status) ||
     cartons.some((c) => LANDED_CARTON_STATUSES.has(c.status));
 
@@ -162,14 +166,17 @@ function PoDetailPage() {
           <KpiTile icon={<AlertTriangle className="h-4 w-4 text-orange-600" />} label="Due" value={fmtBdt(po.due_bdt)} valueClass="text-orange-600" />
           <KpiTile
             icon={<CheckCircle2 className="h-4 w-4 text-blue-600" />}
-            label="Delivered"
-            value={`${deliveredCartons} / ${totalCartons}`}
-            hint={`${deliveredPieces} / ${totalPieces} pcs · ${deliveredPct}%`}
+            label={isQtyMode ? "Released" : "Delivered"}
+            value={isQtyMode ? `${qtyReleased} / ${qtyOrdered}` : `${deliveredCartons} / ${totalCartons}`}
+            hint={isQtyMode
+              ? `${qtyOrdered > 0 ? Math.round((qtyReleased / qtyOrdered) * 100) : 0}% released`
+              : `${deliveredPieces} / ${totalPieces} pcs · ${deliveredPct}%`}
           />
         </div>
       </Card>
 
       {/* Order Pipeline */}
+      {!isQtyMode && (
       <Card className="p-5">
         <div className="flex items-start justify-between mb-4 flex-wrap gap-2">
           <div>
@@ -197,6 +204,7 @@ function PoDetailPage() {
           <SummaryBox tone="slate" label="REMAINING" cartons={remainingBox.length} pieces={remainingBox.reduce((s, c) => s + Number(c.expected_quantity || 0), 0)} />
         </div>
       </Card>
+      )}
 
       {/* Payment Progress */}
       <Card className="p-5">
@@ -305,7 +313,8 @@ function PoDetailPage() {
       )}
 
       {/* "Goods arrived in BD?" alert — hide once any carton has reached arrived_bd or beyond */}
-      {!["arrived_bd", "partially_received", "completed", "cancelled"].includes(po.status) &&
+      {!isQtyMode &&
+        !["arrived_bd", "partially_received", "completed", "cancelled"].includes(po.status) &&
         !cartons.some((c: any) => ["arrived_bd", "released", "in_stock"].includes(c.status)) && (
         <Card className="p-4 border-orange-200 bg-orange-50/50 dark:bg-orange-950/20 dark:border-orange-900/40">
           <div className="flex items-center gap-3 flex-wrap">
@@ -321,7 +330,13 @@ function PoDetailPage() {
         </Card>
       )}
 
+      {/* Quantity mode releases */}
+      {isQtyMode && (
+        <QuantityReleaseCard poId={po.id} brandId={brandId} items={items} releases={releases as any} />
+      )}
+
       {/* Cartons */}
+      {!isQtyMode && (
       <Card className="overflow-hidden">
         <CartonsHeader
           cartons={cartons}
@@ -357,6 +372,7 @@ function PoDetailPage() {
           ))}
         </div>
       </Card>
+      )}
 
       {/* Payments history */}
       <Card className="overflow-hidden">
