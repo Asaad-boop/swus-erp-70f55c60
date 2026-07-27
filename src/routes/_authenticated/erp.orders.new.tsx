@@ -421,6 +421,9 @@ function NewOrderPage() {
       if (!name.trim() || !phone.trim()) throw new Error("Name & Mobile lagbe");
       if (!address.trim()) throw new Error("Address lagbe");
       if (items.length === 0) throw new Error("At least 1 product add korun");
+      if (items.some((i) => i.needsVariant && !i.variant_id)) {
+        throw new Error("Product er color select korun");
+      }
       if (Number(advance) > 0) {
         if (!advanceSource) throw new Error("Advance source select korun");
         if (!advanceNumber || advanceNumber.length < 4) throw new Error("Advance number (min 4 digit) din");
@@ -482,6 +485,8 @@ function NewOrderPage() {
         unit_price: i.unit_price,
         quantity: i.quantity,
         line_total: i.unit_price * i.quantity,
+        variant_id: i.variant_id ?? null,
+        variant_label: i.variant_label ?? null,
       }));
       const { error: itemsErr } = await supabase.from("order_items").insert(itemRows);
       if (itemsErr) throw itemsErr;
