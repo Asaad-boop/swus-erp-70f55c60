@@ -128,7 +128,19 @@ export const Route = createFileRoute("/api/public/webhooks/shopify-order")({
             shipping_phone: ship?.phone ?? order?.phone ?? order?.customer?.phone ?? null,
             shipping_address: addressParts.length ? addressParts.join(", ") : null,
             shipping_city: ship?.city ?? null,
-            is_guest_order: order?.customer == null,
+            // No ERP user_id for storefront orders → must be flagged as guest
+            // (orders_user_or_guest_check: user_id IS NOT NULL OR is_guest_order = true)
+            is_guest_order: true,
+            guest_name:
+              [order?.customer?.first_name, order?.customer?.last_name]
+                .filter(Boolean)
+                .join(" ")
+                .trim() ||
+              [ship?.first_name, ship?.last_name].filter(Boolean).join(" ").trim() ||
+              null,
+            guest_phone:
+              order?.customer?.phone ?? ship?.phone ?? order?.phone ?? null,
+            guest_email: order?.email ?? order?.customer?.email ?? null,
             invoice_no: order?.name ?? null,
           };
 
