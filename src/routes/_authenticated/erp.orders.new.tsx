@@ -396,6 +396,41 @@ function NewOrderPage() {
   };
   const removeItem = (idx: number) => setItems((prev) => prev.filter((_, i) => i !== idx));
 
+  // Multi-color: each selected color becomes its own line item (mixed colors allowed)
+  const toggleVariant = (productId: string, v: VariantOpt) => {
+    setItems((prev) => {
+      const existing = prev.findIndex((i) => i.product_id === productId && i.variant_id === v.id);
+      const label = [v.color_name, v.sku].filter(Boolean).join(" · ");
+      if (existing >= 0) {
+        const rest = prev.filter((_, i) => i !== existing);
+        if (!rest.some((i) => i.product_id === productId)) {
+          const next = [...prev];
+          next[existing] = { ...next[existing], variant_id: null, variant_label: null };
+          return next;
+        }
+        return rest;
+      }
+      const baseIdx = prev.findIndex((i) => i.product_id === productId && !i.variant_id);
+      if (baseIdx >= 0) {
+        const next = [...prev];
+        next[baseIdx] = {
+          ...next[baseIdx],
+          variant_id: v.id,
+          variant_label: label,
+          image: v.image || next[baseIdx].image,
+          stock: v.stock ?? next[baseIdx].stock,
+        };
+        return next;
+      }
+      const tmpl = prev.find((i) => i.product_id === productId);
+      if (!tmpl) return prev;
+      return [
+        ...prev,
+        { ...tmpl, quantity: 1, variant_id: v.id, variant_label: label, image: v.image || tmpl.image, stock: v.stock ?? tmpl.stock },
+      ];
+    });
+  };
+
   // ── totals ────────────────────────────────────────────────────────────
   const [discount, setDiscount] = useState(0);
   const [advance, setAdvance] = useState(0);
@@ -806,21 +841,16 @@ function NewOrderPage() {
                           <Trash2 className="h-4 w-4" />
                         </Button>
                        </div>
-                       <ColorSelector
-                         productId={it.product_id}
-                         selectedId={it.variant_id ?? null}
-                         onMeta={(hasVariants) => {
-                           if (!!it.needsVariant !== hasVariants) updateItem(idx, { needsVariant: hasVariants });
-                         }}
-                         onSelect={(v) =>
-                           updateItem(idx, {
-                             variant_id: v?.id ?? null,
-                             variant_label: v ? [v.color_name, v.sku].filter(Boolean).join(" · ") : null,
-                             image: v?.image || it.image,
-                             stock: v ? (v.stock ?? it.stock) : it.stock,
-                           })
-                         }
-                       />
+                       {items.findIndex((x) => x.product_id === it.product_id) === idx && (
+                         <ColorSelector
+                           productId={it.product_id}
+                           selectedIds={items.filter((x) => x.product_id === it.product_id && x.variant_id).map((x) => x.variant_id as string)}
+                           onMeta={(hasVariants) => {
+                             if (!!it.needsVariant !== hasVariants) updateItem(idx, { needsVariant: hasVariants });
+                           }}
+                           onToggle={(v) => toggleVariant(it.product_id, v)}
+                         />
+                       )}
                       </div>
                     ))}
                   </div>
@@ -1417,11 +1447,11 @@ type VariantOpt = {
 };
 
 function ColorSelector({
-  productId, selectedId, onSelect, onMeta,
+  productId, selectedIds, onToggle, onMeta,
 }: {
   productId: string;
-  selectedId: string | null;
-  onSelect: (v: VariantOpt | null) => void;
+  selectedIds: string[];
+  onToggle: (v: VariantOpt) => void;
   onMeta: (hasVariants: boolean) => void;
 }) {
   const { data: variants = [] } = useQuery({
@@ -1445,14 +1475,14 @@ function ColorSelector({
 
   return (
     <div className="mt-2 flex flex-wrap items-center gap-1.5 border-t pt-2">
-      <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Color *</span>
+      <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Color * (একাধিক select করা যাবে)</span>
       {variants.map((v) => {
-        const active = v.id === selectedId;
+        const active = selectedIds.includes(v.id);
         return (
           <button
             key={v.id}
             type="button"
-            onClick={() => onSelect(active ? null : v)}
+            onClick={() => onToggle(v)}
             className={cn(
               "flex items-center gap-1.5 rounded-full border px-2 py-1 text-[11px] transition",
               active ? "border-indigo-500 bg-indigo-50 font-semibold text-indigo-700 dark:bg-indigo-950/40 dark:text-indigo-300" : "hover:bg-muted",
@@ -1465,7 +1495,7 @@ function ColorSelector({
           </button>
         );
       })}
-      {!selectedId && <span className="text-[10px] font-medium text-rose-600">color select korun</span>}
+      {selectedIds.length === 0 && <span className="text-[10px] font-medium text-rose-600">color select korun</span>}
     </div>
   );
 }
