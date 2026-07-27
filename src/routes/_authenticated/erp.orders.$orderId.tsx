@@ -1056,12 +1056,15 @@ function OrderDetailsPage() {
   });
 
   const addItem = useMutation({
-    mutationFn: async (p: ProductLite) => {
-      const existing = items.find((x) => x.product_id === p.id);
+    mutationFn: async ({ p, v }: { p: ProductLite; v?: VariantLite }) => {
+      const existing = items.find((x) =>
+        x.product_id === p.id && ((x as any).variant_id ?? null) === (v?.id ?? null));
       if (existing) { await updateItem.mutateAsync({ id: existing.id, quantity: existing.quantity + 1 }); return; }
       const unit_price = p.price;
+      const variant_label = v ? [v.color_name, v.sku].filter(Boolean).join(" · ") : null;
       const { error } = await supabase.from("order_items").insert({
-        order_id: orderId, product_id: p.id, name: p.title, image: p.image,
+        order_id: orderId, product_id: p.id, name: p.title, image: v?.image || p.image,
+        variant_id: v?.id ?? null, variant_label,
         quantity: 1, price: unit_price, unit_price, line_total: unit_price,
       });
       if (error) throw error;
