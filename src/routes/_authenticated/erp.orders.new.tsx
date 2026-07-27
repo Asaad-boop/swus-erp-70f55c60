@@ -756,7 +756,8 @@ function NewOrderPage() {
                 ) : (
                   <div className="space-y-2">
                     {items.map((it, idx) => (
-                      <div key={idx} className="flex items-center gap-3 rounded-xl border bg-background p-2.5 transition-all hover:border-indigo-200 hover:shadow-sm">
+                      <div key={idx} className="rounded-xl border bg-background p-2.5 transition-all hover:border-indigo-200 hover:shadow-sm">
+                       <div className="flex items-center gap-3">
                         <div className="h-12 w-12 shrink-0 overflow-hidden rounded-lg border bg-muted">
                           {it.image ? (
                             <img src={it.image} alt="" className="h-full w-full object-cover" />
@@ -771,6 +772,9 @@ function NewOrderPage() {
                           <div className="text-[11px] text-muted-foreground">
                             ৳{it.unit_price.toLocaleString()} · stock {it.stock ?? "—"}
                           </div>
+                          {it.variant_label && (
+                            <div className="truncate text-[11px] font-medium text-indigo-600 dark:text-indigo-400">{it.variant_label}</div>
+                          )}
                         </div>
                         <div className="flex items-center gap-0.5 rounded-lg border bg-muted/30 p-0.5">
                           <Button size="icon" variant="ghost" className="h-7 w-7 rounded-md"
@@ -801,6 +805,22 @@ function NewOrderPage() {
                           onClick={() => removeItem(idx)}>
                           <Trash2 className="h-4 w-4" />
                         </Button>
+                       </div>
+                       <ColorSelector
+                         productId={it.product_id}
+                         selectedId={it.variant_id ?? null}
+                         onMeta={(hasVariants) => {
+                           if (!!it.needsVariant !== hasVariants) updateItem(idx, { needsVariant: hasVariants });
+                         }}
+                         onSelect={(v) =>
+                           updateItem(idx, {
+                             variant_id: v?.id ?? null,
+                             variant_label: v ? [v.color_name, v.sku].filter(Boolean).join(" · ") : null,
+                             image: v?.image || it.image,
+                             stock: v ? (v.stock ?? it.stock) : it.stock,
+                           })
+                         }
+                       />
                       </div>
                     ))}
                   </div>
