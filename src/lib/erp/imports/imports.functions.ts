@@ -83,10 +83,10 @@ export const getPurchaseOrderDetail = createServerFn({ method: "POST" })
     z.object({ poId: z.string().uuid() }).parse(d),
   )
   .handler(async ({ data, context }) => {
-    const [poRes, itemsRes, cartonsRes, paymentsRes, historyRes] = await Promise.all([
+    const [poRes, itemsRes, cartonsRes, paymentsRes, historyRes, releasesRes] = await Promise.all([
       context.supabase.from("imp_purchase_orders").select(`
         id, po_number, brand_id, supplier_id, order_date,
-        currency, fx_rate,
+        currency, fx_rate, receive_mode,
         product_subtotal_bdt, shipping_total_bdt, local_courier_total_bdt,
         grand_total_bdt, paid_bdt, due_bdt, status, notes, created_at,
         fx_rate_cny_bdt, fx_rate_locked_at, fx_rate_source,
@@ -122,6 +122,11 @@ export const getPurchaseOrderDetail = createServerFn({ method: "POST" })
       `).or(`and(entity_type.eq.po,entity_id.eq.${data.poId})`)
         .order("created_at", { ascending: false })
         .limit(100),
+      context.supabase.from("imp_po_releases").select(`
+        id, release_number, warehouse_id, released_at, notes, created_at,
+        items:imp_po_release_items ( id, po_item_id, product_id, variant_id, sku_snapshot,
+          quantity, damaged_qty, unit_landed_cost_bdt )
+      `).eq("po_id", data.poId).order("release_number"),
     ]);
     if (poRes.error) throw poRes.error;
     if (itemsRes.error) throw itemsRes.error;
@@ -133,6 +138,7 @@ export const getPurchaseOrderDetail = createServerFn({ method: "POST" })
       cartons: cartonsRes.data ?? [],
       payments: paymentsRes.data ?? [],
       history: historyRes.data ?? [],
+      releases: releasesRes.data ?? [],
     };
   });
 
@@ -339,9 +345,13 @@ export const createImportPo = createServerFn({ method: "POST" })
       notes: z.string().optional(),
       supplier: supplierInlineSchema.optional(),
       items: z.array(poItemSchema).min(1),
-      cartons: z.array(cartonSchema).min(1),
+      cartons: z.array(cartonSchema).default([]),
+      receive_mode: z.enum(["carton", "quantity"]).default("carton"),
       initial_payment: initialPaymentSchema.optional(),
       idempotency_key: z.string().min(8),
+    }).refine((v) => v.receive_mode === "quantity" || v.cartons.length > 0, {
+      message: "cartons required in carton mode",
+      path: ["cartons"],
     }).parse(d),
   )
   .handler(async ({ data, context }) => {
@@ -1184,4 +1194,163 @@ export const getCargoAgentDashboard = createServerFn({ method: "POST" })
         pos: list,
       };
     });
+  });
+
+/* ============================================================
+   Quantity-mode releases (no cartons) — partial release to stock
+   ============================================================ */
+
+export const releasePoQuantity = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d: any) =>
+    z.object({
+      po_id: z.string().uuid(),
+      warehouse_id: z.string().uuid().optional(),
+      notes: z.string().optional(),
+      items: z.array(z.object({
+        po_item_id: z.string().uuid(),
+        quantity: z.number().int().nonnegative(),
+        damaged_qty: z.number().int().nonnegative().default(0),
+      })).min(1),
+    }).parse(d),
+  )
+  .handler(async ({ data, context }) => {
+    await assertAnyRole(context.supabase, context.userId, ["admin", "operations", "warehouse_staff"]);
+
+    const { data: po, error: pErr } = await context.supabase
+      .from("imp_purchase_orders")
+      .select("id, brand_id, status, receive_mode, fx_rate, fx_rate_cny_bdt, shipping_cost_bdt, freight_cost_bdt, customs_duty_bdt, other_charges_bdt, agent_commission_per_unit_bdt")
+      .eq("id", data.po_id)
+      .maybeSingle();
+    if (pErr) throw pErr;
+    if (!po) throw new Error("PO not found");
+
+    const { data: poItems, error: iErr } = await context.supabase
+      .from("imp_po_items")
+      .select("id, product_id, variant_id, sku_snapshot, name_snapshot, quantity, unit_cost_cny, unit_cost_foreign")
+      .eq("po_id", data.po_id);
+    if (iErr) throw iErr;
+    const itemMap = new Map<string, any>((poItems ?? []).map((r: any) => [r.id, r]));
+
+    // Already released quantities
+    const { data: prevReleases, error: rErr } = await context.supabase
+      .from("imp_po_release_items")
+      .select("po_item_id, quantity, damaged_qty, release:release_id!inner ( po_id )")
+      .eq("release.po_id", data.po_id);
+    if (rErr) throw rErr;
+    const releasedMap = new Map<string, number>();
+    for (const r of prevReleases ?? []) {
+      const k = (r as any).po_item_id as string;
+      releasedMap.set(k, (releasedMap.get(k) ?? 0) + Number((r as any).quantity ?? 0) + Number((r as any).damaged_qty ?? 0));
+    }
+
+    const lines = data.items.filter((l) => l.quantity > 0 || l.damaged_qty > 0);
+    if (lines.length === 0) throw new Error("Nothing to release");
+
+    for (const l of lines) {
+      const pi = itemMap.get(l.po_item_id);
+      if (!pi) throw new Error("Item not part of this PO");
+      const remaining = Number(pi.quantity ?? 0) - (releasedMap.get(l.po_item_id) ?? 0);
+      if (l.quantity + l.damaged_qty > remaining) {
+        throw new Error(`${pi.name_snapshot ?? "Item"}: only ${remaining} pcs remaining`);
+      }
+    }
+
+    // Landed cost per unit
+    const fx = Number((po as any).fx_rate_cny_bdt ?? (po as any).fx_rate ?? 0);
+    const commissionPerUnit = Number((po as any).agent_commission_per_unit_bdt ?? 0);
+    const overheadTotal =
+      Number((po as any).shipping_cost_bdt ?? 0) +
+      Number((po as any).freight_cost_bdt ?? 0) +
+      Number((po as any).customs_duty_bdt ?? 0) +
+      Number((po as any).other_charges_bdt ?? 0);
+    const totalOrdered = (poItems ?? []).reduce((s: number, r: any) => s + Number(r.quantity ?? 0), 0);
+    const overheadPerUnit = totalOrdered > 0 ? overheadTotal / totalOrdered : 0;
+
+    // Next release number
+    const { data: lastRel } = await context.supabase
+      .from("imp_po_releases")
+      .select("release_number")
+      .eq("po_id", data.po_id)
+      .order("release_number", { ascending: false })
+      .limit(1);
+    const nextNumber = Number((lastRel?.[0] as any)?.release_number ?? 0) + 1;
+
+    const { data: release, error: relErr } = await context.supabase
+      .from("imp_po_releases")
+      .insert({
+        po_id: data.po_id,
+        brand_id: (po as any).brand_id,
+        release_number: nextNumber,
+        warehouse_id: data.warehouse_id ?? null,
+        notes: data.notes ?? null,
+        created_by: context.userId,
+      })
+      .select("id, release_number")
+      .single();
+    if (relErr) throw relErr;
+
+    const movements: any[] = [];
+    for (const l of lines) {
+      const pi = itemMap.get(l.po_item_id);
+      const unitCny = Number(pi?.unit_cost_cny ?? pi?.unit_cost_foreign ?? 0);
+      const landed = +(unitCny * fx + overheadPerUnit + commissionPerUnit).toFixed(4);
+
+      const { data: relItem, error: riErr } = await context.supabase
+        .from("imp_po_release_items")
+        .insert({
+          release_id: (release as any).id,
+          po_item_id: l.po_item_id,
+          product_id: pi?.product_id ?? null,
+          variant_id: pi?.variant_id ?? null,
+          sku_snapshot: pi?.sku_snapshot ?? null,
+          quantity: Math.max(1, l.quantity || 1),
+          damaged_qty: l.damaged_qty ?? 0,
+          unit_landed_cost_bdt: landed,
+        })
+        .select("id")
+        .single();
+      if (riErr) throw riErr;
+
+      if (l.quantity > 0 && pi?.product_id) {
+        const { data: movId, error: aErr } = await context.supabase.rpc("adjust_stock_v2", {
+          _product_id: pi.product_id as string,
+          _variant_id: (pi.variant_id ?? null) as any,
+          _delta: l.quantity,
+          _reason: "import_receive",
+          _source: "import",
+          _unit_cost: landed,
+          _reference_type: "imp_po_release",
+          _reference_id: (release as any).id,
+          _idempotency_key: `imp_rel:${(release as any).id}:${(relItem as any).id}`,
+          _note: `PO release #${nextNumber} — landed ${landed.toFixed(2)} BDT/pc`,
+        });
+        if (aErr) throw aErr;
+        await context.supabase
+          .from("imp_po_release_items")
+          .update({ stock_movement_id: movId as any })
+          .eq("id", (relItem as any).id);
+        movements.push({ po_item_id: l.po_item_id, qty: l.quantity, unit_cost: landed, movement_id: movId });
+      }
+      releasedMap.set(l.po_item_id, (releasedMap.get(l.po_item_id) ?? 0) + l.quantity + (l.damaged_qty ?? 0));
+    }
+
+    // Update PO status based on total released
+    const totalReleased = Array.from(releasedMap.values()).reduce((s, n) => s + n, 0);
+    const nextStatus = totalReleased >= totalOrdered && totalOrdered > 0 ? "completed" : "partially_received";
+    await context.supabase
+      .from("imp_purchase_orders")
+      .update({ status: nextStatus as any })
+      .eq("id", data.po_id);
+
+    return {
+      ok: true,
+      release_id: (release as any).id,
+      release_number: nextNumber,
+      movements,
+      landed_per_unit_overhead: +overheadPerUnit.toFixed(4),
+      status: nextStatus,
+      total_released: totalReleased,
+      total_ordered: totalOrdered,
+    };
   });

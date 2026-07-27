@@ -3834,6 +3834,107 @@ export type Database = {
           },
         ]
       }
+      imp_po_release_items: {
+        Row: {
+          created_at: string
+          damaged_qty: number
+          id: string
+          po_item_id: string
+          product_id: string | null
+          quantity: number
+          release_id: string
+          sku_snapshot: string | null
+          stock_movement_id: string | null
+          unit_landed_cost_bdt: number
+          variant_id: string | null
+        }
+        Insert: {
+          created_at?: string
+          damaged_qty?: number
+          id?: string
+          po_item_id: string
+          product_id?: string | null
+          quantity: number
+          release_id: string
+          sku_snapshot?: string | null
+          stock_movement_id?: string | null
+          unit_landed_cost_bdt?: number
+          variant_id?: string | null
+        }
+        Update: {
+          created_at?: string
+          damaged_qty?: number
+          id?: string
+          po_item_id?: string
+          product_id?: string | null
+          quantity?: number
+          release_id?: string
+          sku_snapshot?: string | null
+          stock_movement_id?: string | null
+          unit_landed_cost_bdt?: number
+          variant_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "imp_po_release_items_po_item_id_fkey"
+            columns: ["po_item_id"]
+            isOneToOne: false
+            referencedRelation: "imp_po_items"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "imp_po_release_items_release_id_fkey"
+            columns: ["release_id"]
+            isOneToOne: false
+            referencedRelation: "imp_po_releases"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      imp_po_releases: {
+        Row: {
+          brand_id: string
+          created_at: string
+          created_by: string | null
+          id: string
+          notes: string | null
+          po_id: string
+          release_number: number
+          released_at: string
+          warehouse_id: string | null
+        }
+        Insert: {
+          brand_id: string
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          notes?: string | null
+          po_id: string
+          release_number: number
+          released_at?: string
+          warehouse_id?: string | null
+        }
+        Update: {
+          brand_id?: string
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          notes?: string | null
+          po_id?: string
+          release_number?: number
+          released_at?: string
+          warehouse_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "imp_po_releases_po_id_fkey"
+            columns: ["po_id"]
+            isOneToOne: false
+            referencedRelation: "imp_purchase_orders"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       imp_po_sequences: {
         Row: {
           brand_id: string
@@ -3887,6 +3988,7 @@ export type Database = {
           paid_bdt: number
           po_number: string
           product_subtotal_bdt: number
+          receive_mode: string
           shipped_at: string | null
           shipping_cost_bdt: number | null
           shipping_rate_per_kg: number | null
@@ -3925,6 +4027,7 @@ export type Database = {
           paid_bdt?: number
           po_number: string
           product_subtotal_bdt?: number
+          receive_mode?: string
           shipped_at?: string | null
           shipping_cost_bdt?: number | null
           shipping_rate_per_kg?: number | null
@@ -3963,6 +4066,7 @@ export type Database = {
           paid_bdt?: number
           po_number?: string
           product_subtotal_bdt?: number
+          receive_mode?: string
           shipped_at?: string | null
           shipping_cost_bdt?: number | null
           shipping_rate_per_kg?: number | null
