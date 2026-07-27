@@ -1491,7 +1491,7 @@ function OrderDetailsPage() {
                 <h3 className="text-[13px] font-semibold">Add Products</h3>
               </header>
               <div className="p-4">
-                <ProductSearchPanel brandId={order.brand_id ?? null} onAdd={(p) => addItem.mutate(p)} />
+                <ProductSearchPanel brandId={order.brand_id ?? null} onAdd={(p, v) => addItem.mutate({ p, v })} />
               </div>
             </section>
           </div>
