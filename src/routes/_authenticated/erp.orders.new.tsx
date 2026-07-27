@@ -41,6 +41,7 @@ type LineItem = {
   stock?: number | null;
   variant_id?: string | null;
   variant_label?: string | null;
+  needsVariant?: boolean;
 };
 
 type ProductHit = {
