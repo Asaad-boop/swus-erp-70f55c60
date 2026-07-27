@@ -378,7 +378,7 @@ function NewOrderPage() {
 
   const addItem = (p: ProductHit) => {
     setItems((prev) => {
-      const i = prev.findIndex((x) => x.product_id === p.id);
+      const i = prev.findIndex((x) => x.product_id === p.id && !x.variant_id);
       if (i >= 0) {
         const next = [...prev];
         next[i] = { ...next[i], quantity: next[i].quantity + 1 };
@@ -386,7 +386,7 @@ function NewOrderPage() {
       }
       return [
         ...prev,
-        { product_id: p.id, name: p.title, unit_price: Number(p.price), quantity: 1, image: p.image, stock: p.stock },
+        { product_id: p.id, name: p.title, unit_price: Number(p.price), quantity: 1, image: p.image, stock: p.stock, variant_id: null, variant_label: null },
       ];
     });
   };
