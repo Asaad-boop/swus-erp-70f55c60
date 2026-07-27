@@ -39,6 +39,8 @@ type LineItem = {
   image: string | null;
   sku?: string | null;
   stock?: number | null;
+  variant_id?: string | null;
+  variant_label?: string | null;
 };
 
 type ProductHit = {
