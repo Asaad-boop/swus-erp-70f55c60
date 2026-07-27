@@ -1407,6 +1407,69 @@ function RecordLine({ dot, label, value }: { dot: string; label: string; value: 
   );
 }
 
+type VariantOpt = {
+  id: string;
+  color_name: string | null;
+  color_hex: string | null;
+  sku: string | null;
+  image: string | null;
+  stock: number | null;
+};
+
+function ColorSelector({
+  productId, selectedId, onSelect, onMeta,
+}: {
+  productId: string;
+  selectedId: string | null;
+  onSelect: (v: VariantOpt | null) => void;
+  onMeta: (hasVariants: boolean) => void;
+}) {
+  const { data: variants = [] } = useQuery({
+    queryKey: ["order-product-variants", productId],
+    staleTime: 5 * 60_000,
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("product_variants")
+        .select("id,color_name,color_hex,sku,image,stock,is_active,display_order")
+        .eq("product_id", productId)
+        .eq("is_active", true)
+        .order("display_order");
+      if (error) throw error;
+      return ((data ?? []) as any[]).filter((v) => v.color_name) as VariantOpt[];
+    },
+  });
+
+  useEffect(() => { onMeta(variants.length > 0); }, [variants.length]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  if (variants.length === 0) return null;
+
+  return (
+    <div className="mt-2 flex flex-wrap items-center gap-1.5 border-t pt-2">
+      <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Color *</span>
+      {variants.map((v) => {
+        const active = v.id === selectedId;
+        return (
+          <button
+            key={v.id}
+            type="button"
+            onClick={() => onSelect(active ? null : v)}
+            className={cn(
+              "flex items-center gap-1.5 rounded-full border px-2 py-1 text-[11px] transition",
+              active ? "border-indigo-500 bg-indigo-50 font-semibold text-indigo-700 dark:bg-indigo-950/40 dark:text-indigo-300" : "hover:bg-muted",
+            )}
+          >
+            <span className="h-3.5 w-3.5 rounded-full border" style={{ background: v.color_hex || "#e5e7eb" }} />
+            <span>{v.color_name}</span>
+            {v.sku && <span className="font-mono text-[9px] text-muted-foreground">{v.sku}</span>}
+            <span className="text-[9px] text-muted-foreground tabular-nums">({v.stock ?? 0})</span>
+          </button>
+        );
+      })}
+      {!selectedId && <span className="text-[10px] font-medium text-rose-600">color select korun</span>}
+    </div>
+  );
+}
+
 function RecentOrderPreview({ order, onOpen }: { order: RecentOrder; onOpen: () => void }) {
   const [open, setOpen] = useState(false);
   const date = new Date(order.created_at);
