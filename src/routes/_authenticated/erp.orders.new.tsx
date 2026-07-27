@@ -39,6 +39,9 @@ type LineItem = {
   image: string | null;
   sku?: string | null;
   stock?: number | null;
+  variant_id?: string | null;
+  variant_label?: string | null;
+  needsVariant?: boolean;
 };
 
 type ProductHit = {
@@ -376,7 +379,7 @@ function NewOrderPage() {
 
   const addItem = (p: ProductHit) => {
     setItems((prev) => {
-      const i = prev.findIndex((x) => x.product_id === p.id);
+      const i = prev.findIndex((x) => x.product_id === p.id && !x.variant_id);
       if (i >= 0) {
         const next = [...prev];
         next[i] = { ...next[i], quantity: next[i].quantity + 1 };
@@ -384,7 +387,7 @@ function NewOrderPage() {
       }
       return [
         ...prev,
-        { product_id: p.id, name: p.title, unit_price: Number(p.price), quantity: 1, image: p.image, stock: p.stock },
+        { product_id: p.id, name: p.title, unit_price: Number(p.price), quantity: 1, image: p.image, stock: p.stock, variant_id: null, variant_label: null },
       ];
     });
   };
@@ -419,6 +422,9 @@ function NewOrderPage() {
       if (!name.trim() || !phone.trim()) throw new Error("Name & Mobile lagbe");
       if (!address.trim()) throw new Error("Address lagbe");
       if (items.length === 0) throw new Error("At least 1 product add korun");
+      if (items.some((i) => i.needsVariant && !i.variant_id)) {
+        throw new Error("Product er color select korun");
+      }
       if (Number(advance) > 0) {
         if (!advanceSource) throw new Error("Advance source select korun");
         if (!advanceNumber || advanceNumber.length < 4) throw new Error("Advance number (min 4 digit) din");
@@ -480,6 +486,8 @@ function NewOrderPage() {
         unit_price: i.unit_price,
         quantity: i.quantity,
         line_total: i.unit_price * i.quantity,
+        variant_id: i.variant_id ?? null,
+        variant_label: i.variant_label ?? null,
       }));
       const { error: itemsErr } = await supabase.from("order_items").insert(itemRows);
       if (itemsErr) throw itemsErr;
@@ -748,7 +756,8 @@ function NewOrderPage() {
                 ) : (
                   <div className="space-y-2">
                     {items.map((it, idx) => (
-                      <div key={idx} className="flex items-center gap-3 rounded-xl border bg-background p-2.5 transition-all hover:border-indigo-200 hover:shadow-sm">
+                      <div key={idx} className="rounded-xl border bg-background p-2.5 transition-all hover:border-indigo-200 hover:shadow-sm">
+                       <div className="flex items-center gap-3">
                         <div className="h-12 w-12 shrink-0 overflow-hidden rounded-lg border bg-muted">
                           {it.image ? (
                             <img src={it.image} alt="" className="h-full w-full object-cover" />
@@ -763,6 +772,9 @@ function NewOrderPage() {
                           <div className="text-[11px] text-muted-foreground">
                             ৳{it.unit_price.toLocaleString()} · stock {it.stock ?? "—"}
                           </div>
+                          {it.variant_label && (
+                            <div className="truncate text-[11px] font-medium text-indigo-600 dark:text-indigo-400">{it.variant_label}</div>
+                          )}
                         </div>
                         <div className="flex items-center gap-0.5 rounded-lg border bg-muted/30 p-0.5">
                           <Button size="icon" variant="ghost" className="h-7 w-7 rounded-md"
@@ -793,6 +805,22 @@ function NewOrderPage() {
                           onClick={() => removeItem(idx)}>
                           <Trash2 className="h-4 w-4" />
                         </Button>
+                       </div>
+                       <ColorSelector
+                         productId={it.product_id}
+                         selectedId={it.variant_id ?? null}
+                         onMeta={(hasVariants) => {
+                           if (!!it.needsVariant !== hasVariants) updateItem(idx, { needsVariant: hasVariants });
+                         }}
+                         onSelect={(v) =>
+                           updateItem(idx, {
+                             variant_id: v?.id ?? null,
+                             variant_label: v ? [v.color_name, v.sku].filter(Boolean).join(" · ") : null,
+                             image: v?.image || it.image,
+                             stock: v ? (v.stock ?? it.stock) : it.stock,
+                           })
+                         }
+                       />
                       </div>
                     ))}
                   </div>
@@ -1375,6 +1403,69 @@ function RecordLine({ dot, label, value }: { dot: string; label: string; value: 
         {label}
       </span>
       <span className="font-extrabold tabular-nums text-white">{value}</span>
+    </div>
+  );
+}
+
+type VariantOpt = {
+  id: string;
+  color_name: string | null;
+  color_hex: string | null;
+  sku: string | null;
+  image: string | null;
+  stock: number | null;
+};
+
+function ColorSelector({
+  productId, selectedId, onSelect, onMeta,
+}: {
+  productId: string;
+  selectedId: string | null;
+  onSelect: (v: VariantOpt | null) => void;
+  onMeta: (hasVariants: boolean) => void;
+}) {
+  const { data: variants = [] } = useQuery({
+    queryKey: ["order-product-variants", productId],
+    staleTime: 5 * 60_000,
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("product_variants")
+        .select("id,color_name,color_hex,sku,image,stock,is_active,display_order")
+        .eq("product_id", productId)
+        .eq("is_active", true)
+        .order("display_order");
+      if (error) throw error;
+      return ((data ?? []) as any[]).filter((v) => v.color_name) as VariantOpt[];
+    },
+  });
+
+  useEffect(() => { onMeta(variants.length > 0); }, [variants.length]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  if (variants.length === 0) return null;
+
+  return (
+    <div className="mt-2 flex flex-wrap items-center gap-1.5 border-t pt-2">
+      <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Color *</span>
+      {variants.map((v) => {
+        const active = v.id === selectedId;
+        return (
+          <button
+            key={v.id}
+            type="button"
+            onClick={() => onSelect(active ? null : v)}
+            className={cn(
+              "flex items-center gap-1.5 rounded-full border px-2 py-1 text-[11px] transition",
+              active ? "border-indigo-500 bg-indigo-50 font-semibold text-indigo-700 dark:bg-indigo-950/40 dark:text-indigo-300" : "hover:bg-muted",
+            )}
+          >
+            <span className="h-3.5 w-3.5 rounded-full border" style={{ background: v.color_hex || "#e5e7eb" }} />
+            <span>{v.color_name}</span>
+            {v.sku && <span className="font-mono text-[9px] text-muted-foreground">{v.sku}</span>}
+            <span className="text-[9px] text-muted-foreground tabular-nums">({v.stock ?? 0})</span>
+          </button>
+        );
+      })}
+      {!selectedId && <span className="text-[10px] font-medium text-rose-600">color select korun</span>}
     </div>
   );
 }
