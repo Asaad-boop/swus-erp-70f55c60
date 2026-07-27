@@ -396,6 +396,41 @@ function NewOrderPage() {
   };
   const removeItem = (idx: number) => setItems((prev) => prev.filter((_, i) => i !== idx));
 
+  // Multi-color: each selected color becomes its own line item (mixed colors allowed)
+  const toggleVariant = (productId: string, v: VariantOpt) => {
+    setItems((prev) => {
+      const existing = prev.findIndex((i) => i.product_id === productId && i.variant_id === v.id);
+      const label = [v.color_name, v.sku].filter(Boolean).join(" · ");
+      if (existing >= 0) {
+        const rest = prev.filter((_, i) => i !== existing);
+        if (!rest.some((i) => i.product_id === productId)) {
+          const next = [...prev];
+          next[existing] = { ...next[existing], variant_id: null, variant_label: null };
+          return next;
+        }
+        return rest;
+      }
+      const baseIdx = prev.findIndex((i) => i.product_id === productId && !i.variant_id);
+      if (baseIdx >= 0) {
+        const next = [...prev];
+        next[baseIdx] = {
+          ...next[baseIdx],
+          variant_id: v.id,
+          variant_label: label,
+          image: v.image || next[baseIdx].image,
+          stock: v.stock ?? next[baseIdx].stock,
+        };
+        return next;
+      }
+      const tmpl = prev.find((i) => i.product_id === productId);
+      if (!tmpl) return prev;
+      return [
+        ...prev,
+        { ...tmpl, quantity: 1, variant_id: v.id, variant_label: label, image: v.image || tmpl.image, stock: v.stock ?? tmpl.stock },
+      ];
+    });
+  };
+
   // ── totals ────────────────────────────────────────────────────────────
   const [discount, setDiscount] = useState(0);
   const [advance, setAdvance] = useState(0);
