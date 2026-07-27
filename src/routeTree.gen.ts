@@ -44,6 +44,7 @@ import { Route as AuthenticatedErpImportsIndexRouteImport } from './routes/_auth
 import { Route as AuthenticatedErpFinanceIndexRouteImport } from './routes/_authenticated/erp.finance.index'
 import { Route as AuthenticatedErpCrmIndexRouteImport } from './routes/_authenticated/erp.crm.index'
 import { Route as AuthenticatedErpAnalyticsIndexRouteImport } from './routes/_authenticated/erp.analytics.index'
+import { Route as ApiPublicWebhooksShopifyOrderRouteImport } from './routes/api/public/webhooks.shopify-order'
 import { Route as ApiPublicWebhookPathaoRouteImport } from './routes/api/public/webhook.pathao'
 import { Route as ApiPublicMktTrackerDotjsRouteImport } from './routes/api/public/mkt.tracker[.]js'
 import { Route as ApiPublicMktTrackRouteImport } from './routes/api/public/mkt.track'
@@ -281,6 +282,12 @@ const AuthenticatedErpAnalyticsIndexRoute =
     id: '/analytics/',
     path: '/analytics/',
     getParentRoute: () => AuthenticatedErpRoute,
+  } as any)
+const ApiPublicWebhooksShopifyOrderRoute =
+  ApiPublicWebhooksShopifyOrderRouteImport.update({
+    id: '/api/public/webhooks/shopify-order',
+    path: '/api/public/webhooks/shopify-order',
+    getParentRoute: () => rootRouteImport,
   } as any)
 const ApiPublicWebhookPathaoRoute = ApiPublicWebhookPathaoRouteImport.update({
   id: '/api/public/webhook/pathao',
@@ -590,6 +597,7 @@ export interface FileRoutesByFullPath {
   '/api/public/mkt/track': typeof ApiPublicMktTrackRoute
   '/api/public/mkt/tracker.js': typeof ApiPublicMktTrackerDotjsRoute
   '/api/public/webhook/pathao': typeof ApiPublicWebhookPathaoRoute
+  '/api/public/webhooks/shopify-order': typeof ApiPublicWebhooksShopifyOrderRoute
   '/erp/analytics/': typeof AuthenticatedErpAnalyticsIndexRoute
   '/erp/crm/': typeof AuthenticatedErpCrmIndexRoute
   '/erp/finance/': typeof AuthenticatedErpFinanceIndexRoute
@@ -660,6 +668,7 @@ export interface FileRoutesByTo {
   '/api/public/mkt/track': typeof ApiPublicMktTrackRoute
   '/api/public/mkt/tracker.js': typeof ApiPublicMktTrackerDotjsRoute
   '/api/public/webhook/pathao': typeof ApiPublicWebhookPathaoRoute
+  '/api/public/webhooks/shopify-order': typeof ApiPublicWebhooksShopifyOrderRoute
   '/erp/analytics': typeof AuthenticatedErpAnalyticsIndexRoute
   '/erp/crm': typeof AuthenticatedErpCrmIndexRoute
   '/erp/finance': typeof AuthenticatedErpFinanceIndexRoute
@@ -739,6 +748,7 @@ export interface FileRoutesById {
   '/api/public/mkt/track': typeof ApiPublicMktTrackRoute
   '/api/public/mkt/tracker.js': typeof ApiPublicMktTrackerDotjsRoute
   '/api/public/webhook/pathao': typeof ApiPublicWebhookPathaoRoute
+  '/api/public/webhooks/shopify-order': typeof ApiPublicWebhooksShopifyOrderRoute
   '/_authenticated/erp/analytics/': typeof AuthenticatedErpAnalyticsIndexRoute
   '/_authenticated/erp/crm/': typeof AuthenticatedErpCrmIndexRoute
   '/_authenticated/erp/finance/': typeof AuthenticatedErpFinanceIndexRoute
@@ -818,6 +828,7 @@ export interface FileRouteTypes {
     | '/api/public/mkt/track'
     | '/api/public/mkt/tracker.js'
     | '/api/public/webhook/pathao'
+    | '/api/public/webhooks/shopify-order'
     | '/erp/analytics/'
     | '/erp/crm/'
     | '/erp/finance/'
@@ -888,6 +899,7 @@ export interface FileRouteTypes {
     | '/api/public/mkt/track'
     | '/api/public/mkt/tracker.js'
     | '/api/public/webhook/pathao'
+    | '/api/public/webhooks/shopify-order'
     | '/erp/analytics'
     | '/erp/crm'
     | '/erp/finance'
@@ -966,6 +978,7 @@ export interface FileRouteTypes {
     | '/api/public/mkt/track'
     | '/api/public/mkt/tracker.js'
     | '/api/public/webhook/pathao'
+    | '/api/public/webhooks/shopify-order'
     | '/_authenticated/erp/analytics/'
     | '/_authenticated/erp/crm/'
     | '/_authenticated/erp/finance/'
@@ -996,6 +1009,7 @@ export interface RootRouteChildren {
   ApiPublicMktTrackRoute: typeof ApiPublicMktTrackRoute
   ApiPublicMktTrackerDotjsRoute: typeof ApiPublicMktTrackerDotjsRoute
   ApiPublicWebhookPathaoRoute: typeof ApiPublicWebhookPathaoRoute
+  ApiPublicWebhooksShopifyOrderRoute: typeof ApiPublicWebhooksShopifyOrderRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -1244,6 +1258,13 @@ declare module '@tanstack/react-router' {
       fullPath: '/erp/analytics/'
       preLoaderRoute: typeof AuthenticatedErpAnalyticsIndexRouteImport
       parentRoute: typeof AuthenticatedErpRoute
+    }
+    '/api/public/webhooks/shopify-order': {
+      id: '/api/public/webhooks/shopify-order'
+      path: '/api/public/webhooks/shopify-order'
+      fullPath: '/api/public/webhooks/shopify-order'
+      preLoaderRoute: typeof ApiPublicWebhooksShopifyOrderRouteImport
+      parentRoute: typeof rootRouteImport
     }
     '/api/public/webhook/pathao': {
       id: '/api/public/webhook/pathao'
@@ -1779,6 +1800,7 @@ const rootRouteChildren: RootRouteChildren = {
   ApiPublicMktTrackRoute: ApiPublicMktTrackRoute,
   ApiPublicMktTrackerDotjsRoute: ApiPublicMktTrackerDotjsRoute,
   ApiPublicWebhookPathaoRoute: ApiPublicWebhookPathaoRoute,
+  ApiPublicWebhooksShopifyOrderRoute: ApiPublicWebhooksShopifyOrderRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

@@ -6093,6 +6093,8 @@ export type Database = {
           discount_amount: number
           duplicate_flag: boolean
           expected_delivery_date: string | null
+          external_order_id: string | null
+          external_platform: string | null
           fb_ad_id: string | null
           fb_adset_id: string | null
           fb_campaign_id: string | null
@@ -6211,6 +6213,8 @@ export type Database = {
           discount_amount?: number
           duplicate_flag?: boolean
           expected_delivery_date?: string | null
+          external_order_id?: string | null
+          external_platform?: string | null
           fb_ad_id?: string | null
           fb_adset_id?: string | null
           fb_campaign_id?: string | null
@@ -6329,6 +6333,8 @@ export type Database = {
           discount_amount?: number
           duplicate_flag?: boolean
           expected_delivery_date?: string | null
+          external_order_id?: string | null
+          external_platform?: string | null
           fb_ad_id?: string | null
           fb_adset_id?: string | null
           fb_campaign_id?: string | null
@@ -8273,6 +8279,22 @@ export type Database = {
         }
         Returns: Json
       }
+      get_public_coupon: {
+        Args: { p_code: string }
+        Returns: {
+          applicable_products: Json
+          code: string
+          is_active: boolean
+          max_discount: number
+          min_order_amount: number
+          type: string
+          usage_limit: number
+          used_count: number
+          valid_from: string
+          valid_until: string
+          value: number
+        }[]
+      }
       get_sku_profit: {
         Args: { _brand_id: string; _from: string; _to: string }
         Returns: {
@@ -8408,6 +8430,8 @@ export type Database = {
           discount_amount: number
           duplicate_flag: boolean
           expected_delivery_date: string | null
+          external_order_id: string | null
+          external_platform: string | null
           fb_ad_id: string | null
           fb_adset_id: string | null
           fb_campaign_id: string | null
@@ -8535,6 +8559,8 @@ export type Database = {
           discount_amount: number
           duplicate_flag: boolean
           expected_delivery_date: string | null
+          external_order_id: string | null
+          external_platform: string | null
           fb_ad_id: string | null
           fb_adset_id: string | null
           fb_campaign_id: string | null
@@ -9166,6 +9192,7 @@ export type Database = {
         | "utm"
         | "pixel"
         | "incomplete"
+        | "shopify"
       order_status:
         | "new"
         | "confirmed"
@@ -9438,6 +9465,7 @@ export const Constants = {
         "utm",
         "pixel",
         "incomplete",
+        "shopify",
       ],
       order_status: [
         "new",
