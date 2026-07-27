@@ -83,10 +83,10 @@ export const getPurchaseOrderDetail = createServerFn({ method: "POST" })
     z.object({ poId: z.string().uuid() }).parse(d),
   )
   .handler(async ({ data, context }) => {
-    const [poRes, itemsRes, cartonsRes, paymentsRes, historyRes] = await Promise.all([
+    const [poRes, itemsRes, cartonsRes, paymentsRes, historyRes, releasesRes] = await Promise.all([
       context.supabase.from("imp_purchase_orders").select(`
         id, po_number, brand_id, supplier_id, order_date,
-        currency, fx_rate,
+        currency, fx_rate, receive_mode,
         product_subtotal_bdt, shipping_total_bdt, local_courier_total_bdt,
         grand_total_bdt, paid_bdt, due_bdt, status, notes, created_at,
         fx_rate_cny_bdt, fx_rate_locked_at, fx_rate_source,
@@ -122,6 +122,11 @@ export const getPurchaseOrderDetail = createServerFn({ method: "POST" })
       `).or(`and(entity_type.eq.po,entity_id.eq.${data.poId})`)
         .order("created_at", { ascending: false })
         .limit(100),
+      context.supabase.from("imp_po_releases").select(`
+        id, release_number, warehouse_id, released_at, notes, created_at,
+        items:imp_po_release_items ( id, po_item_id, product_id, variant_id, sku_snapshot,
+          quantity, damaged_qty, unit_landed_cost_bdt )
+      `).eq("po_id", data.poId).order("release_number"),
     ]);
     if (poRes.error) throw poRes.error;
     if (itemsRes.error) throw itemsRes.error;
@@ -133,6 +138,7 @@ export const getPurchaseOrderDetail = createServerFn({ method: "POST" })
       cartons: cartonsRes.data ?? [],
       payments: paymentsRes.data ?? [],
       history: historyRes.data ?? [],
+      releases: releasesRes.data ?? [],
     };
   });
 
@@ -339,9 +345,13 @@ export const createImportPo = createServerFn({ method: "POST" })
       notes: z.string().optional(),
       supplier: supplierInlineSchema.optional(),
       items: z.array(poItemSchema).min(1),
-      cartons: z.array(cartonSchema).min(1),
+      cartons: z.array(cartonSchema).default([]),
+      receive_mode: z.enum(["carton", "quantity"]).default("carton"),
       initial_payment: initialPaymentSchema.optional(),
       idempotency_key: z.string().min(8),
+    }).refine((v) => v.receive_mode === "quantity" || v.cartons.length > 0, {
+      message: "cartons required in carton mode",
+      path: ["cartons"],
     }).parse(d),
   )
   .handler(async ({ data, context }) => {
