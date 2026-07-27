@@ -262,9 +262,19 @@ type ProductLite = {
   is_featured: boolean | null;
 };
 
+type VariantLite = {
+  id: string;
+  product_id: string;
+  color_name: string | null;
+  color_hex: string | null;
+  sku: string | null;
+  image: string | null;
+  stock: number | null;
+};
+
 function ProductSearchPanel({
   brandId, onAdd,
-}: { brandId: string | null; onAdd: (p: ProductLite) => void }) {
+}: { brandId: string | null; onAdd: (p: ProductLite, v?: VariantLite) => void }) {
   const [codeQ, setCodeQ] = useState("");
   const [nameQ, setNameQ] = useState("");
   const [debounced, setDebounced] = useState({ code: "", name: "" });
@@ -294,6 +304,28 @@ function ProductSearchPanel({
     },
   });
 
+  const productIds = (results ?? []).map((p) => p.id);
+  const { data: variantsByProduct } = useQuery({
+    queryKey: ["erp-product-search-variants", productIds],
+    enabled: productIds.length > 0,
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("product_variants")
+        .select("id,product_id,color_name,color_hex,sku,image,stock")
+        .in("product_id", productIds)
+        .eq("is_active", true)
+        .order("display_order", { ascending: true });
+      if (error) throw error;
+      const map = new Map<string, VariantLite[]>();
+      for (const v of (data ?? []) as VariantLite[]) {
+        const arr = map.get(v.product_id) ?? [];
+        arr.push(v);
+        map.set(v.product_id, arr);
+      }
+      return map;
+    },
+  });
+
   return (
     <div className="space-y-3">
       <div className="grid grid-cols-2 gap-3">
@@ -319,7 +351,8 @@ function ProductSearchPanel({
         )}
         <ul className="divide-y">
           {(results ?? []).map((p) => (
-            <li key={p.id} className="flex items-center gap-3 px-2 py-2 hover:bg-muted/40 transition-colors">
+            <li key={p.id} className="px-2 py-2 hover:bg-muted/40 transition-colors">
+             <div className="flex items-center gap-3">
               <div className="h-10 w-10 rounded-md bg-muted shrink-0 overflow-hidden flex items-center justify-center">
                 {p.image
                   ? <img src={p.image} alt="" className="h-full w-full object-cover" />
@@ -336,11 +369,45 @@ function ProductSearchPanel({
                   <span className={cn("text-muted-foreground", p.stock <= 0 && "text-rose-600")}>Stock: {p.stock}</span>
                 </div>
               </div>
-              <Button size="sm" variant="outline" className="h-7 px-2"
-                disabled={p.stock <= 0}
-                onClick={() => onAdd({ id: p.id, title: p.title, price: Number(p.price), image: p.image, stock: p.stock, is_featured: p.is_featured })}>
-                <Plus className="h-3 w-3" />
-              </Button>
+              {(variantsByProduct?.get(p.id)?.length ?? 0) === 0 ? (
+                <Button size="sm" variant="outline" className="h-7 px-2"
+                  disabled={p.stock <= 0}
+                  onClick={() => onAdd({ id: p.id, title: p.title, price: Number(p.price), image: p.image, stock: p.stock, is_featured: p.is_featured })}>
+                  <Plus className="h-3 w-3" />
+                </Button>
+              ) : (
+                <span className="shrink-0 rounded-full bg-indigo-500/10 px-2 py-0.5 text-[9px] font-bold uppercase tracking-wide text-indigo-700 dark:text-indigo-300">
+                  Select color
+                </span>
+              )}
+             </div>
+             {(variantsByProduct?.get(p.id)?.length ?? 0) > 0 && (
+               <div className="mt-2 flex flex-wrap gap-1.5 pl-[52px]">
+                 {(variantsByProduct?.get(p.id) ?? []).map((v) => {
+                   const out = (v.stock ?? 0) <= 0;
+                   return (
+                     <button
+                       key={v.id}
+                       type="button"
+                       disabled={out}
+                       title={out ? "Out of stock" : `Add ${v.color_name ?? "variant"}`}
+                       onClick={() => onAdd({ id: p.id, title: p.title, price: Number(p.price), image: p.image, stock: p.stock, is_featured: p.is_featured }, v)}
+                       className={cn(
+                         "inline-flex items-center gap-1.5 rounded-full border px-2 py-1 text-[10px] font-medium transition-colors",
+                         out
+                           ? "opacity-40 cursor-not-allowed"
+                           : "hover:border-indigo-400 hover:bg-indigo-500/10",
+                       )}
+                     >
+                       <span className="h-3 w-3 rounded-full border shrink-0" style={{ background: v.color_hex || "transparent" }} />
+                       <span className="truncate max-w-[90px]">{v.color_name ?? v.sku ?? "Variant"}</span>
+                       <span className="tabular-nums text-muted-foreground">{v.stock ?? 0}</span>
+                       <Plus className="h-2.5 w-2.5" />
+                     </button>
+                   );
+                 })}
+               </div>
+             )}
             </li>
           ))}
         </ul>
