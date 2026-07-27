@@ -132,26 +132,37 @@ export async function handleShopifyOrderWebhook(request: Request): Promise<Respo
     const lineItems: any[] = Array.isArray(order?.line_items) ? order.line_items : [];
     const skus = Array.from(new Set(lineItems.map((li) => (li?.sku ? String(li.sku).trim() : "")).filter(Boolean)));
 
-    const skuToProduct = new Map<string, { id: string; name: string | null }>();
-    const skuToVariant = new Map<string, { id: string; product_id: string; sku: string | null; variant_name: string | null }>();
+    const skuToProduct = new Map<string, { id: string; title: string | null }>();
+    const skuToVariant = new Map<string, { id: string; product_id: string; sku: string | null; color_name: string | null }>();
 
     if (skus.length) {
       const { data: products } = await supabaseAdmin
         .from("products")
-        .select("id, name, sku")
+        .select("id, title, sku")
         .eq("brand_id", brandId)
         .in("sku", skus);
       for (const p of products ?? []) {
-        if (p.sku) skuToProduct.set(String(p.sku).trim(), { id: p.id, name: p.name ?? null });
+        if (p.sku) skuToProduct.set(String(p.sku).trim(), { id: p.id, title: p.title ?? null });
       }
 
       const { data: variants } = await supabaseAdmin
         .from("product_variants")
-        .select("id, product_id, sku, variant_name")
-        .eq("brand_id", brandId)
+        .select("id, product_id, sku, color_name")
         .in("sku", skus);
+
+      const variantProductIds = Array.from(new Set((variants ?? []).map((v) => v.product_id).filter(Boolean)));
+      const allowedVariantProductIds = new Set<string>();
+      if (variantProductIds.length) {
+        const { data: variantProducts } = await supabaseAdmin
+          .from("products")
+          .select("id")
+          .eq("brand_id", brandId)
+          .in("id", variantProductIds);
+        for (const p of variantProducts ?? []) allowedVariantProductIds.add(p.id);
+      }
+
       for (const v of variants ?? []) {
-        if (v.sku) skuToVariant.set(String(v.sku).trim(), v);
+        if (v.sku && allowedVariantProductIds.has(v.product_id)) skuToVariant.set(String(v.sku).trim(), v);
       }
     }
 
@@ -172,8 +183,8 @@ export async function handleShopifyOrderWebhook(request: Request): Promise<Respo
           order_id: inserted.id,
           product_id: productId,
           variant_id: variant?.id ?? null,
-          variant_label: variant ? [variant.variant_name, variant.sku].filter(Boolean).join(" · ") : null,
-          name: String(li?.title ?? li?.name ?? product?.name ?? sku),
+          variant_label: variant ? [variant.color_name, variant.sku].filter(Boolean).join(" · ") : null,
+          name: String(li?.title ?? li?.name ?? product?.title ?? sku),
           price,
           unit_price: price,
           quantity: qty,
