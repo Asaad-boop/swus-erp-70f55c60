@@ -17,6 +17,7 @@ import { Route as AuthenticatedErpRouteImport } from './routes/_authenticated/er
 import { Route as Char91DotwellKnownChar93OauthProtectedResourceRouteImport } from './routes/[.well-known]/oauth-protected-resource'
 import { Route as Char91DotmcpChar93ListToolsRouteImport } from './routes/[.mcp]/list-tools'
 import { Route as AuthenticatedErpIndexRouteImport } from './routes/_authenticated/erp.index'
+import { Route as ApiWebhooksShopifyOrderRouteImport } from './routes/api/webhooks.shopify-order'
 import { Route as AuthenticatedErpUsersRouteImport } from './routes/_authenticated/erp.users'
 import { Route as AuthenticatedErpSuppliersRouteImport } from './routes/_authenticated/erp.suppliers'
 import { Route as AuthenticatedErpSettingsRouteImport } from './routes/_authenticated/erp.settings'
@@ -127,6 +128,11 @@ const AuthenticatedErpIndexRoute = AuthenticatedErpIndexRouteImport.update({
   id: '/',
   path: '/',
   getParentRoute: () => AuthenticatedErpRoute,
+} as any)
+const ApiWebhooksShopifyOrderRoute = ApiWebhooksShopifyOrderRouteImport.update({
+  id: '/api/webhooks/shopify-order',
+  path: '/api/webhooks/shopify-order',
+  getParentRoute: () => rootRouteImport,
 } as any)
 const AuthenticatedErpUsersRoute = AuthenticatedErpUsersRouteImport.update({
   id: '/users',
@@ -558,6 +564,7 @@ export interface FileRoutesByFullPath {
   '/erp/settings': typeof AuthenticatedErpSettingsRoute
   '/erp/suppliers': typeof AuthenticatedErpSuppliersRoute
   '/erp/users': typeof AuthenticatedErpUsersRoute
+  '/api/webhooks/shopify-order': typeof ApiWebhooksShopifyOrderRoute
   '/erp/': typeof AuthenticatedErpIndexRoute
   '/erp/analytics/live': typeof AuthenticatedErpAnalyticsLiveRoute
   '/erp/crm/$customerId': typeof AuthenticatedErpCrmCustomerIdRoute
@@ -629,6 +636,7 @@ export interface FileRoutesByTo {
   '/erp/settings': typeof AuthenticatedErpSettingsRoute
   '/erp/suppliers': typeof AuthenticatedErpSuppliersRoute
   '/erp/users': typeof AuthenticatedErpUsersRoute
+  '/api/webhooks/shopify-order': typeof ApiWebhooksShopifyOrderRoute
   '/erp': typeof AuthenticatedErpIndexRoute
   '/erp/analytics/live': typeof AuthenticatedErpAnalyticsLiveRoute
   '/erp/crm/$customerId': typeof AuthenticatedErpCrmCustomerIdRoute
@@ -709,6 +717,7 @@ export interface FileRoutesById {
   '/_authenticated/erp/settings': typeof AuthenticatedErpSettingsRoute
   '/_authenticated/erp/suppliers': typeof AuthenticatedErpSuppliersRoute
   '/_authenticated/erp/users': typeof AuthenticatedErpUsersRoute
+  '/api/webhooks/shopify-order': typeof ApiWebhooksShopifyOrderRoute
   '/_authenticated/erp/': typeof AuthenticatedErpIndexRoute
   '/_authenticated/erp/analytics/live': typeof AuthenticatedErpAnalyticsLiveRoute
   '/_authenticated/erp/crm/$customerId': typeof AuthenticatedErpCrmCustomerIdRoute
@@ -789,6 +798,7 @@ export interface FileRouteTypes {
     | '/erp/settings'
     | '/erp/suppliers'
     | '/erp/users'
+    | '/api/webhooks/shopify-order'
     | '/erp/'
     | '/erp/analytics/live'
     | '/erp/crm/$customerId'
@@ -860,6 +870,7 @@ export interface FileRouteTypes {
     | '/erp/settings'
     | '/erp/suppliers'
     | '/erp/users'
+    | '/api/webhooks/shopify-order'
     | '/erp'
     | '/erp/analytics/live'
     | '/erp/crm/$customerId'
@@ -939,6 +950,7 @@ export interface FileRouteTypes {
     | '/_authenticated/erp/settings'
     | '/_authenticated/erp/suppliers'
     | '/_authenticated/erp/users'
+    | '/api/webhooks/shopify-order'
     | '/_authenticated/erp/'
     | '/_authenticated/erp/analytics/live'
     | '/_authenticated/erp/crm/$customerId'
@@ -1002,6 +1014,7 @@ export interface RootRouteChildren {
   Char91DotmcpChar93ListToolsRoute: typeof Char91DotmcpChar93ListToolsRoute
   Char91DotwellKnownChar93OauthProtectedResourceRoute: typeof Char91DotwellKnownChar93OauthProtectedResourceRoute
   Char91DotmcpChar93InvokeToolToolRoute: typeof Char91DotmcpChar93InvokeToolToolRoute
+  ApiWebhooksShopifyOrderRoute: typeof ApiWebhooksShopifyOrderRoute
   ApiPublicCatalogBrandSlugRoute: typeof ApiPublicCatalogBrandSlugRoute
   ApiPublicCronRunRecurringRoute: typeof ApiPublicCronRunRecurringRoute
   ApiPublicCronSyncCourierRoute: typeof ApiPublicCronSyncCourierRoute
@@ -1069,6 +1082,13 @@ declare module '@tanstack/react-router' {
       fullPath: '/erp/'
       preLoaderRoute: typeof AuthenticatedErpIndexRouteImport
       parentRoute: typeof AuthenticatedErpRoute
+    }
+    '/api/webhooks/shopify-order': {
+      id: '/api/webhooks/shopify-order'
+      path: '/api/webhooks/shopify-order'
+      fullPath: '/api/webhooks/shopify-order'
+      preLoaderRoute: typeof ApiWebhooksShopifyOrderRouteImport
+      parentRoute: typeof rootRouteImport
     }
     '/_authenticated/erp/users': {
       id: '/_authenticated/erp/users'
@@ -1793,6 +1813,7 @@ const rootRouteChildren: RootRouteChildren = {
   Char91DotwellKnownChar93OauthProtectedResourceRoute:
     Char91DotwellKnownChar93OauthProtectedResourceRoute,
   Char91DotmcpChar93InvokeToolToolRoute: Char91DotmcpChar93InvokeToolToolRoute,
+  ApiWebhooksShopifyOrderRoute: ApiWebhooksShopifyOrderRoute,
   ApiPublicCatalogBrandSlugRoute: ApiPublicCatalogBrandSlugRoute,
   ApiPublicCronRunRecurringRoute: ApiPublicCronRunRecurringRoute,
   ApiPublicCronSyncCourierRoute: ApiPublicCronSyncCourierRoute,
