@@ -841,21 +841,16 @@ function NewOrderPage() {
                           <Trash2 className="h-4 w-4" />
                         </Button>
                        </div>
-                       <ColorSelector
-                         productId={it.product_id}
-                         selectedId={it.variant_id ?? null}
-                         onMeta={(hasVariants) => {
-                           if (!!it.needsVariant !== hasVariants) updateItem(idx, { needsVariant: hasVariants });
-                         }}
-                         onSelect={(v) =>
-                           updateItem(idx, {
-                             variant_id: v?.id ?? null,
-                             variant_label: v ? [v.color_name, v.sku].filter(Boolean).join(" · ") : null,
-                             image: v?.image || it.image,
-                             stock: v ? (v.stock ?? it.stock) : it.stock,
-                           })
-                         }
-                       />
+                       {items.findIndex((x) => x.product_id === it.product_id) === idx && (
+                         <ColorSelector
+                           productId={it.product_id}
+                           selectedIds={items.filter((x) => x.product_id === it.product_id && x.variant_id).map((x) => x.variant_id as string)}
+                           onMeta={(hasVariants) => {
+                             if (!!it.needsVariant !== hasVariants) updateItem(idx, { needsVariant: hasVariants });
+                           }}
+                           onToggle={(v) => toggleVariant(it.product_id, v)}
+                         />
+                       )}
                       </div>
                     ))}
                   </div>
