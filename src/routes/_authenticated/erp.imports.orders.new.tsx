@@ -90,6 +90,7 @@ function NewPoPage() {
   const [fxRate, setFxRate] = useState<number>(14);
   const [notes, setNotes] = useState("");
   const [agentCommissionCny, setAgentCommissionCny] = useState<number>(0);
+  const [receiveMode, setReceiveMode] = useState<"carton" | "quantity">("carton");
 
   const [items, setItems] = useState<ItemDraft[]>([
     { id: uid(), picked: emptyPick(), quantity: 1, unit_cost_foreign: 0 },
@@ -224,7 +225,7 @@ function NewPoPage() {
     mutationFn: async () => {
       if (!brandId) throw new Error("No brand");
       if (items.some((i) => !i.picked.title.trim() || i.quantity <= 0)) throw new Error("Each item needs a name & quantity > 0");
-      if (reconciliationErrors.length > 0) throw new Error("Carton allocations don't match item quantities");
+      if (receiveMode === "carton" && reconciliationErrors.length > 0) throw new Error("Carton allocations don't match item quantities");
       if (payEnabled && (payAmount <= 0 || !payWalletId)) throw new Error("Payment amount & wallet required");
 
       // Build itemList (one entry per leaf) and leafKey -> item_index map.
@@ -281,7 +282,8 @@ function NewPoPage() {
         fx_rate: fxRate,
         notes: notes || undefined,
         items: itemList,
-        cartons: cartonList,
+        cartons: receiveMode === "carton" ? cartonList : [],
+        receive_mode: receiveMode,
         idempotency_key: newIdemKey("po"),
       };
       if (supplierId) payload.supplier = { id: supplierId };
@@ -339,7 +341,7 @@ function NewPoPage() {
   const totalCartonWeight = cartons.reduce((s, c) => s + (Number(c.weight_kg) || 0), 0);
   const totalUnits = items.reduce((s, i) => s + (Number(i.quantity) || 0), 0);
   const itemsValid = items.length > 0 && items.every((i) => i.picked.title.trim() && i.quantity > 0);
-  const canSubmit = !!brandId && itemsValid && reconciliationErrors.length === 0 && !submitMut.isPending && (!payEnabled || (payAmount > 0 && !!payWalletId));
+  const canSubmit = !!brandId && itemsValid && (receiveMode === "quantity" || reconciliationErrors.length === 0) && !submitMut.isPending && (!payEnabled || (payAmount > 0 && !!payWalletId));
 
   return (
     <div className="p-4 md:p-6 space-y-5 max-w-[1600px] mx-auto pb-24">
@@ -431,6 +433,28 @@ function NewPoPage() {
               <div className="md:col-span-3">
                 <Label className="text-xs">Notes</Label>
                 <Textarea value={notes} onChange={(e) => setNotes(e.target.value)} placeholder="Optional notes" rows={2} />
+              </div>
+              <div className="md:col-span-3">
+                <Label className="text-xs">Receive mode</Label>
+                <div className="mt-1 grid sm:grid-cols-2 gap-2">
+                  {([
+                    { v: "carton" as const, title: "Carton based", desc: "Carton banaye allocation korbo, carton dhore receive hobe." },
+                    { v: "quantity" as const, title: "Quantity based", desc: "Sudhu total piece order — BD te ese joto piece chai toto release korbo." },
+                  ]).map((o) => (
+                    <button
+                      key={o.v}
+                      type="button"
+                      onClick={() => setReceiveMode(o.v)}
+                      className={cn(
+                        "text-left rounded-lg border p-3 transition",
+                        receiveMode === o.v ? "border-primary ring-1 ring-primary/40 bg-primary/5" : "border-border hover:border-primary/40",
+                      )}
+                    >
+                      <div className="text-sm font-semibold">{o.title}</div>
+                      <div className="text-[11px] text-muted-foreground mt-0.5">{o.desc}</div>
+                    </button>
+                  ))}
+                </div>
               </div>
             </div>
           </Card>
@@ -571,6 +595,7 @@ function NewPoPage() {
           </Card>
 
           {/* Cartons */}
+          {receiveMode === "carton" ? (
           <Card className="p-4 md:p-5">
             <div className="flex items-center justify-between flex-wrap gap-2">
               <SectionTitle icon={Truck} title={`Cartons (${cartons.length})`} />
@@ -652,6 +677,15 @@ function NewPoPage() {
               ))}
             </div>
           </Card>
+          ) : (
+            <Card className="p-4 md:p-5">
+              <SectionTitle icon={Truck} title="Quantity based receiving" />
+              <p className="text-xs text-muted-foreground mt-2">
+                Kono carton allocation lagbe na. Total <span className="font-semibold tabular-nums">{totalUnits}</span> pcs order hocche.
+                BD te arrive korar por PO detail page theke joto piece dorkar toto release kore stock e nite parben (partial release supported).
+              </p>
+            </Card>
+          )}
 
           {/* Initial payment */}
           <Card className="p-4 md:p-5">
