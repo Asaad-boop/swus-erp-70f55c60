@@ -93,6 +93,12 @@ function PoDetailPage() {
   const payments: any[] = data.payments;
   const releases: any[] = (data as any).releases ?? [];
   const isQtyMode = po.receive_mode === "quantity";
+  const qtyOrdered = items.reduce((s: number, i: any) => s + Number(i.quantity ?? 0), 0);
+  const qtyReleased = releases.reduce(
+    (s: number, r: any) =>
+      s + (r.items ?? []).reduce((n: number, i: any) => n + Number(i.quantity ?? 0) + Number(i.damaged_qty ?? 0), 0),
+    0,
+  );
 
   const totalCartons = cartons.length;
   const totalPieces = cartons.reduce((s, c) => s + Number(c.expected_quantity || 0), 0);
