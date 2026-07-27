@@ -1447,11 +1447,11 @@ type VariantOpt = {
 };
 
 function ColorSelector({
-  productId, selectedId, onSelect, onMeta,
+  productId, selectedIds, onToggle, onMeta,
 }: {
   productId: string;
-  selectedId: string | null;
-  onSelect: (v: VariantOpt | null) => void;
+  selectedIds: string[];
+  onToggle: (v: VariantOpt) => void;
   onMeta: (hasVariants: boolean) => void;
 }) {
   const { data: variants = [] } = useQuery({
@@ -1475,14 +1475,14 @@ function ColorSelector({
 
   return (
     <div className="mt-2 flex flex-wrap items-center gap-1.5 border-t pt-2">
-      <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Color *</span>
+      <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Color * (একাধিক select করা যাবে)</span>
       {variants.map((v) => {
-        const active = v.id === selectedId;
+        const active = selectedIds.includes(v.id);
         return (
           <button
             key={v.id}
             type="button"
-            onClick={() => onSelect(active ? null : v)}
+            onClick={() => onToggle(v)}
             className={cn(
               "flex items-center gap-1.5 rounded-full border px-2 py-1 text-[11px] transition",
               active ? "border-indigo-500 bg-indigo-50 font-semibold text-indigo-700 dark:bg-indigo-950/40 dark:text-indigo-300" : "hover:bg-muted",
@@ -1495,7 +1495,7 @@ function ColorSelector({
           </button>
         );
       })}
-      {!selectedId && <span className="text-[10px] font-medium text-rose-600">color select korun</span>}
+      {selectedIds.length === 0 && <span className="text-[10px] font-medium text-rose-600">color select korun</span>}
     </div>
   );
 }
