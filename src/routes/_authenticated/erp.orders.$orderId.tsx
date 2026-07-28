@@ -839,19 +839,19 @@ function OrderDetailsPage() {
     mutationFn: async (verify: boolean) => {
       // Payable = items + delivery − discount (advance বাদে)
       const payable = Math.max(0, itemsSubtotal + Number(form.shipping_fee) - Number(form.discount));
-      const patch: Record<string, unknown> = verify
+      const patch = verify
         ? {
             verified_at: new Date().toISOString(),
             advance_amount: payable,
             advance_source: form.advance_source || order?.payment_method || "bKash",
             total: 0,
-            payment_status: "paid",
+            payment_status: "paid" as const,
           }
         : {
-            verified_at: null,
+            verified_at: null as string | null,
             advance_amount: 0,
             total: payable,
-            payment_status: "unpaid",
+            payment_status: "unpaid" as const,
           };
       const { error } = await supabase
         .from("orders")
