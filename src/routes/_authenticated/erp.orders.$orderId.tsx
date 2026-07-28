@@ -371,7 +371,6 @@ function ProductSearchPanel({
               </div>
               {(variantsByProduct?.get(p.id)?.length ?? 0) === 0 ? (
                 <Button size="sm" variant="outline" className="h-7 px-2"
-                  disabled={p.stock <= 0}
                   onClick={() => onAdd({ id: p.id, title: p.title, price: Number(p.price), image: p.image, stock: p.stock, is_featured: p.is_featured })}>
                   <Plus className="h-3 w-3" />
                 </Button>
@@ -389,14 +388,12 @@ function ProductSearchPanel({
                      <button
                        key={v.id}
                        type="button"
-                       disabled={out}
-                       title={out ? "Out of stock" : `Add ${v.color_name ?? "variant"}`}
+                        title={`Add ${v.color_name ?? "variant"}${out ? " (backorder)" : ""}`}
                        onClick={() => onAdd({ id: p.id, title: p.title, price: Number(p.price), image: p.image, stock: p.stock, is_featured: p.is_featured }, v)}
                        className={cn(
                          "inline-flex items-center gap-1.5 rounded-full border px-2 py-1 text-[10px] font-medium transition-colors",
-                         out
-                           ? "opacity-40 cursor-not-allowed"
-                           : "hover:border-indigo-400 hover:bg-indigo-500/10",
+                          "hover:border-indigo-400 hover:bg-indigo-500/10",
+                          out && "border-dashed",
                        )}
                      >
                        <span className="h-3 w-3 rounded-full border shrink-0" style={{ background: v.color_hex || "transparent" }} />
