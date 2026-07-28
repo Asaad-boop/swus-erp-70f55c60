@@ -82,6 +82,7 @@ export const listAbandonedCartsFn = createServerFn({ method: "POST" })
       .select("*", { count: "exact" })
       .eq("is_converted", false)
       .not("customer_phone", "is", null)
+      .neq("customer_phone", "")
       .gt("subtotal", 0);
 
     if (data.brandIds && data.brandIds.length > 0) {
@@ -147,6 +148,7 @@ export const countAbandonedCartsFn = createServerFn({ method: "POST" })
       .select("id", { count: "exact", head: true })
       .eq("is_converted", false)
       .not("customer_phone", "is", null)
+      .neq("customer_phone", "")
       .gt("subtotal", 0);
     if (data.brandIds && data.brandIds.length > 0) {
       q = applyBrandScope(q, data.brandIds);
@@ -413,6 +415,7 @@ export const incompleteReportsFn = createServerFn({ method: "POST" })
       .gte("updated_at", data.dateFrom)
       .lte("updated_at", data.dateTo)
       .not("customer_phone", "is", null)
+      .neq("customer_phone", "")
       .gt("subtotal", 0);
     if (data.brandIds && data.brandIds.length > 0) {
       q = applyBrandScope(q, data.brandIds);
