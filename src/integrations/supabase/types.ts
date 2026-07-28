@@ -8947,6 +8947,10 @@ export type Database = {
         Args: { p_status: Database["public"]["Enums"]["order_status"] }
         Returns: boolean
       }
+      order_stock_net_multiplier: {
+        Args: { p_status: Database["public"]["Enums"]["order_status"] }
+        Returns: number
+      }
       order_stock_restore_multiplier: {
         Args: { p_status: Database["public"]["Enums"]["order_status"] }
         Returns: number
