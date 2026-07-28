@@ -819,6 +819,8 @@ function OrderDetailsPage() {
 
   const getAdvanceValidationError = () => {
     if (Number(form.advance) <= 0) return null;
+    // Payment already verified (bKash/Nagad screenshot check) — number optional.
+    if (order?.verified_at) return null;
     if (!form.advance_source) return "Select advance payment source";
     if (!form.advance_payment_number || form.advance_payment_number.length < 4) return "Enter payment number or last 4 digits";
     return null;
@@ -835,14 +837,40 @@ function OrderDetailsPage() {
 
   const verifyPayment = useMutation({
     mutationFn: async (verify: boolean) => {
+      // Payable = items + delivery − discount (advance বাদে)
+      const payable = Math.max(0, itemsSubtotal + Number(form.shipping_fee) - Number(form.discount));
+      const patch = verify
+        ? {
+            verified_at: new Date().toISOString(),
+            advance_amount: payable,
+            advance_source: form.advance_source || order?.payment_method || "bKash",
+            total: 0,
+            payment_status: "paid" as const,
+          }
+        : {
+            verified_at: null as string | null,
+            advance_amount: 0,
+            total: payable,
+            payment_status: "unpaid" as const,
+          };
       const { error } = await supabase
         .from("orders")
-        .update({ verified_at: verify ? new Date().toISOString() : null })
+        .update(patch)
         .eq("id", orderId);
       if (error) throw error;
+      return { payable, verify };
     },
-    onSuccess: (_d, verify) => {
-      toast.success(verify ? "Payment verified" : "Verification cleared");
+    onSuccess: (res, verify) => {
+      setForm((f) => ({
+        ...f,
+        advance: verify ? res.payable : 0,
+        advance_source: verify ? (f.advance_source || order?.payment_method || "bKash") : f.advance_source,
+      }));
+      toast.success(
+        verify
+          ? `Payment verified — ৳${bdtCompact(res.payable)} advance, COD due ৳0`
+          : "Verification cleared",
+      );
       qc.invalidateQueries({ queryKey: ["orders"] });
       qc.invalidateQueries({ queryKey: ["web-orders"] });
       invalidate();
