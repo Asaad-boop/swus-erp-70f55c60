@@ -942,24 +942,21 @@ function _WebOrdersPageBody() {
     mutationFn: async (status: WebStatusKey) => {
       const ids = Array.from(selectedIds);
       const now = new Date().toISOString();
-      const selectedNewIds = rows.filter((r) => ids.includes(r.id) && r.status === "new").map((r) => r.id);
-      const selectedExistingIds = ids.filter((id) => !selectedNewIds.includes(id));
-      const patch = status === "complete"
-        ? { web_status: status as never, status: "confirmed" as never, confirmation_status: "pending" as never, confirmed_at: now }
-        : status === "cancelled"
-          ? { web_status: status as never, status: "cancelled" as never, cancelled_at: now }
-          : { web_status: status as never };
       if (status === "complete" || status === "cancelled") {
-        if (selectedNewIds.length) {
-          const { error } = await supabase.from("orders").update(patch).in("id", selectedNewIds);
-          if (error) throw error;
-        }
-        if (selectedExistingIds.length) {
-          const { error } = await supabase.from("orders").update({ web_status: status as never }).in("id", selectedExistingIds);
-          if (error) throw error;
-        }
+        // Promote against the DB's live status so nothing stays stuck at `new`.
+        const promo = status === "complete"
+          ? { status: "confirmed" as never, confirmation_status: "pending" as never, confirmed_at: now }
+          : { status: "cancelled" as never, cancelled_at: now };
+        const { error: promoError } = await supabase
+          .from("orders")
+          .update({ web_status: status as never, ...promo })
+          .in("id", ids)
+          .in("status", ["new", "incomplete"]);
+        if (promoError) throw promoError;
+        const { error } = await supabase.from("orders").update({ web_status: status as never }).in("id", ids);
+        if (error) throw error;
       } else {
-        const { error } = await supabase.from("orders").update(patch).in("id", ids);
+        const { error } = await supabase.from("orders").update({ web_status: status as never }).in("id", ids);
         if (error) throw error;
       }
       return ids.length;
