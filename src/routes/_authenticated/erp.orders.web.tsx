@@ -579,7 +579,7 @@ function _WebOrdersPageBody() {
             { count: "exact" },
           ),
         brandIds,
-      ).in("source", WEB_SOURCES);
+      ).or(WEB_QUEUE_FILTER);
 
       // Pre-orders also show in the Web Orders queue so they go to processing.
       // sort
@@ -690,7 +690,7 @@ function _WebOrdersPageBody() {
         let q = applyBrandScope(
           supabase.from("orders").select("id", { count: "exact", head: true }),
           brandIds,
-        ).in("source", WEB_SOURCES).eq("web_status", st);
+        ).or(WEB_QUEUE_FILTER).eq("web_status", st);
         if (st === "processing") q = q.eq("status", "new" as never);
         const { count } = await q;
         return [st, count ?? 0] as const;
@@ -698,7 +698,7 @@ function _WebOrdersPageBody() {
       const allQ = applyBrandScope(
         supabase.from("orders").select("id", { count: "exact", head: true }),
         brandIds,
-      ).in("source", WEB_SOURCES);
+      ).or(WEB_QUEUE_FILTER);
       const [allRes, ...stRes] = await Promise.all([allQ, ...queries]);
       const result: Record<string, number> = { all: allRes.count ?? 0 };
       stRes.forEach(([k, v]) => { result[k] = v; });
