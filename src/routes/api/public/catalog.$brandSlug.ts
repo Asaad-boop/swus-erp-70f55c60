@@ -42,23 +42,10 @@ export const Route = createFileRoute("/api/public/catalog/$brandSlug")({
         if (bErr) return Response.json({ error: bErr.message }, { status: 500, headers: CORS });
         if (!brand) return Response.json({ error: "Brand not found" }, { status: 404, headers: CORS });
 
-        // Per-brand order settings — allow_website_oversell lets storefronts backorder.
-        const { data: settingRow } = await sb
-          .from("app_settings")
-          .select("value")
-          .eq("key", `orders:${brand.id}`)
-          .maybeSingle();
-        // Default: allow oversell (storefront can accept orders when stock is 0).
-        // Only disable if the brand has explicitly set allow_website_oversell = false.
-        let allowOversell = true;
-        if (settingRow?.value) {
-          try {
-            const parsed = JSON.parse(settingRow.value as string);
-            if (parsed && typeof parsed.allow_website_oversell === "boolean") {
-              allowOversell = parsed.allow_website_oversell;
-            }
-          } catch { /* ignore */ }
-        }
+        // Business rule: storefront ALWAYS shows in-stock and accepts orders,
+        // regardless of internal inventory (which may be zero or negative).
+        // Real stock is verified inside the ERP after the order arrives.
+        const allowOversell = true;
 
         let q = sb
           .from("product_brand_listings")
