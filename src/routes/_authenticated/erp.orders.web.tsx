@@ -44,6 +44,10 @@ const STATUS_KEYS = ["processing", "good_but_no_response", "no_response", "advan
 // All order sources that represent orders placed through the website
 // (direct checkout, pixel-tracked, UTM-tagged). All appear in Web Orders.
 const WEB_SOURCES: Array<"website" | "pixel" | "utm"> = ["website", "pixel", "utm"];
+// Unconfirmed orders (status = "new") always belong in this queue, whatever the
+// source — manual / phone / facebook / shopify entries would otherwise be
+// invisible (the Orders list hides status = "new").
+const WEB_QUEUE_FILTER = `source.in.(${WEB_SOURCES.join(",")}),status.eq.new`;
 
 function chunkArray<T>(items: T[], size: number): T[][] {
   const chunks: T[][] = [];
@@ -575,7 +579,7 @@ function _WebOrdersPageBody() {
             { count: "exact" },
           ),
         brandIds,
-      ).in("source", WEB_SOURCES);
+      ).or(WEB_QUEUE_FILTER);
 
       // Pre-orders also show in the Web Orders queue so they go to processing.
       // sort
@@ -686,7 +690,7 @@ function _WebOrdersPageBody() {
         let q = applyBrandScope(
           supabase.from("orders").select("id", { count: "exact", head: true }),
           brandIds,
-        ).in("source", WEB_SOURCES).eq("web_status", st);
+        ).or(WEB_QUEUE_FILTER).eq("web_status", st);
         if (st === "processing") q = q.eq("status", "new" as never);
         const { count } = await q;
         return [st, count ?? 0] as const;
@@ -694,7 +698,7 @@ function _WebOrdersPageBody() {
       const allQ = applyBrandScope(
         supabase.from("orders").select("id", { count: "exact", head: true }),
         brandIds,
-      ).in("source", WEB_SOURCES);
+      ).or(WEB_QUEUE_FILTER);
       const [allRes, ...stRes] = await Promise.all([allQ, ...queries]);
       const result: Record<string, number> = { all: allRes.count ?? 0 };
       stRes.forEach(([k, v]) => { result[k] = v; });
@@ -709,7 +713,7 @@ function _WebOrdersPageBody() {
       .channel(`web-orders-realtime-${brandsKey}`)
       .on(
         "postgres_changes",
-        { event: "INSERT", schema: "public", table: "orders", filter: `source=in.(${WEB_SOURCES.join(",")})` },
+        { event: "INSERT", schema: "public", table: "orders", filter: "status=eq.new" },
         (payload) => {
           const row = payload.new as { id: string; brand_id: string | null; total: number; shipping_name: string | null; guest_name: string | null; shipping_city: string | null };
           if (!row.brand_id || !brandIds.includes(row.brand_id)) return;
