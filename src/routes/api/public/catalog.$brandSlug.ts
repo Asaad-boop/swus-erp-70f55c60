@@ -66,7 +66,8 @@ export const Route = createFileRoute("/api/public/catalog/$brandSlug")({
             "id,price,compare_at_price,slug,title_override,image_override,description_override,display_order," +
             "products!inner(id,title,description,price,old_price,image,gallery,benefits,specs,rating,reviews," +
             "stock,available_stock,is_active,is_featured,is_new_arrival,category_id,sku,barcode," +
-            "shipping_fee_inside,shipping_fee_outside,age_group,video_url,is_preorder,preorder_expected_date)",
+            "shipping_fee_inside,shipping_fee_outside,age_group,video_url,is_preorder,preorder_expected_date," +
+            "product_variants(id,sku,color_name,color_hex,image,display_order,stock,available_stock,is_active))",
           )
           .eq("brand_id", brand.id)
           .eq("is_active", true)
@@ -92,7 +93,17 @@ export const Route = createFileRoute("/api/public/catalog/$brandSlug")({
           products: Record<string, unknown> & {
             id: string; title: string; description: string; price: number; old_price: number | null;
             image: string; gallery: unknown; stock: number; available_stock: number | null;
+            product_variants?: Array<{
+              id: string; sku: string | null; color_name: string | null; color_hex: string | null;
+              image: string | null; display_order: number | null; stock: number | null;
+              available_stock: number | null; is_active: boolean;
+            }> | null;
           };
+        };
+        // Storefront must never show "sold out" when backorders are allowed.
+        const publicStock = (raw: number | null | undefined) => {
+          const s = Number(raw ?? 0);
+          return allowOversell && s <= 0 ? 9999 : s;
         };
         const products = ((data ?? []) as unknown as Row[]).map((r) => ({
           listing_id: r.id,
@@ -104,11 +115,22 @@ export const Route = createFileRoute("/api/public/catalog/$brandSlug")({
           compare_at_price: r.compare_at_price ?? r.products.old_price,
           image: r.image_override ?? r.products.image,
           gallery: r.products.gallery,
-          stock: (() => {
-            const s = r.products.available_stock ?? r.products.stock ?? 0;
-            return allowOversell && s <= 0 ? 9999 : s;
-          })(),
+          stock: publicStock(r.products.available_stock ?? r.products.stock),
           allow_backorder: allowOversell,
+          variants: (r.products.product_variants ?? [])
+            .filter((v) => v.is_active)
+            .sort((a, b) => (a.display_order ?? 0) - (b.display_order ?? 0))
+            .map((v) => ({
+              id: v.id,
+              sku: v.sku,
+              color_name: v.color_name,
+              color_hex: v.color_hex,
+              image: v.image,
+              stock: publicStock(v.available_stock ?? v.stock),
+              available_stock: publicStock(v.available_stock ?? v.stock),
+              in_stock: allowOversell ? true : Number(v.available_stock ?? v.stock ?? 0) > 0,
+              allow_backorder: allowOversell,
+            })),
           brand: { id: brand.id, name: brand.name, slug: brand.slug, logo_url: brand.logo_url },
           // pass through remaining product fields
           benefits: r.products.benefits,
