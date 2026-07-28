@@ -6052,6 +6052,39 @@ export type Database = {
         }
         Relationships: []
       }
+      order_stock_backfill_runs: {
+        Row: {
+          created_at: string
+          id: string
+          movements_created: number
+          note: string | null
+          orders_scanned: number
+          qty_deducted: number
+          qty_restored: number
+          run_key: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          movements_created?: number
+          note?: string | null
+          orders_scanned?: number
+          qty_deducted?: number
+          qty_restored?: number
+          run_key: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          movements_created?: number
+          note?: string | null
+          orders_scanned?: number
+          qty_deducted?: number
+          qty_restored?: number
+          run_key?: string
+        }
+        Relationships: []
+      }
       orders: {
         Row: {
           actual_shipping_breakdown: Json | null
@@ -7946,6 +7979,14 @@ export type Database = {
         Args: { _entry: Json; _log_field: string; _order_id: string }
         Returns: undefined
       }
+      apply_order_stock_ledger: {
+        Args: {
+          p_new_status: Database["public"]["Enums"]["order_status"]
+          p_old_status: Database["public"]["Enums"]["order_status"]
+          p_order_id: string
+        }
+        Returns: number
+      }
       apply_settlement_variance_action: {
         Args: { _action: string; _line_id: string }
         Returns: Json
@@ -8898,6 +8939,22 @@ export type Database = {
       }
       next_invoice_no: { Args: { _brand_id: string }; Returns: string }
       normalize_mobile_bd: { Args: { p_phone: string }; Returns: string }
+      order_stock_is_deducted_status: {
+        Args: { p_status: Database["public"]["Enums"]["order_status"] }
+        Returns: boolean
+      }
+      order_stock_is_reserved_status: {
+        Args: { p_status: Database["public"]["Enums"]["order_status"] }
+        Returns: boolean
+      }
+      order_stock_net_multiplier: {
+        Args: { p_status: Database["public"]["Enums"]["order_status"] }
+        Returns: number
+      }
+      order_stock_restore_multiplier: {
+        Args: { p_status: Database["public"]["Enums"]["order_status"] }
+        Returns: number
+      }
       post_meta_ad_spend_all_brands: {
         Args: { _from?: string; _to?: string }
         Returns: Json
@@ -8909,6 +8966,18 @@ export type Database = {
       post_meta_ad_spend_daily_system: {
         Args: { _brand_id: string; _from: string; _to: string }
         Returns: Json
+      }
+      post_order_stock_movement: {
+        Args: {
+          p_delta: number
+          p_idempotency_key: string
+          p_note: string
+          p_order_id: string
+          p_product_id: string
+          p_reason: string
+          p_variant_id: string
+        }
+        Returns: string
       }
       reapply_invoice_prefix: { Args: { _brand_id: string }; Returns: number }
       rebuild_all_marketing_attributions: {
@@ -9001,7 +9070,7 @@ export type Database = {
         Returns: undefined
       }
       reserve_stock: {
-        Args: { _items: Json; _order_id: string }
+        Args: { _items?: Json; _order_id: string }
         Returns: undefined
       }
       resolve_login_email: { Args: { p_identifier: string }; Returns: string }
