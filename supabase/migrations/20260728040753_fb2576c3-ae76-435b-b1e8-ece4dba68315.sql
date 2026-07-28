@@ -1,0 +1,1 @@
+DROP FUNCTION IF EXISTS public.backfill_order_stock_item_insert(uuid);
