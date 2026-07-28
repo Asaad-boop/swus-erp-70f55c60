@@ -226,15 +226,23 @@ export function OrderDrawer({ orderId, onClose, mode = "fulfillment" }: Props) {
   const updateWebStatus = useMutation({
     mutationFn: async ({ web_status, extra }: { web_status: string; extra?: Record<string, unknown> }) => {
       const now = new Date().toISOString();
-      const isNewOrder = order?.status === "new";
-      const patch = web_status === "complete" && isNewOrder
-        ? { web_status: web_status as never, status: "confirmed" as never, confirmation_status: "pending" as never, confirmed_at: now, ...(extra ?? {}) }
-        : web_status === "cancelled" && isNewOrder
-          ? { web_status: web_status as never, status: "cancelled" as never, cancelled_at: now, ...(extra ?? {}) }
-          : { web_status: web_status as never, ...(extra ?? {}) };
+      // Promote the pipeline status based on the DB's current status (not a possibly
+      // stale client copy) so a "complete"/"cancelled" web status can never leave the
+      // order stuck at `new` — which would hide it from the Order List.
+      if (web_status === "complete" || web_status === "cancelled") {
+        const promo = web_status === "complete"
+          ? { status: "confirmed" as never, confirmation_status: "pending" as never, confirmed_at: now }
+          : { status: "cancelled" as never, cancelled_at: now };
+        const { error: promoError } = await supabase
+          .from("orders")
+          .update({ web_status: web_status as never, ...promo, ...(extra ?? {}) })
+          .eq("id", orderId!)
+          .in("status", ["new", "incomplete"]);
+        if (promoError) throw promoError;
+      }
       const { error } = await supabase
         .from("orders")
-        .update(patch)
+        .update({ web_status: web_status as never, ...(extra ?? {}) })
         .eq("id", orderId!);
       if (error) throw error;
     },
