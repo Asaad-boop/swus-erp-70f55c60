@@ -7995,6 +7995,10 @@ export type Database = {
         Args: { p_brand_id: string }
         Returns: number
       }
+      backfill_order_stock_item_insert: {
+        Args: { p_order_id: string }
+        Returns: number
+      }
       calculate_rfm_all_brands: { Args: never; Returns: undefined }
       cancel_meta_dollar_purchase: {
         Args: { _purchase_id: string; _reason?: string }
