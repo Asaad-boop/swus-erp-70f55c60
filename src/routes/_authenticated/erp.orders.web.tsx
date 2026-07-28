@@ -44,6 +44,10 @@ const STATUS_KEYS = ["processing", "good_but_no_response", "no_response", "advan
 // All order sources that represent orders placed through the website
 // (direct checkout, pixel-tracked, UTM-tagged). All appear in Web Orders.
 const WEB_SOURCES: Array<"website" | "pixel" | "utm"> = ["website", "pixel", "utm"];
+// Unconfirmed orders (status = "new") always belong in this queue, whatever the
+// source — manual / phone / facebook / shopify entries would otherwise be
+// invisible (the Orders list hides status = "new").
+const WEB_QUEUE_FILTER = `source.in.(${WEB_SOURCES.join(",")}),status.eq.new`;
 
 function chunkArray<T>(items: T[], size: number): T[][] {
   const chunks: T[][] = [];
