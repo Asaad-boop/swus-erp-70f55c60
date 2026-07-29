@@ -18,6 +18,7 @@ import { OrderDrawer } from "@/components/erp/orders/order-drawer";
 import { IncompleteOrdersTable } from "@/components/erp/orders/incomplete-orders-table";
 import { useAbandonedCartCount } from "@/hooks/erp/use-abandoned-carts-query";
 import { PathaoBulkUploadDialog } from "@/components/erp/orders/pathao-bulk-upload-dialog";
+import { PreorderConvertDialog } from "@/components/erp/orders/preorder-convert-dialog";
 import { BulkPrintDialog, type PrintMode } from "@/components/erp/orders/bulk-print-dialog";
 import { CourierStatusSyncDialog } from "@/components/erp/orders/courier-status-sync-dialog";
 import { PhoneHistorySyncDialog } from "@/components/erp/orders/phone-history-sync-dialog";
@@ -61,6 +62,7 @@ function OrdersPage() {
   const [pendingIds, setPendingIds] = useState<Set<string>>(new Set());
   const [openId, setOpenId] = useState<string | null>(null);
   const [pathaoBulkOpen, setPathaoBulkOpen] = useState(false);
+  const [preorderOpen, setPreorderOpen] = useState(false);
   const [printMode, setPrintMode] = useState<PrintMode | null>(null);
   const [syncOpen, setSyncOpen] = useState(false);
   const [singleSyncId, setSingleSyncId] = useState<string | null>(null);
@@ -493,6 +495,10 @@ function OrdersPage() {
                 if (selectedIds.size === 0) return;
                 setPhoneHistOpen(true);
               }}
+              onPreorder={() => {
+                if (selectedIds.size === 0) return;
+                setPreorderOpen(true);
+              }}
               onPrint={(mode) => {
                 if (selectedIds.size === 0) return;
                 setPrintMode(mode);
@@ -562,6 +568,14 @@ function OrdersPage() {
       )}
 
       <OrderDrawer orderId={openId} onClose={() => setOpenId(null)} />
+
+      <PreorderConvertDialog
+        open={preorderOpen}
+        onOpenChange={setPreorderOpen}
+        orderIds={Array.from(selectedIds)}
+        brandId={activeBrand?.id ?? null}
+        onDone={() => setSelectedIds(new Set())}
+      />
 
       <PathaoBulkUploadDialog
         open={pathaoBulkOpen}
