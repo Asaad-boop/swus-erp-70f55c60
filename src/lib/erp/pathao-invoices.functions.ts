@@ -31,7 +31,7 @@ export const fetchPathaoInvoiceCsvFn = createServerFn({ method: "POST" })
     );
     return {
       csv: res.csv,
-      endpoint: res.endpoint,
+      invoiceIds: res.invoiceIds,
       attempts: res.attempts,
       filename: `pathao-auto_${data.from}_${data.to}.csv`,
     };
