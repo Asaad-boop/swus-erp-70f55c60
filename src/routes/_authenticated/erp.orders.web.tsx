@@ -4,7 +4,7 @@ import * as React from "react";
 import { format, formatDistanceToNowStrict } from "date-fns";
 import { useMutation, useQuery, useQueryClient, keepPreviousData } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
-import { MessageSquare, Loader2, Star, AlertTriangle, Repeat, Phone as PhoneIcon, Package, ChevronLeft, ChevronRight, Search, X, Lock } from "lucide-react";
+import { MessageSquare, Loader2, Star, AlertTriangle, Repeat, Phone as PhoneIcon, Package, ChevronLeft, ChevronRight, Search, X, Lock, CalendarClock } from "lucide-react";
 import { toast } from "sonner";
 import { zodValidator, fallback } from "@tanstack/zod-adapter";
 import { z } from "zod";
@@ -507,6 +507,7 @@ function _WebOrdersPageBody() {
   const queryClient = useQueryClient();
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [preorderOpen, setPreorderOpen] = useState(false);
+  const [preorderIds, setPreorderIds] = useState<string[]>([]);
   const [printOpen, setPrintOpen] = useState(false);
   const [pathaoBulkOpen, setPathaoBulkOpen] = useState(false);
   // inline status buttons removed; selection-based bulk actions only
@@ -1410,6 +1411,15 @@ function _WebOrdersPageBody() {
                     {/* Actions */}
                     <TableCell className="py-3 text-right">
                       <div onClick={(e) => e.stopPropagation()} className="inline-flex items-center gap-1 justify-end">
+                        <Button
+                          size="icon"
+                          variant="ghost"
+                          title="Move to Pre-order"
+                          className="h-8 w-8 text-indigo-600 hover:bg-indigo-50 dark:hover:bg-indigo-950"
+                          onClick={() => { setPreorderIds([r.id]); setPreorderOpen(true); }}
+                        >
+                          <CalendarClock className="h-4 w-4" />
+                        </Button>
                         <Button asChild size="sm" variant="ghost" className="h-8 px-3 text-xs font-semibold opacity-60 group-hover/row:opacity-100 group-hover/row:bg-foreground group-hover/row:text-background transition-all">
                           <Link
                             to="/erp/orders/$orderId"
@@ -1495,16 +1505,16 @@ function _WebOrdersPageBody() {
         onPrintInvoices={() => { if (selectedIds.size > 0) setPrintOpen(true); }}
         onBookCourier={() => { if (selectedIds.size > 0) setPathaoBulkOpen(true); }}
         onAddTag={(tag) => bulkAddTag.mutate(tag)}
-        onPreorder={() => { if (selectedIds.size > 0) setPreorderOpen(true); }}
+        onPreorder={() => { if (selectedIds.size > 0) { setPreorderIds(Array.from(selectedIds)); setPreorderOpen(true); } }}
         isPending={bulkStatus.isPending || bulkAddTag.isPending}
       />
 
       <PreorderConvertDialog
         open={preorderOpen}
         onOpenChange={setPreorderOpen}
-        orderIds={Array.from(selectedIds)}
+        orderIds={preorderIds}
         brandId={activeBrand?.id ?? null}
-        onDone={() => setSelectedIds(new Set())}
+        onDone={() => { setPreorderIds([]); setSelectedIds(new Set()); }}
       />
 
       <BulkPrintDialog

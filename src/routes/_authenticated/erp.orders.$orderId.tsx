@@ -4,7 +4,7 @@ import { format, formatDistanceToNow } from "date-fns";
 import {
   ArrowLeft, Printer, Truck, Loader2, Phone, MessageCircle, Plus, Minus, Trash2,
   Search, Star, Tag as TagIcon, XCircle, Smartphone, Save, Undo2, CheckCircle2,
-  ChevronLeft, ChevronRight, RotateCcw, Repeat, Copy, Check, MapPin, ShieldCheck, ShieldAlert,
+  ChevronLeft, ChevronRight, RotateCcw, Repeat, Copy, Check, MapPin, ShieldCheck, ShieldAlert, CalendarClock,
 } from "lucide-react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
@@ -461,6 +461,7 @@ function OrderDetailsPage() {
   const order = data?.order;
   const items = data?.items ?? [];
   const notes = data?.notes ?? [];
+  const [preorderOpen, setPreorderOpen] = useState(false);
   const phone = order ? normalizePhone(customerPhone(order)) : "";
 
   /* ------------------------------ Local form state ------------------------- */
@@ -1343,6 +1344,16 @@ function OrderDetailsPage() {
                   <span className="text-xs">Preorder</span>
                   <Switch checked={form.is_preorder} onCheckedChange={(v) => setForm({ ...form, is_preorder: v })} />
                 </div>
+                <Button
+                  type="button"
+                  variant="outline"
+                  className="w-full gap-1.5 border-indigo-300 text-indigo-700 hover:bg-indigo-50 dark:border-indigo-900 dark:text-indigo-300"
+                  disabled={order?.status === "pre_order"}
+                  onClick={() => setPreorderOpen(true)}
+                >
+                  <CalendarClock className="h-3.5 w-3.5" />
+                  {order?.status === "pre_order" ? "Already a Pre-order" : "Move to Pre-order"}
+                </Button>
                 <div className="flex items-center justify-between rounded-md border px-3 py-2">
                   <span className="text-xs">Cross Sale</span>
                   <Switch checked={form.is_cross_sale} onCheckedChange={(v) => setForm({ ...form, is_cross_sale: v })} />

@@ -63,6 +63,7 @@ function OrdersPage() {
   const [openId, setOpenId] = useState<string | null>(null);
   const [pathaoBulkOpen, setPathaoBulkOpen] = useState(false);
   const [preorderOpen, setPreorderOpen] = useState(false);
+  const [preorderIds, setPreorderIds] = useState<string[]>([]);
   const [printMode, setPrintMode] = useState<PrintMode | null>(null);
   const [syncOpen, setSyncOpen] = useState(false);
   const [singleSyncId, setSingleSyncId] = useState<string | null>(null);
@@ -497,6 +498,7 @@ function OrdersPage() {
               }}
               onPreorder={() => {
                 if (selectedIds.size === 0) return;
+                setPreorderIds(Array.from(selectedIds));
                 setPreorderOpen(true);
               }}
               onPrint={(mode) => {
@@ -519,6 +521,7 @@ function OrdersPage() {
           shipmentsByOrderId={shipmentsMap}
           flashOrderIds={flashIds}
           onSyncRow={(id) => { setSingleSyncId(id); }}
+          onPreorder={(id) => { setPreorderIds([id]); setPreorderOpen(true); }}
         />
         {!isLoading && visibleRows.length === 0 && (
           <div className="flex flex-col items-center justify-center gap-3 py-16 text-center">
@@ -572,9 +575,9 @@ function OrdersPage() {
       <PreorderConvertDialog
         open={preorderOpen}
         onOpenChange={setPreorderOpen}
-        orderIds={Array.from(selectedIds)}
+        orderIds={preorderIds}
         brandId={activeBrand?.id ?? null}
-        onDone={() => setSelectedIds(new Set())}
+        onDone={() => { setPreorderIds([]); setSelectedIds(new Set()); }}
       />
 
       <PathaoBulkUploadDialog
