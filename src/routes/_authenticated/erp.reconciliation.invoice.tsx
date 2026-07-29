@@ -732,6 +732,45 @@ function ReconciliationPage() {
             )}
           </div>
 
+          {/* Auto fetch from Pathao */}
+          <div className="rounded-md border bg-muted/20 p-3 space-y-2">
+            <div className="flex flex-wrap items-end gap-3">
+              <div>
+                <Label className="text-xs">Auto fetch — From</Label>
+                <Input type="date" value={autoFrom} onChange={(e) => setAutoFrom(e.target.value)} className="h-9 w-[150px]" />
+              </div>
+              <div>
+                <Label className="text-xs">To</Label>
+                <Input type="date" value={autoTo} onChange={(e) => setAutoTo(e.target.value)} className="h-9 w-[150px]" />
+              </div>
+              <Button
+                variant="secondary"
+                className="gap-2"
+                disabled={autoMut.isPending}
+                onClick={() => autoMut.mutate()}
+              >
+                {autoMut.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <CloudDownload className="h-4 w-4" />}
+                Fetch from Pathao
+              </Button>
+              <p className="text-[11px] text-muted-foreground flex-1 min-w-[220px]">
+                Pathao merchant account theke oi date range er paid invoice sorasori ene preview dekhabe — apni verify kore “Process” korle tarpor Apply hobe.
+              </p>
+            </div>
+
+            {autoAttempts && (
+              <details className="text-[11px] text-muted-foreground">
+                <summary className="cursor-pointer">Pathao response details ({autoAttempts.length} endpoint try kora holo)</summary>
+                <div className="mt-1 space-y-0.5 font-mono">
+                  {autoAttempts.map((a, i) => (
+                    <div key={i} className="break-all">
+                      [{String(a.status)}] {a.path} — {a.snippet}
+                    </div>
+                  ))}
+                </div>
+              </details>
+            )}
+          </div>
+
           {preview && (
             <div className="rounded-md border bg-muted/30 p-3 flex flex-wrap gap-6 text-sm">
               <Stat label="Consignments" value={String(preview.length)} />
