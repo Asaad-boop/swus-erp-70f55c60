@@ -27,6 +27,7 @@ import { applyBrandScope } from "@/lib/erp/apply-brand-scope";
 import { moneyTier } from "@/lib/erp/money-tier";
 import { cn } from "@/lib/utils";
 import { useCurrentRole } from "@/hooks/use-current-role";
+import { hasAnyBackoffice } from "@/lib/erp/access";
 import {
   NetProfitCard, CashPositionCard, CodRemittancePipelineCard, RoasComparisonCard,
   AdWalletBalanceCard, StuckOrdersCard, ReturnRateByProductCard, CourierPerformanceCard,
