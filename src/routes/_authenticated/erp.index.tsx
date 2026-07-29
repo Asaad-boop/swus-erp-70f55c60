@@ -70,7 +70,7 @@ function greeting() {
 
 // ---------- page ----------
 function DashboardPage() {
-  const { isAdmin, isLoading: roleLoading } = useCurrentRole();
+  const { roles, isLoading: roleLoading } = useCurrentRole();
   if (roleLoading) {
     return (
       <div className="min-h-screen grid place-items-center bg-muted/30">
@@ -78,7 +78,7 @@ function DashboardPage() {
       </div>
     );
   }
-  if (!isAdmin) {
+  if (!hasAnyBackoffice(roles)) {
     return (
       <div className="min-h-screen grid place-items-center bg-muted/30">
         <div className="max-w-md text-center space-y-2 p-6">
