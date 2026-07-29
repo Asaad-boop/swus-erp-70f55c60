@@ -55,6 +55,8 @@ type Form = {
   gallery: string[];
   video_url: string;
   age_group: string;
+  is_preorder: boolean;
+  preorder_expected_date: string;
 };
 
 const str = (v: unknown) => (v === null || v === undefined ? "" : String(v));
@@ -87,6 +89,8 @@ function toForm(p: Record<string, any>): Form {
     gallery: Array.isArray(p.gallery) ? p.gallery : [],
     video_url: str(p.video_url),
     age_group: str(p.age_group),
+    is_preorder: !!p.is_preorder,
+    preorder_expected_date: str(p.preorder_expected_date).slice(0, 10),
   };
 }
 
@@ -172,6 +176,8 @@ export function ProductEditDialog({ product, onClose }: Props) {
         gallery: f.gallery,
         video_url: f.video_url || null,
         age_group: f.age_group || null,
+        is_preorder: f.is_preorder,
+        preorder_expected_date: f.is_preorder ? (f.preorder_expected_date || null) : null,
       };
       const { error } = await supabase
         .from("products")
@@ -352,6 +358,31 @@ export function ProductEditDialog({ product, onClose }: Props) {
                   <Separator />
 
                   {/* COLOR VARIANTS */}
+                  {/* PRE-ORDER */}
+                  <section className="space-y-4">
+                    <SectionHeader icon={<Sparkles className="h-4 w-4" />} title="Pre-order" big hint="Website e Buy Now → Pre-order button hoye jabe" />
+                    <div className="flex items-center justify-between rounded-lg border bg-violet-500/5 border-violet-500/20 px-4 py-3">
+                      <div>
+                        <div className="text-sm font-medium">Sell as pre-order</div>
+                        <div className="text-[11px] text-muted-foreground">
+                          On korle HobbyShop / Toyora site e ei product e "Pre-order Now" button dekhabe, ar order ashle ERP-r Pre-order pipeline e jabe.
+                        </div>
+                      </div>
+                      <Switch checked={f.is_preorder} onCheckedChange={(v) => set("is_preorder", v)} />
+                    </div>
+                    {f.is_preorder && (
+                      <Field label="Expected delivery date" hint="Storefront e customer ke dekhano hobe">
+                        <Input
+                          type="date"
+                          value={f.preorder_expected_date}
+                          onChange={(e) => set("preorder_expected_date", e.target.value)}
+                        />
+                      </Field>
+                    )}
+                  </section>
+
+                  <Separator />
+
                   <section className="space-y-4">
                     <SectionHeader icon={<Palette className="h-4 w-4" />} title="Colors & variants" big hint="Each color tracks its own stock" />
                     <ColorsManager productId={product.id} productSku={f.sku || null} baseImage={f.image || null} />
