@@ -458,17 +458,88 @@ function PreOrdersPage() {
       )}
 
       <AdvanceDialog row={advanceRow} onClose={() => setAdvanceRow(null)} onSaved={refresh} />
+      <CancelDialog row={cancelRow} onClose={() => setCancelRow(null)} onSaved={refresh} />
+
+      {tab === "open" && selectedRows.length > 0 && (
+        <div className="fixed inset-x-0 bottom-4 z-40 flex justify-center px-4">
+          <div className="flex items-center gap-3 rounded-full border bg-card/95 px-4 py-2 shadow-lg backdrop-blur animate-fade-in">
+            <span className="text-xs font-semibold tabular-nums">{selectedRows.length} selected</span>
+            <Button size="sm" className="h-8 gap-1.5 rounded-full" onClick={() => readyMut.mutate(selectedRows)} disabled={readyMut.isPending}>
+              {readyMut.isPending ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <PackageCheck className="h-3.5 w-3.5" />}
+              Mark stock arrived
+            </Button>
+            <Button size="sm" variant="ghost" className="h-8 rounded-full" onClick={() => setSelected(new Set())}>
+              Clear
+            </Button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
 
-function Kpi({ label, value, icon: Icon, accent }: { label: string; value: string; icon: React.ElementType; accent: string }) {
+const KPI_TONE: Record<string, { chip: string; glow: string }> = {
+  indigo: { chip: "bg-indigo-500/10 text-indigo-600 ring-indigo-500/20", glow: "bg-indigo-500/10" },
+  emerald: { chip: "bg-emerald-500/10 text-emerald-600 ring-emerald-500/20", glow: "bg-emerald-500/10" },
+  sky: { chip: "bg-sky-500/10 text-sky-600 ring-sky-500/20", glow: "bg-sky-500/10" },
+  rose: { chip: "bg-rose-500/10 text-rose-600 ring-rose-500/20", glow: "bg-rose-500/10" },
+};
+
+function Kpi({ label, value, icon: Icon, tone, hint }: {
+  label: string; value: string; icon: React.ElementType; tone: keyof typeof KPI_TONE; hint?: string;
+}) {
+  const t = KPI_TONE[tone] ?? KPI_TONE.indigo;
   return (
-    <div className="rounded-xl border bg-card p-3 shadow-sm">
-      <div className="flex items-center gap-2 text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
-        <Icon className={cn("h-3.5 w-3.5", accent)} /> {label}
+    <div className="relative overflow-hidden rounded-2xl border bg-card p-3.5 shadow-sm transition-shadow hover:shadow-md">
+      <div className={cn("pointer-events-none absolute -right-8 -top-8 h-24 w-24 rounded-full blur-2xl", t.glow)} />
+      <div className="relative flex items-start justify-between gap-2">
+        <div className="min-w-0">
+          <div className="truncate text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">{label}</div>
+          <div className="mt-1 text-2xl font-bold tabular-nums">{value}</div>
+          {hint && <div className="mt-0.5 truncate text-[10px] text-muted-foreground">{hint}</div>}
+        </div>
+        <span className={cn("flex h-9 w-9 shrink-0 items-center justify-center rounded-xl ring-1 ring-inset", t.chip)}>
+          <Icon className="h-4 w-4" />
+        </span>
       </div>
-      <div className="mt-1 text-xl font-bold tabular-nums">{value}</div>
+    </div>
+  );
+}
+
+const TRACK: { key: PreorderStage; label: string }[] = [
+  { key: "open", label: "Placed" },
+  { key: "advance_paid", label: "Advance" },
+  { key: "ready", label: "Stock" },
+  { key: "called", label: "Called" },
+  { key: "confirmed", label: "Confirmed" },
+];
+
+function StageTrack({ stage }: { stage: PreorderStage }) {
+  if (stage === "cancelled") return null;
+  const idx = TRACK.findIndex((s) => s.key === stage);
+  return (
+    <div className="mt-2.5 ml-2 flex items-center gap-1.5">
+      {TRACK.map((s, i) => {
+        const done = i <= idx;
+        return (
+          <div key={s.key} className="flex items-center gap-1.5">
+            <span className="flex items-center gap-1">
+              <span
+                className={cn(
+                  "h-1.5 w-1.5 rounded-full transition-colors",
+                  done ? "bg-indigo-500" : "bg-muted-foreground/25",
+                )}
+              />
+              <span className={cn("text-[10px]", done ? "font-semibold text-foreground" : "text-muted-foreground")}>
+                {s.label}
+              </span>
+            </span>
+            {i < TRACK.length - 1 && (
+              <span className={cn("h-px w-5 rounded-full", i < idx ? "bg-indigo-500/50" : "bg-muted-foreground/20")} />
+            )}
+          </div>
+        );
+      })}
     </div>
   );
 }
@@ -477,8 +548,39 @@ function Detail({ label, value, className }: { label: string; value: string; cla
   return (
     <div className="flex items-center justify-between gap-2">
       <span className="text-muted-foreground">{label}</span>
-      <span className={cn("tabular-nums", className)}>{value}</span>
+      <span className={cn("truncate tabular-nums", className)}>{value}</span>
     </div>
+  );
+}
+
+function CancelDialog({ row, onClose, onSaved }: { row: Row | null; onClose: () => void; onSaved: () => void }) {
+  const [reason, setReason] = useState("");
+  const save = useMutation({
+    mutationFn: async () => { if (row) await cancelPreorder(row, reason || null); },
+    onSuccess: () => { toast.success("Pre-order cancelled"); setReason(""); onClose(); onSaved(); },
+    onError: (e: Error) => toast.error(e.message),
+  });
+  return (
+    <Dialog open={!!row} onOpenChange={(v) => { if (!v) onClose(); }}>
+      <DialogContent className="max-w-md">
+        <DialogHeader>
+          <DialogTitle className="flex items-center gap-2 text-rose-600">
+            <AlertTriangle className="h-4 w-4" /> Cancel pre-order
+          </DialogTitle>
+          <DialogDescription>Order-টি cancel হয়ে যাবে। কারণ লিখে রাখলে পরে track করা সহজ হবে।</DialogDescription>
+        </DialogHeader>
+        <div className="space-y-1">
+          <Label className="text-[11px]">Reason (optional)</Label>
+          <Textarea rows={3} value={reason} onChange={(e) => setReason(e.target.value)} placeholder="Customer আর নিতে চায় না…" />
+        </div>
+        <DialogFooter>
+          <Button variant="outline" onClick={onClose}>Back</Button>
+          <Button variant="destructive" onClick={() => save.mutate()} disabled={save.isPending}>
+            {save.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />} Cancel pre-order
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
   );
 }
 
