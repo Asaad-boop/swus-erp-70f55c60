@@ -111,21 +111,28 @@ export async function fetchPathaoInvoiceCsv(
   const token = await merchantLogin(creds);
   const attempts: FetchAttempt[] = [];
 
-  // 1) Invoice list (paginated).
+  // 1) Invoice list. The endpoint IGNORES date params and always returns the
+  //    full history, newest first, 10 per page. So we page until the oldest
+  //    invoice on a page falls before `from` (or we hit total_page).
   const invoices: any[] = [];
-  for (let page = 1; page <= 5; page++) {
-    const path = `/api/v1/monetary/invoices/receivable?page=${page}&per_page=50&from=${from}&to=${to}&start_date=${from}&end_date=${to}`;
+  let totalPage = 1;
+  for (let page = 1; page <= totalPage && page <= 200; page++) {
+    const path = `/api/v1/monetary/invoices/receivable?page=${page}`;
     const res = await authGet(token, path);
     const txt = await res.text();
-    attempts.push({ path, status: res.status, snippet: txt.slice(0, 160).replace(/\s+/g, " ") });
+    if (page === 1 || !res.ok) {
+      attempts.push({ path, status: res.status, snippet: txt.slice(0, 160).replace(/\s+/g, " ") });
+    }
     if (!res.ok) break;
     let j: any = null;
     try { j = JSON.parse(txt); } catch { break; }
+    const tp = Number(j?.data?.total_page ?? j?.total_page ?? 1);
+    if (Number.isFinite(tp) && tp > 0) totalPage = tp;
     const list = asList(j);
     if (!list.length) break;
     invoices.push(...list);
-    // No reliable total/last_page in the payload — stop on a short page.
-    if (list.length < 50) break;
+    const oldest = pickDate(list[list.length - 1]);
+    if (oldest && oldest < from) break;
   }
 
   // 2) Keep invoices whose date falls in range (list may ignore date params).
@@ -134,21 +141,23 @@ export async function fetchPathaoInvoiceCsv(
     return !d || (d >= from && d <= to);
   });
 
-  // 3) Per-invoice CSV export.
+  // 3) Per-invoice CSV export (small concurrency — a month can be 80+ invoices).
+  const ids = inRange.map(pickId).filter((v): v is string => !!v);
   const csvParts: string[] = [];
   const invoiceIds: string[] = [];
-  for (const row of inRange) {
-    const id = pickId(row);
-    if (!id) continue;
+
+  const grabOne = async (id: string) => {
     const path = `/api/v1/monetary/invoices/${encodeURIComponent(id)}/export-csv`;
     const res = await authGet(token, path);
     const txt = await res.text();
-    attempts.push({ path, status: res.status, snippet: txt.slice(0, 120).replace(/\s+/g, " ") });
-    if (!res.ok) continue;
+    if (!res.ok) {
+      attempts.push({ path, status: res.status, snippet: txt.slice(0, 120).replace(/\s+/g, " ") });
+      return;
+    }
     if (looksLikeCsv(txt)) {
       csvParts.push(txt);
       invoiceIds.push(id);
-      continue;
+      return;
     }
     // Some builds answer with { data: { url } } pointing at the generated file.
     try {
@@ -157,14 +166,27 @@ export async function fetchPathaoInvoiceCsv(
       if (url && /^https?:\/\//.test(url)) {
         const r2 = await fetchWithTimeout(url);
         const t2 = await r2.text();
-        attempts.push({ path: url, status: r2.status, snippet: t2.slice(0, 120).replace(/\s+/g, " ") });
         if (r2.ok && looksLikeCsv(t2)) {
           csvParts.push(t2);
           invoiceIds.push(id);
+          return;
         }
+        attempts.push({ path: url, status: r2.status, snippet: t2.slice(0, 120).replace(/\s+/g, " ") });
       }
-    } catch { /* not json */ }
+    } catch {
+      attempts.push({ path, status: res.status, snippet: txt.slice(0, 120).replace(/\s+/g, " ") });
+    }
+  };
+
+  const POOL = 5;
+  for (let i = 0; i < ids.length; i += POOL) {
+    await Promise.all(ids.slice(i, i + POOL).map(grabOne));
   }
+  attempts.push({
+    path: `invoices in ${from}..${to}`,
+    status: "info",
+    snippet: `listed ${invoices.length}, in-range ${inRange.length}, csv fetched ${invoiceIds.length}`,
+  });
 
   return { csv: csvParts.length ? mergeCsv(csvParts) : null, invoiceIds, attempts };
 }
