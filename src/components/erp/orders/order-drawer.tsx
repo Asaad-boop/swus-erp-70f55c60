@@ -692,6 +692,16 @@ export function OrderDrawer({ orderId, onClose, mode = "fulfillment" }: Props) {
                         </SelectContent>
                       </Select>
                     </div>
+                    {order.status !== "pre_order" && (
+                      <Button
+                        variant="outline"
+                        className="w-full gap-1.5 border-indigo-300 text-indigo-700 hover:bg-indigo-50 dark:border-indigo-900 dark:text-indigo-300"
+                        disabled={editingBlocked}
+                        onClick={() => guardedAction(() => setPreorderOpen(true))}
+                      >
+                        <CalendarClock className="h-3.5 w-3.5" /> Convert to Pre-order
+                      </Button>
+                    )}
                   </section>
 
                   {/* Notes */}
