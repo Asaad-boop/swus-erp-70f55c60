@@ -40,6 +40,8 @@ export const Route = createFileRoute("/_authenticated/erp/orders/pre-orders")({
   component: PreOrdersPage,
 });
 
+const EMPTY_ORDER = { id: "", invoice_no: null, shipping_name: null, guest_name: null, shipping_phone: null, guest_phone: null };
+
 const fmtBDT = (n: number) => `৳${Math.round(n || 0).toLocaleString()}`;
 const fmtDate = (d: string | null | undefined) =>
   d ? new Date(d).toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "numeric" }) : "—";
@@ -266,12 +268,12 @@ function PreOrdersPage() {
                         params={{ orderId: r.order_id }}
                         className="inline-flex items-center gap-1 text-sm font-semibold hover:underline"
                       >
-                        {invoiceDisplay(o ?? {})} <ExternalLink className="h-3 w-3 opacity-60" />
+                        {invoiceDisplay(o ?? EMPTY_ORDER)} <ExternalLink className="h-3 w-3 opacity-60" />
                       </Link>
                       {o?.source && <span className="text-[11px] text-muted-foreground">{o.source}</span>}
                     </div>
-                    <div className="mt-1 text-sm">{customerName(o ?? {})}</div>
-                    <div className="text-[11px] text-muted-foreground">{customerPhone(o ?? {})}</div>
+                    <div className="mt-1 text-sm">{customerName(o ?? EMPTY_ORDER)}</div>
+                    <div className="text-[11px] text-muted-foreground">{customerPhone(o ?? EMPTY_ORDER)}</div>
                     <div className="mt-1.5 flex flex-wrap gap-1">
                       {(o?.items ?? []).map((it) => (
                         <span key={it.id} className="rounded-md bg-muted px-1.5 py-0.5 text-[10px]">
