@@ -100,6 +100,8 @@ function PreOrdersPage() {
   const [search, setSearch] = useState("");
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [advanceRow, setAdvanceRow] = useState<Row | null>(null);
+  const [cancelRow, setCancelRow] = useState<Row | null>(null);
+  const [busyId, setBusyId] = useState<string | null>(null);
 
   const listQuery = useQuery({
     queryKey: ["preorders", scopeIds],
@@ -162,30 +164,27 @@ function PreOrdersPage() {
     qc.invalidateQueries({ queryKey: ["preorders"] });
     qc.invalidateQueries({ queryKey: ["orders"] });
     setSelected(new Set());
+    setBusyId(null);
   };
 
   const readyMut = useMutation({
     mutationFn: async (list: Row[]) => markPreordersReady(list),
     onSuccess: () => { toast.success("Stock arrived — customer ke call den"); refresh(); },
-    onError: (e: Error) => toast.error(e.message),
+    onError: (e: Error) => { setBusyId(null); toast.error(e.message); },
   });
   const calledMut = useMutation({
     mutationFn: async (r: Row) => markPreorderCalled(r),
     onSuccess: () => { toast.success("Called & confirmed"); refresh(); },
-    onError: (e: Error) => toast.error(e.message),
+    onError: (e: Error) => { setBusyId(null); toast.error(e.message); },
   });
   const confirmMut = useMutation({
     mutationFn: async (r: Row) => confirmPreorderToPipeline(r),
     onSuccess: () => { toast.success("Order confirmed — packaging queue-te gelo"); refresh(); },
-    onError: (e: Error) => toast.error(e.message),
-  });
-  const cancelMut = useMutation({
-    mutationFn: async (r: Row) => cancelPreorder(r, null),
-    onSuccess: () => { toast.success("Pre-order cancelled"); refresh(); },
-    onError: (e: Error) => toast.error(e.message),
+    onError: (e: Error) => { setBusyId(null); toast.error(e.message); },
   });
 
   const selectedRows = rows.filter((r) => selected.has(r.id));
+  const allSelected = rows.length > 0 && rows.every((r) => selected.has(r.id));
 
   return (
     <div className="space-y-4 p-4 md:p-6">
