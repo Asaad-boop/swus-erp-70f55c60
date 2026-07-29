@@ -124,8 +124,18 @@ export async function fetchPathaoInvoiceCsv(
     const list = asList(j);
     if (!list.length) break;
     invoices.push(...list);
+    if (page === 1) {
+      attempts.push({
+        path: "debug:first-invoice",
+        status: "info",
+        snippet: JSON.stringify(list[0]).slice(0, 700),
+      });
+    }
+    const lastPage = Number(j?.data?.last_page ?? j?.last_page ?? 0);
     const total = Number(j?.data?.total ?? j?.total ?? 0);
-    if (!total || invoices.length >= total) break;
+    if (lastPage && page >= lastPage) break;
+    if (!lastPage && total && invoices.length >= total) break;
+    if (!lastPage && !total) break;
   }
 
   // 2) Keep invoices whose date falls in range (list may ignore date params).
