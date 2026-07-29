@@ -187,47 +187,86 @@ function PreOrdersPage() {
   const allSelected = rows.length > 0 && rows.every((r) => selected.has(r.id));
 
   return (
-    <div className="space-y-4 p-4 md:p-6">
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <div>
-          <h1 className="text-xl font-bold tracking-tight">Pre-orders</h1>
-          <p className="text-xs text-muted-foreground">
-            Promise date, advance আর due — সব একসাথে। Stock এলে call দিয়ে confirm করলেই packaging queue-তে যাবে।
-          </p>
+    <div className="space-y-5 p-4 pb-24 md:p-6">
+      {/* Header */}
+      <div className="relative overflow-hidden rounded-2xl border bg-card p-5 shadow-sm">
+        <div className="pointer-events-none absolute -right-16 -top-24 h-56 w-56 rounded-full bg-indigo-500/10 blur-3xl" />
+        <div className="pointer-events-none absolute -bottom-24 left-1/3 h-48 w-48 rounded-full bg-emerald-500/10 blur-3xl" />
+        <div className="relative flex flex-wrap items-start justify-between gap-3">
+          <div className="flex items-start gap-3">
+            <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-indigo-600/10 text-indigo-600 ring-1 ring-inset ring-indigo-600/20">
+              <CalendarClock className="h-5 w-5" />
+            </span>
+            <div>
+              <h1 className="text-xl font-bold tracking-tight">Pre-orders</h1>
+              <p className="mt-0.5 max-w-xl text-xs text-muted-foreground">
+                Promise date, advance আর due — সব একসাথে। Stock এলে call দিয়ে confirm করলেই packaging queue-তে যাবে।
+              </p>
+            </div>
+          </div>
+          <Button variant="outline" size="sm" onClick={refresh} className="gap-1.5">
+            <RefreshCw className={cn("h-3.5 w-3.5 transition-transform", listQuery.isFetching && "animate-spin")} /> Refresh
+          </Button>
         </div>
-        <Button variant="outline" size="sm" onClick={refresh} className="gap-1.5">
-          <RefreshCw className={cn("h-3.5 w-3.5", listQuery.isFetching && "animate-spin")} /> Refresh
-        </Button>
       </div>
 
+      {/* KPIs */}
       <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
-        <Kpi label="Live pre-orders" value={String(kpis.live)} icon={CalendarClock} accent="text-indigo-600" />
-        <Kpi label="Advance collected" value={fmtBDT(kpis.advance)} icon={Wallet} accent="text-emerald-600" />
-        <Kpi label="Due to collect" value={fmtBDT(kpis.due)} icon={PackageCheck} accent="text-sky-600" />
-        <Kpi label="Overdue promise" value={String(kpis.overdue)} icon={AlertTriangle} accent="text-rose-600" />
+        <Kpi label="Live pre-orders" value={String(kpis.live)} icon={Package} tone="indigo" hint="Open + advance paid + ready" />
+        <Kpi label="Advance collected" value={fmtBDT(kpis.advance)} icon={Wallet} tone="emerald" hint="Cash already received" />
+        <Kpi label="Due to collect" value={fmtBDT(kpis.due)} icon={TrendingUp} tone="sky" hint="Delivery-তে নিতে হবে" />
+        <Kpi label="Overdue promise" value={String(kpis.overdue)} icon={AlertTriangle} tone="rose" hint="Promise date পার হয়েছে" />
       </div>
 
-      <div className="flex flex-wrap items-center gap-3">
+      {/* Toolbar */}
+      <div className="sticky top-0 z-20 -mx-1 flex flex-wrap items-center gap-3 rounded-xl border bg-card/85 px-3 py-2 shadow-sm backdrop-blur supports-[backdrop-filter]:bg-card/70">
         <Tabs value={tab} onValueChange={(v) => { setTab(v as TabKey); setSelected(new Set()); }}>
-          <TabsList>
+          <TabsList className="h-9 bg-muted/60">
             {TABS.map((t) => (
-              <TabsTrigger key={t.key} value={t.key} className="gap-1.5">
+              <TabsTrigger key={t.key} value={t.key} className="gap-1.5 text-xs data-[state=active]:shadow-sm">
                 {t.label}
-                <span className="rounded-full bg-muted px-1.5 text-[10px] font-bold tabular-nums">{counts[t.key]}</span>
+                <span
+                  className={cn(
+                    "rounded-full px-1.5 text-[10px] font-bold tabular-nums transition-colors",
+                    tab === t.key ? "bg-foreground text-background" : "bg-muted-foreground/15 text-muted-foreground",
+                  )}
+                >
+                  {counts[t.key]}
+                </span>
               </TabsTrigger>
             ))}
           </TabsList>
         </Tabs>
-        <div className="relative w-72 max-w-full">
+        <div className="relative w-64 max-w-full flex-1 sm:flex-none">
           <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-          <Input className="h-9 pl-9" placeholder="Invoice / name / phone" value={search} onChange={(e) => setSearch(e.target.value)} />
+          <Input
+            className="h-9 pl-9 pr-8"
+            placeholder="Invoice / name / phone"
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+          />
+          {search && (
+            <button
+              onClick={() => setSearch("")}
+              className="absolute right-2 top-1/2 -translate-y-1/2 rounded-md p-1 text-muted-foreground hover:bg-muted"
+              aria-label="Clear search"
+            >
+              <X className="h-3.5 w-3.5" />
+            </button>
+          )}
         </div>
-        {tab === "open" && selectedRows.length > 0 && (
-          <Button size="sm" className="gap-1.5" onClick={() => readyMut.mutate(selectedRows)} disabled={readyMut.isPending}>
-            {readyMut.isPending ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <PackageCheck className="h-3.5 w-3.5" />}
-            Mark stock arrived ({selectedRows.length})
-          </Button>
+        {tab === "open" && rows.length > 0 && (
+          <label className="flex cursor-pointer items-center gap-2 text-xs text-muted-foreground">
+            <input
+              type="checkbox"
+              className="h-3.5 w-3.5 accent-indigo-600"
+              checked={allSelected}
+              onChange={(e) => setSelected(e.target.checked ? new Set(rows.map((r) => r.id)) : new Set())}
+            />
+            Select all
+          </label>
         )}
+        <span className="ml-auto text-[11px] text-muted-foreground tabular-nums">{rows.length} shown</span>
       </div>
 
       {listQuery.isLoading ? (
