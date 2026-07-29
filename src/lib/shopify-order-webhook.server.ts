@@ -8,6 +8,45 @@ function num(v: unknown): number {
   return Number.isFinite(n) ? n : 0;
 }
 
+function firstText(values: unknown[]): string | null {
+  for (const value of values) {
+    const text = String(value ?? "").trim();
+    if (text) return text;
+  }
+  return null;
+}
+
+function paymentLabel(gateways: string[]): string {
+  const joined = gateways.join(" ").toLowerCase();
+  if (joined.includes("bkash") || joined.includes("b-kash")) return "bKash";
+  if (joined.includes("nagad")) return "Nagad";
+  if (joined.includes("rocket")) return "Rocket";
+  if (joined.includes("card") || joined.includes("visa") || joined.includes("mastercard")) return "Card";
+  return firstText(gateways) ?? "online";
+}
+
+function paidAmountFromShopify(order: any, total: number, isCod: boolean): number {
+  if (isCod) return 0;
+  const explicitPaid = num(order?.total_paid ?? order?.current_total_paid);
+  if (explicitPaid > 0) return Math.min(total, explicitPaid);
+
+  const outstandingRaw = firstText([
+    order?.total_outstanding,
+    order?.current_total_outstanding,
+    order?.total_outstanding_set?.shop_money?.amount,
+    order?.current_total_outstanding_set?.shop_money?.amount,
+  ]);
+  if (outstandingRaw != null) {
+    return Math.min(total, Math.max(0, total - num(outstandingRaw)));
+  }
+
+  const financialStatus = String(order?.financial_status ?? "").toLowerCase();
+  if (["paid", "partially_paid", "partially_refunded"].includes(financialStatus)) {
+    return financialStatus === "paid" ? total : 0;
+  }
+  return 0;
+}
+
 function timingSafeEqualStr(a: string, b: string): boolean {
   if (a.length !== b.length) return false;
   let diff = 0;
@@ -87,6 +126,12 @@ export async function handleShopifyOrderWebhook(request: Request): Promise<Respo
       order?.gateway ?? "",
     ].map((g: string) => String(g ?? "").toLowerCase());
     const isCod = gateways.some((g) => g.includes("cash on delivery") || g.includes("cod"));
+    const totalPrice = num(order?.total_price);
+    const paidAmount = paidAmountFromShopify(order, totalPrice, isCod);
+    const paymentMethod = isCod ? "cod" : paymentLabel(gateways);
+    const paymentRef = paidAmount > 0
+      ? firstText([order?.confirmation_number, order?.checkout_token, order?.name, externalOrderId])
+      : null;
     const addressParts = [ship?.address1, ship?.address2].filter(Boolean);
 
     const orderRow = {
@@ -96,10 +141,17 @@ export async function handleShopifyOrderWebhook(request: Request): Promise<Respo
       source: "shopify" as const,
       source_platform: "shopify",
       status: "new" as const,
-      total: num(order?.total_price),
+      web_status: "processing" as const,
+      total: totalPrice,
       subtotal: num(order?.subtotal_price),
       shipping_fee: num(order?.total_shipping_price_set?.shop_money?.amount),
-      payment_method: isCod ? "cod" : "online",
+      discount_amount: num(order?.total_discounts),
+      payment_method: paymentMethod,
+      advance_amount: paidAmount,
+      advance_source: paidAmount > 0 ? paymentMethod : null,
+      advance_txn_id: paymentRef,
+      verified_at: paidAmount > 0 ? new Date().toISOString() : null,
+      payment_status: paidAmount > 0 ? (paidAmount >= totalPrice ? "paid" : "partial") : "unpaid",
       shipping_name:
         [ship?.first_name, ship?.last_name].filter(Boolean).join(" ").trim() || ship?.name || null,
       shipping_phone: ship?.phone ?? order?.phone ?? order?.customer?.phone ?? null,
@@ -205,8 +257,8 @@ export async function handleShopifyOrderWebhook(request: Request): Promise<Respo
       }
     }
 
-    // Pre-order routing: if any ordered product is flagged pre-order in the ERP,
-    // the whole order enters the pre-order pipeline instead of the normal queue.
+    // Pre-order intake: flagged products stay in Web Orders / Processing first.
+    // The operator confirms them into the pre-order pipeline from the ERP.
     let preorder = false;
     const productIds = Array.from(new Set(itemRows.map((r) => r.product_id).filter(Boolean)));
     if (productIds.length) {
@@ -227,37 +279,12 @@ export async function handleShopifyOrderWebhook(request: Request): Promise<Respo
         await supabaseAdmin
           .from("orders")
           .update({
-            status: "pre_order",
+            status: "new",
+            web_status: "processing",
             is_preorder: true,
             preorder_expected_date: expected,
           } as any)
           .eq("id", inserted.id);
-        const { data: pre } = await supabaseAdmin
-          .from("preorders")
-          .upsert(
-            {
-              order_id: inserted.id,
-              brand_id: brandId,
-              promise_date: expected,
-              stage: "open",
-              advance_amount: 0,
-              due_amount: num(order?.total_price),
-              due_collect_method: isCod ? "COD" : null,
-              notes: "Auto-created from website pre-order",
-            } as any,
-            { onConflict: "order_id" },
-          )
-          .select("id")
-          .single();
-        if (pre?.id) {
-          await supabaseAdmin.from("preorder_events").insert({
-            preorder_id: pre.id,
-            order_id: inserted.id,
-            brand_id: brandId,
-            event: "placed",
-            detail: "Pre-order placed from website",
-          } as any);
-        }
       }
     }
 

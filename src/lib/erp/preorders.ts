@@ -107,14 +107,20 @@ export async function moveOrderToPreorder(intake: PreorderIntake) {
 
   const { data: order, error: readErr } = await supabase
     .from("orders")
-    .select("id,brand_id,total,advance_amount")
+    .select("id,brand_id,total,subtotal,shipping_fee,discount_amount,advance_amount,advance_source,advance_txn_id,payment_method")
     .eq("id", intake.orderId)
     .single();
   if (readErr) throw readErr;
 
   const brandId = intake.brandId ?? order.brand_id ?? null;
-  const advance = Number(intake.advanceAmount || 0);
-  const due = Math.max(0, Number(order.total || 0) - advance);
+  const existingAdvance = Number(order.advance_amount ?? 0);
+  const advance = Number(intake.advanceAmount || 0) > 0 ? Number(intake.advanceAmount) : existingAdvance;
+  const advanceMethod = intake.advanceMethod ?? order.payment_method ?? null;
+  const advanceSource = intake.advanceSource ?? order.advance_source ?? advanceMethod;
+  const advanceTxnId = intake.advanceTxnId ?? order.advance_txn_id ?? null;
+  const gross = Math.max(0, Number(order.subtotal ?? 0) + Number(order.shipping_fee ?? 0) - Number(order.discount_amount ?? 0));
+  const dueBase = gross > 0 ? gross : Number(order.total || 0);
+  const due = Math.max(0, dueBase - advance);
 
   const orderPatch: Record<string, unknown> = {
     status: "pre_order",
@@ -125,8 +131,8 @@ export async function moveOrderToPreorder(intake: PreorderIntake) {
   };
   if (advance > 0) {
     orderPatch.advance_amount = advance;
-    orderPatch.advance_source = intake.advanceSource ?? intake.advanceMethod ?? null;
-    if (intake.advanceTxnId) orderPatch.advance_txn_id = intake.advanceTxnId;
+    orderPatch.advance_source = advanceSource;
+    if (advanceTxnId) orderPatch.advance_txn_id = advanceTxnId;
   }
 
   const { error: updErr } = await supabase.from("orders").update(orderPatch as never).eq("id", intake.orderId);
@@ -142,9 +148,9 @@ export async function moveOrderToPreorder(intake: PreorderIntake) {
         promise_days: intake.promiseDays,
         stage: advance > 0 ? "advance_paid" : "open",
         advance_amount: advance,
-        advance_method: intake.advanceMethod,
-        advance_source: intake.advanceSource,
-        advance_txn_id: intake.advanceTxnId,
+        advance_method: advance > 0 ? advanceMethod : null,
+        advance_source: advance > 0 ? advanceSource : null,
+        advance_txn_id: advance > 0 ? advanceTxnId : null,
         advance_received_at: advance > 0 ? new Date().toISOString() : null,
         due_amount: due,
         due_collect_method: intake.dueCollectMethod,
