@@ -135,6 +135,19 @@ export const Route = createFileRoute("/api/public/catalog/$brandSlug")({
           video_url: r.products.video_url,
           is_preorder: r.products.is_preorder,
           preorder_expected_date: r.products.preorder_expected_date,
+          // Storefront CTA contract: when preorder.enabled is true the
+          // product page must render `cta_label` instead of "Buy Now".
+          preorder: {
+            enabled: !!r.products.is_preorder,
+            expected_date: (r.products.preorder_expected_date as string | null) ?? null,
+            cta_label: r.products.is_preorder ? "Pre-order Now" : "Buy Now",
+            badge: r.products.is_preorder ? "Pre-order" : null,
+            note: r.products.is_preorder
+              ? r.products.preorder_expected_date
+                ? `Pre-order — expected delivery ${r.products.preorder_expected_date}`
+                : "Pre-order — ships as soon as stock arrives"
+              : null,
+          },
         }));
 
         if (slug) {
