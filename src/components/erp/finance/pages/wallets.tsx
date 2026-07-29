@@ -314,7 +314,7 @@ function StatementDialog({ wallet, onClose }: { wallet: Wallet | null; onClose: 
     queryFn: async () => {
       const { data, error } = await supabase
         .from("orders")
-        .select("id, invoice_no, status, customer_name")
+        .select("id, invoice_no, status")
         .in("id", orderIds);
       if (error) throw error;
       return data ?? [];
@@ -322,7 +322,7 @@ function StatementDialog({ wallet, onClose }: { wallet: Wallet | null; onClose: 
   });
 
   const orderMap = useMemo(() => {
-    const m = new Map<string, { id: string; invoice_no: string | null; status: string; customer_name: string | null }>();
+    const m = new Map<string, { id: string; invoice_no: string | null; status: string }>();
     for (const o of ordersQ.data ?? []) m.set(o.id, o as never);
     return m;
   }, [ordersQ.data]);
@@ -398,7 +398,6 @@ function StatementDialog({ wallet, onClose }: { wallet: Wallet | null; onClose: 
                               {order.invoice_no ?? `#${order.id.slice(0, 8)}`}
                             </Link>
                             <span className="font-mono text-muted-foreground">{order.id.slice(0, 8)}</span>
-                            {order.customer_name && <span className="text-muted-foreground">· {order.customer_name}</span>}
                             <Badge
                               variant="outline"
                               className={cn(
