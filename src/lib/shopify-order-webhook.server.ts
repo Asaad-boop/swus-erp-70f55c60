@@ -205,7 +205,63 @@ export async function handleShopifyOrderWebhook(request: Request): Promise<Respo
       }
     }
 
-    return Response.json({ ok: true, order_id: inserted.id, items_inserted: itemRows.length, unmapped_skus: unmapped });
+    // Pre-order routing: if any ordered product is flagged pre-order in the ERP,
+    // the whole order enters the pre-order pipeline instead of the normal queue.
+    let preorder = false;
+    const productIds = Array.from(new Set(itemRows.map((r) => r.product_id).filter(Boolean)));
+    if (productIds.length) {
+      const { data: preProducts } = await supabaseAdmin
+        .from("products")
+        .select("id, is_preorder, preorder_expected_date")
+        .in("id", productIds)
+        .eq("is_preorder", true);
+      const flagged = preProducts ?? [];
+      if (flagged.length) {
+        preorder = true;
+        const expected =
+          flagged
+            .map((p) => p.preorder_expected_date)
+            .filter(Boolean)
+            .sort()
+            .pop() ?? null;
+        await supabaseAdmin
+          .from("orders")
+          .update({
+            status: "pre_order",
+            is_preorder: true,
+            preorder_expected_date: expected,
+          } as any)
+          .eq("id", inserted.id);
+        const { data: pre } = await supabaseAdmin
+          .from("preorders")
+          .upsert(
+            {
+              order_id: inserted.id,
+              brand_id: brandId,
+              promise_date: expected,
+              stage: "open",
+              advance_amount: 0,
+              due_amount: num(order?.total_price),
+              due_collect_method: isCod ? "COD" : null,
+              notes: "Auto-created from website pre-order",
+            } as any,
+            { onConflict: "order_id" },
+          )
+          .select("id")
+          .single();
+        if (pre?.id) {
+          await supabaseAdmin.from("preorder_events").insert({
+            preorder_id: pre.id,
+            order_id: inserted.id,
+            brand_id: brandId,
+            event: "placed",
+            detail: "Pre-order placed from website",
+          } as any);
+        }
+      }
+    }
+
+    return Response.json({ ok: true, order_id: inserted.id, items_inserted: itemRows.length, unmapped_skus: unmapped, preorder });
   } catch (e: any) {
     console.error("[shopify webhook] error:", e?.message ?? e);
     return new Response("Webhook processing failed", { status: 500 });
