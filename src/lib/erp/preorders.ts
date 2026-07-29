@@ -107,6 +107,17 @@ export async function moveOrderToPreorder(intake: PreorderIntake) {
   const uid = await currentUserId();
   const promiseDate = intake.promiseDate ?? promiseDateFromDays(intake.promiseDays);
 
+  // Guard: same order twice click / bulk re-run — no duplicate pre-order entry.
+  const { data: existingPre, error: existingErr } = await supabase
+    .from("preorders")
+    .select("id,stage")
+    .eq("order_id", intake.orderId)
+    .maybeSingle();
+  if (existingErr) throw existingErr;
+  if (existingPre && existingPre.stage !== "cancelled") {
+    return { id: existingPre.id as string, created: false as const };
+  }
+
   const { data: order, error: readErr } = await supabase
     .from("orders")
     .select("id,brand_id,total,subtotal,shipping_fee,discount_amount,advance_amount,advance_source,advance_txn_id,payment_method")
@@ -187,7 +198,7 @@ export async function moveOrderToPreorder(intake: PreorderIntake) {
     meta: { promise_date: promiseDate, due },
   });
 
-  return pre.id as string;
+  return { id: pre.id as string, created: true as const };
 }
 
 export async function recordPreorderAdvance(args: {
