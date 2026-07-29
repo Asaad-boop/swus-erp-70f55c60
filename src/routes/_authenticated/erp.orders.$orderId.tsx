@@ -886,6 +886,9 @@ function OrderDetailsPage() {
       const parsedAdvance = parseWebsiteAdvanceDetails(advanceText);
       const websiteOrder = isWebsiteOrderSource(order);
       const authoritativeAdvance = parsedAdvance.amount != null ? parsedAdvance.amount : currentAdvance;
+      if (verify && websiteOrder && order?.is_preorder && parsedAdvance.amount == null) {
+        throw new Error("Website pre-order advance missing — enter the actual paid amount before verifying.");
+      }
       if (verify && websiteOrder && authoritativeAdvance <= 0) {
         throw new Error("Website advance amount missing — enter the actual paid amount before verifying.");
       }
