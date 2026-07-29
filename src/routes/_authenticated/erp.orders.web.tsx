@@ -33,6 +33,7 @@ import { useAbandonedCartCount } from "@/hooks/erp/use-abandoned-carts-query";
 import { applyBrandScope } from "@/lib/erp/apply-brand-scope";
 import { WebOrdersFilterBar, computeDateRange, type SortKey, type DatePreset } from "@/components/erp/orders/web-orders-filter-bar";
 import { WebBulkActionBar, type WebStatusKey } from "@/components/erp/orders/web-bulk-action-bar";
+import { PreorderConvertDialog } from "@/components/erp/orders/preorder-convert-dialog";
 import { BulkPrintDialog } from "@/components/erp/orders/bulk-print-dialog";
 import { PathaoBulkUploadDialog } from "@/components/erp/orders/pathao-bulk-upload-dialog";
 import { useOrderLocks } from "@/hooks/erp/use-order-locks";
@@ -505,6 +506,7 @@ function _WebOrdersPageBody() {
   }, []);
   const queryClient = useQueryClient();
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const [preorderOpen, setPreorderOpen] = useState(false);
   const [printOpen, setPrintOpen] = useState(false);
   const [pathaoBulkOpen, setPathaoBulkOpen] = useState(false);
   // inline status buttons removed; selection-based bulk actions only
@@ -1493,7 +1495,16 @@ function _WebOrdersPageBody() {
         onPrintInvoices={() => { if (selectedIds.size > 0) setPrintOpen(true); }}
         onBookCourier={() => { if (selectedIds.size > 0) setPathaoBulkOpen(true); }}
         onAddTag={(tag) => bulkAddTag.mutate(tag)}
+        onPreorder={() => { if (selectedIds.size > 0) setPreorderOpen(true); }}
         isPending={bulkStatus.isPending || bulkAddTag.isPending}
+      />
+
+      <PreorderConvertDialog
+        open={preorderOpen}
+        onOpenChange={setPreorderOpen}
+        orderIds={Array.from(selectedIds)}
+        brandId={activeBrand?.id ?? null}
+        onDone={() => setSelectedIds(new Set())}
       />
 
       <BulkPrintDialog
