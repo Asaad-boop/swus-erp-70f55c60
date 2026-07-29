@@ -71,26 +71,33 @@ export function PreorderConvertDialog({ open, onOpenChange, orderIds, brandId, o
   }, [existingOrder, open]);
 
   const run = useMutation({
-    mutationFn: async () => {
+    mutationFn: async (confirmNow: boolean = false) => {
       if (withAdvance && single && !(Number(amount) > 0)) throw new Error("Advance amount din");
+      if (confirmNow && single && !(Number(amount) > 0)) throw new Error("Pay korte hole advance amount din");
       for (const id of orderIds) {
         await moveOrderToPreorder({
           orderId: id,
           brandId: brandId ?? null,
           promiseDays: days,
           promiseDate: promiseDateFromDays(days),
-          advanceAmount: withAdvance && single ? Number(amount || 0) : 0,
-          advanceMethod: withAdvance && single ? method : null,
-          advanceSource: withAdvance && single ? source : null,
-          advanceTxnId: withAdvance && single && txnId ? txnId : null,
+          advanceAmount: (withAdvance || confirmNow) && single ? Number(amount || 0) : 0,
+          advanceMethod: (withAdvance || confirmNow) && single ? method : null,
+          advanceSource: (withAdvance || confirmNow) && single ? source : null,
+          advanceTxnId: (withAdvance || confirmNow) && single && txnId ? txnId : null,
           dueCollectMethod: dueMethod,
           dueNote: null,
           notes: notes || null,
+          confirmNow,
         });
       }
+      return confirmNow;
     },
-    onSuccess: () => {
-      toast.success(`${orderIds.length} order pre-order-e move holo`);
+    onSuccess: (confirmNow) => {
+      toast.success(
+        confirmNow
+          ? `${orderIds.length} order confirm hoye pre-order list-e gelo`
+          : `${orderIds.length} order pre-order-e move holo`,
+      );
       qc.invalidateQueries({ queryKey: ["orders"] });
       qc.invalidateQueries({ queryKey: ["orders-status-counts"] });
       qc.invalidateQueries({ queryKey: ["web-orders"] });
@@ -198,10 +205,24 @@ export function PreorderConvertDialog({ open, onOpenChange, orderIds, brandId, o
 
         <DialogFooter>
           <Button variant="outline" onClick={() => onOpenChange(false)}>Cancel</Button>
-          <Button onClick={() => run.mutate()} disabled={run.isPending || orderIds.length === 0}>
+          <Button
+            variant="secondary"
+            onClick={() => run.mutate(false)}
+            disabled={run.isPending || orderIds.length === 0}
+          >
             {run.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
             Move to Pre-order
           </Button>
+          {single && (
+            <Button
+              className="bg-emerald-600 hover:bg-emerald-700 text-white"
+              onClick={() => { setWithAdvance(true); run.mutate(true); }}
+              disabled={run.isPending || orderIds.length === 0}
+            >
+              {run.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+              Move to Pre-order &amp; Pay
+            </Button>
+          )}
         </DialogFooter>
       </DialogContent>
     </Dialog>
