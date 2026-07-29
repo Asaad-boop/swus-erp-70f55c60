@@ -55,6 +55,8 @@ export function useOrdersQuery(filter: OrdersFilter) {
       } else {
         // `new` orders live exclusively in the Web Orders queue — never surface them here.
         q = q.neq("status", "new");
+        // `pre_order` lives in the dedicated Pre-orders pipeline page.
+        q = q.neq("status", "pre_order");
         q = q.or(`status.neq.confirmed,source.is.null,${WEB_ORDER_SOURCE_FILTER},web_status.eq.complete`);
       }
       if (filter.printedFilter === "printed") q = q.not("printed_at", "is", null);
