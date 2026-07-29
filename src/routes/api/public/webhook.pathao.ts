@@ -47,6 +47,18 @@ export const Route = createFileRoute("/api/public/webhook/pathao")({
 });
 
 async function processPathao(payload: any, expected: string): Promise<Response> {
+        // ---- InstaPay payment invoice events -> wallet + reconciliation ----
+        const { isPaymentInvoiceEvent, ingestPathaoPaymentInvoice } = await import("@/lib/erp/instapay.server");
+        if (isPaymentInvoiceEvent(payload)) {
+          const { tryGetSupabaseAdmin: getAdmin } = await import("@/integrations/supabase/client.server");
+          const admin = getAdmin();
+          if (!admin) {
+            return Response.json({ ok: true, skipped: true, reason: "Supabase admin client unavailable" });
+          }
+          const res = await ingestPathaoPaymentInvoice(admin, payload);
+          return Response.json({ ok: true, instapay: res });
+        }
+
         // Pathao sends: { event, consignment_id, order_status, merchant_order_id, updated_at, ... }
         const consignmentId: string | null = payload?.consignment_id ?? payload?.data?.consignment_id ?? null;
         const merchantOrderId: string | null = payload?.merchant_order_id ?? payload?.data?.merchant_order_id ?? null;
