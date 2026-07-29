@@ -842,7 +842,7 @@ export function OrderDrawer({ orderId, onClose, mode = "fulfillment" }: Props) {
           open={preorderOpen}
           onOpenChange={setPreorderOpen}
           orderIds={orderId ? [orderId] : []}
-          brandId={(order as { brand_id?: string | null }).brand_id ?? null}
+          brandId={(order as { brand_id?: string | null } | undefined)?.brand_id ?? null}
           onDone={onClose}
         />
       </DialogContent>
