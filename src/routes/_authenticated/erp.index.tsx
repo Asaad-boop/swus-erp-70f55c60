@@ -27,6 +27,7 @@ import { applyBrandScope } from "@/lib/erp/apply-brand-scope";
 import { moneyTier } from "@/lib/erp/money-tier";
 import { cn } from "@/lib/utils";
 import { useCurrentRole } from "@/hooks/use-current-role";
+import { hasAnyBackoffice } from "@/lib/erp/access";
 import {
   NetProfitCard, CashPositionCard, CodRemittancePipelineCard, RoasComparisonCard,
   AdWalletBalanceCard, StuckOrdersCard, ReturnRateByProductCard, CourierPerformanceCard,
@@ -70,7 +71,7 @@ function greeting() {
 
 // ---------- page ----------
 function DashboardPage() {
-  const { isAdmin, isLoading: roleLoading } = useCurrentRole();
+  const { roles, isLoading: roleLoading } = useCurrentRole();
   if (roleLoading) {
     return (
       <div className="min-h-screen grid place-items-center bg-muted/30">
@@ -78,7 +79,7 @@ function DashboardPage() {
       </div>
     );
   }
-  if (!isAdmin) {
+  if (!hasAnyBackoffice(roles)) {
     return (
       <div className="min-h-screen grid place-items-center bg-muted/30">
         <div className="max-w-md text-center space-y-2 p-6">
