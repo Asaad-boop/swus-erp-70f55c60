@@ -1696,6 +1696,14 @@ function OrderDetailsPage() {
                   ? <Loader2 className="h-4 w-4 animate-spin" />
                   : <><CheckCircle2 className="h-4 w-4 mr-1.5" />Confirm Order (৳{bdtCompact(grandTotal)}.00)</>}
               </Button>
+              <Button
+                variant="outline"
+                className="w-full mt-2 h-10 gap-1.5 border-indigo-300 text-indigo-700 hover:bg-indigo-50 dark:border-indigo-900 dark:text-indigo-300"
+                onClick={() => setPreorderOpen(true)}
+              >
+                <CalendarClock className="h-4 w-4" />
+                Move to Pre-order
+              </Button>
               </>
             ) : (
               <Button
