@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { CalendarClock, Loader2, Wallet } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
@@ -10,6 +10,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { cn } from "@/lib/utils";
 import { ADVANCE_SOURCES, DUE_COLLECT_METHODS, PAYMENT_METHODS, moveOrderToPreorder, promiseDateFromDays } from "@/lib/erp/preorders";
+import { supabase } from "@/integrations/supabase/client";
 
 const DAY_PRESETS = [7, 10, 15, 20, 30, 45];
 
@@ -32,12 +33,42 @@ export function PreorderConvertDialog({ open, onOpenChange, orderIds, brandId, o
   const [txnId, setTxnId] = useState("");
   const [dueMethod, setDueMethod] = useState<string>("COD");
   const [notes, setNotes] = useState("");
+  const singleOrderId = single ? orderIds[0] : null;
+
+  const { data: existingOrder } = useQuery({
+    queryKey: ["preorder-convert-order", singleOrderId],
+    enabled: open && !!singleOrderId,
+    staleTime: 15_000,
+    queryFn: async () => {
+      if (!singleOrderId) return null;
+      const { data, error } = await supabase
+        .from("orders")
+        .select("advance_amount,advance_source,advance_txn_id,payment_method")
+        .eq("id", singleOrderId)
+        .maybeSingle();
+      if (error) throw error;
+      return data;
+    },
+  });
 
   useEffect(() => {
     if (!open) return;
     setDays(15); setWithAdvance(false); setAmount(""); setMethod("bKash");
     setSource("bKash"); setTxnId(""); setDueMethod("COD"); setNotes("");
   }, [open]);
+
+  useEffect(() => {
+    if (!open || !existingOrder) return;
+    const advance = Number(existingOrder.advance_amount ?? 0);
+    if (advance > 0) {
+      setWithAdvance(true);
+      setAmount(String(advance));
+      const method = existingOrder.payment_method || "bKash";
+      setMethod(method);
+      setSource(existingOrder.advance_source || method);
+      setTxnId(existingOrder.advance_txn_id || "");
+    }
+  }, [existingOrder, open]);
 
   const run = useMutation({
     mutationFn: async () => {
@@ -63,6 +94,7 @@ export function PreorderConvertDialog({ open, onOpenChange, orderIds, brandId, o
       qc.invalidateQueries({ queryKey: ["orders"] });
       qc.invalidateQueries({ queryKey: ["orders-status-counts"] });
       qc.invalidateQueries({ queryKey: ["web-orders"] });
+      qc.invalidateQueries({ queryKey: ["web-orders-page"] });
       qc.invalidateQueries({ queryKey: ["preorders"] });
       onOpenChange(false);
       onDone?.();

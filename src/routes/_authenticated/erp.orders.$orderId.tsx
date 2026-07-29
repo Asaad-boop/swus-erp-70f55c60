@@ -838,40 +838,46 @@ function OrderDetailsPage() {
     mutationFn: async (verify: boolean) => {
       // Payable = items + delivery − discount (advance বাদে)
       const payable = Math.max(0, itemsSubtotal + Number(form.shipping_fee) - Number(form.discount));
+      const currentAdvance = Number(form.advance || order?.advance_amount || 0);
+      const verifiedAdvance = currentAdvance > 0 ? Math.min(payable, currentAdvance) : payable;
+      const remainingDue = Math.max(0, payable - verifiedAdvance);
+      const keepPreorderAdvance = !verify && !!order?.is_preorder && currentAdvance > 0;
       const patch = verify
         ? {
             verified_at: new Date().toISOString(),
-            advance_amount: payable,
+            advance_amount: verifiedAdvance,
             advance_source: form.advance_source || order?.payment_method || "bKash",
-            total: 0,
-            payment_status: "paid" as const,
+            advance_txn_id: form.advance_txn_id || order?.advance_txn_id || null,
+            total: remainingDue <= 0 ? 0 : payable,
+            payment_status: remainingDue <= 0 ? "paid" as const : "partial" as const,
           }
         : {
             verified_at: null as string | null,
-            advance_amount: 0,
+            advance_amount: keepPreorderAdvance ? currentAdvance : 0,
             total: payable,
-            payment_status: "unpaid" as const,
+            payment_status: keepPreorderAdvance ? "partial" as const : "unpaid" as const,
           };
       const { error } = await supabase
         .from("orders")
         .update(patch)
         .eq("id", orderId);
       if (error) throw error;
-      return { payable, verify };
+      return { payable, verify, advance: verifiedAdvance, remainingDue, keepPreorderAdvance, currentAdvance };
     },
     onSuccess: (res, verify) => {
       setForm((f) => ({
         ...f,
-        advance: verify ? res.payable : 0,
+        advance: verify ? res.advance : (res.keepPreorderAdvance ? res.currentAdvance : 0),
         advance_source: verify ? (f.advance_source || order?.payment_method || "bKash") : f.advance_source,
       }));
       toast.success(
         verify
-          ? `Payment verified — ৳${bdtCompact(res.payable)} advance, COD due ৳0`
+          ? `Payment verified — ৳${bdtCompact(res.advance)} advance, COD due ৳${bdtCompact(res.remainingDue)}`
           : "Verification cleared",
       );
       qc.invalidateQueries({ queryKey: ["orders"] });
       qc.invalidateQueries({ queryKey: ["web-orders"] });
+      qc.invalidateQueries({ queryKey: ["web-orders-page"] });
       invalidate();
     },
     onError: (e: Error) => toast.error(e.message),

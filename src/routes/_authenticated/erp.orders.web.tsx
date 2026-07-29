@@ -120,10 +120,14 @@ type WebOrderRow = {
   web_status: WebStatus | null;
   total: number;
   advance_amount: number | null;
+  advance_txn_id: string | null;
+  verified_at: string | null;
   payment_method: string | null;
   call_attempt_count: number | null;
   call_status: string | null;
   brand_id: string | null;
+  is_preorder: boolean | null;
+  preorder_expected_date: string | null;
   items_summary?: { name: string; quantity: number; image: string | null; unit_price: number | null }[];
   latest_order_note?: string | null;
   attribution?: { utm_source: string | null; utm_medium: string | null } | null;
@@ -578,7 +582,7 @@ function _WebOrdersPageBody() {
         supabase
           .from("orders")
           .select(
-            "id,created_at,shipping_name,shipping_phone,shipping_address,shipping_city,shipping_district,guest_name,guest_phone,latest_note,customer_note,notes,tags,source_website,status,web_status,total,advance_amount,payment_method,call_attempt_count,call_status,brand_id,updated_at",
+            "id,created_at,shipping_name,shipping_phone,shipping_address,shipping_city,shipping_district,guest_name,guest_phone,latest_note,customer_note,notes,tags,source_website,status,web_status,total,advance_amount,advance_txn_id,verified_at,payment_method,call_attempt_count,call_status,brand_id,is_preorder,preorder_expected_date,updated_at",
             { count: "exact" },
           ),
         brandIds,
@@ -1220,6 +1224,11 @@ function _WebOrdersPageBody() {
                           <div className="flex items-center gap-1.5 min-w-0">
                             <span className="text-[13px] font-semibold text-foreground truncate tracking-tight" title={name}>{name}</span>
                             {name !== "—" && <CopyIconBtn value={name} label="Name" className="shrink-0 opacity-0 group-hover/row:opacity-100 transition-opacity" />}
+                            {r.is_preorder && (
+                              <Badge variant="outline" className="shrink-0 border-indigo-500/30 bg-indigo-500/10 text-[10px] font-bold text-indigo-700 dark:text-indigo-300">
+                                Pre-order
+                              </Badge>
+                            )}
                             <CustomerBadges total={b.total} confirmRate={confirmRate} delivered={b.delivered} />
                           </div>
                           {lock && (
@@ -1349,7 +1358,7 @@ function _WebOrdersPageBody() {
                               <div className="text-[11px] text-muted-foreground">
                                 {items.length} {items.length === 1 ? "item" : "items"} · {totalQty} qty
                               </div>
-                              <AdvanceBadge advance={r.advance_amount} total={r.total} txnId={(r as any).advance_txn_id} variant="full" className="mt-1 items-start" />
+                              <AdvanceBadge advance={r.advance_amount} total={r.total} txnId={r.advance_txn_id ?? r.verified_at} variant="full" className="mt-1 items-start" />
                               {r.payment_method && r.payment_method.toLowerCase() !== "cod" && (
                                 <span className="mt-1 inline-flex items-center gap-1 h-[18px] px-1.5 rounded-md text-[10px] font-bold uppercase tracking-wide bg-pink-500/10 text-pink-700 dark:text-pink-300 ring-1 ring-inset ring-pink-500/40">
                                   📱 {r.payment_method}
