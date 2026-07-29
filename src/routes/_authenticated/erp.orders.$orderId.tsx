@@ -2022,6 +2022,13 @@ function OrderDetailsPage() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      <PreorderConvertDialog
+        open={preorderOpen}
+        onOpenChange={setPreorderOpen}
+        orderIds={[orderId]}
+        brandId={(order as { brand_id?: string | null } | undefined)?.brand_id ?? null}
+      />
     </div>
   );
 }
