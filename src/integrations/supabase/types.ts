@@ -6477,6 +6477,145 @@ export type Database = {
           },
         ]
       }
+      preorder_events: {
+        Row: {
+          brand_id: string | null
+          created_at: string
+          created_by: string | null
+          detail: string | null
+          event: string
+          id: string
+          meta: Json
+          order_id: string | null
+          preorder_id: string
+        }
+        Insert: {
+          brand_id?: string | null
+          created_at?: string
+          created_by?: string | null
+          detail?: string | null
+          event: string
+          id?: string
+          meta?: Json
+          order_id?: string | null
+          preorder_id: string
+        }
+        Update: {
+          brand_id?: string | null
+          created_at?: string
+          created_by?: string | null
+          detail?: string | null
+          event?: string
+          id?: string
+          meta?: Json
+          order_id?: string | null
+          preorder_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "preorder_events_preorder_id_fkey"
+            columns: ["preorder_id"]
+            isOneToOne: false
+            referencedRelation: "preorders"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      preorders: {
+        Row: {
+          advance_amount: number
+          advance_method: string | null
+          advance_received_at: string | null
+          advance_source: string | null
+          advance_txn_id: string | null
+          brand_id: string | null
+          called_at: string | null
+          cancel_reason: string | null
+          cancelled_at: string | null
+          confirmed_at: string | null
+          created_at: string
+          created_by: string | null
+          due_amount: number
+          due_collect_method: string | null
+          due_note: string | null
+          id: string
+          notes: string | null
+          order_id: string
+          promise_date: string | null
+          promise_days: number | null
+          ready_at: string | null
+          refund_amount: number
+          refund_method: string | null
+          refund_note: string | null
+          stage: string
+          updated_at: string
+        }
+        Insert: {
+          advance_amount?: number
+          advance_method?: string | null
+          advance_received_at?: string | null
+          advance_source?: string | null
+          advance_txn_id?: string | null
+          brand_id?: string | null
+          called_at?: string | null
+          cancel_reason?: string | null
+          cancelled_at?: string | null
+          confirmed_at?: string | null
+          created_at?: string
+          created_by?: string | null
+          due_amount?: number
+          due_collect_method?: string | null
+          due_note?: string | null
+          id?: string
+          notes?: string | null
+          order_id: string
+          promise_date?: string | null
+          promise_days?: number | null
+          ready_at?: string | null
+          refund_amount?: number
+          refund_method?: string | null
+          refund_note?: string | null
+          stage?: string
+          updated_at?: string
+        }
+        Update: {
+          advance_amount?: number
+          advance_method?: string | null
+          advance_received_at?: string | null
+          advance_source?: string | null
+          advance_txn_id?: string | null
+          brand_id?: string | null
+          called_at?: string | null
+          cancel_reason?: string | null
+          cancelled_at?: string | null
+          confirmed_at?: string | null
+          created_at?: string
+          created_by?: string | null
+          due_amount?: number
+          due_collect_method?: string | null
+          due_note?: string | null
+          id?: string
+          notes?: string | null
+          order_id?: string
+          promise_date?: string | null
+          promise_days?: number | null
+          ready_at?: string | null
+          refund_amount?: number
+          refund_method?: string | null
+          refund_note?: string | null
+          stage?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "preorders_order_id_fkey"
+            columns: ["order_id"]
+            isOneToOne: true
+            referencedRelation: "orders"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       product_brand_listings: {
         Row: {
           brand_id: string
@@ -9305,6 +9444,7 @@ export type Database = {
         | "paid"
         | "return_in_transit"
         | "completed"
+        | "pre_order"
       payment_status: "unpaid" | "partial" | "paid" | "refunded"
       web_order_status:
         | "processing"
@@ -9579,6 +9719,7 @@ export const Constants = {
         "paid",
         "return_in_transit",
         "completed",
+        "pre_order",
       ],
       payment_status: ["unpaid", "partial", "paid", "refunded"],
       web_order_status: [

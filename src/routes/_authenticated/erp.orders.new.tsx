@@ -25,6 +25,7 @@ import { parseCustomerTextFn } from "@/lib/erp/parse-customer.functions";
 import { fetchCourierHistoryFn } from "@/lib/erp/courier-history.functions";
 import { cn } from "@/lib/utils";
 import { OrderSuccessDialog } from "@/components/erp/orders/order-success-dialog";
+import { DUE_COLLECT_METHODS, moveOrderToPreorder, promiseDateFromDays } from "@/lib/erp/preorders";
 
 export const Route = createFileRoute("/_authenticated/erp/orders/new")({
   head: () => ({ meta: [{ title: "New Order — ERP" }] }),
@@ -94,6 +95,9 @@ function NewOrderPage() {
   );
   const [deliveryMethod, setDeliveryMethod] = useState<DeliveryMethod>("pathao");
   const [isPreorder, setIsPreorder] = useState(false);
+  const [preorderDays, setPreorderDays] = useState(15);
+  const [preorderDueMethod, setPreorderDueMethod] = useState<string>("COD");
+  const [preorderNote, setPreorderNote] = useState("");
   const [isCrossSale, setIsCrossSale] = useState(false);
   const [orderSource, setOrderSource] = useState<string>("");
 
@@ -472,8 +476,8 @@ function NewOrderPage() {
         .from("orders")
         .insert({
           brand_id: effectiveBrand.id,
-          status: "confirmed",
-          confirmation_status: "confirmed",
+          status: isPreorder ? "pre_order" : "confirmed",
+          confirmation_status: isPreorder ? "pending" : "confirmed",
           confirmed_by: currentUserId,
           confirmed_at: new Date().toISOString(),
           source: "manual",
@@ -526,6 +530,22 @@ function NewOrderPage() {
       }));
       const { error: itemsErr } = await supabase.from("order_items").insert(itemRows);
       if (itemsErr) throw itemsErr;
+
+      if (isPreorder) {
+        await moveOrderToPreorder({
+          orderId,
+          brandId: effectiveBrand.id,
+          promiseDays: preorderDays,
+          promiseDate: promiseDateFromDays(preorderDays),
+          advanceAmount: Number(advance || 0),
+          advanceMethod: Number(advance) > 0 ? advanceSource : null,
+          advanceSource: Number(advance) > 0 ? advanceSource : null,
+          advanceTxnId: Number(advance) > 0 && advanceTxnId ? advanceTxnId : null,
+          dueCollectMethod: preorderDueMethod,
+          dueNote: null,
+          notes: preorderNote || null,
+        });
+      }
       // Stock reservation is handled by DB triggers (tg_orders_stock_reservation
       // + trg_order_items_reserved) — they touch reserved_stock only. Do NOT
       // call the legacy 1-arg reserve_stock RPC here: it decrements physical
@@ -985,7 +1005,52 @@ function NewOrderPage() {
                 </Field>
                 <div className="space-y-2">
                   <div className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground">Extra Options</div>
-                  <ToggleRow label="Preorder" checked={isPreorder} onChange={setIsPreorder} />
+                  <ToggleRow label="Pre-order Mode" checked={isPreorder} onChange={setIsPreorder} />
+                  {isPreorder && (
+                    <div className="space-y-3 rounded-xl border border-indigo-200 bg-indigo-50/50 p-3 dark:border-indigo-900/50 dark:bg-indigo-950/20">
+                      <div className="text-[11px] font-semibold text-indigo-700 dark:text-indigo-300">
+                        এই order pre-order pipeline-এ যাবে (packaging queue-তে যাবে না)। Stock এলে call দিয়ে confirm করলেই pending-এ চলে যাবে।
+                      </div>
+                      <Field label="Promise time (days)" bn="কত দিনের কথা">
+                        <div className="flex flex-wrap gap-1.5">
+                          {[7, 10, 15, 20, 30, 45].map((d) => (
+                            <button
+                              key={d}
+                              type="button"
+                              onClick={() => setPreorderDays(d)}
+                              className={cn(
+                                "h-8 rounded-lg border px-2.5 text-xs font-semibold transition-colors",
+                                preorderDays === d ? "border-indigo-600 bg-indigo-600 text-white" : "bg-background hover:bg-muted",
+                              )}
+                            >
+                              {d}d
+                            </button>
+                          ))}
+                          <Input
+                            type="number"
+                            min={1}
+                            value={preorderDays}
+                            onChange={(e) => setPreorderDays(Math.max(1, Number(e.target.value || 0)))}
+                            className="h-8 w-20 text-xs"
+                          />
+                        </div>
+                        <div className="mt-1 text-[11px] text-muted-foreground">
+                          Promise date: <span className="font-semibold text-foreground">{promiseDateFromDays(preorderDays) ?? "—"}</span>
+                        </div>
+                      </Field>
+                      <Field label="Due collect method" bn="বাকি টাকা কীভাবে">
+                        <Select value={preorderDueMethod} onValueChange={setPreorderDueMethod}>
+                          <SelectTrigger className="h-9"><SelectValue /></SelectTrigger>
+                          <SelectContent>
+                            {DUE_COLLECT_METHODS.map((m) => <SelectItem key={m} value={m}>{m}</SelectItem>)}
+                          </SelectContent>
+                        </Select>
+                      </Field>
+                      <Field label="Pre-order note">
+                        <Textarea rows={2} value={preorderNote} onChange={(e) => setPreorderNote(e.target.value)} className="resize-none" />
+                      </Field>
+                    </div>
+                  )}
                   <ToggleRow label="Cross Sale" checked={isCrossSale} onChange={setIsCrossSale} />
                 </div>
               </CardContent>

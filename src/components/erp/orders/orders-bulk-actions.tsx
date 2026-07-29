@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { CheckCheck, Printer, Sticker, ClipboardList, FileSpreadsheet, Truck, RefreshCw, Download, Copy, X, Loader2, ChevronDown, Phone, Zap, Search, PackageCheck } from "lucide-react";
+import { CheckCheck, Printer, Sticker, ClipboardList, FileSpreadsheet, Truck, RefreshCw, Download, Copy, X, Loader2, ChevronDown, Phone, Zap, Search, PackageCheck, CalendarClock } from "lucide-react";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -15,11 +15,12 @@ type Props = {
   onSendToPathao: () => void;
   onSyncCourier: () => void;
   onPhoneHistory: () => void;
+  onPreorder: () => void;
   onPrint: (mode: "invoice" | "sticker" | "picking" | "sheet") => void;
   isPending: boolean;
 };
 
-export function OrdersBulkActions({ selectedCount, totalCount, onSelectAll, onClear, onStatus, onExport, onSendToPathao, onSyncCourier, onPhoneHistory, onPrint, isPending }: Props) {
+export function OrdersBulkActions({ selectedCount, totalCount, onSelectAll, onClear, onStatus, onExport, onSendToPathao, onSyncCourier, onPhoneHistory, onPreorder, onPrint, isPending }: Props) {
   const disabled = selectedCount === 0;
   const [open, setOpen] = useState(false);
   const [q, setQ] = useState("");
@@ -126,6 +127,11 @@ export function OrdersBulkActions({ selectedCount, totalCount, onSelectAll, onCl
               <IconTile icon={RefreshCw} label="Sync Status" tone="blue" onClick={onSyncCourier} disabled={disabled} />
             </div>
             <ActionRow icon={Phone} label="Match by Phone (History)" onClick={onPhoneHistory} disabled={disabled} />
+          </Section>
+
+          {/* Pre-order */}
+          <Section label="Pre-order" hint="Stock nei — promise date diye rakho">
+            <ActionRow icon={CalendarClock} label="Move to Pre-order" onClick={onPreorder} disabled={disabled} />
           </Section>
 
           {/* 3. Print — after courier booked */}

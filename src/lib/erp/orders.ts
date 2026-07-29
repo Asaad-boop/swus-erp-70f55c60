@@ -89,6 +89,7 @@ export const STATUS_BADGE: Record<string, { label: string; className: string }> 
   cancelled: { label: "Cancelled", className: "bg-zinc-200 text-zinc-700 dark:bg-zinc-800 dark:text-zinc-300" },
   // Legacy / fallbacks (still in DB enum)
   new: { label: "New", className: "bg-slate-100 text-slate-800 dark:bg-slate-900 dark:text-slate-300" },
+  pre_order: { label: "Pre-order", className: "bg-indigo-100 text-indigo-800 dark:bg-indigo-950 dark:text-indigo-300" },
   packaging: { label: "Packaging", className: "bg-purple-100 text-purple-800 dark:bg-purple-950 dark:text-purple-300" },
   fake: { label: "Fake", className: "bg-red-200 text-red-900 dark:bg-red-950 dark:text-red-300" },
 };
@@ -107,6 +108,7 @@ export const STATUS_ACCENT: Record<string, string> = {
   exchange: "#8b5cf6", exchanged: "#8b5cf6",
   paid_return: "#14b8a6", unpaid_return: "#14b8a6",
   on_hold: "#eab308", cancelled: "#71717a",
+  pre_order: "#6366f1",
 };
 export function statusAccent(s: string) { return STATUS_ACCENT[s] ?? "#a1a1aa"; }
 

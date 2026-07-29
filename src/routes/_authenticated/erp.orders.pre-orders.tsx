@@ -2,441 +2,427 @@ import { createFileRoute, Link } from "@tanstack/react-router";
 import { useMemo, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
-import { Clock, CheckCircle2, PackageCheck, Search, CalendarDays, ExternalLink, RefreshCw, Wallet, AlertCircle, Package } from "lucide-react";
+import {
+  AlertTriangle, CalendarClock, CheckCircle2, ExternalLink, Loader2, PackageCheck,
+  PhoneCall, RefreshCw, Search, Wallet, X,
+} from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { applyBrandScope } from "@/lib/erp/apply-brand-scope";
 import { useBrand } from "@/contexts/brand-context";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
-import { Switch } from "@/components/ui/switch";
-import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { customerName, customerPhone, invoiceDisplay } from "@/lib/erp/orders";
 import { cn } from "@/lib/utils";
+import {
+  cancelPreorder, confirmPreorderToPipeline, daysLeft, markPreorderCalled,
+  markPreordersReady, recordPreorderAdvance, stageMeta,
+  ADVANCE_SOURCES, PAYMENT_METHODS, type PreorderStage,
+} from "@/lib/erp/preorders";
+import {
+  Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle,
+} from "@/components/ui/dialog";
+import { Label } from "@/components/ui/label";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
 export const Route = createFileRoute("/_authenticated/erp/orders/pre-orders")({
-  head: () => ({ meta: [{ title: "Pre-orders — ERP" }] }),
+  head: () => ({
+    meta: [
+      { title: "Pre-orders — SWUS ERP" },
+      { name: "description", content: "Track pre-orders, promise dates, advance payments and due settlement in one pipeline." },
+      { property: "og:title", content: "Pre-orders — SWUS ERP" },
+      { property: "og:description", content: "Track pre-orders, promise dates, advance payments and due settlement in one pipeline." },
+      { property: "og:type", content: "website" },
+      { name: "twitter:card", content: "summary" },
+    ],
+  }),
   component: PreOrdersPage,
 });
+
+const EMPTY_ORDER = { id: "", invoice_no: null, shipping_name: null, guest_name: null, shipping_phone: null, guest_phone: null };
 
 const fmtBDT = (n: number) => `৳${Math.round(n || 0).toLocaleString()}`;
 const fmtDate = (d: string | null | undefined) =>
   d ? new Date(d).toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "numeric" }) : "—";
 
-type PreOrderRow = {
+type Row = {
   id: string;
-  invoice_no: string | null;
-  created_at: string;
-  status: string;
-  total: number;
-  advance_amount: number | null;
-  shipping_name: string | null;
-  shipping_phone: string | null;
-  guest_name: string | null;
-  guest_phone: string | null;
+  order_id: string;
   brand_id: string | null;
-  preorder_expected_date: string | null;
-  preorder_ready_at: string | null;
-  preorder_converted_at: string | null;
-  source: string | null;
-  items: { id: string; name: string | null; image: string | null; quantity: number; line_total: number | null }[];
+  stage: PreorderStage;
+  promise_date: string | null;
+  promise_days: number | null;
+  advance_amount: number;
+  advance_method: string | null;
+  advance_source: string | null;
+  advance_txn_id: string | null;
+  due_amount: number;
+  due_collect_method: string | null;
+  notes: string | null;
+  ready_at: string | null;
+  called_at: string | null;
+  confirmed_at: string | null;
+  created_at: string;
+  order: {
+    id: string;
+    invoice_no: string | null;
+    created_at: string;
+    status: string;
+    total: number;
+    source: string | null;
+    shipping_name: string | null;
+    shipping_phone: string | null;
+    guest_name: string | null;
+    guest_phone: string | null;
+    items: { id: string; name: string | null; image: string | null; quantity: number; variant_label: string | null }[];
+  } | null;
 };
+
+type TabKey = "open" | "ready" | "called" | "converted" | "cancelled";
+
+const TABS: { key: TabKey; label: string; stages: PreorderStage[] }[] = [
+  { key: "open", label: "Open", stages: ["open", "advance_paid"] },
+  { key: "ready", label: "Stock Arrived", stages: ["ready"] },
+  { key: "called", label: "Called", stages: ["called"] },
+  { key: "converted", label: "Converted", stages: ["confirmed"] },
+  { key: "cancelled", label: "Cancelled", stages: ["cancelled"] },
+];
 
 function PreOrdersPage() {
   const qc = useQueryClient();
   const { activeBrand, brandIds, isAllBrands } = useBrand();
   const scopeIds = isAllBrands ? brandIds : activeBrand ? [activeBrand.id] : [];
 
-  const [tab, setTab] = useState<"open" | "ready" | "converted" | "products">("open");
+  const [tab, setTab] = useState<TabKey>("open");
   const [search, setSearch] = useState("");
+  const [selected, setSelected] = useState<Set<string>>(new Set());
+  const [advanceRow, setAdvanceRow] = useState<Row | null>(null);
 
-  const ordersQuery = useQuery({
-    queryKey: ["pre-orders", scopeIds, tab, search],
-    enabled: scopeIds.length > 0 && tab !== "products",
+  const listQuery = useQuery({
+    queryKey: ["preorders", scopeIds],
+    enabled: scopeIds.length > 0,
     queryFn: async () => {
-      let q = applyBrandScope(
+      const { data, error } = await applyBrandScope(
         supabase
-          .from("orders")
+          .from("preorders")
           .select(
-            "id,invoice_no,created_at,status,total,advance_amount,shipping_name,shipping_phone,guest_name,guest_phone,brand_id,preorder_expected_date,preorder_ready_at,preorder_converted_at,source,items:order_items(id,name,image,quantity,line_total)",
+            "id,order_id,brand_id,stage,promise_date,promise_days,advance_amount,advance_method,advance_source,advance_txn_id,due_amount,due_collect_method,notes,ready_at,called_at,confirmed_at,created_at," +
+              "order:orders!preorders_order_id_fkey(id,invoice_no,created_at,status,total,source,shipping_name,shipping_phone,guest_name,guest_phone,items:order_items(id,name,image,quantity,variant_label))",
           ),
         scopeIds,
       )
-        .eq("is_preorder", true)
         .order("created_at", { ascending: false })
-        .limit(500);
-
-      if (tab === "open") {
-        q = q.is("preorder_converted_at", null).is("preorder_ready_at", null);
-      } else if (tab === "ready") {
-        q = q.not("preorder_ready_at", "is", null).is("preorder_converted_at", null);
-      } else if (tab === "converted") {
-        q = q.not("preorder_converted_at", "is", null);
-      }
-      if (search.trim()) {
-        const s = search.trim();
-        q = q.or(
-          `shipping_name.ilike.%${s}%,shipping_phone.ilike.%${s}%,guest_name.ilike.%${s}%,guest_phone.ilike.%${s}%,invoice_no.ilike.%${s}%`,
-        );
-      }
-      const { data, error } = await q;
+        .limit(1000);
       if (error) throw error;
-      return (data ?? []) as PreOrderRow[];
+      return (data ?? []) as unknown as Row[];
     },
   });
 
-  const countsQuery = useQuery({
-    queryKey: ["pre-orders-counts", scopeIds],
-    enabled: scopeIds.length > 0,
-    queryFn: async () => {
-      const base = () => applyBrandScope(
-        supabase.from("orders").select("id,total,advance_amount,preorder_ready_at,preorder_converted_at", { count: "exact", head: false }),
-        scopeIds,
-      ).eq("is_preorder", true).limit(5000);
-      const { data, error } = await base();
-      if (error) throw error;
-      let open = 0, ready = 0, converted = 0, advance = 0, value = 0;
-      for (const r of (data ?? []) as PreOrderRow[]) {
-        value += Number(r.total) || 0;
-        advance += Number(r.advance_amount) || 0;
-        if (r.preorder_converted_at) converted++;
-        else if (r.preorder_ready_at) ready++;
-        else open++;
-      }
-      return { open, ready, converted, advance, value };
-    },
-  });
+  const all = listQuery.data ?? [];
 
-  const markReady = useMutation({
-    mutationFn: async (ids: string[]) => {
-      const { error } = await supabase
-        .from("orders")
-        .update({ preorder_ready_at: new Date().toISOString() } as never)
-        .in("id", ids);
-      if (error) throw error;
-    },
-    onSuccess: () => {
-      toast.success("Marked ready for fulfillment");
-      qc.invalidateQueries({ queryKey: ["pre-orders"] });
-      qc.invalidateQueries({ queryKey: ["pre-orders-counts"] });
-    },
+  const counts = useMemo(() => {
+    const c: Record<TabKey, number> = { open: 0, ready: 0, called: 0, converted: 0, cancelled: 0 };
+    for (const r of all) {
+      const t = TABS.find((x) => x.stages.includes(r.stage));
+      if (t) c[t.key] += 1;
+    }
+    return c;
+  }, [all]);
+
+  const kpis = useMemo(() => {
+    const live = all.filter((r) => r.stage !== "cancelled" && r.stage !== "confirmed");
+    return {
+      live: live.length,
+      advance: live.reduce((s, r) => s + Number(r.advance_amount || 0), 0),
+      due: live.reduce((s, r) => s + Number(r.due_amount || 0), 0),
+      overdue: live.filter((r) => {
+        const d = daysLeft(r.promise_date);
+        return d !== null && d < 0;
+      }).length,
+    };
+  }, [all]);
+
+  const rows = useMemo(() => {
+    const stages = TABS.find((t) => t.key === tab)!.stages;
+    const s = search.trim().toLowerCase();
+    return all
+      .filter((r) => stages.includes(r.stage))
+      .filter((r) => {
+        if (!s) return true;
+        const o = r.order;
+        return [o?.invoice_no, o?.shipping_name, o?.guest_name, o?.shipping_phone, o?.guest_phone]
+          .some((v) => (v ?? "").toLowerCase().includes(s));
+      });
+  }, [all, tab, search]);
+
+  const refresh = () => {
+    qc.invalidateQueries({ queryKey: ["preorders"] });
+    qc.invalidateQueries({ queryKey: ["orders"] });
+    setSelected(new Set());
+  };
+
+  const readyMut = useMutation({
+    mutationFn: async (list: Row[]) => markPreordersReady(list),
+    onSuccess: () => { toast.success("Stock arrived — customer ke call den"); refresh(); },
+    onError: (e: Error) => toast.error(e.message),
+  });
+  const calledMut = useMutation({
+    mutationFn: async (r: Row) => markPreorderCalled(r),
+    onSuccess: () => { toast.success("Called & confirmed"); refresh(); },
+    onError: (e: Error) => toast.error(e.message),
+  });
+  const confirmMut = useMutation({
+    mutationFn: async (r: Row) => confirmPreorderToPipeline(r),
+    onSuccess: () => { toast.success("Order confirmed — packaging queue-te gelo"); refresh(); },
+    onError: (e: Error) => toast.error(e.message),
+  });
+  const cancelMut = useMutation({
+    mutationFn: async (r: Row) => cancelPreorder(r, null),
+    onSuccess: () => { toast.success("Pre-order cancelled"); refresh(); },
     onError: (e: Error) => toast.error(e.message),
   });
 
-  const convertOrder = useMutation({
-    mutationFn: async (id: string) => {
-      const { error } = await supabase
-        .from("orders")
-        .update({
-          is_preorder: false,
-          preorder_converted_at: new Date().toISOString(),
-          status: "confirmed",
-        } as never)
-        .eq("id", id);
-      if (error) throw error;
-    },
-    onSuccess: () => {
-      toast.success("Converted to regular order — now in Order List");
-      qc.invalidateQueries({ queryKey: ["pre-orders"] });
-      qc.invalidateQueries({ queryKey: ["pre-orders-counts"] });
-      qc.invalidateQueries({ queryKey: ["orders"] });
-    },
-    onError: (e: Error) => toast.error(e.message),
-  });
-
-  const counts = countsQuery.data ?? { open: 0, ready: 0, converted: 0, advance: 0, value: 0 };
-  const rows = ordersQuery.data ?? [];
+  const selectedRows = rows.filter((r) => selected.has(r.id));
 
   return (
-    <div className="p-6 space-y-5">
-      <div className="flex items-start justify-between gap-4 flex-wrap">
+    <div className="space-y-4 p-4 md:p-6">
+      <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
-          <h1 className="text-2xl font-semibold tracking-tight flex items-center gap-2">
-            <Clock className="h-5 w-5" /> Pre-orders
-          </h1>
-          <p className="text-sm text-muted-foreground mt-1">
-            Reserve stock-out or upcoming products. Convert to regular orders when ready.
+          <h1 className="text-xl font-bold tracking-tight">Pre-orders</h1>
+          <p className="text-xs text-muted-foreground">
+            Promise date, advance আর due — সব একসাথে। Stock এলে call দিয়ে confirm করলেই packaging queue-তে যাবে।
           </p>
         </div>
-        <Button variant="outline" size="sm" onClick={() => { ordersQuery.refetch(); countsQuery.refetch(); }}>
-          <RefreshCw className="h-4 w-4 mr-2" /> Refresh
+        <Button variant="outline" size="sm" onClick={refresh} className="gap-1.5">
+          <RefreshCw className={cn("h-3.5 w-3.5", listQuery.isFetching && "animate-spin")} /> Refresh
         </Button>
       </div>
 
-      {/* KPIs */}
-      <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
-        <Kpi label="Open" value={counts.open} icon={<Clock className="h-4 w-4" />} tone="blue" />
-        <Kpi label="Ready" value={counts.ready} icon={<PackageCheck className="h-4 w-4" />} tone="amber" />
-        <Kpi label="Converted" value={counts.converted} icon={<CheckCircle2 className="h-4 w-4" />} tone="emerald" />
-        <Kpi label="Advance Collected" value={fmtBDT(counts.advance)} icon={<Wallet className="h-4 w-4" />} tone="violet" />
-        <Kpi label="Pipeline Value" value={fmtBDT(counts.value)} icon={<Package className="h-4 w-4" />} tone="neutral" />
+      <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
+        <Kpi label="Live pre-orders" value={String(kpis.live)} icon={CalendarClock} accent="text-indigo-600" />
+        <Kpi label="Advance collected" value={fmtBDT(kpis.advance)} icon={Wallet} accent="text-emerald-600" />
+        <Kpi label="Due to collect" value={fmtBDT(kpis.due)} icon={PackageCheck} accent="text-sky-600" />
+        <Kpi label="Overdue promise" value={String(kpis.overdue)} icon={AlertTriangle} accent="text-rose-600" />
       </div>
 
-      <Tabs value={tab} onValueChange={(v) => setTab(v as typeof tab)}>
-        <div className="flex items-center justify-between gap-3 flex-wrap">
+      <div className="flex flex-wrap items-center gap-3">
+        <Tabs value={tab} onValueChange={(v) => { setTab(v as TabKey); setSelected(new Set()); }}>
           <TabsList>
-            <TabsTrigger value="open">Open <span className="ml-2 text-xs opacity-60">{counts.open}</span></TabsTrigger>
-            <TabsTrigger value="ready">Ready <span className="ml-2 text-xs opacity-60">{counts.ready}</span></TabsTrigger>
-            <TabsTrigger value="converted">Converted <span className="ml-2 text-xs opacity-60">{counts.converted}</span></TabsTrigger>
-            <TabsTrigger value="products">Pre-order Products</TabsTrigger>
+            {TABS.map((t) => (
+              <TabsTrigger key={t.key} value={t.key} className="gap-1.5">
+                {t.label}
+                <span className="rounded-full bg-muted px-1.5 text-[10px] font-bold tabular-nums">{counts[t.key]}</span>
+              </TabsTrigger>
+            ))}
           </TabsList>
-          {tab !== "products" && (
-            <div className="relative w-72 max-w-full">
-              <Search className="h-4 w-4 absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
-              <Input
-                placeholder="Name, phone, invoice…"
-                value={search}
-                onChange={(e) => setSearch(e.target.value)}
-                className="pl-9 h-9"
-              />
-            </div>
-          )}
+        </Tabs>
+        <div className="relative w-72 max-w-full">
+          <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+          <Input className="h-9 pl-9" placeholder="Invoice / name / phone" value={search} onChange={(e) => setSearch(e.target.value)} />
         </div>
-
-        <TabsContent value={tab} className="mt-4">
-          {tab === "products" ? (
-            <PreorderProductsPanel scopeIds={scopeIds} />
-          ) : ordersQuery.isLoading ? (
-            <div className="text-center text-sm text-muted-foreground py-10">Loading…</div>
-          ) : rows.length === 0 ? (
-            <div className="text-center py-14 border rounded-xl bg-card">
-              <Clock className="h-10 w-10 mx-auto text-muted-foreground/50 mb-3" />
-              <div className="text-sm text-muted-foreground">No {tab} pre-orders</div>
-            </div>
-          ) : (
-            <div className="space-y-2">
-              {rows.map((o) => (
-                <PreOrderCard
-                  key={o.id}
-                  o={o}
-                  onReady={() => markReady.mutate([o.id])}
-                  onConvert={() => convertOrder.mutate(o.id)}
-                  busy={markReady.isPending || convertOrder.isPending}
-                />
-              ))}
-            </div>
-          )}
-        </TabsContent>
-      </Tabs>
-    </div>
-  );
-}
-
-function Kpi({ label, value, icon, tone }: { label: string; value: string | number; icon: React.ReactNode; tone: "blue" | "amber" | "emerald" | "violet" | "neutral" }) {
-  const toneCls: Record<string, string> = {
-    blue: "text-blue-600 dark:text-blue-400 bg-blue-500/10",
-    amber: "text-amber-600 dark:text-amber-400 bg-amber-500/10",
-    emerald: "text-emerald-600 dark:text-emerald-400 bg-emerald-500/10",
-    violet: "text-violet-600 dark:text-violet-400 bg-violet-500/10",
-    neutral: "text-foreground/80 bg-muted",
-  };
-  return (
-    <div className="rounded-xl border bg-card p-4">
-      <div className="flex items-center justify-between">
-        <span className="text-[11px] uppercase tracking-wider font-medium text-muted-foreground">{label}</span>
-        <span className={cn("h-7 w-7 rounded-md grid place-items-center", toneCls[tone])}>{icon}</span>
+        {tab === "open" && selectedRows.length > 0 && (
+          <Button size="sm" className="gap-1.5" onClick={() => readyMut.mutate(selectedRows)} disabled={readyMut.isPending}>
+            {readyMut.isPending ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <PackageCheck className="h-3.5 w-3.5" />}
+            Mark stock arrived ({selectedRows.length})
+          </Button>
+        )}
       </div>
-      <div className="mt-2 text-xl font-semibold tabular-nums">{value}</div>
-    </div>
-  );
-}
 
-function PreOrderCard({ o, onReady, onConvert, busy }: { o: PreOrderRow; onReady: () => void; onConvert: () => void; busy: boolean }) {
-  const name = customerName(o);
-  const phone = customerPhone(o);
-  const advance = Number(o.advance_amount) || 0;
-  const due = Math.max(0, (Number(o.total) || 0) - advance);
-  const isReady = !!o.preorder_ready_at && !o.preorder_converted_at;
-  const isConverted = !!o.preorder_converted_at;
-  const overdue = o.preorder_expected_date && new Date(o.preorder_expected_date) < new Date() && !isConverted;
-
-  return (
-    <div className="rounded-xl border bg-card hover:border-foreground/20 transition-colors">
-      <div className="p-4 flex items-start gap-4 flex-wrap">
-        <div className="flex-1 min-w-[260px]">
-          <div className="flex items-center gap-2 flex-wrap">
-            <Link
-              to="/erp/orders/$orderId"
-              params={{ orderId: o.id }}
-              className="font-semibold text-sm hover:underline inline-flex items-center gap-1"
-            >
-              {invoiceDisplay(o)} <ExternalLink className="h-3 w-3 opacity-60" />
-            </Link>
-            {isConverted ? (
-              <Badge variant="outline" className="bg-emerald-500/10 text-emerald-700 dark:text-emerald-300 border-emerald-500/30">Converted</Badge>
-            ) : isReady ? (
-              <Badge variant="outline" className="bg-amber-500/10 text-amber-700 dark:text-amber-300 border-amber-500/30">Ready</Badge>
-            ) : (
-              <Badge variant="outline" className="bg-blue-500/10 text-blue-700 dark:text-blue-300 border-blue-500/30">Open</Badge>
-            )}
-            {overdue && (
-              <Badge variant="outline" className="bg-red-500/10 text-red-700 dark:text-red-300 border-red-500/30">
-                <AlertCircle className="h-3 w-3 mr-1" /> Overdue
-              </Badge>
-            )}
-          </div>
-          <div className="mt-1.5 text-sm">
-            <span className="font-medium">{name}</span>
-            <span className="text-muted-foreground"> · {phone || "—"}</span>
-          </div>
-          <div className="mt-1 text-xs text-muted-foreground flex items-center gap-3 flex-wrap">
-            <span>Placed {fmtDate(o.created_at)}</span>
-            <span className="inline-flex items-center gap-1">
-              <CalendarDays className="h-3 w-3" /> ETA {fmtDate(o.preorder_expected_date)}
-            </span>
-          </div>
+      {listQuery.isLoading ? (
+        <div className="py-16 text-center text-sm text-muted-foreground">Loading…</div>
+      ) : rows.length === 0 ? (
+        <div className="rounded-xl border bg-card py-16 text-center text-sm text-muted-foreground">
+          এই tab-এ কোনো pre-order নেই।
         </div>
+      ) : (
+        <div className="space-y-2">
+          {rows.map((r) => {
+            const o = r.order;
+            const meta = stageMeta(r.stage);
+            const left = daysLeft(r.promise_date);
+            return (
+              <div
+                key={r.id}
+                className="rounded-xl border bg-card p-3 shadow-sm"
+                style={{ borderLeft: `3px solid ${meta.accent}` }}
+              >
+                <div className="flex flex-wrap items-start gap-3">
+                  {tab === "open" && (
+                    <input
+                      type="checkbox"
+                      className="mt-1.5 h-4 w-4"
+                      checked={selected.has(r.id)}
+                      onChange={(e) => {
+                        const next = new Set(selected);
+                        if (e.target.checked) next.add(r.id); else next.delete(r.id);
+                        setSelected(next);
+                      }}
+                    />
+                  )}
+                  <div className="min-w-[220px] flex-1">
+                    <div className="flex flex-wrap items-center gap-2">
+                      <Badge className={meta.className}>{meta.label}</Badge>
+                      <Link
+                        to="/erp/orders/$orderId"
+                        params={{ orderId: r.order_id }}
+                        className="inline-flex items-center gap-1 text-sm font-semibold hover:underline"
+                      >
+                        {invoiceDisplay(o ?? EMPTY_ORDER)} <ExternalLink className="h-3 w-3 opacity-60" />
+                      </Link>
+                      {o?.source && <span className="text-[11px] text-muted-foreground">{o.source}</span>}
+                    </div>
+                    <div className="mt-1 text-sm">{customerName(o ?? EMPTY_ORDER)}</div>
+                    <div className="text-[11px] text-muted-foreground">{customerPhone(o ?? EMPTY_ORDER)}</div>
+                    <div className="mt-1.5 flex flex-wrap gap-1">
+                      {(o?.items ?? []).map((it) => (
+                        <span key={it.id} className="rounded-md bg-muted px-1.5 py-0.5 text-[10px]">
+                          {it.name}{it.variant_label ? ` · ${it.variant_label}` : ""} × {it.quantity}
+                        </span>
+                      ))}
+                    </div>
+                  </div>
 
-        <div className="flex items-center gap-2 flex-wrap">
-          {(o.items ?? []).slice(0, 4).map((it) => (
-            <div key={it.id} className="flex items-center gap-2 rounded-md border bg-muted/30 pl-1 pr-2 py-1">
-              {it.image ? (
-                <img src={it.image} alt="" className="h-8 w-8 rounded object-cover" />
-              ) : (
-                <div className="h-8 w-8 rounded bg-muted grid place-items-center"><Package className="h-3.5 w-3.5 opacity-50" /></div>
-              )}
-              <div className="text-[11px] leading-tight max-w-[140px]">
-                <div className="font-medium truncate">{it.name ?? "—"}</div>
-                <div className="text-muted-foreground">×{it.quantity}</div>
+                  <div className="min-w-[170px] space-y-0.5 text-[11px]">
+                    <Detail label="Promise" value={fmtDate(r.promise_date)} />
+                    <Detail
+                      label="Time left"
+                      value={left === null ? "—" : left < 0 ? `${Math.abs(left)}d overdue` : `${left}d left`}
+                      className={left !== null && left < 0 ? "text-rose-600 font-semibold" : ""}
+                    />
+                    <Detail label="Placed" value={fmtDate(o?.created_at)} />
+                  </div>
+
+                  <div className="min-w-[190px] space-y-0.5 text-[11px]">
+                    <Detail label="Order total" value={fmtBDT(Number(o?.total || 0))} />
+                    <Detail
+                      label="Advance"
+                      value={`${fmtBDT(Number(r.advance_amount || 0))}${r.advance_method ? ` · ${r.advance_method}` : ""}`}
+                      className={Number(r.advance_amount) > 0 ? "text-emerald-700 dark:text-emerald-400 font-semibold" : ""}
+                    />
+                    {r.advance_txn_id && <Detail label="Txn" value={r.advance_txn_id} />}
+                    <Detail label="Due" value={`${fmtBDT(Number(r.due_amount || 0))} · ${r.due_collect_method ?? "—"}`} />
+                  </div>
+
+                  <div className="flex flex-wrap items-center gap-1.5">
+                    {(r.stage === "open" || r.stage === "advance_paid") && (
+                      <>
+                        <Button size="sm" variant="outline" className="h-8 gap-1.5" onClick={() => setAdvanceRow(r)}>
+                          <Wallet className="h-3.5 w-3.5" /> Advance
+                        </Button>
+                        <Button size="sm" className="h-8 gap-1.5" onClick={() => readyMut.mutate([r])} disabled={readyMut.isPending}>
+                          <PackageCheck className="h-3.5 w-3.5" /> Stock arrived
+                        </Button>
+                      </>
+                    )}
+                    {r.stage === "ready" && (
+                      <Button size="sm" className="h-8 gap-1.5" onClick={() => calledMut.mutate(r)} disabled={calledMut.isPending}>
+                        <PhoneCall className="h-3.5 w-3.5" /> Called & confirmed
+                      </Button>
+                    )}
+                    {(r.stage === "ready" || r.stage === "called") && (
+                      <Button
+                        size="sm"
+                        className="h-8 gap-1.5 bg-emerald-600 hover:bg-emerald-700"
+                        onClick={() => confirmMut.mutate(r)}
+                        disabled={confirmMut.isPending}
+                      >
+                        <CheckCircle2 className="h-3.5 w-3.5" /> Confirm order
+                      </Button>
+                    )}
+                    {r.stage !== "cancelled" && r.stage !== "confirmed" && (
+                      <Button size="sm" variant="ghost" className="h-8 gap-1.5 text-rose-600" onClick={() => cancelMut.mutate(r)}>
+                        <X className="h-3.5 w-3.5" /> Cancel
+                      </Button>
+                    )}
+                  </div>
+                </div>
+                {r.notes && <div className="mt-2 rounded-lg bg-muted/50 px-2 py-1 text-[11px] text-muted-foreground">{r.notes}</div>}
               </div>
-            </div>
-          ))}
-          {(o.items?.length ?? 0) > 4 && (
-            <span className="text-xs text-muted-foreground">+{(o.items!.length - 4)} more</span>
-          )}
+            );
+          })}
         </div>
+      )}
 
-        <div className="text-right min-w-[140px]">
-          <div className="text-base font-semibold tabular-nums">{fmtBDT(Number(o.total))}</div>
-          <div className="text-[11px] text-muted-foreground tabular-nums">
-            Advance {fmtBDT(advance)} · Due {fmtBDT(due)}
-          </div>
-          <div className="mt-2 flex gap-1.5 justify-end">
-            {!isReady && !isConverted && (
-              <Button size="sm" variant="outline" disabled={busy} onClick={onReady}>
-                <PackageCheck className="h-3.5 w-3.5 mr-1" /> Mark Ready
-              </Button>
-            )}
-            {!isConverted && (
-              <Button size="sm" disabled={busy} onClick={onConvert}>
-                <CheckCircle2 className="h-3.5 w-3.5 mr-1" /> Convert
-              </Button>
-            )}
-          </div>
-        </div>
-      </div>
+      <AdvanceDialog row={advanceRow} onClose={() => setAdvanceRow(null)} onSaved={refresh} />
     </div>
   );
 }
 
-/* ----- Pre-order Products panel ----- */
+function Kpi({ label, value, icon: Icon, accent }: { label: string; value: string; icon: React.ElementType; accent: string }) {
+  return (
+    <div className="rounded-xl border bg-card p-3 shadow-sm">
+      <div className="flex items-center gap-2 text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
+        <Icon className={cn("h-3.5 w-3.5", accent)} /> {label}
+      </div>
+      <div className="mt-1 text-xl font-bold tabular-nums">{value}</div>
+    </div>
+  );
+}
 
-type ProductRow = {
-  id: string;
-  title: string;
-  image: string | null;
-  sku: string | null;
-  stock: number;
-  is_preorder: boolean;
-  preorder_expected_date: string | null;
-  preorder_note: string | null;
-  brand_id: string | null;
-};
+function Detail({ label, value, className }: { label: string; value: string; className?: string }) {
+  return (
+    <div className="flex items-center justify-between gap-2">
+      <span className="text-muted-foreground">{label}</span>
+      <span className={cn("tabular-nums", className)}>{value}</span>
+    </div>
+  );
+}
 
-function PreorderProductsPanel({ scopeIds }: { scopeIds: string[] }) {
-  const qc = useQueryClient();
-  const [q, setQ] = useState("");
-  const [onlyPreorder, setOnlyPreorder] = useState(true);
+function AdvanceDialog({ row, onClose, onSaved }: { row: Row | null; onClose: () => void; onSaved: () => void }) {
+  const [amount, setAmount] = useState("");
+  const [method, setMethod] = useState("bKash");
+  const [source, setSource] = useState("bKash");
+  const [txnId, setTxnId] = useState("");
 
-  const productsQuery = useQuery({
-    queryKey: ["preorder-products", scopeIds, q, onlyPreorder],
-    enabled: scopeIds.length > 0,
-    queryFn: async () => {
-      let qb = applyBrandScope(
-        supabase
-          .from("products")
-          .select("id,title,image,sku,stock,is_preorder,preorder_expected_date,preorder_note,brand_id"),
-        scopeIds,
-      ).order("is_preorder", { ascending: false }).order("title").limit(300);
-      if (onlyPreorder) qb = qb.eq("is_preorder", true);
-      if (q.trim()) qb = qb.or(`title.ilike.%${q.trim()}%,sku.ilike.%${q.trim()}%`);
-      const { data, error } = await qb;
-      if (error) throw error;
-      return (data ?? []) as ProductRow[];
+  const save = useMutation({
+    mutationFn: async () => {
+      if (!row) return;
+      if (!(Number(amount) > 0)) throw new Error("Amount din");
+      await recordPreorderAdvance({ preorder: row, amount: Number(amount), method, source, txnId: txnId || null });
     },
-  });
-
-  const updateProduct = useMutation({
-    mutationFn: async (input: Partial<ProductRow> & { id: string }) => {
-      const { id, ...patch } = input;
-      const { error } = await supabase.from("products").update(patch as never).eq("id", id);
-      if (error) throw error;
-    },
-    onSuccess: () => {
-      qc.invalidateQueries({ queryKey: ["preorder-products"] });
-    },
+    onSuccess: () => { toast.success("Advance saved"); onClose(); onSaved(); },
     onError: (e: Error) => toast.error(e.message),
   });
 
-  const rows = productsQuery.data ?? [];
-
   return (
-    <div className="space-y-3">
-      <div className="flex items-center gap-3 flex-wrap">
-        <div className="relative w-72 max-w-full">
-          <Search className="h-4 w-4 absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
-          <Input placeholder="Search product / SKU" value={q} onChange={(e) => setQ(e.target.value)} className="pl-9 h-9" />
+    <Dialog open={!!row} onOpenChange={(v) => { if (!v) onClose(); }}>
+      <DialogContent className="max-w-md">
+        <DialogHeader>
+          <DialogTitle>Advance payment</DialogTitle>
+          <DialogDescription>Customer কত টাকা advance দিলো, কোন method-এ — সেটা রাখুন।</DialogDescription>
+        </DialogHeader>
+        <div className="grid gap-3 sm:grid-cols-2">
+          <div className="space-y-1">
+            <Label className="text-[11px]">Amount</Label>
+            <Input type="number" min={0} value={amount} onChange={(e) => setAmount(e.target.value)} placeholder="0" />
+          </div>
+          <div className="space-y-1">
+            <Label className="text-[11px]">Method</Label>
+            <Select value={method} onValueChange={setMethod}>
+              <SelectTrigger><SelectValue /></SelectTrigger>
+              <SelectContent>{PAYMENT_METHODS.map((m) => <SelectItem key={m} value={m}>{m}</SelectItem>)}</SelectContent>
+            </Select>
+          </div>
+          <div className="space-y-1">
+            <Label className="text-[11px]">Source / wallet</Label>
+            <Select value={source} onValueChange={setSource}>
+              <SelectTrigger><SelectValue /></SelectTrigger>
+              <SelectContent>{ADVANCE_SOURCES.map((m) => <SelectItem key={m} value={m}>{m}</SelectItem>)}</SelectContent>
+            </Select>
+          </div>
+          <div className="space-y-1">
+            <Label className="text-[11px]">Txn ID (optional)</Label>
+            <Input value={txnId} onChange={(e) => setTxnId(e.target.value)} />
+          </div>
         </div>
-        <label className="inline-flex items-center gap-2 text-sm">
-          <Switch checked={onlyPreorder} onCheckedChange={setOnlyPreorder} />
-          <span>Only pre-order products</span>
-        </label>
-        <span className="text-xs text-muted-foreground ml-auto">
-          Turning on the toggle auto-tags every new order for this product as a pre-order.
-        </span>
-      </div>
-
-      {productsQuery.isLoading ? (
-        <div className="text-center text-sm text-muted-foreground py-10">Loading…</div>
-      ) : rows.length === 0 ? (
-        <div className="text-center py-12 border rounded-xl bg-card text-sm text-muted-foreground">
-          No products match.
-        </div>
-      ) : (
-        <div className="rounded-xl border bg-card divide-y">
-          {rows.map((p) => (
-            <div key={p.id} className="p-3 flex items-center gap-3 flex-wrap">
-              {p.image ? (
-                <img src={p.image} className="h-12 w-12 rounded object-cover" alt="" />
-              ) : (
-                <div className="h-12 w-12 rounded bg-muted grid place-items-center"><Package className="h-4 w-4 opacity-50" /></div>
-              )}
-              <div className="flex-1 min-w-[200px]">
-                <div className="font-medium text-sm">{p.title}</div>
-                <div className="text-[11px] text-muted-foreground">
-                  SKU {p.sku || "—"} · Stock <span className={cn("tabular-nums", p.stock <= 0 ? "text-red-500" : "")}>{p.stock}</span>
-                </div>
-              </div>
-              <div className="flex items-center gap-2">
-                <span className="text-xs text-muted-foreground">ETA</span>
-                <Input
-                  type="date"
-                  value={p.preorder_expected_date ?? ""}
-                  onChange={(e) => updateProduct.mutate({ id: p.id, preorder_expected_date: e.target.value || null })}
-                  className="h-8 w-[150px]"
-                />
-              </div>
-              <label className="inline-flex items-center gap-2">
-                <span className="text-xs text-muted-foreground">Pre-order</span>
-                <Switch
-                  checked={p.is_preorder}
-                  onCheckedChange={(v) => updateProduct.mutate({ id: p.id, is_preorder: v })}
-                />
-              </label>
-            </div>
-          ))}
-        </div>
-      )}
-    </div>
+        <DialogFooter>
+          <Button variant="outline" onClick={onClose}>Cancel</Button>
+          <Button onClick={() => save.mutate()} disabled={save.isPending}>
+            {save.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />} Save
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
   );
 }

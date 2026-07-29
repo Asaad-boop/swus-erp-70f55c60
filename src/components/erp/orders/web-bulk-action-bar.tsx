@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { CheckCircle2, X, Printer, Truck, Tag as TagIcon, RefreshCcw, Plus } from "lucide-react";
+import { CheckCircle2, X, Printer, Truck, Tag as TagIcon, RefreshCcw, Plus, CalendarClock } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
@@ -32,10 +32,11 @@ type Props = {
   onPrintInvoices: () => void;
   onBookCourier: () => void;
   onAddTag: (tag: string) => void;
+  onPreorder: () => void;
   isPending?: boolean;
 };
 
-export function WebBulkActionBar({ count, onClear, onStatus, onPrintInvoices, onBookCourier, onAddTag, isPending }: Props) {
+export function WebBulkActionBar({ count, onClear, onStatus, onPrintInvoices, onBookCourier, onAddTag, onPreorder, isPending }: Props) {
   const [tagInput, setTagInput] = useState("");
   const [tagOpen, setTagOpen] = useState(false);
   if (count === 0) return null;
@@ -74,6 +75,10 @@ export function WebBulkActionBar({ count, onClear, onStatus, onPrintInvoices, on
 
         <Button size="sm" variant="ghost" className="h-8 gap-1.5 text-xs" onClick={onBookCourier}>
           <Truck className="h-3.5 w-3.5" /> Book Courier
+        </Button>
+
+        <Button size="sm" variant="ghost" className="h-8 gap-1.5 text-xs text-indigo-600" onClick={onPreorder}>
+          <CalendarClock className="h-3.5 w-3.5" /> Pre-order
         </Button>
 
         <Popover open={tagOpen} onOpenChange={setTagOpen}>
