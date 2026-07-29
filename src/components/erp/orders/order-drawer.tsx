@@ -1,6 +1,6 @@
 import { format } from "date-fns";
 import { useEffect, useState } from "react";
-import { User, Phone, MapPin, Package, Clock, Loader2, Hash, Calendar, Globe, UserCog, ListChecks, StickyNote, Send, AlertTriangle, Truck, Pencil, Lock, ShieldAlert, Save, X } from "lucide-react";
+import { User, Phone, MapPin, Package, Clock, Loader2, Hash, Calendar, Globe, UserCog, ListChecks, StickyNote, Send, AlertTriangle, Truck, Pencil, Lock, ShieldAlert, Save, X, CalendarClock } from "lucide-react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { toast } from "sonner";
@@ -18,6 +18,7 @@ import { useOrderLock } from "@/hooks/erp/use-order-lock";
 import { STATUS_GROUPS, STATUS_BADGE, customerName, customerPhone, invoiceDisplay, statusBadge, type OrderStatus } from "@/lib/erp/orders";
 import { setOrderActualShippingCostFn } from "@/lib/erp/courier-sync.functions";
 import { confirmOrderAdvanceReceivedFn } from "@/lib/erp/finance/advance.functions";
+import { PreorderConvertDialog } from "@/components/erp/orders/preorder-convert-dialog";
 
 type Props = { orderId: string | null; onClose: () => void; mode?: "web" | "fulfillment" };
 
@@ -107,6 +108,7 @@ export function OrderDrawer({ orderId, onClose, mode = "fulfillment" }: Props) {
   const lockState = useOrderLock(orderId);
   const [note, setNote] = useState("");
   const [advOpen, setAdvOpen] = useState(false);
+  const [preorderOpen, setPreorderOpen] = useState(false);
   const [advAmount, setAdvAmount] = useState("");
   const [advSource, setAdvSource] = useState("");
   const [advNumber, setAdvNumber] = useState("");
