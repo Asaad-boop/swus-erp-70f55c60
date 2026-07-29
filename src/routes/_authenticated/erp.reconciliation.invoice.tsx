@@ -524,10 +524,12 @@ function ReconciliationPage() {
   const autoFetchFn = useServerFn(fetchPathaoInvoiceCsvFn);
 
   // ---- Auto fetch (Pathao merchant panel) ----
-  const today = new Date();
-  const iso = (d: Date) => d.toISOString().slice(0, 10);
-  const [autoFrom, setAutoFrom] = useState(iso(new Date(today.getFullYear(), today.getMonth(), 1)));
-  const [autoTo, setAutoTo] = useState(iso(today));
+  const isoDay = (d: Date) => d.toISOString().slice(0, 10);
+  const [autoFrom, setAutoFrom] = useState(() => {
+    const n = new Date();
+    return isoDay(new Date(n.getFullYear(), n.getMonth(), 1));
+  });
+  const [autoTo, setAutoTo] = useState(() => isoDay(new Date()));
   const [autoAttempts, setAutoAttempts] = useState<{ path: string; status: number | string; snippet: string }[] | null>(null);
 
   const autoMut = useMutation({
