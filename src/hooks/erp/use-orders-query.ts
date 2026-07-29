@@ -165,11 +165,11 @@ export function useOrderStatusCounts(filter: OrdersFilter) {
       // exact-count round trips (each of which scanned the whole table).
       const { data, error } = await supabase.rpc("erp_order_status_counts", {
         _brand_ids: brandIds,
-        _search: filter.search.trim() || null,
-        _source: filter.source,
-        _courier: filter.courier,
-        _date_from: filter.dateFrom,
-        _date_to: filter.dateTo,
+        _search: filter.search.trim() || undefined,
+        _source: filter.source ?? undefined,
+        _courier: filter.courier ?? undefined,
+        _date_from: filter.dateFrom ?? undefined,
+        _date_to: filter.dateTo ?? undefined,
         _printed: filter.printedFilter ?? "all",
       });
       if (error) throw error;
