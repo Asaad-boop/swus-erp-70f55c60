@@ -145,6 +145,7 @@ export async function handleShopifyOrderWebhook(request: Request): Promise<Respo
       total: totalPrice,
       subtotal: num(order?.subtotal_price),
       shipping_fee: num(order?.total_shipping_price_set?.shop_money?.amount),
+      discount_amount: num(order?.total_discounts),
       payment_method: paymentMethod,
       advance_amount: paidAmount,
       advance_source: paidAmount > 0 ? paymentMethod : null,

@@ -107,7 +107,7 @@ export async function moveOrderToPreorder(intake: PreorderIntake) {
 
   const { data: order, error: readErr } = await supabase
     .from("orders")
-    .select("id,brand_id,total,advance_amount,advance_source,advance_txn_id,payment_method")
+    .select("id,brand_id,total,subtotal,shipping_fee,discount_amount,advance_amount,advance_source,advance_txn_id,payment_method")
     .eq("id", intake.orderId)
     .single();
   if (readErr) throw readErr;
@@ -118,7 +118,9 @@ export async function moveOrderToPreorder(intake: PreorderIntake) {
   const advanceMethod = intake.advanceMethod ?? order.payment_method ?? null;
   const advanceSource = intake.advanceSource ?? order.advance_source ?? advanceMethod;
   const advanceTxnId = intake.advanceTxnId ?? order.advance_txn_id ?? null;
-  const due = Math.max(0, Number(order.total || 0) - advance);
+  const gross = Math.max(0, Number(order.subtotal ?? 0) + Number(order.shipping_fee ?? 0) - Number(order.discount_amount ?? 0));
+  const dueBase = gross > 0 ? gross : Number(order.total || 0);
+  const due = Math.max(0, dueBase - advance);
 
   const orderPatch: Record<string, unknown> = {
     status: "pre_order",
