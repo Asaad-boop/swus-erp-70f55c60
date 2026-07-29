@@ -35,6 +35,23 @@ export function PreorderConvertDialog({ open, onOpenChange, orderIds, brandId, o
   const [notes, setNotes] = useState("");
   const singleOrderId = single ? orderIds[0] : null;
 
+  const { data: alreadyPreorders } = useQuery({
+    queryKey: ["preorder-convert-existing", orderIds],
+    enabled: open && orderIds.length > 0,
+    staleTime: 5_000,
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("preorders")
+        .select("order_id,stage")
+        .in("order_id", orderIds);
+      if (error) throw error;
+      return (data ?? []).filter((p) => p.stage !== "cancelled").map((p) => p.order_id as string);
+    },
+  });
+  const alreadyCount = alreadyPreorders?.length ?? 0;
+  const pendingIds = orderIds.filter((id) => !(alreadyPreorders ?? []).includes(id));
+  const allAlready = orderIds.length > 0 && pendingIds.length === 0;
+
   const { data: existingOrder } = useQuery({
     queryKey: ["preorder-convert-order", singleOrderId],
     enabled: open && !!singleOrderId,
@@ -74,8 +91,11 @@ export function PreorderConvertDialog({ open, onOpenChange, orderIds, brandId, o
     mutationFn: async (confirmNow: boolean = false) => {
       if (withAdvance && single && !(Number(amount) > 0)) throw new Error("Advance amount din");
       if (confirmNow && single && !(Number(amount) > 0)) throw new Error("Pay korte hole advance amount din");
-      for (const id of orderIds) {
-        await moveOrderToPreorder({
+      if (pendingIds.length === 0) throw new Error("এই order আগে থেকেই pre-order list-এ আছে");
+      let createdCount = 0;
+      let skipped = 0;
+      for (const id of pendingIds) {
+        const res = await moveOrderToPreorder({
           orderId: id,
           brandId: brandId ?? null,
           promiseDays: days,
@@ -89,15 +109,21 @@ export function PreorderConvertDialog({ open, onOpenChange, orderIds, brandId, o
           notes: notes || null,
           confirmNow,
         });
+        if (res.created) createdCount += 1;
+        else skipped += 1;
       }
-      return confirmNow;
+      return { confirmNow, createdCount, skipped };
     },
-    onSuccess: (confirmNow) => {
-      toast.success(
-        confirmNow
-          ? `${orderIds.length} order confirm hoye pre-order list-e gelo`
-          : `${orderIds.length} order pre-order-e move holo`,
-      );
+    onSuccess: ({ confirmNow, createdCount, skipped }) => {
+      if (createdCount > 0) {
+        toast.success(
+          confirmNow
+            ? `${createdCount} order confirm hoye pre-order list-e gelo`
+            : `${createdCount} order pre-order-e move holo`,
+        );
+      }
+      const skippedTotal = skipped + alreadyCount;
+      if (skippedTotal > 0) toast.info(`${skippedTotal} order আগে থেকেই pre-order list-এ ছিল — duplicate হয়নি`);
       qc.invalidateQueries({ queryKey: ["orders"] });
       qc.invalidateQueries({ queryKey: ["orders-status-counts"] });
       qc.invalidateQueries({ queryKey: ["web-orders"] });
@@ -125,6 +151,13 @@ export function PreorderConvertDialog({ open, onOpenChange, orderIds, brandId, o
         </DialogHeader>
 
         <div className="space-y-4">
+          {alreadyCount > 0 && (
+            <div className="rounded-xl border border-amber-300 bg-amber-50 p-3 text-xs font-medium text-amber-900 dark:border-amber-900 dark:bg-amber-950 dark:text-amber-200">
+              {single
+                ? "এই order আগে থেকেই pre-order list-এ আছে — আবার move করলে duplicate entry হবে না।"
+                : `${alreadyCount} টি order আগে থেকেই pre-order list-এ আছে, ওগুলো skip হবে।`}
+            </div>
+          )}
           <div className="space-y-2">
             <Label className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Promise time — কত দিনের কথা দেওয়া</Label>
             <div className="flex flex-wrap gap-1.5">
@@ -208,7 +241,7 @@ export function PreorderConvertDialog({ open, onOpenChange, orderIds, brandId, o
           <Button
             variant="secondary"
             onClick={() => run.mutate(false)}
-            disabled={run.isPending || orderIds.length === 0}
+            disabled={run.isPending || orderIds.length === 0 || allAlready}
           >
             {run.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
             Move to Pre-order
@@ -217,7 +250,7 @@ export function PreorderConvertDialog({ open, onOpenChange, orderIds, brandId, o
             <Button
               className="bg-emerald-600 hover:bg-emerald-700 text-white"
               onClick={() => { setWithAdvance(true); run.mutate(true); }}
-              disabled={run.isPending || orderIds.length === 0}
+              disabled={run.isPending || orderIds.length === 0 || allAlready}
             >
               {run.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
               Move to Pre-order &amp; Pay
