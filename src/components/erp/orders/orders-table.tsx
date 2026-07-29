@@ -1,5 +1,5 @@
 import { flexRender, getCoreRowModel, useReactTable, type ColumnDef } from "@tanstack/react-table";
-import { MoreHorizontal, FileText, Printer, ImageDown, Pencil, Send, X as XIcon, ListPlus, StickyNote, Phone, MapPin, Copy, ImageIcon, MessageSquare, ArrowRight, RefreshCcw, Check, CheckCircle2, Hash, ExternalLink } from "lucide-react";
+import { MoreHorizontal, FileText, Printer, ImageDown, Pencil, Send, X as XIcon, ListPlus, StickyNote, Phone, MapPin, Copy, ImageIcon, MessageSquare, ArrowRight, RefreshCcw, Check, CheckCircle2, Hash, ExternalLink, CalendarClock } from "lucide-react";
 import { format } from "date-fns";
 import { Link } from "@tanstack/react-router";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
@@ -52,9 +52,11 @@ type Props = {
   shipmentsByOrderId?: Record<string, CourierShipmentRow>;
   flashOrderIds?: Set<string>;
   onSyncRow?: (orderId: string) => void;
+  onPreorder?: (orderId: string) => void;
 };
 
-export function OrdersTable({ rows, loading, selectedIds, onToggleSelect, onToggleAll, onRowClick, onStatusChange, pendingStatusIds, shipmentsByOrderId, flashOrderIds, onSyncRow }: Props) {
+
+export function OrdersTable({ rows, loading, selectedIds, onToggleSelect, onToggleAll, onRowClick, onStatusChange, pendingStatusIds, shipmentsByOrderId, flashOrderIds, onSyncRow, onPreorder }: Props) {
   const copyText = (text: string, label: string) => {
     navigator.clipboard?.writeText(text).then(() => toast.success(`${label} copied`));
   };
@@ -451,6 +453,11 @@ export function OrdersTable({ rows, loading, selectedIds, onToggleSelect, onTogg
                 <DropdownMenuItem onClick={() => onStatusChange(o.id, "ready_to_ship")} disabled={o.status === "ready_to_ship"}>
                   <Send className="h-4 w-4" /> Send to RTS
                 </DropdownMenuItem>
+                {onPreorder && (
+                  <DropdownMenuItem onClick={() => onPreorder(o.id)} disabled={o.status === "pre_order"}>
+                    <CalendarClock className="h-4 w-4" /> Move to Pre-order
+                  </DropdownMenuItem>
+                )}
                 <DropdownMenuItem
                   onClick={() => onStatusChange(o.id, "cancelled")}
                   disabled={o.status === "cancelled"}
