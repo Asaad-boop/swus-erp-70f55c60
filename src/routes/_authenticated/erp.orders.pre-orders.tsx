@@ -4,7 +4,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import {
   AlertTriangle, CalendarClock, CheckCircle2, ExternalLink, Loader2, PackageCheck,
-  PhoneCall, RefreshCw, Search, Wallet, X, Clock3, Package, TrendingUp,
+  PhoneCall, RefreshCw, Search, Wallet, X, Package, TrendingUp,
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { applyBrandScope } from "@/lib/erp/apply-brand-scope";
