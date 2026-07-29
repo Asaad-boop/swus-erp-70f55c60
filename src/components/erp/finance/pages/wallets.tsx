@@ -1,5 +1,6 @@
 import { useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
+import { Link } from "@tanstack/react-router";
 import { ArrowRightLeft, Banknote, Building2, Coins, Landmark, Plus, Smartphone, Truck, Wallet as WalletIcon, FileText, Pencil, ArrowDownToLine, ArrowUpFromLine } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useBrand } from "@/contexts/brand-context";
@@ -283,7 +284,7 @@ function StatementDialog({ wallet, onClose }: { wallet: Wallet | null; onClose: 
     queryFn: async () => {
       const { data, error } = await supabase
         .from("erp_transactions")
-        .select("id, txn_type, amount, transaction_date, description, account_id, to_account_id")
+        .select("id, txn_type, amount, transaction_date, description, account_id, to_account_id, reference_type, reference_id")
         .or(`account_id.eq.${wallet!.id},to_account_id.eq.${wallet!.id}`)
         .order("transaction_date", { ascending: false })
         .order("created_at", { ascending: false })
@@ -295,6 +296,57 @@ function StatementDialog({ wallet, onClose }: { wallet: Wallet | null; onClose: 
 
   const rows = stmtQ.data ?? [];
 
+  const orderIds = useMemo(
+    () =>
+      Array.from(
+        new Set(
+          rows
+            .filter((r) => (r.reference_type ?? "").startsWith("order") && r.reference_id)
+            .map((r) => r.reference_id as string),
+        ),
+      ),
+    [rows],
+  );
+
+  const ordersQ = useQuery({
+    queryKey: ["wallet_statement_orders", wallet?.id, orderIds.length],
+    enabled: orderIds.length > 0,
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("orders")
+        .select("id, invoice_no, status")
+        .in("id", orderIds);
+      if (error) throw error;
+      return data ?? [];
+    },
+  });
+
+  const orderMap = useMemo(() => {
+    const m = new Map<string, { id: string; invoice_no: string | null; status: string }>();
+    for (const o of ordersQ.data ?? []) m.set(o.id, o as never);
+    return m;
+  }, [ordersQ.data]);
+
+  const VOID_STATUSES = new Set(["cancelled", "fake", "returned", "unpaid_return", "paid_return"]);
+
+  const effective = useMemo(
+    () =>
+      rows.reduce((sum, r) => {
+        const order = r.reference_id ? orderMap.get(r.reference_id) : undefined;
+        if (order && VOID_STATUSES.has(order.status)) return sum;
+        const inflow =
+          r.txn_type === "income" ||
+          (r.txn_type === "transfer" && r.to_account_id === wallet?.id) ||
+          (r.txn_type === "adjustment" && Number(r.amount) > 0);
+        return sum + (inflow ? Math.abs(Number(r.amount)) : -Math.abs(Number(r.amount)));
+      }, 0),
+    [rows, orderMap, wallet?.id],
+  );
+  const voidCount = rows.filter((r) => {
+    const o = r.reference_id ? orderMap.get(r.reference_id) : undefined;
+    return o && VOID_STATUSES.has(o.status);
+  }).length;
+
   return (
     <Dialog open={!!wallet} onOpenChange={(o) => !o && onClose()}>
       <DialogContent className="max-w-3xl max-h-[80vh] overflow-hidden flex flex-col">
@@ -302,6 +354,12 @@ function StatementDialog({ wallet, onClose }: { wallet: Wallet | null; onClose: 
           <DialogTitle>
             {wallet?.name} · <span className="font-mono">{fmtBdt(wallet?.current_balance ?? 0)}</span>
           </DialogTitle>
+          {voidCount > 0 && (
+            <p className="text-xs text-muted-foreground">
+              {voidCount} টি entry cancel/return হওয়া order-এর — বাদ ধরে net{" "}
+              <span className="font-mono font-semibold text-foreground">{fmtBdt(effective)}</span>
+            </p>
+          )}
         </DialogHeader>
         <div className="overflow-auto flex-1">
           {stmtQ.isLoading && <p className="text-sm text-muted-foreground p-4">Loading…</p>}
@@ -322,12 +380,38 @@ function StatementDialog({ wallet, onClose }: { wallet: Wallet | null; onClose: 
                 {rows.map((r) => {
                   const inflow = r.txn_type === "income" || (r.txn_type === "transfer" && r.to_account_id === wallet?.id) || (r.txn_type === "adjustment" && Number(r.amount) > 0);
                   const signed = inflow ? Math.abs(Number(r.amount)) : -Math.abs(Number(r.amount));
+                  const order = r.reference_id ? orderMap.get(r.reference_id) : undefined;
+                  const voided = !!order && VOID_STATUSES.has(order.status);
                   return (
-                    <TableRow key={r.id}>
+                    <TableRow key={r.id} className={cn(voided && "opacity-60")}>
                       <TableCell className="text-xs whitespace-nowrap">{r.transaction_date}</TableCell>
                       <TableCell><Badge variant="outline" className="text-[10px] uppercase">{r.txn_type}</Badge></TableCell>
-                      <TableCell className="text-sm">{r.description ?? "—"}</TableCell>
-                      <TableCell className={cn("text-right tabular-nums font-medium", signed >= 0 ? "text-emerald-600" : "text-red-600")}>
+                      <TableCell className="text-sm">
+                        <div>{r.description ?? "—"}</div>
+                        {order && (
+                          <div className="mt-0.5 flex flex-wrap items-center gap-1.5 text-[11px]">
+                            <Link
+                              to="/erp/orders/$orderId"
+                              params={{ orderId: order.id }}
+                              className="font-mono font-semibold text-indigo-600 hover:underline dark:text-indigo-400"
+                            >
+                              {order.invoice_no ?? `#${order.id.slice(0, 8)}`}
+                            </Link>
+                            <span className="font-mono text-muted-foreground">{order.id.slice(0, 8)}</span>
+                            <Badge
+                              variant="outline"
+                              className={cn(
+                                "text-[10px] uppercase",
+                                voided && "border-rose-300 bg-rose-50 text-rose-700 dark:border-rose-900 dark:bg-rose-950 dark:text-rose-300",
+                              )}
+                            >
+                              {order.status}
+                            </Badge>
+                            {voided && <span className="font-semibold text-rose-600">বাদ — টাকা পাওয়া যায়নি</span>}
+                          </div>
+                        )}
+                      </TableCell>
+                      <TableCell className={cn("text-right tabular-nums font-medium", voided ? "text-muted-foreground line-through" : signed >= 0 ? "text-emerald-600" : "text-red-600")}>
                         {signed >= 0 ? "+" : ""}{fmtBdt(signed)}
                       </TableCell>
                     </TableRow>
