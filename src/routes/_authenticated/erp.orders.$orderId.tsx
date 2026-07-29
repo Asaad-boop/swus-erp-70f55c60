@@ -848,7 +848,7 @@ function OrderDetailsPage() {
             advance_amount: verifiedAdvance,
             advance_source: form.advance_source || order?.payment_method || "bKash",
             advance_txn_id: form.advance_txn_id || order?.advance_txn_id || null,
-            total: remainingDue <= 0 ? 0 : payable,
+            total: remainingDue,
             payment_status: remainingDue <= 0 ? "paid" as const : "partial" as const,
           }
         : {
