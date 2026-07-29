@@ -17,6 +17,8 @@ import {
   ChevronRight,
 } from "lucide-react";
 import { Download, FileDown } from "lucide-react";
+import { CloudDownload } from "lucide-react";
+import { fetchPathaoInvoiceCsvFn } from "@/lib/erp/pathao-invoices.functions";
 import { exportReconciliationCsv, exportReconciliationPdf } from "@/lib/erp/reconciliation-export";
 import { useBrand } from "@/contexts/brand-context";
 import { useAccounts, useCategories } from "@/hooks/erp/use-finance-query";
@@ -519,6 +521,41 @@ function ReconciliationPage() {
   const createFn = useServerFn(createPathaoReconciliationRun);
   const deleteFn = useServerFn(deletePathaoReconciliationRun);
   const previewFn = useServerFn(previewPathaoReconciliation);
+  const autoFetchFn = useServerFn(fetchPathaoInvoiceCsvFn);
+
+  // ---- Auto fetch (Pathao merchant panel) ----
+  const isoDay = (d: Date) => d.toISOString().slice(0, 10);
+  const [autoFrom, setAutoFrom] = useState(() => {
+    const n = new Date();
+    return isoDay(new Date(n.getFullYear(), n.getMonth(), 1));
+  });
+  const [autoTo, setAutoTo] = useState(() => isoDay(new Date()));
+  const [autoAttempts, setAutoAttempts] = useState<{ path: string; status: number | string; snippet: string }[] | null>(null);
+
+  const autoMut = useMutation({
+    mutationFn: () => autoFetchFn({ data: { brandId: null, from: autoFrom, to: autoTo } }),
+    onSuccess: (r) => {
+      setAutoAttempts(r.attempts ?? null);
+      if (!r.csv) {
+        toast.error("Pathao theke invoice CSV pawa jayni — niche details dekhun, CSV manually upload korte parben.");
+        return;
+      }
+      try {
+        const parsed = parsePathaoCsv(r.csv);
+        if (!parsed.length) {
+          toast.error("Ei date range e kono paid invoice nei");
+          return;
+        }
+        setPreview(parsed);
+        setFilename(r.filename);
+        setAutoAttempts(null);
+        toast.success(`${parsed.length} consignment ana holo — preview dekhe Process korun`);
+      } catch (e) {
+        toast.error("Parse failed: " + (e as Error).message);
+      }
+    },
+    onError: (e: Error) => toast.error(e.message),
+  });
 
   const runsQ = useQuery({
     queryKey: ["pathao-reconciliation-runs", "all"],
@@ -692,6 +729,45 @@ function ReconciliationPage() {
                 )}
                 Process {preview.length} consignments
               </Button>
+            )}
+          </div>
+
+          {/* Auto fetch from Pathao */}
+          <div className="rounded-md border bg-muted/20 p-3 space-y-2">
+            <div className="flex flex-wrap items-end gap-3">
+              <div>
+                <Label className="text-xs">Auto fetch — From</Label>
+                <Input type="date" value={autoFrom} onChange={(e) => setAutoFrom(e.target.value)} className="h-9 w-[150px]" />
+              </div>
+              <div>
+                <Label className="text-xs">To</Label>
+                <Input type="date" value={autoTo} onChange={(e) => setAutoTo(e.target.value)} className="h-9 w-[150px]" />
+              </div>
+              <Button
+                variant="secondary"
+                className="gap-2"
+                disabled={autoMut.isPending}
+                onClick={() => autoMut.mutate()}
+              >
+                {autoMut.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <CloudDownload className="h-4 w-4" />}
+                Fetch from Pathao
+              </Button>
+              <p className="text-[11px] text-muted-foreground flex-1 min-w-[220px]">
+                Pathao merchant account theke oi date range er paid invoice sorasori ene preview dekhabe — apni verify kore “Process” korle tarpor Apply hobe.
+              </p>
+            </div>
+
+            {autoAttempts && (
+              <details className="text-[11px] text-muted-foreground">
+                <summary className="cursor-pointer">Pathao response details ({autoAttempts.length} endpoint try kora holo)</summary>
+                <div className="mt-1 space-y-0.5 font-mono">
+                  {autoAttempts.map((a, i) => (
+                    <div key={i} className="break-all">
+                      [{String(a.status)}] {a.path} — {a.snippet}
+                    </div>
+                  ))}
+                </div>
+              </details>
             )}
           </div>
 
