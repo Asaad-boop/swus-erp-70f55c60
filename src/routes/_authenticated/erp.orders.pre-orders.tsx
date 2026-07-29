@@ -590,6 +590,14 @@ function AdvanceDialog({ row, onClose, onSaved }: { row: Row | null; onClose: ()
   const [source, setSource] = useState("bKash");
   const [txnId, setTxnId] = useState("");
 
+  useEffect(() => {
+    if (!row) return;
+    setAmount(Number(row.advance_amount) > 0 ? String(row.advance_amount) : "");
+    setMethod(row.advance_method ?? "bKash");
+    setSource(row.advance_source ?? "bKash");
+    setTxnId(row.advance_txn_id ?? "");
+  }, [row]);
+
   const save = useMutation({
     mutationFn: async () => {
       if (!row) return;
