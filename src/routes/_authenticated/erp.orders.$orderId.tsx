@@ -54,6 +54,44 @@ function bdtCompact(n: number) {
   return new Intl.NumberFormat("en-IN", { maximumFractionDigits: 0 }).format(n || 0);
 }
 
+function parseMoneyText(value: string | undefined): number | null {
+  if (!value) return null;
+  const n = Number(value.replace(/,/g, ""));
+  return Number.isFinite(n) ? n : null;
+}
+
+function normalizePaymentSource(value: string | null): string | null {
+  const s = (value ?? "").trim().toLowerCase();
+  if (!s) return null;
+  if (s.includes("bkash") || s.includes("b-kash") || s.includes("বিকাশ")) return "bKash";
+  if (s.includes("nagad")) return "Nagad";
+  if (s.includes("rocket")) return "Rocket";
+  if (s.includes("upay")) return "Upay";
+  if (s.includes("bank")) return "Bank";
+  if (s.includes("card") || s.includes("visa") || s.includes("master")) return "Card";
+  return value?.trim() || null;
+}
+
+function parseWebsiteAdvanceDetails(text: string) {
+  const advanceMatch = text.match(/(?:advance\s*(?:paid|payment|amount)?|paid\s*advance)\s*[:\-]?\s*(?:৳|tk\.?|bdt)?\s*([0-9,]+(?:\.[0-9]+)?)/i);
+  const dueMatch = text.match(/(?:due\s*(?:on\s*delivery|amount)?|cod\s*due)\s*[:\-]?\s*(?:৳|tk\.?|bdt)?\s*([0-9,]+(?:\.[0-9]+)?)/i);
+  const sourceMatch = text.match(/(?:payment(?:\s*method)?|method|source)\s*[:\-]\s*([A-Za-z\- ]{2,24})/i);
+  const phoneMatch = text.match(/(?:from|sender|payment\s*(?:no|number)|(?:b\s*-?kash|bkash|nagad|rocket)\s*(?:no|number))\s*[:\-]\s*(\+?\d[\d\s\-]{5,24})/i);
+  const txnMatch = text.match(/(?:trx\s*id|trxid|transaction\s*id|txn\s*id|txn)\s*[:\-]\s*([A-Za-z0-9_-]{4,60})/i);
+  return {
+    amount: parseMoneyText(advanceMatch?.[1]),
+    due: parseMoneyText(dueMatch?.[1]),
+    source: normalizePaymentSource(sourceMatch?.[1] ?? null),
+    paymentNumber: phoneMatch?.[1]?.replace(/[^0-9+]/g, "") ?? null,
+    txnId: txnMatch?.[1] ?? null,
+  };
+}
+
+function isWebsiteOrderSource(order: { source?: string | null; source_platform?: string | null; source_website?: string | null } | null | undefined) {
+  const text = [order?.source, order?.source_platform, order?.source_website].filter(Boolean).join(" ").toLowerCase();
+  return /website|pixel|utm|direct|organic|shopify|hobbyshop|toyora/.test(text);
+}
+
 function pathaoSourceLabel(source?: string) {
   if (source === "pathao_address_parser") return "Pathao merchant address parser";
   return source ?? "";
@@ -839,16 +877,32 @@ function OrderDetailsPage() {
       // Payable = items + delivery − discount (advance বাদে)
       const payable = Math.max(0, itemsSubtotal + Number(form.shipping_fee) - Number(form.discount));
       const currentAdvance = Number(form.advance || order?.advance_amount || 0);
-      const verifiedAdvance = order?.is_preorder && currentAdvance > 0 ? Math.min(payable, currentAdvance) : payable;
+      const advanceText = [
+        order?.notes,
+        order?.customer_note,
+        order?.latest_note,
+        ...notes.map((n) => n.body),
+      ].filter(Boolean).join("\n");
+      const parsedAdvance = parseWebsiteAdvanceDetails(advanceText);
+      const websiteOrder = isWebsiteOrderSource(order);
+      const authoritativeAdvance = parsedAdvance.amount != null ? parsedAdvance.amount : currentAdvance;
+      if (verify && websiteOrder && order?.is_preorder && parsedAdvance.amount == null) {
+        throw new Error("Website pre-order advance missing — enter the actual paid amount before verifying.");
+      }
+      if (verify && websiteOrder && authoritativeAdvance <= 0) {
+        throw new Error("Website advance amount missing — enter the actual paid amount before verifying.");
+      }
+      const verifiedAdvance = authoritativeAdvance > 0 ? Math.min(payable, authoritativeAdvance) : payable;
       const remainingDue = Math.max(0, payable - verifiedAdvance);
       const keepPreorderAdvance = !verify && !!order?.is_preorder && currentAdvance > 0;
       const patch = verify
         ? {
             verified_at: new Date().toISOString(),
             advance_amount: verifiedAdvance,
-            advance_source: form.advance_source || order?.payment_method || "bKash",
-            advance_txn_id: form.advance_txn_id || order?.advance_txn_id || null,
-            total: remainingDue,
+            advance_source: parsedAdvance.source || form.advance_source || order?.advance_source || order?.payment_method || "bKash",
+            advance_payment_number: parsedAdvance.paymentNumber || form.advance_payment_number || order?.advance_payment_number || null,
+            advance_txn_id: parsedAdvance.txnId || form.advance_txn_id || order?.advance_txn_id || null,
+            total: parsedAdvance.due != null ? parsedAdvance.due : remainingDue,
             payment_status: remainingDue <= 0 ? "paid" as const : "partial" as const,
           }
         : {
@@ -862,13 +916,25 @@ function OrderDetailsPage() {
         .update(patch)
         .eq("id", orderId);
       if (error) throw error;
-      return { payable, verify, advance: verifiedAdvance, remainingDue, keepPreorderAdvance, currentAdvance };
+      return {
+        payable,
+        verify,
+        advance: verifiedAdvance,
+        remainingDue: parsedAdvance.due != null ? parsedAdvance.due : remainingDue,
+        keepPreorderAdvance,
+        currentAdvance,
+        source: verify ? patch.advance_source : form.advance_source,
+        paymentNumber: verify ? patch.advance_payment_number : form.advance_payment_number,
+        txnId: verify ? patch.advance_txn_id : form.advance_txn_id,
+      };
     },
     onSuccess: (res, verify) => {
       setForm((f) => ({
         ...f,
         advance: verify ? res.advance : (res.keepPreorderAdvance ? res.currentAdvance : 0),
-        advance_source: verify ? (f.advance_source || order?.payment_method || "bKash") : f.advance_source,
+        advance_source: verify ? (res.source || f.advance_source || order?.payment_method || "bKash") : f.advance_source,
+        advance_payment_number: verify ? (res.paymentNumber ?? f.advance_payment_number) : f.advance_payment_number,
+        advance_txn_id: verify ? (res.txnId ?? f.advance_txn_id) : f.advance_txn_id,
       }));
       toast.success(
         verify
