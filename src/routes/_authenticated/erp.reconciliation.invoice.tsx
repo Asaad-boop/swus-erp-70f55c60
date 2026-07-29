@@ -521,6 +521,39 @@ function ReconciliationPage() {
   const createFn = useServerFn(createPathaoReconciliationRun);
   const deleteFn = useServerFn(deletePathaoReconciliationRun);
   const previewFn = useServerFn(previewPathaoReconciliation);
+  const autoFetchFn = useServerFn(fetchPathaoInvoiceCsvFn);
+
+  // ---- Auto fetch (Pathao merchant panel) ----
+  const today = new Date();
+  const iso = (d: Date) => d.toISOString().slice(0, 10);
+  const [autoFrom, setAutoFrom] = useState(iso(new Date(today.getFullYear(), today.getMonth(), 1)));
+  const [autoTo, setAutoTo] = useState(iso(today));
+  const [autoAttempts, setAutoAttempts] = useState<{ path: string; status: number | string; snippet: string }[] | null>(null);
+
+  const autoMut = useMutation({
+    mutationFn: () => autoFetchFn({ data: { brandId: null, from: autoFrom, to: autoTo } }),
+    onSuccess: (r) => {
+      setAutoAttempts(r.attempts ?? null);
+      if (!r.csv) {
+        toast.error("Pathao theke invoice CSV pawa jayni — niche details dekhun, CSV manually upload korte parben.");
+        return;
+      }
+      try {
+        const parsed = parsePathaoCsv(r.csv);
+        if (!parsed.length) {
+          toast.error("Ei date range e kono paid invoice nei");
+          return;
+        }
+        setPreview(parsed);
+        setFilename(r.filename);
+        setAutoAttempts(null);
+        toast.success(`${parsed.length} consignment ana holo — preview dekhe Process korun`);
+      } catch (e) {
+        toast.error("Parse failed: " + (e as Error).message);
+      }
+    },
+    onError: (e: Error) => toast.error(e.message),
+  });
 
   const runsQ = useQuery({
     queryKey: ["pathao-reconciliation-runs", "all"],
