@@ -161,62 +161,27 @@ export function useOrderStatusCounts(filter: OrdersFilter) {
     enabled: brandIds.length > 0,
     staleTime: 0,
     queryFn: async () => {
-      // Use PostgREST exact HEAD counts instead of fetching status rows.
-      // This avoids the 1,000-row response cap and keeps tab badges aligned
-      // with the list header count after status/print/filter changes.
-      const buildCountQuery = (statuses: OrderStatus[] | null) => {
-        let q = applyBrandScope(
-          supabase.from("orders").select("id", { count: "exact", head: true }),
-          brandIds,
-        );
-
-        if (statuses && statuses.length > 0) {
-          q = q.in("status", statuses);
-          if (statuses.includes("confirmed")) {
-            q = q.or(`status.neq.confirmed,source.is.null,${WEB_ORDER_SOURCE_FILTER},web_status.eq.complete`);
-          }
-        } else {
-          q = q.neq("status", "new");
-          q = q.or(`status.neq.confirmed,source.is.null,${WEB_ORDER_SOURCE_FILTER},web_status.eq.complete`);
-        }
-
-        if (filter.printedFilter === "printed") q = q.not("printed_at", "is", null);
-        else if (filter.printedFilter === "unprinted") q = q.is("printed_at", null);
-        if (filter.source) q = q.eq("source", filter.source as never);
-        if (filter.courier) q = q.eq("courier_name", filter.courier);
-        if (filter.dateFrom) q = q.gte("created_at", filter.dateFrom);
-        if (filter.dateTo) q = q.lte("created_at", filter.dateTo);
-        if (filter.search.trim()) {
-          const s = filter.search.trim();
-          q = q.or(
-            `shipping_name.ilike.%${s}%,shipping_phone.ilike.%${s}%,guest_name.ilike.%${s}%,guest_phone.ilike.%${s}%,tracking_number.ilike.%${s}%`,
-          );
-        }
-        return q;
-      };
+      // Single grouped aggregate on the server instead of 17 separate
+      // exact-count round trips (each of which scanned the whole table).
+      const { data, error } = await supabase.rpc("erp_order_status_counts", {
+        _brand_ids: brandIds,
+        _search: filter.search.trim() || undefined,
+        _source: filter.source ?? undefined,
+        _courier: filter.courier ?? undefined,
+        _date_from: filter.dateFrom ?? undefined,
+        _date_to: filter.dateTo ?? undefined,
+        _printed: filter.printedFilter ?? "all",
+      });
+      if (error) throw error;
 
       const counts: Record<string, number> = {};
-      const statuses = [
-        "confirmed", "packed", "ready_to_ship", "shipped", "in_transit",
-        "delivered", "completed", "partial_delivered", "partial_return",
-        "pending_return", "return_in_transit", "returned", "exchange", "exchanged",
-        "on_hold", "cancelled",
-      ] as OrderStatus[];
-
-      const [totalResult, ...statusResults] = await Promise.all([
-        buildCountQuery(null),
-        ...statuses.map((status) => buildCountQuery([status])),
-      ]);
-
-      if (totalResult.error) throw totalResult.error;
-      statusResults.forEach((result, index) => {
-        if (result.error) throw result.error;
-        const status = statuses[index];
-        const count = result.count ?? 0;
-        if (count > 0) counts[status] = count;
-      });
-
-      return { counts, total: totalResult.count ?? 0 };
+      let total = 0;
+      for (const row of (data ?? []) as { status: string; cnt: number }[]) {
+        const c = Number(row.cnt) || 0;
+        if (c > 0) counts[row.status] = c;
+        total += c;
+      }
+      return { counts, total };
     },
   });
 }
