@@ -56,6 +56,8 @@ export type PreorderIntake = {
   dueCollectMethod: string | null;
   dueNote: string | null;
   notes: string | null;
+  /** Confirm the order immediately (goes to confirmed pipeline) while staying in the pre-order list. */
+  confirmNow?: boolean;
 };
 
 export function promiseDateFromDays(days: number | null | undefined): string | null {
@@ -123,12 +125,20 @@ export async function moveOrderToPreorder(intake: PreorderIntake) {
   const due = Math.max(0, dueBase - advance);
 
   const orderPatch: Record<string, unknown> = {
-    status: "pre_order",
     is_preorder: true,
     preorder_expected_date: promiseDate,
     preorder_ready_at: null,
     preorder_converted_at: null,
   };
+  if (intake.confirmNow) {
+    orderPatch.status = "confirmed";
+    orderPatch.confirmation_status = "confirmed";
+    orderPatch.confirmed_at = new Date().toISOString();
+    orderPatch.confirmed_by = uid;
+    orderPatch.web_status = "complete";
+  } else {
+    orderPatch.status = "pre_order";
+  }
   if (advance > 0) {
     orderPatch.advance_amount = advance;
     orderPatch.advance_source = advanceSource;
