@@ -8103,6 +8103,21 @@ export type Database = {
         Returns: string
       }
       crm_normalize_phone: { Args: { p: string }; Returns: string }
+      erp_order_status_counts: {
+        Args: {
+          _brand_ids: string[]
+          _courier?: string
+          _date_from?: string
+          _date_to?: string
+          _printed?: string
+          _search?: string
+          _source?: string
+        }
+        Returns: {
+          cnt: number
+          status: string
+        }[]
+      }
       erp_profit_loss: {
         Args: { _brand_id: string; _from: string; _to: string }
         Returns: Json
