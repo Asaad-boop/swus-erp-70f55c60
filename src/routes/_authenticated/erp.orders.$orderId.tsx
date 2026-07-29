@@ -839,7 +839,7 @@ function OrderDetailsPage() {
       // Payable = items + delivery − discount (advance বাদে)
       const payable = Math.max(0, itemsSubtotal + Number(form.shipping_fee) - Number(form.discount));
       const currentAdvance = Number(form.advance || order?.advance_amount || 0);
-      const verifiedAdvance = currentAdvance > 0 ? Math.min(payable, currentAdvance) : payable;
+      const verifiedAdvance = order?.is_preorder && currentAdvance > 0 ? Math.min(payable, currentAdvance) : payable;
       const remainingDue = Math.max(0, payable - verifiedAdvance);
       const keepPreorderAdvance = !verify && !!order?.is_preorder && currentAdvance > 0;
       const patch = verify
