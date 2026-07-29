@@ -66,7 +66,7 @@ function asList(v: any): any[] {
 }
 
 function pickDate(row: any): string | null {
-  for (const k of ["invoice_date", "payment_date", "created_at", "date", "transaction_date", "updated_at"]) {
+  for (const k of ["invoice_created_at", "invoice_date", "payment_date", "created_at", "date", "transaction_date", "updated_at"]) {
     const v = row?.[k];
     if (typeof v === "string" && /\d{4}-\d{2}-\d{2}/.test(v)) return v.slice(0, 10);
   }
@@ -74,7 +74,7 @@ function pickDate(row: any): string | null {
 }
 
 function pickId(row: any): string | null {
-  for (const k of ["invoice_id", "id", "invoice_no", "invoiceId", "hash_id"]) {
+  for (const k of ["order_invoice_id", "invoice_id", "id", "invoice_no", "invoiceId", "hash_id"]) {
     const v = row?.[k];
     if (v !== undefined && v !== null && String(v).length) return String(v);
   }
@@ -124,18 +124,8 @@ export async function fetchPathaoInvoiceCsv(
     const list = asList(j);
     if (!list.length) break;
     invoices.push(...list);
-    if (page === 1) {
-      attempts.push({
-        path: "debug:first-invoice",
-        status: "info",
-        snippet: JSON.stringify(list[0]).slice(0, 700),
-      });
-    }
-    const lastPage = Number(j?.data?.last_page ?? j?.last_page ?? 0);
-    const total = Number(j?.data?.total ?? j?.total ?? 0);
-    if (lastPage && page >= lastPage) break;
-    if (!lastPage && total && invoices.length >= total) break;
-    if (!lastPage && !total) break;
+    // No reliable total/last_page in the payload — stop on a short page.
+    if (list.length < 50) break;
   }
 
   // 2) Keep invoices whose date falls in range (list may ignore date params).
