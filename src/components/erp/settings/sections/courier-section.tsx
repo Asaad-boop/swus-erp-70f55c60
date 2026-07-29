@@ -1,6 +1,7 @@
 import { PathaoSettings } from "@/components/erp/courier/pathao-settings";
 import { SteadfastSettings } from "@/components/erp/courier/steadfast-settings";
 import { CourierMappingSettings } from "@/components/erp/settings/courier-mapping-settings";
+import { InstapaySettings } from "@/components/erp/settings/instapay-settings";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useCurrentRole } from "@/hooks/use-current-role";
 import { Alert, AlertDescription } from "@/components/ui/alert";
@@ -31,7 +32,10 @@ export function CourierSection({ brandId }: { brandId: string }) {
         </TabsList>
         <TabsContent value="pathao">
           {isAdmin ? (
-            <PathaoSettings key={brandId} />
+            <div className="space-y-4">
+              <PathaoSettings key={brandId} />
+              <InstapaySettings brandId={brandId} />
+            </div>
           ) : (
             <div className="rounded-xl border bg-card p-6 text-sm text-muted-foreground">Hidden — admin only.</div>
           )}
