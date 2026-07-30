@@ -6,7 +6,7 @@ import {
   ChevronsLeft, ChevronRight, Sparkles, ClipboardList, ClipboardCheck, PackageSearch,
   Activity, BarChart3, RotateCcw, FileSpreadsheet, Zap, Briefcase, Stethoscope, ChevronDown,
   Receipt, BookOpen, Landmark, Coins, ArrowDownCircle, ArrowUpCircle, HandCoins, Scale,
-  FileBarChart, Target, Banknote, Building2, Search, PackageCheck, ShieldCheck, CheckCircle2, Clock,
+  FileBarChart, Target, Banknote, Building2, Search, PackageCheck, ShieldCheck, CheckCircle2, Clock, LayoutGrid,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useGlobalSearch } from "@/components/erp/global-search";
@@ -38,6 +38,7 @@ const groups: Group[] = [
         label: "Orders",
         icon: ClipboardList,
         items: [
+          { to: "/erp/orders/dashboard", label: "Order Dashboard", icon: LayoutGrid },
           { to: "/erp/orders/web", label: "Web Orders", icon: Globe },
           { to: "/erp/orders/list", label: "Order List", icon: ClipboardList },
           { to: "/erp/orders/pre-orders", label: "Pre-orders", icon: Clock },

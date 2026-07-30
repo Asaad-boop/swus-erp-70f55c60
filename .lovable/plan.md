@@ -1,56 +1,72 @@
-## কেন current টা কাজ করছে না
+# Order Dashboard (Advanced)
 
-DB trigger `auto_flag_preorder` stock কম থাকলেই order-কে auto pre-order বানিয়ে দেয়। System এখন backorder-friendly, তাই অসংখ্য normal order ভুল করে pre-order হয়ে যাচ্ছে। সাথে advance/due/promise কিছুই track হয় না। পুরোটা কেটে নতুন করে বানানো হবে।
+একটা নতুন full-power Order Dashboard বানাবো `/erp/orders/dashboard`-এ। বর্তমান `/erp/orders/list` থাকবে (দ্রুত daily operation-এর জন্য), আর এই নতুনটা হবে "সব ডেটা এক জায়গায়" analytical + drill-down dashboard।
 
-## নতুন Pre-order flow
+## 1. কী কী দেখা যাবে
+
+**উপরে KPI স্ট্রিপ** (selected filter অনুযায়ী live):
+- Total orders, Total value, Delivered value, Advance collected, COD outstanding
+- Confirmed / Packed / Shipped / In transit / Delivered / Returned (paid+unpaid) / Cancelled / Fake / Pre-order
+- Delivery rate %, Return rate %, Avg order value, Avg confirm→delivery time
+
+**চার্ট সারি:**
+- Daily orders + revenue (stacked bar/line)
+- Status funnel (New → Confirmed → Shipped → Delivered)
+- Source breakdown (website / facebook / manual / phone / shopify)
+- Top brands, top products, top districts/zones
+
+**মূল টেবিল** — প্রতিটা order-এ column toggle করে দেখা যাবে:
+Invoice no, Order ID, Date, Customer + phone, Brand, Items (variant/color/SKU সহ), Qty, Subtotal, Discount, Delivery charge, Advance, COD due, Payment status, Order status, Courier + consignment + live courier status, Tags, Source/UTM/campaign, **Confirmed by (কে confirm করলো) + কখন**, Packed by, Last updated by, Note count, Settlement/reconciliation status, Profit (delivered হলে)।
+
+**Row expand** করলে: full status timeline (কে, কখন, কোন status), order notes, SMS log, payments/advance details, courier tracking history, stock movement — সব একসাথে।
+
+## 2. Filter ও Tag
+
+- Date range (advanced picker — presets + typeable + 2-month range, প্রজেক্ট standard অনুযায়ী)
+- Brand (multi), Status (multi-select, group সহ), Payment status, Source, Courier, City/Zone
+- Confirmed-by user, Assigned staff
+- Tag chips (existing `order-tags` system) — multi include/exclude
+- Amount range, Advance আছে/নাই, COD outstanding আছে/নাই
+- Search: invoice / phone / name / consignment / product name / SKU
+- Saved views (filter combo save করে নাম দিয়ে রাখা), URL search-params এ সব filter → link share করা যাবে
+- Sort: যেকোনো column, asc/desc
+- Export: বর্তমান filter অনুযায়ী CSV + PDF summary
+
+## 3. Backend / API
+
+নতুন ফাইল `src/lib/erp/orders-dashboard.functions.ts` — server functions (RLS + brand scope মেনে):
+- `getOrderDashboardSummary` — KPI + chart series, একটা Postgres RPC `erp_order_dashboard_summary(filters)` দিয়ে single round-trip
+- `listOrderDashboardRows` — paginated (server-side sort/filter, 50/100/200 per page) rich row, items + variant + courier + confirmed_by join সহ
+- `getOrderDashboardDetail` — এক order-এর timeline + notes + SMS + payments + tracking
+- `exportOrderDashboard` — filter অনুযায়ী পুরো dataset CSV
+
+DB সাইডে: filter-heavy কলামে index (`orders(brand_id, status, created_at)`, `orders(confirmed_by)`, phone/invoice trigram) যোগ করা হবে যাতে বড় ডেটাতেও দ্রুত থাকে। "কে confirm করলো" এর জন্য `order_status_history` + `orders.confirmed_by` থেকে resolve করে profile name দেখাবো।
+
+## 4. UI structure
 
 ```text
-Entry (৩ ভাবে)                Pre-order pipeline                 Exit
-──────────────────────        ─────────────────────────────      ──────────────────
-Create Order → Pre-order  ┐   Open ─ Advance Paid ─ Stock         Confirm করলে →
-Web Order → Convert       ├─► Arrived (Ready) ─ Called &          status = confirmed
-Order List (new/pending)  ┘   Confirmed                           → Pending/Packaging
-   → Convert                        │                                 queue-তে চলে যাবে
-                                    └─► Cancelled / Refunded
+/erp/orders/dashboard
+ ├─ Filter bar (sticky, chip আকারে active filters + Reset)
+ ├─ KPI strip (clickable → filter apply)
+ ├─ Charts (collapsible)
+ └─ Data table (virtualized, column chooser, row expand, bulk actions)
 ```
 
-### ১. Create Order page-এ Pre-order button
-`/erp/orders/new` top-এ একটা **"Pre-order Mode"** toggle button। ON করলে page pre-order mode-এ যাবে:
-- Promise date / "কত দিন" input (দিন লিখলে date auto, date দিলে দিন auto)
-- Advance section: **Without advance** / **With advance** — with advance দিলে amount + method (bKash/Nagad/Rocket/Bank/Cash) + source (Website/Facebook/Phone/Manual/Shopify) + txn ID
-- Due collect method: বাকি টাকা আসার পরে কীভাবে নেবে (COD / bKash / Nagad / Bank / Cash on pickup) + note
-- Save করলে order status `pre_order` হবে, তাই এটা Pending/Packaging queue-তে যাবে না
+Bulk actions টেবিল থেকেই: status change, print invoice/label, courier book, SMS পাঠানো, tag add/remove, export selected।
 
-### ২. Web Orders → Pre-order convert
-`/erp/orders/web` drawer + bulk action bar-এ **"Convert to Pre-order"** — একই promise/advance/due dialog আসবে, confirm করলে order pre-order pipeline-এ চলে যাবে।
+## 5. কাজের ধাপ
 
-### ৩. Order List (new/pending) → Pre-order convert
-Order list row action + bulk action-এ **"Move to Pre-order"** (শুধু new/confirmed/pending status-এর জন্য)। একই dialog।
+1. DB: dashboard summary RPC + index migration
+2. `orders-dashboard.functions.ts` (4টা server fn) + Zod filter schema (URL search-params-এর সাথে shared)
+3. Route `erp.orders.dashboard.tsx` + search-param validation
+4. Components: `dashboard-filter-bar`, `dashboard-kpis`, `dashboard-charts`, `dashboard-table` (column chooser + expand), `order-timeline-panel`
+5. Saved views (localStorage প্রথমে; চাইলে পরে DB-তে)
+6. CSV/PDF export
+7. ERP sidebar-এ "Order Dashboard" মেনু যোগ
 
-### ৪. Stock এলে → call → confirm
-Pre-orders page-এ প্রতিটা row-তে:
-- **Mark Stock Arrived** (Ready) — product stock এলে
-- **Called & Confirmed** — customer-কে call দিয়ে confirm হলে; চাইলে বাকি টাকার due method এখানে update করা যাবে
-- **Confirm Order** — order status `confirmed` হয়ে যাবে, pre-order pipeline থেকে বেরিয়ে normal Order List-এর pending/packaging queue-তে ঢুকবে (stock ledger তখনই deduct হবে)
-- **Cancel / Refund** — advance থাকলে refund note সহ
+## টেকনিক্যাল নোট
 
-## Pre-orders page (`/erp/orders/pre-orders`) নতুন করে
-
-- **KPI**: Open · Advance Paid · Ready · Overdue · Advance collected (৳) · Due outstanding (৳)
-- **Tabs**: All · Open · Advance Paid · Ready (stock arrived) · Confirmed · Cancelled
-- **Filter**: brand, advanced date-range picker, search (name/phone/invoice), advance method, source, overdue-only, with/without advance
-- **Row**: product thumb + color/variant, customer + phone, promise date + "৪ দিন বাকি"/"৩ দিন overdue" chip, advance chip (method + amount), due chip (amount + collect method)
-- **Detail sheet**: full timeline (Placed → Advance → Ready → Called → Confirmed), notes, edit promise/advance/due
-- **Export**: CSV + PDF summary (existing reconciliation export style)
-
-## Technical
-
-**Cleanup**: পুরনো `erp.orders.pre-orders.tsx` delete; DB trigger `trg_auto_flag_preorder` + function drop; order detail-এর পুরনো `is_preorder` switch নতুন panel দিয়ে replace; ভুলভাবে auto-flag হওয়া order গুলোর `is_preorder` clear করা হবে (যেগুলো সত্যিই pre-order না)।
-
-**Schema (migration)**:
-- `order_status` enum-এ নতুন value `pre_order` (তাই Order List-এর pending/packaging filter থেকে auto বাদ থাকবে)
-- নতুন টেবিল `preorders` — order_id, brand_id, promise_date, promise_days, stage, advance_amount/method/source/txn_id/received_at, due_amount, due_collect_method, due_note, ready_at, called_at, confirmed_at, cancelled_at, refund fields, notes, timestamps
-- নতুন টেবিল `preorder_events` — timeline
-- দুটোতেই brand-scoped RLS + GRANT; পুরনো `preorder_*` column থেকে data migrate
-
-**Code**: `src/lib/erp/preorders.functions.ts` (createServerFn) + query hooks, `applyBrandScope`, shared `<PreorderDialog>` component যেটা তিন entry point-ই ব্যবহার করবে। Advance record হলে order-এর `advance_amount`/`payment_status` তোমার existing advance rule অনুযায়ী sync হবে — কোনো নতুন cash-account posting নিজে থেকে হবে না।
+- সব read server function দিয়ে, `useQuery` + keepPreviousData; brand scope `applyBrandScope` মেনে
+- Filter state URL-এ (`validateSearch` + `fallback`), তাই refresh/share-এ view অক্ষত
+- বড় টেবিল virtualize করা হবে, ডেটা না থাকলে card/section hide
+- বিদ্যমান `orders.ts` status/badge/tag constants reuse হবে, নতুন করে duplicate হবে না
