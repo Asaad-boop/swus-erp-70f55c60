@@ -7296,6 +7296,51 @@ export type Database = {
         }
         Relationships: []
       }
+      sms_logs: {
+        Row: {
+          brand_id: string | null
+          created_at: string
+          created_by: string | null
+          id: string
+          message: string
+          order_id: string | null
+          phone: string
+          preorder_id: string | null
+          provider_response: string | null
+          segments: number
+          status: string
+          template_key: string | null
+        }
+        Insert: {
+          brand_id?: string | null
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          message: string
+          order_id?: string | null
+          phone: string
+          preorder_id?: string | null
+          provider_response?: string | null
+          segments?: number
+          status?: string
+          template_key?: string | null
+        }
+        Update: {
+          brand_id?: string | null
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          message?: string
+          order_id?: string | null
+          phone?: string
+          preorder_id?: string | null
+          provider_response?: string | null
+          segments?: number
+          status?: string
+          template_key?: string | null
+        }
+        Relationships: []
+      }
       staff_permissions: {
         Row: {
           permissions: Json
