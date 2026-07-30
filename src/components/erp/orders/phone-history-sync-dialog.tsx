@@ -60,8 +60,23 @@ function normalizePhone(raw: string | null): string | null {
   return d.length >= 10 ? d : null;
 }
 
-function suggestStatus(total: number, success: number, cancelled: number): OrderStatus | null {
+/** Statuses that phone history must NEVER override — courier/finance truth. */
+const PHONE_SUGGEST_LOCKED: OrderStatus[] = [
+  "delivered", "partial_delivered", "completed", "paid",
+  "returned", "pending_return", "return_in_transit", "paid_return",
+  "unpaid_return", "partial_return", "exchange", "exchanged", "damaged", "cancelled",
+];
+
+function suggestStatus(
+  total: number,
+  success: number,
+  cancelled: number,
+  current: OrderStatus,
+): OrderStatus | null {
   if (total === 0) return null;
+  // Phone history ei order er courier truth noy — tai je order already
+  // delivered/return/settled family te ache tar upor kono suggestion na.
+  if (PHONE_SUGGEST_LOCKED.includes(current)) return null;
   // Phone history shudhu confirm kore customer legit + courier e parcel jay.
   // Eta proof noy je EI order delivered hoye geche. Tai shipped order ke
   // in_transit e ano — actual delivered status courier API theke ashbe.
@@ -173,7 +188,7 @@ export function PhoneHistorySyncDialog({
               continue;
             }
             const s = hist.summary;
-            const sug = suggestStatus(s.total, s.success, s.cancelled);
+            const sug = suggestStatus(s.total, s.success, s.cancelled, o.status as OrderStatus);
             next[o.id] = {
               ...next[o.id],
               loading: false,
@@ -182,7 +197,8 @@ export function PhoneHistorySyncDialog({
               cancelled: s.cancelled,
               suggested: sug,
               override: sug,
-              selected: !!sug && sug !== o.status,
+              // Never auto-check: staff ke explicit ticket dite hobe.
+              selected: false,
             };
           }
           return next;
