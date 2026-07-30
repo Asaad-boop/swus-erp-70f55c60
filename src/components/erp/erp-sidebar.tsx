@@ -38,6 +38,7 @@ const groups: Group[] = [
         label: "Orders",
         icon: ClipboardList,
         items: [
+          { to: "/erp/orders/dashboard", label: "Order Dashboard", icon: LayoutGrid },
           { to: "/erp/orders/web", label: "Web Orders", icon: Globe },
           { to: "/erp/orders/list", label: "Order List", icon: ClipboardList },
           { to: "/erp/orders/pre-orders", label: "Pre-orders", icon: Clock },
