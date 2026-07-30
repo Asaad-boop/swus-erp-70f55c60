@@ -256,12 +256,6 @@ export function QuantityReleaseCard({
         </div>
       </Card>
 
-      {previewLines.length > 0 && (
-        <Card className="overflow-hidden border-emerald-500/40">
-          <div className="hidden" />
-        </Card>
-      )}
-
       {grandTotal > 0 && (
         <Card className="p-4 space-y-3">
           <div className="flex items-center justify-between gap-3 flex-wrap">
