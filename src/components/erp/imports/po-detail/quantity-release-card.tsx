@@ -404,6 +404,46 @@ export function QuantityReleaseCard({
               <div className="font-semibold tabular-nums text-orange-600">{fmtBdt(previewTotalDue)}</div>
             </div>
           </div>
+          <div className="p-4 border-t border-border">
+            <div className="text-xs text-muted-foreground mb-2">
+              Rate breakdown — per pcs, per 1,000 pcs, ar ei release ({previewQty + previewDamaged} pcs)
+            </div>
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Component</TableHead>
+                  <TableHead className="text-right">Per pcs</TableHead>
+                  <TableHead className="text-right">Per 1,000 pcs</TableHead>
+                  <TableHead className="text-right">Ei release</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {[
+                  { k: "Goods (purchase) due", pu: goodsDuePerUnit, tot: previewGoodsDue },
+                  { k: "Shipping / overhead due", pu: shipDuePerUnit, tot: previewShipDue },
+                ].map((r) => (
+                  <TableRow key={r.k}>
+                    <TableCell className="text-sm">{r.k}</TableCell>
+                    <TableCell className="text-right tabular-nums">৳{r.pu.toFixed(4)}</TableCell>
+                    <TableCell className="text-right tabular-nums">{fmtBdt(r.pu * 1000)}</TableCell>
+                    <TableCell className="text-right tabular-nums font-medium">{fmtBdt(r.tot)}</TableCell>
+                  </TableRow>
+                ))}
+                <TableRow className="bg-muted/40">
+                  <TableCell className="text-sm font-semibold">Total due</TableCell>
+                  <TableCell className="text-right tabular-nums font-semibold">
+                    ৳{(goodsDuePerUnit + shipDuePerUnit).toFixed(4)}
+                  </TableCell>
+                  <TableCell className="text-right tabular-nums font-semibold">
+                    {fmtBdt((goodsDuePerUnit + shipDuePerUnit) * 1000)}
+                  </TableCell>
+                  <TableCell className="text-right tabular-nums font-semibold text-orange-600">
+                    {fmtBdt(previewTotalDue)}
+                  </TableCell>
+                </TableRow>
+              </TableBody>
+            </Table>
+          </div>
         </Card>
       )}
 
