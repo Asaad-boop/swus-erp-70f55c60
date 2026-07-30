@@ -19,6 +19,9 @@ export type FetchAttempt = { path: string; status: number | string; snippet: str
 const TIMEOUT_MS = 30_000;
 const BASE = "https://merchant.pathao.com";
 
+/** Short-lived token cache — the login endpoint rate-limits aggressively. */
+const tokenCache = new Map<string, { token: string; exp: number }>();
+
 async function fetchWithTimeout(url: string, init: RequestInit = {}) {
   const ctl = new AbortController();
   const t = setTimeout(() => ctl.abort(), TIMEOUT_MS);
