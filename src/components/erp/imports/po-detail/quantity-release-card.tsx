@@ -2,7 +2,7 @@ import { useMemo, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { toast } from "sonner";
-import { Boxes, Loader2, PackageCheck, Warehouse } from "lucide-react";
+import { AlertTriangle, Boxes, Loader2, PackageCheck, Warehouse, Wallet } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -27,13 +27,14 @@ type Release = {
 };
 
 export function QuantityReleaseCard({
-  poId, brandId, po, items, releases,
+  poId, brandId, po, items, releases, onPayDue,
 }: {
   poId: string;
   brandId: string | null;
   po?: any;
   items: any[];
   releases: Release[];
+  onPayDue?: () => void;
 }) {
   const qc = useQueryClient();
   const whFn = useServerFn(listWarehouses);
@@ -100,6 +101,11 @@ export function QuantityReleaseCard({
   const previewDamaged = previewLines.reduce((s, l) => s + l.damaged, 0);
   const previewValue = previewLines.reduce((s, l) => s + l.value, 0);
   const previewDamagedValue = previewLines.reduce((s, l) => s + l.damagedValue, 0);
+
+  const grandTotal = Number(po?.grand_total_bdt ?? 0);
+  const paid = Number(po?.paid_bdt ?? 0);
+  const due = Number(po?.due_bdt ?? 0);
+  const paidPct = grandTotal > 0 ? Math.round((paid / grandTotal) * 100) : 0;
 
   const mut = useMutation({
     mutationFn: () =>
@@ -249,6 +255,39 @@ export function QuantityReleaseCard({
           </div>
         </div>
       </Card>
+
+      {grandTotal > 0 && (
+        <Card className="p-4 space-y-3">
+          <div className="flex items-center justify-between gap-3 flex-wrap">
+            <h3 className="font-semibold inline-flex items-center gap-2"><Wallet className="h-4 w-4" />Supplier payment</h3>
+            <div className="text-sm">
+              <span className="text-emerald-600 font-semibold tabular-nums">{fmtBdt(paid)}</span>
+              <span className="text-muted-foreground"> / {fmtBdt(grandTotal)}</span>
+              <span className="ml-2 text-xs text-muted-foreground">({paidPct}%)</span>
+            </div>
+          </div>
+          <Progress value={paidPct} className="h-2 [&>div]:bg-emerald-500" />
+          <div className="flex items-center gap-3 flex-wrap">
+            {due > 0 ? (
+              <div className="flex-1 min-w-0 text-xs text-orange-800 dark:text-orange-200 inline-flex items-center gap-2">
+                <AlertTriangle className="h-4 w-4 text-orange-600 shrink-0" />
+                <span><span className="font-semibold">Due:</span> <span className="font-mono tabular-nums">{fmtBdt(due)}</span> — quantity release korleo due thake, ekhane pay korte parben.</span>
+              </div>
+            ) : (
+              <div className="flex-1 min-w-0 text-xs text-emerald-700 dark:text-emerald-400">Full paid ✓</div>
+            )}
+            <Button
+              size="sm"
+              className={due > 0 ? "bg-orange-600 hover:bg-orange-700 text-white" : ""}
+              variant={due > 0 ? "default" : "outline"}
+              onClick={() => onPayDue?.()}
+            >
+              <Wallet className="h-3.5 w-3.5 mr-1" />
+              {due > 0 ? `Pay due ${fmtBdt(due)}` : "Record payment"}
+            </Button>
+          </div>
+        </Card>
+      )}
 
       {previewLines.length > 0 && (
         <Card className="overflow-hidden border-emerald-500/40">

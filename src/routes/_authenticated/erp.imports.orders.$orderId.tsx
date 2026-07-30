@@ -377,7 +377,7 @@ function PoDetailPage() {
       </Card>
 
       {isQtyMode && (
-        <QuantityReleaseCard poId={po.id} brandId={brandId} po={po as any} items={items} releases={releases as any} />
+        <QuantityReleaseCard poId={po.id} brandId={brandId} po={po as any} items={items} releases={releases as any} onPayDue={() => setPaymentOpen(true)} />
       )}
 
       {/* Cartons */}
