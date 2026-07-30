@@ -968,8 +968,9 @@ function _WebOrdersPageBody() {
       }
       return ids.length;
     },
-    onSuccess: (n) => {
+    onSuccess: (n, status) => {
       toast.success(`Updated ${n} order${n === 1 ? "" : "s"}`);
+      if (status === "complete") fireOrderSmsMany(Array.from(selectedIds), "order_confirm");
       setSelectedIds(new Set());
       invalidateWebOrders();
     },
