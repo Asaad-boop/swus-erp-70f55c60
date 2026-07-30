@@ -83,7 +83,9 @@ export function QuantityReleaseCard({
     .map((i) => {
       const d = getDraft(i.id);
       const unitCny = Number(i.unit_cost_cny ?? i.unit_cost_foreign ?? 0);
-      const landed = +(unitCny * fx + overheadPerUnit + commissionPerUnit).toFixed(4);
+      const goodsUnit = unitCny * fx;
+      const landed = +(goodsUnit + overheadPerUnit + commissionPerUnit).toFixed(4);
+      const pcs = d.qty + d.damaged;
       return {
         id: i.id,
         title: i.product?.title ?? i.name_snapshot ?? "Item",
@@ -93,6 +95,8 @@ export function QuantityReleaseCard({
         landed,
         value: landed * d.qty,
         damagedValue: landed * d.damaged,
+        goodsDue: goodsUnit * pcs,
+        shipDue: (overheadPerUnit + commissionPerUnit) * pcs,
       };
     })
     .filter((l) => l.qty > 0 || l.damaged > 0);
@@ -101,11 +105,19 @@ export function QuantityReleaseCard({
   const previewDamaged = previewLines.reduce((s, l) => s + l.damaged, 0);
   const previewValue = previewLines.reduce((s, l) => s + l.value, 0);
   const previewDamagedValue = previewLines.reduce((s, l) => s + l.damagedValue, 0);
+  const previewGoodsDue = previewLines.reduce((s, l) => s + l.goodsDue, 0);
+  const previewShipDue = previewLines.reduce((s, l) => s + l.shipDue, 0);
+  const previewTotalDue = previewGoodsDue + previewShipDue;
 
   const grandTotal = Number(po?.grand_total_bdt ?? 0);
   const paid = Number(po?.paid_bdt ?? 0);
   const due = Number(po?.due_bdt ?? 0);
   const paidPct = grandTotal > 0 ? Math.round((paid / grandTotal) * 100) : 0;
+
+  // Pro-rata due: joto pcs release hoyeche (+ ekhon hobe) toto tar purchase + shipping
+  const draftPcs = previewQty + previewDamaged;
+  const releasedShare = totalOrdered > 0 ? (grandTotal * (totalReleased + draftPcs)) / totalOrdered : 0;
+  const dueForReleased = Math.max(0, Math.min(due, releasedShare - paid));
 
   const mut = useMutation({
     mutationFn: () =>
@@ -267,11 +279,29 @@ export function QuantityReleaseCard({
             </div>
           </div>
           <Progress value={paidPct} className="h-2 [&>div]:bg-emerald-500" />
+          <div className="grid sm:grid-cols-3 gap-3 text-sm rounded-md border border-border p-3">
+            <div>
+              <div className="text-xs text-muted-foreground">Released pcs (+ ekhon)</div>
+              <div className="font-semibold tabular-nums">{totalReleased + draftPcs} / {totalOrdered}</div>
+            </div>
+            <div>
+              <div className="text-xs text-muted-foreground">Oi pcs-er total cost</div>
+              <div className="font-semibold tabular-nums">{fmtBdt(releasedShare)}</div>
+            </div>
+            <div className="sm:text-right">
+              <div className="text-xs text-muted-foreground">Ekhon due (pro-rata)</div>
+              <div className="font-semibold tabular-nums text-orange-600">{fmtBdt(dueForReleased)}</div>
+            </div>
+          </div>
           <div className="flex items-center gap-3 flex-wrap">
             {due > 0 ? (
               <div className="flex-1 min-w-0 text-xs text-orange-800 dark:text-orange-200 inline-flex items-center gap-2">
                 <AlertTriangle className="h-4 w-4 text-orange-600 shrink-0" />
-                <span><span className="font-semibold">Due:</span> <span className="font-mono tabular-nums">{fmtBdt(due)}</span> — quantity release korleo due thake, ekhane pay korte parben.</span>
+                <span>
+                  <span className="font-semibold">Total due:</span> <span className="font-mono tabular-nums">{fmtBdt(due)}</span>
+                  {" — "}joto pcs release dicchen toto pcs-er purchase + shipping due{" "}
+                  <span className="font-mono tabular-nums font-semibold">{fmtBdt(dueForReleased)}</span>.
+                </span>
               </div>
             ) : (
               <div className="flex-1 min-w-0 text-xs text-emerald-700 dark:text-emerald-400">Full paid ✓</div>
@@ -283,7 +313,7 @@ export function QuantityReleaseCard({
               onClick={() => onPayDue?.()}
             >
               <Wallet className="h-3.5 w-3.5 mr-1" />
-              {due > 0 ? `Pay due ${fmtBdt(due)}` : "Record payment"}
+              {dueForReleased > 0 ? `Pay ${fmtBdt(dueForReleased)}` : due > 0 ? `Pay due ${fmtBdt(due)}` : "Record payment"}
             </Button>
           </div>
         </Card>
@@ -345,6 +375,20 @@ export function QuantityReleaseCard({
             <div className="sm:text-right">
               <div className="text-xs text-muted-foreground">Inventory value add</div>
               <div className="font-semibold tabular-nums text-emerald-600">{fmtBdt(previewValue)}</div>
+            </div>
+          </div>
+          <div className="p-4 border-t border-border grid sm:grid-cols-3 gap-3 text-sm bg-muted/30">
+            <div>
+              <div className="text-xs text-muted-foreground">Purchase due (ei pcs)</div>
+              <div className="font-semibold tabular-nums">{fmtBdt(previewGoodsDue)}</div>
+            </div>
+            <div>
+              <div className="text-xs text-muted-foreground">Shipping / overhead (ei pcs)</div>
+              <div className="font-semibold tabular-nums">{fmtBdt(previewShipDue)}</div>
+            </div>
+            <div className="sm:text-right">
+              <div className="text-xs text-muted-foreground">Total (ei release)</div>
+              <div className="font-semibold tabular-nums text-orange-600">{fmtBdt(previewTotalDue)}</div>
             </div>
           </div>
         </Card>
