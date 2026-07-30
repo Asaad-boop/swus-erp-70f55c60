@@ -8287,6 +8287,46 @@ export type Database = {
         Returns: string
       }
       crm_normalize_phone: { Args: { p: string }; Returns: string }
+      erp_order_dashboard_rows: {
+        Args: {
+          p_brand_ids?: string[]
+          p_city?: string
+          p_confirmed_by?: string
+          p_courier?: string
+          p_dir?: string
+          p_from?: string
+          p_limit?: number
+          p_max_amount?: number
+          p_min_amount?: number
+          p_offset?: number
+          p_payment_status?: string
+          p_search?: string
+          p_sort?: string
+          p_source?: string
+          p_statuses?: string[]
+          p_tags?: string[]
+          p_to?: string
+        }
+        Returns: Json
+      }
+      erp_order_dashboard_summary: {
+        Args: {
+          p_brand_ids?: string[]
+          p_city?: string
+          p_confirmed_by?: string
+          p_courier?: string
+          p_from?: string
+          p_max_amount?: number
+          p_min_amount?: number
+          p_payment_status?: string
+          p_search?: string
+          p_source?: string
+          p_statuses?: string[]
+          p_tags?: string[]
+          p_to?: string
+        }
+        Returns: Json
+      }
       erp_order_status_counts: {
         Args: {
           _brand_ids: string[]
