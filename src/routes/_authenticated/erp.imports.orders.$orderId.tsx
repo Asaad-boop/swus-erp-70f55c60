@@ -16,7 +16,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogD
 import { Table, TableHeader, TableHead, TableBody, TableRow, TableCell } from "@/components/ui/table";
 import { Progress } from "@/components/ui/progress";
 import {
-  getPurchaseOrderDetail, updateCartonStage, deleteImportPo,
+  getPurchaseOrderDetail, updateCartonStage, deleteImportPo, setPoReceiveMode,
 } from "@/lib/erp/imports/imports.functions";
 import {
   PO_STATUS_LABEL, fmtBdt, newIdemKey,
@@ -43,6 +43,15 @@ function PoDetailPage() {
   const stageFn = useServerFn(updateCartonStage);
   const navigate = useNavigate();
   const deleteFn = useServerFn(deleteImportPo);
+  const modeFn = useServerFn(setPoReceiveMode);
+  const modeMut = useMutation({
+    mutationFn: (mode: "carton" | "quantity") => modeFn({ data: { poId: orderId, mode } }),
+    onSuccess: (r: any) => {
+      toast.success(r.mode === "quantity" ? "Quantity mode on — piece wise release korte parben" : "Carton mode on");
+      qc.invalidateQueries({ queryKey: ["imp-po", orderId] });
+    },
+    onError: (e: any) => toast.error(e?.message ?? "Failed"),
+  });
   const [deleteOpen, setDeleteOpen] = useState(false);
   const [deleteConfirm, setDeleteConfirm] = useState("");
   const deleteMut = useMutation({
@@ -337,6 +346,36 @@ function PoDetailPage() {
       )}
 
       {/* Quantity mode releases */}
+      <Card className="p-3 flex items-center gap-3 flex-wrap">
+        <div className="flex-1 min-w-0">
+          <div className="text-sm font-semibold">Receive mode</div>
+          <p className="text-xs text-muted-foreground">
+            {isQtyMode
+              ? "Quantity mode — carton chara piece wise stock e nite parben."
+              : "Carton mode — carton wise receive hocche. Quantity wise korte switch korun."}
+          </p>
+        </div>
+        <div className="flex gap-1">
+          <Button
+            size="sm"
+            variant={!isQtyMode ? "default" : "outline"}
+            disabled={!isQtyMode || modeMut.isPending}
+            onClick={() => modeMut.mutate("carton")}
+          >
+            Carton wise
+          </Button>
+          <Button
+            size="sm"
+            variant={isQtyMode ? "default" : "outline"}
+            disabled={isQtyMode || modeMut.isPending}
+            onClick={() => modeMut.mutate("quantity")}
+          >
+            {modeMut.isPending ? <Loader2 className="h-4 w-4 mr-1 animate-spin" /> : null}
+            Quantity wise
+          </Button>
+        </div>
+      </Card>
+
       {isQtyMode && (
         <QuantityReleaseCard poId={po.id} brandId={brandId} items={items} releases={releases as any} />
       )}
