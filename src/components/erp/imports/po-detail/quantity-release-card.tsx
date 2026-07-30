@@ -73,7 +73,8 @@ export function QuantityReleaseCard({
   const fx = Number(po?.fx_rate_cny_bdt ?? po?.fx_rate ?? 0);
   const commissionPerUnit = Number(po?.agent_commission_per_unit_bdt ?? 0);
   const overheadTotal =
-    Number(po?.shipping_cost_bdt ?? 0) +
+    Number(po?.shipping_total_bdt ?? po?.shipping_cost_bdt ?? 0) +
+    Number(po?.local_courier_total_bdt ?? 0) +
     Number(po?.freight_cost_bdt ?? 0) +
     Number(po?.customs_duty_bdt ?? 0) +
     Number(po?.other_charges_bdt ?? 0);

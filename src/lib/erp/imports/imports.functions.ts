@@ -1264,7 +1264,7 @@ export const releasePoQuantity = createServerFn({ method: "POST" })
 
     const { data: po, error: pErr } = await context.supabase
       .from("imp_purchase_orders")
-      .select("id, brand_id, status, receive_mode, fx_rate, fx_rate_cny_bdt, shipping_cost_bdt, freight_cost_bdt, customs_duty_bdt, other_charges_bdt, agent_commission_per_unit_bdt")
+      .select("id, brand_id, status, receive_mode, fx_rate, fx_rate_cny_bdt, shipping_cost_bdt, shipping_total_bdt, local_courier_total_bdt, freight_cost_bdt, customs_duty_bdt, other_charges_bdt, agent_commission_per_unit_bdt")
       .eq("id", data.po_id)
       .maybeSingle();
     if (pErr) throw pErr;
@@ -1305,7 +1305,8 @@ export const releasePoQuantity = createServerFn({ method: "POST" })
     const fx = Number((po as any).fx_rate_cny_bdt ?? (po as any).fx_rate ?? 0);
     const commissionPerUnit = Number((po as any).agent_commission_per_unit_bdt ?? 0);
     const overheadTotal =
-      Number((po as any).shipping_cost_bdt ?? 0) +
+      Number((po as any).shipping_total_bdt ?? (po as any).shipping_cost_bdt ?? 0) +
+      Number((po as any).local_courier_total_bdt ?? 0) +
       Number((po as any).freight_cost_bdt ?? 0) +
       Number((po as any).customs_duty_bdt ?? 0) +
       Number((po as any).other_charges_bdt ?? 0);
