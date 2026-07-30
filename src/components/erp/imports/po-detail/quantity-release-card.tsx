@@ -173,13 +173,25 @@ export function QuantityReleaseCard({
                   <TableCell>
                     <div className="flex items-center gap-2 min-w-0">
                       {it.product?.image ?? it.image_snapshot ? (
-                        <img src={it.product?.image ?? it.image_snapshot} alt="" className="h-9 w-9 rounded object-cover border border-border" />
+                        <img src={it.variant?.image ?? it.product?.image ?? it.image_snapshot} alt="" className="h-9 w-9 rounded object-cover border border-border" />
                       ) : (
                         <div className="h-9 w-9 rounded bg-muted border border-dashed border-border" />
                       )}
                       <div className="min-w-0">
                         <div className="truncate text-sm font-medium">{it.product?.title ?? it.name_snapshot}</div>
-                        <div className="text-[10px] font-mono text-muted-foreground truncate">{it.product?.sku ?? it.sku_snapshot ?? "—"}</div>
+                        <div className="flex items-center gap-1.5 min-w-0">
+                          {it.variant?.color_name && (
+                            <span className="inline-flex items-center gap-1 text-[10px] text-muted-foreground">
+                              {it.variant?.color_hex && (
+                                <span className="h-2.5 w-2.5 rounded-full border border-border" style={{ backgroundColor: it.variant.color_hex }} />
+                              )}
+                              {it.variant.color_name}
+                            </span>
+                          )}
+                          <span className="text-[10px] font-mono text-muted-foreground truncate">
+                            {it.variant?.sku ?? it.sku_snapshot ?? it.product?.sku ?? "—"}
+                          </span>
+                        </div>
                       </div>
                     </div>
                   </TableCell>
