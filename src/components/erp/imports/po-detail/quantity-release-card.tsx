@@ -89,6 +89,12 @@ export function QuantityReleaseCard({
   const shipTotalAll = overheadTotal + commissionPerUnit * totalOrdered;
   const paidToGoods = Math.min(paidSoFar, goodsTotalAll);
   const paidToShip = Math.max(0, paidSoFar - goodsTotalAll);
+  // Line-wise: paid ta protita line-e tar nijer goods value onushare pro-rata bosbe,
+  // tai jei line-er unit cost beshi, tar due/pc o beshi.
+  const goodsPaidRatio = goodsTotalAll > 0 ? Math.min(1, paidToGoods / goodsTotalAll) : 0;
+  const goodsDuePerUnitFor = (i: any) =>
+    Math.max(0, Number(i.unit_cost_cny ?? i.unit_cost_foreign ?? 0) * fx * (1 - goodsPaidRatio));
+  // avg (fallback / display only)
   const goodsDuePerUnit = totalOrdered > 0 ? Math.max(0, goodsTotalAll - paidToGoods) / totalOrdered : 0;
   const shipDuePerUnit = totalOrdered > 0 ? Math.max(0, shipTotalAll - paidToShip) / totalOrdered : 0;
 
@@ -108,7 +114,9 @@ export function QuantityReleaseCard({
         landed,
         value: landed * d.qty,
         damagedValue: landed * d.damaged,
-        goodsDue: goodsDuePerUnit * pcs,
+        goodsDuePerUnit: goodsDuePerUnitFor(i),
+        shipDuePerUnit,
+        goodsDue: goodsDuePerUnitFor(i) * pcs,
         shipDue: shipDuePerUnit * pcs,
       };
     })
@@ -121,6 +129,9 @@ export function QuantityReleaseCard({
   const previewGoodsDue = previewLines.reduce((s, l) => s + l.goodsDue, 0);
   const previewShipDue = previewLines.reduce((s, l) => s + l.shipDue, 0);
   const previewTotalDue = previewGoodsDue + previewShipDue;
+  const previewPcs = previewLines.reduce((s, l) => s + l.qty + l.damaged, 0);
+  // Weighted (line-wise) effective rate for ei release
+  const effGoodsDuePerUnit = previewPcs > 0 ? previewGoodsDue / previewPcs : goodsDuePerUnit;
 
   const grandTotal = Number(po?.grand_total_bdt ?? 0);
   const paid = Number(po?.paid_bdt ?? 0);
@@ -129,7 +140,11 @@ export function QuantityReleaseCard({
 
   // Pro-rata due: joto pcs release hoyeche (+ ekhon hobe) toto tar baki purchase + shipping
   const draftPcs = previewQty + previewDamaged;
-  const releasedShare = (goodsDuePerUnit + shipDuePerUnit) * (totalReleased + draftPcs);
+  // Line-wise released share: already-released pcs + ei draft, protita line-er nijer rate diye
+  const releasedShare = items.reduce((s, i) => {
+    const pcs = (releasedByItem.get(i.id) ?? 0) + getDraft(i.id).qty + getDraft(i.id).damaged;
+    return s + pcs * (goodsDuePerUnitFor(i) + shipDuePerUnit);
+  }, 0);
   const dueForReleased = Math.max(0, Math.min(due || releasedShare, releasedShare));
 
   const mut = useMutation({
