@@ -29,7 +29,7 @@ export const Route = createFileRoute("/api/public/cron/sync-courier")({
         const ok = (anon && apikey && apikey === anon) || (expected && cronHeader === expected);
         if (!ok) return new Response("Unauthorized", { status: 401 });
 
-        let body: { brandId?: string; limit?: number } = {};
+        let body: { brandId?: string; limit?: number; statuses?: string[]; orderIds?: string[]; dryRun?: boolean } = {};
         try {
           body = await request.json();
         } catch {
@@ -47,12 +47,17 @@ export const Route = createFileRoute("/api/public/cron/sync-courier")({
         // Find in-flight orders that have any way to be tracked. We fetch a
         // wider candidate set, then process the stalest shipments first so a
         // small cron batch rotates instead of hammering the same rows forever.
+        const targetStatuses =
+          Array.isArray(body.statuses) && body.statuses.length > 0
+            ? body.statuses
+            : ["ready_to_ship", "shipped", "in_transit", "on_hold"];
         let q = supabaseAdmin
           .from("orders")
           .select("id,invoice_no,status,courier_name,tracking_number,brand_id,shipped_at")
-          .in("status", ["ready_to_ship", "shipped", "in_transit", "on_hold"])
+          .in("status", targetStatuses as never[])
           .order("shipped_at", { ascending: true, nullsFirst: false })
           .limit(candidateLimit);
+        if (Array.isArray(body.orderIds) && body.orderIds.length > 0) q = q.in("id", body.orderIds);
         if (body.brandId) q = q.eq("brand_id", body.brandId);
         const { data: orders, error: oErr } = await q;
         if (oErr) return Response.json({ checked: 0, updated: 0, error: oErr.message });
