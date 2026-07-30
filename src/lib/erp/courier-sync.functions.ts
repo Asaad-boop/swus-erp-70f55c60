@@ -358,6 +358,13 @@ export const syncCourierStatusFn = createServerFn({ method: "POST" })
       .object({
         orderIds: z.array(z.string().uuid()).min(1).max(100),
         brandId: z.string().uuid().optional(),
+        /**
+         * Write the mapped courier status back to orders.status.
+         * Default false: fetching is a PREVIEW. Dialogs show the suggestion
+         * and only the user's explicit "Apply" performs the transition —
+         * otherwise a simple refresh silently reverts manual corrections.
+         */
+        apply: z.boolean().optional(),
         overrides: z
           .array(
             z.object({
@@ -558,9 +565,8 @@ export const syncCourierStatusFn = createServerFn({ method: "POST" })
       }
     }
 
-    // Auto-sync orders.status from mapped courier status when they differ.
-    // This is what keeps the ERP order list in sync with the live courier state.
-    {
+    // Sync orders.status from mapped courier status ONLY when explicitly asked.
+    if (data.apply) {
       const statusChanges = results.filter(
         (r) => r.ok && r.mapped_status && r.mapped_status !== r.current_status,
       );
