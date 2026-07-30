@@ -1,7 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useEffect, useMemo, useState } from "react";
 import {
-  Building, Building2, FileText, Truck, Wallet, Bell, Plug, Users, Database, AlertTriangle, ContactRound, BarChart3, Facebook,
+  Building, Building2, FileText, Truck, Wallet, Bell, Plug, Users, Database, AlertTriangle, ContactRound, BarChart3, Facebook, MessageSquare,
 } from "lucide-react";
 import { useBrand } from "@/contexts/brand-context";
 import { BusinessSettings } from "@/components/erp/settings/business-settings";
@@ -17,6 +17,7 @@ import { DangerZoneSection } from "@/components/erp/settings/sections/danger-zon
 import { CrmCustomFieldsSection } from "@/components/erp/settings/sections/crm-section";
 import { AnalyticsSection } from "@/components/erp/settings/sections/analytics-section";
 import { TrackingSection } from "@/components/erp/settings/sections/tracking-section";
+import { SmsSection } from "@/components/erp/settings/sections/sms-section";
 import { cn } from "@/lib/utils";
 import { useCurrentRole } from "@/hooks/use-current-role";
 
@@ -27,7 +28,7 @@ export const Route = createFileRoute("/_authenticated/erp/settings")({
 
 type SectionId =
   | "business" | "brands" | "invoice" | "courier" | "finance"
-  | "notifications" | "integrations" | "analytics" | "tracking" | "crm" | "users" | "data" | "danger";
+  | "notifications" | "sms" | "integrations" | "analytics" | "tracking" | "crm" | "users" | "data" | "danger";
 
 type SectionDef = {
   id: SectionId;
@@ -45,6 +46,7 @@ const SECTIONS: SectionDef[] = [
   { id: "courier",       label: "Courier",          description: "Pathao, Steadfast, status mapping",   icon: Truck,          perBrand: true  },
   { id: "finance",       label: "Finance",          description: "Accounting, FX, tax defaults",        icon: Wallet,         perBrand: true  },
   { id: "notifications", label: "Notifications",    description: "Alerts, daily summaries",             icon: Bell,           perBrand: true  },
+  { id: "sms",           label: "SMS (BulkSMSBD)",  description: "Order, pre-order & custom SMS",       icon: MessageSquare,  perBrand: true  },
   { id: "integrations",  label: "Integrations",     description: "Meta, Gemini, webhooks",              icon: Plug,           perBrand: true  },
   { id: "analytics",     label: "Analytics & Tracking", description: "GA4, Clarity, Pixel, retention", icon: BarChart3,      perBrand: true  },
   { id: "tracking",      label: "Meta Pixel & CAPI",    description: "Per-brand Pixel, CAPI, UTM, status", icon: Facebook,    perBrand: false },
@@ -157,6 +159,7 @@ function SectionRouter({ section, brandId }: { section: SectionId; brandId: stri
     case "courier":       return <CourierSection key={brandId} brandId={brandId} />;
     case "finance":       return <FinanceSection key={brandId} brandId={brandId} />;
     case "notifications": return <NotificationsSection key={brandId} brandId={brandId} />;
+    case "sms":           return <SmsSection key={brandId} brandId={brandId} />;
     case "integrations":  return <IntegrationsSection key={brandId} brandId={brandId} />;
     case "analytics":     return <AnalyticsSection key={brandId} brandId={brandId} />;
     case "tracking":      return <TrackingSection />;

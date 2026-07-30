@@ -19,6 +19,7 @@ import { STATUS_GROUPS, STATUS_BADGE, customerName, customerPhone, invoiceDispla
 import { setOrderActualShippingCostFn } from "@/lib/erp/courier-sync.functions";
 import { confirmOrderAdvanceReceivedFn } from "@/lib/erp/finance/advance.functions";
 import { PreorderConvertDialog } from "@/components/erp/orders/preorder-convert-dialog";
+import { fireOrderSms } from "@/lib/erp/sms/notify";
 
 type Props = { orderId: string | null; onClose: () => void; mode?: "web" | "fulfillment" };
 
@@ -182,8 +183,9 @@ export function OrderDrawer({ orderId, onClose, mode = "fulfillment" }: Props) {
       const { error } = await supabase.rpc("transition_order_status", { _order_id: orderId!, _new_status: status });
       if (error) throw error;
     },
-    onSuccess: () => {
+    onSuccess: (_d, vars) => {
       toast.success("Status updated");
+      if (vars === "confirmed" && orderId) fireOrderSms(orderId, "order_confirm");
       qc.invalidateQueries({ queryKey: ["orders"] });
       qc.invalidateQueries({ queryKey: ["order-detail", orderId] });
     },
@@ -248,8 +250,9 @@ export function OrderDrawer({ orderId, onClose, mode = "fulfillment" }: Props) {
         .eq("id", orderId!);
       if (error) throw error;
     },
-    onSuccess: () => {
+    onSuccess: (_d, vars) => {
       toast.success("Status updated");
+      if (vars.web_status === "complete" && orderId) fireOrderSms(orderId, "order_confirm");
       qc.invalidateQueries({ queryKey: ["web-orders"] });
       qc.invalidateQueries({ queryKey: ["web-orders-page"] });
       qc.invalidateQueries({ queryKey: ["web-orders-counts"] });

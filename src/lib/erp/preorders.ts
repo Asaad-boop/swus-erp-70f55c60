@@ -1,4 +1,5 @@
 import { supabase } from "@/integrations/supabase/client";
+import { fireOrderSms, fireOrderSmsMany } from "@/lib/erp/sms/notify";
 
 export type PreorderStage = "open" | "advance_paid" | "ready" | "called" | "confirmed" | "cancelled";
 
@@ -198,6 +199,7 @@ export async function moveOrderToPreorder(intake: PreorderIntake) {
     meta: { promise_date: promiseDate, due },
   });
 
+  fireOrderSms(intake.orderId, "preorder_placed");
   return { id: pre.id as string, created: true as const };
 }
 
@@ -254,6 +256,7 @@ export async function markPreordersReady(rows: Pick<PreorderRecord, "id" | "orde
   for (const r of rows) {
     await logPreorderEvent({ preorderId: r.id, orderId: r.order_id, brandId: r.brand_id, event: "ready", detail: "Stock arrived — ready to call customer" });
   }
+  fireOrderSmsMany(rows.map((r) => r.order_id), "preorder_ready");
 }
 
 export async function markPreorderCalled(row: Pick<PreorderRecord, "id" | "order_id" | "brand_id">, note?: string) {
@@ -286,6 +289,7 @@ export async function confirmPreorderToPipeline(row: Pick<PreorderRecord, "id" |
     .eq("id", row.id);
   if (pErr) throw pErr;
   await logPreorderEvent({ preorderId: row.id, orderId: row.order_id, brandId: row.brand_id, event: "confirmed", detail: "Converted to a confirmed order (pending queue)" });
+  fireOrderSms(row.order_id, "preorder_confirmed");
 }
 
 export async function cancelPreorder(row: Pick<PreorderRecord, "id" | "order_id" | "brand_id">, reason: string | null) {
