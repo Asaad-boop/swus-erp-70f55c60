@@ -434,7 +434,7 @@ export function QuantityReleaseCard({
               </TableHeader>
               <TableBody>
                 {[
-                  { k: "Goods (purchase) due", pu: goodsDuePerUnit, tot: previewGoodsDue },
+                  { k: "Goods (purchase) due", pu: effGoodsDuePerUnit, tot: previewGoodsDue },
                   { k: "Shipping / overhead due", pu: shipDuePerUnit, tot: previewShipDue },
                 ].map((r) => (
                   <TableRow key={r.k}>
@@ -447,10 +447,10 @@ export function QuantityReleaseCard({
                 <TableRow className="bg-muted/40">
                   <TableCell className="text-sm font-semibold">Total due</TableCell>
                   <TableCell className="text-right tabular-nums font-semibold">
-                    ৳{(goodsDuePerUnit + shipDuePerUnit).toFixed(4)}
+                    ৳{(effGoodsDuePerUnit + shipDuePerUnit).toFixed(4)}
                   </TableCell>
                   <TableCell className="text-right tabular-nums font-semibold">
-                    {fmtBdt((goodsDuePerUnit + shipDuePerUnit) * 1000)}
+                    {fmtBdt((effGoodsDuePerUnit + shipDuePerUnit) * 1000)}
                   </TableCell>
                   <TableCell className="text-right tabular-nums font-semibold text-orange-600">
                     {fmtBdt(previewTotalDue)}
