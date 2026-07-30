@@ -28,6 +28,7 @@ import { AutoTagChips } from "@/components/erp/orders/auto-tag-chips";
 import { CopyIconBtn, PhoneActions } from "@/components/erp/orders/contact-actions";
 import { AdvanceBadge } from "@/components/erp/orders/advance-badge";
 import { TagFilterBar, buildFilterOptions } from "@/components/erp/orders/tag-filter-bar";
+import { fireOrderSms, fireOrderSmsMany } from "@/lib/erp/sms/notify";
 import { IncompleteOrdersTable } from "@/components/erp/orders/incomplete-orders-table";
 import { useAbandonedCartCount } from "@/hooks/erp/use-abandoned-carts-query";
 import { applyBrandScope } from "@/lib/erp/apply-brand-scope";
