@@ -30,6 +30,9 @@ async function fetchWithTimeout(url: string, init: RequestInit = {}) {
 }
 
 async function merchantLogin(creds: Creds): Promise<string> {
+  const cacheKey = creds.username.trim().toLowerCase();
+  const hit = tokenCache.get(cacheKey);
+  if (hit && hit.exp > Date.now()) return hit.token;
   const res = await fetchWithTimeout(`${BASE}/api/v1/login`, {
     method: "POST",
     headers: { "Content-Type": "application/json", Accept: "application/json" },
@@ -44,6 +47,7 @@ async function merchantLogin(creds: Creds): Promise<string> {
   try { j = JSON.parse(txt); } catch { /* ignore */ }
   const token = j?.access_token || j?.data?.access_token;
   if (!token) throw new Error("Pathao merchant login: access_token pawa jayni");
+  tokenCache.set(cacheKey, { token: token as string, exp: Date.now() + 10 * 60_000 });
   return token as string;
 }
 
