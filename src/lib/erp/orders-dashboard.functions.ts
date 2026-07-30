@@ -29,20 +29,21 @@ const listSchema = orderDashboardFilterSchema.extend({
 });
 
 function rpcArgs(f: OrderDashboardFilter) {
+  const u = <T,>(v: T | null | undefined): T | undefined => (v == null ? undefined : v);
   return {
-    p_brand_ids: f.brandIds.length ? f.brandIds : null,
-    p_from: f.from,
-    p_to: f.to,
-    p_statuses: f.statuses.length ? f.statuses : null,
-    p_payment_status: f.paymentStatus,
-    p_source: f.source,
-    p_courier: f.courier,
-    p_confirmed_by: f.confirmedBy,
-    p_search: f.search?.trim() ? f.search.trim() : null,
-    p_tags: f.tags.length ? f.tags : null,
-    p_min_amount: f.minAmount,
-    p_max_amount: f.maxAmount,
-    p_city: f.city?.trim() ? f.city.trim() : null,
+    p_brand_ids: f.brandIds.length ? f.brandIds : undefined,
+    p_from: u(f.from),
+    p_to: u(f.to),
+    p_statuses: f.statuses.length ? f.statuses : undefined,
+    p_payment_status: u(f.paymentStatus),
+    p_source: u(f.source),
+    p_courier: u(f.courier),
+    p_confirmed_by: u(f.confirmedBy),
+    p_search: f.search?.trim() ? f.search.trim() : undefined,
+    p_tags: f.tags.length ? f.tags : undefined,
+    p_min_amount: u(f.minAmount),
+    p_max_amount: u(f.maxAmount),
+    p_city: f.city?.trim() ? f.city.trim() : undefined,
   };
 }
 
