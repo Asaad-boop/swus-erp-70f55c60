@@ -83,7 +83,9 @@ export function QuantityReleaseCard({
     .map((i) => {
       const d = getDraft(i.id);
       const unitCny = Number(i.unit_cost_cny ?? i.unit_cost_foreign ?? 0);
-      const landed = +(unitCny * fx + overheadPerUnit + commissionPerUnit).toFixed(4);
+      const goodsUnit = unitCny * fx;
+      const landed = +(goodsUnit + overheadPerUnit + commissionPerUnit).toFixed(4);
+      const pcs = d.qty + d.damaged;
       return {
         id: i.id,
         title: i.product?.title ?? i.name_snapshot ?? "Item",
@@ -93,6 +95,8 @@ export function QuantityReleaseCard({
         landed,
         value: landed * d.qty,
         damagedValue: landed * d.damaged,
+        goodsDue: goodsUnit * pcs,
+        shipDue: (overheadPerUnit + commissionPerUnit) * pcs,
       };
     })
     .filter((l) => l.qty > 0 || l.damaged > 0);
@@ -101,11 +105,19 @@ export function QuantityReleaseCard({
   const previewDamaged = previewLines.reduce((s, l) => s + l.damaged, 0);
   const previewValue = previewLines.reduce((s, l) => s + l.value, 0);
   const previewDamagedValue = previewLines.reduce((s, l) => s + l.damagedValue, 0);
+  const previewGoodsDue = previewLines.reduce((s, l) => s + l.goodsDue, 0);
+  const previewShipDue = previewLines.reduce((s, l) => s + l.shipDue, 0);
+  const previewTotalDue = previewGoodsDue + previewShipDue;
 
   const grandTotal = Number(po?.grand_total_bdt ?? 0);
   const paid = Number(po?.paid_bdt ?? 0);
   const due = Number(po?.due_bdt ?? 0);
   const paidPct = grandTotal > 0 ? Math.round((paid / grandTotal) * 100) : 0;
+
+  // Pro-rata due: joto pcs release hoyeche (+ ekhon hobe) toto tar purchase + shipping
+  const draftPcs = previewQty + previewDamaged;
+  const releasedShare = totalOrdered > 0 ? (grandTotal * (totalReleased + draftPcs)) / totalOrdered : 0;
+  const dueForReleased = Math.max(0, Math.min(due, releasedShare - paid));
 
   const mut = useMutation({
     mutationFn: () =>
