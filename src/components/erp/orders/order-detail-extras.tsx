@@ -190,7 +190,7 @@ export function ShipmentPanel({
     },
   });
   const sync = useMutation({
-    mutationFn: async () => syncFn({ data: { orderIds: [orderId], brandId: brandId ?? undefined } }),
+    mutationFn: async () => syncFn({ data: { orderIds: [orderId], brandId: brandId ?? undefined, apply: true } }),
     onSuccess: () => { toast.success("Status synced"); qc.invalidateQueries({ queryKey: ["order-shipment", orderId] }); qc.invalidateQueries({ queryKey: ["order-detail", orderId] }); },
     onError: (e: Error) => toast.error(e.message),
   });
