@@ -257,6 +257,7 @@ export function QuantityReleaseCard({
       </Card>
 
       {previewLines.length > 0 && (
+        <>
         <Card className="overflow-hidden border-emerald-500/40">
           <div className="p-4 border-b border-border flex items-center justify-between gap-2 flex-wrap">
             <div>
