@@ -144,7 +144,8 @@ export const getPurchaseOrderDetail = createServerFn({ method: "POST" })
         id, product_id, variant_id, sku_snapshot, name_snapshot, image_snapshot,
         quantity, unit_cost_foreign, unit_cost_bdt, subtotal_bdt,
         unit_cost_cny, landed_cost_bdt,
-        product:product_id ( id, title, image, sku )
+        product:product_id ( id, title, image, sku ),
+        variant:variant_id ( id, sku, color_name, color_hex, image )
       `).eq("po_id", data.poId).order("created_at"),
       context.supabase.from("imp_cartons").select(`
         id, carton_number, barcode, expected_quantity,
