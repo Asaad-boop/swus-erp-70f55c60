@@ -19,6 +19,9 @@ export type FetchAttempt = { path: string; status: number | string; snippet: str
 const TIMEOUT_MS = 30_000;
 const BASE = "https://merchant.pathao.com";
 
+/** Short-lived token cache — the login endpoint rate-limits aggressively. */
+const tokenCache = new Map<string, { token: string; exp: number }>();
+
 async function fetchWithTimeout(url: string, init: RequestInit = {}) {
   const ctl = new AbortController();
   const t = setTimeout(() => ctl.abort(), TIMEOUT_MS);
@@ -30,6 +33,9 @@ async function fetchWithTimeout(url: string, init: RequestInit = {}) {
 }
 
 async function merchantLogin(creds: Creds): Promise<string> {
+  const cacheKey = creds.username.trim().toLowerCase();
+  const hit = tokenCache.get(cacheKey);
+  if (hit && hit.exp > Date.now()) return hit.token;
   const res = await fetchWithTimeout(`${BASE}/api/v1/login`, {
     method: "POST",
     headers: { "Content-Type": "application/json", Accept: "application/json" },
@@ -44,6 +50,7 @@ async function merchantLogin(creds: Creds): Promise<string> {
   try { j = JSON.parse(txt); } catch { /* ignore */ }
   const token = j?.access_token || j?.data?.access_token;
   if (!token) throw new Error("Pathao merchant login: access_token pawa jayni");
+  tokenCache.set(cacheKey, { token: token as string, exp: Date.now() + 10 * 60_000 });
   return token as string;
 }
 
@@ -84,6 +91,112 @@ function pickId(row: any): string | null {
 function looksLikeCsv(text: string) {
   const head = text.slice(0, 500).toLowerCase();
   return head.includes(",") && (head.includes("consignment") || head.includes("collected"));
+}
+
+function pickNum(row: any, keys: string[]): number | null {
+  for (const k of keys) {
+    const v = row?.[k];
+    const n = typeof v === "string" ? Number(v.replace(/[^0-9.\-]/g, "")) : Number(v);
+    if (v !== undefined && v !== null && v !== "" && Number.isFinite(n)) return n;
+  }
+  return null;
+}
+
+export type PathaoInvoiceSummary = {
+  id: string;
+  date: string | null;
+  invoiceNo: string | null;
+  collected: number | null;
+  fee: number | null;
+  payout: number | null;
+  orders: number | null;
+  status: string | null;
+};
+
+/** List every payout invoice in the date range (no CSV download). */
+export async function listPathaoInvoices(
+  creds: Creds,
+  from: string,
+  to: string,
+): Promise<{ invoices: PathaoInvoiceSummary[]; attempts: FetchAttempt[] }> {
+  const token = await merchantLogin(creds);
+  const attempts: FetchAttempt[] = [];
+  const rows: any[] = [];
+  let totalPage = 1;
+  for (let page = 1; page <= totalPage && page <= 200; page++) {
+    const path = `/api/v1/monetary/invoices/receivable?page=${page}`;
+    const res = await authGet(token, path);
+    const txt = await res.text();
+    if (page === 1 || !res.ok) {
+      attempts.push({ path, status: res.status, snippet: txt.slice(0, 160).replace(/\s+/g, " ") });
+    }
+    if (!res.ok) break;
+    let j: any = null;
+    try { j = JSON.parse(txt); } catch { break; }
+    const tp = Number(j?.data?.total_page ?? j?.total_page ?? 1);
+    if (Number.isFinite(tp) && tp > 0) totalPage = tp;
+    const list = asList(j);
+    if (!list.length) break;
+    rows.push(...list);
+    const oldest = pickDate(list[list.length - 1]);
+    if (oldest && oldest < from) break;
+  }
+
+  const invoices = rows
+    .filter((r) => {
+      const d = pickDate(r);
+      return !d || (d >= from && d <= to);
+    })
+    .map((r): PathaoInvoiceSummary | null => {
+      const id = pickId(r);
+      if (!id) return null;
+      const collected = pickNum(r, ["total_collected_amount", "collected_amount", "total_collected", "collected"]);
+      const fee = pickNum(r, ["total_delivery_charge", "total_fee", "delivery_charge", "charge", "fee"]);
+      const payout = pickNum(r, ["receivable_amount", "total_receivable", "payable_amount", "net_amount", "amount", "total_amount"]);
+      return {
+        id,
+        date: pickDate(r),
+        invoiceNo: (r?.invoice_no ?? r?.invoice_id ?? r?.hash_id ?? null) as string | null,
+        collected,
+        fee: fee ?? (collected != null && payout != null ? +(collected - payout).toFixed(2) : null),
+        payout,
+        orders: pickNum(r, ["total_order", "order_count", "total_orders", "total_consignment"]),
+        status: (r?.status_text ?? r?.status ?? null) as string | null,
+      };
+    })
+    .filter((v): v is PathaoInvoiceSummary => !!v);
+
+  attempts.push({
+    path: `invoices in ${from}..${to}`,
+    status: "info",
+    snippet: `listed ${rows.length}, in-range ${invoices.length}`,
+  });
+  return { invoices, attempts };
+}
+
+/** Download the CSV of one invoice. */
+export async function fetchOnePathaoInvoiceCsv(
+  creds: Creds,
+  invoiceId: string,
+): Promise<{ csv: string | null; attempts: FetchAttempt[] }> {
+  const token = await merchantLogin(creds);
+  const attempts: FetchAttempt[] = [];
+  const path = `/api/v1/monetary/invoices/${encodeURIComponent(invoiceId)}/export-csv`;
+  const res = await authGet(token, path);
+  const txt = await res.text();
+  if (res.ok && looksLikeCsv(txt)) return { csv: txt, attempts };
+  attempts.push({ path, status: res.status, snippet: txt.slice(0, 160).replace(/\s+/g, " ") });
+  try {
+    const j = JSON.parse(txt);
+    const url: string | undefined = j?.data?.url ?? j?.url ?? j?.data?.file ?? j?.data?.download_url;
+    if (url && /^https?:\/\//.test(url)) {
+      const r2 = await fetchWithTimeout(url);
+      const t2 = await r2.text();
+      if (r2.ok && looksLikeCsv(t2)) return { csv: t2, attempts };
+      attempts.push({ path: url, status: r2.status, snippet: t2.slice(0, 160).replace(/\s+/g, " ") });
+    }
+  } catch { /* not JSON */ }
+  return { csv: null, attempts };
 }
 
 /** Merge CSVs: keep the first header, append the data rows of the rest. */

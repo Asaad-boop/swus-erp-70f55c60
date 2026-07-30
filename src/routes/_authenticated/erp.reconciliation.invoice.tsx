@@ -18,7 +18,7 @@ import {
 } from "lucide-react";
 import { Download, FileDown } from "lucide-react";
 import { CloudDownload } from "lucide-react";
-import { fetchPathaoInvoiceCsvFn } from "@/lib/erp/pathao-invoices.functions";
+import { fetchPathaoInvoiceCsvFn, listPathaoInvoicesFn, fetchOnePathaoInvoiceFn } from "@/lib/erp/pathao-invoices.functions";
 import { exportReconciliationCsv, exportReconciliationPdf } from "@/lib/erp/reconciliation-export";
 import { useBrand } from "@/contexts/brand-context";
 import { useAccounts, useCategories } from "@/hooks/erp/use-finance-query";
@@ -522,6 +522,8 @@ function ReconciliationPage() {
   const deleteFn = useServerFn(deletePathaoReconciliationRun);
   const previewFn = useServerFn(previewPathaoReconciliation);
   const autoFetchFn = useServerFn(fetchPathaoInvoiceCsvFn);
+  const listInvoicesFn = useServerFn(listPathaoInvoicesFn);
+  const fetchOneFn = useServerFn(fetchOnePathaoInvoiceFn);
 
   // ---- Auto fetch (Pathao merchant panel) ----
   const isoDay = (d: Date) => d.toISOString().slice(0, 10);
@@ -531,6 +533,48 @@ function ReconciliationPage() {
   });
   const [autoTo, setAutoTo] = useState(() => isoDay(new Date()));
   const [autoAttempts, setAutoAttempts] = useState<{ path: string; status: number | string; snippet: string }[] | null>(null);
+  const [invoiceList, setInvoiceList] = useState<
+    { id: string; date: string | null; invoiceNo: string | null; collected: number | null; fee: number | null; payout: number | null; orders: number | null; status: string | null }[] | null
+  >(null);
+  const [loadingInvoiceId, setLoadingInvoiceId] = useState<string | null>(null);
+  const [activeInvoiceId, setActiveInvoiceId] = useState<string | null>(null);
+
+  const listMut = useMutation({
+    mutationFn: () => listInvoicesFn({ data: { brandId: null, from: autoFrom, to: autoTo } }),
+    onSuccess: (r) => {
+      setInvoiceList(r.invoices);
+      setAutoAttempts(r.invoices.length ? null : (r.attempts ?? null));
+      if (!r.invoices.length) toast.error("Ei date range e kono invoice pawa jayni");
+      else toast.success(`${r.invoices.length} ta invoice pawa gelo — ekta ekta kore load korun`);
+    },
+    onError: (e: Error) => toast.error(e.message),
+  });
+
+  const loadOne = async (inv: { id: string; date: string | null }) => {
+    setLoadingInvoiceId(inv.id);
+    try {
+      const r = await fetchOneFn({ data: { brandId: null, invoiceId: inv.id } });
+      if (!r.csv) {
+        setAutoAttempts(r.attempts ?? null);
+        toast.error("Ei invoice er CSV pawa jayni");
+        return;
+      }
+      const parsed = parsePathaoCsv(r.csv);
+      if (!parsed.length) {
+        toast.error("Invoice e kono row nei");
+        return;
+      }
+      setPreview(parsed);
+      setFilename(`pathao-inv_${inv.id}_${inv.date ?? autoTo}.csv`);
+      setActiveInvoiceId(inv.id);
+      setAutoAttempts(null);
+      toast.success(`Invoice ${inv.id} — ${parsed.length} consignment preview e`);
+    } catch (e) {
+      toast.error((e as Error).message);
+    } finally {
+      setLoadingInvoiceId(null);
+    }
+  };
 
   const autoMut = useMutation({
     mutationFn: () => autoFetchFn({ data: { brandId: null, from: autoFrom, to: autoTo } }),
@@ -561,6 +605,29 @@ function ReconciliationPage() {
     queryKey: ["pathao-reconciliation-runs", "all"],
     queryFn: () => listFn({ data: { brandId: null } }),
   });
+
+  // Invoice list helpers
+  const appliedInvoiceIds = useMemo(() => {
+    const set = new Set<string>();
+    for (const r of (runsQ.data ?? []) as Array<Record<string, any>>) {
+      if (r.status === "reverted") continue;
+      const m = String(r.source_filename ?? "").match(/pathao-inv_([^_]+)_/);
+      if (m) set.add(m[1]);
+    }
+    return set;
+  }, [runsQ.data]);
+  const invoiceTotals = useMemo(
+    () =>
+      (invoiceList ?? []).reduce(
+        (a, i) => ({
+          collected: a.collected + (i.collected ?? 0),
+          fee: a.fee + (i.fee ?? 0),
+          payout: a.payout + (i.payout ?? 0),
+        }),
+        { collected: 0, fee: 0, payout: 0 },
+      ),
+    [invoiceList],
+  );
 
   // Dry-run match preview (no inserts). Re-runs when parsed rows or brand change.
   const previewKey = useMemo(() => {
@@ -637,6 +704,7 @@ function ReconciliationPage() {
       if (fileRef.current) fileRef.current.value = "";
       qc.invalidateQueries({ queryKey: ["pathao-reconciliation-runs"] });
       setOpenRunId(r.runId);
+      setActiveInvoiceId(null);
     },
     onError: (e: Error) => toast.error(e.message),
   });
@@ -750,12 +818,89 @@ function ReconciliationPage() {
                 onClick={() => autoMut.mutate()}
               >
                 {autoMut.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <CloudDownload className="h-4 w-4" />}
-                Fetch from Pathao
+                Fetch all (merged)
+              </Button>
+              <Button
+                className="gap-2"
+                disabled={listMut.isPending}
+                onClick={() => listMut.mutate()}
+              >
+                {listMut.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <FileText className="h-4 w-4" />}
+                Show invoices (date wise)
               </Button>
               <p className="text-[11px] text-muted-foreground flex-1 min-w-[220px]">
-                Pathao merchant account theke oi date range er paid invoice sorasori ene preview dekhabe — apni verify kore “Process” korle tarpor Apply hobe.
+                “Show invoices” dile oi range er protita invoice alada alada date wise list hobe — ekta ekta kore Load kore verify kore Process korte parben. “Fetch all” pura range ek CSV te merge kore.
               </p>
             </div>
+
+            {invoiceList && (
+              <div className="rounded-md border bg-background overflow-hidden">
+                <div className="flex items-center justify-between px-3 py-2 border-b bg-muted/40">
+                  <span className="text-xs font-medium">{invoiceList.length} invoice — {autoFrom} → {autoTo}</span>
+                  <Button variant="ghost" size="sm" className="h-7 text-xs" onClick={() => { setInvoiceList(null); setActiveInvoiceId(null); }}>
+                    Close
+                  </Button>
+                </div>
+                <div className="max-h-[340px] overflow-auto">
+                  <table className="w-full text-sm">
+                    <thead className="sticky top-0 bg-muted/60 text-xs">
+                      <tr>
+                        <th className="px-3 py-2 text-left font-medium">Date</th>
+                        <th className="px-3 py-2 text-left font-medium">Invoice</th>
+                        <th className="px-3 py-2 text-right font-medium">Orders</th>
+                        <th className="px-3 py-2 text-right font-medium">Collected</th>
+                        <th className="px-3 py-2 text-right font-medium">Fee</th>
+                        <th className="px-3 py-2 text-right font-medium">Payout</th>
+                        <th className="px-3 py-2 text-right font-medium">Action</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {invoiceList.map((inv) => {
+                        const done = appliedInvoiceIds.has(inv.id);
+                        return (
+                          <tr key={inv.id} className={`border-t ${activeInvoiceId === inv.id ? "bg-primary/5" : ""}`}>
+                            <td className="px-3 py-2 whitespace-nowrap">{inv.date ?? "—"}</td>
+                            <td className="px-3 py-2 font-mono text-xs">
+                              {inv.invoiceNo ?? inv.id}
+                              {done && (
+                                <Badge variant="outline" className="ml-2 border-emerald-500/50 bg-emerald-500/10 text-emerald-700 text-[10px]">
+                                  Applied
+                                </Badge>
+                              )}
+                            </td>
+                            <td className="px-3 py-2 text-right tabular-nums">{inv.orders ?? "—"}</td>
+                            <td className="px-3 py-2 text-right tabular-nums">{inv.collected != null ? fmtBdt(inv.collected) : "—"}</td>
+                            <td className="px-3 py-2 text-right tabular-nums text-amber-700">{inv.fee != null ? fmtBdt(inv.fee) : "—"}</td>
+                            <td className="px-3 py-2 text-right tabular-nums font-medium text-emerald-700">{inv.payout != null ? fmtBdt(inv.payout) : "—"}</td>
+                            <td className="px-3 py-2 text-right">
+                              <Button
+                                size="sm"
+                                variant={activeInvoiceId === inv.id ? "default" : "outline"}
+                                className="h-7 text-xs gap-1"
+                                disabled={loadingInvoiceId !== null}
+                                onClick={() => loadOne(inv)}
+                              >
+                                {loadingInvoiceId === inv.id ? <Loader2 className="h-3 w-3 animate-spin" /> : <CloudDownload className="h-3 w-3" />}
+                                Load
+                              </Button>
+                            </td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                    <tfoot className="bg-muted/40 text-xs font-medium">
+                      <tr className="border-t">
+                        <td className="px-3 py-2" colSpan={3}>Total</td>
+                        <td className="px-3 py-2 text-right tabular-nums">{fmtBdt(invoiceTotals.collected)}</td>
+                        <td className="px-3 py-2 text-right tabular-nums">{fmtBdt(invoiceTotals.fee)}</td>
+                        <td className="px-3 py-2 text-right tabular-nums">{fmtBdt(invoiceTotals.payout)}</td>
+                        <td />
+                      </tr>
+                    </tfoot>
+                  </table>
+                </div>
+              </div>
+            )}
 
             {autoAttempts && (
               <details className="text-[11px] text-muted-foreground">
