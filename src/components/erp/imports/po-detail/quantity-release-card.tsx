@@ -27,10 +27,11 @@ type Release = {
 };
 
 export function QuantityReleaseCard({
-  poId, brandId, items, releases,
+  poId, brandId, po, items, releases,
 }: {
   poId: string;
   brandId: string | null;
+  po?: any;
   items: any[];
   releases: Release[];
 }) {
@@ -66,6 +67,39 @@ export function QuantityReleaseCard({
   const totalReleased = Array.from(releasedByItem.values()).reduce((s, n) => s + n, 0);
   const pct = totalOrdered > 0 ? Math.round((totalReleased / totalOrdered) * 100) : 0;
   const draftTotal = items.reduce((s, i) => s + getDraft(i.id).qty + getDraft(i.id).damaged, 0);
+
+  // Landed cost preview — mirrors the server formula in releasePoQuantity()
+  const fx = Number(po?.fx_rate_cny_bdt ?? po?.fx_rate ?? 0);
+  const commissionPerUnit = Number(po?.agent_commission_per_unit_bdt ?? 0);
+  const overheadTotal =
+    Number(po?.shipping_cost_bdt ?? 0) +
+    Number(po?.freight_cost_bdt ?? 0) +
+    Number(po?.customs_duty_bdt ?? 0) +
+    Number(po?.other_charges_bdt ?? 0);
+  const overheadPerUnit = totalOrdered > 0 ? overheadTotal / totalOrdered : 0;
+
+  const previewLines = items
+    .map((i) => {
+      const d = getDraft(i.id);
+      const unitCny = Number(i.unit_cost_cny ?? i.unit_cost_foreign ?? 0);
+      const landed = +(unitCny * fx + overheadPerUnit + commissionPerUnit).toFixed(4);
+      return {
+        id: i.id,
+        title: i.product?.title ?? i.name_snapshot ?? "Item",
+        sku: i.product?.sku ?? i.sku_snapshot ?? "—",
+        qty: d.qty,
+        damaged: d.damaged,
+        landed,
+        value: landed * d.qty,
+        damagedValue: landed * d.damaged,
+      };
+    })
+    .filter((l) => l.qty > 0 || l.damaged > 0);
+
+  const previewQty = previewLines.reduce((s, l) => s + l.qty, 0);
+  const previewDamaged = previewLines.reduce((s, l) => s + l.damaged, 0);
+  const previewValue = previewLines.reduce((s, l) => s + l.value, 0);
+  const previewDamagedValue = previewLines.reduce((s, l) => s + l.damagedValue, 0);
 
   const mut = useMutation({
     mutationFn: () =>
@@ -203,6 +237,67 @@ export function QuantityReleaseCard({
           </div>
         </div>
       </Card>
+
+      {previewLines.length > 0 && (
+        <Card className="overflow-hidden border-emerald-500/40">
+          <div className="p-4 border-b border-border flex items-center justify-between gap-2 flex-wrap">
+            <div>
+              <h3 className="font-semibold inline-flex items-center gap-2">
+                <PackageCheck className="h-4 w-4 text-emerald-600" />Release preview
+              </h3>
+              <p className="text-xs text-muted-foreground mt-0.5">
+                Process korar age dekhe nin — per-piece landed cost o stock e ki jabe.
+              </p>
+            </div>
+            <Badge variant="outline" className="text-[11px]">
+              {previewQty} pcs{previewDamaged > 0 ? ` + ${previewDamaged} damaged` : ""}
+            </Badge>
+          </div>
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>Product</TableHead>
+                <TableHead className="text-right">Pcs to stock</TableHead>
+                <TableHead className="text-right">Damaged</TableHead>
+                <TableHead className="text-right">Landed / pc</TableHead>
+                <TableHead className="text-right">Line value</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {previewLines.map((l) => (
+                <TableRow key={l.id}>
+                  <TableCell>
+                    <div className="text-sm font-medium truncate">{l.title}</div>
+                    <div className="text-[10px] font-mono text-muted-foreground">{l.sku}</div>
+                  </TableCell>
+                  <TableCell className="text-right tabular-nums font-semibold">{l.qty}</TableCell>
+                  <TableCell className="text-right tabular-nums">
+                    {l.damaged > 0 ? <span className="text-orange-600">{l.damaged}</span> : "—"}
+                  </TableCell>
+                  <TableCell className="text-right tabular-nums">{fmtBdt(l.landed)}</TableCell>
+                  <TableCell className="text-right tabular-nums font-semibold">{fmtBdt(l.value)}</TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+          <div className="p-4 border-t border-border grid sm:grid-cols-3 gap-3 text-sm">
+            <div>
+              <div className="text-xs text-muted-foreground">Stock in</div>
+              <div className="font-semibold tabular-nums">{previewQty} pcs</div>
+            </div>
+            <div>
+              <div className="text-xs text-muted-foreground">Damaged (stock e jabe na)</div>
+              <div className="font-semibold tabular-nums">
+                {previewDamaged} pcs {previewDamaged > 0 && <span className="text-xs text-muted-foreground">({fmtBdt(previewDamagedValue)})</span>}
+              </div>
+            </div>
+            <div className="sm:text-right">
+              <div className="text-xs text-muted-foreground">Inventory value add</div>
+              <div className="font-semibold tabular-nums text-emerald-600">{fmtBdt(previewValue)}</div>
+            </div>
+          </div>
+        </Card>
+      )}
 
       {releases.length > 0 && (
         <Card className="overflow-hidden">
