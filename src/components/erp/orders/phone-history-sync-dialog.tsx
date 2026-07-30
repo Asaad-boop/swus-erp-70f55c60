@@ -188,7 +188,7 @@ export function PhoneHistorySyncDialog({
               continue;
             }
             const s = hist.summary;
-            const sug = suggestStatus(s.total, s.success, s.cancelled);
+            const sug = suggestStatus(s.total, s.success, s.cancelled, o.status as OrderStatus);
             next[o.id] = {
               ...next[o.id],
               loading: false,
@@ -197,7 +197,8 @@ export function PhoneHistorySyncDialog({
               cancelled: s.cancelled,
               suggested: sug,
               override: sug,
-              selected: !!sug && sug !== o.status,
+              // Never auto-check: staff ke explicit ticket dite hobe.
+              selected: false,
             };
           }
           return next;
