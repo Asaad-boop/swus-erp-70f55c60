@@ -37,6 +37,50 @@ export const deleteImportPo = createServerFn({ method: "POST" })
   });
 
 /* ============================================================
+   Switch receive mode (carton <-> quantity) for an existing PO
+   ============================================================ */
+
+export const setPoReceiveMode = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d: { poId: string; mode: "carton" | "quantity" }) =>
+    z.object({
+      poId: z.string().uuid(),
+      mode: z.enum(["carton", "quantity"]),
+    }).parse(d),
+  )
+  .handler(async ({ data, context }) => {
+    await assertAnyRole(context.supabase, context.userId, ["admin", "operations", "warehouse_staff"]);
+
+    if (data.mode === "quantity") {
+      const { data: cartons, error: cErr } = await context.supabase
+        .from("imp_cartons")
+        .select("id, status")
+        .eq("po_id", data.poId);
+      if (cErr) throw cErr;
+      if ((cartons ?? []).some((c: any) => ["released", "in_stock"].includes(c.status))) {
+        throw new Error("Kichu carton already stock e dhukeche — quantity mode e switch kora jabe na.");
+      }
+    } else {
+      const { data: rel, error: rErr } = await context.supabase
+        .from("imp_po_releases")
+        .select("id")
+        .eq("po_id", data.poId)
+        .limit(1);
+      if (rErr) throw rErr;
+      if ((rel ?? []).length > 0) {
+        throw new Error("Already quantity release kora hoyeche — carton mode e fera jabe na.");
+      }
+    }
+
+    const { error } = await context.supabase
+      .from("imp_purchase_orders")
+      .update({ receive_mode: data.mode })
+      .eq("id", data.poId);
+    if (error) throw error;
+    return { ok: true, mode: data.mode };
+  });
+
+/* ============================================================
    READ-side server functions
    ============================================================ */
 
