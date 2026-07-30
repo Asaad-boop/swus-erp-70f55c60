@@ -93,6 +93,112 @@ function looksLikeCsv(text: string) {
   return head.includes(",") && (head.includes("consignment") || head.includes("collected"));
 }
 
+function pickNum(row: any, keys: string[]): number | null {
+  for (const k of keys) {
+    const v = row?.[k];
+    const n = typeof v === "string" ? Number(v.replace(/[^0-9.\-]/g, "")) : Number(v);
+    if (v !== undefined && v !== null && v !== "" && Number.isFinite(n)) return n;
+  }
+  return null;
+}
+
+export type PathaoInvoiceSummary = {
+  id: string;
+  date: string | null;
+  invoiceNo: string | null;
+  collected: number | null;
+  fee: number | null;
+  payout: number | null;
+  orders: number | null;
+  status: string | null;
+};
+
+/** List every payout invoice in the date range (no CSV download). */
+export async function listPathaoInvoices(
+  creds: Creds,
+  from: string,
+  to: string,
+): Promise<{ invoices: PathaoInvoiceSummary[]; attempts: FetchAttempt[] }> {
+  const token = await merchantLogin(creds);
+  const attempts: FetchAttempt[] = [];
+  const rows: any[] = [];
+  let totalPage = 1;
+  for (let page = 1; page <= totalPage && page <= 200; page++) {
+    const path = `/api/v1/monetary/invoices/receivable?page=${page}`;
+    const res = await authGet(token, path);
+    const txt = await res.text();
+    if (page === 1 || !res.ok) {
+      attempts.push({ path, status: res.status, snippet: txt.slice(0, 160).replace(/\s+/g, " ") });
+    }
+    if (!res.ok) break;
+    let j: any = null;
+    try { j = JSON.parse(txt); } catch { break; }
+    const tp = Number(j?.data?.total_page ?? j?.total_page ?? 1);
+    if (Number.isFinite(tp) && tp > 0) totalPage = tp;
+    const list = asList(j);
+    if (!list.length) break;
+    rows.push(...list);
+    const oldest = pickDate(list[list.length - 1]);
+    if (oldest && oldest < from) break;
+  }
+
+  const invoices = rows
+    .filter((r) => {
+      const d = pickDate(r);
+      return !d || (d >= from && d <= to);
+    })
+    .map((r): PathaoInvoiceSummary | null => {
+      const id = pickId(r);
+      if (!id) return null;
+      const collected = pickNum(r, ["total_collected_amount", "collected_amount", "total_collected", "collected"]);
+      const fee = pickNum(r, ["total_delivery_charge", "total_fee", "delivery_charge", "charge", "fee"]);
+      const payout = pickNum(r, ["receivable_amount", "total_receivable", "payable_amount", "net_amount", "amount", "total_amount"]);
+      return {
+        id,
+        date: pickDate(r),
+        invoiceNo: (r?.invoice_no ?? r?.invoice_id ?? r?.hash_id ?? null) as string | null,
+        collected,
+        fee: fee ?? (collected != null && payout != null ? +(collected - payout).toFixed(2) : null),
+        payout,
+        orders: pickNum(r, ["total_order", "order_count", "total_orders", "total_consignment"]),
+        status: (r?.status_text ?? r?.status ?? null) as string | null,
+      };
+    })
+    .filter((v): v is PathaoInvoiceSummary => !!v);
+
+  attempts.push({
+    path: `invoices in ${from}..${to}`,
+    status: "info",
+    snippet: `listed ${rows.length}, in-range ${invoices.length}`,
+  });
+  return { invoices, attempts };
+}
+
+/** Download the CSV of one invoice. */
+export async function fetchOnePathaoInvoiceCsv(
+  creds: Creds,
+  invoiceId: string,
+): Promise<{ csv: string | null; attempts: FetchAttempt[] }> {
+  const token = await merchantLogin(creds);
+  const attempts: FetchAttempt[] = [];
+  const path = `/api/v1/monetary/invoices/${encodeURIComponent(invoiceId)}/export-csv`;
+  const res = await authGet(token, path);
+  const txt = await res.text();
+  if (res.ok && looksLikeCsv(txt)) return { csv: txt, attempts };
+  attempts.push({ path, status: res.status, snippet: txt.slice(0, 160).replace(/\s+/g, " ") });
+  try {
+    const j = JSON.parse(txt);
+    const url: string | undefined = j?.data?.url ?? j?.url ?? j?.data?.file ?? j?.data?.download_url;
+    if (url && /^https?:\/\//.test(url)) {
+      const r2 = await fetchWithTimeout(url);
+      const t2 = await r2.text();
+      if (r2.ok && looksLikeCsv(t2)) return { csv: t2, attempts };
+      attempts.push({ path: url, status: r2.status, snippet: t2.slice(0, 160).replace(/\s+/g, " ") });
+    }
+  } catch { /* not JSON */ }
+  return { csv: null, attempts };
+}
+
 /** Merge CSVs: keep the first header, append the data rows of the rest. */
 function mergeCsv(parts: string[]): string {
   const out: string[] = [];
