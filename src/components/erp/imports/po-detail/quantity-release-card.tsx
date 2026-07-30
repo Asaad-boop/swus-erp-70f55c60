@@ -80,6 +80,18 @@ export function QuantityReleaseCard({
     Number(po?.other_charges_bdt ?? 0);
   const overheadPerUnit = totalOrdered > 0 ? overheadTotal / totalOrdered : 0;
 
+  // Paid ta age goods (purchase) er against dhora hoy, tarpor shipping/overhead
+  const paidSoFar = Number(po?.paid_bdt ?? 0);
+  const goodsTotalAll = items.reduce(
+    (s, i) => s + Number(i.unit_cost_cny ?? i.unit_cost_foreign ?? 0) * fx * Number(i.quantity ?? 0),
+    0,
+  );
+  const shipTotalAll = overheadTotal + commissionPerUnit * totalOrdered;
+  const paidToGoods = Math.min(paidSoFar, goodsTotalAll);
+  const paidToShip = Math.max(0, paidSoFar - goodsTotalAll);
+  const goodsDuePerUnit = totalOrdered > 0 ? Math.max(0, goodsTotalAll - paidToGoods) / totalOrdered : 0;
+  const shipDuePerUnit = totalOrdered > 0 ? Math.max(0, shipTotalAll - paidToShip) / totalOrdered : 0;
+
   const previewLines = items
     .map((i) => {
       const d = getDraft(i.id);
@@ -96,8 +108,8 @@ export function QuantityReleaseCard({
         landed,
         value: landed * d.qty,
         damagedValue: landed * d.damaged,
-        goodsDue: goodsUnit * pcs,
-        shipDue: (overheadPerUnit + commissionPerUnit) * pcs,
+        goodsDue: goodsDuePerUnit * pcs,
+        shipDue: shipDuePerUnit * pcs,
       };
     })
     .filter((l) => l.qty > 0 || l.damaged > 0);
@@ -115,10 +127,10 @@ export function QuantityReleaseCard({
   const due = Number(po?.due_bdt ?? 0);
   const paidPct = grandTotal > 0 ? Math.round((paid / grandTotal) * 100) : 0;
 
-  // Pro-rata due: joto pcs release hoyeche (+ ekhon hobe) toto tar purchase + shipping
+  // Pro-rata due: joto pcs release hoyeche (+ ekhon hobe) toto tar baki purchase + shipping
   const draftPcs = previewQty + previewDamaged;
-  const releasedShare = totalOrdered > 0 ? (grandTotal * (totalReleased + draftPcs)) / totalOrdered : 0;
-  const dueForReleased = Math.max(0, Math.min(due, releasedShare - paid));
+  const releasedShare = (goodsDuePerUnit + shipDuePerUnit) * (totalReleased + draftPcs);
+  const dueForReleased = Math.max(0, Math.min(due || releasedShare, releasedShare));
 
   const mut = useMutation({
     mutationFn: () =>
@@ -286,7 +298,7 @@ export function QuantityReleaseCard({
               <div className="font-semibold tabular-nums">{totalReleased + draftPcs} / {totalOrdered}</div>
             </div>
             <div>
-              <div className="text-xs text-muted-foreground">Oi pcs-er total cost</div>
+              <div className="text-xs text-muted-foreground">Oi pcs-er baki (purchase+shipping)</div>
               <div className="font-semibold tabular-nums">{fmtBdt(releasedShare)}</div>
             </div>
             <div className="sm:text-right">
