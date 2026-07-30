@@ -795,12 +795,89 @@ function ReconciliationPage() {
                 onClick={() => autoMut.mutate()}
               >
                 {autoMut.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <CloudDownload className="h-4 w-4" />}
-                Fetch from Pathao
+                Fetch all (merged)
+              </Button>
+              <Button
+                className="gap-2"
+                disabled={listMut.isPending}
+                onClick={() => listMut.mutate()}
+              >
+                {listMut.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <FileText className="h-4 w-4" />}
+                Show invoices (date wise)
               </Button>
               <p className="text-[11px] text-muted-foreground flex-1 min-w-[220px]">
-                Pathao merchant account theke oi date range er paid invoice sorasori ene preview dekhabe — apni verify kore “Process” korle tarpor Apply hobe.
+                “Show invoices” dile oi range er protita invoice alada alada date wise list hobe — ekta ekta kore Load kore verify kore Process korte parben. “Fetch all” pura range ek CSV te merge kore.
               </p>
             </div>
+
+            {invoiceList && (
+              <div className="rounded-md border bg-background overflow-hidden">
+                <div className="flex items-center justify-between px-3 py-2 border-b bg-muted/40">
+                  <span className="text-xs font-medium">{invoiceList.length} invoice — {autoFrom} → {autoTo}</span>
+                  <Button variant="ghost" size="sm" className="h-7 text-xs" onClick={() => { setInvoiceList(null); setActiveInvoiceId(null); }}>
+                    Close
+                  </Button>
+                </div>
+                <div className="max-h-[340px] overflow-auto">
+                  <table className="w-full text-sm">
+                    <thead className="sticky top-0 bg-muted/60 text-xs">
+                      <tr>
+                        <th className="px-3 py-2 text-left font-medium">Date</th>
+                        <th className="px-3 py-2 text-left font-medium">Invoice</th>
+                        <th className="px-3 py-2 text-right font-medium">Orders</th>
+                        <th className="px-3 py-2 text-right font-medium">Collected</th>
+                        <th className="px-3 py-2 text-right font-medium">Fee</th>
+                        <th className="px-3 py-2 text-right font-medium">Payout</th>
+                        <th className="px-3 py-2 text-right font-medium">Action</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {invoiceList.map((inv) => {
+                        const done = appliedInvoiceIds.has(inv.id);
+                        return (
+                          <tr key={inv.id} className={`border-t ${activeInvoiceId === inv.id ? "bg-primary/5" : ""}`}>
+                            <td className="px-3 py-2 whitespace-nowrap">{inv.date ?? "—"}</td>
+                            <td className="px-3 py-2 font-mono text-xs">
+                              {inv.invoiceNo ?? inv.id}
+                              {done && (
+                                <Badge variant="outline" className="ml-2 border-emerald-500/50 bg-emerald-500/10 text-emerald-700 text-[10px]">
+                                  Applied
+                                </Badge>
+                              )}
+                            </td>
+                            <td className="px-3 py-2 text-right tabular-nums">{inv.orders ?? "—"}</td>
+                            <td className="px-3 py-2 text-right tabular-nums">{inv.collected != null ? fmtBdt(inv.collected) : "—"}</td>
+                            <td className="px-3 py-2 text-right tabular-nums text-amber-700">{inv.fee != null ? fmtBdt(inv.fee) : "—"}</td>
+                            <td className="px-3 py-2 text-right tabular-nums font-medium text-emerald-700">{inv.payout != null ? fmtBdt(inv.payout) : "—"}</td>
+                            <td className="px-3 py-2 text-right">
+                              <Button
+                                size="sm"
+                                variant={activeInvoiceId === inv.id ? "default" : "outline"}
+                                className="h-7 text-xs gap-1"
+                                disabled={loadingInvoiceId !== null}
+                                onClick={() => loadOne(inv)}
+                              >
+                                {loadingInvoiceId === inv.id ? <Loader2 className="h-3 w-3 animate-spin" /> : <CloudDownload className="h-3 w-3" />}
+                                Load
+                              </Button>
+                            </td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                    <tfoot className="bg-muted/40 text-xs font-medium">
+                      <tr className="border-t">
+                        <td className="px-3 py-2" colSpan={3}>Total</td>
+                        <td className="px-3 py-2 text-right tabular-nums">{fmtBdt(invoiceTotals.collected)}</td>
+                        <td className="px-3 py-2 text-right tabular-nums">{fmtBdt(invoiceTotals.fee)}</td>
+                        <td className="px-3 py-2 text-right tabular-nums">{fmtBdt(invoiceTotals.payout)}</td>
+                        <td />
+                      </tr>
+                    </tfoot>
+                  </table>
+                </div>
+              </div>
+            )}
 
             {autoAttempts && (
               <details className="text-[11px] text-muted-foreground">
