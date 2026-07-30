@@ -18,7 +18,7 @@ import {
 } from "lucide-react";
 import { Download, FileDown } from "lucide-react";
 import { CloudDownload } from "lucide-react";
-import { fetchPathaoInvoiceCsvFn } from "@/lib/erp/pathao-invoices.functions";
+import { fetchPathaoInvoiceCsvFn, listPathaoInvoicesFn, fetchOnePathaoInvoiceFn } from "@/lib/erp/pathao-invoices.functions";
 import { exportReconciliationCsv, exportReconciliationPdf } from "@/lib/erp/reconciliation-export";
 import { useBrand } from "@/contexts/brand-context";
 import { useAccounts, useCategories } from "@/hooks/erp/use-finance-query";
@@ -522,6 +522,8 @@ function ReconciliationPage() {
   const deleteFn = useServerFn(deletePathaoReconciliationRun);
   const previewFn = useServerFn(previewPathaoReconciliation);
   const autoFetchFn = useServerFn(fetchPathaoInvoiceCsvFn);
+  const listInvoicesFn = useServerFn(listPathaoInvoicesFn);
+  const fetchOneFn = useServerFn(fetchOnePathaoInvoiceFn);
 
   // ---- Auto fetch (Pathao merchant panel) ----
   const isoDay = (d: Date) => d.toISOString().slice(0, 10);
@@ -531,6 +533,48 @@ function ReconciliationPage() {
   });
   const [autoTo, setAutoTo] = useState(() => isoDay(new Date()));
   const [autoAttempts, setAutoAttempts] = useState<{ path: string; status: number | string; snippet: string }[] | null>(null);
+  const [invoiceList, setInvoiceList] = useState<
+    { id: string; date: string | null; invoiceNo: string | null; collected: number | null; fee: number | null; payout: number | null; orders: number | null; status: string | null }[] | null
+  >(null);
+  const [loadingInvoiceId, setLoadingInvoiceId] = useState<string | null>(null);
+  const [activeInvoiceId, setActiveInvoiceId] = useState<string | null>(null);
+
+  const listMut = useMutation({
+    mutationFn: () => listInvoicesFn({ data: { brandId: null, from: autoFrom, to: autoTo } }),
+    onSuccess: (r) => {
+      setInvoiceList(r.invoices);
+      setAutoAttempts(r.invoices.length ? null : (r.attempts ?? null));
+      if (!r.invoices.length) toast.error("Ei date range e kono invoice pawa jayni");
+      else toast.success(`${r.invoices.length} ta invoice pawa gelo — ekta ekta kore load korun`);
+    },
+    onError: (e: Error) => toast.error(e.message),
+  });
+
+  const loadOne = async (inv: { id: string; date: string | null }) => {
+    setLoadingInvoiceId(inv.id);
+    try {
+      const r = await fetchOneFn({ data: { brandId: null, invoiceId: inv.id } });
+      if (!r.csv) {
+        setAutoAttempts(r.attempts ?? null);
+        toast.error("Ei invoice er CSV pawa jayni");
+        return;
+      }
+      const parsed = parsePathaoCsv(r.csv);
+      if (!parsed.length) {
+        toast.error("Invoice e kono row nei");
+        return;
+      }
+      setPreview(parsed);
+      setFilename(`pathao-inv_${inv.id}_${inv.date ?? autoTo}.csv`);
+      setActiveInvoiceId(inv.id);
+      setAutoAttempts(null);
+      toast.success(`Invoice ${inv.id} — ${parsed.length} consignment preview e`);
+    } catch (e) {
+      toast.error((e as Error).message);
+    } finally {
+      setLoadingInvoiceId(null);
+    }
+  };
 
   const autoMut = useMutation({
     mutationFn: () => autoFetchFn({ data: { brandId: null, from: autoFrom, to: autoTo } }),
@@ -637,6 +681,7 @@ function ReconciliationPage() {
       if (fileRef.current) fileRef.current.value = "";
       qc.invalidateQueries({ queryKey: ["pathao-reconciliation-runs"] });
       setOpenRunId(r.runId);
+      setActiveInvoiceId(null);
     },
     onError: (e: Error) => toast.error(e.message),
   });
