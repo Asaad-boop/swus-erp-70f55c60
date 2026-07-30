@@ -2,7 +2,7 @@ import { useMemo, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { toast } from "sonner";
-import { Boxes, Loader2, PackageCheck, Warehouse } from "lucide-react";
+import { AlertTriangle, Boxes, Loader2, PackageCheck, Warehouse, Wallet } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -27,13 +27,14 @@ type Release = {
 };
 
 export function QuantityReleaseCard({
-  poId, brandId, po, items, releases,
+  poId, brandId, po, items, releases, onPayDue,
 }: {
   poId: string;
   brandId: string | null;
   po?: any;
   items: any[];
   releases: Release[];
+  onPayDue?: () => void;
 }) {
   const qc = useQueryClient();
   const whFn = useServerFn(listWarehouses);
@@ -100,6 +101,11 @@ export function QuantityReleaseCard({
   const previewDamaged = previewLines.reduce((s, l) => s + l.damaged, 0);
   const previewValue = previewLines.reduce((s, l) => s + l.value, 0);
   const previewDamagedValue = previewLines.reduce((s, l) => s + l.damagedValue, 0);
+
+  const grandTotal = Number(po?.grand_total_bdt ?? 0);
+  const paid = Number(po?.paid_bdt ?? 0);
+  const due = Number(po?.due_bdt ?? 0);
+  const paidPct = grandTotal > 0 ? Math.round((paid / grandTotal) * 100) : 0;
 
   const mut = useMutation({
     mutationFn: () =>
