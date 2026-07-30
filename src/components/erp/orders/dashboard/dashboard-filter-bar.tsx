@@ -7,13 +7,12 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Separator } from "@/components/ui/separator";
-import { DateRangePicker, type MktRange } from "@/components/erp/marketing/date-range-picker";
+import { DateRangePicker, type MktRangeValue } from "@/components/erp/marketing/date-range-picker";
 import { ORDER_STATUSES, STATUS_GROUPS, statusBadge } from "@/lib/erp/orders";
 import { cn } from "@/lib/utils";
 
 export type DashboardFilterState = {
-  from: string;
-  to: string;
+  range: MktRangeValue;
   statuses: string[];
   paymentStatus: string;
   source: string;
@@ -113,11 +112,6 @@ export function DashboardFilterBar({
   const [tagDraft, setTagDraft] = useState("");
   const [more, setMore] = useState(false);
 
-  const range: MktRange = {
-    from: state.from ? new Date(state.from) : undefined,
-    to: state.to ? new Date(state.to) : undefined,
-  };
-
   const activeCount =
     state.statuses.length +
     state.tags.length +
@@ -127,15 +121,7 @@ export function DashboardFilterBar({
   return (
     <div className="space-y-2 rounded-lg border bg-card p-3">
       <div className="flex flex-wrap items-center gap-2">
-        <DateRangePicker
-          value={range}
-          onChange={(r) =>
-            onChange({
-              from: r?.from ? r.from.toISOString().slice(0, 10) : "",
-              to: r?.to ? r.to.toISOString().slice(0, 10) : "",
-            })
-          }
-        />
+        <DateRangePicker value={state.range} onChange={(r) => onChange({ range: r })} />
         <MultiStatus value={state.statuses} onChange={(v) => onChange({ statuses: v })} />
 
         <div className="relative min-w-[220px] flex-1">
