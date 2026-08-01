@@ -188,6 +188,25 @@ function PreOrdersPage() {
   const selectedRows = rows.filter((r) => selected.has(r.id));
   const allSelected = rows.length > 0 && rows.every((r) => selected.has(r.id));
 
+  const blastFn = useServerFn(sendPreorderBlast);
+  const [blastOpen, setBlastOpen] = useState(false);
+  const blastPreview = useQuery({
+    queryKey: ["preorder-blast-preview", scopeIds],
+    enabled: blastOpen && scopeIds.length > 0,
+    queryFn: () => blastFn({ data: { brandIds: scopeIds, template: "preorder_placed", preview: true } }),
+  });
+  const blastMut = useMutation({
+    mutationFn: () => blastFn({ data: { brandIds: scopeIds, template: "preorder_placed" } }),
+    onSuccess: (r) => {
+      if ("sent" in r) {
+        toast.success(`${r.sent} জনকে SMS গেছে${r.failed ? ` · ${r.failed} fail` : ""}`);
+      }
+      setBlastOpen(false);
+      qc.invalidateQueries({ queryKey: ["sms-logs"] });
+    },
+    onError: (e: Error) => toast.error(e.message),
+  });
+
   return (
     <div className="space-y-5 p-4 pb-24 md:p-6">
       {/* Header */}
@@ -206,11 +225,56 @@ function PreOrdersPage() {
               </p>
             </div>
           </div>
-          <Button variant="outline" size="sm" onClick={refresh} className="gap-1.5">
-            <RefreshCw className={cn("h-3.5 w-3.5 transition-transform", listQuery.isFetching && "animate-spin")} /> Refresh
-          </Button>
+          <div className="flex items-center gap-2">
+            <Button variant="outline" size="sm" onClick={() => setBlastOpen(true)} className="gap-1.5" disabled={scopeIds.length === 0}>
+              <MessageSquare className="h-3.5 w-3.5" /> সবাইকে SMS
+            </Button>
+            <Button variant="outline" size="sm" onClick={refresh} className="gap-1.5">
+              <RefreshCw className={cn("h-3.5 w-3.5 transition-transform", listQuery.isFetching && "animate-spin")} /> Refresh
+            </Button>
+          </div>
         </div>
       </div>
+
+      <Dialog open={blastOpen} onOpenChange={setBlastOpen}>
+        <DialogContent className="max-w-lg">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <MessageSquare className="h-4 w-4 text-indigo-600" /> Pre-order customer দের SMS
+            </DialogTitle>
+            <DialogDescription>
+              Active pre-order (open / advance paid / ready / called) সব customer কে "Pre-order placed" template টা যাবে।
+            </DialogDescription>
+          </DialogHeader>
+          {blastPreview.isLoading ? (
+            <Skeleton className="h-24 w-full" />
+          ) : blastPreview.data && "total" in blastPreview.data ? (
+            <div className="space-y-3">
+              <div className="rounded-xl border bg-muted/40 p-3 text-sm">
+                <span className="font-semibold">{blastPreview.data.total}</span> জন recipient
+                {blastPreview.data.skipped > 0 && (
+                  <span className="text-muted-foreground"> · {blastPreview.data.skipped} skip (phone/config নেই)</span>
+                )}
+              </div>
+              {blastPreview.data.sample?.map((s) => (
+                <div key={s.phone} className="rounded-lg border p-2 text-xs">
+                  <div className="font-mono text-muted-foreground">{s.phone}</div>
+                  <div className="mt-1 whitespace-pre-wrap">{s.message}</div>
+                </div>
+              ))}
+            </div>
+          ) : null}
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setBlastOpen(false)}>Cancel</Button>
+            <Button
+              onClick={() => blastMut.mutate()}
+              disabled={blastMut.isPending || !(blastPreview.data && "total" in blastPreview.data && blastPreview.data.total > 0)}
+            >
+              {blastMut.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />} Send now
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       {/* KPIs */}
       <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
