@@ -31,7 +31,7 @@ export const SMS_DEFAULTS: SmsConfig = {
     order_confirm:
       "Dear {name}, apnar order #{invoice} confirm hoyeche. Total: Tk {total}, Due: Tk {due}. Dhonnobad - {brand}",
     preorder_placed:
-      "Dear {name}, apnar PRE-ORDER #{invoice} grohon kora hoyeche. Advance: Tk {advance}, Due: Tk {due}. Expected: {expected}. - {brand}",
+      "{brand}: প্রিয় {name}, আপনার প্রি-অর্ডার (#{invoice}) নিশ্চিত হয়েছে। খুব শীঘ্রই ডেলিভারি করা হবে। বাকি: ৳{due}।",
     preorder_ready:
       "Dear {name}, apnar pre-order #{invoice} er product stock e eseche. Delivery confirm korte reply din. - {brand}",
     preorder_confirmed:
