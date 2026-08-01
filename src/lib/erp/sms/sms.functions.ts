@@ -189,13 +189,14 @@ export const listSmsLogs = createServerFn({ method: "POST" })
  */
 export const sendPreorderBlast = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((d: { brandIds: string[]; template?: SmsTemplateKey; stages?: string[]; preview?: boolean }) =>
+  .inputValidator((d: { brandIds: string[]; template?: SmsTemplateKey; stages?: string[]; preview?: boolean; skipAlreadySent?: boolean }) =>
     z
       .object({
         brandIds: z.array(z.string().uuid()).min(1),
         template: z.enum(["preorder_placed", "preorder_ready", "preorder_confirmed", "order_confirm"]).optional(),
         stages: z.array(z.string()).optional(),
         preview: z.boolean().optional(),
+        skipAlreadySent: z.boolean().optional(),
       })
       .parse(d),
   )
@@ -218,6 +219,23 @@ export const sendPreorderBlast = createServerFn({ method: "POST" })
     const { data: brands } = await ctx.supabase.from("brands").select("id,name").in("id", data.brandIds);
     const brandName = new Map<string, string>((brands ?? []).map((b: { id: string; name: string }) => [b.id, b.name]));
 
+    // Phones that already received this template successfully — never SMS twice.
+    const skipAlreadySent = data.skipAlreadySent !== false;
+    const alreadySent = new Set<string>();
+    if (skipAlreadySent) {
+      const { data: doneLogs } = await ctx.supabase
+        .from("sms_logs")
+        .select("phone")
+        .in("brand_id", data.brandIds)
+        .eq("template_key", templateKey)
+        .eq("status", "sent")
+        .limit(5000);
+      for (const l of (doneLogs ?? []) as Array<{ phone: string }>) {
+        const p = normalizeBdPhone(l.phone);
+        if (p) alreadySent.add(p);
+      }
+    }
+
     const { renderTemplate, sendBulkSms } = await import("./sms.server");
     const configs = new Map<string, SmsConfig>();
     for (const b of data.brandIds) configs.set(b, await loadConfig(ctx, b));
@@ -225,6 +243,7 @@ export const sendPreorderBlast = createServerFn({ method: "POST" })
     type Target = { brandId: string; orderId: string; phone: string; message: string };
     const targets: Target[] = [];
     const skipped: string[] = [];
+    let alreadyCount = 0;
     const seen = new Set<string>();
 
     for (const p of (pres ?? []) as any[]) {
@@ -233,6 +252,7 @@ export const sendPreorderBlast = createServerFn({ method: "POST" })
       const phone = normalizeBdPhone(o.shipping_phone || o.guest_phone || "");
       if (!phone || seen.has(phone)) { if (!phone) skipped.push(o.invoice_no || o.id); continue; }
       seen.add(phone);
+      if (alreadySent.has(phone)) { alreadyCount += 1; continue; }
       const cfg = configs.get(p.brand_id);
       if (!cfg?.api_key || !cfg.sender_id) { skipped.push(o.invoice_no || o.id); continue; }
       const total = Number(o.total || 0);
@@ -256,7 +276,7 @@ export const sendPreorderBlast = createServerFn({ method: "POST" })
     }
 
     if (data.preview) {
-      return { preview: true as const, total: targets.length, skipped: skipped.length, sample: targets.slice(0, 3) };
+      return { preview: true as const, total: targets.length, skipped: skipped.length, already: alreadyCount, sample: targets.slice(0, 3) };
     }
 
     let sent = 0;
@@ -278,5 +298,5 @@ export const sendPreorderBlast = createServerFn({ method: "POST" })
       });
     }
     await logSms(ctx, logs);
-    return { preview: false as const, total: targets.length, sent, failed, skipped: skipped.length };
+    return { preview: false as const, total: targets.length, sent, failed, skipped: skipped.length, already: alreadyCount };
   });
