@@ -19,6 +19,8 @@ import {
 import { Download, FileDown } from "lucide-react";
 import { CloudDownload } from "lucide-react";
 import { fetchPathaoInvoiceCsvFn, listPathaoInvoicesFn, fetchOnePathaoInvoiceFn } from "@/lib/erp/pathao-invoices.functions";
+import { DateRangePicker, buildPreset, type MktRangeValue } from "@/components/erp/marketing/date-range-picker";
+import { DailyInvoiceCoverage } from "@/components/erp/reconciliation/daily-invoice-coverage";
 import { exportReconciliationCsv, exportReconciliationPdf } from "@/lib/erp/reconciliation-export";
 import { useBrand } from "@/contexts/brand-context";
 import { useAccounts, useCategories } from "@/hooks/erp/use-finance-query";
@@ -260,10 +262,9 @@ function ReconciliationPage() {
   const [openRunId, setOpenRunId] = useState<string | null>(null);
 
   // Summary export date range (defaults to last 30 days)
-  const today = new Date();
-  const monthAgo = new Date(today.getTime() - 30 * 24 * 60 * 60 * 1000);
-  const [sumFrom, setSumFrom] = useState<string>(monthAgo.toISOString().slice(0, 10));
-  const [sumTo, setSumTo] = useState<string>(today.toISOString().slice(0, 10));
+  const [sumRange, setSumRange] = useState<MktRangeValue>(() => buildPreset("30d"));
+  const sumFrom = sumRange.from;
+  const sumTo = sumRange.to;
   const [sumBusy, setSumBusy] = useState(false);
 
   async function buildSummaryData() {
