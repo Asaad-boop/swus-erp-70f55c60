@@ -182,3 +182,118 @@ export const listSmsLogs = createServerFn({ method: "POST" })
     if (error) throw error;
     return rows ?? [];
   });
+
+/**
+ * Bulk-send a pre-order template SMS to every (non-cancelled) pre-order
+ * customer of the given brands. `preview: true` only returns the recipients.
+ */
+export const sendPreorderBlast = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d: { brandIds: string[]; template?: SmsTemplateKey; stages?: string[]; preview?: boolean }) =>
+    z
+      .object({
+        brandIds: z.array(z.string().uuid()).min(1),
+        template: z.enum(["preorder_placed", "preorder_ready", "preorder_confirmed", "order_confirm"]).optional(),
+        stages: z.array(z.string()).optional(),
+        preview: z.boolean().optional(),
+      })
+      .parse(d),
+  )
+  .handler(async ({ data, context }) => {
+    const ctx = context as unknown as Ctx;
+    const templateKey = (data.template ?? "preorder_placed") as Exclude<SmsTemplateKey, "custom">;
+    const stages = data.stages ?? ["open", "advance_paid", "ready", "called"];
+
+    const { data: pres, error } = await ctx.supabase
+      .from("preorders")
+      .select(
+        "order_id,brand_id,advance_amount,due_amount,promise_date," +
+          "order:orders!preorders_order_id_fkey(id,invoice_no,total,advance_amount,shipping_name,shipping_phone,guest_name,guest_phone,courier_name,tracking_number)",
+      )
+      .in("brand_id", data.brandIds)
+      .in("stage", stages)
+      .limit(1000);
+    if (error) throw error;
+
+    const { data: brands } = await ctx.supabase.from("brands").select("id,name").in("id", data.brandIds);
+    const brandName = new Map<string, string>((brands ?? []).map((b: { id: string; name: string }) => [b.id, b.name]));
+
+    const { renderTemplate, sendBulkSms } = await import("./sms.server");
+    const configs = new Map<string, SmsConfig>();
+    for (const b of data.brandIds) configs.set(b, await loadConfig(ctx, b));
+
+    type Target = { brandId: string; orderId: string; phone: string; message: string };
+    const targets: Target[] = [];
+    const skipped: string[] = [];
+    const seen = new Set<string>();
+
+    for (const p of (pres ?? []) as any[]) {
+      const o = p.order;
+      if (!o || !p.brand_id) continue;
+      const phone = normalizeBdPhone(o.shipping_phone || o.guest_phone || "");
+      if (!phone || seen.has(phone)) { if (!phone) skipped.push(o.invoice_no || o.id); continue; }
+      seen.add(phone);
+      const cfg = configs.get(p.brand_id);
+      if (!cfg?.api_key || !cfg.sender_id) { skipped.push(o.invoice_no || o.id); continue; }
+      const total = Number(o.total || 0);
+      const advance = Number(p.advance_amount ?? o.advance_amount ?? 0);
+      const message = renderTemplate(cfg.templates[templateKey], {
+        name: o.shipping_name || o.guest_name || "Customer",
+        phone,
+        invoice: o.invoice_no || String(o.id).slice(0, 8),
+        order_id: String(o.id).slice(0, 8),
+        total: total.toLocaleString("en-US"),
+        advance: advance.toLocaleString("en-US"),
+        due: Math.max(0, Number(p.due_amount ?? total - advance)).toLocaleString("en-US"),
+        brand: brandName.get(p.brand_id) ?? "",
+        expected: p.promise_date ?? "",
+        courier: o.courier_name ?? "",
+        tracking: o.tracking_number ?? "",
+        date: new Date().toISOString().slice(0, 10),
+      }).trim();
+      if (!message) continue;
+      targets.push({ brandId: p.brand_id, orderId: o.id, phone, message });
+    }
+
+    if (data.preview) {
+      return { preview: true as const, total: targets.length, skipped: skipped.length, sample: targets.slice(0, 3) };
+    }
+
+    let sent = 0;
+    let failed = 0;
+    const logs: Array<Record<string, unknown>> = [];
+    for (const t of targets) {
+      const cfg = configs.get(t.brandId)!;
+      const res = await sendBulkSms({ apiKey: cfg.api_key, senderId: cfg.sender_id, numbers: [t.phone], message: t.message });
+      if (res.ok) sent += 1; else failed += 1;
+      logs.push({
+        brand_id: t.brandId,
+        order_id: t.orderId,
+        phone: t.phone,
+        message: t.message,
+        template_key: templateKey,
+        status: res.ok ? "sent" : "failed",
+        provider_response: `${res.code ?? ""} ${res.message}`.trim(),
+        segments: smsSegments(t.message),
+      });
+    }
+    await logSms(ctx, logs);
+    return { preview: false as const, total: targets.length, sent, failed, skipped: skipped.length };
+  });
+
+const _unusedListSmsLogs = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d: { brandId?: string | null; limit?: number }) =>
+    z.object({ brandId: z.string().uuid().nullable().optional(), limit: z.number().min(1).max(200).optional() }).parse(d ?? {}),
+  )
+  .handler(async ({ data, context }) => {
+    let q = context.supabase
+      .from("sms_logs")
+      .select("id,phone,message,template_key,status,provider_response,segments,order_id,created_at")
+      .order("created_at", { ascending: false })
+      .limit(data.limit ?? 50);
+    if (data.brandId) q = q.eq("brand_id", data.brandId);
+    const { data: rows, error } = await q;
+    if (error) throw error;
+    return rows ?? [];
+  });
