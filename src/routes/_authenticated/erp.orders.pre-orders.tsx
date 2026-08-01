@@ -252,10 +252,18 @@ function PreOrdersPage() {
             <div className="space-y-3">
               <div className="rounded-xl border bg-muted/40 p-3 text-sm">
                 <span className="font-semibold">{blastPreview.data.total}</span> জন recipient
+                {"already" in blastPreview.data && blastPreview.data.already > 0 && (
+                  <span className="text-emerald-600"> · {blastPreview.data.already} জনকে আগেই পাঠানো হয়েছে (skip)</span>
+                )}
                 {blastPreview.data.skipped > 0 && (
                   <span className="text-muted-foreground"> · {blastPreview.data.skipped} skip (phone/config নেই)</span>
                 )}
               </div>
+              {blastPreview.data.total === 0 && (
+                <div className="rounded-lg border border-emerald-500/30 bg-emerald-500/10 p-2 text-xs text-emerald-700">
+                  বাকি কেউ নেই — সবাইকে SMS চলে গেছে ✅
+                </div>
+              )}
               {blastPreview.data.sample?.map((s) => (
                 <div key={s.phone} className="rounded-lg border p-2 text-xs">
                   <div className="font-mono text-muted-foreground">{s.phone}</div>
