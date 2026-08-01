@@ -802,12 +802,8 @@ function ReconciliationPage() {
           <div className="rounded-md border bg-muted/20 p-3 space-y-2">
             <div className="flex flex-wrap items-end gap-3">
               <div>
-                <Label className="text-xs">Auto fetch — From</Label>
-                <Input type="date" value={autoFrom} onChange={(e) => setAutoFrom(e.target.value)} className="h-9 w-[150px]" />
-              </div>
-              <div>
-                <Label className="text-xs">To</Label>
-                <Input type="date" value={autoTo} onChange={(e) => setAutoTo(e.target.value)} className="h-9 w-[150px]" />
+                <Label className="text-xs">Auto fetch — date range</Label>
+                <DateRangePicker value={autoRange} onChange={setAutoRange} className="w-[260px]" />
               </div>
               <Button
                 variant="secondary"
