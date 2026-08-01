@@ -280,20 +280,3 @@ export const sendPreorderBlast = createServerFn({ method: "POST" })
     await logSms(ctx, logs);
     return { preview: false as const, total: targets.length, sent, failed, skipped: skipped.length };
   });
-
-const _unusedListSmsLogs = createServerFn({ method: "POST" })
-  .middleware([requireSupabaseAuth])
-  .inputValidator((d: { brandId?: string | null; limit?: number }) =>
-    z.object({ brandId: z.string().uuid().nullable().optional(), limit: z.number().min(1).max(200).optional() }).parse(d ?? {}),
-  )
-  .handler(async ({ data, context }) => {
-    let q = context.supabase
-      .from("sms_logs")
-      .select("id,phone,message,template_key,status,provider_response,segments,order_id,created_at")
-      .order("created_at", { ascending: false })
-      .limit(data.limit ?? 50);
-    if (data.brandId) q = q.eq("brand_id", data.brandId);
-    const { data: rows, error } = await q;
-    if (error) throw error;
-    return rows ?? [];
-  });
