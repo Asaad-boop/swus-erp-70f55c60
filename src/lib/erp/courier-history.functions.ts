@@ -97,7 +97,12 @@ async function fetchPathao(supabase: any, brandId: string | null, phone: string)
       body: JSON.stringify({ phone }),
     });
     const text = await res.text();
-    if (!res.ok) throw new Error(`${res.status}: ${text.slice(0, 120)}`);
+    if (!res.ok) {
+      if (res.status === 403 || /inactive/i.test(text)) {
+        throw new Error("Steadfast fraud-check API bondho (account inactive) — Steadfast support ke bolun fraud check API enable korte");
+      }
+      throw new Error(`${res.status}: ${text.slice(0, 120)}`);
+    }
     const j = JSON.parse(text);
     const c = j?.data?.customer ?? j?.customer ?? j?.data ?? {};
     const total = Number(c.total_delivery ?? c.total ?? 0);
