@@ -19,6 +19,8 @@ import {
 import { Download, FileDown } from "lucide-react";
 import { CloudDownload } from "lucide-react";
 import { fetchPathaoInvoiceCsvFn, listPathaoInvoicesFn, fetchOnePathaoInvoiceFn } from "@/lib/erp/pathao-invoices.functions";
+import { DateRangePicker, buildPreset, type MktRangeValue } from "@/components/erp/marketing/date-range-picker";
+import { DailyInvoiceCoverage } from "@/components/erp/reconciliation/daily-invoice-coverage";
 import { exportReconciliationCsv, exportReconciliationPdf } from "@/lib/erp/reconciliation-export";
 import { useBrand } from "@/contexts/brand-context";
 import { useAccounts, useCategories } from "@/hooks/erp/use-finance-query";
@@ -260,10 +262,9 @@ function ReconciliationPage() {
   const [openRunId, setOpenRunId] = useState<string | null>(null);
 
   // Summary export date range (defaults to last 30 days)
-  const today = new Date();
-  const monthAgo = new Date(today.getTime() - 30 * 24 * 60 * 60 * 1000);
-  const [sumFrom, setSumFrom] = useState<string>(monthAgo.toISOString().slice(0, 10));
-  const [sumTo, setSumTo] = useState<string>(today.toISOString().slice(0, 10));
+  const [sumRange, setSumRange] = useState<MktRangeValue>(() => buildPreset("30d"));
+  const sumFrom = sumRange.from;
+  const sumTo = sumRange.to;
   const [sumBusy, setSumBusy] = useState(false);
 
   async function buildSummaryData() {
@@ -526,12 +527,9 @@ function ReconciliationPage() {
   const fetchOneFn = useServerFn(fetchOnePathaoInvoiceFn);
 
   // ---- Auto fetch (Pathao merchant panel) ----
-  const isoDay = (d: Date) => d.toISOString().slice(0, 10);
-  const [autoFrom, setAutoFrom] = useState(() => {
-    const n = new Date();
-    return isoDay(new Date(n.getFullYear(), n.getMonth(), 1));
-  });
-  const [autoTo, setAutoTo] = useState(() => isoDay(new Date()));
+  const [autoRange, setAutoRange] = useState<MktRangeValue>(() => buildPreset("this_month"));
+  const autoFrom = autoRange.from;
+  const autoTo = autoRange.to;
   const [autoAttempts, setAutoAttempts] = useState<{ path: string; status: number | string; snippet: string }[] | null>(null);
   const [invoiceList, setInvoiceList] = useState<
     { id: string; date: string | null; invoiceNo: string | null; collected: number | null; fee: number | null; payout: number | null; orders: number | null; status: string | null }[] | null
@@ -616,18 +614,6 @@ function ReconciliationPage() {
     }
     return set;
   }, [runsQ.data]);
-  const invoiceTotals = useMemo(
-    () =>
-      (invoiceList ?? []).reduce(
-        (a, i) => ({
-          collected: a.collected + (i.collected ?? 0),
-          fee: a.fee + (i.fee ?? 0),
-          payout: a.payout + (i.payout ?? 0),
-        }),
-        { collected: 0, fee: 0, payout: 0 },
-      ),
-    [invoiceList],
-  );
 
   // Dry-run match preview (no inserts). Re-runs when parsed rows or brand change.
   const previewKey = useMemo(() => {
@@ -804,12 +790,8 @@ function ReconciliationPage() {
           <div className="rounded-md border bg-muted/20 p-3 space-y-2">
             <div className="flex flex-wrap items-end gap-3">
               <div>
-                <Label className="text-xs">Auto fetch — From</Label>
-                <Input type="date" value={autoFrom} onChange={(e) => setAutoFrom(e.target.value)} className="h-9 w-[150px]" />
-              </div>
-              <div>
-                <Label className="text-xs">To</Label>
-                <Input type="date" value={autoTo} onChange={(e) => setAutoTo(e.target.value)} className="h-9 w-[150px]" />
+                <Label className="text-xs">Auto fetch — date range</Label>
+                <DateRangePicker value={autoRange} onChange={setAutoRange} className="w-[260px]" />
               </div>
               <Button
                 variant="secondary"
@@ -834,72 +816,16 @@ function ReconciliationPage() {
             </div>
 
             {invoiceList && (
-              <div className="rounded-md border bg-background overflow-hidden">
-                <div className="flex items-center justify-between px-3 py-2 border-b bg-muted/40">
-                  <span className="text-xs font-medium">{invoiceList.length} invoice — {autoFrom} → {autoTo}</span>
-                  <Button variant="ghost" size="sm" className="h-7 text-xs" onClick={() => { setInvoiceList(null); setActiveInvoiceId(null); }}>
-                    Close
-                  </Button>
-                </div>
-                <div className="max-h-[340px] overflow-auto">
-                  <table className="w-full text-sm">
-                    <thead className="sticky top-0 bg-muted/60 text-xs">
-                      <tr>
-                        <th className="px-3 py-2 text-left font-medium">Date</th>
-                        <th className="px-3 py-2 text-left font-medium">Invoice</th>
-                        <th className="px-3 py-2 text-right font-medium">Orders</th>
-                        <th className="px-3 py-2 text-right font-medium">Collected</th>
-                        <th className="px-3 py-2 text-right font-medium">Fee</th>
-                        <th className="px-3 py-2 text-right font-medium">Payout</th>
-                        <th className="px-3 py-2 text-right font-medium">Action</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {invoiceList.map((inv) => {
-                        const done = appliedInvoiceIds.has(inv.id);
-                        return (
-                          <tr key={inv.id} className={`border-t ${activeInvoiceId === inv.id ? "bg-primary/5" : ""}`}>
-                            <td className="px-3 py-2 whitespace-nowrap">{inv.date ?? "—"}</td>
-                            <td className="px-3 py-2 font-mono text-xs">
-                              {inv.invoiceNo ?? inv.id}
-                              {done && (
-                                <Badge variant="outline" className="ml-2 border-emerald-500/50 bg-emerald-500/10 text-emerald-700 text-[10px]">
-                                  Applied
-                                </Badge>
-                              )}
-                            </td>
-                            <td className="px-3 py-2 text-right tabular-nums">{inv.orders ?? "—"}</td>
-                            <td className="px-3 py-2 text-right tabular-nums">{inv.collected != null ? fmtBdt(inv.collected) : "—"}</td>
-                            <td className="px-3 py-2 text-right tabular-nums text-amber-700">{inv.fee != null ? fmtBdt(inv.fee) : "—"}</td>
-                            <td className="px-3 py-2 text-right tabular-nums font-medium text-emerald-700">{inv.payout != null ? fmtBdt(inv.payout) : "—"}</td>
-                            <td className="px-3 py-2 text-right">
-                              <Button
-                                size="sm"
-                                variant={activeInvoiceId === inv.id ? "default" : "outline"}
-                                className="h-7 text-xs gap-1"
-                                disabled={loadingInvoiceId !== null}
-                                onClick={() => loadOne(inv)}
-                              >
-                                {loadingInvoiceId === inv.id ? <Loader2 className="h-3 w-3 animate-spin" /> : <CloudDownload className="h-3 w-3" />}
-                                Load
-                              </Button>
-                            </td>
-                          </tr>
-                        );
-                      })}
-                    </tbody>
-                    <tfoot className="bg-muted/40 text-xs font-medium">
-                      <tr className="border-t">
-                        <td className="px-3 py-2" colSpan={3}>Total</td>
-                        <td className="px-3 py-2 text-right tabular-nums">{fmtBdt(invoiceTotals.collected)}</td>
-                        <td className="px-3 py-2 text-right tabular-nums">{fmtBdt(invoiceTotals.fee)}</td>
-                        <td className="px-3 py-2 text-right tabular-nums">{fmtBdt(invoiceTotals.payout)}</td>
-                        <td />
-                      </tr>
-                    </tfoot>
-                  </table>
-                </div>
-              </div>
+              <DailyInvoiceCoverage
+                invoices={invoiceList}
+                from={autoFrom}
+                to={autoTo}
+                appliedInvoiceIds={appliedInvoiceIds}
+                activeInvoiceId={activeInvoiceId}
+                loadingInvoiceId={loadingInvoiceId}
+                onLoad={loadOne}
+                onClose={() => { setInvoiceList(null); setActiveInvoiceId(null); }}
+              />
             )}
 
             {autoAttempts && (
@@ -1076,24 +1002,7 @@ function ReconciliationPage() {
         <div className="flex flex-wrap items-end justify-between gap-3">
           <h2 className="text-lg font-semibold">History</h2>
           <div className="flex items-end gap-2">
-            <div>
-              <Label className="text-[10px] uppercase text-muted-foreground">From</Label>
-              <Input
-                type="date"
-                value={sumFrom}
-                onChange={(e) => setSumFrom(e.target.value)}
-                className="h-8 w-[140px]"
-              />
-            </div>
-            <div>
-              <Label className="text-[10px] uppercase text-muted-foreground">To</Label>
-              <Input
-                type="date"
-                value={sumTo}
-                onChange={(e) => setSumTo(e.target.value)}
-                className="h-8 w-[140px]"
-              />
-            </div>
+            <DateRangePicker value={sumRange} onChange={setSumRange} className="w-[250px]" />
             <Button size="sm" variant="outline" onClick={downloadSummary} disabled={sumBusy}>
               {sumBusy ? <Loader2 className="h-4 w-4 animate-spin" /> : <Download className="h-4 w-4" />}
               CSV
