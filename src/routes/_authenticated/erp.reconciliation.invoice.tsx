@@ -527,12 +527,9 @@ function ReconciliationPage() {
   const fetchOneFn = useServerFn(fetchOnePathaoInvoiceFn);
 
   // ---- Auto fetch (Pathao merchant panel) ----
-  const isoDay = (d: Date) => d.toISOString().slice(0, 10);
-  const [autoFrom, setAutoFrom] = useState(() => {
-    const n = new Date();
-    return isoDay(new Date(n.getFullYear(), n.getMonth(), 1));
-  });
-  const [autoTo, setAutoTo] = useState(() => isoDay(new Date()));
+  const [autoRange, setAutoRange] = useState<MktRangeValue>(() => buildPreset("this_month"));
+  const autoFrom = autoRange.from;
+  const autoTo = autoRange.to;
   const [autoAttempts, setAutoAttempts] = useState<{ path: string; status: number | string; snippet: string }[] | null>(null);
   const [invoiceList, setInvoiceList] = useState<
     { id: string; date: string | null; invoiceNo: string | null; collected: number | null; fee: number | null; payout: number | null; orders: number | null; status: string | null }[] | null
