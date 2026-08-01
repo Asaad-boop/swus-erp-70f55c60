@@ -1,11 +1,13 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useEffect, useMemo, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useServerFn } from "@tanstack/react-start";
 import { toast } from "sonner";
 import {
   AlertTriangle, CalendarClock, CheckCircle2, ExternalLink, Loader2, PackageCheck,
-  PhoneCall, RefreshCw, Search, Wallet, X, Package, TrendingUp,
+  PhoneCall, RefreshCw, Search, Wallet, X, Package, TrendingUp, MessageSquare,
 } from "lucide-react";
+import { sendPreorderBlast } from "@/lib/erp/sms/sms.functions";
 import { supabase } from "@/integrations/supabase/client";
 import { applyBrandScope } from "@/lib/erp/apply-brand-scope";
 import { useBrand } from "@/contexts/brand-context";
