@@ -614,18 +614,6 @@ function ReconciliationPage() {
     }
     return set;
   }, [runsQ.data]);
-  const invoiceTotals = useMemo(
-    () =>
-      (invoiceList ?? []).reduce(
-        (a, i) => ({
-          collected: a.collected + (i.collected ?? 0),
-          fee: a.fee + (i.fee ?? 0),
-          payout: a.payout + (i.payout ?? 0),
-        }),
-        { collected: 0, fee: 0, payout: 0 },
-      ),
-    [invoiceList],
-  );
 
   // Dry-run match preview (no inserts). Re-runs when parsed rows or brand change.
   const previewKey = useMemo(() => {
