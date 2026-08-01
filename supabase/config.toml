@@ -1,4 +1,1 @@
 project_id = "bgsspipkjeuceftuatue"
-
-[functions.notify-order-telegram]
-verify_jwt = false

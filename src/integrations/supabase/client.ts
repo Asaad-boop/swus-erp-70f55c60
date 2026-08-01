@@ -2,36 +2,15 @@
 import { createClient } from '@supabase/supabase-js';
 import type { Database } from './types';
 
-const FALLBACK_URL = "https://bgsspipkjeuceftuatue.supabase.co";
-const FALLBACK_KEY =
-  "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJnc3NwaXBramV1Y2VmdHVhdHVlIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzYyNDcyMzIsImV4cCI6MjA5MTgyMzIzMn0.h6aRTBUhTvEvKCx8M-lvyA2BCBQbhvWMWKgn8dIyilc";
-
-// Some hosts (Vercel) accidentally ship placeholder strings like
-// "<anon key from .env>" or "your-anon-key". Validate URL + JWT shape and
-// fall back to the known-good project values when the env var is bogus.
-function pickUrl(v: unknown): string {
-  return typeof v === "string" && /^https:\/\/[a-z0-9-]+\.supabase\.co\/?$/i.test(v.trim())
-    ? v.trim().replace(/\/$/, "")
-    : FALLBACK_URL;
-}
-function pickKey(v: unknown): string {
-  return typeof v === "string" && /^eyJ[A-Za-z0-9_-]+\.eyJ[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+$/.test(v.trim())
-    ? v.trim()
-    : FALLBACK_KEY;
-}
-
-const SUPABASE_URL = pickUrl(import.meta.env.VITE_SUPABASE_URL);
-const SUPABASE_PUBLISHABLE_KEY = pickKey(
-  import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY ||
-    import.meta.env.VITE_SUPABASE_ANON_KEY,
-);
+const SUPABASE_URL = "https://bgsspipkjeuceftuatue.supabase.co";
+const SUPABASE_PUBLISHABLE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJnc3NwaXBramV1Y2VmdHVhdHVlIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzYyNDcyMzIsImV4cCI6MjA5MTgyMzIzMn0.h6aRTBUhTvEvKCx8M-lvyA2BCBQbhvWMWKgn8dIyilc";
 
 // Import the supabase client like this:
 // import { supabase } from "@/integrations/supabase/client";
 
 export const supabase = createClient<Database>(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY, {
   auth: {
-    storage: typeof window !== 'undefined' ? window.localStorage : undefined,
+    storage: typeof window !== 'undefined' ? localStorage : undefined,
     persistSession: true,
     autoRefreshToken: true,
   }
