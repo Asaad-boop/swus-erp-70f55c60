@@ -337,14 +337,21 @@ export const getPathaoReconciliationRun = createServerFn({ method: "GET" })
     if (runErr) throw new Error(runErr.message);
     if (!run) throw new Error("Run not found");
 
-    const { data: rows, error: rowErr } = await supabase
-      .from("erp_reconciliation_rows")
-      .select("*, orders:matched_order_id(id, status, total, shipping_name, shipping_phone, payment_status)")
-      .eq("run_id", data.runId)
-      .order("created_at", { ascending: true });
-    if (rowErr) throw new Error(rowErr.message);
+    const PAGE = 1000;
+    const allRows: unknown[] = [];
+    for (let from = 0; ; from += PAGE) {
+      const { data: page, error: rowErr } = await supabase
+        .from("erp_reconciliation_rows")
+        .select("*, orders:matched_order_id(id, status, total, shipping_name, shipping_phone, payment_status)")
+        .eq("run_id", data.runId)
+        .order("created_at", { ascending: true })
+        .range(from, from + PAGE - 1);
+      if (rowErr) throw new Error(rowErr.message);
+      allRows.push(...(page ?? []));
+      if (!page || page.length < PAGE) break;
+    }
 
-    return { run, rows: rows ?? [] };
+    return { run, rows: allRows };
   });
 
 // ---------- List runs ----------
