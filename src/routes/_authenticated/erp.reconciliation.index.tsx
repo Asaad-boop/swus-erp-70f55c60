@@ -339,8 +339,8 @@ function OverviewPage() {
                     <YAxis tickFormatter={(v) => `${Math.round(Number(v) / 1000)}k`} className="text-xs" />
                     <Tooltip formatter={(v: number) => fmtBdt(Number(v))} />
                     <Legend wrapperStyle={{ fontSize: 11 }} />
-                    <Bar dataKey="expected" name="Expected" fill="hsl(var(--muted-foreground))" />
-                    <Bar dataKey="collected" name="Collected" fill="hsl(var(--primary))" />
+                    <Bar dataKey="expected" name="Expected" fill="var(--muted-foreground)" radius={[3, 3, 0, 0]} />
+                    <Bar dataKey="collected" name="Collected" fill="var(--primary)" radius={[3, 3, 0, 0]} />
                   </BarChart>
                 </ResponsiveContainer>
               )}
