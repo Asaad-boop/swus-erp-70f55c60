@@ -997,7 +997,7 @@ function ReconciliationPage() {
         </Card>
       )}
 
-      {/* History */}
+      {/* Received breakdown + History */}
       <div className="space-y-2">
         <div className="flex flex-wrap items-end justify-between gap-3">
           <h2 className="text-lg font-semibold">History</h2>
@@ -1013,6 +1013,7 @@ function ReconciliationPage() {
             </Button>
           </div>
         </div>
+        <ReceivedSummary from={sumFrom} to={sumTo} />
         <Card>
           <Table>
             <TableHeader>
