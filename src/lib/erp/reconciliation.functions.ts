@@ -419,6 +419,9 @@ export const applyPathaoReconciliationRun = createServerFn({ method: "POST" })
         includeMismatch: z.boolean().default(false),
         brandWallets: z.record(z.string().uuid(), z.string().uuid()).optional(),
         brandFeeCategories: z.record(z.string().uuid(), z.string().uuid()).optional(),
+        // Batching — client loops until done to avoid request timeouts on big invoices
+        limit: z.number().int().min(1).max(500).optional().default(120),
+        afterId: z.string().uuid().nullable().optional(),
       })
       .parse(d),
   )
@@ -432,7 +435,7 @@ export const applyPathaoReconciliationRun = createServerFn({ method: "POST" })
       .maybeSingle();
     if (runErr) throw new Error(runErr.message);
     if (!run) throw new Error("Run not found");
-    if (run.status === "applied") throw new Error("Already applied");
+    if (run.status === "applied" && !data.afterId) throw new Error("Already applied");
     // NOTE: run.brand_id can now be null (cross-brand upload). Each row carries its own brand_id.
     const runBrandId: string | null = run.brand_id;
 
@@ -440,13 +443,19 @@ export const applyPathaoReconciliationRun = createServerFn({ method: "POST" })
       ? ["matched", "amount_mismatch"]
       : ["matched"];
 
-    const { data: rows, error: rowErr } = await supabase
+    let rowQuery = supabase
       .from("erp_reconciliation_rows")
       .select("*")
       .eq("run_id", data.runId)
       .in("match_status", allowedStatuses)
-      .is("applied_income_txn_id", null);
+      .not("matched_order_id", "is", null)
+      .order("id", { ascending: true })
+      .limit(data.limit);
+    if (data.afterId) rowQuery = rowQuery.gt("id", data.afterId);
+    const { data: rows, error: rowErr } = await rowQuery;
     if (rowErr) throw new Error(rowErr.message);
+    const fetchedCount = (rows ?? []).length;
+    const lastId = fetchedCount ? ((rows ?? [])[fetchedCount - 1] as { id: string }).id : null;
 
     // Resolve per-brand default wallets from erp_settings (auto-pick strategy)
     const brandsInRun = [
