@@ -285,6 +285,51 @@ function StatsStrip({
           </div>
         )}
       </div>
+      {/* Per-courier breakdown — each courier separately (Pathao = own API, rest via BDCourier) */}
+      <div className="border-t border-border/60 bg-muted/20">
+        <div className="flex items-center justify-between gap-2 px-4 pt-3 pb-1.5">
+          <span className="text-[10px] font-bold uppercase tracking-[0.12em] text-muted-foreground">
+            Courier-wise success rate
+          </span>
+          <button
+            type="button"
+            onClick={onRefresh}
+            disabled={refreshing}
+            className="inline-flex items-center gap-1 rounded-full border bg-card px-2 py-0.5 text-[10px] font-medium text-muted-foreground transition-colors hover:text-foreground disabled:opacity-50"
+          >
+            <RefreshCw className={cn("h-3 w-3", refreshing && "animate-spin")} />
+            {refreshing ? "Refreshing" : "Refresh"}
+          </button>
+        </div>
+        {courierRows.length === 0 ? (
+          <p className="px-4 pb-3 text-[11px] text-muted-foreground/70">
+            {loading || refreshing ? "Courier data ashche..." : "Kono courier record pawa jayni."}
+          </p>
+        ) : (
+          <ul className="divide-y divide-border/50">
+            {courierRows.map((c) => {
+              const denom = c.success + c.cancel;
+              const pct = denom > 0 ? Math.round((c.success / denom) * 100) : 0;
+              const t = toneFor(pct, denom === 0);
+              return (
+                <li key={c.name} className="flex items-center gap-3 px-4 py-2 transition-colors hover:bg-muted/40">
+                  <span className="w-24 shrink-0 truncate text-[11px] font-semibold text-foreground">{c.label}</span>
+                  <div className="h-1.5 flex-1 overflow-hidden rounded-full bg-muted">
+                    <div className={cn("h-full rounded-full transition-all duration-700", t.bar)} style={{ width: `${denom === 0 ? 0 : pct}%` }} />
+                  </div>
+                  <span className={cn("w-10 shrink-0 text-right text-[11px] font-bold tabular-nums", t.text)}>
+                    {denom === 0 ? "—" : `${pct}%`}
+                  </span>
+                  <span className="w-20 shrink-0 text-right text-[10px] tabular-nums text-muted-foreground">
+                    <span className="font-semibold text-foreground">{c.success}</span>/{denom || c.total}
+                    <span className="ml-1 text-rose-600 dark:text-rose-400">✕{c.cancel}</span>
+                  </span>
+                </li>
+              );
+            })}
+          </ul>
+        )}
+      </div>
     </div>
   );
 }
