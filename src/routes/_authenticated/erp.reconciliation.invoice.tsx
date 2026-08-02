@@ -1691,21 +1691,44 @@ function RowItem({ row, brandId, runId }: { row: Row; brandId: string | null; ru
 
   return (
     <>
-      <TableRow>
-        <TableCell>
+      <TableRow className="transition-colors hover:bg-muted/40">
+        <TableCell className="py-1.5">
           <div className="flex flex-col items-start gap-1">
             {statusBadge}
             {typeBadge}
           </div>
         </TableCell>
-        <TableCell className="text-xs font-mono">
-          <div>{row.consignment_id ?? "—"}</div>
+        <TableCell className="py-1.5 font-mono text-xs">
+          <button
+            type="button"
+            title="Copy consignment ID"
+            onClick={() => {
+              if (row.consignment_id) {
+                navigator.clipboard.writeText(row.consignment_id);
+                toast.success("Consignment ID copied");
+              }
+            }}
+            className="group flex items-center gap-1 hover:text-primary"
+          >
+            {row.consignment_id ?? "—"}
+            <Copy className="h-3 w-3 opacity-0 transition-opacity group-hover:opacity-70" />
+          </button>
           <div className="text-muted-foreground">{row.merchant_order_id ?? ""}</div>
         </TableCell>
-        <TableCell className="text-xs">
+        <TableCell className="py-1.5 text-xs">
           {row.orders ? (
             <>
-              <div className="font-medium">{row.orders.shipping_name ?? "—"}</div>
+              {row.matched_order_id ? (
+                <Link
+                  to="/erp/orders/$orderId"
+                  params={{ orderId: row.matched_order_id }}
+                  className="font-medium hover:text-primary hover:underline"
+                >
+                  {row.orders.shipping_name ?? "—"}
+                </Link>
+              ) : (
+                <div className="font-medium">{row.orders.shipping_name ?? "—"}</div>
+              )}
               <div className="text-muted-foreground">
                 {row.orders.shipping_phone} · {fmtBdt(row.orders.total)} · {row.orders.status}
               </div>
@@ -1717,10 +1740,10 @@ function RowItem({ row, brandId, runId }: { row: Row; brandId: string | null; ru
             </>
           )}
         </TableCell>
-        <TableCell className="text-right font-mono">{fmtBdt(row.collected)}</TableCell>
-        <TableCell className="text-right font-mono text-amber-700">{fmtBdt(row.total_fee)}</TableCell>
-        <TableCell className="text-right font-mono text-emerald-700">{fmtBdt(row.payout)}</TableCell>
-        <TableCell className="text-right font-mono text-xs">
+        <TableCell className="py-1.5 text-right font-mono tabular-nums">{fmtBdt(row.collected)}</TableCell>
+        <TableCell className="py-1.5 text-right font-mono tabular-nums text-amber-700">{fmtBdt(row.total_fee)}</TableCell>
+        <TableCell className="py-1.5 text-right font-mono tabular-nums text-emerald-700">{fmtBdt(row.payout)}</TableCell>
+        <TableCell className="py-1.5 text-right font-mono text-xs tabular-nums">
           {(row.match_type === "return" || row.match_type === "partial")
             ? row.payout < 0
               ? <span className="text-rose-700">−{Math.abs(row.payout).toFixed(0)}</span>
@@ -1729,7 +1752,7 @@ function RowItem({ row, brandId, runId }: { row: Row; brandId: string | null; ru
               ? `${row.amount_diff > 0 ? "+" : ""}${row.amount_diff.toFixed(0)}`
               : "—"}
         </TableCell>
-        <TableCell className="text-right">
+        <TableCell className="py-1.5 text-right">
           {!row.applied_income_txn_id && (
             <Button
               size="sm"
