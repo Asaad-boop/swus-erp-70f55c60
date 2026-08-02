@@ -621,13 +621,15 @@ export const applyPathaoReconciliationRun = createServerFn({ method: "POST" })
             .eq("order_id", orderId);
           const totalLine = (lines ?? []).reduce((s, l) => s + (Number(l.line_total) || 0), 0);
           if (totalLine > 0 && lines?.length) {
-            for (const l of lines) {
-              const share = ((Number(l.line_total) || 0) / totalLine) * displayFee;
-              await supabase
-                .from("order_items")
-                .update({ courier_cost_allocated: +share.toFixed(2) } as never)
-                .eq("id", l.id);
-            }
+            await Promise.all(
+              lines.map((l) => {
+                const share = ((Number(l.line_total) || 0) / totalLine) * displayFee;
+                return supabase
+                  .from("order_items")
+                  .update({ courier_cost_allocated: +share.toFixed(2) } as never)
+                  .eq("id", l.id);
+              }),
+            );
           }
         }
 
