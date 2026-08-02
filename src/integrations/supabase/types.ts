@@ -9247,6 +9247,21 @@ export type Database = {
         Args: { p_product_id: string; p_variant_id: string }
         Returns: undefined
       }
+      recon_received_summary: {
+        Args: { _from: string; _to: string }
+        Returns: {
+          account_id: string
+          account_name: string
+          brand_id: string
+          brand_name: string
+          expense: number
+          income: number
+          net: number
+          txn_count: number
+          txn_date: string
+          wallet_type: string
+        }[]
+      }
       reconcile_courier_settlement: {
         Args: { _remittance_id: string }
         Returns: Json
