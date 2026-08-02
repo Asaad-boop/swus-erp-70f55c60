@@ -146,6 +146,22 @@ function OverviewPage() {
   });
   const reviewLines = reviewQ.data ?? [];
 
+  // Exact needs-review count (list above is capped at 50 rows).
+  const reviewCountQ = useQuery({
+    queryKey: ["settlement-needs-review-count", brandIds.join(",")],
+    enabled: brandIds.length > 0,
+    queryFn: async () => {
+      const { count, error } = await supabase
+        .from("erp_courier_settlement_lines")
+        .select("id", { count: "exact", head: true })
+        .eq("match_status", "needs_review")
+        .in("brand_id", brandIds);
+      if (error) throw error;
+      return count ?? 0;
+    },
+  });
+  const reviewCount = reviewCountQ.data ?? reviewLines.length;
+
   const reviewOrderIds = useMemo(
     () => Array.from(new Set(reviewLines.map((r) => r.matched_order_id).filter((x): x is string => !!x))),
     [reviewLines],
@@ -210,7 +226,9 @@ function OverviewPage() {
     onSuccess: () => {
       toast.success("Order status updated");
       qc.invalidateQueries({ queryKey: ["settlement-needs-review"] });
+      qc.invalidateQueries({ queryKey: ["settlement-needs-review-count"] });
       qc.invalidateQueries({ queryKey: ["settlement-review-orders"] });
+      qc.invalidateQueries({ queryKey: ["reconciliation-dashboard"] });
     },
     onError: (e: Error) => toast.error(e.message),
   });
