@@ -338,7 +338,14 @@ export const getPathaoReconciliationRun = createServerFn({ method: "GET" })
     if (!run) throw new Error("Run not found");
 
     const PAGE = 1000;
-    const allRows: unknown[] = [];
+    type RunRow = Awaited<
+      ReturnType<
+        ReturnType<
+          ReturnType<ReturnType<typeof supabase.from<"erp_reconciliation_rows">>["select"]>["eq"]
+        >["order"]
+      >
+    >;
+    let allRows: NonNullable<RunRow["data"]> = [];
     for (let from = 0; ; from += PAGE) {
       const { data: page, error: rowErr } = await supabase
         .from("erp_reconciliation_rows")
@@ -347,7 +354,7 @@ export const getPathaoReconciliationRun = createServerFn({ method: "GET" })
         .order("created_at", { ascending: true })
         .range(from, from + PAGE - 1);
       if (rowErr) throw new Error(rowErr.message);
-      allRows.push(...(page ?? []));
+      allRows = allRows.concat(page ?? []);
       if (!page || page.length < PAGE) break;
     }
 
