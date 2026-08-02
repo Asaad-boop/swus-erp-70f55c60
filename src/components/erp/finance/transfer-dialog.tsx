@@ -71,7 +71,8 @@ export function TransferDialog({ open, onClose, brandId, accounts, defaultFromId
         throw new Error(`Insufficient balance in ${from.name}. Available ${fmtBdt(from.current_balance)}`);
       }
       // For shared/all-brands transfer, attribute txn to source account's brand (fallback to dest)
-      const txnBrandId = effectiveBrandId ?? from?.brand_id ?? to?.brand_id ?? null;
+      const txnBrandId =
+        effectiveBrandId ?? from?.brand_id ?? to?.brand_id ?? brands[0]?.id ?? null;
       if (!txnBrandId) throw new Error("Selected accounts have no brand. Pick a brand.");
       const { error } = await supabase.from("erp_transactions").insert({
         brand_id: txnBrandId,
