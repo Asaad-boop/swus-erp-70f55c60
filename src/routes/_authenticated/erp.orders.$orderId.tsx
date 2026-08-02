@@ -796,7 +796,7 @@ function OrderDetailsPage() {
   const [refreshing, setRefreshing] = useState(false);
 
   // FAST PATH: read the DB-cached row directly so cards appear instantly on reload
-type HistProvider = { name: string; total: number; success: number; cancelled: number; ok: boolean; error?: string };
+type HistProvider = { name: string; label?: string; total: number; success: number; cancelled: number; ok: boolean; error?: string };
 
 /** Pathao = our own API; every other courier comes from BDCourier and is summed together. */
 function splitCourierProviders(providers?: HistProvider[] | null) {
@@ -813,6 +813,15 @@ function splitCourierProviders(providers?: HistProvider[] | null) {
       cancel: okOthers.reduce((s, p) => s + p.cancelled, 0),
     },
     steadfastError: okOthers.length > 0 ? "" : failed?.error ?? "",
+    couriers: list
+      .filter((p) => p.ok)
+      .map((p) => ({
+        name: p.name,
+        label: p.label ?? p.name.charAt(0).toUpperCase() + p.name.slice(1),
+        total: p.total,
+        success: p.success,
+        cancel: p.cancelled,
+      })),
   };
 }
 
@@ -826,7 +835,7 @@ function splitCourierProviders(providers?: HistProvider[] | null) {
         .select("data")
         .eq("phone", phone)
         .maybeSingle();
-      const hist = data?.data as { providers?: Array<{ name: string; total: number; success: number; cancelled: number; ok: boolean; error?: string }> } | null;
+      const hist = data?.data as { providers?: HistProvider[] } | null;
       if (!hist) return null;
       return splitCourierProviders(hist.providers);
     },
