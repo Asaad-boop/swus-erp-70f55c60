@@ -274,6 +274,11 @@ function ReconciliationPage() {
   const [filename, setFilename] = useState<string | null>(null);
   const [preview, setPreview] = useState<NormalizedRow[] | null>(null);
   const [openRunId, setOpenRunId] = useState<string | null>(null);
+  const [dragOver, setDragOver] = useState(false);
+  const [previewFilter, setPreviewFilter] = useState<"all" | "matched" | "amount_mismatch" | "duplicate" | "unmatched">("all");
+  const [previewSearch, setPreviewSearch] = useState("");
+  const [showAllRows, setShowAllRows] = useState(false);
+  const [deleteRunId, setDeleteRunId] = useState<string | null>(null);
 
   // Summary export date range (defaults to last 30 days)
   const [sumRange, setSumRange] = useState<MktRangeValue>(() => buildPreset("30d"));
