@@ -31,6 +31,33 @@ function normalizePhone(p: string | null | undefined): string | null {
   return digits.slice(-11); // last 11 digits (BD mobile)
 }
 
+/**
+ * PostgREST caps a single response at 1000 rows, so a plain `.in(col, ids)`
+ * with a big invoice silently drops matches. Fetch in id-chunks and page
+ * through each chunk so every shipment/row is returned.
+ */
+async function fetchInChunks<T>(
+  ids: string[],
+  build: (chunk: string[]) => any,
+): Promise<T[]> {
+  const out: T[] = [];
+  const CHUNK = 150;
+  const PAGE = 1000;
+  for (let i = 0; i < ids.length; i += CHUNK) {
+    const chunk = ids.slice(i, i + CHUNK);
+    let offset = 0;
+    for (;;) {
+      const { data, error } = await build(chunk).range(offset, offset + PAGE - 1);
+      if (error) throw new Error(error.message);
+      const list = (data ?? []) as T[];
+      out.push(...list);
+      if (list.length < PAGE) break;
+      offset += PAGE;
+    }
+  }
+  return out;
+}
+
 // ---------- Create run (parse + match preview) ----------
 
 export const createPathaoReconciliationRun = createServerFn({ method: "POST" })
@@ -87,11 +114,13 @@ export const createPathaoReconciliationRun = createServerFn({ method: "POST" })
     // even before apply.
     const seenConsignments = new Set<string>();
     if (consignmentIds.length) {
-      const { data: prior } = await supabase
-        .from("erp_reconciliation_rows")
-        .select("consignment_id, run:run_id(id, brand_id, status)")
-        .in("consignment_id", consignmentIds);
-      (prior ?? []).forEach((p: any) => {
+      const prior = await fetchInChunks<any>(consignmentIds, (chunk) =>
+        supabase
+          .from("erp_reconciliation_rows")
+          .select("consignment_id, run:run_id(id, brand_id, status)")
+          .in("consignment_id", chunk),
+      );
+      prior.forEach((p: any) => {
         const st = p.run?.status;
         if (p.consignment_id && st !== "reverted" && st !== "draft" && (!brandFilter || p.run?.brand_id === brandFilter)) {
           seenConsignments.add(p.consignment_id);
@@ -103,24 +132,34 @@ export const createPathaoReconciliationRun = createServerFn({ method: "POST" })
     const shipmentByMerchant = new Map<string, { order_id: string; brand_id: string | null }>();
 
     if (consignmentIds.length) {
-      let q = supabase
-        .from("courier_shipments")
-        .select("order_id, consignment_id, brand_id")
-        .in("consignment_id", consignmentIds);
-      if (brandFilter) q = q.eq("brand_id", brandFilter);
-      const { data: ships } = await q;
-      (ships ?? []).forEach((s) => {
+      const ships = await fetchInChunks<{ order_id: string; consignment_id: string | null; brand_id: string | null }>(
+        consignmentIds,
+        (chunk) => {
+          let q = supabase
+            .from("courier_shipments")
+            .select("order_id, consignment_id, brand_id")
+            .in("consignment_id", chunk);
+          if (brandFilter) q = q.eq("brand_id", brandFilter);
+          return q;
+        },
+      );
+      ships.forEach((s) => {
         if (s.consignment_id) shipmentByConsignment.set(s.consignment_id, { order_id: s.order_id, brand_id: (s as { brand_id: string | null }).brand_id ?? null });
       });
     }
     if (merchantIds.length) {
-      let q = supabase
-        .from("courier_shipments")
-        .select("order_id, merchant_order_id, brand_id")
-        .in("merchant_order_id", merchantIds);
-      if (brandFilter) q = q.eq("brand_id", brandFilter);
-      const { data: ships } = await q;
-      (ships ?? []).forEach((s) => {
+      const ships = await fetchInChunks<{ order_id: string; merchant_order_id: string | null; brand_id: string | null }>(
+        merchantIds,
+        (chunk) => {
+          let q = supabase
+            .from("courier_shipments")
+            .select("order_id, merchant_order_id, brand_id")
+            .in("merchant_order_id", chunk);
+          if (brandFilter) q = q.eq("brand_id", brandFilter);
+          return q;
+        },
+      );
+      ships.forEach((s) => {
         if (s.merchant_order_id) shipmentByMerchant.set(s.merchant_order_id, { order_id: s.order_id, brand_id: (s as { brand_id: string | null }).brand_id ?? null });
       });
     }
@@ -781,11 +820,13 @@ export const previewPathaoReconciliation = createServerFn({ method: "POST" })
     // Cross-run duplicate consignment ids
     const seen = new Set<string>();
     if (consignmentIds.length) {
-      const { data: prior } = await supabase
-        .from("erp_reconciliation_rows")
-        .select("consignment_id, run:run_id(brand_id, status)")
-        .in("consignment_id", consignmentIds);
-      (prior ?? []).forEach((p: any) => {
+      const prior = await fetchInChunks<any>(consignmentIds, (chunk) =>
+        supabase
+          .from("erp_reconciliation_rows")
+          .select("consignment_id, run:run_id(brand_id, status)")
+          .in("consignment_id", chunk),
+      );
+      prior.forEach((p: any) => {
         const st = p.run?.status;
         if (p.consignment_id && st !== "reverted" && st !== "draft" && (!brandFilter || p.run?.brand_id === brandFilter)) {
           seen.add(p.consignment_id);
@@ -796,24 +837,34 @@ export const previewPathaoReconciliation = createServerFn({ method: "POST" })
     const byConsignment = new Map<string, string>();
     const byMerchant = new Map<string, string>();
     if (consignmentIds.length) {
-      let q = supabase
-        .from("courier_shipments")
-        .select("order_id, consignment_id")
-        .in("consignment_id", consignmentIds);
-      if (brandFilter) q = q.eq("brand_id", brandFilter);
-      const { data: ships } = await q;
-      (ships ?? []).forEach((s) => {
+      const ships = await fetchInChunks<{ order_id: string; consignment_id: string | null }>(
+        consignmentIds,
+        (chunk) => {
+          let q = supabase
+            .from("courier_shipments")
+            .select("order_id, consignment_id")
+            .in("consignment_id", chunk);
+          if (brandFilter) q = q.eq("brand_id", brandFilter);
+          return q;
+        },
+      );
+      ships.forEach((s) => {
         if (s.consignment_id) byConsignment.set(s.consignment_id, s.order_id);
       });
     }
     if (merchantIds.length) {
-      let q = supabase
-        .from("courier_shipments")
-        .select("order_id, merchant_order_id")
-        .in("merchant_order_id", merchantIds);
-      if (brandFilter) q = q.eq("brand_id", brandFilter);
-      const { data: ships } = await q;
-      (ships ?? []).forEach((s) => {
+      const ships = await fetchInChunks<{ order_id: string; merchant_order_id: string | null }>(
+        merchantIds,
+        (chunk) => {
+          let q = supabase
+            .from("courier_shipments")
+            .select("order_id, merchant_order_id")
+            .in("merchant_order_id", chunk);
+          if (brandFilter) q = q.eq("brand_id", brandFilter);
+          return q;
+        },
+      );
+      ships.forEach((s) => {
         if (s.merchant_order_id) byMerchant.set(s.merchant_order_id, s.order_id);
       });
     }
