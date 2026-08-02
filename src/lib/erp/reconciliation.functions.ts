@@ -881,24 +881,41 @@ export const previewPathaoReconciliation = createServerFn({ method: "POST" })
     }
 
     const out: PreviewMatchResult[] = [];
+    type Resolved = {
+      orderId: string | null;
+      via: string | null;
+      confidence: number;
+      reason: string | null;
+    };
+    const resolved = new Map<number, Resolved>();
+    const phoneRows: typeof data.rows = [];
+
+    // Pass 1 — cheap in-memory resolution via consignment / merchant maps.
     for (const r of data.rows) {
-      let orderId: string | null = null;
-      let via: string | null = null;
-      let confidence = 0;
-      let reason: string | null = null;
       if (r.consignment_id && byConsignment.has(r.consignment_id)) {
-        orderId = byConsignment.get(r.consignment_id)!;
-        via = "consignment";
-        confidence = 1.0;
-        reason = "Consignment ID exact match in courier_shipments";
+        resolved.set(r.idx, {
+          orderId: byConsignment.get(r.consignment_id)!,
+          via: "consignment",
+          confidence: 1.0,
+          reason: "Consignment ID exact match in courier_shipments",
+        });
       } else if (r.merchant_order_id && byMerchant.has(r.merchant_order_id)) {
-        orderId = byMerchant.get(r.merchant_order_id)!;
-        via = "merchant_order_id";
-        confidence = 0.95;
-        reason = "Merchant order ID exact match";
-      } else {
-        const phone = normalizePhone(r.recipient_phone);
-        if (phone) {
+        resolved.set(r.idx, {
+          orderId: byMerchant.get(r.merchant_order_id)!,
+          via: "merchant_order_id",
+          confidence: 0.95,
+          reason: "Merchant order ID exact match",
+        });
+      } else if (normalizePhone(r.recipient_phone)) {
+        phoneRows.push(r);
+      }
+    }
+
+    // Pass 2 — phone fallback, resolved with bounded concurrency (was sequential).
+    const resolveByPhone = async (r: (typeof data.rows)[number]): Promise<void> => {
+      const phone = normalizePhone(r.recipient_phone)!;
+      {
+        {
           // Smarter fallback: pull recent orders by phone AND check if any
           // already has a courier_shipments row for this brand. A linked
           // shipment dramatically increases confidence even when Pathao
@@ -954,19 +971,53 @@ export const previewPathaoReconciliation = createServerFn({ method: "POST" })
           const best = cands[0];
           // Require minimum signal: either amount within 50, OR shipment-linked
           if (best && (best.diff <= 50 || best.hasShipment)) {
-            orderId = best.id;
-            via = best.hasShipment ? "shipment+phone" : "phone+amount";
-            confidence = best.score;
-            reason = best.label;
+            resolved.set(r.idx, {
+              orderId: best.id,
+              via: best.hasShipment ? "shipment+phone" : "phone+amount",
+              confidence: best.score,
+              reason: best.label,
+            });
           } else if (best && cands.length === 1 && best.diff <= 300) {
             // Single phone hit, lenient: keep but low confidence
-            orderId = best.id;
-            via = "phone-only";
-            confidence = best.score;
-            reason = `single phone hit (diff ${best.diff.toFixed(0)})`;
+            resolved.set(r.idx, {
+              orderId: best.id,
+              via: "phone-only",
+              confidence: best.score,
+              reason: `single phone hit (diff ${best.diff.toFixed(0)})`,
+            });
           }
         }
       }
+    };
+    const POOL = 12;
+    for (let i = 0; i < phoneRows.length; i += POOL) {
+      await Promise.all(phoneRows.slice(i, i + POOL).map(resolveByPhone));
+    }
+
+    // Pass 3 — one bulk fetch of every matched order (was 1 query per row).
+    const orderIds = [
+      ...new Set([...resolved.values()].map((v) => v.orderId).filter(Boolean) as string[]),
+    ];
+    const orderById = new Map<string, { total: number; status: string; shipping_name: string | null }>();
+    if (orderIds.length) {
+      const ords = await fetchInChunks<any>(orderIds, (chunk) =>
+        supabase.from("orders").select("id, total, status, shipping_name").in("id", chunk),
+      );
+      ords.forEach((o: any) =>
+        orderById.set(o.id, {
+          total: Number(o.total),
+          status: o.status,
+          shipping_name: o.shipping_name ?? null,
+        }),
+      );
+    }
+
+    for (const r of data.rows) {
+      const res = resolved.get(r.idx);
+      const orderId = res?.orderId ?? null;
+      const via = res?.via ?? null;
+      const confidence = res?.confidence ?? 0;
+      const reason = res?.reason ?? null;
 
       let amountDiff: number | null = null;
       let orderTotal: number | null = null;
@@ -974,11 +1025,7 @@ export const previewPathaoReconciliation = createServerFn({ method: "POST" })
       let orderName: string | null = null;
       let status: PreviewMatchResult["status"] = "unmatched";
       if (orderId) {
-        const { data: ord } = await supabase
-          .from("orders")
-          .select("total, status, shipping_name")
-          .eq("id", orderId)
-          .maybeSingle();
+        const ord = orderById.get(orderId);
         if (ord) {
           orderTotal = Number(ord.total);
           orderStatus = ord.status;
