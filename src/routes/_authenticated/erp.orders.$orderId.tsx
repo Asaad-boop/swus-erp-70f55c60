@@ -141,7 +141,7 @@ const STAT_COLUMNS = [
   { key: "ourRecord", label: "Our Record", dot: "bg-indigo-500", bar: "bg-indigo-500", tint: "from-indigo-500/[0.07]" },
   { key: "overall",   label: "Overall",    dot: "bg-sky-500",    bar: "bg-sky-500",    tint: "from-sky-500/[0.07]" },
   { key: "pathao",    label: "Pathao",     dot: "bg-rose-500",   bar: "bg-rose-500",   tint: "from-rose-500/[0.07]" },
-  { key: "steadfast", label: "Steadfast",  dot: "bg-amber-500",  bar: "bg-amber-500",  tint: "from-amber-500/[0.07]" },
+  { key: "steadfast", label: "Other couriers",  dot: "bg-amber-500",  bar: "bg-amber-500",  tint: "from-amber-500/[0.07]" },
 ] as const;
 
 function StatsStrip({
@@ -737,6 +737,26 @@ function OrderDetailsPage() {
   const [refreshing, setRefreshing] = useState(false);
 
   // FAST PATH: read the DB-cached row directly so cards appear instantly on reload
+type HistProvider = { name: string; total: number; success: number; cancelled: number; ok: boolean; error?: string };
+
+/** Pathao = our own API; every other courier comes from BDCourier and is summed together. */
+function splitCourierProviders(providers?: HistProvider[] | null) {
+  const list = providers ?? [];
+  const pathao = list.find((p) => p.name === "pathao");
+  const others = list.filter((p) => p.name !== "pathao");
+  const okOthers = others.filter((p) => p.ok);
+  const failed = others.find((p) => !p.ok);
+  return {
+    pathao: { total: pathao?.total ?? 0, success: pathao?.success ?? 0, cancel: pathao?.cancelled ?? 0 },
+    steadfast: {
+      total: okOthers.reduce((s, p) => s + p.total, 0),
+      success: okOthers.reduce((s, p) => s + p.success, 0),
+      cancel: okOthers.reduce((s, p) => s + p.cancelled, 0),
+    },
+    steadfastError: okOthers.length > 0 ? "" : failed?.error ?? "",
+  };
+}
+
   const { data: cachedCourierHistory } = useQuery({
     queryKey: ["courier-history-cache", phone],
     enabled: !!phone && phone.length >= 11,
@@ -749,13 +769,7 @@ function OrderDetailsPage() {
         .maybeSingle();
       const hist = data?.data as { providers?: Array<{ name: string; total: number; success: number; cancelled: number; ok: boolean; error?: string }> } | null;
       if (!hist) return null;
-      const pathao = hist.providers?.find((p) => p.name === "pathao");
-      const steadfast = hist.providers?.find((p) => p.name === "steadfast");
-      return {
-        pathao: { total: pathao?.total ?? 0, success: pathao?.success ?? 0, cancel: pathao?.cancelled ?? 0 },
-        steadfast: { total: steadfast?.total ?? 0, success: steadfast?.success ?? 0, cancel: steadfast?.cancelled ?? 0 },
-        steadfastError: steadfast?.ok ? "" : steadfast?.error ?? "",
-      };
+      return splitCourierProviders(hist.providers);
     },
   });
 
@@ -767,13 +781,7 @@ function OrderDetailsPage() {
     queryFn: async () => {
       const { results } = await fetchCourierHistory({ data: { phones: [phone], brandId: order!.brand_id! } });
       const r = results[phone];
-      const pathao = r?.providers.find((p) => p.name === "pathao");
-      const steadfast = r?.providers.find((p) => p.name === "steadfast");
-      return {
-        pathao: { total: pathao?.total ?? 0, success: pathao?.success ?? 0, cancel: pathao?.cancelled ?? 0 },
-        steadfast: { total: steadfast?.total ?? 0, success: steadfast?.success ?? 0, cancel: steadfast?.cancelled ?? 0 },
-        steadfastError: steadfast?.ok ? "" : steadfast?.error ?? "",
-      };
+      return splitCourierProviders(r?.providers);
     },
   });
   // Prefer fresh data when available; fall back to cached for instant render
