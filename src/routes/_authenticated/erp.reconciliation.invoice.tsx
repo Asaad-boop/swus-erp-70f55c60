@@ -1850,7 +1850,8 @@ function ManualMatchDialog({
   });
 
   const mut = useMutation({
-    mutationFn: (orderId: string | null) => matchFn({ data: { rowId, orderId } }),
+    mutationFn: (v: { orderId: string | null; acceptDiff?: boolean }) =>
+      matchFn({ data: { rowId, orderId: v.orderId, acceptDiff: v.acceptDiff ?? false } }),
     onSuccess: () => {
       toast.success("Linked");
       onSaved();
@@ -1865,7 +1866,7 @@ function ManualMatchDialog({
           <DialogTitle>Manually link order</DialogTitle>
         </DialogHeader>
         <Input
-          placeholder="Search by phone or name…"
+          placeholder="Phone / name / invoice no / consignment ID…"
           value={q}
           onChange={(e) => setQ(e.target.value)}
         />
@@ -1888,12 +1889,24 @@ function ManualMatchDialog({
                     <div className="font-medium">{o.shipping_name}</div>
                     <div className="text-muted-foreground">
                       {o.shipping_phone} · {fmtBdt(o.total)} · {o.status}
+                      {o.invoice_no ? ` · #${o.invoice_no}` : ""}
                     </div>
                   </TableCell>
                   <TableCell className="text-right">
-                    <Button size="sm" onClick={() => mut.mutate(o.id)} disabled={mut.isPending}>
-                      Link
-                    </Button>
+                    <div className="flex justify-end gap-1">
+                      <Button size="sm" onClick={() => mut.mutate({ orderId: o.id })} disabled={mut.isPending}>
+                        Link
+                      </Button>
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={() => mut.mutate({ orderId: o.id, acceptDiff: true })}
+                        disabled={mut.isPending}
+                        title="Link kore diff-o accept koro"
+                      >
+                        Link + accept
+                      </Button>
+                    </div>
                   </TableCell>
                 </TableRow>
               ))}
@@ -1901,7 +1914,7 @@ function ManualMatchDialog({
           </Table>
         </div>
         <DialogFooter>
-          {<Button variant="outline" onClick={() => mut.mutate(null)}>Unlink</Button>}
+          <Button variant="outline" onClick={() => mut.mutate({ orderId: null })}>Unlink</Button>
           <Button variant="outline" onClick={onClose}>Close</Button>
         </DialogFooter>
       </DialogContent>
