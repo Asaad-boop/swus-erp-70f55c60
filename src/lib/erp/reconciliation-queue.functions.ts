@@ -151,16 +151,27 @@ export const getReconciliationDashboard = createServerFn({ method: "GET" })
       .lt("delivered_at", cutoff14);
     const outstandingTotal = (outstanding ?? []).reduce((s, o) => s + Number(o.total ?? 0), 0);
 
-    // Return fees (last 30 days) — sum of return_fee from reconciliation_rows
-    const { data: returnRows } = await supabase
-      .from("erp_reconciliation_rows")
-      .select("return_fee, created_at, run_id")
-      .eq("match_type", "return")
+    // Return fees (last 30 days) — brand-scoped through the parent run,
+    // otherwise other brands' fees leak into this brand's net COD.
+    const { data: runRows } = await supabase
+      .from("erp_reconciliation_runs")
+      .select("id")
+      .eq("brand_id", data.brandId)
       .gte("created_at", cutoff30);
-    const returnFeesTotal = (returnRows ?? []).reduce(
-      (s, r) => s + Number((r as { return_fee?: number }).return_fee ?? 0),
-      0,
-    );
+    const runIds = (runRows ?? []).map((r) => (r as { id: string }).id);
+    let returnFeesTotal = 0;
+    if (runIds.length) {
+      const { data: returnRows } = await supabase
+        .from("erp_reconciliation_rows")
+        .select("return_fee, run_id")
+        .eq("match_type", "return")
+        .in("run_id", runIds)
+        .gte("created_at", cutoff30);
+      returnFeesTotal = (returnRows ?? []).reduce(
+        (s, r) => s + Number((r as { return_fee?: number }).return_fee ?? 0),
+        0,
+      );
+    }
 
     // Net COD received (this month) = reconciledTotal - returnFees
     const netCod = reconciledTotal - returnFeesTotal;
