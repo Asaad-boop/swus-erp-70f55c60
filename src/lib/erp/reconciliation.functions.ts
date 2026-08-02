@@ -489,19 +489,20 @@ export const applyPathaoReconciliationRun = createServerFn({ method: "POST" })
     let failed = 0;
     const errors: string[] = [];
 
-    for (const r of rows ?? []) {
-      if (!r.matched_order_id) continue;
+    const rowList = (rows ?? []).filter((r) => r.matched_order_id);
+
+    const processRow = async (r: (typeof rowList)[number]) => {
       const rowBrand = (r as { brand_id?: string | null }).brand_id ?? runBrandId;
       if (!rowBrand) {
         failed++;
         errors.push(`Row ${r.consignment_id ?? r.id}: no brand resolved`);
-        continue;
+        return;
       }
       const walletId = brandWalletMap.get(rowBrand) ?? data.walletAccountId ?? null;
       if (!walletId) {
         failed++;
         errors.push(`Row ${r.consignment_id ?? r.id}: no wallet for brand ${rowBrand}`);
-        continue;
+        return;
       }
       const feeCategoryId = brandFeeCatMap.get(rowBrand) ?? data.feeCategoryId ?? null;
       try {
