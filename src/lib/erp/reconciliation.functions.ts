@@ -658,18 +658,45 @@ export const applyPathaoReconciliationRun = createServerFn({ method: "POST" })
         failed++;
         errors.push(`Row ${r.consignment_id ?? r.id}: ${(e as Error).message}`);
       }
+    };
+
+    // Parallel pool — big invoices (1000+ rows) used to time out ("Failed to fetch")
+    // because every row was processed strictly one after another.
+    const POOL = 8;
+    let cursor = 0;
+    await Promise.all(
+      Array.from({ length: Math.min(POOL, rowList.length) }, async () => {
+        while (cursor < rowList.length) {
+          const idx = cursor++;
+          await processRow(rowList[idx]!);
+        }
+      }),
+    );
+
+    // How many eligible rows are still pending after this batch?
+    const { count: remaining } = await supabase
+      .from("erp_reconciliation_rows")
+      .select("id", { count: "exact", head: true })
+      .eq("run_id", data.runId)
+      .in("match_status", allowedStatuses)
+      .is("applied_income_txn_id", null)
+      .not("matched_order_id", "is", null);
+
+    // Rows that fail repeatedly would loop forever — stop when a batch applied nothing.
+    const done = (remaining ?? 0) === 0 || applied === 0;
+
+    if (done) {
+      await supabase
+        .from("erp_reconciliation_runs")
+        .update({
+          status: failed === 0 && (remaining ?? 0) === 0 ? "applied" : "partial",
+          applied_at: new Date().toISOString(),
+          notes: errors.length ? errors.slice(0, 10).join("\n") : null,
+        })
+        .eq("id", data.runId);
     }
 
-    await supabase
-      .from("erp_reconciliation_runs")
-      .update({
-        status: failed === 0 ? "applied" : "partial",
-        applied_at: new Date().toISOString(),
-        notes: errors.length ? errors.slice(0, 10).join("\n") : null,
-      })
-      .eq("id", data.runId);
-
-    return { applied, failed, errors: errors.slice(0, 10) };
+    return { applied, failed, remaining: remaining ?? 0, done, errors: errors.slice(0, 10) };
   });
 
 // ---------- Revert run ----------
