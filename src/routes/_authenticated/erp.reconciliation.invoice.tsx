@@ -1754,14 +1754,28 @@ function RowItem({ row, brandId, runId }: { row: Row; brandId: string | null; ru
         </TableCell>
         <TableCell className="py-1.5 text-right">
           {!row.applied_income_txn_id && (
-            <Button
-              size="sm"
-              variant="outline"
-              className="h-7"
-              onClick={() => setSearchOpen(true)}
-            >
-              {row.matched_order_id ? "Re-link" : "Link"}
-            </Button>
+            <div className="flex items-center justify-end gap-1">
+              {status === "amount_mismatch" && row.matched_order_id && (
+                <Button
+                  size="sm"
+                  variant="outline"
+                  className="h-7 border-amber-400 text-amber-700 hover:bg-amber-50"
+                  disabled={acceptMut.isPending}
+                  onClick={() => acceptMut.mutate()}
+                  title="Diff mene niye matched kore dao"
+                >
+                  Accept diff
+                </Button>
+              )}
+              <Button
+                size="sm"
+                variant="outline"
+                className="h-7"
+                onClick={() => setSearchOpen(true)}
+              >
+                {row.matched_order_id ? "Re-link" : "Link"}
+              </Button>
+            </div>
           )}
         </TableCell>
       </TableRow>
