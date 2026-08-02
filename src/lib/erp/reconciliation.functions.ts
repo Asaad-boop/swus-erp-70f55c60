@@ -752,6 +752,7 @@ export const manualMatchReconciliationRow = createServerFn({ method: "POST" })
       .object({
         rowId: z.string().uuid(),
         orderId: z.string().uuid().nullable(),
+        acceptDiff: z.boolean().optional().default(false),
       })
       .parse(d),
   )
@@ -774,7 +775,8 @@ export const manualMatchReconciliationRow = createServerFn({ method: "POST" })
         .maybeSingle();
       if (ord) {
         amountDiff = Number(row.collected) - Number(ord.total);
-        status = Math.abs(amountDiff) <= 1 ? "matched" : "amount_mismatch";
+        status =
+          data.acceptDiff || Math.abs(amountDiff) <= 1 ? "matched" : "amount_mismatch";
       }
     }
 
@@ -782,13 +784,58 @@ export const manualMatchReconciliationRow = createServerFn({ method: "POST" })
       .from("erp_reconciliation_rows")
       .update({
         matched_order_id: data.orderId,
-        matched_via: data.orderId ? "manual" : null,
+        matched_via: data.orderId ? (data.acceptDiff ? "manual_accepted" : "manual") : null,
         match_status: status,
         amount_diff: amountDiff,
       })
       .eq("id", data.rowId);
     if (error) throw new Error(error.message);
     return { ok: true };
+  });
+
+// ---------- Accept amount diff (single row / whole run) ----------
+
+export const acceptReconciliationDiff = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d) =>
+    z
+      .object({
+        rowId: z.string().uuid().optional(),
+        runId: z.string().uuid().optional(),
+        maxAbsDiff: z.number().nonnegative().optional(),
+      })
+      .parse(d),
+  )
+  .handler(async ({ data, context }) => {
+    const { supabase } = context;
+    if (!data.rowId && !data.runId) throw new Error("rowId or runId required");
+
+    let q = supabase
+      .from("erp_reconciliation_rows")
+      .select("id, amount_diff, applied_income_txn_id")
+      .eq("match_status", "amount_mismatch");
+    if (data.rowId) q = q.eq("id", data.rowId);
+    if (data.runId) q = q.eq("run_id", data.runId);
+    const { data: rows, error } = await q;
+    if (error) throw new Error(error.message);
+
+    const targets = (rows ?? []).filter(
+      (r) =>
+        !r.applied_income_txn_id &&
+        (data.maxAbsDiff === undefined ||
+          Math.abs(Number(r.amount_diff ?? 0)) <= data.maxAbsDiff),
+    );
+    if (targets.length === 0) return { ok: true, accepted: 0 };
+
+    for (let i = 0; i < targets.length; i += 200) {
+      const chunk = targets.slice(i, i + 200).map((r) => r.id);
+      const { error: uErr } = await supabase
+        .from("erp_reconciliation_rows")
+        .update({ match_status: "matched", matched_via: "manual_accepted" })
+        .in("id", chunk);
+      if (uErr) throw new Error(uErr.message);
+    }
+    return { ok: true, accepted: targets.length };
   });
 
 // ---------- Search orders for manual matching ----------
@@ -801,10 +848,31 @@ export const searchOrdersForMatch = createServerFn({ method: "GET" })
   .handler(async ({ data, context }) => {
     const { supabase } = context;
     const term = data.q.trim();
+
+    // Consignment / merchant-order lookup → order ids
+    const shipIds: string[] = [];
+    {
+      const { data: ships } = await supabase
+        .from("courier_shipments")
+        .select("order_id")
+        .or(`consignment_id.ilike.%${term}%,tracking_code.ilike.%${term}%`)
+        .limit(20);
+      for (const s of (ships ?? []) as { order_id: string | null }[]) {
+        if (s.order_id) shipIds.push(s.order_id);
+      }
+    }
+
+    const orMatch = [
+      `shipping_phone.ilike.%${term}%`,
+      `shipping_name.ilike.%${term}%`,
+      `invoice_no.ilike.%${term}%`,
+      ...(shipIds.length ? [`id.in.(${shipIds.join(",")})`] : []),
+    ].join(",");
+
     let q = supabase
       .from("orders")
-      .select("id, status, total, shipping_name, shipping_phone, created_at, brand_id")
-      .or(`shipping_phone.ilike.%${term}%,shipping_name.ilike.%${term}%`)
+      .select("id, status, total, shipping_name, shipping_phone, invoice_no, created_at, brand_id")
+      .or(orMatch)
       .order("created_at", { ascending: false })
       .limit(20);
     if (data.brandId) q = q.eq("brand_id", data.brandId);

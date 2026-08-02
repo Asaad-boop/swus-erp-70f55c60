@@ -76,6 +76,7 @@ import {
   revertPathaoReconciliationRun,
   deletePathaoReconciliationRun,
   manualMatchReconciliationRow,
+  acceptReconciliationDiff,
   searchOrdersForMatch,
   previewPathaoReconciliation,
 } from "@/lib/erp/reconciliation.functions";
@@ -1395,6 +1396,15 @@ function RunDetailDialog({
   const [q, setQ] = useState("");
   const [showAll, setShowAll] = useState(false);
   const CAP = 1000;
+  const acceptAllFn = useServerFn(acceptReconciliationDiff);
+  const acceptAllMut = useMutation({
+    mutationFn: (maxAbsDiff: number) => acceptAllFn({ data: { runId, maxAbsDiff } }),
+    onSuccess: (r: { accepted: number }) => {
+      toast.success(`${r.accepted} row accepted`);
+      qc.invalidateQueries({ queryKey: ["pathao-reconciliation-run", runId] });
+    },
+    onError: (e: Error) => toast.error(e.message),
+  });
 
   const getFn = useServerFn(getPathaoReconciliationRun);
   const revertFn = useServerFn(revertPathaoReconciliationRun);
@@ -1485,6 +1495,18 @@ function RunDetailDialog({
           <TabBtn active={tab === "mismatch"} onClick={() => setTab("mismatch")} icon={<AlertTriangle className="h-3.5 w-3.5" />} count={counts.mismatch} label="Amount mismatch" tone="warn" />
           <TabBtn active={tab === "unmatched"} onClick={() => setTab("unmatched")} icon={<XCircle className="h-3.5 w-3.5" />} count={counts.unmatched} label="Unmatched" tone="bad" />
           <TabBtn active={tab === "all"} onClick={() => setTab("all")} icon={<FileText className="h-3.5 w-3.5" />} count={rows.length} label="All" />
+          {tab === "mismatch" && counts.mismatch > 0 && run?.status !== "applied" && (
+            <Button
+              size="sm"
+              variant="outline"
+              className="h-8 border-amber-400 text-amber-700 hover:bg-amber-50"
+              disabled={acceptAllMut.isPending}
+              onClick={() => acceptAllMut.mutate(50)}
+              title="≤ ৳50 diff wala shob row matched kore dao"
+            >
+              Accept small diffs (≤৳50)
+            </Button>
+          )}
           <div className="relative ml-auto w-56">
             <Search className="pointer-events-none absolute left-2 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-muted-foreground" />
             <Input
@@ -1666,6 +1688,15 @@ function RowItem({ row, brandId, runId }: { row: Row; brandId: string | null; ru
   const qc = useQueryClient();
   const [searchOpen, setSearchOpen] = useState(false);
   const status = row.match_status;
+  const acceptFn = useServerFn(acceptReconciliationDiff);
+  const acceptMut = useMutation({
+    mutationFn: () => acceptFn({ data: { rowId: row.id } }),
+    onSuccess: () => {
+      toast.success("Diff accepted");
+      qc.invalidateQueries({ queryKey: ["pathao-reconciliation-run", runId] });
+    },
+    onError: (e: Error) => toast.error(e.message),
+  });
 
   const statusBadge = (() => {
     if (row.applied_income_txn_id) {
@@ -1754,14 +1785,28 @@ function RowItem({ row, brandId, runId }: { row: Row; brandId: string | null; ru
         </TableCell>
         <TableCell className="py-1.5 text-right">
           {!row.applied_income_txn_id && (
-            <Button
-              size="sm"
-              variant="outline"
-              className="h-7"
-              onClick={() => setSearchOpen(true)}
-            >
-              {row.matched_order_id ? "Re-link" : "Link"}
-            </Button>
+            <div className="flex items-center justify-end gap-1">
+              {status === "amount_mismatch" && row.matched_order_id && (
+                <Button
+                  size="sm"
+                  variant="outline"
+                  className="h-7 border-amber-400 text-amber-700 hover:bg-amber-50"
+                  disabled={acceptMut.isPending}
+                  onClick={() => acceptMut.mutate()}
+                  title="Diff mene niye matched kore dao"
+                >
+                  Accept diff
+                </Button>
+              )}
+              <Button
+                size="sm"
+                variant="outline"
+                className="h-7"
+                onClick={() => setSearchOpen(true)}
+              >
+                {row.matched_order_id ? "Re-link" : "Link"}
+              </Button>
+            </div>
           )}
         </TableCell>
       </TableRow>
@@ -1805,7 +1850,8 @@ function ManualMatchDialog({
   });
 
   const mut = useMutation({
-    mutationFn: (orderId: string | null) => matchFn({ data: { rowId, orderId } }),
+    mutationFn: (v: { orderId: string | null; acceptDiff?: boolean }) =>
+      matchFn({ data: { rowId, orderId: v.orderId, acceptDiff: v.acceptDiff ?? false } }),
     onSuccess: () => {
       toast.success("Linked");
       onSaved();
@@ -1820,7 +1866,7 @@ function ManualMatchDialog({
           <DialogTitle>Manually link order</DialogTitle>
         </DialogHeader>
         <Input
-          placeholder="Search by phone or name…"
+          placeholder="Phone / name / invoice no / consignment ID…"
           value={q}
           onChange={(e) => setQ(e.target.value)}
         />
@@ -1843,12 +1889,24 @@ function ManualMatchDialog({
                     <div className="font-medium">{o.shipping_name}</div>
                     <div className="text-muted-foreground">
                       {o.shipping_phone} · {fmtBdt(o.total)} · {o.status}
+                      {o.invoice_no ? ` · #${o.invoice_no}` : ""}
                     </div>
                   </TableCell>
                   <TableCell className="text-right">
-                    <Button size="sm" onClick={() => mut.mutate(o.id)} disabled={mut.isPending}>
-                      Link
-                    </Button>
+                    <div className="flex justify-end gap-1">
+                      <Button size="sm" onClick={() => mut.mutate({ orderId: o.id })} disabled={mut.isPending}>
+                        Link
+                      </Button>
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={() => mut.mutate({ orderId: o.id, acceptDiff: true })}
+                        disabled={mut.isPending}
+                        title="Link kore diff-o accept koro"
+                      >
+                        Link + accept
+                      </Button>
+                    </div>
                   </TableCell>
                 </TableRow>
               ))}
@@ -1856,7 +1914,7 @@ function ManualMatchDialog({
           </Table>
         </div>
         <DialogFooter>
-          {<Button variant="outline" onClick={() => mut.mutate(null)}>Unlink</Button>}
+          <Button variant="outline" onClick={() => mut.mutate({ orderId: null })}>Unlink</Button>
           <Button variant="outline" onClick={onClose}>Close</Button>
         </DialogFooter>
       </DialogContent>
