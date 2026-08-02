@@ -24,7 +24,7 @@ async function fetchWithTimeout(
 }
 
 type ProviderResult = {
-  name: "pathao" | "steadfast";
+  name: string;
   label: string;
   total: number;
   success: number;
@@ -48,9 +48,14 @@ function normalizePhone(raw: string): string {
   return digits;
 }
 
-function cachedProvider(data: HistoryData | null, name: ProviderResult["name"]): ProviderResult | null {
+function cachedProvider(data: HistoryData | null, name: string): ProviderResult | null {
   const provider = data?.providers?.find((p) => p.name === name);
   return provider?.ok ? provider : null;
+}
+
+function cachedOthers(data: HistoryData | null): ProviderResult[] | null {
+  const rows = (data?.providers ?? []).filter((p) => p.name !== "pathao" && p.ok);
+  return rows.length > 0 ? rows : null;
 }
 
 function readNumber(source: any, keys: string[]): number | null {
@@ -99,7 +104,7 @@ async function fetchPathao(supabase: any, brandId: string | null, phone: string)
     const text = await res.text();
     if (!res.ok) {
       if (res.status === 403 || /inactive/i.test(text)) {
-        throw new Error("Steadfast fraud-check API bondho (account inactive) — Steadfast support ke bolun fraud check API enable korte");
+        throw new Error("Pathao success-rate API access nei (403) — Pathao merchant support e access chan");
       }
       throw new Error(`${res.status}: ${text.slice(0, 120)}`);
     }
@@ -119,42 +124,6 @@ async function fetchPathao(supabase: any, brandId: string | null, phone: string)
       cancelled: 0,
       error: (e as Error).message,
     };
-  }
-}
-
-async function fetchSteadfast(supabase: any, brandId: string | null, phone: string): Promise<ProviderResult> {
-  try {
-    const { loadSteadfastCreds } = await import("./steadfast.server");
-    const creds = await loadSteadfastCreds(supabase, brandId);
-    const res = await fetchWithTimeout(
-      `${creds.base_url}/fraud_check/${encodeURIComponent(phone)}`,
-      {
-        method: "GET",
-        headers: {
-          "Api-Key": creds.api_key,
-          "Secret-Key": creds.secret_key,
-          Accept: "application/json",
-        },
-      },
-    );
-    const text = await res.text();
-    if (!res.ok) throw new Error(`${res.status}: ${text.slice(0, 120)}`);
-    const j = JSON.parse(text);
-    const c = j?.data ?? j?.result ?? j?.customer ?? j;
-    // Steadfast /fraud_check/{phone} returns:
-    // { status, total_consignments, delivered_consignments, cancelled_consignments, success_ratio }
-    const total = readNumber(c, ["total_consignments", "total_consignment", "total_parcels", "total_parcel", "total"])
-      ?? readNumber(j, ["total_consignments", "total_consignment", "total_parcels", "total_parcel", "total"])
-      ?? 0;
-    const success = readNumber(c, ["delivered_consignments", "delivered_consignment", "total_delivered", "successful_consignments", "successful_consignment", "delivered", "success"])
-      ?? readNumber(j, ["delivered_consignments", "delivered_consignment", "total_delivered", "successful_consignments", "successful_consignment", "delivered", "success"])
-      ?? 0;
-    const cancelled = readNumber(c, ["cancelled_consignments", "cancelled_consignment", "total_cancelled", "cancelled", "cancel"])
-      ?? readNumber(j, ["cancelled_consignments", "cancelled_consignment", "total_cancelled", "cancelled", "cancel"])
-      ?? Math.max(0, total - success);
-    return { name: "steadfast", label: "Steadfast", ok: true, total, success, cancelled };
-  } catch (e) {
-    return { name: "steadfast", label: "Steadfast", ok: false, total: 0, success: 0, cancelled: 0, error: (e as Error).message };
   }
 }
 
@@ -188,14 +157,15 @@ async function getOneWithCache(
     ? (Date.now() - new Date(cached.fetched_at).getTime()) / 3_600_000 < CACHE_TTL_HOURS
     : false;
   const cachedPathao = cacheFresh ? cachedProvider(cachedData, "pathao") : null;
-  const cachedSteadfast = cacheFresh ? cachedProvider(cachedData, "steadfast") : null;
-  if (cachedPathao && cachedSteadfast) return cachedData!;
+  const cachedRest = cacheFresh ? cachedOthers(cachedData) : null;
+  if (cachedPathao && cachedRest) return cachedData!;
 
-  const [pathao, steadfast] = await Promise.all([
+  const { fetchBdCourierHistory } = await import("./bdcourier.server");
+  const [pathao, others] = await Promise.all([
     cachedPathao ?? fetchPathao(supabase, brandId, normalized),
-    cachedSteadfast ?? fetchSteadfast(supabase, brandId, normalized),
+    cachedRest ?? fetchBdCourierHistory(supabase, normalized),
   ]);
-  const providers: ProviderResult[] = [pathao, steadfast];
+  const providers: ProviderResult[] = [pathao, ...others];
   const summary = {
     total: providers.filter((p) => p.ok).reduce((s, p) => s + p.total, 0),
     success: providers.filter((p) => p.ok).reduce((s, p) => s + p.success, 0),
@@ -244,4 +214,10 @@ export const fetchCourierHistoryFn = createServerFn({ method: "POST" })
       });
     }
     return { results };
+  });
+export const bdCourierQuotaFn = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .handler(async ({ context }) => {
+    const { getBdCourierQuota } = await import("./bdcourier.server");
+    return await getBdCourierQuota(context.supabase);
   });

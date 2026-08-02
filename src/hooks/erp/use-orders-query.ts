@@ -229,7 +229,7 @@ export function useCustomerHistory(phone: string | null, brandId: string | null,
 }
 
 export type CourierProviderStat = {
-  name: "pathao" | "steadfast";
+  name: string;
   label: string;
   total: number;
   success: number;
