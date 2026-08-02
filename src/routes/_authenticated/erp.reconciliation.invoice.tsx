@@ -793,7 +793,7 @@ function ReconciliationPage() {
     return out;
   }, [preview, previewFilter, previewSearch, matchByIdx]);
 
-  const ROW_CAP = 150;
+  const ROW_CAP = 1000;
   const visibleRows = showAllRows ? filteredPreview : filteredPreview.slice(0, ROW_CAP);
 
   return (
@@ -1394,7 +1394,7 @@ function RunDetailDialog({
   const [applyOpen, setApplyOpen] = useState(false);
   const [q, setQ] = useState("");
   const [showAll, setShowAll] = useState(false);
-  const CAP = 150;
+  const CAP = 1000;
 
   const getFn = useServerFn(getPathaoReconciliationRun);
   const revertFn = useServerFn(revertPathaoReconciliationRun);
