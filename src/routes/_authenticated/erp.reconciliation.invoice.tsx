@@ -767,80 +767,150 @@ function ReconciliationPage() {
     );
   }, [preview]);
 
+  // Reset preview view-state whenever a new invoice/CSV is loaded.
+  useEffect(() => {
+    setPreviewFilter("all");
+    setPreviewSearch("");
+    setShowAllRows(false);
+  }, [previewKey]);
+
+  // Filtered + capped preview rows — keeps big invoices (1000+ rows) snappy.
+  const filteredPreview = useMemo(() => {
+    if (!preview) return [] as { r: NormalizedRow; idx: number }[];
+    const q = previewSearch.trim().toLowerCase();
+    const out: { r: NormalizedRow; idx: number }[] = [];
+    preview.forEach((r, idx) => {
+      if (previewFilter !== "all") {
+        const st = matchByIdx.get(idx)?.status ?? "unmatched";
+        if (st !== previewFilter) return;
+      }
+      if (q) {
+        const hay = `${r.consignment_id ?? ""} ${r.merchant_order_id ?? ""} ${r.recipient_name ?? ""} ${r.recipient_phone ?? ""}`.toLowerCase();
+        if (!hay.includes(q)) return;
+      }
+      out.push({ r, idx });
+    });
+    return out;
+  }, [preview, previewFilter, previewSearch, matchByIdx]);
+
+  const ROW_CAP = 150;
+  const visibleRows = showAllRows ? filteredPreview : filteredPreview.slice(0, ROW_CAP);
+
   return (
-    <div className="p-4 md:p-6 space-y-5 max-w-7xl">
-      <header>
-        <h1 className="text-2xl font-bold tracking-tight">Pathao Invoice Reconciliation</h1>
-        <p className="text-sm text-muted-foreground">
-          Cross-brand upload: ekta invoice e multiple brand er order thakle system auto-detect korbe (consignment ID → merchant ID → phone+amount priority)। Per-brand default COD wallet automatically pick hobe apply er time.
-        </p>
+    <div className="p-4 md:p-6 pb-16 space-y-5 max-w-7xl">
+      <header className="sticky top-0 z-30 -mx-4 md:-mx-6 px-4 md:px-6 py-3 mb-1 bg-background/80 backdrop-blur-md border-b">
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <div className="min-w-0">
+            <h1 className="text-xl md:text-2xl font-bold tracking-tight flex items-center gap-2">
+              <span className="inline-flex h-7 w-7 items-center justify-center rounded-md bg-primary/10 text-primary">
+                <FileText className="h-4 w-4" />
+              </span>
+              Pathao Invoice Reconciliation
+            </h1>
+            <p className="text-[11px] md:text-xs text-muted-foreground mt-0.5 line-clamp-2">
+              Cross-brand: consignment ID → merchant ID → phone+amount priority te auto match. Per-brand default COD wallet apply er somoy pick hobe.
+            </p>
+          </div>
+          {preview && (
+            <Button
+              onClick={() => createMut.mutate()}
+              disabled={createMut.isPending}
+              className="gap-2 shadow-sm transition-all active:scale-[0.98]"
+            >
+              {createMut.isPending ? (
+                <Loader2 className="h-4 w-4 animate-spin" />
+              ) : (
+                <Upload className="h-4 w-4" />
+              )}
+              Process {preview.length} consignments
+            </Button>
+          )}
+        </div>
       </header>
 
-      {/* Upload zone */}
-      <Card>
-        <CardContent className="p-4 md:p-5 space-y-3">
-          <div className="flex flex-wrap items-end gap-3">
-            <div className="flex-1 min-w-[280px]">
-              <Label className="text-xs">Pathao paid invoice CSV</Label>
+      {/* Step 1 — source */}
+      <Card className="overflow-hidden border-border/70 shadow-sm">
+        <SectionHead
+          step={1}
+          icon={<CloudDownload className="h-4 w-4" />}
+          title="Invoice source"
+          desc="Pathao theke auto fetch korun, othoba CSV drop korun."
+        />
+        <CardContent className="p-4 md:p-5 space-y-4">
+          <div className="grid gap-4 lg:grid-cols-[1.35fr_1fr]">
+            {/* Auto fetch */}
+            <div className="rounded-lg border bg-muted/20 p-3 space-y-3">
+              <div className="flex flex-wrap items-end gap-2">
+                <div>
+                  <Label className="text-[11px] uppercase tracking-wide text-muted-foreground">Date range</Label>
+                  <DateRangePicker value={autoRange} onChange={setAutoRange} className="w-[250px]" />
+                </div>
+                <Button
+                  className="gap-2 transition-all active:scale-[0.98]"
+                  disabled={listMut.isPending}
+                  onClick={() => listMut.mutate()}
+                >
+                  {listMut.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <FileText className="h-4 w-4" />}
+                  Show invoices (date wise)
+                </Button>
+                <Button
+                  variant="secondary"
+                  className="gap-2 transition-all active:scale-[0.98]"
+                  disabled={autoMut.isPending}
+                  onClick={() => autoMut.mutate()}
+                >
+                  {autoMut.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <CloudDownload className="h-4 w-4" />}
+                  Fetch all (merged)
+                </Button>
+              </div>
+              <p className="text-[11px] text-muted-foreground">
+                “Show invoices” — range er protita invoice date-wise list hobe, ekta ekta kore Load kore verify kore Process korben. “Fetch all” pura range ek CSV te merge kore.
+              </p>
+            </div>
+
+            {/* Manual CSV drop */}
+            <div
+              onDragOver={(e) => { e.preventDefault(); setDragOver(true); }}
+              onDragLeave={() => setDragOver(false)}
+              onDrop={(e) => {
+                e.preventDefault();
+                setDragOver(false);
+                const f = e.dataTransfer.files?.[0];
+                if (f) handleFile(f);
+              }}
+              onClick={() => fileRef.current?.click()}
+              className={cn(
+                "rounded-lg border-2 border-dashed p-4 text-center cursor-pointer transition-all duration-200",
+                dragOver
+                  ? "border-primary bg-primary/5 scale-[1.01]"
+                  : "border-border hover:border-primary/50 hover:bg-muted/30",
+              )}
+            >
+              <Upload className={cn("mx-auto h-6 w-6 mb-1.5 transition-colors", dragOver ? "text-primary" : "text-muted-foreground")} />
+              <div className="text-sm font-medium">CSV drop korun ba click korun</div>
+              <p className="text-[11px] text-muted-foreground mt-0.5">
+                Pathao dashboard → Payments → Download paid invoice CSV
+              </p>
+              {filename && (
+                <Badge variant="secondary" className="mt-2 max-w-full truncate font-mono text-[10px]">
+                  {filename}
+                </Badge>
+              )}
               <Input
                 ref={fileRef}
                 type="file"
                 accept=".csv,text/csv"
+                className="hidden"
                 onChange={(e) => {
                   const f = e.target.files?.[0];
                   if (f) handleFile(f);
                 }}
               />
-              <p className="text-[11px] text-muted-foreground mt-1">
-                Pathao dashboard → Payments → Download paid invoice CSV
-              </p>
             </div>
-            {preview && (
-              <Button
-                onClick={() => createMut.mutate()}
-                disabled={createMut.isPending}
-                className="gap-2"
-              >
-                {createMut.isPending ? (
-                  <Loader2 className="h-4 w-4 animate-spin" />
-                ) : (
-                  <Upload className="h-4 w-4" />
-                )}
-                Process {preview.length} consignments
-              </Button>
-            )}
           </div>
 
-          {/* Auto fetch from Pathao */}
-          <div className="rounded-md border bg-muted/20 p-3 space-y-2">
-            <div className="flex flex-wrap items-end gap-3">
-              <div>
-                <Label className="text-xs">Auto fetch — date range</Label>
-                <DateRangePicker value={autoRange} onChange={setAutoRange} className="w-[260px]" />
-              </div>
-              <Button
-                variant="secondary"
-                className="gap-2"
-                disabled={autoMut.isPending}
-                onClick={() => autoMut.mutate()}
-              >
-                {autoMut.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <CloudDownload className="h-4 w-4" />}
-                Fetch all (merged)
-              </Button>
-              <Button
-                className="gap-2"
-                disabled={listMut.isPending}
-                onClick={() => listMut.mutate()}
-              >
-                {listMut.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <FileText className="h-4 w-4" />}
-                Show invoices (date wise)
-              </Button>
-              <p className="text-[11px] text-muted-foreground flex-1 min-w-[220px]">
-                “Show invoices” dile oi range er protita invoice alada alada date wise list hobe — ekta ekta kore Load kore verify kore Process korte parben. “Fetch all” pura range ek CSV te merge kore.
-              </p>
-            </div>
-
-            {invoiceList && (
+          {invoiceList && (
+            <div className="animate-in fade-in-0 slide-in-from-top-1 duration-200">
               <DailyInvoiceCoverage
                 invoices={invoiceList}
                 from={autoFrom}
@@ -851,90 +921,112 @@ function ReconciliationPage() {
                 onLoad={loadOne}
                 onClose={() => { setInvoiceList(null); setActiveInvoiceId(null); }}
               />
-            )}
-
-            {autoAttempts && (
-              <details className="text-[11px] text-muted-foreground">
-                <summary className="cursor-pointer">Pathao response details ({autoAttempts.length} endpoint try kora holo)</summary>
-                <div className="mt-1 space-y-0.5 font-mono">
-                  {autoAttempts.map((a, i) => (
-                    <div key={i} className="break-all">
-                      [{String(a.status)}] {a.path} — {a.snippet}
-                    </div>
-                  ))}
-                </div>
-              </details>
-            )}
-          </div>
-
-          {preview && (
-            <div className="rounded-md border bg-muted/30 p-3 flex flex-wrap gap-6 text-sm">
-              <Stat label="Consignments" value={String(preview.length)} />
-              <Stat label="Collected" value={fmtBdt(previewTotals.collected)} />
-              <Stat label="Courier fees" value={fmtBdt(previewTotals.fee)} tone="warn" />
-              <Stat label="Net payout" value={fmtBdt(previewTotals.payout)} tone="good" />
-              {filename && <Stat label="File" value={filename} />}
             </div>
           )}
 
-          {preview && (
-            <div className="flex flex-wrap items-center gap-2 text-sm">
-              <Badge variant="outline" className="border-emerald-500/50 bg-emerald-500/10 text-emerald-700">
-                ✅ {previewByType.paid} paid
-              </Badge>
-              <Badge variant="outline" className="border-amber-500/50 bg-amber-500/10 text-amber-700">
-                ↩ {previewByType.return} returns
-              </Badge>
-              <Badge variant="outline" className="border-sky-500/50 bg-sky-500/10 text-sky-700">
-                📦 {previewByType.partial} partial
-              </Badge>
-            </div>
+          {autoAttempts && (
+            <details className="text-[11px] text-muted-foreground">
+              <summary className="cursor-pointer">Pathao response details ({autoAttempts.length} endpoint try kora holo)</summary>
+              <div className="mt-1 space-y-0.5 font-mono">
+                {autoAttempts.map((a, i) => (
+                  <div key={i} className="break-all">
+                    [{String(a.status)}] {a.path} — {a.snippet}
+                  </div>
+                ))}
+              </div>
+            </details>
           )}
         </CardContent>
       </Card>
 
       {/* CSV preview table — mapping, grouped totals, dry-run statuses */}
       {preview && (
-        <Card>
+        <Card className="overflow-hidden border-border/70 shadow-sm animate-in fade-in-0 slide-in-from-bottom-1 duration-200">
+          <SectionHead
+            step={2}
+            icon={<Sparkles className="h-4 w-4" />}
+            title="Preview — before processing"
+            desc={`${preview.length} consignment · ${previewGrouped.subRows} CSV row · insta-fee ${previewGrouped.instaCount} ta (${fmtBdt(previewGrouped.instaFee)})`}
+            right={
+              matchQ.isFetching ? (
+                <span className="flex items-center gap-1 text-xs text-muted-foreground">
+                  <Loader2 className="h-3 w-3 animate-spin" /> matching…
+                </span>
+              ) : null
+            }
+          />
           <CardContent className="p-4 md:p-5 space-y-3">
-            <div className="flex flex-wrap items-center justify-between gap-3">
-              <div>
-                <h2 className="text-base font-semibold">Preview — before processing</h2>
-                <p className="text-[11px] text-muted-foreground">
-                  {preview.length} consignment, {previewGrouped.subRows} CSV row.
-                  Insta-fee {previewGrouped.instaCount} ta consignment-e (
-                  {fmtBdt(previewGrouped.instaFee)}). "Process" click korle apply hobe.
-                </p>
+            {/* KPI strip */}
+            <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-6 gap-2">
+              <Kpi label="Consignments" value={String(preview.length)} />
+              <Kpi label="Collected" value={fmtBdt(previewTotals.collected)} />
+              <Kpi label="Delivery payout" value={fmtBdt(previewGrouped.deliveryPayout)} tone="good" />
+              <Kpi label="Insta-fee" value={fmtBdt(previewGrouped.instaFee)} tone="warn" />
+              <Kpi label="Courier fees" value={fmtBdt(previewTotals.fee)} tone="warn" />
+              <Kpi label="Net payout" value={fmtBdt(previewTotals.payout)} tone="good" />
+            </div>
+
+            {/* Type mix */}
+            <div className="flex flex-wrap items-center gap-1.5 text-xs">
+              <Badge variant="outline" className="border-emerald-500/40 bg-emerald-500/10 text-emerald-700 dark:text-emerald-300">
+                {previewByType.paid} paid
+              </Badge>
+              <Badge variant="outline" className="border-amber-500/40 bg-amber-500/10 text-amber-700 dark:text-amber-300">
+                {previewByType.return} returns
+              </Badge>
+              <Badge variant="outline" className="border-sky-500/40 bg-sky-500/10 text-sky-700 dark:text-sky-300">
+                {previewByType.partial} partial
+              </Badge>
+            </div>
+
+            {/* Filter chips + search */}
+            <div className="flex flex-wrap items-center gap-2">
+              <div className="flex flex-wrap gap-1">
+                {([
+                  ["all", `All ${preview.length}`],
+                  ["matched", `Matched ${previewStatusCounts.matched}`],
+                  ["amount_mismatch", `Diff ${previewStatusCounts.amount_mismatch}`],
+                  ["duplicate", `Duplicate ${previewStatusCounts.duplicate}`],
+                  ["unmatched", `Unmatched ${previewStatusCounts.unmatched}`],
+                ] as const).map(([key, label]) => (
+                  <button
+                    key={key}
+                    type="button"
+                    onClick={() => { setPreviewFilter(key); setShowAllRows(false); }}
+                    className={cn(
+                      "rounded-full border px-2.5 py-1 text-[11px] font-medium transition-colors",
+                      previewFilter === key
+                        ? "border-primary bg-primary text-primary-foreground"
+                        : "border-border bg-background hover:bg-muted",
+                    )}
+                  >
+                    {label}
+                  </button>
+                ))}
               </div>
-              <div className="flex flex-wrap gap-2 text-xs">
-                <Badge variant="outline" className="border-emerald-500/50 bg-emerald-500/10 text-emerald-700">
-                  ✅ Matched {previewStatusCounts.matched}
-                </Badge>
-                <Badge variant="outline" className="border-amber-500/50 bg-amber-500/10 text-amber-700">
-                  ⚠ Amount diff {previewStatusCounts.amount_mismatch}
-                </Badge>
-                <Badge variant="outline" className="border-red-500/50 bg-red-500/10 text-red-700">
-                  ✖ Duplicate {previewStatusCounts.duplicate}
-                </Badge>
-                <Badge variant="outline">? Unmatched {previewStatusCounts.unmatched}</Badge>
-                {matchQ.isFetching && (
-                  <span className="flex items-center gap-1 text-muted-foreground">
-                    <Loader2 className="h-3 w-3 animate-spin" /> matching…
-                  </span>
+              <div className="relative ml-auto w-full sm:w-64">
+                <Search className="absolute left-2 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-muted-foreground" />
+                <Input
+                  value={previewSearch}
+                  onChange={(e) => { setPreviewSearch(e.target.value); setShowAllRows(false); }}
+                  placeholder="Consignment / order / phone / name"
+                  className="h-8 pl-7 pr-7 text-xs"
+                />
+                {previewSearch && (
+                  <button
+                    type="button"
+                    onClick={() => setPreviewSearch("")}
+                    className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                  >
+                    <X className="h-3.5 w-3.5" />
+                  </button>
                 )}
               </div>
             </div>
 
-            <div className="rounded-md border bg-muted/20 px-3 py-2 grid grid-cols-2 md:grid-cols-4 gap-3 text-xs">
-              <Stat label="Delivery payout (sum)" value={fmtBdt(previewGrouped.deliveryPayout)} tone="good" />
-              <Stat label="Insta-fee charges" value={fmtBdt(previewGrouped.instaFee)} tone="warn" />
-              <Stat label="Net payout" value={fmtBdt(previewTotals.payout)} tone="good" />
-              <Stat label="Total courier fees" value={fmtBdt(previewTotals.fee)} tone="warn" />
-            </div>
-
-            <div className="max-h-[420px] overflow-auto rounded-md border">
+            <div className="max-h-[460px] overflow-auto rounded-md border">
               <Table>
-                <TableHeader className="sticky top-0 bg-background z-10">
+                <TableHeader className="sticky top-0 z-10 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/80">
                   <TableRow>
                     <TableHead className="w-[110px]">Status</TableHead>
                     <TableHead>Consignment / Order ID</TableHead>
@@ -947,11 +1039,18 @@ function ReconciliationPage() {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {preview.map((r, idx) => {
+                  {visibleRows.length === 0 && (
+                    <TableRow>
+                      <TableCell colSpan={8} className="py-10 text-center text-sm text-muted-foreground">
+                        Ei filter e kono row nei.
+                      </TableCell>
+                    </TableRow>
+                  )}
+                  {visibleRows.map(({ r, idx }) => {
                     const m = matchByIdx.get(idx);
                     const status = m?.status ?? "unmatched";
                     return (
-                      <TableRow key={idx}>
+                      <TableRow key={idx} className="transition-colors hover:bg-muted/40">
                         <TableCell>
                           <PreviewStatusBadge status={status} loading={!m && matchQ.isFetching} />
                         </TableCell>
@@ -1018,30 +1117,42 @@ function ReconciliationPage() {
                 </TableBody>
               </Table>
             </div>
+            {filteredPreview.length > visibleRows.length && (
+              <div className="flex items-center justify-center">
+                <Button size="sm" variant="outline" onClick={() => setShowAllRows(true)}>
+                  Show all {filteredPreview.length} rows ({filteredPreview.length - visibleRows.length} more)
+                </Button>
+              </div>
+            )}
           </CardContent>
         </Card>
       )}
 
       {/* Received breakdown + History */}
-      <div className="space-y-2">
-        <div className="flex flex-wrap items-end justify-between gap-3">
-          <h2 className="text-lg font-semibold">History</h2>
-          <div className="flex items-end gap-2">
+      <div className="space-y-3">
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <h2 className="text-lg font-semibold flex items-center gap-2">
+            <span className="inline-flex h-6 w-6 items-center justify-center rounded-md bg-muted text-muted-foreground">
+              <History className="h-3.5 w-3.5" />
+            </span>
+            Received & history
+          </h2>
+          <div className="flex items-center gap-2">
             <DateRangePicker value={sumRange} onChange={setSumRange} className="w-[250px]" />
-            <Button size="sm" variant="outline" onClick={downloadSummary} disabled={sumBusy}>
+            <Button size="sm" variant="outline" className="gap-1.5" onClick={downloadSummary} disabled={sumBusy}>
               {sumBusy ? <Loader2 className="h-4 w-4 animate-spin" /> : <Download className="h-4 w-4" />}
               CSV
             </Button>
-            <Button size="sm" variant="outline" onClick={downloadSummaryPdf} disabled={sumBusy}>
+            <Button size="sm" variant="outline" className="gap-1.5" onClick={downloadSummaryPdf} disabled={sumBusy}>
               {sumBusy ? <Loader2 className="h-4 w-4 animate-spin" /> : <FileDown className="h-4 w-4" />}
               PDF
             </Button>
           </div>
         </div>
         <ReceivedSummary from={sumFrom} to={sumTo} />
-        <Card>
+        <Card className="overflow-hidden border-border/70 shadow-sm">
           <Table>
-            <TableHeader>
+            <TableHeader className="bg-muted/40">
               <TableRow>
                 <TableHead>Date</TableHead>
                 <TableHead>File</TableHead>
@@ -1053,24 +1164,29 @@ function ReconciliationPage() {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {runsQ.isLoading && (
-                <TableRow>
-                  <TableCell colSpan={7} className="text-center py-8 text-muted-foreground">
-                    Loading…
-                  </TableCell>
-                </TableRow>
-              )}
+              {runsQ.isLoading &&
+                Array.from({ length: 5 }).map((_, i) => (
+                  <TableRow key={`sk-${i}`}>
+                    {Array.from({ length: 7 }).map((__, j) => (
+                      <TableCell key={j}>
+                        <Skeleton className="h-4 w-full" />
+                      </TableCell>
+                    ))}
+                  </TableRow>
+                ))}
               {!runsQ.isLoading && (runsQ.data ?? []).length === 0 && (
                 <TableRow>
-                  <TableCell colSpan={7} className="text-center py-8 text-muted-foreground">
-                    Kono reconciliation run nei. Upper e CSV upload koro.
+                  <TableCell colSpan={7} className="py-12 text-center text-muted-foreground">
+                    <Inbox className="mx-auto mb-2 h-7 w-7 opacity-40" />
+                    <div className="text-sm font-medium">Kono reconciliation run nei</div>
+                    <div className="text-xs">Upore theke invoice fetch ba CSV upload korun.</div>
                   </TableCell>
                 </TableRow>
               )}
               {(runsQ.data ?? []).map((r) => (
                 <TableRow
                   key={r.id}
-                  className="cursor-pointer hover:bg-muted/40"
+                  className="cursor-pointer transition-colors hover:bg-muted/50"
                   onClick={() => setOpenRunId(r.id)}
                 >
                   <TableCell className="text-xs whitespace-nowrap">
@@ -1092,10 +1208,10 @@ function ReconciliationPage() {
                       <Button
                         size="icon"
                         variant="ghost"
-                        className="h-7 w-7"
+                        className="h-7 w-7 text-muted-foreground hover:text-destructive"
                         onClick={(e) => {
                           e.stopPropagation();
-                          if (confirm("Delete this draft?")) deleteMut.mutate(r.id);
+                          setDeleteRunId(r.id);
                         }}
                       >
                         <Trash2 className="h-3.5 w-3.5" />
@@ -1110,9 +1226,84 @@ function ReconciliationPage() {
         </Card>
       </div>
 
+      <AlertDialog open={!!deleteRunId} onOpenChange={(o) => { if (!o) setDeleteRunId(null); }}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Draft run delete korbo?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Ei draft run ar er sob row muche jabe. Kono wallet entry apply hoyni, tai finance e kono prabhab porbe na.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              onClick={() => {
+                if (deleteRunId) deleteMut.mutate(deleteRunId);
+                setDeleteRunId(null);
+              }}
+            >
+              Delete
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
       {openRunId && (
         <RunDetailDialog runId={openRunId} brandId={brandId} onClose={() => setOpenRunId(null)} />
       )}
+    </div>
+  );
+}
+
+function SectionHead({
+  step,
+  icon,
+  title,
+  desc,
+  right,
+}: {
+  step?: number;
+  icon?: React.ReactNode;
+  title: string;
+  desc?: string;
+  right?: React.ReactNode;
+}) {
+  return (
+    <div className="flex items-center justify-between gap-3 border-b bg-muted/30 px-4 md:px-5 py-3">
+      <div className="flex items-start gap-2.5 min-w-0">
+        <span className="mt-0.5 inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-md bg-primary/10 text-primary">
+          {step ? <span className="text-xs font-bold">{step}</span> : icon}
+        </span>
+        <div className="min-w-0">
+          <h2 className="text-sm font-semibold leading-tight">{title}</h2>
+          {desc && <p className="text-[11px] text-muted-foreground truncate">{desc}</p>}
+        </div>
+      </div>
+      {right}
+    </div>
+  );
+}
+
+function Kpi({ label, value, tone }: { label: string; value: string; tone?: "good" | "warn" }) {
+  return (
+    <div
+      className={cn(
+        "rounded-lg border bg-card px-3 py-2 transition-colors",
+        tone === "good" && "border-emerald-500/25 bg-emerald-500/5",
+        tone === "warn" && "border-amber-500/25 bg-amber-500/5",
+      )}
+    >
+      <div className="text-[10px] uppercase tracking-wide text-muted-foreground">{label}</div>
+      <div
+        className={cn(
+          "font-semibold tabular-nums truncate",
+          tone === "good" && "text-emerald-600 dark:text-emerald-400",
+          tone === "warn" && "text-amber-700 dark:text-amber-400",
+        )}
+      >
+        {value}
+      </div>
     </div>
   );
 }
