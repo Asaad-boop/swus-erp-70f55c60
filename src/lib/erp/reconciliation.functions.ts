@@ -820,11 +820,13 @@ export const previewPathaoReconciliation = createServerFn({ method: "POST" })
     // Cross-run duplicate consignment ids
     const seen = new Set<string>();
     if (consignmentIds.length) {
-      const { data: prior } = await supabase
-        .from("erp_reconciliation_rows")
-        .select("consignment_id, run:run_id(brand_id, status)")
-        .in("consignment_id", consignmentIds);
-      (prior ?? []).forEach((p: any) => {
+      const prior = await fetchInChunks<any>(consignmentIds, (chunk) =>
+        supabase
+          .from("erp_reconciliation_rows")
+          .select("consignment_id, run:run_id(brand_id, status)")
+          .in("consignment_id", chunk),
+      );
+      prior.forEach((p: any) => {
         const st = p.run?.status;
         if (p.consignment_id && st !== "reverted" && st !== "draft" && (!brandFilter || p.run?.brand_id === brandFilter)) {
           seen.add(p.consignment_id);
@@ -835,24 +837,34 @@ export const previewPathaoReconciliation = createServerFn({ method: "POST" })
     const byConsignment = new Map<string, string>();
     const byMerchant = new Map<string, string>();
     if (consignmentIds.length) {
-      let q = supabase
-        .from("courier_shipments")
-        .select("order_id, consignment_id")
-        .in("consignment_id", consignmentIds);
-      if (brandFilter) q = q.eq("brand_id", brandFilter);
-      const { data: ships } = await q;
-      (ships ?? []).forEach((s) => {
+      const ships = await fetchInChunks<{ order_id: string; consignment_id: string | null }>(
+        consignmentIds,
+        (chunk) => {
+          let q = supabase
+            .from("courier_shipments")
+            .select("order_id, consignment_id")
+            .in("consignment_id", chunk);
+          if (brandFilter) q = q.eq("brand_id", brandFilter);
+          return q;
+        },
+      );
+      ships.forEach((s) => {
         if (s.consignment_id) byConsignment.set(s.consignment_id, s.order_id);
       });
     }
     if (merchantIds.length) {
-      let q = supabase
-        .from("courier_shipments")
-        .select("order_id, merchant_order_id")
-        .in("merchant_order_id", merchantIds);
-      if (brandFilter) q = q.eq("brand_id", brandFilter);
-      const { data: ships } = await q;
-      (ships ?? []).forEach((s) => {
+      const ships = await fetchInChunks<{ order_id: string; merchant_order_id: string | null }>(
+        merchantIds,
+        (chunk) => {
+          let q = supabase
+            .from("courier_shipments")
+            .select("order_id, merchant_order_id")
+            .in("merchant_order_id", chunk);
+          if (brandFilter) q = q.eq("brand_id", brandFilter);
+          return q;
+        },
+      );
+      ships.forEach((s) => {
         if (s.merchant_order_id) byMerchant.set(s.merchant_order_id, s.order_id);
       });
     }
