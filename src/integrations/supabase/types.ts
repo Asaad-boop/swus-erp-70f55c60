@@ -14,6 +14,123 @@ export type Database = {
   }
   public: {
     Tables: {
+      _backup_instapay_dup_2026_08_02: {
+        Row: {
+          account_id: string | null
+          amount: number | null
+          attachment_url: string | null
+          brand_id: string | null
+          category_id: string | null
+          created_at: string | null
+          created_by: string | null
+          description: string | null
+          id: string | null
+          reference_id: string | null
+          reference_type: string | null
+          rn: number | null
+          supplier_id: string | null
+          to_account_id: string | null
+          transaction_date: string | null
+          txn_type: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          account_id?: string | null
+          amount?: number | null
+          attachment_url?: string | null
+          brand_id?: string | null
+          category_id?: string | null
+          created_at?: string | null
+          created_by?: string | null
+          description?: string | null
+          id?: string | null
+          reference_id?: string | null
+          reference_type?: string | null
+          rn?: number | null
+          supplier_id?: string | null
+          to_account_id?: string | null
+          transaction_date?: string | null
+          txn_type?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          account_id?: string | null
+          amount?: number | null
+          attachment_url?: string | null
+          brand_id?: string | null
+          category_id?: string | null
+          created_at?: string | null
+          created_by?: string | null
+          description?: string | null
+          id?: string | null
+          reference_id?: string | null
+          reference_type?: string | null
+          rn?: number | null
+          supplier_id?: string | null
+          to_account_id?: string | null
+          transaction_date?: string | null
+          txn_type?: string | null
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
+      _backup_instapay_dup_exp_2026_08_02: {
+        Row: {
+          account_id: string | null
+          amount: number | null
+          attachment_url: string | null
+          brand_id: string | null
+          category_id: string | null
+          created_at: string | null
+          created_by: string | null
+          description: string | null
+          id: string | null
+          reference_id: string | null
+          reference_type: string | null
+          supplier_id: string | null
+          to_account_id: string | null
+          transaction_date: string | null
+          txn_type: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          account_id?: string | null
+          amount?: number | null
+          attachment_url?: string | null
+          brand_id?: string | null
+          category_id?: string | null
+          created_at?: string | null
+          created_by?: string | null
+          description?: string | null
+          id?: string | null
+          reference_id?: string | null
+          reference_type?: string | null
+          supplier_id?: string | null
+          to_account_id?: string | null
+          transaction_date?: string | null
+          txn_type?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          account_id?: string | null
+          amount?: number | null
+          attachment_url?: string | null
+          brand_id?: string | null
+          category_id?: string | null
+          created_at?: string | null
+          created_by?: string | null
+          description?: string | null
+          id?: string | null
+          reference_id?: string | null
+          reference_type?: string | null
+          supplier_id?: string | null
+          to_account_id?: string | null
+          transaction_date?: string | null
+          txn_type?: string | null
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
       _backup_phase4b_brand_remap: {
         Row: {
           prior_brand_id: string | null

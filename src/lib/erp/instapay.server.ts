@@ -319,6 +319,15 @@ async function applyInstapayRow(
     .eq("reference_id", p.orderId)
     .in("reference_type", ["order_courier", "order_delivery", "order_return_charge"]);
 
+  // Idempotency: remove any earlier payout/deduction posted for this order on
+  // the same wallet so a re-sent invoice replaces instead of stacking.
+  await supabase
+    .from("erp_transactions")
+    .delete()
+    .eq("reference_id", p.orderId)
+    .eq("reference_type", "order")
+    .eq("account_id", walletId);
+
   let incomeId: string | null = null;
   let expenseId: string | null = null;
 
