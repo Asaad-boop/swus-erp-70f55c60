@@ -144,6 +144,15 @@ const STAT_COLUMNS = [
   { key: "steadfast", label: "Other couriers",  dot: "bg-amber-500",  bar: "bg-amber-500",  tint: "from-amber-500/[0.07]" },
 ] as const;
 
+type CourierRow = { name: string; label: string; total: number; success: number; cancel: number };
+
+function toneFor(pct: number, empty: boolean) {
+  if (empty) return { text: "text-muted-foreground/60", ring: "stroke-muted-foreground/30", bar: "bg-muted-foreground/30", chip: "bg-muted/40 text-muted-foreground ring-border", glow: "" };
+  if (pct >= 80) return { text: "text-emerald-600 dark:text-emerald-400", ring: "stroke-emerald-500", bar: "bg-emerald-500", chip: "bg-emerald-500/10 text-emerald-700 dark:text-emerald-300 ring-emerald-500/30", glow: "shadow-[0_0_16px_-2px_rgba(16,185,129,0.4)]" };
+  if (pct >= 50) return { text: "text-amber-600 dark:text-amber-400", ring: "stroke-amber-500", bar: "bg-amber-500", chip: "bg-amber-500/10 text-amber-700 dark:text-amber-300 ring-amber-500/30", glow: "shadow-[0_0_16px_-2px_rgba(245,158,11,0.4)]" };
+  return { text: "text-rose-600 dark:text-rose-400", ring: "stroke-rose-500", bar: "bg-rose-500", chip: "bg-rose-500/10 text-rose-700 dark:text-rose-300 ring-rose-500/30", glow: "shadow-[0_0_16px_-2px_rgba(244,63,94,0.4)]" };
+}
+
 function StatsStrip({
   stats,
   customerName: cname,
@@ -151,6 +160,7 @@ function StatsStrip({
   onRefresh,
   refreshing,
   loading,
+  couriers = [],
 }: {
   stats: Record<string, StatCell>;
   customerName: string;
@@ -158,10 +168,11 @@ function StatsStrip({
   onRefresh: () => void;
   refreshing: boolean;
   loading?: boolean;
+  couriers?: CourierRow[];
 }) {
   // Hide cards without data: Our Record/RedX/Steadfast/Pathao hide if total===0.
   // Overall always shown when any provider has data.
-  void cname; void onRefresh; void refreshing;
+  void cname;
   const visibleColumns = STAT_COLUMNS.filter((c) => {
     const s = stats[c.key];
     if (!s) return false;
@@ -195,7 +206,10 @@ function StatsStrip({
       </div>
     );
   }
-  if (cardCount === 0) return null;
+  const courierRows = couriers
+    .filter((c) => c.total > 0)
+    .sort((a, b) => b.total - a.total);
+  if (cardCount === 0 && courierRows.length === 0) return null;
   const gridCols = cardCount >= 4 ? "sm:grid-cols-4"
     : cardCount === 3 ? "sm:grid-cols-3"
     : cardCount === 2 ? "sm:grid-cols-2"
