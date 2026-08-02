@@ -523,7 +523,7 @@ export const applyPathaoReconciliationRun = createServerFn({ method: "POST" })
         await supabase
           .from("erp_transactions")
           .delete()
-          .eq("reference_id", r.matched_order_id)
+          .eq("reference_id", orderId)
           .in("reference_type", ["order_courier", "order_delivery", "order_return_charge"]);
 
         // Wallet cash model (approach b): the courier deducts its fees
@@ -552,7 +552,7 @@ export const applyPathaoReconciliationRun = createServerFn({ method: "POST" })
               amount: incomeAmount,
               transaction_date: txnDate,
               reference_type: "order",
-              reference_id: r.matched_order_id,
+              reference_id: orderId,
               description: `${description} · payout`,
               created_by: userId,
             })
@@ -572,7 +572,7 @@ export const applyPathaoReconciliationRun = createServerFn({ method: "POST" })
               amount: expenseAmount,
               transaction_date: txnDate,
               reference_type: "order",
-              reference_id: r.matched_order_id,
+              reference_id: orderId,
               description: `${description} · courier deduction (return/fee)`,
               created_by: userId,
             })
@@ -607,7 +607,7 @@ export const applyPathaoReconciliationRun = createServerFn({ method: "POST" })
         const { error: oErr } = await supabase
           .from("orders")
           .update(orderUpdate as never)
-          .eq("id", r.matched_order_id);
+          .eq("id", orderId);
         if (oErr) throw oErr;
 
         // Allocate courier fee proportionally across order_items for per-SKU
@@ -618,7 +618,7 @@ export const applyPathaoReconciliationRun = createServerFn({ method: "POST" })
           const { data: lines } = await supabase
             .from("order_items")
             .select("id, line_total")
-            .eq("order_id", r.matched_order_id);
+            .eq("order_id", orderId);
           const totalLine = (lines ?? []).reduce((s, l) => s + (Number(l.line_total) || 0), 0);
           if (totalLine > 0 && lines?.length) {
             for (const l of lines) {
