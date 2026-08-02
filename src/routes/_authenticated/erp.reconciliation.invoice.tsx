@@ -1666,6 +1666,15 @@ function RowItem({ row, brandId, runId }: { row: Row; brandId: string | null; ru
   const qc = useQueryClient();
   const [searchOpen, setSearchOpen] = useState(false);
   const status = row.match_status;
+  const acceptFn = useServerFn(acceptReconciliationDiff);
+  const acceptMut = useMutation({
+    mutationFn: () => acceptFn({ data: { rowId: row.id } }),
+    onSuccess: () => {
+      toast.success("Diff accepted");
+      qc.invalidateQueries({ queryKey: ["pathao-reconciliation-run", runId] });
+    },
+    onError: (e: Error) => toast.error(e.message),
+  });
 
   const statusBadge = (() => {
     if (row.applied_income_txn_id) {
