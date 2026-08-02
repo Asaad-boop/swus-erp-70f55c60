@@ -1486,6 +1486,18 @@ function RunDetailDialog({
           <TabBtn active={tab === "mismatch"} onClick={() => setTab("mismatch")} icon={<AlertTriangle className="h-3.5 w-3.5" />} count={counts.mismatch} label="Amount mismatch" tone="warn" />
           <TabBtn active={tab === "unmatched"} onClick={() => setTab("unmatched")} icon={<XCircle className="h-3.5 w-3.5" />} count={counts.unmatched} label="Unmatched" tone="bad" />
           <TabBtn active={tab === "all"} onClick={() => setTab("all")} icon={<FileText className="h-3.5 w-3.5" />} count={rows.length} label="All" />
+          {tab === "mismatch" && counts.mismatch > 0 && run?.status !== "applied" && (
+            <Button
+              size="sm"
+              variant="outline"
+              className="h-8 border-amber-400 text-amber-700 hover:bg-amber-50"
+              disabled={acceptAllMut.isPending}
+              onClick={() => acceptAllMut.mutate(50)}
+              title="≤ ৳50 diff wala shob row matched kore dao"
+            >
+              Accept small diffs (≤৳50)
+            </Button>
+          )}
           <div className="relative ml-auto w-56">
             <Search className="pointer-events-none absolute left-2 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-muted-foreground" />
             <Input
