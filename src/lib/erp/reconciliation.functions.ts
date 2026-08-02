@@ -492,6 +492,8 @@ export const applyPathaoReconciliationRun = createServerFn({ method: "POST" })
     const rowList = (rows ?? []).filter((r) => r.matched_order_id);
 
     const processRow = async (r: (typeof rowList)[number]) => {
+      const orderId = r.matched_order_id as string | null;
+      if (!orderId) return;
       const rowBrand = (r as { brand_id?: string | null }).brand_id ?? runBrandId;
       if (!rowBrand) {
         failed++;
