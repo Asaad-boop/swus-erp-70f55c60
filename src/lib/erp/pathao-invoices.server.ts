@@ -279,29 +279,8 @@ export async function fetchPathaoInvoiceCsv(
   const token = await merchantLogin(creds);
   const attempts: FetchAttempt[] = [];
 
-  // 1) Invoice list. The endpoint IGNORES date params and always returns the
-  //    full history, newest first, 10 per page. So we page until the oldest
-  //    invoice on a page falls before `from` (or we hit total_page).
-  const invoices: any[] = [];
-  let totalPage = 1;
-  for (let page = 1; page <= totalPage && page <= 200; page++) {
-    const path = `/api/v1/monetary/invoices/receivable?page=${page}`;
-    const res = await authGet(token, path);
-    const txt = await res.text();
-    if (page === 1 || !res.ok) {
-      attempts.push({ path, status: res.status, snippet: txt.slice(0, 160).replace(/\s+/g, " ") });
-    }
-    if (!res.ok) break;
-    let j: any = null;
-    try { j = JSON.parse(txt); } catch { break; }
-    const tp = Number(j?.data?.total_page ?? j?.total_page ?? 1);
-    if (Number.isFinite(tp) && tp > 0) totalPage = tp;
-    const list = asList(j);
-    if (!list.length) break;
-    invoices.push(...list);
-    const oldest = pickDate(list[list.length - 1]);
-    if (oldest && oldest < from) break;
-  }
+  // 1) Invoice list (parallel paged + de-duplicated).
+  const invoices = await listInvoiceRows(token, from, attempts);
 
   // 2) Keep invoices whose date falls in range (list may ignore date params).
   const inRange = invoices.filter((row) => {
@@ -346,7 +325,7 @@ export async function fetchPathaoInvoiceCsv(
     }
   };
 
-  const POOL = 5;
+  const POOL = 8;
   for (let i = 0; i < ids.length; i += POOL) {
     await Promise.all(ids.slice(i, i + POOL).map(grabOne));
   }
