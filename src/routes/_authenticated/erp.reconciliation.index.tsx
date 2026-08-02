@@ -262,7 +262,7 @@ function OverviewPage() {
       <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-5">
         <Kpi title="Pending COD" value={fmtBdt(kpis.pendingTotal)} sub={`${kpis.pendingCount} orders`} icon={<Clock className="h-4 w-4" />} loading={dashLoading} />
         <Kpi title="Reconciled (MTD)" value={fmtBdt(kpis.reconciledTotal)} icon={<CheckCircle2 className="h-4 w-4" />} loading={dashLoading} tone="good" />
-        <Kpi title="Needs review" value={String(reviewLines.length)} sub="settlement lines" icon={<AlertCircle className="h-4 w-4" />} loading={reviewQ.isLoading} tone="warn" />
+        <Kpi title="Needs review" value={String(reviewCount)} sub="settlement lines" icon={<AlertCircle className="h-4 w-4" />} loading={reviewCountQ.isLoading} tone="warn" />
         <Kpi title="Net to bank (MTD)" value={fmtBdt(kpis.netCod)} icon={<TrendingUp className="h-4 w-4" />} loading={dashLoading} />
         <Kpi title="Advance covered" value={String(advanceCount)} sub="orders (MTD)" icon={<Wallet className="h-4 w-4" />} loading={advanceQ.isLoading} />
       </div>
@@ -271,9 +271,12 @@ function OverviewPage() {
       <section className="space-y-2">
         <div className="flex items-baseline justify-between">
           <h2 className="text-sm font-semibold uppercase tracking-wide text-amber-700">
-            Needs Review · {reviewLines.length}
+            Needs Review · {reviewCount}
           </h2>
-          <p className="text-xs text-muted-foreground">Variance settlement lines waiting on a decision.</p>
+          <p className="text-xs text-muted-foreground">
+            Variance settlement lines waiting on a decision.
+            {reviewCount > reviewLines.length && ` (showing ${reviewLines.length})`}
+          </p>
         </div>
         {reviewQ.isLoading ? (
           <Card><CardContent className="py-6 text-center text-sm text-muted-foreground">Loading…</CardContent></Card>
