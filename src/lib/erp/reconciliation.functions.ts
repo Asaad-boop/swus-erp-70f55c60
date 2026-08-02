@@ -537,6 +537,16 @@ export const applyPathaoReconciliationRun = createServerFn({ method: "POST" })
           .eq("reference_id", orderId)
           .in("reference_type", ["order_courier", "order_delivery", "order_return_charge"]);
 
+        // Idempotency: drop any payout/deduction this order already got from a
+        // previous reconciliation apply on the same wallet, so re-applying an
+        // invoice replaces (never stacks) the wallet effect.
+        await supabase
+          .from("erp_transactions")
+          .delete()
+          .eq("reference_id", orderId)
+          .eq("reference_type", "order")
+          .eq("account_id", walletId);
+
         // Wallet cash model (approach b): the courier deducts its fees
         // BEFORE handing us the payout. We therefore only book what actually
         // lands in (or comes out of) the wallet — the payout itself — and
