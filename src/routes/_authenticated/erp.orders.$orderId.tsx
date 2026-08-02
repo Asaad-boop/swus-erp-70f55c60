@@ -1368,6 +1368,7 @@ function splitCourierProviders(providers?: HistProvider[] | null) {
             customerName={form.name}
             fraudNote={fraudNote}
             refreshing={refreshing}
+            couriers={courierHistory?.couriers ?? []}
             loading={courierLoading || (courierFetching && !courierHistory)}
             onRefresh={async () => { setRefreshing(true); await refetchHistory(); setRefreshing(false); }}
           />
