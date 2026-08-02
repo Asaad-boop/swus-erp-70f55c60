@@ -78,8 +78,8 @@ export const getOutstandingCod = createServerFn({ method: "GET" })
     const now = Date.now();
     const orders = ((rows ?? []) as Array<Record<string, unknown>>).map((o) => {
       const ref = (o.delivered_at ?? o.updated_at) as string | null;
-      const days = ref ? Math.floor((now - new Date(ref).getTime()) / 86400000) - data.thresholdDays : 0;
-      return { ...o, days_overdue: days };
+      const daysSince = ref ? Math.floor((now - new Date(ref).getTime()) / 86400000) : 0;
+      return { ...o, days_since_delivery: daysSince, days_overdue: Math.max(0, daysSince - data.thresholdDays) };
     });
     const totalAmount = orders.reduce((s, o) => s + Number((o as { total?: unknown }).total ?? 0), 0);
     return { orders, totalCount: orders.length, totalAmount };
