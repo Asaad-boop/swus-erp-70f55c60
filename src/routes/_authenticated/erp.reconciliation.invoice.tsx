@@ -1396,6 +1396,15 @@ function RunDetailDialog({
   const [q, setQ] = useState("");
   const [showAll, setShowAll] = useState(false);
   const CAP = 1000;
+  const acceptAllFn = useServerFn(acceptReconciliationDiff);
+  const acceptAllMut = useMutation({
+    mutationFn: (maxAbsDiff: number) => acceptAllFn({ data: { runId, maxAbsDiff } }),
+    onSuccess: (r: { accepted: number }) => {
+      toast.success(`${r.accepted} row accepted`);
+      qc.invalidateQueries({ queryKey: ["pathao-reconciliation-run", runId] });
+    },
+    onError: (e: Error) => toast.error(e.message),
+  });
 
   const getFn = useServerFn(getPathaoReconciliationRun);
   const revertFn = useServerFn(revertPathaoReconciliationRun);
