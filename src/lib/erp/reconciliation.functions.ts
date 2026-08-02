@@ -31,6 +31,33 @@ function normalizePhone(p: string | null | undefined): string | null {
   return digits.slice(-11); // last 11 digits (BD mobile)
 }
 
+/**
+ * PostgREST caps a single response at 1000 rows, so a plain `.in(col, ids)`
+ * with a big invoice silently drops matches. Fetch in id-chunks and page
+ * through each chunk so every shipment/row is returned.
+ */
+async function fetchInChunks<T>(
+  ids: string[],
+  build: (chunk: string[]) => any,
+): Promise<T[]> {
+  const out: T[] = [];
+  const CHUNK = 150;
+  const PAGE = 1000;
+  for (let i = 0; i < ids.length; i += CHUNK) {
+    const chunk = ids.slice(i, i + CHUNK);
+    let offset = 0;
+    for (;;) {
+      const { data, error } = await build(chunk).range(offset, offset + PAGE - 1);
+      if (error) throw new Error(error.message);
+      const list = (data ?? []) as T[];
+      out.push(...list);
+      if (list.length < PAGE) break;
+      offset += PAGE;
+    }
+  }
+  return out;
+}
+
 // ---------- Create run (parse + match preview) ----------
 
 export const createPathaoReconciliationRun = createServerFn({ method: "POST" })
