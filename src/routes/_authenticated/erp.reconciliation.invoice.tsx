@@ -21,6 +21,7 @@ import { CloudDownload } from "lucide-react";
 import { fetchPathaoInvoiceCsvFn, listPathaoInvoicesFn, fetchOnePathaoInvoiceFn } from "@/lib/erp/pathao-invoices.functions";
 import { DateRangePicker, buildPreset, type MktRangeValue } from "@/components/erp/marketing/date-range-picker";
 import { DailyInvoiceCoverage } from "@/components/erp/reconciliation/daily-invoice-coverage";
+import { ReceivedSummary } from "@/components/erp/reconciliation/received-summary";
 import { exportReconciliationCsv, exportReconciliationPdf } from "@/lib/erp/reconciliation-export";
 import { useBrand } from "@/contexts/brand-context";
 import { useAccounts, useCategories } from "@/hooks/erp/use-finance-query";
@@ -997,7 +998,7 @@ function ReconciliationPage() {
         </Card>
       )}
 
-      {/* History */}
+      {/* Received breakdown + History */}
       <div className="space-y-2">
         <div className="flex flex-wrap items-end justify-between gap-3">
           <h2 className="text-lg font-semibold">History</h2>
@@ -1013,6 +1014,7 @@ function ReconciliationPage() {
             </Button>
           </div>
         </div>
+        <ReceivedSummary from={sumFrom} to={sumTo} />
         <Card>
           <Table>
             <TableHeader>
