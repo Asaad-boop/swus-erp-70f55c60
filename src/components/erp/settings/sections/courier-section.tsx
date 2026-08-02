@@ -2,6 +2,7 @@ import { PathaoSettings } from "@/components/erp/courier/pathao-settings";
 import { SteadfastSettings } from "@/components/erp/courier/steadfast-settings";
 import { CourierMappingSettings } from "@/components/erp/settings/courier-mapping-settings";
 import { InstapaySettings } from "@/components/erp/settings/instapay-settings";
+import { BdCourierSettings } from "@/components/erp/settings/bdcourier-settings";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useCurrentRole } from "@/hooks/use-current-role";
 import { Alert, AlertDescription } from "@/components/ui/alert";
@@ -28,6 +29,7 @@ export function CourierSection({ brandId }: { brandId: string }) {
         <TabsList>
           <TabsTrigger value="pathao">Pathao</TabsTrigger>
           <TabsTrigger value="steadfast">Steadfast</TabsTrigger>
+          <TabsTrigger value="bdcourier">BDCourier</TabsTrigger>
           <TabsTrigger value="mapping">Status Mapping</TabsTrigger>
         </TabsList>
         <TabsContent value="pathao">
@@ -43,6 +45,13 @@ export function CourierSection({ brandId }: { brandId: string }) {
         <TabsContent value="steadfast">
           {isAdmin ? (
             <SteadfastSettings key={brandId} />
+          ) : (
+            <div className="rounded-xl border bg-card p-6 text-sm text-muted-foreground">Hidden — admin only.</div>
+          )}
+        </TabsContent>
+        <TabsContent value="bdcourier">
+          {isAdmin ? (
+            <BdCourierSettings />
           ) : (
             <div className="rounded-xl border bg-card p-6 text-sm text-muted-foreground">Hidden — admin only.</div>
           )}
