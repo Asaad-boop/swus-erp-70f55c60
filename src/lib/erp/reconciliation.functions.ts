@@ -193,11 +193,12 @@ export const createPathaoReconciliationRun = createServerFn({ method: "POST" })
 
     const rowInserts: RowInsert[] = [];
 
-    for (const r of data.rows) {
+    // Pass 1: id-based matching (in-memory), collect phone fallbacks
+    type Pre = { r: (typeof data.rows)[number]; matchedOrderId: string | null; matchedVia: string | null; rowBrandId: string | null };
+    const pre: Pre[] = data.rows.map((r) => {
       let matchedOrderId: string | null = null;
       let matchedVia: string | null = null;
       let rowBrandId: string | null = brandFilter;
-
       if (r.consignment_id && shipmentByConsignment.has(r.consignment_id)) {
         const hit = shipmentByConsignment.get(r.consignment_id)!;
         matchedOrderId = hit.order_id;
@@ -208,35 +209,65 @@ export const createPathaoReconciliationRun = createServerFn({ method: "POST" })
         matchedOrderId = hit.order_id;
         rowBrandId = hit.brand_id ?? rowBrandId;
         matchedVia = "merchant_order_id";
-      } else {
-        // phone fallback
-        const phone = normalizePhone(r.recipient_phone);
-        if (phone) {
+      }
+      return { r, matchedOrderId, matchedVia, rowBrandId };
+    });
+
+    // Pass 2: phone fallback, parallel pool
+    const needPhone = pre.filter((p) => !p.matchedOrderId && normalizePhone(p.r.recipient_phone));
+    const POOL = 12;
+    for (let i = 0; i < needPhone.length; i += POOL) {
+      await Promise.all(
+        needPhone.slice(i, i + POOL).map(async (p) => {
+          const phone = normalizePhone(p.r.recipient_phone)!;
           let q = supabase
             .from("orders")
-            .select("id, total, shipping_phone, status, created_at, brand_id")
+            .select("id, total, shipping_phone, created_at, brand_id")
             .ilike("shipping_phone", `%${phone}`)
             .order("created_at", { ascending: false })
             .limit(5);
           if (brandFilter) q = q.eq("brand_id", brandFilter);
           const { data: ords } = await q;
-          const best = (ords ?? []).find((o) => Math.abs(Number(o.total) - r.collected) <= 50);
+          const best = (ords ?? []).find((o) => Math.abs(Number(o.total) - p.r.collected) <= 50);
           if (best) {
-            matchedOrderId = best.id;
-            rowBrandId = (best as { brand_id: string | null }).brand_id ?? rowBrandId;
-            matchedVia = "phone+amount";
+            p.matchedOrderId = best.id;
+            p.rowBrandId = (best as { brand_id: string | null }).brand_id ?? p.rowBrandId;
+            p.matchedVia = "phone+amount";
           }
-        }
-      }
+        }),
+      );
+    }
 
+    // Pass 3: bulk fetch matched orders + already-applied duplicates
+    const matchedIds = [...new Set(pre.map((p) => p.matchedOrderId).filter(Boolean) as string[])];
+    const orderById = new Map<string, { total: number; brand_id: string | null }>();
+    const appliedOrderIds = new Set<string>();
+    if (matchedIds.length) {
+      const ords = await fetchInChunks<{ id: string; total: number; brand_id: string | null }>(
+        matchedIds,
+        (chunk) => supabase.from("orders").select("id, total, brand_id").in("id", chunk),
+      );
+      ords.forEach((o) => orderById.set(o.id, { total: Number(o.total), brand_id: o.brand_id ?? null }));
+
+      const applied = await fetchInChunks<{ matched_order_id: string }>(matchedIds, (chunk) =>
+        supabase
+          .from("erp_reconciliation_rows")
+          .select("matched_order_id")
+          .in("matched_order_id", chunk)
+          .not("applied_income_txn_id", "is", null),
+      );
+      applied.forEach((a) => a.matched_order_id && appliedOrderIds.add(a.matched_order_id));
+    }
+
+    for (const p of pre) {
+      const r = p.r;
+      const matchedOrderId = p.matchedOrderId;
+      const matchedVia = p.matchedVia;
+      let rowBrandId = p.rowBrandId;
       let amountDiff: number | null = null;
       let status = "unmatched";
       if (matchedOrderId) {
-        const { data: ord } = await supabase
-          .from("orders")
-          .select("total, brand_id")
-          .eq("id", matchedOrderId)
-          .maybeSingle();
+        const ord = orderById.get(matchedOrderId);
         if (ord) {
           // Return/partial rows should NOT be compared against order.total.
           // For `return` (incl. paid_return) collected = return-delivery fee
@@ -251,19 +282,13 @@ export const createPathaoReconciliationRun = createServerFn({ method: "POST" })
             status =
               Math.abs(amountDiff) <= data.tolerance ? "matched" : "amount_mismatch";
           }
-          rowBrandId = (ord as { brand_id: string | null }).brand_id ?? rowBrandId;
+          rowBrandId = ord.brand_id ?? rowBrandId;
         } else {
           status = "matched"; // already linked though we couldn't re-read
         }
 
         // Duplicate check: same order already applied in another run
-        const { data: dupe } = await supabase
-          .from("erp_reconciliation_rows")
-          .select("id")
-          .eq("matched_order_id", matchedOrderId)
-          .not("applied_income_txn_id", "is", null)
-          .limit(1);
-        if (dupe && dupe.length > 0) status = "duplicate";
+        if (appliedOrderIds.has(matchedOrderId)) status = "duplicate";
       }
 
       // Cross-run consignment-level duplicate (independent of match)
@@ -298,10 +323,15 @@ export const createPathaoReconciliationRun = createServerFn({ method: "POST" })
       });
     }
 
-    const { error: rowErr } = await supabase
-      .from("erp_reconciliation_rows")
-      .insert(rowInserts as never);
-    if (rowErr) throw new Error(rowErr.message);
+    // Chunked insert — a single 1700-row insert can exceed request limits and
+    // leave the run with zero rows.
+    const INSERT_CHUNK = 250;
+    for (let i = 0; i < rowInserts.length; i += INSERT_CHUNK) {
+      const { error: rowErr } = await supabase
+        .from("erp_reconciliation_rows")
+        .insert(rowInserts.slice(i, i + INSERT_CHUNK) as never);
+      if (rowErr) throw new Error(rowErr.message);
+    }
 
     // Update counts on run
     const matched = rowInserts.filter((r) => r.match_status === "matched").length;
