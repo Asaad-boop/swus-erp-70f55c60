@@ -90,14 +90,23 @@ export const getOutstandingCod = createServerFn({ method: "GET" })
 export const waiveOrders = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((d) =>
-    z.object({ orderIds: z.array(z.string().uuid()).min(1), reason: z.string().optional() }).parse(d),
+    z
+      .object({
+        orderIds: z.array(z.string().uuid()).min(1),
+        brandIds: z.array(z.string().uuid()).optional(),
+        reason: z.string().optional(),
+      })
+      .parse(d),
   )
   .handler(async ({ data, context }) => {
     const { supabase } = context;
-    const { error } = await supabase
+    let q = supabase
       .from("orders")
       .update({ reconciliation_status: "waived" } as never)
       .in("id", data.orderIds);
+    // Extra guard on top of RLS: never touch orders outside the active brand scope.
+    if (data.brandIds?.length) q = q.in("brand_id", data.brandIds);
+    const { error } = await q;
     if (error) throw new Error(error.message);
     return { ok: true, count: data.orderIds.length };
   });
