@@ -4,7 +4,7 @@ import { format, formatDistanceToNow } from "date-fns";
 import {
   ArrowLeft, Printer, Truck, Loader2, Phone, MessageCircle, Plus, Minus, Trash2,
   Search, Star, Tag as TagIcon, XCircle, Smartphone, Save, Undo2, CheckCircle2,
-  ChevronLeft, ChevronRight, RotateCcw, Repeat, Copy, Check, MapPin, ShieldCheck, ShieldAlert, CalendarClock,
+  ChevronLeft, ChevronRight, RotateCcw, Repeat, Copy, Check, MapPin, ShieldCheck, ShieldAlert, CalendarClock, RefreshCw,
 } from "lucide-react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { PreorderConvertDialog } from "@/components/erp/orders/preorder-convert-dialog";
@@ -144,6 +144,15 @@ const STAT_COLUMNS = [
   { key: "steadfast", label: "Other couriers",  dot: "bg-amber-500",  bar: "bg-amber-500",  tint: "from-amber-500/[0.07]" },
 ] as const;
 
+type CourierRow = { name: string; label: string; total: number; success: number; cancel: number };
+
+function toneFor(pct: number, empty: boolean) {
+  if (empty) return { text: "text-muted-foreground/60", ring: "stroke-muted-foreground/30", bar: "bg-muted-foreground/30", chip: "bg-muted/40 text-muted-foreground ring-border", glow: "" };
+  if (pct >= 80) return { text: "text-emerald-600 dark:text-emerald-400", ring: "stroke-emerald-500", bar: "bg-emerald-500", chip: "bg-emerald-500/10 text-emerald-700 dark:text-emerald-300 ring-emerald-500/30", glow: "shadow-[0_0_16px_-2px_rgba(16,185,129,0.4)]" };
+  if (pct >= 50) return { text: "text-amber-600 dark:text-amber-400", ring: "stroke-amber-500", bar: "bg-amber-500", chip: "bg-amber-500/10 text-amber-700 dark:text-amber-300 ring-amber-500/30", glow: "shadow-[0_0_16px_-2px_rgba(245,158,11,0.4)]" };
+  return { text: "text-rose-600 dark:text-rose-400", ring: "stroke-rose-500", bar: "bg-rose-500", chip: "bg-rose-500/10 text-rose-700 dark:text-rose-300 ring-rose-500/30", glow: "shadow-[0_0_16px_-2px_rgba(244,63,94,0.4)]" };
+}
+
 function StatsStrip({
   stats,
   customerName: cname,
@@ -151,6 +160,7 @@ function StatsStrip({
   onRefresh,
   refreshing,
   loading,
+  couriers = [],
 }: {
   stats: Record<string, StatCell>;
   customerName: string;
@@ -158,10 +168,11 @@ function StatsStrip({
   onRefresh: () => void;
   refreshing: boolean;
   loading?: boolean;
+  couriers?: CourierRow[];
 }) {
   // Hide cards without data: Our Record/RedX/Steadfast/Pathao hide if total===0.
   // Overall always shown when any provider has data.
-  void cname; void onRefresh; void refreshing;
+  void cname;
   const visibleColumns = STAT_COLUMNS.filter((c) => {
     const s = stats[c.key];
     if (!s) return false;
@@ -195,7 +206,10 @@ function StatsStrip({
       </div>
     );
   }
-  if (cardCount === 0) return null;
+  const courierRows = couriers
+    .filter((c) => c.total > 0)
+    .sort((a, b) => b.total - a.total);
+  if (cardCount === 0 && courierRows.length === 0) return null;
   const gridCols = cardCount >= 4 ? "sm:grid-cols-4"
     : cardCount === 3 ? "sm:grid-cols-3"
     : cardCount === 2 ? "sm:grid-cols-2"
@@ -269,6 +283,51 @@ function StatsStrip({
               <p className="text-[11px] leading-snug text-foreground/80 line-clamp-5 whitespace-pre-wrap">{fraudNote}</p>
             </div>
           </div>
+        )}
+      </div>
+      {/* Per-courier breakdown — each courier separately (Pathao = own API, rest via BDCourier) */}
+      <div className="border-t border-border/60 bg-muted/20">
+        <div className="flex items-center justify-between gap-2 px-4 pt-3 pb-1.5">
+          <span className="text-[10px] font-bold uppercase tracking-[0.12em] text-muted-foreground">
+            Courier-wise success rate
+          </span>
+          <button
+            type="button"
+            onClick={onRefresh}
+            disabled={refreshing}
+            className="inline-flex items-center gap-1 rounded-full border bg-card px-2 py-0.5 text-[10px] font-medium text-muted-foreground transition-colors hover:text-foreground disabled:opacity-50"
+          >
+            <RefreshCw className={cn("h-3 w-3", refreshing && "animate-spin")} />
+            {refreshing ? "Refreshing" : "Refresh"}
+          </button>
+        </div>
+        {courierRows.length === 0 ? (
+          <p className="px-4 pb-3 text-[11px] text-muted-foreground/70">
+            {loading || refreshing ? "Courier data ashche..." : "Kono courier record pawa jayni."}
+          </p>
+        ) : (
+          <ul className="divide-y divide-border/50">
+            {courierRows.map((c) => {
+              const denom = c.success + c.cancel;
+              const pct = denom > 0 ? Math.round((c.success / denom) * 100) : 0;
+              const t = toneFor(pct, denom === 0);
+              return (
+                <li key={c.name} className="flex items-center gap-3 px-4 py-2 transition-colors hover:bg-muted/40">
+                  <span className="w-24 shrink-0 truncate text-[11px] font-semibold text-foreground">{c.label}</span>
+                  <div className="h-1.5 flex-1 overflow-hidden rounded-full bg-muted">
+                    <div className={cn("h-full rounded-full transition-all duration-700", t.bar)} style={{ width: `${denom === 0 ? 0 : pct}%` }} />
+                  </div>
+                  <span className={cn("w-10 shrink-0 text-right text-[11px] font-bold tabular-nums", t.text)}>
+                    {denom === 0 ? "—" : `${pct}%`}
+                  </span>
+                  <span className="w-20 shrink-0 text-right text-[10px] tabular-nums text-muted-foreground">
+                    <span className="font-semibold text-foreground">{c.success}</span>/{denom || c.total}
+                    <span className="ml-1 text-rose-600 dark:text-rose-400">✕{c.cancel}</span>
+                  </span>
+                </li>
+              );
+            })}
+          </ul>
         )}
       </div>
     </div>
@@ -737,7 +796,7 @@ function OrderDetailsPage() {
   const [refreshing, setRefreshing] = useState(false);
 
   // FAST PATH: read the DB-cached row directly so cards appear instantly on reload
-type HistProvider = { name: string; total: number; success: number; cancelled: number; ok: boolean; error?: string };
+type HistProvider = { name: string; label?: string; total: number; success: number; cancelled: number; ok: boolean; error?: string };
 
 /** Pathao = our own API; every other courier comes from BDCourier and is summed together. */
 function splitCourierProviders(providers?: HistProvider[] | null) {
@@ -754,6 +813,15 @@ function splitCourierProviders(providers?: HistProvider[] | null) {
       cancel: okOthers.reduce((s, p) => s + p.cancelled, 0),
     },
     steadfastError: okOthers.length > 0 ? "" : failed?.error ?? "",
+    couriers: list
+      .filter((p) => p.ok)
+      .map((p) => ({
+        name: p.name,
+        label: p.label ?? p.name.charAt(0).toUpperCase() + p.name.slice(1),
+        total: p.total,
+        success: p.success,
+        cancel: p.cancelled,
+      })),
   };
 }
 
@@ -767,7 +835,7 @@ function splitCourierProviders(providers?: HistProvider[] | null) {
         .select("data")
         .eq("phone", phone)
         .maybeSingle();
-      const hist = data?.data as { providers?: Array<{ name: string; total: number; success: number; cancelled: number; ok: boolean; error?: string }> } | null;
+      const hist = data?.data as { providers?: HistProvider[] } | null;
       if (!hist) return null;
       return splitCourierProviders(hist.providers);
     },
@@ -1300,6 +1368,7 @@ function splitCourierProviders(providers?: HistProvider[] | null) {
             customerName={form.name}
             fraudNote={fraudNote}
             refreshing={refreshing}
+            couriers={courierHistory?.couriers ?? []}
             loading={courierLoading || (courierFetching && !courierHistory)}
             onRefresh={async () => { setRefreshing(true); await refetchHistory(); setRefreshing(false); }}
           />
