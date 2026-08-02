@@ -57,6 +57,7 @@ export function TransferDialog({ open, onClose, brandId, accounts, defaultFromId
 
   const from = scopedAccounts.find((a) => a.id === fromId);
   const to = scopedAccounts.find((a) => a.id === toId);
+  const canPick = Boolean(effectiveBrandId) || isShared;
   const amt = Number(amount || 0);
   const insufficient = from && amt > Number(from.current_balance);
 
@@ -116,7 +117,7 @@ export function TransferDialog({ open, onClose, brandId, accounts, defaultFromId
           )}
           <div>
             <Label>From account</Label>
-            <Select value={fromId} onValueChange={setFromId} disabled={!effectiveBrandId}>
+            <Select value={fromId} onValueChange={setFromId} disabled={!canPick}>
               <SelectTrigger><SelectValue placeholder="Select source" /></SelectTrigger>
               <SelectContent>
                 {scopedAccounts.map((a) => (
@@ -128,7 +129,7 @@ export function TransferDialog({ open, onClose, brandId, accounts, defaultFromId
           <div className="flex justify-center text-muted-foreground"><ArrowRight className="h-4 w-4" /></div>
           <div>
             <Label>To account</Label>
-            <Select value={toId} onValueChange={setToId} disabled={!effectiveBrandId}>
+            <Select value={toId} onValueChange={setToId} disabled={!canPick}>
               <SelectTrigger><SelectValue placeholder="Select destination" /></SelectTrigger>
               <SelectContent>
                 {scopedAccounts.filter((a) => a.id !== fromId).map((a) => (
