@@ -498,7 +498,9 @@ export const applyPathaoReconciliationRun = createServerFn({ method: "POST" })
     let failed = 0;
     const errors: string[] = [];
 
-    const rowList = (rows ?? []).filter((r) => r.matched_order_id);
+    const rowList = (rows ?? []).filter(
+      (r) => r.matched_order_id && !r.applied_income_txn_id && !r.applied_expense_txn_id,
+    );
 
     const processRow = async (r: (typeof rowList)[number]) => {
       const orderId = r.matched_order_id as string | null;
@@ -682,30 +684,21 @@ export const applyPathaoReconciliationRun = createServerFn({ method: "POST" })
       }),
     );
 
-    // How many eligible rows are still pending after this batch?
-    const { count: remaining } = await supabase
-      .from("erp_reconciliation_rows")
-      .select("id", { count: "exact", head: true })
-      .eq("run_id", data.runId)
-      .in("match_status", allowedStatuses)
-      .is("applied_income_txn_id", null)
-      .not("matched_order_id", "is", null);
-
-    // Rows that fail repeatedly would loop forever — stop when a batch applied nothing.
-    const done = (remaining ?? 0) === 0 || applied === 0;
+    // Keyset pagination: fewer rows than the page size means we reached the end.
+    const done = fetchedCount < data.limit;
 
     if (done) {
       await supabase
         .from("erp_reconciliation_runs")
         .update({
-          status: failed === 0 && (remaining ?? 0) === 0 ? "applied" : "partial",
+          status: failed === 0 ? "applied" : "partial",
           applied_at: new Date().toISOString(),
           notes: errors.length ? errors.slice(0, 10).join("\n") : null,
         })
         .eq("id", data.runId);
     }
 
-    return { applied, failed, remaining: remaining ?? 0, done, errors: errors.slice(0, 10) };
+    return { applied, failed, done, nextCursor: lastId, errors: errors.slice(0, 10) };
   });
 
 // ---------- Revert run ----------
