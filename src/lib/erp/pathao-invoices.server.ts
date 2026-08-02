@@ -113,6 +113,78 @@ export type PathaoInvoiceSummary = {
   status: string | null;
 };
 
+/**
+ * Page through the receivable-invoice list. The endpoint ignores date params and
+ * always returns full history newest-first (10/page), so we fetch page 1 to learn
+ * total_page and then pull the rest in parallel batches, stopping as soon as a
+ * batch reaches invoices older than `from`. Results are de-duplicated by id.
+ */
+async function listInvoiceRows(
+  token: string,
+  from: string,
+  attempts: FetchAttempt[],
+): Promise<any[]> {
+  const rows: any[] = [];
+  const seen = new Set<string>();
+  const push = (list: any[]) => {
+    for (const r of list) {
+      const id = pickId(r);
+      const key = id ?? JSON.stringify(r).slice(0, 120);
+      if (seen.has(key)) continue;
+      seen.add(key);
+      rows.push(r);
+    }
+  };
+
+  const getPage = async (page: number, record: boolean) => {
+    const path = `/api/v1/monetary/invoices/receivable?page=${page}`;
+    const res = await authGet(token, path);
+    const txt = await res.text();
+    if (record || !res.ok) {
+      attempts.push({ path, status: res.status, snippet: txt.slice(0, 160).replace(/\s+/g, " ") });
+    }
+    if (!res.ok) return null;
+    try {
+      return JSON.parse(txt);
+    } catch {
+      return null;
+    }
+  };
+
+  const first = await getPage(1, true);
+  if (!first) return rows;
+  push(asList(first));
+  let totalPage = Number(first?.data?.total_page ?? first?.total_page ?? 1);
+  if (!Number.isFinite(totalPage) || totalPage < 1) totalPage = 1;
+  totalPage = Math.min(totalPage, 200);
+
+  const firstOldest = pickDate(asList(first).at(-1));
+  if (firstOldest && firstOldest < from) return rows;
+
+  const POOL = 6;
+  for (let page = 2; page <= totalPage; page += POOL) {
+    const batch = Array.from({ length: Math.min(POOL, totalPage - page + 1) }, (_, i) => page + i);
+    const results = await Promise.all(batch.map((p) => getPage(p, false)));
+    let reachedEnd = false;
+    for (const j of results) {
+      if (!j) {
+        reachedEnd = true;
+        continue;
+      }
+      const list = asList(j);
+      if (!list.length) {
+        reachedEnd = true;
+        continue;
+      }
+      push(list);
+      const oldest = pickDate(list[list.length - 1]);
+      if (oldest && oldest < from) reachedEnd = true;
+    }
+    if (reachedEnd) break;
+  }
+  return rows;
+}
+
 /** List every payout invoice in the date range (no CSV download). */
 export async function listPathaoInvoices(
   creds: Creds,
@@ -121,26 +193,7 @@ export async function listPathaoInvoices(
 ): Promise<{ invoices: PathaoInvoiceSummary[]; attempts: FetchAttempt[] }> {
   const token = await merchantLogin(creds);
   const attempts: FetchAttempt[] = [];
-  const rows: any[] = [];
-  let totalPage = 1;
-  for (let page = 1; page <= totalPage && page <= 200; page++) {
-    const path = `/api/v1/monetary/invoices/receivable?page=${page}`;
-    const res = await authGet(token, path);
-    const txt = await res.text();
-    if (page === 1 || !res.ok) {
-      attempts.push({ path, status: res.status, snippet: txt.slice(0, 160).replace(/\s+/g, " ") });
-    }
-    if (!res.ok) break;
-    let j: any = null;
-    try { j = JSON.parse(txt); } catch { break; }
-    const tp = Number(j?.data?.total_page ?? j?.total_page ?? 1);
-    if (Number.isFinite(tp) && tp > 0) totalPage = tp;
-    const list = asList(j);
-    if (!list.length) break;
-    rows.push(...list);
-    const oldest = pickDate(list[list.length - 1]);
-    if (oldest && oldest < from) break;
-  }
+  const rows = await listInvoiceRows(token, from, attempts);
 
   const invoices = rows
     .filter((r) => {
@@ -165,6 +218,8 @@ export async function listPathaoInvoices(
       };
     })
     .filter((v): v is PathaoInvoiceSummary => !!v);
+
+  invoices.sort((a, b) => ((a.date ?? "") < (b.date ?? "") ? 1 : -1));
 
   attempts.push({
     path: `invoices in ${from}..${to}`,
