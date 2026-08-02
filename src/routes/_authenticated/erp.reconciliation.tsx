@@ -18,7 +18,7 @@ function ReconciliationLayout() {
   const { pathname } = useLocation();
   return (
     <div className="flex flex-col h-full">
-      <div className="border-b border-border bg-card px-4 md:px-6">
+      <div className="sticky top-0 z-30 border-b border-border bg-card/95 backdrop-blur px-4 md:px-6">
         <div className="flex items-center gap-1 overflow-x-auto">
           {tabs.map(({ to, label, icon: Icon, exact }) => {
             const active = exact ? pathname === to : pathname.startsWith(to);
@@ -27,10 +27,10 @@ function ReconciliationLayout() {
                 key={to}
                 to={to as never}
                 className={cn(
-                  "flex items-center gap-2 px-4 py-3 text-sm font-medium border-b-2 -mb-px transition-colors whitespace-nowrap",
+                  "flex items-center gap-2 px-4 py-3 text-sm font-medium border-b-2 -mb-px transition-all duration-200 whitespace-nowrap rounded-t-md",
                   active
-                    ? "border-primary text-foreground"
-                    : "border-transparent text-muted-foreground hover:text-foreground",
+                    ? "border-primary text-foreground bg-primary/5"
+                    : "border-transparent text-muted-foreground hover:text-foreground hover:bg-muted/50",
                 )}
               >
                 <Icon className="h-4 w-4" />

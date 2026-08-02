@@ -19,6 +19,7 @@ export const getPendingCodQueue = createServerFn({ method: "GET" })
   )
   .handler(async ({ data, context }) => {
     const { supabase } = context;
+    const LIMIT = 500;
     let q = supabase
       .from("orders")
       .select(
@@ -28,9 +29,10 @@ export const getPendingCodQueue = createServerFn({ method: "GET" })
       .in("status", ["delivered", "partial_delivered"])
       .eq("reconciliation_status", "pending")
       .order("delivered_at", { ascending: true, nullsFirst: false })
-      .limit(500);
+      .limit(LIMIT);
 
-    if (data.courier) q = q.eq("courier_name", data.courier);
+    // Partial, case-insensitive courier match so "path" also finds "pathao".
+    if (data.courier) q = q.ilike("courier_name", `%${data.courier.trim()}%`);
     if (data.dateFrom) q = q.gte("delivered_at", data.dateFrom);
     if (data.dateTo) q = q.lte("delivered_at", data.dateTo);
 
@@ -46,7 +48,7 @@ export const getPendingCodQueue = createServerFn({ method: "GET" })
 
     const totalAmount = orders.reduce((s, o) => s + Number((o as { total?: unknown }).total ?? 0), 0);
 
-    return { orders, totalCount: orders.length, totalAmount };
+    return { orders, totalCount: orders.length, totalAmount, truncated: orders.length >= LIMIT };
   });
 
 // ---------- Outstanding (> 14 days) ----------
@@ -76,8 +78,8 @@ export const getOutstandingCod = createServerFn({ method: "GET" })
     const now = Date.now();
     const orders = ((rows ?? []) as Array<Record<string, unknown>>).map((o) => {
       const ref = (o.delivered_at ?? o.updated_at) as string | null;
-      const days = ref ? Math.floor((now - new Date(ref).getTime()) / 86400000) - data.thresholdDays : 0;
-      return { ...o, days_overdue: days };
+      const daysSince = ref ? Math.floor((now - new Date(ref).getTime()) / 86400000) : 0;
+      return { ...o, days_since_delivery: daysSince, days_overdue: Math.max(0, daysSince - data.thresholdDays) };
     });
     const totalAmount = orders.reduce((s, o) => s + Number((o as { total?: unknown }).total ?? 0), 0);
     return { orders, totalCount: orders.length, totalAmount };
@@ -88,14 +90,23 @@ export const getOutstandingCod = createServerFn({ method: "GET" })
 export const waiveOrders = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((d) =>
-    z.object({ orderIds: z.array(z.string().uuid()).min(1), reason: z.string().optional() }).parse(d),
+    z
+      .object({
+        orderIds: z.array(z.string().uuid()).min(1),
+        brandIds: z.array(z.string().uuid()).optional(),
+        reason: z.string().optional(),
+      })
+      .parse(d),
   )
   .handler(async ({ data, context }) => {
     const { supabase } = context;
-    const { error } = await supabase
+    let q = supabase
       .from("orders")
       .update({ reconciliation_status: "waived" } as never)
       .in("id", data.orderIds);
+    // Extra guard on top of RLS: never touch orders outside the active brand scope.
+    if (data.brandIds?.length) q = q.in("brand_id", data.brandIds);
+    const { error } = await q;
     if (error) throw new Error(error.message);
     return { ok: true, count: data.orderIds.length };
   });
@@ -140,16 +151,27 @@ export const getReconciliationDashboard = createServerFn({ method: "GET" })
       .lt("delivered_at", cutoff14);
     const outstandingTotal = (outstanding ?? []).reduce((s, o) => s + Number(o.total ?? 0), 0);
 
-    // Return fees (last 30 days) — sum of return_fee from reconciliation_rows
-    const { data: returnRows } = await supabase
-      .from("erp_reconciliation_rows")
-      .select("return_fee, created_at, run_id")
-      .eq("match_type", "return")
+    // Return fees (last 30 days) — brand-scoped through the parent run,
+    // otherwise other brands' fees leak into this brand's net COD.
+    const { data: runRows } = await supabase
+      .from("erp_reconciliation_runs")
+      .select("id")
+      .eq("brand_id", data.brandId)
       .gte("created_at", cutoff30);
-    const returnFeesTotal = (returnRows ?? []).reduce(
-      (s, r) => s + Number((r as { return_fee?: number }).return_fee ?? 0),
-      0,
-    );
+    const runIds = (runRows ?? []).map((r) => (r as { id: string }).id);
+    let returnFeesTotal = 0;
+    if (runIds.length) {
+      const { data: returnRows } = await supabase
+        .from("erp_reconciliation_rows")
+        .select("return_fee, run_id")
+        .eq("match_type", "return")
+        .in("run_id", runIds)
+        .gte("created_at", cutoff30);
+      returnFeesTotal = (returnRows ?? []).reduce(
+        (s, r) => s + Number((r as { return_fee?: number }).return_fee ?? 0),
+        0,
+      );
+    }
 
     // Net COD received (this month) = reconciledTotal - returnFees
     const netCod = reconciledTotal - returnFeesTotal;

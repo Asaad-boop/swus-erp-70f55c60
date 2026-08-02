@@ -146,6 +146,22 @@ function OverviewPage() {
   });
   const reviewLines = reviewQ.data ?? [];
 
+  // Exact needs-review count (list above is capped at 50 rows).
+  const reviewCountQ = useQuery({
+    queryKey: ["settlement-needs-review-count", brandIds.join(",")],
+    enabled: brandIds.length > 0,
+    queryFn: async () => {
+      const { count, error } = await supabase
+        .from("erp_courier_settlement_lines")
+        .select("id", { count: "exact", head: true })
+        .eq("match_status", "needs_review")
+        .in("brand_id", brandIds);
+      if (error) throw error;
+      return count ?? 0;
+    },
+  });
+  const reviewCount = reviewCountQ.data ?? reviewLines.length;
+
   const reviewOrderIds = useMemo(
     () => Array.from(new Set(reviewLines.map((r) => r.matched_order_id).filter((x): x is string => !!x))),
     [reviewLines],
@@ -210,7 +226,9 @@ function OverviewPage() {
     onSuccess: () => {
       toast.success("Order status updated");
       qc.invalidateQueries({ queryKey: ["settlement-needs-review"] });
+      qc.invalidateQueries({ queryKey: ["settlement-needs-review-count"] });
       qc.invalidateQueries({ queryKey: ["settlement-review-orders"] });
+      qc.invalidateQueries({ queryKey: ["reconciliation-dashboard"] });
     },
     onError: (e: Error) => toast.error(e.message),
   });
@@ -244,7 +262,7 @@ function OverviewPage() {
       <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-5">
         <Kpi title="Pending COD" value={fmtBdt(kpis.pendingTotal)} sub={`${kpis.pendingCount} orders`} icon={<Clock className="h-4 w-4" />} loading={dashLoading} />
         <Kpi title="Reconciled (MTD)" value={fmtBdt(kpis.reconciledTotal)} icon={<CheckCircle2 className="h-4 w-4" />} loading={dashLoading} tone="good" />
-        <Kpi title="Needs review" value={String(reviewLines.length)} sub="settlement lines" icon={<AlertCircle className="h-4 w-4" />} loading={reviewQ.isLoading} tone="warn" />
+        <Kpi title="Needs review" value={String(reviewCount)} sub="settlement lines" icon={<AlertCircle className="h-4 w-4" />} loading={reviewCountQ.isLoading} tone="warn" />
         <Kpi title="Net to bank (MTD)" value={fmtBdt(kpis.netCod)} icon={<TrendingUp className="h-4 w-4" />} loading={dashLoading} />
         <Kpi title="Advance covered" value={String(advanceCount)} sub="orders (MTD)" icon={<Wallet className="h-4 w-4" />} loading={advanceQ.isLoading} />
       </div>
@@ -253,9 +271,12 @@ function OverviewPage() {
       <section className="space-y-2">
         <div className="flex items-baseline justify-between">
           <h2 className="text-sm font-semibold uppercase tracking-wide text-amber-700">
-            Needs Review · {reviewLines.length}
+            Needs Review · {reviewCount}
           </h2>
-          <p className="text-xs text-muted-foreground">Variance settlement lines waiting on a decision.</p>
+          <p className="text-xs text-muted-foreground">
+            Variance settlement lines waiting on a decision.
+            {reviewCount > reviewLines.length && ` (showing ${reviewLines.length})`}
+          </p>
         </div>
         {reviewQ.isLoading ? (
           <Card><CardContent className="py-6 text-center text-sm text-muted-foreground">Loading…</CardContent></Card>
@@ -339,8 +360,8 @@ function OverviewPage() {
                     <YAxis tickFormatter={(v) => `${Math.round(Number(v) / 1000)}k`} className="text-xs" />
                     <Tooltip formatter={(v: number) => fmtBdt(Number(v))} />
                     <Legend wrapperStyle={{ fontSize: 11 }} />
-                    <Bar dataKey="expected" name="Expected" fill="hsl(var(--muted-foreground))" />
-                    <Bar dataKey="collected" name="Collected" fill="hsl(var(--primary))" />
+                    <Bar dataKey="expected" name="Expected" fill="var(--muted-foreground)" radius={[3, 3, 0, 0]} />
+                    <Bar dataKey="collected" name="Collected" fill="var(--primary)" radius={[3, 3, 0, 0]} />
                   </BarChart>
                 </ResponsiveContainer>
               )}
