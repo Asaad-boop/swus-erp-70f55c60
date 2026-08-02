@@ -419,6 +419,9 @@ export const applyPathaoReconciliationRun = createServerFn({ method: "POST" })
         includeMismatch: z.boolean().default(false),
         brandWallets: z.record(z.string().uuid(), z.string().uuid()).optional(),
         brandFeeCategories: z.record(z.string().uuid(), z.string().uuid()).optional(),
+        // Batching — client loops until done to avoid request timeouts on big invoices
+        limit: z.number().int().min(1).max(500).optional().default(120),
+        afterId: z.string().uuid().nullable().optional(),
       })
       .parse(d),
   )
@@ -432,7 +435,7 @@ export const applyPathaoReconciliationRun = createServerFn({ method: "POST" })
       .maybeSingle();
     if (runErr) throw new Error(runErr.message);
     if (!run) throw new Error("Run not found");
-    if (run.status === "applied") throw new Error("Already applied");
+    if (run.status === "applied" && !data.afterId) throw new Error("Already applied");
     // NOTE: run.brand_id can now be null (cross-brand upload). Each row carries its own brand_id.
     const runBrandId: string | null = run.brand_id;
 
@@ -440,13 +443,19 @@ export const applyPathaoReconciliationRun = createServerFn({ method: "POST" })
       ? ["matched", "amount_mismatch"]
       : ["matched"];
 
-    const { data: rows, error: rowErr } = await supabase
+    let rowQuery = supabase
       .from("erp_reconciliation_rows")
       .select("*")
       .eq("run_id", data.runId)
       .in("match_status", allowedStatuses)
-      .is("applied_income_txn_id", null);
+      .not("matched_order_id", "is", null)
+      .order("id", { ascending: true })
+      .limit(data.limit);
+    if (data.afterId) rowQuery = rowQuery.gt("id", data.afterId);
+    const { data: rows, error: rowErr } = await rowQuery;
     if (rowErr) throw new Error(rowErr.message);
+    const fetchedCount = (rows ?? []).length;
+    const lastId = fetchedCount ? ((rows ?? [])[fetchedCount - 1] as { id: string }).id : null;
 
     // Resolve per-brand default wallets from erp_settings (auto-pick strategy)
     const brandsInRun = [
@@ -489,19 +498,24 @@ export const applyPathaoReconciliationRun = createServerFn({ method: "POST" })
     let failed = 0;
     const errors: string[] = [];
 
-    for (const r of rows ?? []) {
-      if (!r.matched_order_id) continue;
+    const rowList = (rows ?? []).filter(
+      (r) => r.matched_order_id && !r.applied_income_txn_id && !r.applied_expense_txn_id,
+    );
+
+    const processRow = async (r: (typeof rowList)[number]) => {
+      const orderId = r.matched_order_id as string | null;
+      if (!orderId) return;
       const rowBrand = (r as { brand_id?: string | null }).brand_id ?? runBrandId;
       if (!rowBrand) {
         failed++;
         errors.push(`Row ${r.consignment_id ?? r.id}: no brand resolved`);
-        continue;
+        return;
       }
       const walletId = brandWalletMap.get(rowBrand) ?? data.walletAccountId ?? null;
       if (!walletId) {
         failed++;
         errors.push(`Row ${r.consignment_id ?? r.id}: no wallet for brand ${rowBrand}`);
-        continue;
+        return;
       }
       const feeCategoryId = brandFeeCatMap.get(rowBrand) ?? data.feeCategoryId ?? null;
       try {
@@ -520,7 +534,7 @@ export const applyPathaoReconciliationRun = createServerFn({ method: "POST" })
         await supabase
           .from("erp_transactions")
           .delete()
-          .eq("reference_id", r.matched_order_id)
+          .eq("reference_id", orderId)
           .in("reference_type", ["order_courier", "order_delivery", "order_return_charge"]);
 
         // Wallet cash model (approach b): the courier deducts its fees
@@ -549,7 +563,7 @@ export const applyPathaoReconciliationRun = createServerFn({ method: "POST" })
               amount: incomeAmount,
               transaction_date: txnDate,
               reference_type: "order",
-              reference_id: r.matched_order_id,
+              reference_id: orderId,
               description: `${description} · payout`,
               created_by: userId,
             })
@@ -569,7 +583,7 @@ export const applyPathaoReconciliationRun = createServerFn({ method: "POST" })
               amount: expenseAmount,
               transaction_date: txnDate,
               reference_type: "order",
-              reference_id: r.matched_order_id,
+              reference_id: orderId,
               description: `${description} · courier deduction (return/fee)`,
               created_by: userId,
             })
@@ -604,7 +618,7 @@ export const applyPathaoReconciliationRun = createServerFn({ method: "POST" })
         const { error: oErr } = await supabase
           .from("orders")
           .update(orderUpdate as never)
-          .eq("id", r.matched_order_id);
+          .eq("id", orderId);
         if (oErr) throw oErr;
 
         // Allocate courier fee proportionally across order_items for per-SKU
@@ -615,16 +629,18 @@ export const applyPathaoReconciliationRun = createServerFn({ method: "POST" })
           const { data: lines } = await supabase
             .from("order_items")
             .select("id, line_total")
-            .eq("order_id", r.matched_order_id);
+            .eq("order_id", orderId);
           const totalLine = (lines ?? []).reduce((s, l) => s + (Number(l.line_total) || 0), 0);
           if (totalLine > 0 && lines?.length) {
-            for (const l of lines) {
-              const share = ((Number(l.line_total) || 0) / totalLine) * displayFee;
-              await supabase
-                .from("order_items")
-                .update({ courier_cost_allocated: +share.toFixed(2) } as never)
-                .eq("id", l.id);
-            }
+            await Promise.all(
+              lines.map((l) => {
+                const share = ((Number(l.line_total) || 0) / totalLine) * displayFee;
+                return supabase
+                  .from("order_items")
+                  .update({ courier_cost_allocated: +share.toFixed(2) } as never)
+                  .eq("id", l.id);
+              }),
+            );
           }
         }
 
@@ -653,18 +669,36 @@ export const applyPathaoReconciliationRun = createServerFn({ method: "POST" })
         failed++;
         errors.push(`Row ${r.consignment_id ?? r.id}: ${(e as Error).message}`);
       }
+    };
+
+    // Parallel pool — big invoices (1000+ rows) used to time out ("Failed to fetch")
+    // because every row was processed strictly one after another.
+    const POOL = 8;
+    let cursor = 0;
+    await Promise.all(
+      Array.from({ length: Math.min(POOL, rowList.length) }, async () => {
+        while (cursor < rowList.length) {
+          const idx = cursor++;
+          await processRow(rowList[idx]!);
+        }
+      }),
+    );
+
+    // Keyset pagination: fewer rows than the page size means we reached the end.
+    const done = fetchedCount < data.limit;
+
+    if (done) {
+      await supabase
+        .from("erp_reconciliation_runs")
+        .update({
+          status: failed === 0 ? "applied" : "partial",
+          applied_at: new Date().toISOString(),
+          notes: errors.length ? errors.slice(0, 10).join("\n") : null,
+        })
+        .eq("id", data.runId);
     }
 
-    await supabase
-      .from("erp_reconciliation_runs")
-      .update({
-        status: failed === 0 ? "applied" : "partial",
-        applied_at: new Date().toISOString(),
-        notes: errors.length ? errors.slice(0, 10).join("\n") : null,
-      })
-      .eq("id", data.runId);
-
-    return { applied, failed, errors: errors.slice(0, 10) };
+    return { applied, failed, done, nextCursor: lastId, errors: errors.slice(0, 10) };
   });
 
 // ---------- Revert run ----------

@@ -2001,6 +2001,7 @@ function ApplyDialog({
     allAccounts.find((a) => a.id === wid)?.name ?? "—";
 
   const applyFn = useServerFn(applyPathaoReconciliationRun);
+  const [progress, setProgress] = useState<{ applied: number; failed: number } | null>(null);
   const mut = useMutation({
     mutationFn: async () => {
       // 1) Persist "save as default" choices before apply so future runs pick them up
@@ -2022,13 +2023,37 @@ function ApplyDialog({
         const chosen = effectiveWallet(b);
         if (chosen) overrides[b] = chosen;
       }
-      return applyFn({
-        data: {
-          runId,
-          brandWallets: Object.keys(overrides).length ? overrides : undefined,
-          includeMismatch,
-        },
-      });
+      // 3) Batched apply — boro invoice (1000+ row) ekbare pathale request timeout
+      //    hoye "Failed to fetch" hoto. Ekhon chhoto chhoto batch-e cursor niye chole.
+      let cursor: string | null = null;
+      let applied = 0;
+      let failed = 0;
+      const errors: string[] = [];
+      setProgress({ applied: 0, failed: 0 });
+      for (let guard = 0; guard < 200; guard++) {
+        const r: {
+          applied: number;
+          failed: number;
+          done: boolean;
+          nextCursor: string | null;
+          errors: string[];
+        } = await applyFn({
+          data: {
+            runId,
+            brandWallets: Object.keys(overrides).length ? overrides : undefined,
+            includeMismatch,
+            limit: 120,
+            afterId: cursor,
+          },
+        });
+        applied += r.applied;
+        failed += r.failed;
+        if (r.errors?.length) errors.push(...r.errors);
+        setProgress({ applied, failed });
+        if (r.done || !r.nextCursor) break;
+        cursor = r.nextCursor;
+      }
+      return { applied, failed, errors: errors.slice(0, 10) };
     },
     onSuccess: (r) => {
       if (r.failed === 0) toast.success(`Applied ${r.applied} rows`);
@@ -2036,7 +2061,10 @@ function ApplyDialog({
       qc.invalidateQueries({ queryKey: ["erp-settings-cod"] });
       onApplied();
     },
-    onError: (e: Error) => toast.error(e.message),
+    onError: (e: Error) => {
+      setProgress(null);
+      toast.error(e.message);
+    },
   });
 
   const brandName = (id: string) => brands.find((b) => b.id === id)?.name ?? id.slice(0, 8);
@@ -2131,6 +2159,12 @@ function ApplyDialog({
           )}
         </div>
         <DialogFooter>
+          {mut.isPending && progress && (
+            <span className="mr-auto text-xs text-muted-foreground tabular-nums">
+              Applying… {progress.applied} rows done
+              {progress.failed > 0 ? ` · ${progress.failed} failed` : ""}
+            </span>
+          )}
           <Button variant="outline" onClick={onClose}>Cancel</Button>
           <Button
             onClick={() => mut.mutate()}
