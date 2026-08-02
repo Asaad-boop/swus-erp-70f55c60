@@ -19,6 +19,7 @@ export const getPendingCodQueue = createServerFn({ method: "GET" })
   )
   .handler(async ({ data, context }) => {
     const { supabase } = context;
+    const LIMIT = 500;
     let q = supabase
       .from("orders")
       .select(
@@ -28,9 +29,10 @@ export const getPendingCodQueue = createServerFn({ method: "GET" })
       .in("status", ["delivered", "partial_delivered"])
       .eq("reconciliation_status", "pending")
       .order("delivered_at", { ascending: true, nullsFirst: false })
-      .limit(500);
+      .limit(LIMIT);
 
-    if (data.courier) q = q.eq("courier_name", data.courier);
+    // Partial, case-insensitive courier match so "path" also finds "pathao".
+    if (data.courier) q = q.ilike("courier_name", `%${data.courier.trim()}%`);
     if (data.dateFrom) q = q.gte("delivered_at", data.dateFrom);
     if (data.dateTo) q = q.lte("delivered_at", data.dateTo);
 
@@ -46,7 +48,7 @@ export const getPendingCodQueue = createServerFn({ method: "GET" })
 
     const totalAmount = orders.reduce((s, o) => s + Number((o as { total?: unknown }).total ?? 0), 0);
 
-    return { orders, totalCount: orders.length, totalAmount };
+    return { orders, totalCount: orders.length, totalAmount, truncated: orders.length >= LIMIT };
   });
 
 // ---------- Outstanding (> 14 days) ----------
