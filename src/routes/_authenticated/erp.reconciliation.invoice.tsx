@@ -1,4 +1,4 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, Link } from "@tanstack/react-router";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
@@ -1392,6 +1392,9 @@ function RunDetailDialog({
   const qc = useQueryClient();
   const [tab, setTab] = useState<"matched" | "mismatch" | "unmatched" | "all">("matched");
   const [applyOpen, setApplyOpen] = useState(false);
+  const [q, setQ] = useState("");
+  const [showAll, setShowAll] = useState(false);
+  const CAP = 150;
 
   const getFn = useServerFn(getPathaoReconciliationRun);
   const revertFn = useServerFn(revertPathaoReconciliationRun);
@@ -1413,11 +1416,44 @@ function RunDetailDialog({
 
   const rows = (runQ.data?.rows ?? []) as Row[];
   const filtered = useMemo(() => {
-    if (tab === "all") return rows;
-    if (tab === "matched") return rows.filter((r) => r.match_status === "matched");
-    if (tab === "mismatch") return rows.filter((r) => r.match_status === "amount_mismatch");
-    return rows.filter((r) => r.match_status === "unmatched" || r.match_status === "duplicate");
-  }, [rows, tab]);
+    const byTab =
+      tab === "all"
+        ? rows
+        : tab === "matched"
+          ? rows.filter((r) => r.match_status === "matched")
+          : tab === "mismatch"
+            ? rows.filter((r) => r.match_status === "amount_mismatch")
+            : rows.filter((r) => r.match_status === "unmatched" || r.match_status === "duplicate");
+    const needle = q.trim().toLowerCase();
+    if (!needle) return byTab;
+    return byTab.filter((r) =>
+      [
+        r.consignment_id,
+        r.merchant_order_id,
+        r.recipient_name,
+        r.recipient_phone,
+        r.orders?.shipping_name,
+        r.orders?.shipping_phone,
+      ]
+        .filter(Boolean)
+        .some((v) => String(v).toLowerCase().includes(needle)),
+    );
+  }, [rows, tab, q]);
+
+  const visible = showAll ? filtered : filtered.slice(0, CAP);
+
+  const sums = useMemo(
+    () =>
+      filtered.reduce(
+        (a, r) => ({
+          collected: a.collected + Number(r.collected ?? 0),
+          fee: a.fee + Number(r.total_fee ?? 0),
+          payout: a.payout + Number(r.payout ?? 0),
+        }),
+        { collected: 0, fee: 0, payout: 0 },
+      ),
+    [filtered],
+  );
 
   const run = runQ.data?.run;
   const counts = {
@@ -1428,8 +1464,8 @@ function RunDetailDialog({
 
   return (
     <Dialog open onOpenChange={(o) => !o && onClose()}>
-      <DialogContent className="max-w-6xl max-h-[90vh] flex flex-col">
-        <DialogHeader>
+      <DialogContent className="max-w-6xl max-h-[92vh] flex flex-col gap-3 p-0">
+        <DialogHeader className="border-b bg-muted/30 px-5 pb-3 pt-5">
           <DialogTitle className="flex items-center gap-2">
             Run {run?.source_filename ?? runId.slice(0, 8)}
             {run && <StatusBadge status={run.status} />}
@@ -1444,16 +1480,48 @@ function RunDetailDialog({
           </DialogDescription>
         </DialogHeader>
 
-        <div className="flex gap-2 flex-wrap">
+        <div className="flex flex-wrap items-center gap-2 px-5">
           <TabBtn active={tab === "matched"} onClick={() => setTab("matched")} icon={<CheckCircle2 className="h-3.5 w-3.5" />} count={counts.matched} label="Matched" tone="good" />
           <TabBtn active={tab === "mismatch"} onClick={() => setTab("mismatch")} icon={<AlertTriangle className="h-3.5 w-3.5" />} count={counts.mismatch} label="Amount mismatch" tone="warn" />
           <TabBtn active={tab === "unmatched"} onClick={() => setTab("unmatched")} icon={<XCircle className="h-3.5 w-3.5" />} count={counts.unmatched} label="Unmatched" tone="bad" />
           <TabBtn active={tab === "all"} onClick={() => setTab("all")} icon={<FileText className="h-3.5 w-3.5" />} count={rows.length} label="All" />
+          <div className="relative ml-auto w-56">
+            <Search className="pointer-events-none absolute left-2 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-muted-foreground" />
+            <Input
+              value={q}
+              onChange={(e) => setQ(e.target.value)}
+              placeholder="Consignment / phone / name…"
+              className="h-8 pl-7 pr-7 text-xs"
+            />
+            {q && (
+              <button
+                type="button"
+                onClick={() => setQ("")}
+                className="absolute right-1.5 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+              >
+                <X className="h-3.5 w-3.5" />
+              </button>
+            )}
+          </div>
         </div>
 
-        <div className="flex-1 overflow-auto rounded-md border">
+        <div className="grid grid-cols-2 gap-px border-y bg-border md:grid-cols-4">
+          {[
+            { label: "Rows in view", value: String(filtered.length), tone: "" },
+            { label: "Collected", value: fmtBdt(sums.collected), tone: "" },
+            { label: "Fee", value: fmtBdt(sums.fee), tone: "text-amber-700" },
+            { label: "Payout", value: fmtBdt(sums.payout), tone: "text-emerald-700" },
+          ].map((s) => (
+            <div key={s.label} className="bg-background px-5 py-2">
+              <div className="text-[10px] uppercase tracking-wide text-muted-foreground">{s.label}</div>
+              <div className={cn("text-sm font-semibold tabular-nums", s.tone)}>{s.value}</div>
+            </div>
+          ))}
+        </div>
+
+        <div className="mx-5 flex-1 overflow-auto rounded-md border">
           <Table>
-            <TableHeader className="sticky top-0 bg-background z-10">
+            <TableHeader className="sticky top-0 z-10 bg-background/95 backdrop-blur">
               <TableRow>
                 <TableHead>Status</TableHead>
                 <TableHead>Consignment</TableHead>
@@ -1466,28 +1534,39 @@ function RunDetailDialog({
               </TableRow>
             </TableHeader>
             <TableBody>
-              {runQ.isLoading && (
-                <TableRow>
-                  <TableCell colSpan={8} className="text-center py-8 text-muted-foreground">
-                    Loading…
-                  </TableCell>
-                </TableRow>
-              )}
+              {runQ.isLoading &&
+                [0, 1, 2, 3, 4, 5].map((i) => (
+                  <TableRow key={i}>
+                    <TableCell colSpan={8} className="py-2">
+                      <Skeleton className="h-6 w-full" />
+                    </TableCell>
+                  </TableRow>
+                ))}
               {!runQ.isLoading && filtered.length === 0 && (
                 <TableRow>
-                  <TableCell colSpan={8} className="text-center py-8 text-muted-foreground">
-                    Empty.
+                  <TableCell colSpan={8} className="py-10 text-center text-xs text-muted-foreground">
+                    <Inbox className="mx-auto mb-2 h-5 w-5 opacity-50" />
+                    {q ? "Ei search e kono row nei" : "Ei tab e kono row nei"}
                   </TableCell>
                 </TableRow>
               )}
-              {filtered.map((r) => (
+              {visible.map((r) => (
                 <RowItem key={r.id} row={r} brandId={brandId} runId={runId} />
               ))}
+              {!showAll && filtered.length > CAP && (
+                <TableRow>
+                  <TableCell colSpan={8} className="py-3 text-center">
+                    <Button size="sm" variant="outline" className="h-7 text-xs" onClick={() => setShowAll(true)}>
+                      Show all {filtered.length} rows
+                    </Button>
+                  </TableCell>
+                </TableRow>
+              )}
             </TableBody>
           </Table>
         </div>
 
-        <DialogFooter className="gap-2">
+        <DialogFooter className="gap-2 border-t bg-muted/30 px-5 py-3">
           {run && rows.length > 0 && (
             <>
               <Button
@@ -1612,21 +1691,44 @@ function RowItem({ row, brandId, runId }: { row: Row; brandId: string | null; ru
 
   return (
     <>
-      <TableRow>
-        <TableCell>
+      <TableRow className="transition-colors hover:bg-muted/40">
+        <TableCell className="py-1.5">
           <div className="flex flex-col items-start gap-1">
             {statusBadge}
             {typeBadge}
           </div>
         </TableCell>
-        <TableCell className="text-xs font-mono">
-          <div>{row.consignment_id ?? "—"}</div>
+        <TableCell className="py-1.5 font-mono text-xs">
+          <button
+            type="button"
+            title="Copy consignment ID"
+            onClick={() => {
+              if (row.consignment_id) {
+                navigator.clipboard.writeText(row.consignment_id);
+                toast.success("Consignment ID copied");
+              }
+            }}
+            className="group flex items-center gap-1 hover:text-primary"
+          >
+            {row.consignment_id ?? "—"}
+            <Copy className="h-3 w-3 opacity-0 transition-opacity group-hover:opacity-70" />
+          </button>
           <div className="text-muted-foreground">{row.merchant_order_id ?? ""}</div>
         </TableCell>
-        <TableCell className="text-xs">
+        <TableCell className="py-1.5 text-xs">
           {row.orders ? (
             <>
-              <div className="font-medium">{row.orders.shipping_name ?? "—"}</div>
+              {row.matched_order_id ? (
+                <Link
+                  to="/erp/orders/$orderId"
+                  params={{ orderId: row.matched_order_id }}
+                  className="font-medium hover:text-primary hover:underline"
+                >
+                  {row.orders.shipping_name ?? "—"}
+                </Link>
+              ) : (
+                <div className="font-medium">{row.orders.shipping_name ?? "—"}</div>
+              )}
               <div className="text-muted-foreground">
                 {row.orders.shipping_phone} · {fmtBdt(row.orders.total)} · {row.orders.status}
               </div>
@@ -1638,10 +1740,10 @@ function RowItem({ row, brandId, runId }: { row: Row; brandId: string | null; ru
             </>
           )}
         </TableCell>
-        <TableCell className="text-right font-mono">{fmtBdt(row.collected)}</TableCell>
-        <TableCell className="text-right font-mono text-amber-700">{fmtBdt(row.total_fee)}</TableCell>
-        <TableCell className="text-right font-mono text-emerald-700">{fmtBdt(row.payout)}</TableCell>
-        <TableCell className="text-right font-mono text-xs">
+        <TableCell className="py-1.5 text-right font-mono tabular-nums">{fmtBdt(row.collected)}</TableCell>
+        <TableCell className="py-1.5 text-right font-mono tabular-nums text-amber-700">{fmtBdt(row.total_fee)}</TableCell>
+        <TableCell className="py-1.5 text-right font-mono tabular-nums text-emerald-700">{fmtBdt(row.payout)}</TableCell>
+        <TableCell className="py-1.5 text-right font-mono text-xs tabular-nums">
           {(row.match_type === "return" || row.match_type === "partial")
             ? row.payout < 0
               ? <span className="text-rose-700">−{Math.abs(row.payout).toFixed(0)}</span>
@@ -1650,7 +1752,7 @@ function RowItem({ row, brandId, runId }: { row: Row; brandId: string | null; ru
               ? `${row.amount_diff > 0 ? "+" : ""}${row.amount_diff.toFixed(0)}`
               : "—"}
         </TableCell>
-        <TableCell className="text-right">
+        <TableCell className="py-1.5 text-right">
           {!row.applied_income_txn_id && (
             <Button
               size="sm"
