@@ -621,6 +621,9 @@ function ReconciliationPage() {
   const runsQ = useQuery({
     queryKey: ["pathao-reconciliation-runs", "all"],
     queryFn: () => listFn({ data: { brandId: null } }),
+    staleTime: 60_000,
+    gcTime: 5 * 60_000,
+    placeholderData: (prev) => prev,
   });
 
   // Invoice list helpers
@@ -644,6 +647,9 @@ function ReconciliationPage() {
   const matchQ = useQuery({
     queryKey: ["pathao-recon-preview", "all", previewKey],
     enabled: !!preview,
+    staleTime: 5 * 60_000,
+    gcTime: 10 * 60_000,
+    placeholderData: (prev) => prev,
     queryFn: () =>
       previewFn({
         data: {
