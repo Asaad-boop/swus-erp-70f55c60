@@ -154,7 +154,7 @@ function Panel({
   const isOpen = collapsible ? open : true;
   return (
     <section className={cn("surface-panel rise-in group/panel relative rounded-2xl overflow-hidden", lazy && "lazy-panel", className)}>
-      <span className={cn("pointer-events-none absolute inset-x-0 top-0 h-px opacity-60", accent.replace("bg-", "bg-gradient-to-r from-transparent via-").concat("/60 to-transparent"))} />
+      <span className="pointer-events-none absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-white/60 to-transparent dark:via-white/10" />
       <header className="surface-head px-4 py-3 sm:px-5 grid grid-cols-[minmax(0,1fr)_auto] items-center gap-3">
         <button
           type="button"
