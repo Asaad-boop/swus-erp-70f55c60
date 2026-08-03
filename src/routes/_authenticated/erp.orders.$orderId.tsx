@@ -1353,20 +1353,21 @@ function splitCourierProviders(providers?: HistProvider[] | null) {
   /* ------------------------------ Render ----------------------------------- */
 
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-background print:hidden">
+    <div className="min-h-screen workspace-bg print:hidden">
       <OrderLockBanner lock={orderLock} />
       {/* Sticky Header */}
-      <header className="sticky top-0 z-30 border-b border-gray-100 dark:border-border bg-white/85 dark:bg-card/85 backdrop-blur supports-[backdrop-filter]:bg-white/70">
-        <div className="max-w-[1600px] mx-auto px-4 md:px-6 py-2.5 flex flex-wrap items-center justify-between gap-3">
-          <div className="flex items-center gap-2 min-w-0">
+      <header className="glass-bar sticky top-0 z-30 border-b border-border/60">
+        <span className="pointer-events-none absolute inset-x-0 bottom-0 h-px bg-gradient-to-r from-transparent via-primary/40 to-transparent" />
+        <div className="max-w-[1600px] mx-auto px-3 sm:px-4 md:px-6 py-2.5 grid grid-cols-[minmax(0,1fr)_auto] items-center gap-3">
+          <div className="flex min-w-0 items-center gap-2">
             <Button asChild size="sm" variant="ghost" className="h-8 px-2 text-gray-600 hover:text-gray-900">
-              <Link to="/erp/orders/web"><ArrowLeft className="h-4 w-4 mr-1" />Orders</Link>
+              <Link to="/erp/orders/web"><ArrowLeft className="h-4 w-4 sm:mr-1" /><span className="hidden sm:inline">Orders</span></Link>
             </Button>
-            <span className="h-4 w-px bg-gray-200 dark:bg-border" />
+            <span className="h-4 w-px bg-border" />
             <div className="flex items-baseline gap-2 min-w-0">
-              <span className="text-[11px] uppercase tracking-wider text-gray-500">Order</span>
+              <span className="hidden sm:inline text-[11px] uppercase tracking-wider text-muted-foreground">Order</span>
               <CopyChip value={invoiceDisplay(order)} className="-mx-1">
-                <span className="font-mono text-sm font-semibold text-gray-900 dark:text-foreground truncate">#{invoiceDisplay(order)}</span>
+                <span className="font-mono text-sm font-semibold text-foreground truncate">#{invoiceDisplay(order)}</span>
               </CopyChip>
               <Badge variant="outline" className={cn("h-5 px-1.5 text-[10px] hidden sm:inline-flex", statusBadge(order.status).className)}>{statusBadge(order.status).label}</Badge>
               {(() => {
@@ -1394,8 +1395,8 @@ function splitCourierProviders(providers?: HistProvider[] | null) {
               </div>
             )}
           </div>
-          <div className="flex flex-wrap items-center gap-2">
-            <div className="hidden md:flex items-center gap-2 text-[11px] text-gray-600">
+          <div className="flex shrink-0 items-center gap-2">
+            <div className="hidden lg:flex items-center gap-2 text-[11px] text-muted-foreground">
               <span className="text-gray-400">Created</span>
               <span className="text-emerald-600 font-medium">{formatDistanceToNow(new Date(order.created_at), { addSuffix: true })}</span>
               <span className="h-3 w-px bg-gray-200" />
@@ -1404,19 +1405,19 @@ function splitCourierProviders(providers?: HistProvider[] | null) {
             </div>
             {!isWebOrder && (
               <>
-                <Button size="sm" variant="outline" className="h-8" onClick={() => {
+                <Button size="sm" variant="outline" className="h-8 px-2 sm:px-3 transition-transform active:scale-95" onClick={() => {
                   window.print();
                   void import("@/lib/erp/mark-printed").then(({ markOrdersPrinted }) => markOrdersPrinted([order.id]));
-                }}><Printer className="h-3.5 w-3.5 mr-1" />Invoice</Button>
-                <Button size="sm" variant="outline" className="h-8" onClick={() => setBookOpen(true)}><Truck className="h-3.5 w-3.5 mr-1" />Pathao</Button>
-                <Button size="sm" variant="outline" className="h-8" onClick={() => setBookSteadfastOpen(true)}><Truck className="h-3.5 w-3.5 mr-1" />Steadfast</Button>
+                }}><Printer className="h-3.5 w-3.5 sm:mr-1" /><span className="hidden sm:inline">Invoice</span></Button>
+                <Button size="sm" variant="outline" className="h-8 px-2 sm:px-3 transition-transform active:scale-95" onClick={() => setBookOpen(true)}><Truck className="h-3.5 w-3.5 sm:mr-1" /><span className="hidden sm:inline">Pathao</span></Button>
+                <Button size="sm" variant="outline" className="h-8 px-2 sm:px-3 hidden sm:inline-flex transition-transform active:scale-95" onClick={() => setBookSteadfastOpen(true)}><Truck className="h-3.5 w-3.5 mr-1" />Steadfast</Button>
               </>
             )}
           </div>
         </div>
       </header>
 
-      <div className="max-w-[1600px] mx-auto p-4 md:p-6 grid grid-cols-1 xl:grid-cols-[minmax(0,1fr)_340px] gap-4 items-start">
+      <div className="max-w-[1600px] mx-auto p-3 sm:p-4 md:p-6 grid grid-cols-1 xl:grid-cols-[minmax(0,1fr)_minmax(320px,380px)] gap-3 sm:gap-4 items-start">
         {/* MAIN */}
         <div className="space-y-4 min-w-0">
           {/* Stats strip */}
