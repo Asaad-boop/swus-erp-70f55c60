@@ -1836,15 +1836,13 @@ function splitCourierProviders(providers?: HistProvider[] | null) {
 
         {/* RIGHT SIDEBAR */}
         <aside className="space-y-4 xl:sticky xl:top-[64px] xl:max-h-[calc(100vh-80px)] xl:overflow-y-auto xl:pr-1 xl:-mr-1">
-          <section className="rounded-2xl border border-gray-100 dark:border-border bg-white dark:bg-card shadow-sm overflow-hidden">
-            <header className="px-5 py-3 border-b border-gray-100 dark:border-border flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <span className="h-1.5 w-1.5 rounded-full bg-emerald-500" />
-                <h3 className="text-[13px] font-semibold">Order Summary</h3>
-              </div>
-              <span className="text-[10px] font-mono text-gray-500">#{invoiceDisplay(order)}</span>
-            </header>
-            <div className="p-4 space-y-2 text-xs">
+          <Panel
+            title="Order Summary"
+            accent="bg-emerald-500"
+            right={<span className="text-[10px] font-mono text-gray-500">#{invoiceDisplay(order)}</span>}
+            bodyClassName="p-4"
+          >
+            <div className="space-y-2 text-xs">
               <Row label="Date" value={format(new Date(order.created_at), "dd MMM yyyy, hh:mm a")} />
               <Row label="Status" value={
                 <div className="flex items-center gap-1.5">
@@ -1857,12 +1855,18 @@ function splitCourierProviders(providers?: HistProvider[] | null) {
               } />
               <Row label="Payment" value={order.payment_method ?? "—"} />
               <Row label="Source" value={sourceLabel(order.source)} />
+              <Row label="Device" value={<span className="inline-flex items-center gap-1 capitalize"><Smartphone className="h-3 w-3 text-gray-400" />{sessionInfo?.device_type || "Not tracked"}</span>} />
+              <Row label="Mobile" value={
+                <CopyChip value={`+88${form.mobile}`} className="-mx-1">
+                  <span className="font-mono">+88{form.mobile}</span>
+                </CopyChip>
+              } />
               <div className="h-px bg-border my-2" />
               <Row label="Subtotal" value={`৳${bdtCompact(itemsSubtotal)}`} />
               <Row label="Delivery" value={`৳${bdtCompact(form.shipping_fee)}`} />
               <Row label="Total" value={<span className="font-bold text-foreground">৳{bdtCompact(grandTotal)}</span>} />
             </div>
-          </section>
+          </Panel>
 
           {/* Payment Verification — customer-provided txn / number */}
           {(() => {
