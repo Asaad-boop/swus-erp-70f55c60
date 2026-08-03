@@ -210,126 +210,117 @@ function StatsStrip({
     .filter((c) => c.total > 0)
     .sort((a, b) => b.total - a.total);
   if (cardCount === 0 && courierRows.length === 0) return null;
-  const gridCols = cardCount >= 4 ? "sm:grid-cols-4"
-    : cardCount === 3 ? "sm:grid-cols-3"
-    : cardCount === 2 ? "sm:grid-cols-2"
-    : "sm:grid-cols-1";
+  // Hero = Overall if present, else the first visible column.
+  const heroCol = visibleColumns.find((c) => c.key === "overall") ?? visibleColumns[0];
+  const subCols = visibleColumns.filter((c) => c.key !== heroCol?.key);
+  const hero = heroCol ? stats[heroCol.key]! : null;
+  const heroDenom = hero ? hero.success + hero.cancel : 0;
+  const heroPct = heroDenom > 0 ? Math.round((hero!.success / heroDenom) * 100) : 0;
+  const heroTone = toneFor(heroPct, heroDenom === 0);
+  const R = 15;
+  const C = 2 * Math.PI * R;
   return (
     <div className="rounded-2xl border bg-card overflow-hidden shadow-[0_1px_2px_rgba(0,0,0,0.04),0_8px_24px_-12px_rgba(0,0,0,0.08)]">
-      <div className={cn("grid grid-cols-2 divide-x divide-y sm:divide-y-0 divide-border/60", gridCols)}>
-        {visibleColumns.map((c) => {
-          const s = stats[c.key]!;
-          const denom = s.success + s.cancel;
-          const successPct = denom > 0 ? Math.round((s.success / denom) * 100) : 0;
-          const isEmpty = s.total === 0;
-          const tone = isEmpty
-            ? { text: "text-muted-foreground/60", ring: "stroke-muted-foreground/30", chip: "bg-muted/40 text-muted-foreground ring-border", glow: "" }
-            : successPct >= 80
-              ? { text: "text-emerald-600 dark:text-emerald-400", ring: "stroke-emerald-500", chip: "bg-emerald-500/10 text-emerald-700 dark:text-emerald-300 ring-emerald-500/30", glow: "shadow-[0_0_16px_-2px_rgba(16,185,129,0.4)]" }
-              : successPct >= 50
-                ? { text: "text-amber-600 dark:text-amber-400", ring: "stroke-amber-500", chip: "bg-amber-500/10 text-amber-700 dark:text-amber-300 ring-amber-500/30", glow: "shadow-[0_0_16px_-2px_rgba(245,158,11,0.4)]" }
-                : { text: "text-rose-600 dark:text-rose-400", ring: "stroke-rose-500", chip: "bg-rose-500/10 text-rose-700 dark:text-rose-300 ring-rose-500/30", glow: "shadow-[0_0_16px_-2px_rgba(244,63,94,0.4)]" };
-          const R = 15;
-          const C = 2 * Math.PI * R;
-          const offset = denom === 0 ? C : C * (1 - successPct / 100);
-          return (
-            <div key={c.key} className="group relative px-4 py-4 transition-colors hover:bg-muted/30">
-              <div className={cn("pointer-events-none absolute inset-0 bg-gradient-to-br to-transparent opacity-60", c.tint)} />
-              <div className="relative space-y-3">
-                <div className="flex items-center gap-1.5">
-                  <span className={cn("h-1.5 w-1.5 rounded-full", c.dot)} />
-                  <span className="text-[10px] font-bold uppercase tracking-[0.12em] text-muted-foreground truncate">{c.label}</span>
-                </div>
-                <div className="flex items-center gap-3">
-                  <div className={cn("relative shrink-0 rounded-full", tone.glow)}>
-                    <svg viewBox="0 0 36 36" className="h-12 w-12 -rotate-90">
-                      <circle cx="18" cy="18" r={R} className="fill-none stroke-muted/50" strokeWidth="2.5" />
-                      <circle cx="18" cy="18" r={R}
-                        className={cn("fill-none transition-all duration-700 ease-out", tone.ring)}
-                        strokeWidth="3" strokeLinecap="round" strokeDasharray={C} strokeDashoffset={offset} />
-                    </svg>
-                    <div className="absolute inset-0 flex items-center justify-center">
-                      <span className={cn("text-[11px] font-bold tabular-nums tracking-tight", tone.text)}>
-                        {denom === 0 ? "—" : `${successPct}%`}
-                      </span>
-                    </div>
-                  </div>
-                  <div className="text-xs tabular-nums leading-tight space-y-1">
-                    <span className={cn("inline-flex items-center rounded-full px-1.5 py-0.5 text-[10px] font-bold ring-1 ring-inset", tone.chip)}>
-                      {denom === 0 ? "no data" : `${successPct}% success`}
-                    </span>
-                    <div className="flex items-center gap-1.5">
-                      <span className="text-[10px] uppercase tracking-wider text-muted-foreground/70">Order</span>
-                      <span className="font-semibold text-foreground">{s.success}<span className="text-muted-foreground/50">/{denom || s.total}</span></span>
-                    </div>
-                    <div className="flex items-center gap-1.5">
-                      <span className="text-[10px] uppercase tracking-wider text-muted-foreground/70">Cancel</span>
-                      <span className="font-semibold text-rose-600 dark:text-rose-400">{s.cancel}</span>
-                    </div>
-                  </div>
-                </div>
+      {/* Header: single hero ring + compact per-source pills + refresh */}
+      <div className="flex flex-wrap items-center gap-x-5 gap-y-3 px-4 py-3.5">
+        {hero && (
+          <div className="flex items-center gap-3">
+            <div className="relative shrink-0">
+              <svg viewBox="0 0 36 36" className="h-14 w-14 -rotate-90">
+                <circle cx="18" cy="18" r={R} className="fill-none stroke-muted/60" strokeWidth="3" />
+                <circle cx="18" cy="18" r={R}
+                  className={cn("fill-none transition-all duration-700 ease-out", heroTone.ring)}
+                  strokeWidth="3.5" strokeLinecap="round" strokeDasharray={C}
+                  strokeDashoffset={heroDenom === 0 ? C : C * (1 - heroPct / 100)} />
+              </svg>
+              <div className="absolute inset-0 flex items-center justify-center">
+                <span className={cn("text-sm font-bold tabular-nums", heroTone.text)}>
+                  {heroDenom === 0 ? "—" : `${heroPct}%`}
+                </span>
               </div>
             </div>
-          );
-        })}
-        {showFraud && (
-          <div className="group relative px-4 py-4">
-            <div className="pointer-events-none absolute inset-0 bg-gradient-to-br from-fuchsia-500/[0.07] to-transparent opacity-60" />
-            <div className="relative space-y-2">
-              <div className="flex items-center gap-1.5">
-                <span className="h-1.5 w-1.5 rounded-full bg-fuchsia-500" />
-                <span className="text-[10px] font-bold uppercase tracking-[0.12em] text-muted-foreground truncate">Fraud Note</span>
+            <div className="leading-tight">
+              <div className="text-[10px] font-bold uppercase tracking-[0.12em] text-muted-foreground">
+                Success rate
               </div>
-              <p className="text-[11px] leading-snug text-foreground/80 line-clamp-5 whitespace-pre-wrap">{fraudNote}</p>
+              <div className="text-sm font-semibold tabular-nums text-foreground">
+                {hero.success}<span className="text-muted-foreground/60">/{heroDenom || hero.total}</span>
+                <span className="ml-2 text-xs font-medium text-rose-600 dark:text-rose-400">{hero.cancel} cancel</span>
+              </div>
             </div>
           </div>
         )}
-      </div>
-      {/* Per-courier breakdown — each courier separately (Pathao = own API, rest via BDCourier) */}
-      <div className="border-t border-border/60 bg-muted/20">
-        <div className="flex items-center justify-between gap-2 px-4 pt-3 pb-1.5">
-          <span className="text-[10px] font-bold uppercase tracking-[0.12em] text-muted-foreground">
-            Courier-wise success rate
-          </span>
-          <button
-            type="button"
-            onClick={onRefresh}
-            disabled={refreshing}
-            className="inline-flex items-center gap-1 rounded-full border bg-card px-2 py-0.5 text-[10px] font-medium text-muted-foreground transition-colors hover:text-foreground disabled:opacity-50"
-          >
-            <RefreshCw className={cn("h-3 w-3", refreshing && "animate-spin")} />
-            {refreshing ? "Refreshing" : "Refresh"}
-          </button>
-        </div>
-        {courierRows.length === 0 ? (
-          <p className="px-4 pb-3 text-[11px] text-muted-foreground/70">
-            {loading || refreshing ? "Courier data ashche..." : "Kono courier record pawa jayni."}
-          </p>
-        ) : (
-          <ul className="divide-y divide-border/50">
-            {courierRows.map((c) => {
-              const denom = c.success + c.cancel;
-              const pct = denom > 0 ? Math.round((c.success / denom) * 100) : 0;
+
+        {subCols.length > 0 && (
+          <div className="flex flex-wrap items-center gap-1.5">
+            {subCols.map((c) => {
+              const s = stats[c.key]!;
+              const denom = s.success + s.cancel;
+              const pct = denom > 0 ? Math.round((s.success / denom) * 100) : 0;
               const t = toneFor(pct, denom === 0);
               return (
-                <li key={c.name} className="flex items-center gap-3 px-4 py-2 transition-colors hover:bg-muted/40">
-                  <span className="w-24 shrink-0 truncate text-[11px] font-semibold text-foreground">{c.label}</span>
-                  <div className="h-1.5 flex-1 overflow-hidden rounded-full bg-muted">
-                    <div className={cn("h-full rounded-full transition-all duration-700", t.bar)} style={{ width: `${denom === 0 ? 0 : pct}%` }} />
-                  </div>
-                  <span className={cn("w-10 shrink-0 text-right text-[11px] font-bold tabular-nums", t.text)}>
-                    {denom === 0 ? "—" : `${pct}%`}
-                  </span>
-                  <span className="w-20 shrink-0 text-right text-[10px] tabular-nums text-muted-foreground">
-                    <span className="font-semibold text-foreground">{c.success}</span>/{denom || c.total}
-                    <span className="ml-1 text-rose-600 dark:text-rose-400">✕{c.cancel}</span>
-                  </span>
-                </li>
+                <span
+                  key={c.key}
+                  className="inline-flex items-center gap-1.5 rounded-full border bg-muted/30 px-2.5 py-1 text-[11px]"
+                >
+                  <span className={cn("h-1.5 w-1.5 rounded-full", c.dot)} />
+                  <span className="text-muted-foreground">{c.label}</span>
+                  <span className={cn("font-bold tabular-nums", t.text)}>{denom === 0 ? "—" : `${pct}%`}</span>
+                  <span className="tabular-nums text-muted-foreground/70">{s.success}/{denom || s.total}</span>
+                </span>
               );
             })}
-          </ul>
+          </div>
         )}
+
+        <button
+          type="button"
+          onClick={onRefresh}
+          disabled={refreshing}
+          className="ml-auto inline-flex items-center gap-1.5 rounded-full border bg-card px-2.5 py-1 text-[11px] font-medium text-muted-foreground transition-colors hover:text-foreground disabled:opacity-50"
+        >
+          <RefreshCw className={cn("h-3 w-3", refreshing && "animate-spin")} />
+          {refreshing ? "Refreshing" : "Refresh"}
+        </button>
       </div>
+
+      {/* Per-courier breakdown */}
+      {(courierRows.length > 0 || loading || refreshing) && (
+        <div className="border-t border-border/60">
+          {courierRows.length === 0 ? (
+            <p className="px-4 py-2.5 text-[11px] text-muted-foreground/70">Courier data ashche...</p>
+          ) : (
+            <ul className="divide-y divide-border/40">
+              {courierRows.map((c) => {
+                const denom = c.success + c.cancel;
+                const pct = denom > 0 ? Math.round((c.success / denom) * 100) : 0;
+                const t = toneFor(pct, denom === 0);
+                return (
+                  <li key={c.name} className="flex items-center gap-3 px-4 py-2 transition-colors hover:bg-muted/30">
+                    <span className="w-24 shrink-0 truncate text-[11px] font-medium text-foreground">{c.label}</span>
+                    <div className="h-1 flex-1 overflow-hidden rounded-full bg-muted">
+                      <div className={cn("h-full rounded-full transition-all duration-700", t.bar)} style={{ width: `${denom === 0 ? 0 : pct}%` }} />
+                    </div>
+                    <span className={cn("w-9 shrink-0 text-right text-[11px] font-bold tabular-nums", t.text)}>
+                      {denom === 0 ? "—" : `${pct}%`}
+                    </span>
+                    <span className="w-14 shrink-0 text-right text-[10px] tabular-nums text-muted-foreground">
+                      {c.success}/{denom || c.total}
+                    </span>
+                  </li>
+                );
+              })}
+            </ul>
+          )}
+        </div>
+      )}
+
+      {showFraud && (
+        <div className="border-t border-border/60 bg-muted/20 px-4 py-2.5">
+          <span className="text-[10px] font-bold uppercase tracking-[0.12em] text-muted-foreground">Fraud note</span>
+          <p className="mt-1 text-[11px] leading-snug text-foreground/80 whitespace-pre-wrap">{fraudNote}</p>
+        </div>
+      )}
     </div>
   );
 }
