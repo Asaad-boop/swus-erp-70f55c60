@@ -1536,23 +1536,15 @@ function splitCourierProviders(providers?: HistProvider[] | null) {
                     </SelectContent>
                   </Select>
                 </FieldShell>
-                <div className="flex items-center justify-between rounded-md border px-3 py-2">
-                  <span className="text-xs">Preorder</span>
-                  <Switch checked={form.is_preorder} onCheckedChange={(v) => setForm({ ...form, is_preorder: v })} />
-                </div>
-                <Button
-                  type="button"
-                  variant="outline"
-                  className="w-full gap-1.5 border-indigo-300 text-indigo-700 hover:bg-indigo-50 dark:border-indigo-900 dark:text-indigo-300"
-                  disabled={order?.status === "pre_order"}
-                  onClick={() => setPreorderOpen(true)}
-                >
-                  <CalendarClock className="h-3.5 w-3.5" />
-                  {order?.status === "pre_order" ? "Already a Pre-order" : "Move to Pre-order"}
-                </Button>
-                <div className="flex items-center justify-between rounded-md border px-3 py-2">
-                  <span className="text-xs">Cross Sale</span>
-                  <Switch checked={form.is_cross_sale} onCheckedChange={(v) => setForm({ ...form, is_cross_sale: v })} />
+                <div className="grid grid-cols-2 gap-2">
+                  <div className="flex items-center justify-between rounded-md border px-2.5 py-2">
+                    <span className="text-[11px]">Preorder</span>
+                    <Switch checked={form.is_preorder} onCheckedChange={(v) => setForm({ ...form, is_preorder: v })} />
+                  </div>
+                  <div className="flex items-center justify-between rounded-md border px-2.5 py-2">
+                    <span className="text-[11px]">Cross Sale</span>
+                    <Switch checked={form.is_cross_sale} onCheckedChange={(v) => setForm({ ...form, is_cross_sale: v })} />
+                  </div>
                 </div>
               </div>
             </div>
