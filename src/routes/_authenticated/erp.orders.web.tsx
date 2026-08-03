@@ -219,11 +219,56 @@ function CallLogPopover({
 type Breakdown = { total: number; confirmed: number; cancelled: number; returned: number; delivered: number };
 
 type ProviderStat = { total: number; success: number; cancelled: number };
+type NamedProviderStat = ProviderStat & { name: string; label: string };
 type CourierBreakdown = {
   pathao: ProviderStat;
   steadfast: ProviderStat;
+  all: ProviderStat;
+  providers: NamedProviderStat[];
   found: boolean;
 };
+
+const COURIER_LABELS: Record<string, string> = {
+  pathao: "Pathao",
+  steadfast: "Steadfast",
+  redx: "RedX",
+  paperfly: "Paperfly",
+  parceldex: "ParcelDex",
+  courrierfast: "CourierFast",
+  sundarban: "Sundarban",
+  ecourier: "eCourier",
+  parcelll: "Parcelll",
+};
+
+function courierLabel(name: string, fallback?: string | null) {
+  return COURIER_LABELS[name] ?? fallback ?? name.charAt(0).toUpperCase() + name.slice(1);
+}
+
+function buildCourierBreakdown(
+  providers: Array<{ name: string; label?: string | null; total?: number; success?: number; cancelled?: number; ok?: boolean }> | null | undefined,
+): CourierBreakdown {
+  const empty = { total: 0, success: 0, cancelled: 0 };
+  const result: CourierBreakdown = {
+    pathao: { ...empty },
+    steadfast: { ...empty },
+    all: { ...empty },
+    providers: [],
+    found: false,
+  };
+  (providers ?? []).forEach((p) => {
+    if (p.ok === false) return;
+    const stat = { total: p.total ?? 0, success: p.success ?? 0, cancelled: p.cancelled ?? 0 };
+    if (p.name === "pathao") result.pathao = stat;
+    if (p.name === "steadfast") result.steadfast = stat;
+    result.all.total += stat.total;
+    result.all.success += stat.success;
+    result.all.cancelled += stat.cancelled;
+    if (stat.total > 0) result.providers.push({ ...stat, name: p.name, label: courierLabel(p.name, p.label) });
+  });
+  result.providers.sort((a, b) => b.total - a.total);
+  result.found = result.all.total > 0;
+  return result;
+}
 
 function normalizePhone(raw: string) {
   const digits = raw.replace(/\D/g, "");
