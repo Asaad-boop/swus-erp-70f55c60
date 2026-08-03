@@ -1977,31 +1977,16 @@ function splitCourierProviders(providers?: HistProvider[] | null) {
             />
           )}
 
-          {/* Customer 360 */}
-          <CustomerHistoryPanel brandId={order.brand_id ?? null} phone={phone} currentOrderId={orderId} />
-
-          {/* Returns & Exchanges cases */}
-          <OrderCasesPanel orderId={orderId} />
-
-          {/* Contact info */}
-          <section className="rounded-2xl border border-gray-100 dark:border-border bg-white dark:bg-card shadow-sm p-4 space-y-2 text-xs">
-            <div className="flex items-center gap-2">
-              <Phone className="h-3.5 w-3.5 text-emerald-600" />
-              <span className="text-gray-500">Mobile:</span>
-              <CopyChip value={`+88${form.mobile}`} className="-mx-1">
-                <span className="font-mono">+88{form.mobile}</span>
-              </CopyChip>
-            </div>
-            <div className="flex items-center gap-2"><Smartphone className="h-3.5 w-3.5 text-gray-400" /><span className="text-gray-500">Device:</span><span className="capitalize">{sessionInfo?.device_type || "Not tracked"}</span></div>
-          </section>
-
-          <section className="rounded-2xl border border-gray-100 dark:border-border bg-white dark:bg-card shadow-sm overflow-hidden">
-            <header className="px-5 py-3 border-b border-gray-100 dark:border-border flex items-center gap-2">
-              <span className="h-1.5 w-1.5 rounded-full bg-amber-500" />
-              <TagIcon className="h-3.5 w-3.5 text-amber-600" />
-              <h3 className="text-[13px] font-semibold">Order Tags</h3>
-            </header>
-            <div className="p-4 space-y-2">
+          {/* Tags — folded until needed */}
+          <Panel
+            title={<span className="inline-flex items-center gap-1.5"><TagIcon className="h-3.5 w-3.5 text-amber-600" />Order Tags</span>}
+            accent="bg-amber-500"
+            collapsible
+            defaultOpen={tags.length > 0}
+            bodyClassName="p-4"
+            right={tags.length > 0 ? <span className="text-[10px] text-gray-500 tabular-nums">{tags.length}</span> : null}
+          >
+            <div className="space-y-2">
               <div className="flex flex-wrap gap-1.5 min-h-[24px]">
                 {tags.length === 0 && <span className="text-xs text-gray-400">No tags yet</span>}
                 {tags.map((t) => (
@@ -2023,7 +2008,7 @@ function splitCourierProviders(providers?: HistProvider[] | null) {
                   }} />
               </div>
             </div>
-          </section>
+          </Panel>
 
           <section className="rounded-2xl border border-gray-100 dark:border-border bg-white dark:bg-card shadow-sm overflow-hidden">
             <header className="px-5 py-3 border-b border-gray-100 dark:border-border flex items-center gap-2">
