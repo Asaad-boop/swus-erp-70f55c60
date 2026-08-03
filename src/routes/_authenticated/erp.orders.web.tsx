@@ -1443,8 +1443,9 @@ function _WebOrdersPageBody() {
                     {/* Success Rate */}
                     <TableCell className="py-3">
                       <SuccessBlock
-                        total={courier.pathao.total + courier.steadfast.total || b.total}
-                        success={courier.pathao.success + courier.steadfast.success || b.confirmed}
+                        total={courier.all.total || b.total}
+                        success={courier.all.success || b.confirmed}
+                        providers={courier.providers}
                       />
                     </TableCell>
 
