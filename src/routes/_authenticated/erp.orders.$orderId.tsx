@@ -1794,7 +1794,7 @@ function splitCourierProviders(providers?: HistProvider[] | null) {
                 </div>
               )}
               <Button
-                className="w-full mt-4 h-11 bg-indigo-600 hover:bg-indigo-700 text-white shadow-sm shadow-indigo-600/20"
+                className="w-full mt-4 h-11 bg-gradient-to-r from-primary to-indigo-500 text-primary-foreground shadow-lg shadow-primary/25 transition-all duration-200 hover:shadow-xl hover:shadow-primary/30 hover:brightness-105 active:scale-[0.98]"
                 size="lg"
                 disabled={confirmOrder.isPending}
                 onClick={() => {
@@ -1992,6 +1992,7 @@ function splitCourierProviders(providers?: HistProvider[] | null) {
             collapsible
             defaultOpen={tags.length > 0}
             bodyClassName="p-4"
+            lazy
             right={tags.length > 0 ? <span className="text-[10px] text-gray-500 tabular-nums">{tags.length}</span> : null}
           >
             <div className="space-y-2">
