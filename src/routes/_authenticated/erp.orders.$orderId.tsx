@@ -138,7 +138,7 @@ function CopyChip({ value, className, children }: { value: string; className?: s
 
 /** Unified section shell — optionally collapsible to keep the page calm. */
 function Panel({
-  title, accent = "bg-gray-300", right, children, collapsible = false, defaultOpen = true, className, bodyClassName,
+  title, accent = "bg-gray-300", right, children, collapsible = false, defaultOpen = true, className, bodyClassName, lazy = false,
 }: {
   title: React.ReactNode;
   accent?: string;
@@ -148,28 +148,30 @@ function Panel({
   defaultOpen?: boolean;
   className?: string;
   bodyClassName?: string;
+  lazy?: boolean;
 }) {
   const [open, setOpen] = useState(defaultOpen);
   const isOpen = collapsible ? open : true;
   return (
-    <section className={cn("rounded-2xl border border-gray-100 dark:border-border bg-white dark:bg-card shadow-sm overflow-hidden", className)}>
-      <header className="px-5 py-3 flex items-center justify-between gap-3">
+    <section className={cn("surface-panel rise-in group/panel relative rounded-2xl overflow-hidden", lazy && "lazy-panel", className)}>
+      <span className="pointer-events-none absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-white/60 to-transparent dark:via-white/10" />
+      <header className="surface-head px-4 py-3 sm:px-5 grid grid-cols-[minmax(0,1fr)_auto] items-center gap-3">
         <button
           type="button"
           disabled={!collapsible}
           onClick={() => setOpen((v) => !v)}
-          className={cn("flex min-w-0 items-center gap-2 text-left", collapsible && "group")}
+          className={cn("flex min-w-0 items-center gap-2.5 text-left", collapsible && "group cursor-pointer")}
         >
-          <span className={cn("h-1.5 w-1.5 shrink-0 rounded-full", accent)} />
-          <h3 className="truncate text-[13px] font-semibold text-gray-900 dark:text-foreground">{title}</h3>
+          <span className={cn("h-5 w-1.5 shrink-0 rounded-full transition-transform duration-300 group-hover/panel:scale-y-110", accent)} />
+          <h3 className="font-display truncate text-[13px] font-semibold tracking-tight text-gray-900 dark:text-foreground">{title}</h3>
           {collapsible && (
-            <ChevronDown className={cn("h-3.5 w-3.5 shrink-0 text-gray-400 transition-transform", isOpen && "rotate-180")} />
+            <ChevronDown className={cn("h-3.5 w-3.5 shrink-0 text-muted-foreground transition-transform duration-300", isOpen && "rotate-180")} />
           )}
         </button>
         {right ? <div className="shrink-0">{right}</div> : null}
       </header>
       {isOpen && (
-        <div className={cn("border-t border-gray-100 dark:border-border", bodyClassName ?? "p-5")}>{children}</div>
+        <div className={cn("border-t border-gray-100 dark:border-border", bodyClassName ?? "p-4 sm:p-5")}>{children}</div>
       )}
     </section>
   );
@@ -1351,20 +1353,21 @@ function splitCourierProviders(providers?: HistProvider[] | null) {
   /* ------------------------------ Render ----------------------------------- */
 
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-background print:hidden">
+    <div className="min-h-screen workspace-bg print:hidden">
       <OrderLockBanner lock={orderLock} />
       {/* Sticky Header */}
-      <header className="sticky top-0 z-30 border-b border-gray-100 dark:border-border bg-white/85 dark:bg-card/85 backdrop-blur supports-[backdrop-filter]:bg-white/70">
-        <div className="max-w-[1600px] mx-auto px-4 md:px-6 py-2.5 flex flex-wrap items-center justify-between gap-3">
-          <div className="flex items-center gap-2 min-w-0">
+      <header className="glass-bar sticky top-0 z-30 border-b border-border/60">
+        <span className="pointer-events-none absolute inset-x-0 bottom-0 h-px bg-gradient-to-r from-transparent via-primary/40 to-transparent" />
+        <div className="max-w-[1600px] mx-auto px-3 sm:px-4 md:px-6 py-2.5 grid grid-cols-[minmax(0,1fr)_auto] items-center gap-3">
+          <div className="flex min-w-0 items-center gap-2">
             <Button asChild size="sm" variant="ghost" className="h-8 px-2 text-gray-600 hover:text-gray-900">
-              <Link to="/erp/orders/web"><ArrowLeft className="h-4 w-4 mr-1" />Orders</Link>
+              <Link to="/erp/orders/web"><ArrowLeft className="h-4 w-4 sm:mr-1" /><span className="hidden sm:inline">Orders</span></Link>
             </Button>
-            <span className="h-4 w-px bg-gray-200 dark:bg-border" />
+            <span className="h-4 w-px bg-border" />
             <div className="flex items-baseline gap-2 min-w-0">
-              <span className="text-[11px] uppercase tracking-wider text-gray-500">Order</span>
+              <span className="hidden sm:inline text-[11px] uppercase tracking-wider text-muted-foreground">Order</span>
               <CopyChip value={invoiceDisplay(order)} className="-mx-1">
-                <span className="font-mono text-sm font-semibold text-gray-900 dark:text-foreground truncate">#{invoiceDisplay(order)}</span>
+                <span className="font-mono text-sm font-semibold text-foreground truncate">#{invoiceDisplay(order)}</span>
               </CopyChip>
               <Badge variant="outline" className={cn("h-5 px-1.5 text-[10px] hidden sm:inline-flex", statusBadge(order.status).className)}>{statusBadge(order.status).label}</Badge>
               {(() => {
@@ -1392,8 +1395,8 @@ function splitCourierProviders(providers?: HistProvider[] | null) {
               </div>
             )}
           </div>
-          <div className="flex flex-wrap items-center gap-2">
-            <div className="hidden md:flex items-center gap-2 text-[11px] text-gray-600">
+          <div className="flex shrink-0 items-center gap-2">
+            <div className="hidden lg:flex items-center gap-2 text-[11px] text-muted-foreground">
               <span className="text-gray-400">Created</span>
               <span className="text-emerald-600 font-medium">{formatDistanceToNow(new Date(order.created_at), { addSuffix: true })}</span>
               <span className="h-3 w-px bg-gray-200" />
@@ -1402,19 +1405,19 @@ function splitCourierProviders(providers?: HistProvider[] | null) {
             </div>
             {!isWebOrder && (
               <>
-                <Button size="sm" variant="outline" className="h-8" onClick={() => {
+                <Button size="sm" variant="outline" className="h-8 px-2 sm:px-3 transition-transform active:scale-95" onClick={() => {
                   window.print();
                   void import("@/lib/erp/mark-printed").then(({ markOrdersPrinted }) => markOrdersPrinted([order.id]));
-                }}><Printer className="h-3.5 w-3.5 mr-1" />Invoice</Button>
-                <Button size="sm" variant="outline" className="h-8" onClick={() => setBookOpen(true)}><Truck className="h-3.5 w-3.5 mr-1" />Pathao</Button>
-                <Button size="sm" variant="outline" className="h-8" onClick={() => setBookSteadfastOpen(true)}><Truck className="h-3.5 w-3.5 mr-1" />Steadfast</Button>
+                }}><Printer className="h-3.5 w-3.5 sm:mr-1" /><span className="hidden sm:inline">Invoice</span></Button>
+                <Button size="sm" variant="outline" className="h-8 px-2 sm:px-3 transition-transform active:scale-95" onClick={() => setBookOpen(true)}><Truck className="h-3.5 w-3.5 sm:mr-1" /><span className="hidden sm:inline">Pathao</span></Button>
+                <Button size="sm" variant="outline" className="h-8 px-2 sm:px-3 hidden sm:inline-flex transition-transform active:scale-95" onClick={() => setBookSteadfastOpen(true)}><Truck className="h-3.5 w-3.5 mr-1" />Steadfast</Button>
               </>
             )}
           </div>
         </div>
       </header>
 
-      <div className="max-w-[1600px] mx-auto p-4 md:p-6 grid grid-cols-1 xl:grid-cols-[minmax(0,1fr)_340px] gap-4 items-start">
+      <div className="max-w-[1600px] mx-auto p-3 sm:p-4 md:p-6 grid grid-cols-1 xl:grid-cols-[minmax(0,1fr)_minmax(320px,380px)] gap-3 sm:gap-4 items-start">
         {/* MAIN */}
         <div className="space-y-4 min-w-0">
           {/* Stats strip */}
@@ -1791,7 +1794,7 @@ function splitCourierProviders(providers?: HistProvider[] | null) {
                 </div>
               )}
               <Button
-                className="w-full mt-4 h-11 bg-indigo-600 hover:bg-indigo-700 text-white shadow-sm shadow-indigo-600/20"
+                className="w-full mt-4 h-11 bg-gradient-to-r from-primary to-indigo-500 text-primary-foreground shadow-lg shadow-primary/25 transition-all duration-200 hover:shadow-xl hover:shadow-primary/30 hover:brightness-105 active:scale-[0.98]"
                 size="lg"
                 disabled={confirmOrder.isPending}
                 onClick={() => {
@@ -1835,7 +1838,7 @@ function splitCourierProviders(providers?: HistProvider[] | null) {
         </div>
 
         {/* RIGHT SIDEBAR */}
-        <aside className="space-y-4 xl:sticky xl:top-[64px] xl:max-h-[calc(100vh-80px)] xl:overflow-y-auto xl:pr-1 xl:-mr-1">
+        <aside className="space-y-3 sm:space-y-4 xl:sticky xl:top-[64px] xl:max-h-[calc(100vh-80px)] xl:overflow-y-auto xl:overscroll-contain xl:pr-1 xl:-mr-1 [scrollbar-width:thin]">
           <Panel
             title="Order Summary"
             accent="bg-emerald-500"
@@ -1989,6 +1992,7 @@ function splitCourierProviders(providers?: HistProvider[] | null) {
             collapsible
             defaultOpen={tags.length > 0}
             bodyClassName="p-4"
+            lazy
             right={tags.length > 0 ? <span className="text-[10px] text-gray-500 tabular-nums">{tags.length}</span> : null}
           >
             <div className="space-y-2">
@@ -2105,8 +2109,8 @@ function splitCourierProviders(providers?: HistProvider[] | null) {
           </Panel>
 
           {/* Insights — one at a time instead of four stacked cards */}
-          <div className="space-y-3">
-            <div className="flex items-center gap-1 rounded-xl border border-gray-100 dark:border-border bg-white dark:bg-card p-1 shadow-sm">
+          <div className="space-y-3 lazy-panel">
+            <div className="surface-panel flex items-center gap-1 rounded-xl p-1">
               {([
                 ["history", "Customer"],
                 ["cases", "Cases"],
@@ -2118,10 +2122,10 @@ function splitCourierProviders(providers?: HistProvider[] | null) {
                   type="button"
                   onClick={() => setInsightTab(key)}
                   className={cn(
-                    "flex-1 rounded-lg px-2 py-1.5 text-[11px] font-medium transition-colors",
+                    "flex-1 rounded-lg px-2 py-1.5 text-[11px] font-medium transition-all duration-200 active:scale-[0.97]",
                     insightTab === key
-                      ? "bg-indigo-600 text-white shadow-sm"
-                      : "text-gray-500 hover:bg-gray-100 dark:hover:bg-muted/50",
+                      ? "bg-primary text-primary-foreground shadow-sm shadow-primary/25"
+                      : "text-muted-foreground hover:bg-muted/60",
                   )}
                 >{label}</button>
               ))}

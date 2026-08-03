@@ -126,6 +126,17 @@
   --gradient-hr-hero: linear-gradient(135deg, oklch(0.97 0.03 265) 0%, oklch(0.96 0.04 235) 60%, oklch(0.97 0.03 305) 100%);
   --shadow-hr-card: 0 1px 2px 0 oklch(0.2 0.04 265 / 0.04), 0 1px 1px 0 oklch(0.2 0.04 265 / 0.03);
   --shadow-hr-elevated: 0 8px 24px -12px oklch(0.2 0.04 265 / 0.12), 0 2px 4px -2px oklch(0.2 0.04 265 / 0.06);
+  /* Order workspace surfaces */
+  --panel-bg: oklch(1 0 0);
+  --panel-border: oklch(0.93 0.01 258);
+  --panel-border-hover: oklch(0.87 0.03 262);
+  --panel-head: linear-gradient(180deg, oklch(0.995 0.004 258) 0%, oklch(1 0 0) 100%);
+  --shadow-panel: 0 1px 2px oklch(0.2 0.04 265 / 0.05), 0 8px 20px -18px oklch(0.2 0.04 265 / 0.35);
+  --shadow-panel-lg: 0 2px 4px oklch(0.2 0.04 265 / 0.05), 0 18px 40px -24px oklch(0.2 0.04 265 / 0.38);
+  --glass-bg: oklch(1 0 0 / 0.72);
+  --workspace-bg: radial-gradient(1200px 500px at 12% -10%, oklch(0.94 0.045 268 / 0.75), transparent 60%),
+                  radial-gradient(900px 420px at 92% -6%, oklch(0.94 0.05 195 / 0.6), transparent 62%),
+                  oklch(0.985 0.004 258);
 }
 
 .dark {
@@ -182,6 +193,16 @@
   --gradient-hr-hero: linear-gradient(135deg, oklch(0.22 0.05 265) 0%, oklch(0.2 0.06 235) 60%, oklch(0.22 0.05 305) 100%);
   --shadow-hr-card: 0 1px 2px 0 oklch(0 0 0 / 0.3);
   --shadow-hr-elevated: 0 8px 24px -12px oklch(0 0 0 / 0.5), 0 2px 4px -2px oklch(0 0 0 / 0.3);
+  --panel-bg: oklch(0.185 0.045 282);
+  --panel-border: oklch(1 0 0 / 0.08);
+  --panel-border-hover: oklch(1 0 0 / 0.16);
+  --panel-head: linear-gradient(180deg, oklch(1 0 0 / 0.05) 0%, oklch(1 0 0 / 0) 100%);
+  --shadow-panel: 0 1px 2px oklch(0 0 0 / 0.35), 0 10px 26px -20px oklch(0 0 0 / 0.7);
+  --shadow-panel-lg: 0 2px 6px oklch(0 0 0 / 0.4), 0 22px 46px -26px oklch(0 0 0 / 0.75);
+  --glass-bg: oklch(0.18 0.05 282 / 0.7);
+  --workspace-bg: radial-gradient(1200px 500px at 12% -10%, oklch(0.32 0.1 275 / 0.55), transparent 60%),
+                  radial-gradient(900px 420px at 92% -6%, oklch(0.3 0.09 205 / 0.45), transparent 62%),
+                  oklch(0.13 0.04 280);
 }
 
 @layer base {
@@ -200,6 +221,53 @@
   h1, h2, h3, h4, h5, .font-display {
     font-family: var(--font-display);
     letter-spacing: -0.02em;
+  }
+}
+
+@keyframes panel-rise {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: none; }
+}
+
+@utility workspace-bg {
+  background: var(--workspace-bg);
+  background-attachment: fixed;
+}
+
+@utility surface-panel {
+  background: var(--panel-bg);
+  border: 1px solid var(--panel-border);
+  box-shadow: var(--shadow-panel);
+  transition: box-shadow 240ms cubic-bezier(0.22, 1, 0.36, 1), border-color 240ms ease;
+  &:hover {
+    box-shadow: var(--shadow-panel-lg);
+    border-color: var(--panel-border-hover);
+  }
+}
+
+@utility surface-head {
+  background: var(--panel-head);
+}
+
+@utility glass-bar {
+  background: var(--glass-bg);
+  backdrop-filter: blur(16px) saturate(180%);
+  -webkit-backdrop-filter: blur(16px) saturate(180%);
+}
+
+@utility rise-in {
+  animation: panel-rise 420ms cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+@utility lazy-panel {
+  content-visibility: auto;
+  contain-intrinsic-size: auto 340px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
   }
 }
 
