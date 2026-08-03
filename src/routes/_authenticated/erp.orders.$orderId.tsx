@@ -1838,7 +1838,7 @@ function splitCourierProviders(providers?: HistProvider[] | null) {
         </div>
 
         {/* RIGHT SIDEBAR */}
-        <aside className="space-y-4 xl:sticky xl:top-[64px] xl:max-h-[calc(100vh-80px)] xl:overflow-y-auto xl:pr-1 xl:-mr-1">
+        <aside className="space-y-3 sm:space-y-4 xl:sticky xl:top-[64px] xl:max-h-[calc(100vh-80px)] xl:overflow-y-auto xl:overscroll-contain xl:pr-1 xl:-mr-1 [scrollbar-width:thin]">
           <Panel
             title="Order Summary"
             accent="bg-emerald-500"
