@@ -153,6 +153,14 @@ function toneFor(pct: number, empty: boolean) {
   return { text: "text-rose-600 dark:text-rose-400", ring: "stroke-rose-500", bar: "bg-rose-500", chip: "bg-rose-500/10 text-rose-700 dark:text-rose-300 ring-rose-500/30", glow: "shadow-[0_0_16px_-2px_rgba(244,63,94,0.4)]" };
 }
 
+/** Bangla verdict for a success percentage. */
+function banglaVerdict(pct: number, empty: boolean) {
+  if (empty) return { label: "তথ্য নেই", chip: "bg-muted/50 text-muted-foreground ring-border" };
+  if (pct >= 80) return { label: "ভালো", chip: "bg-emerald-500/10 text-emerald-700 dark:text-emerald-300 ring-emerald-500/30" };
+  if (pct >= 50) return { label: "মিডিয়াম", chip: "bg-amber-500/10 text-amber-700 dark:text-amber-300 ring-amber-500/30" };
+  return { label: "খারাপ", chip: "bg-rose-500/10 text-rose-700 dark:text-rose-300 ring-rose-500/30" };
+}
+
 function StatsStrip({
   stats,
   customerName: cname,
@@ -240,8 +248,16 @@ function StatsStrip({
               </div>
             </div>
             <div className="leading-tight">
-              <div className="text-[10px] font-bold uppercase tracking-[0.12em] text-muted-foreground">
-                Success rate
+              <div className="flex items-center gap-2">
+                <span className="text-[10px] font-bold uppercase tracking-[0.12em] text-muted-foreground">
+                  Success rate
+                </span>
+                <span className={cn(
+                  "inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-bold ring-1 ring-inset",
+                  banglaVerdict(heroPct, heroDenom === 0).chip,
+                )}>
+                  {banglaVerdict(heroPct, heroDenom === 0).label}
+                </span>
               </div>
               <div className="text-sm font-semibold tabular-nums text-foreground">
                 {hero.success}<span className="text-muted-foreground/60">/{heroDenom || hero.total}</span>
@@ -303,6 +319,12 @@ function StatsStrip({
                     </div>
                     <span className={cn("w-9 shrink-0 text-right text-[11px] font-bold tabular-nums", t.text)}>
                       {denom === 0 ? "—" : `${pct}%`}
+                    </span>
+                    <span className={cn(
+                      "w-16 shrink-0 rounded-full px-1.5 py-0.5 text-center text-[10px] font-bold ring-1 ring-inset",
+                      banglaVerdict(pct, denom === 0).chip,
+                    )}>
+                      {banglaVerdict(pct, denom === 0).label}
                     </span>
                     <span className="w-14 shrink-0 text-right text-[10px] tabular-nums text-muted-foreground">
                       {c.success}/{denom || c.total}
