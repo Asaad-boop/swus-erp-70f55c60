@@ -1827,7 +1827,12 @@ function splitCourierProviders(providers?: HistProvider[] | null) {
               </Button>
             )}
             </div>
-          </section>
+          </Panel>
+
+          {/* Order Timeline — folded by default */}
+          <Panel title="Order Timeline" accent="bg-sky-500" collapsible defaultOpen={false} bodyClassName="p-0">
+            <OrderTimeline orderId={orderId} />
+          </Panel>
         </div>
 
         {/* RIGHT SIDEBAR */}
