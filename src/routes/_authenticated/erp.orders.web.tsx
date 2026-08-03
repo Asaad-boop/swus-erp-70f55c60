@@ -292,7 +292,15 @@ function initials(name: string) {
   return name.split(/\s+/).filter(Boolean).slice(0, 2).map((w) => w[0]?.toUpperCase() ?? "").join("") || "?";
 }
 
-function SuccessBlock({ total, success }: { total: number; success: number }) {
+function SuccessBlock({
+  total,
+  success,
+  providers = [],
+}: {
+  total: number;
+  success: number;
+  providers?: NamedProviderStat[];
+}) {
   const pct = total > 0 ? Math.round((success / total) * 100) : 0;
   const tone = total === 0
     ? { text: "text-muted-foreground/60", ring: "stroke-muted-foreground/30", chip: "bg-muted/40 text-muted-foreground ring-border", glow: "" }
@@ -335,6 +343,33 @@ function SuccessBlock({ total, success }: { total: number; success: number }) {
           <span className="text-[10px] uppercase tracking-wider text-muted-foreground/70">Rating</span>
           <span className="font-semibold text-foreground">{success}</span>
         </div>
+        {providers.length > 0 && (
+          <div className="space-y-0.5 pt-1">
+            {providers.slice(0, 4).map((p) => {
+              const ppct = p.total > 0 ? Math.round((p.success / p.total) * 100) : 0;
+              return (
+                <div key={p.name} className="flex items-center gap-1.5 text-[10px] leading-tight">
+                  <span className="w-14 shrink-0 truncate text-muted-foreground/80">{p.label}</span>
+                  <span
+                    className={cn(
+                      "font-semibold tabular-nums",
+                      ppct >= 80
+                        ? "text-emerald-600 dark:text-emerald-400"
+                        : ppct >= 50
+                          ? "text-amber-600 dark:text-amber-400"
+                          : "text-rose-600 dark:text-rose-400",
+                    )}
+                  >
+                    {ppct}%
+                  </span>
+                  <span className="text-muted-foreground/60 tabular-nums">
+                    {p.success}/{p.total}
+                  </span>
+                </div>
+              );
+            })}
+          </div>
+        )}
       </div>
     </div>
   );
