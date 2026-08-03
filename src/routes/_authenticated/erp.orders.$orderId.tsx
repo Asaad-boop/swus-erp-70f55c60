@@ -2108,8 +2108,8 @@ function splitCourierProviders(providers?: HistProvider[] | null) {
           </Panel>
 
           {/* Insights — one at a time instead of four stacked cards */}
-          <div className="space-y-3">
-            <div className="flex items-center gap-1 rounded-xl border border-gray-100 dark:border-border bg-white dark:bg-card p-1 shadow-sm">
+          <div className="space-y-3 lazy-panel">
+            <div className="surface-panel flex items-center gap-1 rounded-xl p-1">
               {([
                 ["history", "Customer"],
                 ["cases", "Cases"],
@@ -2121,10 +2121,10 @@ function splitCourierProviders(providers?: HistProvider[] | null) {
                   type="button"
                   onClick={() => setInsightTab(key)}
                   className={cn(
-                    "flex-1 rounded-lg px-2 py-1.5 text-[11px] font-medium transition-colors",
+                    "flex-1 rounded-lg px-2 py-1.5 text-[11px] font-medium transition-all duration-200 active:scale-[0.97]",
                     insightTab === key
-                      ? "bg-indigo-600 text-white shadow-sm"
-                      : "text-gray-500 hover:bg-gray-100 dark:hover:bg-muted/50",
+                      ? "bg-primary text-primary-foreground shadow-sm shadow-primary/25"
+                      : "text-muted-foreground hover:bg-muted/60",
                   )}
                 >{label}</button>
               ))}
