@@ -248,8 +248,16 @@ function StatsStrip({
               </div>
             </div>
             <div className="leading-tight">
-              <div className="text-[10px] font-bold uppercase tracking-[0.12em] text-muted-foreground">
-                Success rate
+              <div className="flex items-center gap-2">
+                <span className="text-[10px] font-bold uppercase tracking-[0.12em] text-muted-foreground">
+                  Success rate
+                </span>
+                <span className={cn(
+                  "inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-bold ring-1 ring-inset",
+                  banglaVerdict(heroPct, heroDenom === 0).chip,
+                )}>
+                  {banglaVerdict(heroPct, heroDenom === 0).label}
+                </span>
               </div>
               <div className="text-sm font-semibold tabular-nums text-foreground">
                 {hero.success}<span className="text-muted-foreground/60">/{heroDenom || hero.total}</span>
@@ -311,6 +319,12 @@ function StatsStrip({
                     </div>
                     <span className={cn("w-9 shrink-0 text-right text-[11px] font-bold tabular-nums", t.text)}>
                       {denom === 0 ? "—" : `${pct}%`}
+                    </span>
+                    <span className={cn(
+                      "w-16 shrink-0 rounded-full px-1.5 py-0.5 text-center text-[10px] font-bold ring-1 ring-inset",
+                      banglaVerdict(pct, denom === 0).chip,
+                    )}>
+                      {banglaVerdict(pct, denom === 0).label}
                     </span>
                     <span className="w-14 shrink-0 text-right text-[10px] tabular-nums text-muted-foreground">
                       {c.success}/{denom || c.total}
