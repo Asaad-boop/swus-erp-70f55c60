@@ -840,20 +840,9 @@ function _WebOrdersPageBody() {
       );
       const map = new Map<string, CourierBreakdown>();
       cacheRows.flat().forEach((row) => {
-        const hist = row.data as { providers?: Array<{ name: string; total: number; success: number; cancelled: number; ok: boolean }> } | null;
+        const hist = row.data as { providers?: Array<{ name: string; label?: string; total: number; success: number; cancelled: number; ok: boolean }> } | null;
         if (!hist) return;
-        const result: CourierBreakdown = {
-          pathao: { total: 0, success: 0, cancelled: 0 },
-          steadfast: { total: 0, success: 0, cancelled: 0 },
-          found: false,
-        };
-        (hist.providers ?? []).forEach((p) => {
-          const stat = { total: p.total ?? 0, success: p.success ?? 0, cancelled: p.cancelled ?? 0 };
-          if (p.name === "pathao") result.pathao = stat;
-          else if (p.name === "steadfast") result.steadfast = stat;
-        });
-        result.found = result.pathao.total + result.steadfast.total > 0;
-        map.set(row.phone, result);
+        map.set(row.phone, buildCourierBreakdown(hist.providers));
       });
       return map;
     },
@@ -875,16 +864,7 @@ function _WebOrdersPageBody() {
       );
       const map = new Map<string, CourierBreakdown>();
       Object.entries(results).forEach(([phone, d]) => {
-        const result: CourierBreakdown = {
-          pathao: { total: 0, success: 0, cancelled: 0 },
-          steadfast: { total: 0, success: 0, cancelled: 0 },
-          found: !!d.found,
-        };
-        (d.providers ?? []).forEach((p) => {
-          const stat = { total: p.total ?? 0, success: p.success ?? 0, cancelled: p.cancelled ?? 0 };
-          if (p.name === "pathao") result.pathao = stat;
-          else if (p.name === "steadfast") result.steadfast = stat;
-        });
+        const result = buildCourierBreakdown(d.providers);
         map.set(phone, result);
         map.set(normalizePhone(phone), result);
       });
@@ -906,10 +886,17 @@ function _WebOrdersPageBody() {
   };
 
   const emptyProvider: ProviderStat = { total: 0, success: 0, cancelled: 0 };
+  const emptyCourier: CourierBreakdown = {
+    pathao: emptyProvider,
+    steadfast: emptyProvider,
+    all: emptyProvider,
+    providers: [],
+    found: false,
+  };
   const getCourier = (r: WebOrderRow): CourierBreakdown => {
     const phone = normalizePhone(r.shipping_phone ?? r.guest_phone ?? "");
-    if (!phone) return { pathao: emptyProvider, steadfast: emptyProvider, found: false };
-    return courierHistory?.get(phone) ?? { pathao: emptyProvider, steadfast: emptyProvider, found: false };
+    if (!phone) return emptyCourier;
+    return courierHistory?.get(phone) ?? emptyCourier;
   };
 
   // Compute auto-tags for every loaded row (cheap, sync)
