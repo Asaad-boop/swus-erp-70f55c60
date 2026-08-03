@@ -1427,15 +1427,8 @@ function splitCourierProviders(providers?: HistProvider[] | null) {
           />
 
           {/* Customer row */}
-          <section className="rounded-2xl border border-gray-100 dark:border-border bg-white dark:bg-card shadow-sm overflow-hidden">
-            <header className="px-5 py-3 border-b border-gray-100 dark:border-border flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <span className="h-1.5 w-1.5 rounded-full bg-indigo-500" />
-                <h3 className="text-[13px] font-semibold text-gray-900 dark:text-foreground">Customer & Delivery</h3>
-              </div>
-              <span className="text-[10px] uppercase tracking-wider text-gray-400">Editable</span>
-            </header>
-            <div className="p-5 space-y-4">
+          <Panel title="Customer & Delivery" accent="bg-indigo-500" bodyClassName="p-5">
+            <div className="space-y-4">
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               <FieldShell label="Mobile Number">
                 <div className="relative">
