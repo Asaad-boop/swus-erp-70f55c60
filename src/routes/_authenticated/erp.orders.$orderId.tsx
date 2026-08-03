@@ -1329,6 +1329,7 @@ function splitCourierProviders(providers?: HistProvider[] | null) {
   const [bookOpen, setBookOpen] = useState(false);
   const [bookSteadfastOpen, setBookSteadfastOpen] = useState(false);
   const [showAddProducts, setShowAddProducts] = useState(false);
+  const [insightTab, setInsightTab] = useState<"history" | "cases" | "attribution" | "activity">("history");
   const isWebOrder = order?.status === "new" && ["website", "pixel", "utm"].includes(String(order?.source ?? ""));
   const [returnOpen, setReturnOpen] = useState(false);
   const [exchangeOpen, setExchangeOpen] = useState(false);
