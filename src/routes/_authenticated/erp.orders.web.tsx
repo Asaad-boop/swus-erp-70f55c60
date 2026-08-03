@@ -219,11 +219,56 @@ function CallLogPopover({
 type Breakdown = { total: number; confirmed: number; cancelled: number; returned: number; delivered: number };
 
 type ProviderStat = { total: number; success: number; cancelled: number };
+type NamedProviderStat = ProviderStat & { name: string; label: string };
 type CourierBreakdown = {
   pathao: ProviderStat;
   steadfast: ProviderStat;
+  all: ProviderStat;
+  providers: NamedProviderStat[];
   found: boolean;
 };
+
+const COURIER_LABELS: Record<string, string> = {
+  pathao: "Pathao",
+  steadfast: "Steadfast",
+  redx: "RedX",
+  paperfly: "Paperfly",
+  parceldex: "ParcelDex",
+  courrierfast: "CourierFast",
+  sundarban: "Sundarban",
+  ecourier: "eCourier",
+  parcelll: "Parcelll",
+};
+
+function courierLabel(name: string, fallback?: string | null) {
+  return COURIER_LABELS[name] ?? fallback ?? name.charAt(0).toUpperCase() + name.slice(1);
+}
+
+function buildCourierBreakdown(
+  providers: Array<{ name: string; label?: string | null; total?: number; success?: number; cancelled?: number; ok?: boolean }> | null | undefined,
+): CourierBreakdown {
+  const empty = { total: 0, success: 0, cancelled: 0 };
+  const result: CourierBreakdown = {
+    pathao: { ...empty },
+    steadfast: { ...empty },
+    all: { ...empty },
+    providers: [],
+    found: false,
+  };
+  (providers ?? []).forEach((p) => {
+    if (p.ok === false) return;
+    const stat = { total: p.total ?? 0, success: p.success ?? 0, cancelled: p.cancelled ?? 0 };
+    if (p.name === "pathao") result.pathao = stat;
+    if (p.name === "steadfast") result.steadfast = stat;
+    result.all.total += stat.total;
+    result.all.success += stat.success;
+    result.all.cancelled += stat.cancelled;
+    if (stat.total > 0) result.providers.push({ ...stat, name: p.name, label: courierLabel(p.name, p.label) });
+  });
+  result.providers.sort((a, b) => b.total - a.total);
+  result.found = result.all.total > 0;
+  return result;
+}
 
 function normalizePhone(raw: string) {
   const digits = raw.replace(/\D/g, "");
@@ -247,7 +292,15 @@ function initials(name: string) {
   return name.split(/\s+/).filter(Boolean).slice(0, 2).map((w) => w[0]?.toUpperCase() ?? "").join("") || "?";
 }
 
-function SuccessBlock({ total, success }: { total: number; success: number }) {
+function SuccessBlock({
+  total,
+  success,
+  providers = [],
+}: {
+  total: number;
+  success: number;
+  providers?: NamedProviderStat[];
+}) {
   const pct = total > 0 ? Math.round((success / total) * 100) : 0;
   const tone = total === 0
     ? { text: "text-muted-foreground/60", ring: "stroke-muted-foreground/30", chip: "bg-muted/40 text-muted-foreground ring-border", glow: "" }
@@ -290,6 +343,33 @@ function SuccessBlock({ total, success }: { total: number; success: number }) {
           <span className="text-[10px] uppercase tracking-wider text-muted-foreground/70">Rating</span>
           <span className="font-semibold text-foreground">{success}</span>
         </div>
+        {providers.length > 0 && (
+          <div className="space-y-0.5 pt-1">
+            {providers.slice(0, 4).map((p) => {
+              const ppct = p.total > 0 ? Math.round((p.success / p.total) * 100) : 0;
+              return (
+                <div key={p.name} className="flex items-center gap-1.5 text-[10px] leading-tight">
+                  <span className="w-14 shrink-0 truncate text-muted-foreground/80">{p.label}</span>
+                  <span
+                    className={cn(
+                      "font-semibold tabular-nums",
+                      ppct >= 80
+                        ? "text-emerald-600 dark:text-emerald-400"
+                        : ppct >= 50
+                          ? "text-amber-600 dark:text-amber-400"
+                          : "text-rose-600 dark:text-rose-400",
+                    )}
+                  >
+                    {ppct}%
+                  </span>
+                  <span className="text-muted-foreground/60 tabular-nums">
+                    {p.success}/{p.total}
+                  </span>
+                </div>
+              );
+            })}
+          </div>
+        )}
       </div>
     </div>
   );
@@ -795,20 +875,9 @@ function _WebOrdersPageBody() {
       );
       const map = new Map<string, CourierBreakdown>();
       cacheRows.flat().forEach((row) => {
-        const hist = row.data as { providers?: Array<{ name: string; total: number; success: number; cancelled: number; ok: boolean }> } | null;
+        const hist = row.data as { providers?: Array<{ name: string; label?: string; total: number; success: number; cancelled: number; ok: boolean }> } | null;
         if (!hist) return;
-        const result: CourierBreakdown = {
-          pathao: { total: 0, success: 0, cancelled: 0 },
-          steadfast: { total: 0, success: 0, cancelled: 0 },
-          found: false,
-        };
-        (hist.providers ?? []).forEach((p) => {
-          const stat = { total: p.total ?? 0, success: p.success ?? 0, cancelled: p.cancelled ?? 0 };
-          if (p.name === "pathao") result.pathao = stat;
-          else if (p.name === "steadfast") result.steadfast = stat;
-        });
-        result.found = result.pathao.total + result.steadfast.total > 0;
-        map.set(row.phone, result);
+        map.set(row.phone, buildCourierBreakdown(hist.providers));
       });
       return map;
     },
@@ -830,16 +899,7 @@ function _WebOrdersPageBody() {
       );
       const map = new Map<string, CourierBreakdown>();
       Object.entries(results).forEach(([phone, d]) => {
-        const result: CourierBreakdown = {
-          pathao: { total: 0, success: 0, cancelled: 0 },
-          steadfast: { total: 0, success: 0, cancelled: 0 },
-          found: !!d.found,
-        };
-        (d.providers ?? []).forEach((p) => {
-          const stat = { total: p.total ?? 0, success: p.success ?? 0, cancelled: p.cancelled ?? 0 };
-          if (p.name === "pathao") result.pathao = stat;
-          else if (p.name === "steadfast") result.steadfast = stat;
-        });
+        const result = buildCourierBreakdown(d.providers);
         map.set(phone, result);
         map.set(normalizePhone(phone), result);
       });
@@ -861,10 +921,17 @@ function _WebOrdersPageBody() {
   };
 
   const emptyProvider: ProviderStat = { total: 0, success: 0, cancelled: 0 };
+  const emptyCourier: CourierBreakdown = {
+    pathao: emptyProvider,
+    steadfast: emptyProvider,
+    all: emptyProvider,
+    providers: [],
+    found: false,
+  };
   const getCourier = (r: WebOrderRow): CourierBreakdown => {
     const phone = normalizePhone(r.shipping_phone ?? r.guest_phone ?? "");
-    if (!phone) return { pathao: emptyProvider, steadfast: emptyProvider, found: false };
-    return courierHistory?.get(phone) ?? { pathao: emptyProvider, steadfast: emptyProvider, found: false };
+    if (!phone) return emptyCourier;
+    return courierHistory?.get(phone) ?? emptyCourier;
   };
 
   // Compute auto-tags for every loaded row (cheap, sync)
@@ -1376,8 +1443,9 @@ function _WebOrdersPageBody() {
                     {/* Success Rate */}
                     <TableCell className="py-3">
                       <SuccessBlock
-                        total={courier.pathao.total + courier.steadfast.total || b.total}
-                        success={courier.pathao.success + courier.steadfast.success || b.confirmed}
+                        total={courier.all.total || b.total}
+                        success={courier.all.success || b.confirmed}
+                        providers={courier.providers}
                       />
                     </TableCell>
 
