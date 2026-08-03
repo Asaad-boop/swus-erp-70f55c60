@@ -1621,10 +1621,7 @@ function splitCourierProviders(providers?: HistProvider[] | null) {
               );
             })()}
             </div>
-          </section>
-
-          {/* Order Timeline */}
-          <OrderTimeline orderId={orderId} />
+          </Panel>
 
           {/* Ordered Products + Add Products */}
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
