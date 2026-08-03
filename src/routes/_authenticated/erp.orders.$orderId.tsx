@@ -1616,18 +1616,29 @@ function splitCourierProviders(providers?: HistProvider[] | null) {
             </div>
           </Panel>
 
-          {/* Ordered Products + Add Products */}
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-            <section className="rounded-2xl border border-gray-100 dark:border-border bg-white dark:bg-card shadow-sm overflow-hidden">
-              <header className="px-5 py-3 border-b border-gray-100 dark:border-border flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <span className="h-1.5 w-1.5 rounded-full bg-emerald-500" />
-                  <h3 className="text-[13px] font-semibold">Ordered Products</h3>
-                  <span className="inline-flex items-center justify-center min-w-[20px] h-5 px-1.5 rounded-full bg-gray-100 dark:bg-muted text-[10px] font-semibold text-gray-600 tabular-nums">{items.length}</span>
-                </div>
+          {/* Ordered Products (add-products folded in) */}
+          <Panel
+            title={<span className="inline-flex items-center gap-2">Ordered Products
+              <span className="inline-flex items-center justify-center min-w-[20px] h-5 px-1.5 rounded-full bg-gray-100 dark:bg-muted text-[10px] font-semibold text-gray-600 tabular-nums">{items.length}</span>
+            </span>}
+            accent="bg-emerald-500"
+            bodyClassName="p-4"
+            right={
+              <div className="flex items-center gap-2">
                 <span className="text-[11px] text-gray-500 tabular-nums">৳{bdtCompact(itemsSubtotal)}</span>
-              </header>
-              <div className="p-4">
+                <Button size="sm" variant={showAddProducts ? "secondary" : "outline"} className="h-7 px-2 text-[11px]"
+                  onClick={() => setShowAddProducts((v) => !v)}>
+                  <Plus className="h-3 w-3 mr-1" />{showAddProducts ? "Close" : "Add"}
+                </Button>
+              </div>
+            }
+          >
+            <div>
+              {showAddProducts && (
+                <div className="mb-4 rounded-xl border border-dashed border-gray-200 dark:border-border p-3">
+                  <ProductSearchPanel brandId={order.brand_id ?? null} onAdd={(p, v) => addItem.mutate({ p, v })} />
+                </div>
+              )}
               {items.length === 0 ? (
                 <p className="text-xs text-muted-foreground text-center py-8">No items in this order</p>
               ) : (
