@@ -313,10 +313,10 @@ function SuccessBlock({
   const R = 15;
   const C = 2 * Math.PI * R;
   const offset = C * (1 - pct / 100);
-  return (
-    <div className="flex items-center gap-3">
-      <div className={cn("relative shrink-0 rounded-full", tone.glow)}>
-        <svg viewBox="0 0 36 36" className="h-12 w-12 -rotate-90">
+  const ring = (
+    <div className="flex items-center gap-2">
+      <div className="relative shrink-0">
+        <svg viewBox="0 0 36 36" className="h-9 w-9 -rotate-90">
           <circle cx="18" cy="18" r={R} className="fill-none stroke-muted/50" strokeWidth="2.5" />
           <circle
             cx="18" cy="18" r={R}
@@ -328,50 +328,44 @@ function SuccessBlock({
           />
         </svg>
         <div className="absolute inset-0 flex items-center justify-center">
-          <span className={cn("text-[11px] font-bold tabular-nums tracking-tight", tone.text)}>{pct}%</span>
+          <span className={cn("text-[10px] font-bold tabular-nums tracking-tight", tone.text)}>{pct}</span>
         </div>
       </div>
-      <div className="text-xs tabular-nums leading-tight space-y-1">
-        <span className={cn("inline-flex items-center rounded-full px-1.5 py-0.5 text-[10px] font-bold ring-1 ring-inset", tone.chip)}>
-          {pct}% success
-        </span>
-        <div className="flex items-center gap-1.5">
-          <span className="text-[10px] uppercase tracking-wider text-muted-foreground/70">Order</span>
-          <span className="font-semibold text-foreground">{success}<span className="text-muted-foreground/50">/{total}</span></span>
-        </div>
-        <div className="flex items-center gap-1.5">
-          <span className="text-[10px] uppercase tracking-wider text-muted-foreground/70">Rating</span>
-          <span className="font-semibold text-foreground">{success}</span>
+      <div className="text-[11px] tabular-nums leading-tight">
+        <div className="font-semibold text-foreground">
+          {success}<span className="text-muted-foreground/50">/{total}</span>
         </div>
         {providers.length > 0 && (
-          <div className="space-y-0.5 pt-1">
-            {providers.slice(0, 4).map((p) => {
-              const ppct = p.total > 0 ? Math.round((p.success / p.total) * 100) : 0;
-              return (
-                <div key={p.name} className="flex items-center gap-1.5 text-[10px] leading-tight">
-                  <span className="w-14 shrink-0 truncate text-muted-foreground/80">{p.label}</span>
-                  <span
-                    className={cn(
-                      "font-semibold tabular-nums",
-                      ppct >= 80
-                        ? "text-emerald-600 dark:text-emerald-400"
-                        : ppct >= 50
-                          ? "text-amber-600 dark:text-amber-400"
-                          : "text-rose-600 dark:text-rose-400",
-                    )}
-                  >
-                    {ppct}%
-                  </span>
-                  <span className="text-muted-foreground/60 tabular-nums">
-                    {p.success}/{p.total}
-                  </span>
-                </div>
-              );
-            })}
+          <div className="text-[10px] text-muted-foreground/70">
+            {providers.length === 1 ? providers[0]!.label : `${providers.length} couriers`}
           </div>
         )}
       </div>
     </div>
+  );
+  if (providers.length === 0) return ring;
+  return (
+    <TooltipProvider delayDuration={100}>
+      <Tooltip>
+        <TooltipTrigger asChild>
+          <button type="button" className="cursor-default text-left" onClick={(e) => e.stopPropagation()}>
+            {ring}
+          </button>
+        </TooltipTrigger>
+        <TooltipContent side="left" className="space-y-1 p-2">
+          {providers.map((p) => {
+            const ppct = p.total > 0 ? Math.round((p.success / p.total) * 100) : 0;
+            return (
+              <div key={p.name} className="flex items-center gap-2 text-[11px] tabular-nums">
+                <span className="w-16 shrink-0 truncate">{p.label}</span>
+                <span className="font-semibold">{ppct}%</span>
+                <span className="opacity-70">{p.success}/{p.total}</span>
+              </div>
+            );
+          })}
+        </TooltipContent>
+      </Tooltip>
+    </TooltipProvider>
   );
 }
 
