@@ -5,6 +5,7 @@ import {
   ArrowLeft, Printer, Truck, Loader2, Phone, MessageCircle, Plus, Minus, Trash2,
   Search, Star, Tag as TagIcon, XCircle, Smartphone, Save, Undo2, CheckCircle2,
   ChevronLeft, ChevronRight, RotateCcw, Repeat, Copy, Check, MapPin, ShieldCheck, ShieldAlert, CalendarClock, RefreshCw,
+  ChevronDown,
 } from "lucide-react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { PreorderConvertDialog } from "@/components/erp/orders/preorder-convert-dialog";
@@ -134,6 +135,45 @@ function CopyChip({ value, className, children }: { value: string; className?: s
 /* -------------------------------------------------------------------------- */
 /*  Stats strip — donut design (ours) + RedX + Fraud Note                      */
 /* -------------------------------------------------------------------------- */
+
+/** Unified section shell — optionally collapsible to keep the page calm. */
+function Panel({
+  title, accent = "bg-gray-300", right, children, collapsible = false, defaultOpen = true, className, bodyClassName,
+}: {
+  title: React.ReactNode;
+  accent?: string;
+  right?: React.ReactNode;
+  children: React.ReactNode;
+  collapsible?: boolean;
+  defaultOpen?: boolean;
+  className?: string;
+  bodyClassName?: string;
+}) {
+  const [open, setOpen] = useState(defaultOpen);
+  const isOpen = collapsible ? open : true;
+  return (
+    <section className={cn("rounded-2xl border border-gray-100 dark:border-border bg-white dark:bg-card shadow-sm overflow-hidden", className)}>
+      <header className="px-5 py-3 flex items-center justify-between gap-3">
+        <button
+          type="button"
+          disabled={!collapsible}
+          onClick={() => setOpen((v) => !v)}
+          className={cn("flex min-w-0 items-center gap-2 text-left", collapsible && "group")}
+        >
+          <span className={cn("h-1.5 w-1.5 shrink-0 rounded-full", accent)} />
+          <h3 className="truncate text-[13px] font-semibold text-gray-900 dark:text-foreground">{title}</h3>
+          {collapsible && (
+            <ChevronDown className={cn("h-3.5 w-3.5 shrink-0 text-gray-400 transition-transform", isOpen && "rotate-180")} />
+          )}
+        </button>
+        {right ? <div className="shrink-0">{right}</div> : null}
+      </header>
+      {isOpen && (
+        <div className={cn("border-t border-gray-100 dark:border-border", bodyClassName ?? "p-5")}>{children}</div>
+      )}
+    </section>
+  );
+}
 
 type StatCell = { total: number; success: number; cancel: number };
 
