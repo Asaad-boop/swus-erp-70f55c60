@@ -292,6 +292,14 @@ function initials(name: string) {
   return name.split(/\s+/).filter(Boolean).slice(0, 2).map((w) => w[0]?.toUpperCase() ?? "").join("") || "?";
 }
 
+/** Bangla verdict for a success percentage. */
+function banglaVerdict(pct: number, empty: boolean) {
+  if (empty) return { label: "তথ্য নেই", chip: "bg-muted/50 text-muted-foreground ring-border" };
+  if (pct >= 80) return { label: "ভালো", chip: "bg-emerald-500/10 text-emerald-700 dark:text-emerald-300 ring-emerald-500/30" };
+  if (pct >= 50) return { label: "মিডিয়াম", chip: "bg-amber-500/10 text-amber-700 dark:text-amber-300 ring-amber-500/30" };
+  return { label: "খারাপ", chip: "bg-rose-500/10 text-rose-700 dark:text-rose-300 ring-rose-500/30" };
+}
+
 function SuccessBlock({
   total,
   success,
@@ -335,6 +343,12 @@ function SuccessBlock({
         <div className="font-semibold text-foreground">
           {success}<span className="text-muted-foreground/50">/{total}</span>
         </div>
+        <span className={cn(
+          "mt-0.5 inline-flex items-center rounded-full px-1.5 py-0.5 text-[10px] font-bold ring-1 ring-inset",
+          banglaVerdict(pct, total === 0).chip,
+        )}>
+          {banglaVerdict(pct, total === 0).label}
+        </span>
         {providers.length > 0 && (
           <div className="text-[10px] text-muted-foreground/70">
             {providers.length === 1 ? providers[0]!.label : `${providers.length} couriers`}
