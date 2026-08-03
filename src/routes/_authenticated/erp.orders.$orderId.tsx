@@ -5,6 +5,7 @@ import {
   ArrowLeft, Printer, Truck, Loader2, Phone, MessageCircle, Plus, Minus, Trash2,
   Search, Star, Tag as TagIcon, XCircle, Smartphone, Save, Undo2, CheckCircle2,
   ChevronLeft, ChevronRight, RotateCcw, Repeat, Copy, Check, MapPin, ShieldCheck, ShieldAlert, CalendarClock, RefreshCw,
+  ChevronDown,
 } from "lucide-react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { PreorderConvertDialog } from "@/components/erp/orders/preorder-convert-dialog";
@@ -134,6 +135,45 @@ function CopyChip({ value, className, children }: { value: string; className?: s
 /* -------------------------------------------------------------------------- */
 /*  Stats strip — donut design (ours) + RedX + Fraud Note                      */
 /* -------------------------------------------------------------------------- */
+
+/** Unified section shell — optionally collapsible to keep the page calm. */
+function Panel({
+  title, accent = "bg-gray-300", right, children, collapsible = false, defaultOpen = true, className, bodyClassName,
+}: {
+  title: React.ReactNode;
+  accent?: string;
+  right?: React.ReactNode;
+  children: React.ReactNode;
+  collapsible?: boolean;
+  defaultOpen?: boolean;
+  className?: string;
+  bodyClassName?: string;
+}) {
+  const [open, setOpen] = useState(defaultOpen);
+  const isOpen = collapsible ? open : true;
+  return (
+    <section className={cn("rounded-2xl border border-gray-100 dark:border-border bg-white dark:bg-card shadow-sm overflow-hidden", className)}>
+      <header className="px-5 py-3 flex items-center justify-between gap-3">
+        <button
+          type="button"
+          disabled={!collapsible}
+          onClick={() => setOpen((v) => !v)}
+          className={cn("flex min-w-0 items-center gap-2 text-left", collapsible && "group")}
+        >
+          <span className={cn("h-1.5 w-1.5 shrink-0 rounded-full", accent)} />
+          <h3 className="truncate text-[13px] font-semibold text-gray-900 dark:text-foreground">{title}</h3>
+          {collapsible && (
+            <ChevronDown className={cn("h-3.5 w-3.5 shrink-0 text-gray-400 transition-transform", isOpen && "rotate-180")} />
+          )}
+        </button>
+        {right ? <div className="shrink-0">{right}</div> : null}
+      </header>
+      {isOpen && (
+        <div className={cn("border-t border-gray-100 dark:border-border", bodyClassName ?? "p-5")}>{children}</div>
+      )}
+    </section>
+  );
+}
 
 type StatCell = { total: number; success: number; cancel: number };
 
@@ -1288,6 +1328,8 @@ function splitCourierProviders(providers?: HistProvider[] | null) {
 
   const [bookOpen, setBookOpen] = useState(false);
   const [bookSteadfastOpen, setBookSteadfastOpen] = useState(false);
+  const [showAddProducts, setShowAddProducts] = useState(false);
+  const [insightTab, setInsightTab] = useState<"history" | "cases" | "attribution" | "activity">("history");
   const isWebOrder = order?.status === "new" && ["website", "pixel", "utm"].includes(String(order?.source ?? ""));
   const [returnOpen, setReturnOpen] = useState(false);
   const [exchangeOpen, setExchangeOpen] = useState(false);
@@ -1387,15 +1429,8 @@ function splitCourierProviders(providers?: HistProvider[] | null) {
           />
 
           {/* Customer row */}
-          <section className="rounded-2xl border border-gray-100 dark:border-border bg-white dark:bg-card shadow-sm overflow-hidden">
-            <header className="px-5 py-3 border-b border-gray-100 dark:border-border flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <span className="h-1.5 w-1.5 rounded-full bg-indigo-500" />
-                <h3 className="text-[13px] font-semibold text-gray-900 dark:text-foreground">Customer & Delivery</h3>
-              </div>
-              <span className="text-[10px] uppercase tracking-wider text-gray-400">Editable</span>
-            </header>
-            <div className="p-5 space-y-4">
+          <Panel title="Customer & Delivery" accent="bg-indigo-500" bodyClassName="p-5">
+            <div className="space-y-4">
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               <FieldShell label="Mobile Number">
                 <div className="relative">
@@ -1503,23 +1538,15 @@ function splitCourierProviders(providers?: HistProvider[] | null) {
                     </SelectContent>
                   </Select>
                 </FieldShell>
-                <div className="flex items-center justify-between rounded-md border px-3 py-2">
-                  <span className="text-xs">Preorder</span>
-                  <Switch checked={form.is_preorder} onCheckedChange={(v) => setForm({ ...form, is_preorder: v })} />
-                </div>
-                <Button
-                  type="button"
-                  variant="outline"
-                  className="w-full gap-1.5 border-indigo-300 text-indigo-700 hover:bg-indigo-50 dark:border-indigo-900 dark:text-indigo-300"
-                  disabled={order?.status === "pre_order"}
-                  onClick={() => setPreorderOpen(true)}
-                >
-                  <CalendarClock className="h-3.5 w-3.5" />
-                  {order?.status === "pre_order" ? "Already a Pre-order" : "Move to Pre-order"}
-                </Button>
-                <div className="flex items-center justify-between rounded-md border px-3 py-2">
-                  <span className="text-xs">Cross Sale</span>
-                  <Switch checked={form.is_cross_sale} onCheckedChange={(v) => setForm({ ...form, is_cross_sale: v })} />
+                <div className="grid grid-cols-2 gap-2">
+                  <div className="flex items-center justify-between rounded-md border px-2.5 py-2">
+                    <span className="text-[11px]">Preorder</span>
+                    <Switch checked={form.is_preorder} onCheckedChange={(v) => setForm({ ...form, is_preorder: v })} />
+                  </div>
+                  <div className="flex items-center justify-between rounded-md border px-2.5 py-2">
+                    <span className="text-[11px]">Cross Sale</span>
+                    <Switch checked={form.is_cross_sale} onCheckedChange={(v) => setForm({ ...form, is_cross_sale: v })} />
+                  </div>
                 </div>
               </div>
             </div>
@@ -1588,23 +1615,31 @@ function splitCourierProviders(providers?: HistProvider[] | null) {
               );
             })()}
             </div>
-          </section>
+          </Panel>
 
-          {/* Order Timeline */}
-          <OrderTimeline orderId={orderId} />
-
-          {/* Ordered Products + Add Products */}
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-            <section className="rounded-2xl border border-gray-100 dark:border-border bg-white dark:bg-card shadow-sm overflow-hidden">
-              <header className="px-5 py-3 border-b border-gray-100 dark:border-border flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <span className="h-1.5 w-1.5 rounded-full bg-emerald-500" />
-                  <h3 className="text-[13px] font-semibold">Ordered Products</h3>
-                  <span className="inline-flex items-center justify-center min-w-[20px] h-5 px-1.5 rounded-full bg-gray-100 dark:bg-muted text-[10px] font-semibold text-gray-600 tabular-nums">{items.length}</span>
-                </div>
+          {/* Ordered Products (add-products folded in) */}
+          <Panel
+            title={<span className="inline-flex items-center gap-2">Ordered Products
+              <span className="inline-flex items-center justify-center min-w-[20px] h-5 px-1.5 rounded-full bg-gray-100 dark:bg-muted text-[10px] font-semibold text-gray-600 tabular-nums">{items.length}</span>
+            </span>}
+            accent="bg-emerald-500"
+            bodyClassName="p-4"
+            right={
+              <div className="flex items-center gap-2">
                 <span className="text-[11px] text-gray-500 tabular-nums">৳{bdtCompact(itemsSubtotal)}</span>
-              </header>
-              <div className="p-4">
+                <Button size="sm" variant={showAddProducts ? "secondary" : "outline"} className="h-7 px-2 text-[11px]"
+                  onClick={() => setShowAddProducts((v) => !v)}>
+                  <Plus className="h-3 w-3 mr-1" />{showAddProducts ? "Close" : "Add"}
+                </Button>
+              </div>
+            }
+          >
+            <div>
+              {showAddProducts && (
+                <div className="mb-4 rounded-xl border border-dashed border-gray-200 dark:border-border p-3">
+                  <ProductSearchPanel brandId={order.brand_id ?? null} onAdd={(p, v) => addItem.mutate({ p, v })} />
+                </div>
+              )}
               {items.length === 0 ? (
                 <p className="text-xs text-muted-foreground text-center py-8">No items in this order</p>
               ) : (
@@ -1682,26 +1717,12 @@ function splitCourierProviders(providers?: HistProvider[] | null) {
                   })}
                 </ul>
               )}
-              </div>
-            </section>
-            <section className="rounded-2xl border border-gray-100 dark:border-border bg-white dark:bg-card shadow-sm overflow-hidden">
-              <header className="px-5 py-3 border-b border-gray-100 dark:border-border flex items-center gap-2">
-                <span className="h-1.5 w-1.5 rounded-full bg-indigo-500" />
-                <h3 className="text-[13px] font-semibold">Add Products</h3>
-              </header>
-              <div className="p-4">
-                <ProductSearchPanel brandId={order.brand_id ?? null} onAdd={(p, v) => addItem.mutate({ p, v })} />
-              </div>
-            </section>
-          </div>
+            </div>
+          </Panel>
 
           {/* Totals row */}
-          <section className="rounded-2xl border border-gray-100 dark:border-border bg-white dark:bg-card shadow-sm overflow-hidden">
-            <header className="px-5 py-3 border-b border-gray-100 dark:border-border flex items-center gap-2">
-              <span className="h-1.5 w-1.5 rounded-full bg-amber-500" />
-              <h3 className="text-[13px] font-semibold">Pricing & Totals</h3>
-            </header>
-            <div className="p-5">
+          <Panel title="Pricing & Totals" accent="bg-amber-500" bodyClassName="p-5">
+            <div>
             <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
               <FieldShell label="Discount">
                 <NumInput value={form.discount} onChange={(v) => setForm({ ...form, discount: v })} />
@@ -1807,20 +1828,21 @@ function splitCourierProviders(providers?: HistProvider[] | null) {
               </Button>
             )}
             </div>
-          </section>
+          </Panel>
+
+          {/* Order Timeline (self-collapsible) */}
+          <OrderTimeline orderId={orderId} />
         </div>
 
         {/* RIGHT SIDEBAR */}
         <aside className="space-y-4 xl:sticky xl:top-[64px] xl:max-h-[calc(100vh-80px)] xl:overflow-y-auto xl:pr-1 xl:-mr-1">
-          <section className="rounded-2xl border border-gray-100 dark:border-border bg-white dark:bg-card shadow-sm overflow-hidden">
-            <header className="px-5 py-3 border-b border-gray-100 dark:border-border flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <span className="h-1.5 w-1.5 rounded-full bg-emerald-500" />
-                <h3 className="text-[13px] font-semibold">Order Summary</h3>
-              </div>
-              <span className="text-[10px] font-mono text-gray-500">#{invoiceDisplay(order)}</span>
-            </header>
-            <div className="p-4 space-y-2 text-xs">
+          <Panel
+            title="Order Summary"
+            accent="bg-emerald-500"
+            right={<span className="text-[10px] font-mono text-gray-500">#{invoiceDisplay(order)}</span>}
+            bodyClassName="p-4"
+          >
+            <div className="space-y-2 text-xs">
               <Row label="Date" value={format(new Date(order.created_at), "dd MMM yyyy, hh:mm a")} />
               <Row label="Status" value={
                 <div className="flex items-center gap-1.5">
@@ -1833,12 +1855,18 @@ function splitCourierProviders(providers?: HistProvider[] | null) {
               } />
               <Row label="Payment" value={order.payment_method ?? "—"} />
               <Row label="Source" value={sourceLabel(order.source)} />
+              <Row label="Device" value={<span className="inline-flex items-center gap-1 capitalize"><Smartphone className="h-3 w-3 text-gray-400" />{sessionInfo?.device_type || "Not tracked"}</span>} />
+              <Row label="Mobile" value={
+                <CopyChip value={`+88${form.mobile}`} className="-mx-1">
+                  <span className="font-mono">+88{form.mobile}</span>
+                </CopyChip>
+              } />
               <div className="h-px bg-border my-2" />
               <Row label="Subtotal" value={`৳${bdtCompact(itemsSubtotal)}`} />
               <Row label="Delivery" value={`৳${bdtCompact(form.shipping_fee)}`} />
               <Row label="Total" value={<span className="font-bold text-foreground">৳{bdtCompact(grandTotal)}</span>} />
             </div>
-          </section>
+          </Panel>
 
           {/* Payment Verification — customer-provided txn / number */}
           {(() => {
@@ -1954,31 +1982,16 @@ function splitCourierProviders(providers?: HistProvider[] | null) {
             />
           )}
 
-          {/* Customer 360 */}
-          <CustomerHistoryPanel brandId={order.brand_id ?? null} phone={phone} currentOrderId={orderId} />
-
-          {/* Returns & Exchanges cases */}
-          <OrderCasesPanel orderId={orderId} />
-
-          {/* Contact info */}
-          <section className="rounded-2xl border border-gray-100 dark:border-border bg-white dark:bg-card shadow-sm p-4 space-y-2 text-xs">
-            <div className="flex items-center gap-2">
-              <Phone className="h-3.5 w-3.5 text-emerald-600" />
-              <span className="text-gray-500">Mobile:</span>
-              <CopyChip value={`+88${form.mobile}`} className="-mx-1">
-                <span className="font-mono">+88{form.mobile}</span>
-              </CopyChip>
-            </div>
-            <div className="flex items-center gap-2"><Smartphone className="h-3.5 w-3.5 text-gray-400" /><span className="text-gray-500">Device:</span><span className="capitalize">{sessionInfo?.device_type || "Not tracked"}</span></div>
-          </section>
-
-          <section className="rounded-2xl border border-gray-100 dark:border-border bg-white dark:bg-card shadow-sm overflow-hidden">
-            <header className="px-5 py-3 border-b border-gray-100 dark:border-border flex items-center gap-2">
-              <span className="h-1.5 w-1.5 rounded-full bg-amber-500" />
-              <TagIcon className="h-3.5 w-3.5 text-amber-600" />
-              <h3 className="text-[13px] font-semibold">Order Tags</h3>
-            </header>
-            <div className="p-4 space-y-2">
+          {/* Tags — folded until needed */}
+          <Panel
+            title={<span className="inline-flex items-center gap-1.5"><TagIcon className="h-3.5 w-3.5 text-amber-600" />Order Tags</span>}
+            accent="bg-amber-500"
+            collapsible
+            defaultOpen={tags.length > 0}
+            bodyClassName="p-4"
+            right={tags.length > 0 ? <span className="text-[10px] text-gray-500 tabular-nums">{tags.length}</span> : null}
+          >
+            <div className="space-y-2">
               <div className="flex flex-wrap gap-1.5 min-h-[24px]">
                 {tags.length === 0 && <span className="text-xs text-gray-400">No tags yet</span>}
                 {tags.map((t) => (
@@ -2000,14 +2013,10 @@ function splitCourierProviders(providers?: HistProvider[] | null) {
                   }} />
               </div>
             </div>
-          </section>
+          </Panel>
 
-          <section className="rounded-2xl border border-gray-100 dark:border-border bg-white dark:bg-card shadow-sm overflow-hidden">
-            <header className="px-5 py-3 border-b border-gray-100 dark:border-border flex items-center gap-2">
-              <span className="h-1.5 w-1.5 rounded-full bg-indigo-500" />
-              <h3 className="text-[13px] font-semibold">Actions</h3>
-            </header>
-            <div className="p-4 space-y-3">
+          <Panel title="Actions & Notes" accent="bg-indigo-500" bodyClassName="p-4">
+            <div className="space-y-3">
               <Select
                 value={draftWebStatus}
                 disabled={updateWebStatus.isPending}
@@ -2093,13 +2102,35 @@ function splitCourierProviders(providers?: HistProvider[] | null) {
                 );
               })()}
             </div>
-          </section>
+          </Panel>
 
-          {/* Full UTM attribution */}
-          <AttributionPanel orderId={orderId} />
-
-          {/* Live activity log — every staff action logged with name + time */}
-          <ActivityLogPanel orderId={orderId} />
+          {/* Insights — one at a time instead of four stacked cards */}
+          <div className="space-y-3">
+            <div className="flex items-center gap-1 rounded-xl border border-gray-100 dark:border-border bg-white dark:bg-card p-1 shadow-sm">
+              {([
+                ["history", "Customer"],
+                ["cases", "Cases"],
+                ["attribution", "Source"],
+                ["activity", "Activity"],
+              ] as const).map(([key, label]) => (
+                <button
+                  key={key}
+                  type="button"
+                  onClick={() => setInsightTab(key)}
+                  className={cn(
+                    "flex-1 rounded-lg px-2 py-1.5 text-[11px] font-medium transition-colors",
+                    insightTab === key
+                      ? "bg-indigo-600 text-white shadow-sm"
+                      : "text-gray-500 hover:bg-gray-100 dark:hover:bg-muted/50",
+                  )}
+                >{label}</button>
+              ))}
+            </div>
+            {insightTab === "history" && <CustomerHistoryPanel brandId={order.brand_id ?? null} phone={phone} currentOrderId={orderId} />}
+            {insightTab === "cases" && <OrderCasesPanel orderId={orderId} />}
+            {insightTab === "attribution" && <AttributionPanel orderId={orderId} />}
+            {insightTab === "activity" && <ActivityLogPanel orderId={orderId} />}
+          </div>
         </aside>
       </div>
 
