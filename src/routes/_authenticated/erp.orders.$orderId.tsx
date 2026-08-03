@@ -2015,12 +2015,8 @@ function splitCourierProviders(providers?: HistProvider[] | null) {
             </div>
           </Panel>
 
-          <section className="rounded-2xl border border-gray-100 dark:border-border bg-white dark:bg-card shadow-sm overflow-hidden">
-            <header className="px-5 py-3 border-b border-gray-100 dark:border-border flex items-center gap-2">
-              <span className="h-1.5 w-1.5 rounded-full bg-indigo-500" />
-              <h3 className="text-[13px] font-semibold">Actions</h3>
-            </header>
-            <div className="p-4 space-y-3">
+          <Panel title="Actions & Notes" accent="bg-indigo-500" bodyClassName="p-4">
+            <div className="space-y-3">
               <Select
                 value={draftWebStatus}
                 disabled={updateWebStatus.isPending}
@@ -2106,13 +2102,35 @@ function splitCourierProviders(providers?: HistProvider[] | null) {
                 );
               })()}
             </div>
-          </section>
+          </Panel>
 
-          {/* Full UTM attribution */}
-          <AttributionPanel orderId={orderId} />
-
-          {/* Live activity log — every staff action logged with name + time */}
-          <ActivityLogPanel orderId={orderId} />
+          {/* Insights — one at a time instead of four stacked cards */}
+          <div className="space-y-3">
+            <div className="flex items-center gap-1 rounded-xl border border-gray-100 dark:border-border bg-white dark:bg-card p-1 shadow-sm">
+              {([
+                ["history", "Customer"],
+                ["cases", "Cases"],
+                ["attribution", "Source"],
+                ["activity", "Activity"],
+              ] as const).map(([key, label]) => (
+                <button
+                  key={key}
+                  type="button"
+                  onClick={() => setInsightTab(key)}
+                  className={cn(
+                    "flex-1 rounded-lg px-2 py-1.5 text-[11px] font-medium transition-colors",
+                    insightTab === key
+                      ? "bg-indigo-600 text-white shadow-sm"
+                      : "text-gray-500 hover:bg-gray-100 dark:hover:bg-muted/50",
+                  )}
+                >{label}</button>
+              ))}
+            </div>
+            {insightTab === "history" && <CustomerHistoryPanel brandId={order.brand_id ?? null} phone={phone} currentOrderId={orderId} />}
+            {insightTab === "cases" && <OrderCasesPanel orderId={orderId} />}
+            {insightTab === "attribution" && <AttributionPanel orderId={orderId} />}
+            {insightTab === "activity" && <ActivityLogPanel orderId={orderId} />}
+          </div>
         </aside>
       </div>
 
