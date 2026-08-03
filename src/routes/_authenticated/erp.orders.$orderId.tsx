@@ -1716,26 +1716,12 @@ function splitCourierProviders(providers?: HistProvider[] | null) {
                   })}
                 </ul>
               )}
-              </div>
-            </section>
-            <section className="rounded-2xl border border-gray-100 dark:border-border bg-white dark:bg-card shadow-sm overflow-hidden">
-              <header className="px-5 py-3 border-b border-gray-100 dark:border-border flex items-center gap-2">
-                <span className="h-1.5 w-1.5 rounded-full bg-indigo-500" />
-                <h3 className="text-[13px] font-semibold">Add Products</h3>
-              </header>
-              <div className="p-4">
-                <ProductSearchPanel brandId={order.brand_id ?? null} onAdd={(p, v) => addItem.mutate({ p, v })} />
-              </div>
-            </section>
-          </div>
+            </div>
+          </Panel>
 
           {/* Totals row */}
-          <section className="rounded-2xl border border-gray-100 dark:border-border bg-white dark:bg-card shadow-sm overflow-hidden">
-            <header className="px-5 py-3 border-b border-gray-100 dark:border-border flex items-center gap-2">
-              <span className="h-1.5 w-1.5 rounded-full bg-amber-500" />
-              <h3 className="text-[13px] font-semibold">Pricing & Totals</h3>
-            </header>
-            <div className="p-5">
+          <Panel title="Pricing & Totals" accent="bg-amber-500" bodyClassName="p-5">
+            <div>
             <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
               <FieldShell label="Discount">
                 <NumInput value={form.discount} onChange={(v) => setForm({ ...form, discount: v })} />
