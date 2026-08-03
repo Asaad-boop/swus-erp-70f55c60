@@ -138,7 +138,7 @@ function CopyChip({ value, className, children }: { value: string; className?: s
 
 /** Unified section shell — optionally collapsible to keep the page calm. */
 function Panel({
-  title, accent = "bg-gray-300", right, children, collapsible = false, defaultOpen = true, className, bodyClassName,
+  title, accent = "bg-gray-300", right, children, collapsible = false, defaultOpen = true, className, bodyClassName, lazy = false,
 }: {
   title: React.ReactNode;
   accent?: string;
@@ -148,28 +148,30 @@ function Panel({
   defaultOpen?: boolean;
   className?: string;
   bodyClassName?: string;
+  lazy?: boolean;
 }) {
   const [open, setOpen] = useState(defaultOpen);
   const isOpen = collapsible ? open : true;
   return (
-    <section className={cn("rounded-2xl border border-gray-100 dark:border-border bg-white dark:bg-card shadow-sm overflow-hidden", className)}>
-      <header className="px-5 py-3 flex items-center justify-between gap-3">
+    <section className={cn("surface-panel rise-in group/panel relative rounded-2xl overflow-hidden", lazy && "lazy-panel", className)}>
+      <span className={cn("pointer-events-none absolute inset-x-0 top-0 h-px opacity-60", accent.replace("bg-", "bg-gradient-to-r from-transparent via-").concat("/60 to-transparent"))} />
+      <header className="surface-head px-4 py-3 sm:px-5 grid grid-cols-[minmax(0,1fr)_auto] items-center gap-3">
         <button
           type="button"
           disabled={!collapsible}
           onClick={() => setOpen((v) => !v)}
-          className={cn("flex min-w-0 items-center gap-2 text-left", collapsible && "group")}
+          className={cn("flex min-w-0 items-center gap-2.5 text-left", collapsible && "group cursor-pointer")}
         >
-          <span className={cn("h-1.5 w-1.5 shrink-0 rounded-full", accent)} />
-          <h3 className="truncate text-[13px] font-semibold text-gray-900 dark:text-foreground">{title}</h3>
+          <span className={cn("h-5 w-1.5 shrink-0 rounded-full transition-transform duration-300 group-hover/panel:scale-y-110", accent)} />
+          <h3 className="font-display truncate text-[13px] font-semibold tracking-tight text-gray-900 dark:text-foreground">{title}</h3>
           {collapsible && (
-            <ChevronDown className={cn("h-3.5 w-3.5 shrink-0 text-gray-400 transition-transform", isOpen && "rotate-180")} />
+            <ChevronDown className={cn("h-3.5 w-3.5 shrink-0 text-muted-foreground transition-transform duration-300", isOpen && "rotate-180")} />
           )}
         </button>
         {right ? <div className="shrink-0">{right}</div> : null}
       </header>
       {isOpen && (
-        <div className={cn("border-t border-gray-100 dark:border-border", bodyClassName ?? "p-5")}>{children}</div>
+        <div className={cn("border-t border-gray-100 dark:border-border", bodyClassName ?? "p-4 sm:p-5")}>{children}</div>
       )}
     </section>
   );
