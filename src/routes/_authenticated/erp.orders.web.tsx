@@ -897,10 +897,12 @@ function _WebOrdersPageBody() {
     enabled: missingPhones.length > 0,
     staleTime: 5 * 60_000,
     queryFn: async () => {
-      const historyResponses = [];
-      for (const phoneChunk of chunkArray(missingPhones, COURIER_HISTORY_BATCH_SIZE)) {
-        historyResponses.push(await fetchCourierHistory({ data: { phones: phoneChunk, brandId: activeBrand?.id } }));
-      }
+      // Fire every chunk in parallel — was sequential, which made new phones slow to appear.
+      const historyResponses = await Promise.all(
+        chunkArray(missingPhones, COURIER_HISTORY_BATCH_SIZE).map((phoneChunk) =>
+          fetchCourierHistory({ data: { phones: phoneChunk, brandId: activeBrand?.id } }),
+        ),
+      );
       const results = historyResponses.reduce<Record<string, Awaited<ReturnType<typeof fetchCourierHistory>>["results"][string]>>(
         (acc, response) => ({ ...acc, ...response.results }),
         {},
