@@ -60,19 +60,30 @@ async function writeSetting(supabase: any, key: string, value: unknown) {
     .upsert({ key, value: JSON.stringify(value), updated_at: new Date().toISOString() }, { onConflict: "key" });
 }
 
+// Short-lived memo so a burst of lookups doesn't re-read quota settings per phone.
+let quotaMemo: { at: number; limit: number; used: number } | null = null;
+const QUOTA_MEMO_MS = 15_000;
+
 export async function getBdCourierQuota(supabase: any) {
-  const [limitRaw, usedRaw] = await Promise.all([
-    readSetting(supabase, LIMIT_KEY),
-    readSetting(supabase, todayKey()),
-  ]);
-  const limit = Number(limitRaw) > 0 ? Number(limitRaw) : DEFAULT_DAILY_LIMIT;
-  const used = Number(usedRaw) > 0 ? Number(usedRaw) : 0;
+  if (!quotaMemo || Date.now() - quotaMemo.at > QUOTA_MEMO_MS) {
+    const [limitRaw, usedRaw] = await Promise.all([
+      readSetting(supabase, LIMIT_KEY),
+      readSetting(supabase, todayKey()),
+    ]);
+    quotaMemo = {
+      at: Date.now(),
+      limit: Number(limitRaw) > 0 ? Number(limitRaw) : DEFAULT_DAILY_LIMIT,
+      used: Number(usedRaw) > 0 ? Number(usedRaw) : 0,
+    };
+  }
+  const { limit, used } = quotaMemo;
   return { limit, used, remaining: Math.max(0, limit - used), configured: !!process.env.BDCOURIER_API_KEY };
 }
 
 async function bumpUsage(supabase: any, by = 1) {
   const key = todayKey();
   const current = Number(await readSetting(supabase, key)) || 0;
+  if (quotaMemo) quotaMemo.used = Math.max(quotaMemo.used + by, current + by);
   await writeSetting(supabase, key, current + by);
 }
 
