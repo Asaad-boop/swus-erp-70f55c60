@@ -1197,6 +1197,8 @@ function splitCourierProviders(providers?: HistProvider[] | null) {
 
   const saveCustomer = useMutation({
     mutationFn: async () => {
+      const phoneError = bdPhoneError(form.mobile);
+      if (phoneError) throw new Error(phoneError);
       const payload = {
         shipping_phone: form.mobile,
         shipping_name: form.name,
