@@ -560,7 +560,7 @@ export function ErpSidebar() {
           )}
         </div>
 
-        <nav className={cn("erp-sidebar-scroll flex-1 py-3 overflow-y-auto overflow-x-visible", collapsed ? "px-2" : "px-3")}>
+        <nav className={cn("erp-sidebar-scroll flex-1 py-3", collapsed ? "px-2 overflow-visible" : "px-3 overflow-y-auto overflow-x-hidden")}>
           {/* Pinned */}
           {!collapsed && !q && favItems.length > 0 && (
             <div className="mb-4">
@@ -607,6 +607,6 @@ export function ErpSidebar() {
   );
 }
 
-function favKey(i: { to: string; label: string; search?: Record<string, string> }) {
+function favKey(i: { to: string; label: string; search?: Record<string, string>; icon?: unknown }) {
   return i.to + "|" + (i.search ? JSON.stringify(i.search) : "") + "|" + i.label;
 }
