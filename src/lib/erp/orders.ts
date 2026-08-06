@@ -212,6 +212,25 @@ export function shortId(id: string) {
   return id.slice(0, 8).toUpperCase();
 }
 
+/**
+ * Bangladesh mobile validation for order create/edit.
+ * Accepts 01XXXXXXXXX (11 digits) with optional +88 / 88 prefix.
+ * Returns an error message, or null when valid.
+ */
+export function bdPhoneError(raw: string | null | undefined): string | null {
+  const digits = String(raw ?? "").replace(/\D/g, "");
+  if (!digits) return "Mobile number lagbe";
+  const local = digits.startsWith("880") ? "0" + digits.slice(3) : digits;
+  if (!/^01[3-9]\d{8}$/.test(local)) return "Mobile number thik nei — 01XXXXXXXXX (11 digit) din";
+  return null;
+}
+
+/** Normalize a BD mobile to local 01XXXXXXXXX form. */
+export function normalizeBdPhone(raw: string | null | undefined): string {
+  const digits = String(raw ?? "").replace(/\D/g, "");
+  return digits.startsWith("880") ? "0" + digits.slice(3) : digits;
+}
+
 /** Display invoice number, falling back to a short order id. */
 export function invoiceDisplay(o: { invoice_no: string | null; id: string }) {
   return o.invoice_no ?? shortId(o.id);
