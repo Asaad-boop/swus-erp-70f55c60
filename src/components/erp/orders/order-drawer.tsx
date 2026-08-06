@@ -15,7 +15,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Textarea } from "@/components/ui/textarea";
 import { useOrderDetail, useStaffList } from "@/hooks/erp/use-orders-query";
 import { useOrderLock } from "@/hooks/erp/use-order-lock";
-import { STATUS_GROUPS, STATUS_BADGE, customerName, customerPhone, invoiceDisplay, statusBadge, type OrderStatus } from "@/lib/erp/orders";
+import { STATUS_GROUPS, STATUS_BADGE, bdPhoneError, customerName, customerPhone, invoiceDisplay, statusBadge, type OrderStatus } from "@/lib/erp/orders";
 import { setOrderActualShippingCostFn } from "@/lib/erp/courier-sync.functions";
 import { confirmOrderAdvanceReceivedFn } from "@/lib/erp/finance/advance.functions";
 import { PreorderConvertDialog } from "@/components/erp/orders/preorder-convert-dialog";
