@@ -5,7 +5,7 @@ import {
   TrendingDown, TrendingUp, PackagePlus, Megaphone, Container, Heart,
   ChevronsLeft, ChevronRight, Sparkles, ClipboardList, ClipboardCheck, PackageSearch,
   Activity, BarChart3, RotateCcw, FileSpreadsheet, Zap, Briefcase, Stethoscope, ChevronDown,
-  Receipt, BookOpen, Landmark, Coins, ArrowDownCircle, ArrowUpCircle, HandCoins, Scale,
+  Star, Filter, X, Receipt, BookOpen, Landmark, Coins, ArrowDownCircle, ArrowUpCircle, HandCoins, Scale,
   FileBarChart, Target, Banknote, Building2, Search, PackageCheck, ShieldCheck, CheckCircle2, Clock, LayoutGrid,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
