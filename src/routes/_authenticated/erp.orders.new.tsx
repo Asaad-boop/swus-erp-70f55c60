@@ -683,8 +683,14 @@ function NewOrderPage() {
                       inputMode="tel"
                       value={phone}
                       onChange={(e) => setPhone(e.target.value)}
-                      className="h-10 bg-muted/30 focus-visible:bg-background"
+                      className={cn(
+                        "h-10 bg-muted/30 focus-visible:bg-background",
+                        phone.trim() && bdPhoneError(phone) && "border-destructive focus-visible:ring-destructive",
+                      )}
                     />
+                    {phone.trim() && bdPhoneError(phone) && (
+                      <p className="mt-1 text-[11px] font-medium text-destructive">{bdPhoneError(phone)}</p>
+                    )}
                   </Field>
                   <Field label="Customer Name" bn="নাম" required>
                     <Input
