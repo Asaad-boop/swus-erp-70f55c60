@@ -8363,6 +8363,7 @@ export type Database = {
       }
       check_reorder_triggers: { Args: { _brand_id: string }; Returns: number }
       check_reorder_triggers_all_brands: { Args: never; Returns: number }
+      combo_derived_stock: { Args: { _combo_id: string }; Returns: number }
       confirm_meta_dollar_purchase: {
         Args: { _purchase_id: string }
         Returns: Json
@@ -9356,6 +9357,7 @@ export type Database = {
         Args: { p_order_id: string }
         Returns: string
       }
+      recalc_combo_stock: { Args: { _combo_id: string }; Returns: undefined }
       recalc_product_rating: {
         Args: { _product_id: string }
         Returns: undefined
