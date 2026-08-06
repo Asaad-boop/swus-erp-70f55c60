@@ -22,7 +22,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { useOrderDetail } from "@/hooks/erp/use-orders-query";
-import { customerName, customerPhone, invoiceDisplay, settlementBadge, statusBadge, type OrderStatus } from "@/lib/erp/orders";
+import { bdPhoneError, customerName, customerPhone, invoiceDisplay, settlementBadge, statusBadge, type OrderStatus } from "@/lib/erp/orders";
 import { PrintableInvoice } from "@/components/erp/orders/order-invoice";
 import { BookPathaoDialog } from "@/components/erp/courier/book-pathao-dialog";
 import { BookSteadfastDialog } from "@/components/erp/courier/book-steadfast-dialog";
@@ -1082,6 +1082,8 @@ function splitCourierProviders(providers?: HistProvider[] | null) {
 
   const confirmOrder = useMutation({
     mutationFn: async () => {
+      const phoneError = bdPhoneError(form.mobile);
+      if (phoneError) throw new Error(phoneError);
       const advanceError = getAdvanceValidationError();
       if (advanceError) throw new Error(advanceError);
       // 1) Persist any pending customer + pricing edits first
