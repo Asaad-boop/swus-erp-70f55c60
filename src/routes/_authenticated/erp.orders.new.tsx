@@ -26,6 +26,7 @@ import { fetchCourierHistoryFn } from "@/lib/erp/courier-history.functions";
 import { cn } from "@/lib/utils";
 import { OrderSuccessDialog } from "@/components/erp/orders/order-success-dialog";
 import { DUE_COLLECT_METHODS, moveOrderToPreorder, promiseDateFromDays } from "@/lib/erp/preorders";
+import { bdPhoneError, normalizeBdPhone } from "@/lib/erp/orders";
 
 export const Route = createFileRoute("/_authenticated/erp/orders/new")({
   head: () => ({ meta: [{ title: "New Order — ERP" }] }),
@@ -458,7 +459,9 @@ function NewOrderPage() {
   const create = useMutation({
     mutationFn: async () => {
       if (!effectiveBrand) throw new Error("Brand select korun");
-      if (!name.trim() || !phone.trim()) throw new Error("Name & Mobile lagbe");
+      if (!name.trim()) throw new Error("Customer name lagbe");
+      const phoneError = bdPhoneError(phone);
+      if (phoneError) throw new Error(phoneError);
       if (!address.trim()) throw new Error("Address lagbe");
       if (items.length === 0) throw new Error("At least 1 product add korun");
       if (items.some((i) => i.needsVariant && !i.variant_id)) {
@@ -484,9 +487,9 @@ function NewOrderPage() {
           source_platform: orderSource || null,
           is_guest_order: true,
           guest_name: name,
-          guest_phone: phone,
+          guest_phone: normalizeBdPhone(phone),
           shipping_name: name,
-          shipping_phone: phone,
+          shipping_phone: normalizeBdPhone(phone),
           shipping_address: address,
           shipping_city: cityName || null,
           shipping_thana: zoneName || null,
