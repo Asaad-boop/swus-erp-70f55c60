@@ -195,6 +195,8 @@ export function OrderDrawer({ orderId, onClose, mode = "fulfillment" }: Props) {
   const saveCustomer = useMutation({
     mutationFn: async () => {
       if (!orderId) throw new Error("Order missing");
+      const phoneError = bdPhoneError(customerDraft.shipping_phone);
+      if (phoneError) throw new Error(phoneError);
       const payload = {
         shipping_name: customerDraft.shipping_name.trim() || null,
         shipping_phone: customerDraft.shipping_phone.trim() || null,
