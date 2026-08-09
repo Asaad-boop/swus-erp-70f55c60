@@ -9495,6 +9495,68 @@ export type Database = {
           variant_label: string
         }[]
       }
+      rpt_order_ops_breakdown: {
+        Args: {
+          _basis?: string
+          _brand_ids: string[]
+          _dim?: string
+          _from: string
+          _to: string
+        }
+        Returns: {
+          aov: number
+          cancel_rate: number
+          cancelled: number
+          confirmed: number
+          delivered: number
+          delivered_value: number
+          delivery_rate: number
+          label: string
+          placed: number
+          return_rate: number
+          returned: number
+        }[]
+      }
+      rpt_order_performance: {
+        Args: {
+          _basis?: string
+          _brand_ids: string[]
+          _from: string
+          _to: string
+        }
+        Returns: Json
+      }
+      rpt_product_performance: {
+        Args: {
+          _basis?: string
+          _brand_ids: string[]
+          _from: string
+          _level?: string
+          _to: string
+        }
+        Returns: {
+          avg_cost: number
+          avg_price: number
+          cogs: number
+          contribution_profit: number
+          cost_missing_units: number
+          courier_cost: number
+          discounts: number
+          gross_profit: number
+          gross_sales: number
+          margin_pct: number
+          net_revenue: number
+          orders: number
+          product_id: string
+          product_name: string
+          return_rate: number
+          returned_units: number
+          sku: string
+          units: number
+          variant_id: string
+          variant_label: string
+        }[]
+      }
       rpt_sales_breakdown: {
         Args: {
           _basis?: string
