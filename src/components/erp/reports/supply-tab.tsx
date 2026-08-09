@@ -22,9 +22,10 @@ type SupRow = {
   kind: string; po_id: string; po_number: string; supplier: string; order_date: string | null;
   status: string; units: number; total: number; paid: number; due: number;
   landed_per_unit: number; cartons: number; cartons_received: number;
+  in_range: boolean;
 };
 
-type Filter = "all" | "import" | "local" | "due";
+type Filter = "all" | "import" | "local" | "due" | "in range";
 
 export function SupplyTab({ args, enabled }: { args: RpcArgs; enabled: boolean }) {
   const [filter, setFilter] = useState<Filter>("all");
@@ -72,6 +73,7 @@ export function SupplyTab({ args, enabled }: { args: RpcArgs; enabled: boolean }
       if (filter === "import" && r.kind !== "import") return false;
       if (filter === "local" && r.kind !== "local") return false;
       if (filter === "due" && Number(r.due) <= 0) return false;
+      if (filter === "in range" && !r.in_range) return false;
       if (!term) return true;
       return (r.po_number ?? "").toLowerCase().includes(term) || (r.supplier ?? "").toLowerCase().includes(term);
     });
@@ -87,7 +89,7 @@ export function SupplyTab({ args, enabled }: { args: RpcArgs; enabled: boolean }
         action={
           <div className="flex flex-wrap items-center gap-2">
             <div className="flex gap-1">
-              {(["all", "import", "local", "due"] as const).map((k) => (
+              {(["all", "import", "local", "due", "in range"] as const).map((k) => (
                 <Button key={k} size="sm" variant={filter === k ? "default" : "outline"} className="h-7 px-2.5 text-xs capitalize" onClick={() => setFilter(k)}>{k}</Button>
               ))}
             </div>
@@ -137,6 +139,7 @@ export function SupplyTab({ args, enabled }: { args: RpcArgs; enabled: boolean }
                       <div className="font-medium">{r.po_number}</div>
                       <div className="mt-0.5 flex items-center gap-1.5">
                         <Badge variant="outline" className="text-[10px] uppercase">{r.kind}</Badge>
+                        {!r.in_range && <Badge variant="outline" className="text-[10px] uppercase text-muted-foreground">carried over</Badge>}
                         <span className="text-xs text-muted-foreground">{r.status?.replace(/_/g, " ")}</span>
                       </div>
                     </TableCell>

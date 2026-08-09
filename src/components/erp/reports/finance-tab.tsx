@@ -12,7 +12,8 @@ import { Panel, KpiStrip, EmptyState, type Kpi } from "@/components/erp/reports/
 import type { RpcArgs } from "@/components/erp/reports/customers-tab";
 
 export type PnlV2 = {
-  gross_sales: number; discounts: number; net_revenue: number; cogs: number;
+  gross_sales: number; discounts: number; net_revenue: number; shipping_income: number;
+  total_revenue: number; cogs: number;
   gross_profit: number; gross_margin_pct: number; courier_cost: number; packaging_cost: number;
   return_loss: number; refunds: number; return_courier_cost: number; contribution_profit: number;
   ad_spend: number; opex_total: number; opex_by_category: Record<string, number>;
@@ -40,7 +41,7 @@ export function FinanceTab({ args, enabled }: { args: RpcArgs; enabled: boolean 
 
   const kpis: Kpi[] = p
     ? [
-        { label: "Net revenue", value: p.net_revenue, hint: `${p.delivered_orders} delivered orders` },
+        { label: "Total revenue", value: p.total_revenue ?? p.net_revenue, hint: `${p.delivered_orders} delivered orders · incl. delivery charge` },
         { label: "Gross profit", value: p.gross_profit, tone: p.gross_profit >= 0 ? "good" : "bad", hint: `${p.gross_margin_pct}% margin` },
         { label: "Contribution profit", value: p.contribution_profit, tone: p.contribution_profit >= 0 ? "good" : "bad", hint: "after courier & returns" },
         { label: "Net profit", value: p.net_profit, tone: p.net_profit >= 0 ? "good" : "bad", hint: `${p.net_margin_pct}% net margin` },
@@ -54,6 +55,8 @@ export function FinanceTab({ args, enabled }: { args: RpcArgs; enabled: boolean 
       { label: "Gross sales", value: p.gross_sales },
       { label: "Discounts", value: -p.discounts, kind: "sub" },
       { label: "Net revenue", value: p.net_revenue, kind: "total" },
+      { label: "Delivery charge income", value: p.shipping_income ?? 0, kind: "sub" },
+      { label: "Total revenue", value: p.total_revenue ?? p.net_revenue, kind: "total" },
       { label: "COGS", value: -p.cogs, kind: "sub", hint: p.cost_missing_units > 0 ? `${p.cost_missing_units} units without cost` : undefined },
       { label: "Gross profit", value: p.gross_profit, kind: "total" },
       { label: "Courier cost", value: -p.courier_cost, kind: "sub" },
