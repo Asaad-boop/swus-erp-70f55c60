@@ -9571,6 +9571,47 @@ export type Database = {
           variant_label: string
         }[]
       }
+      rpt_marketing_campaigns: {
+        Args: { _brand_ids: string[]; _from: string; _to: string }
+        Returns: {
+          cac: number
+          campaign_id: string
+          campaign_name: string
+          clicks: number
+          cogs: number
+          cpc: number
+          ctr: number
+          delivered_orders: number
+          gross_profit: number
+          impressions: number
+          net_profit: number
+          orders: number
+          revenue: number
+          roas: number
+          spend: number
+          status: string
+        }[]
+      }
+      rpt_marketing_daily: {
+        Args: { _brand_ids: string[]; _from: string; _to: string }
+        Returns: {
+          clicks: number
+          day: string
+          delivered_orders: number
+          gross_profit: number
+          impressions: number
+          manual_spend: number
+          orders: number
+          revenue: number
+          roas: number
+          spend: number
+          total_spend: number
+        }[]
+      }
+      rpt_marketing_summary: {
+        Args: { _brand_ids: string[]; _from: string; _to: string }
+        Returns: Json
+      }
       rpt_order_ops_breakdown: {
         Args: {
           _basis?: string
@@ -9633,6 +9674,44 @@ export type Database = {
           variant_label: string
         }[]
       }
+      rpt_returns_products: {
+        Args: {
+          _basis?: string
+          _brand_ids: string[]
+          _from: string
+          _to: string
+        }
+        Returns: {
+          cost_loss: number
+          orders: number
+          product_id: string
+          product_name: string
+          return_rate: number
+          returned_units: number
+          returned_value: number
+          sku: string
+          units_sold: number
+        }[]
+      }
+      rpt_returns_reasons: {
+        Args: { _brand_ids: string[]; _from: string; _to: string }
+        Returns: {
+          cases: number
+          dimension: string
+          label: string
+          loss: number
+          units: number
+        }[]
+      }
+      rpt_returns_summary: {
+        Args: {
+          _basis?: string
+          _brand_ids: string[]
+          _from: string
+          _to: string
+        }
+        Returns: Json
+      }
       rpt_sales_breakdown: {
         Args: {
           _basis?: string
@@ -9681,6 +9760,29 @@ export type Database = {
           units: number
         }[]
       }
+      rpt_supply_rows: {
+        Args: { _brand_ids: string[]; _from: string; _to: string }
+        Returns: {
+          cartons: number
+          cartons_received: number
+          due: number
+          kind: string
+          landed_per_unit: number
+          order_date: string
+          paid: number
+          po_id: string
+          po_number: string
+          status: string
+          supplier: string
+          total: number
+          units: number
+        }[]
+      }
+      rpt_supply_summary: {
+        Args: { _brand_ids: string[]; _from: string; _to: string }
+        Returns: Json
+      }
+      rpt_usd_bdt_rate: { Args: never; Returns: number }
       run_recurring_rules: { Args: { _brand_id?: string }; Returns: Json }
       seed_default_coa: { Args: { _brand_id: string }; Returns: number }
       set_product_stock: {
