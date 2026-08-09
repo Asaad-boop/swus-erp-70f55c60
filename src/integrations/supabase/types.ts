@@ -9643,6 +9643,10 @@ export type Database = {
         }
         Returns: Json
       }
+      rpt_pnl_v2: {
+        Args: { _brand_ids: string[]; _from: string; _to: string }
+        Returns: Json
+      }
       rpt_product_performance: {
         Args: {
           _basis?: string

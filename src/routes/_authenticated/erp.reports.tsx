@@ -23,8 +23,19 @@ import { InventoryTab } from "@/components/erp/reports/inventory-tab";
 import { MarketingTab } from "@/components/erp/reports/marketing-tab";
 import { ReturnsTab } from "@/components/erp/reports/returns-tab";
 import { SupplyTab } from "@/components/erp/reports/supply-tab";
+import { FinanceTab } from "@/components/erp/reports/finance-tab";
+
+const TAB_VALUES = [
+  "overview", "sales", "orders", "products", "customers",
+  "inventory", "marketing", "returns", "supply", "finance",
+] as const;
+type TabValue = (typeof TAB_VALUES)[number];
 
 export const Route = createFileRoute("/_authenticated/erp/reports")({
+  validateSearch: (search: Record<string, unknown>): { tab?: TabValue } => {
+    const t = String(search.tab ?? "");
+    return TAB_VALUES.includes(t as TabValue) ? { tab: t as TabValue } : {};
+  },
   head: () => ({
     meta: [
       { title: "Reports Hub — ERP" },
@@ -91,6 +102,8 @@ const BASIS_LABEL: Record<Basis, string> = {
 
 function ReportsHub() {
   const { brandIds, picker } = useMultiBrandPicker();
+  const { tab } = Route.useSearch();
+  const navigate = Route.useNavigate();
   const [range, setRange] = useState<MktRangeValue>(() => buildPreset("30d"));
   const [basis, setBasis] = useState<Basis>("delivered");
 
@@ -181,7 +194,10 @@ function ReportsHub() {
         <>
           <DataHealth data={healthQ.data} loading={healthQ.isLoading} />
 
-          <Tabs defaultValue="overview">
+          <Tabs
+            value={tab ?? "overview"}
+            onValueChange={(v) => navigate({ search: { tab: v as TabValue }, replace: true })}
+          >
             <TabsList className="flex-wrap">
               <TabsTrigger value="overview">Overview</TabsTrigger>
               <TabsTrigger value="sales">Sales</TabsTrigger>
@@ -192,6 +208,7 @@ function ReportsHub() {
               <TabsTrigger value="marketing">Marketing</TabsTrigger>
               <TabsTrigger value="returns">Returns</TabsTrigger>
               <TabsTrigger value="supply">Supply chain</TabsTrigger>
+              <TabsTrigger value="finance">Finance</TabsTrigger>
             </TabsList>
 
             <TabsContent value="overview" className="mt-4 space-y-4">
@@ -231,6 +248,10 @@ function ReportsHub() {
 
             <TabsContent value="supply" className="mt-4 space-y-4">
               <SupplyTab args={args} enabled={enabled} />
+            </TabsContent>
+
+            <TabsContent value="finance" className="mt-4 space-y-4">
+              <FinanceTab args={args} enabled={enabled} />
             </TabsContent>
           </Tabs>
         </>

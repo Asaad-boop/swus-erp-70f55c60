@@ -56,6 +56,10 @@ function InventoryReportsPage() {
                 <h1 className="text-2xl font-bold tracking-tight leading-tight">Inventory Reports</h1>
                 <p className="text-xs text-muted-foreground mt-0.5">
                   {effectiveBrand?.name ?? "—"} · valuation, movements & reorder intelligence
+                  {" · "}
+                  <a href="/erp/reports?tab=inventory" className="underline underline-offset-2">
+                    Reports Hub
+                  </a>
                 </p>
               </div>
             </div>
