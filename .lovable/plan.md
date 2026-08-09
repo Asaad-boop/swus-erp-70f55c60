@@ -1,72 +1,55 @@
-# Order Dashboard (Advanced)
+# Reports Hub — accurate, accounting-grade reporting
 
-একটা নতুন full-power Order Dashboard বানাবো `/erp/orders/dashboard`-এ। বর্তমান `/erp/orders/list` থাকবে (দ্রুত daily operation-এর জন্য), আর এই নতুনটা হবে "সব ডেটা এক জায়গায়" analytical + drill-down dashboard।
+আমাদের এখনকার report গুলো আলাদা আলাদা page-এ ছড়ানো, একেকটা একেক formula ব্যবহার করে, তাই number মেলে না। Plan হলো একটাই **Reports Hub** বানানো যেখানে সব report একই canonical accounting source থেকে আসবে — sales, orders, products, customers, inventory, finance, marketing।
 
-## 1. কী কী দেখা যাবে
+## Core principle: one source of truth
 
-**উপরে KPI স্ট্রিপ** (selected filter অনুযায়ী live):
-- Total orders, Total value, Delivered value, Advance collected, COD outstanding
-- Confirmed / Packed / Shipped / In transit / Delivered / Returned (paid+unpaid) / Cancelled / Fake / Pre-order
-- Delivery rate %, Return rate %, Avg order value, Avg confirm→delivery time
-
-**চার্ট সারি:**
-- Daily orders + revenue (stacked bar/line)
-- Status funnel (New → Confirmed → Shipped → Delivered)
-- Source breakdown (website / facebook / manual / phone / shopify)
-- Top brands, top products, top districts/zones
-
-**মূল টেবিল** — প্রতিটা order-এ column toggle করে দেখা যাবে:
-Invoice no, Order ID, Date, Customer + phone, Brand, Items (variant/color/SKU সহ), Qty, Subtotal, Discount, Delivery charge, Advance, COD due, Payment status, Order status, Courier + consignment + live courier status, Tags, Source/UTM/campaign, **Confirmed by (কে confirm করলো) + কখন**, Packed by, Last updated by, Note count, Settlement/reconciliation status, Profit (delivered হলে)।
-
-**Row expand** করলে: full status timeline (কে, কখন, কোন status), order notes, SMS log, payments/advance details, courier tracking history, stock movement — সব একসাথে।
-
-## 2. Filter ও Tag
-
-- Date range (advanced picker — presets + typeable + 2-month range, প্রজেক্ট standard অনুযায়ী)
-- Brand (multi), Status (multi-select, group সহ), Payment status, Source, Courier, City/Zone
-- Confirmed-by user, Assigned staff
-- Tag chips (existing `order-tags` system) — multi include/exclude
-- Amount range, Advance আছে/নাই, COD outstanding আছে/নাই
-- Search: invoice / phone / name / consignment / product name / SKU
-- Saved views (filter combo save করে নাম দিয়ে রাখা), URL search-params এ সব filter → link share করা যাবে
-- Sort: যেকোনো column, asc/desc
-- Export: বর্তমান filter অনুযায়ী CSV + PDF summary
-
-## 3. Backend / API
-
-নতুন ফাইল `src/lib/erp/orders-dashboard.functions.ts` — server functions (RLS + brand scope মেনে):
-- `getOrderDashboardSummary` — KPI + chart series, একটা Postgres RPC `erp_order_dashboard_summary(filters)` দিয়ে single round-trip
-- `listOrderDashboardRows` — paginated (server-side sort/filter, 50/100/200 per page) rich row, items + variant + courier + confirmed_by join সহ
-- `getOrderDashboardDetail` — এক order-এর timeline + notes + SMS + payments + tracking
-- `exportOrderDashboard` — filter অনুযায়ী পুরো dataset CSV
-
-DB সাইডে: filter-heavy কলামে index (`orders(brand_id, status, created_at)`, `orders(confirmed_by)`, phone/invoice trigram) যোগ করা হবে যাতে বড় ডেটাতেও দ্রুত থাকে। "কে confirm করলো" এর জন্য `order_status_history` + `orders.confirmed_by` থেকে resolve করে profile name দেখাবো।
-
-## 4. UI structure
+সব report একই definition মানবে:
 
 ```text
-/erp/orders/dashboard
- ├─ Filter bar (sticky, chip আকারে active filters + Reset)
- ├─ KPI strip (clickable → filter apply)
- ├─ Charts (collapsible)
- └─ Data table (virtualized, column chooser, row expand, bulk actions)
+Gross Sales      = delivered order items line_total
+- Discounts      = order-level discount allocated per line
+= Net Revenue
+- COGS           = unit_cost_snapshot → variant avg → product avg → cost_price
+= Gross Profit
+- Courier cost   = reconciled courier charge (actual, not estimate)
+- Return loss    = returned/unpaid-return cost + courier both-way
+- Ad spend       = get_meta_spend_bdt (FX-converted)
+- Opex           = erp_transactions expense (non-informational only)
+= Net Profit
 ```
 
-Bulk actions টেবিল থেকেই: status change, print invoice/label, courier book, SMS পাঠানো, tag add/remove, export selected।
+Cash vs Accrual আলাদা করে দেখানো হবে — "Delivered (earned)" আর "Received (wallet-এ ঢুকেছে)" দুটো column, যাতে reconciliation-এর সাথে মিলে।
 
-## 5. কাজের ধাপ
+## Reports (7 tabs)
 
-1. DB: dashboard summary RPC + index migration
-2. `orders-dashboard.functions.ts` (4টা server fn) + Zod filter schema (URL search-params-এর সাথে shared)
-3. Route `erp.orders.dashboard.tsx` + search-param validation
-4. Components: `dashboard-filter-bar`, `dashboard-kpis`, `dashboard-charts`, `dashboard-table` (column chooser + expand), `order-timeline-panel`
-5. Saved views (localStorage প্রথমে; চাইলে পরে DB-তে)
-6. CSV/PDF export
-7. ERP sidebar-এ "Order Dashboard" মেনু যোগ
+1. **Overview** — KPI strip (Net revenue, Gross profit, Net profit, Orders, AOV, Delivery rate, Return rate, ROAS), revenue vs profit trend chart, top movers।
+2. **Sales** — daily/weekly/monthly sales, brand-wise, channel-wise (website/manual/Shopify/FB), payment-method wise, courier-wise, city/zone-wise।
+3. **Orders** — status funnel (new → confirmed → shipped → delivered), delivery/return/cancel rate, courier performance, avg fulfilment time, fake/hold analysis।
+4. **Products** — per SKU + variant: units sold, revenue, COGS, gross profit, margin %, return rate, stock cover (days), dead stock, combo breakdown।
+5. **Customers** — new vs repeat, repeat rate, LTV, RFM segments, top customers, cohort retention।
+6. **Inventory** — stock value (at cost), aging, low stock, reorder need, stock movement summary, landed-cost sync।
+7. **Finance** — বিদ্যমান P&L / Balance Sheet / Cash Flow / Trial Balance / GL / Budget vs Actual, কিন্তু নতুন canonical P&L দিয়ে (COGS + courier + returns + ad spend সহ)।
 
-## টেকনিক্যাল নোট
+প্রতিটা report-এ: date range picker (advanced variant), brand scope, compare-to-previous-period, drill-down (row click → underlying orders), Excel + PDF export।
 
-- সব read server function দিয়ে, `useQuery` + keepPreviousData; brand scope `applyBrandScope` মেনে
-- Filter state URL-এ (`validateSearch` + `fallback`), তাই refresh/share-এ view অক্ষত
-- বড় টেবিল virtualize করা হবে, ডেটা না থাকলে card/section hide
-- বিদ্যমান `orders.ts` status/badge/tag constants reuse হবে, নতুন করে duplicate হবে না
+## Technical work
+
+- **New SQL RPCs** (brand-scoped, security definer, indexed):
+  `rpt_sales_summary`, `rpt_sales_timeseries`, `rpt_order_funnel`, `rpt_product_performance`, `rpt_customer_summary`, `rpt_inventory_valuation`, `rpt_pnl_v2`।
+  সবগুলো একটা shared internal view `rpt_delivered_lines` ব্যবহার করবে (existing `mkt_delivered_line_costs`-এর superset) যাতে COGS fallback chain একই থাকে।
+- `erp_profit_loss` রিপ্লেস না করে `rpt_pnl_v2` বানানো হবে যেটা COGS, courier cost, return loss, ad spend আলাদা line হিসেবে দেবে; পুরোনো P&L tab নতুনটায় সুইচ হবে।
+- **New route** `/erp/reports` (hub, 7 tabs), sidebar-এ "Reports" এখান থেকে point করবে। পুরোনো `/erp/finance/reports` Finance tab হিসেবে থেকে যাবে (redirect), যাতে কোনো link ভাঙে না।
+- Shared components: `ReportShell` (header + range + export), `KpiStrip`, `ReportTable` (sort/pin/drilldown), `TrendChart`।
+- Export: `exportAoaXlsx` reuse + jsPDF PDF (Bengali font already wired)।
+
+## Rollout (যাতে একবারে ভেঙে না যায়)
+
+- Phase 1 — canonical SQL layer + Overview + Sales tab
+- Phase 2 — Orders + Products tab
+- Phase 3 — Customers + Inventory tab
+- Phase 4 — Finance tab migrate to `rpt_pnl_v2`, পুরোনো duplicate report page গুলো cleanup
+
+## Verification
+
+প্রতিটা phase-এ live data দিয়ে cross-check: Reports-এর revenue = reconciliation-এর received + pending, Reports-এর profit = brand-profitability page-এর profit, product report-এর units = stock movement। না মিললে ship করব না।
