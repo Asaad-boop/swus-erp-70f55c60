@@ -9447,6 +9447,50 @@ export type Database = {
         Returns: undefined
       }
       resolve_login_email: { Args: { p_identifier: string }; Returns: string }
+      rpt_customer_segments: {
+        Args: { _brand_ids: string[]; _to?: string }
+        Returns: {
+          avg_recency_days: number
+          customers: number
+          orders: number
+          revenue: number
+          segment: string
+        }[]
+      }
+      rpt_customer_summary: {
+        Args: {
+          _basis?: string
+          _brand_ids: string[]
+          _from: string
+          _to: string
+        }
+        Returns: Json
+      }
+      rpt_customer_top: {
+        Args: {
+          _basis?: string
+          _brand_ids: string[]
+          _from: string
+          _limit?: number
+          _to: string
+        }
+        Returns: {
+          aov: number
+          contribution_profit: number
+          customer_name: string
+          customer_phone: string
+          delivered_orders: number
+          first_order: string
+          gross_profit: number
+          is_new: boolean
+          last_order: string
+          net_revenue: number
+          orders: number
+          return_rate: number
+          returned_orders: number
+          units: number
+        }[]
+      }
       rpt_data_health: {
         Args: {
           _basis?: string
@@ -9454,6 +9498,38 @@ export type Database = {
           _from: string
           _to: string
         }
+        Returns: Json
+      }
+      rpt_inventory_rows: {
+        Args: {
+          _brand_ids: string[]
+          _from: string
+          _level?: string
+          _to: string
+        }
+        Returns: {
+          available: number
+          daily_run_rate: number
+          days_of_cover: number
+          is_dead: boolean
+          is_low: boolean
+          last_sold: string
+          product_id: string
+          product_name: string
+          reserved: number
+          revenue: number
+          sell_through: number
+          sku: string
+          stock: number
+          stock_value: number
+          unit_cost: number
+          units_sold: number
+          variant_id: string
+          variant_label: string
+        }[]
+      }
+      rpt_inventory_summary: {
+        Args: { _brand_ids: string[]; _from: string; _to: string }
         Returns: Json
       }
       rpt_lines: {
