@@ -9500,6 +9500,7 @@ export type Database = {
         }
         Returns: Json
       }
+      rpt_delivered_statuses: { Args: never; Returns: string[] }
       rpt_inventory_rows: {
         Args: {
           _brand_ids: string[]
@@ -9678,6 +9679,7 @@ export type Database = {
           variant_label: string
         }[]
       }
+      rpt_returned_statuses: { Args: never; Returns: string[] }
       rpt_returns_products: {
         Args: {
           _basis?: string
