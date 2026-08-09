@@ -50,7 +50,8 @@ type Basis = "delivered" | "created" | "confirmed";
 type Summary = {
   orders_placed: number; open_orders: number; delivered_orders: number;
   returned_orders: number; cancelled_orders: number; units_sold: number;
-  gross_sales: number; discounts: number; net_revenue: number; cogs: number;
+  gross_sales: number; discounts: number; net_revenue: number;
+  shipping_income: number; total_revenue: number; cogs: number;
   gross_profit: number; courier_cost: number; packaging_cost: number; refunds: number;
   returned_value: number; return_courier_cost: number; contribution_profit: number;
   aov: number; delivery_rate: number; return_rate: number; cancel_rate: number;
@@ -145,7 +146,7 @@ function ReportsHub() {
 
   const kpis: Kpi[] = s
     ? [
-        { label: "Net revenue", value: s.net_revenue, hint: `${s.delivered_orders} delivered orders` },
+        { label: "Total revenue", value: s.total_revenue ?? s.net_revenue, hint: `${s.delivered_orders} delivered orders · incl. delivery charge` },
         { label: "Gross profit", value: s.gross_profit, tone: s.gross_profit >= 0 ? "good" : "bad", hint: s.net_revenue > 0 ? `${((s.gross_profit / s.net_revenue) * 100).toFixed(1)}% margin` : undefined },
         { label: "Contribution profit", value: s.contribution_profit, tone: s.contribution_profit >= 0 ? "good" : "bad", hint: "after courier, packaging, returns" },
         { label: "COGS", value: s.cogs },
@@ -395,6 +396,7 @@ function ProfitBridge({ s }: { s: Summary }) {
     { label: "Gross sales", value: s.gross_sales },
     { label: "Discounts", value: -s.discounts },
     { label: "Net revenue", value: s.net_revenue, strong: true },
+    { label: "Delivery charge income", value: s.shipping_income ?? 0 },
     { label: "COGS", value: -s.cogs },
     { label: "Gross profit", value: s.gross_profit, strong: true },
     { label: "Courier charge", value: -s.courier_cost },
