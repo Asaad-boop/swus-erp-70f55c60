@@ -4,7 +4,7 @@ import { useQuery } from "@tanstack/react-query";
 import {
   AreaChart, Area, BarChart, Bar, CartesianGrid, XAxis, YAxis, Tooltip, ResponsiveContainer, Legend,
 } from "recharts";
-import { FileSpreadsheet, AlertTriangle, RefreshCw } from "lucide-react";
+import { FileSpreadsheet, AlertTriangle, RefreshCw, Search } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useMultiBrandPicker } from "@/components/erp/brand-picker-gate";
 import { DateRangePicker, buildPreset, type MktRangeValue } from "@/components/erp/marketing/date-range-picker";
@@ -14,6 +14,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Table, TableHeader, TableHead, TableBody, TableRow, TableCell } from "@/components/ui/table";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Input } from "@/components/ui/input";
 import { fmtBdt } from "@/lib/erp/finance";
 import { exportAoaXlsx } from "@/lib/erp/utils/excel";
 import { Panel, KpiStrip, EmptyState, type Kpi } from "@/components/erp/reports/report-kit";
@@ -53,6 +54,28 @@ type SeriesRow = {
 type BreakdownRow = {
   label: string; orders: number; delivered_orders: number; units: number;
   net_revenue: number; cogs: number; gross_profit: number; courier_cost: number; return_rate: number;
+};
+
+type Funnel = {
+  placed: number; confirmed: number; shipped: number; delivered: number;
+  returned: number; cancelled: number; open_orders: number;
+  delivered_value: number; placed_value: number; aov: number;
+  confirm_rate: number; delivery_rate: number; return_rate: number; cancel_rate: number;
+  hours_to_confirm: number; hours_to_ship: number; hours_to_deliver: number;
+};
+
+type OpsRow = {
+  label: string; placed: number; confirmed: number; delivered: number; returned: number;
+  cancelled: number; delivery_rate: number; return_rate: number; cancel_rate: number;
+  delivered_value: number; aov: number;
+};
+
+type ProductRow = {
+  product_id: string; variant_id: string | null; product_name: string; variant_label: string | null;
+  sku: string | null; orders: number; units: number; gross_sales: number; discounts: number;
+  net_revenue: number; cogs: number; gross_profit: number; margin_pct: number; courier_cost: number;
+  contribution_profit: number; avg_price: number; avg_cost: number; returned_units: number;
+  return_rate: number; cost_missing_units: number;
 };
 
 const BASIS_LABEL: Record<Basis, string> = {
@@ -157,6 +180,8 @@ function ReportsHub() {
             <TabsList className="flex-wrap">
               <TabsTrigger value="overview">Overview</TabsTrigger>
               <TabsTrigger value="sales">Sales</TabsTrigger>
+              <TabsTrigger value="orders">Orders</TabsTrigger>
+              <TabsTrigger value="products">Products</TabsTrigger>
             </TabsList>
 
             <TabsContent value="overview" className="mt-4 space-y-4">
@@ -168,6 +193,14 @@ function ReportsHub() {
             <TabsContent value="sales" className="mt-4 space-y-4">
               <TrendPanel rows={seriesQ.data ?? []} loading={seriesQ.isLoading} showTable />
               <BreakdownPanel args={args} enabled={enabled} />
+            </TabsContent>
+
+            <TabsContent value="orders" className="mt-4 space-y-4">
+              <OrdersTab args={args} enabled={enabled} />
+            </TabsContent>
+
+            <TabsContent value="products" className="mt-4 space-y-4">
+              <ProductsTab args={args} enabled={enabled} />
             </TabsContent>
           </Tabs>
         </>
@@ -433,5 +466,379 @@ function BreakdownPanel({ args, enabled }: { args: { _brand_ids: string[]; _from
         </div>
       )}
     </Panel>
+  );
+}
+
+type RpcArgs = { _brand_ids: string[]; _from: string; _to: string; _basis: string };
+
+const OPS_DIMS = [
+  { key: "courier", label: "Courier" },
+  { key: "source", label: "Channel" },
+  { key: "city", label: "City" },
+  { key: "payment", label: "Payment" },
+  { key: "brand", label: "Brand" },
+  { key: "status", label: "Status" },
+];
+
+function OrdersTab({ args, enabled }: { args: RpcArgs; enabled: boolean }) {
+  const [dim, setDim] = useState("courier");
+
+  const funnelQ = useQuery({
+    queryKey: ["rpt-funnel", JSON.stringify(args)],
+    enabled,
+    queryFn: async () => {
+      const { data, error } = await supabase.rpc("rpt_order_performance", args as never);
+      if (error) throw error;
+      return data as unknown as Funnel;
+    },
+  });
+
+  const opsQ = useQuery({
+    queryKey: ["rpt-ops", JSON.stringify(args), dim],
+    enabled,
+    queryFn: async () => {
+      const { data, error } = await supabase.rpc("rpt_order_ops_breakdown", { ...args, _dim: dim } as never);
+      if (error) throw error;
+      return (data ?? []) as unknown as OpsRow[];
+    },
+  });
+
+  const f = funnelQ.data;
+  const rows = opsQ.data ?? [];
+
+  const kpis: Kpi[] = f
+    ? [
+        { label: "Orders placed", value: f.placed, kind: "number", hint: fmtBdt(f.placed_value) },
+        { label: "Confirmed", value: f.confirmed, kind: "number", hint: `${Number(f.confirm_rate).toFixed(1)}% of placed` },
+        { label: "Delivered", value: f.delivered, kind: "number", hint: fmtBdt(f.delivered_value) },
+        { label: "Open / in pipeline", value: f.open_orders, kind: "number" },
+        { label: "Delivery rate", value: f.delivery_rate, kind: "percent", tone: Number(f.delivery_rate) >= 80 ? "good" : "default" },
+        { label: "Return rate", value: f.return_rate, kind: "percent", tone: Number(f.return_rate) > 15 ? "bad" : "default" },
+        { label: "Cancel rate", value: f.cancel_rate, kind: "percent", tone: Number(f.cancel_rate) > 10 ? "bad" : "default" },
+        { label: "AOV (delivered)", value: f.aov },
+      ]
+    : [];
+
+  const funnelSteps = f
+    ? [
+        { label: "Placed", value: Number(f.placed) },
+        { label: "Confirmed", value: Number(f.confirmed) },
+        { label: "Shipped", value: Number(f.shipped) },
+        { label: "Delivered", value: Number(f.delivered) },
+      ]
+    : [];
+  const maxStep = funnelSteps[0]?.value || 1;
+
+  return (
+    <>
+      <KpiStrip items={kpis} loading={funnelQ.isLoading} />
+
+      <div className="grid gap-4 lg:grid-cols-2">
+        <Panel title="Order funnel" subtitle="Cohort of orders in the selected range">
+          {funnelQ.isLoading ? (
+            <Skeleton className="h-[200px] rounded-lg" />
+          ) : !f ? (
+            <EmptyState text="No orders in this range." />
+          ) : (
+            <div className="space-y-3">
+              {funnelSteps.map((s2) => (
+                <div key={s2.label}>
+                  <div className="mb-1 flex items-center justify-between text-sm">
+                    <span className="font-medium">{s2.label}</span>
+                    <span className="tabular-nums text-muted-foreground">
+                      {s2.value.toLocaleString()} · {((s2.value / maxStep) * 100).toFixed(1)}%
+                    </span>
+                  </div>
+                  <div className="h-2.5 overflow-hidden rounded-full bg-muted">
+                    <div className="h-full rounded-full bg-primary transition-all" style={{ width: `${Math.min(100, (s2.value / maxStep) * 100)}%` }} />
+                  </div>
+                </div>
+              ))}
+              <div className="grid grid-cols-2 gap-2 pt-2 text-sm">
+                <div className="rounded-lg border p-2.5">
+                  <div className="text-xs text-muted-foreground">Returned</div>
+                  <div className="font-semibold tabular-nums text-rose-600 dark:text-rose-400">{Number(f.returned).toLocaleString()}</div>
+                </div>
+                <div className="rounded-lg border p-2.5">
+                  <div className="text-xs text-muted-foreground">Cancelled</div>
+                  <div className="font-semibold tabular-nums text-rose-600 dark:text-rose-400">{Number(f.cancelled).toLocaleString()}</div>
+                </div>
+              </div>
+            </div>
+          )}
+        </Panel>
+
+        <Panel title="Handling speed" subtitle="Average time between stages">
+          {funnelQ.isLoading ? (
+            <Skeleton className="h-[200px] rounded-lg" />
+          ) : !f ? (
+            <EmptyState text="No data." />
+          ) : (
+            <div className="divide-y">
+              {[
+                { label: "Order → Confirm", h: Number(f.hours_to_confirm) },
+                { label: "Confirm → Ship", h: Number(f.hours_to_ship) },
+                { label: "Ship → Deliver", h: Number(f.hours_to_deliver) },
+              ].map((r) => (
+                <div key={r.label} className="flex items-center justify-between py-3 text-sm">
+                  <span className="text-muted-foreground">{r.label}</span>
+                  <span className="font-semibold tabular-nums">
+                    {r.h >= 24 ? `${(r.h / 24).toFixed(1)} days` : `${r.h.toFixed(1)} hrs`}
+                  </span>
+                </div>
+              ))}
+            </div>
+          )}
+        </Panel>
+      </div>
+
+      <Panel
+        title="Operations breakdown"
+        subtitle="Delivery, return and cancel performance"
+        action={
+          <div className="flex items-center gap-2">
+            <div className="flex flex-wrap gap-1">
+              {OPS_DIMS.map((d) => (
+                <Button key={d.key} size="sm" variant={dim === d.key ? "default" : "outline"} className="h-7 px-2.5 text-xs" onClick={() => setDim(d.key)}>
+                  {d.label}
+                </Button>
+              ))}
+            </div>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() =>
+                exportAoaXlsx(
+                  [["Label", "Placed", "Confirmed", "Delivered", "Returned", "Cancelled", "Delivery %", "Return %", "Cancel %", "Delivered value", "AOV"],
+                   ...rows.map((r) => [r.label, r.placed, r.confirmed, r.delivered, r.returned, r.cancelled, r.delivery_rate, r.return_rate, r.cancel_rate, r.delivered_value, r.aov])],
+                  "Order ops", `order-ops-${dim}`,
+                )
+              }
+            >
+              <FileSpreadsheet className="mr-1.5 h-3.5 w-3.5" />Excel
+            </Button>
+          </div>
+        }
+      >
+        {opsQ.isLoading ? (
+          <Skeleton className="h-[240px] rounded-lg" />
+        ) : rows.length === 0 ? (
+          <EmptyState text="No orders in this range." />
+        ) : (
+          <div className="max-h-[420px] overflow-auto rounded-lg border">
+            <Table>
+              <TableHeader className="sticky top-0 z-10 bg-muted/60 backdrop-blur">
+                <TableRow>
+                  <TableHead>Label</TableHead>
+                  <TableHead className="text-right">Placed</TableHead>
+                  <TableHead className="text-right">Delivered</TableHead>
+                  <TableHead className="text-right">Delivery %</TableHead>
+                  <TableHead className="text-right">Return %</TableHead>
+                  <TableHead className="text-right">Cancel %</TableHead>
+                  <TableHead className="text-right">Delivered value</TableHead>
+                  <TableHead className="text-right">AOV</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {rows.map((r) => (
+                  <TableRow key={r.label}>
+                    <TableCell className="font-medium">{r.label}</TableCell>
+                    <TableCell className="text-right tabular-nums">{Number(r.placed).toLocaleString()}</TableCell>
+                    <TableCell className="text-right tabular-nums">{Number(r.delivered).toLocaleString()}</TableCell>
+                    <TableCell className="text-right tabular-nums">{Number(r.delivery_rate).toFixed(1)}%</TableCell>
+                    <TableCell className={`text-right tabular-nums ${Number(r.return_rate) > 15 ? "text-rose-600 dark:text-rose-400" : ""}`}>{Number(r.return_rate).toFixed(1)}%</TableCell>
+                    <TableCell className="text-right tabular-nums">{Number(r.cancel_rate).toFixed(1)}%</TableCell>
+                    <TableCell className="text-right tabular-nums">{fmtBdt(r.delivered_value)}</TableCell>
+                    <TableCell className="text-right tabular-nums">{fmtBdt(r.aov)}</TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </div>
+        )}
+      </Panel>
+    </>
+  );
+}
+
+type ProductSort = "net_revenue" | "gross_profit" | "units" | "margin_pct" | "return_rate";
+
+const PRODUCT_SORTS: { key: ProductSort; label: string }[] = [
+  { key: "net_revenue", label: "Revenue" },
+  { key: "gross_profit", label: "Profit" },
+  { key: "units", label: "Units" },
+  { key: "margin_pct", label: "Margin %" },
+  { key: "return_rate", label: "Return %" },
+];
+
+function ProductsTab({ args, enabled }: { args: RpcArgs; enabled: boolean }) {
+  const [level, setLevel] = useState<"product" | "variant">("product");
+  const [sort, setSort] = useState<ProductSort>("net_revenue");
+  const [search, setSearch] = useState("");
+
+  const q = useQuery({
+    queryKey: ["rpt-products", JSON.stringify(args), level],
+    enabled,
+    queryFn: async () => {
+      const { data, error } = await supabase.rpc("rpt_product_performance", { ...args, _level: level } as never);
+      if (error) throw error;
+      return (data ?? []) as unknown as ProductRow[];
+    },
+  });
+
+  const rows = useMemo(() => {
+    const term = search.trim().toLowerCase();
+    const list = (q.data ?? []).filter((r) =>
+      !term ||
+      r.product_name?.toLowerCase().includes(term) ||
+      (r.sku ?? "").toLowerCase().includes(term) ||
+      (r.variant_label ?? "").toLowerCase().includes(term),
+    );
+    return [...list].sort((a, b) => Number(b[sort] ?? 0) - Number(a[sort] ?? 0));
+  }, [q.data, search, sort]);
+
+  const totals = useMemo(
+    () =>
+      rows.reduce(
+        (acc, r) => ({
+          units: acc.units + Number(r.units),
+          net_revenue: acc.net_revenue + Number(r.net_revenue),
+          cogs: acc.cogs + Number(r.cogs),
+          gross_profit: acc.gross_profit + Number(r.gross_profit),
+          contribution_profit: acc.contribution_profit + Number(r.contribution_profit),
+        }),
+        { units: 0, net_revenue: 0, cogs: 0, gross_profit: 0, contribution_profit: 0 },
+      ),
+    [rows],
+  );
+
+  const chartRows = rows.slice(0, 10).map((r) => ({
+    label: (r.variant_label ? `${r.product_name} · ${r.variant_label}` : r.product_name).slice(0, 26),
+    gross_profit: Number(r.gross_profit),
+    net_revenue: Number(r.net_revenue),
+  }));
+
+  return (
+    <>
+      <Panel title={`Top ${level === "variant" ? "variants" : "products"} by ${PRODUCT_SORTS.find((s) => s.key === sort)?.label.toLowerCase()}`}>
+        {q.isLoading ? (
+          <Skeleton className="h-[300px] rounded-lg" />
+        ) : chartRows.length === 0 ? (
+          <EmptyState text="No delivered product lines in this range." />
+        ) : (
+          <div className="h-[320px]">
+            <ResponsiveContainer width="100%" height="100%">
+              <BarChart data={chartRows} layout="vertical" margin={{ left: 8, right: 16 }}>
+                <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" horizontal={false} />
+                <XAxis type="number" tick={{ fontSize: 11, fill: "hsl(var(--muted-foreground))" }} tickLine={false} axisLine={false} />
+                <YAxis type="category" dataKey="label" width={170} tick={{ fontSize: 11, fill: "hsl(var(--muted-foreground))" }} tickLine={false} axisLine={false} />
+                <Tooltip formatter={(v: number, n: string) => [fmtBdt(v), n]} contentStyle={{ background: "hsl(var(--popover))", border: "1px solid hsl(var(--border))", borderRadius: 10, fontSize: 12 }} />
+                <Legend wrapperStyle={{ fontSize: 12 }} />
+                <Bar dataKey="net_revenue" name="Net revenue" fill="hsl(var(--primary))" radius={[0, 6, 6, 0]} />
+                <Bar dataKey="gross_profit" name="Gross profit" fill="hsl(var(--chart-2, 160 60% 45%))" radius={[0, 6, 6, 0]} />
+              </BarChart>
+            </ResponsiveContainer>
+          </div>
+        )}
+      </Panel>
+
+      <Panel
+        title="Product profitability"
+        subtitle={`${rows.length} rows · net revenue ${fmtBdt(totals.net_revenue)} · gross profit ${fmtBdt(totals.gross_profit)}`}
+        action={
+          <div className="flex flex-wrap items-center gap-2">
+            <div className="flex gap-1">
+              <Button size="sm" variant={level === "product" ? "default" : "outline"} className="h-7 px-2.5 text-xs" onClick={() => setLevel("product")}>Product</Button>
+              <Button size="sm" variant={level === "variant" ? "default" : "outline"} className="h-7 px-2.5 text-xs" onClick={() => setLevel("variant")}>Variant</Button>
+            </div>
+            <div className="relative">
+              <Search className="pointer-events-none absolute left-2 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-muted-foreground" />
+              <Input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Search product / SKU" className="h-7 w-[190px] pl-7 text-xs" />
+            </div>
+            <Select value={sort} onValueChange={(v) => setSort(v as ProductSort)}>
+              <SelectTrigger className="h-7 w-[130px] text-xs"><SelectValue /></SelectTrigger>
+              <SelectContent>
+                {PRODUCT_SORTS.map((s2) => <SelectItem key={s2.key} value={s2.key}>{s2.label}</SelectItem>)}
+              </SelectContent>
+            </Select>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() =>
+                exportAoaXlsx(
+                  [["Product", "Variant", "SKU", "Orders", "Units", "Net revenue", "COGS", "Gross profit", "Margin %", "Courier", "Contribution", "Avg price", "Avg cost", "Returned units", "Return %", "Units missing cost"],
+                   ...rows.map((r) => [r.product_name, r.variant_label ?? "", r.sku ?? "", r.orders, r.units, r.net_revenue, r.cogs, r.gross_profit, r.margin_pct, r.courier_cost, r.contribution_profit, r.avg_price, r.avg_cost, r.returned_units, r.return_rate, r.cost_missing_units])],
+                  "Products", `product-profit-${level}`,
+                )
+              }
+            >
+              <FileSpreadsheet className="mr-1.5 h-3.5 w-3.5" />Excel
+            </Button>
+          </div>
+        }
+      >
+        {q.isLoading ? (
+          <Skeleton className="h-[320px] rounded-lg" />
+        ) : rows.length === 0 ? (
+          <EmptyState text="No delivered product lines in this range." />
+        ) : (
+          <div className="max-h-[560px] overflow-auto rounded-lg border">
+            <Table>
+              <TableHeader className="sticky top-0 z-10 bg-muted/60 backdrop-blur">
+                <TableRow>
+                  <TableHead>Product</TableHead>
+                  <TableHead className="text-right">Units</TableHead>
+                  <TableHead className="text-right">Net revenue</TableHead>
+                  <TableHead className="text-right">COGS</TableHead>
+                  <TableHead className="text-right">Gross profit</TableHead>
+                  <TableHead className="text-right">Margin</TableHead>
+                  <TableHead className="text-right">Contribution</TableHead>
+                  <TableHead className="text-right">Return %</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {rows.map((r) => (
+                  <TableRow key={`${r.product_id}-${r.variant_id ?? "all"}`}>
+                    <TableCell>
+                      <div className="font-medium">{r.product_name}</div>
+                      <div className="flex flex-wrap items-center gap-1.5 text-xs text-muted-foreground">
+                        {r.variant_label && <span>{r.variant_label}</span>}
+                        {r.sku && <span className="font-mono">{r.sku}</span>}
+                        {Number(r.cost_missing_units) > 0 && (
+                          <Badge variant="outline" className="border-amber-500/40 text-amber-600 dark:text-amber-400">
+                            {Number(r.cost_missing_units)} units no cost
+                          </Badge>
+                        )}
+                      </div>
+                    </TableCell>
+                    <TableCell className="text-right tabular-nums">{Number(r.units).toLocaleString()}</TableCell>
+                    <TableCell className="text-right tabular-nums">{fmtBdt(r.net_revenue)}</TableCell>
+                    <TableCell className="text-right tabular-nums text-muted-foreground">{fmtBdt(r.cogs)}</TableCell>
+                    <TableCell className={`text-right tabular-nums ${Number(r.gross_profit) < 0 ? "text-rose-600 dark:text-rose-400" : ""}`}>{fmtBdt(r.gross_profit)}</TableCell>
+                    <TableCell className="text-right tabular-nums">{Number(r.margin_pct).toFixed(1)}%</TableCell>
+                    <TableCell className={`text-right font-medium tabular-nums ${Number(r.contribution_profit) < 0 ? "text-rose-600 dark:text-rose-400" : ""}`}>{fmtBdt(r.contribution_profit)}</TableCell>
+                    <TableCell className={`text-right tabular-nums ${Number(r.return_rate) > 15 ? "text-rose-600 dark:text-rose-400" : ""}`}>{Number(r.return_rate).toFixed(1)}%</TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+              <TableBody>
+                <TableRow className="bg-muted/40 font-semibold">
+                  <TableCell>Total</TableCell>
+                  <TableCell className="text-right tabular-nums">{totals.units.toLocaleString()}</TableCell>
+                  <TableCell className="text-right tabular-nums">{fmtBdt(totals.net_revenue)}</TableCell>
+                  <TableCell className="text-right tabular-nums">{fmtBdt(totals.cogs)}</TableCell>
+                  <TableCell className="text-right tabular-nums">{fmtBdt(totals.gross_profit)}</TableCell>
+                  <TableCell className="text-right tabular-nums">
+                    {totals.net_revenue > 0 ? `${((totals.gross_profit / totals.net_revenue) * 100).toFixed(1)}%` : "—"}
+                  </TableCell>
+                  <TableCell className="text-right tabular-nums">{fmtBdt(totals.contribution_profit)}</TableCell>
+                  <TableCell />
+                </TableRow>
+              </TableBody>
+            </Table>
+          </div>
+        )}
+      </Panel>
+    </>
   );
 }
