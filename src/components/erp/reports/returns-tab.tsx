@@ -15,7 +15,8 @@ type RetSummary = {
   delivered_orders: number; returned_orders: number; return_rate: number; returned_value: number;
   returned_cogs: number; return_courier_cost: number; cases: number; case_units: number;
   refunds: number; product_cost_loss: number; packaging_loss: number; case_delivery_loss: number;
-  total_loss: number; restocked_units: number; pending_cases: number; exchanges: number;
+  total_loss: number; case_total_loss: number; estimated_loss: number; loss_source: string;
+  restocked_units: number; pending_cases: number; exchanges: number;
   exchange_charges: number; exchange_loss: number;
 };
 
@@ -65,11 +66,11 @@ export function ReturnsTab({ args, enabled }: { args: RpcArgs; enabled: boolean 
   const kpis: Kpi[] = s
     ? [
         { label: "Returned orders", value: Number(s.returned_orders), kind: "number", hint: `${Number(s.delivered_orders).toLocaleString()} delivered` },
-        { label: "Return rate", value: Number(s.return_rate || 0), kind: "percent", tone: Number(s.return_rate) > 10 ? "bad" : "good" },
+        { label: "Return rate", value: Number(s.return_rate || 0), kind: "percent", tone: Number(s.return_rate) > 10 ? "bad" : "good", hint: "created-cohort · same as Sales tab" },
         { label: "Returned value", value: Number(s.returned_value), tone: "bad" },
         { label: "Stuck cost in returns", value: Number(s.returned_cogs), hint: "product cost of returned orders" },
         { label: "Return courier cost", value: Number(s.return_courier_cost), tone: "bad" },
-        { label: "Case loss (net)", value: Number(s.total_loss), tone: Number(s.total_loss) > 0 ? "bad" : "good", hint: `${Number(s.cases).toLocaleString()} cases · ${Number(s.case_units).toLocaleString()} units` },
+        { label: "Return loss (net)", value: Number(s.total_loss), tone: Number(s.total_loss) > 0 ? "bad" : "good", hint: `${s.loss_source ?? "return cases"} · ${Number(s.cases).toLocaleString()} cases` },
         { label: "Restocked units", value: Number(s.restocked_units), kind: "number", hint: `${Number(s.pending_cases).toLocaleString()} cases pending` },
         { label: "Exchange loss", value: Number(s.exchange_loss), tone: Number(s.exchange_loss) > 0 ? "bad" : "good", hint: `${Number(s.exchanges).toLocaleString()} exchanges` },
       ]

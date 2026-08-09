@@ -9772,6 +9772,7 @@ export type Database = {
           cartons: number
           cartons_received: number
           due: number
+          in_range: boolean
           kind: string
           landed_per_unit: number
           order_date: string
