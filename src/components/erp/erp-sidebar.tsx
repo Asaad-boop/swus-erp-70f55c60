@@ -74,6 +74,14 @@ const groups: Group[] = [
         ],
       },
       {
+        key: "reports",
+        label: "Reports",
+        icon: FileBarChart,
+        items: [
+          { to: "/erp/reports", label: "Reports Hub", icon: FileBarChart },
+        ],
+      },
+      {
         key: "supply",
         label: "Supply Chain",
         icon: Container,
