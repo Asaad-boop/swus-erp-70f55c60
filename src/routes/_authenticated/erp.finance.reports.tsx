@@ -37,7 +37,12 @@ function ReportsPage() {
       <header className="flex flex-wrap justify-between items-end gap-3 print:hidden">
         <div>
           <h1 className="text-2xl font-bold tracking-tight">Financial Reports</h1>
-          <p className="text-sm text-muted-foreground">{effectiveBrand?.name}</p>
+          <p className="text-sm text-muted-foreground">
+            {effectiveBrand?.name} ·{" "}
+            <a href="/erp/reports?tab=finance" className="underline underline-offset-2">
+              New canonical P&amp;L in Reports Hub
+            </a>
+          </p>
         </div>
         <div className="flex flex-wrap gap-2 items-end">
           {picker}
