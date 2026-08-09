@@ -22,6 +22,8 @@ export const PAGE_CATALOG: PageEntry[] = [
   { group: "Sales", path: "/erp/orders/pre-orders", label: "Pre-orders" },
   { group: "Sales", path: "/erp/orders/new", label: "Create Order" },
 
+  { group: "Reports", path: "/erp/reports", label: "Reports Hub" },
+
   { group: "Inventory", path: "/erp/inventory", label: "Stock" },
   { group: "Inventory", path: "/erp/reorder-queue", label: "Reorder Queue" },
   { group: "Inventory", path: "/erp/purchase-orders", label: "Purchase Orders" },
