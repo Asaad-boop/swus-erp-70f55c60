@@ -342,13 +342,13 @@ const DIMS = [
   { key: "status", label: "Status" },
 ];
 
-function BreakdownPanel({ args, enabled }: { args: Record<string, unknown>; enabled: boolean }) {
+function BreakdownPanel({ args, enabled }: { args: { _brand_ids: string[]; _from: string; _to: string; _basis: string }; enabled: boolean }) {
   const [dim, setDim] = useState("source");
   const q = useQuery({
     queryKey: ["rpt-breakdown", JSON.stringify(args), dim],
     enabled,
     queryFn: async () => {
-      const { data, error } = await supabase.rpc("rpt_sales_breakdown", { ...(args as never), _dim: dim } as never);
+      const { data, error } = await supabase.rpc("rpt_sales_breakdown", { ...args, _dim: dim } as never);
       if (error) throw error;
       return (data ?? []) as unknown as BreakdownRow[];
     },
