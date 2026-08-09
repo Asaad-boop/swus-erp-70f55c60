@@ -18,6 +18,8 @@ import { Input } from "@/components/ui/input";
 import { fmtBdt } from "@/lib/erp/finance";
 import { exportAoaXlsx } from "@/lib/erp/utils/excel";
 import { Panel, KpiStrip, EmptyState, type Kpi } from "@/components/erp/reports/report-kit";
+import { CustomersTab } from "@/components/erp/reports/customers-tab";
+import { InventoryTab } from "@/components/erp/reports/inventory-tab";
 
 export const Route = createFileRoute("/_authenticated/erp/reports")({
   head: () => ({
@@ -182,6 +184,8 @@ function ReportsHub() {
               <TabsTrigger value="sales">Sales</TabsTrigger>
               <TabsTrigger value="orders">Orders</TabsTrigger>
               <TabsTrigger value="products">Products</TabsTrigger>
+              <TabsTrigger value="customers">Customers</TabsTrigger>
+              <TabsTrigger value="inventory">Inventory</TabsTrigger>
             </TabsList>
 
             <TabsContent value="overview" className="mt-4 space-y-4">
@@ -201,6 +205,14 @@ function ReportsHub() {
 
             <TabsContent value="products" className="mt-4 space-y-4">
               <ProductsTab args={args} enabled={enabled} />
+            </TabsContent>
+
+            <TabsContent value="customers" className="mt-4 space-y-4">
+              <CustomersTab args={args} enabled={enabled} />
+            </TabsContent>
+
+            <TabsContent value="inventory" className="mt-4 space-y-4">
+              <InventoryTab args={args} enabled={enabled} />
             </TabsContent>
           </Tabs>
         </>
