@@ -9447,6 +9447,102 @@ export type Database = {
         Returns: undefined
       }
       resolve_login_email: { Args: { p_identifier: string }; Returns: string }
+      rpt_data_health: {
+        Args: {
+          _basis?: string
+          _brand_ids: string[]
+          _from: string
+          _to: string
+        }
+        Returns: Json
+      }
+      rpt_lines: {
+        Args: {
+          _basis?: string
+          _brand_ids: string[]
+          _from: string
+          _to: string
+        }
+        Returns: {
+          brand_id: string
+          city: string
+          cost_missing: boolean
+          cost_source: string
+          courier_cost: number
+          courier_name: string
+          customer_phone: string
+          day: string
+          discount_alloc: number
+          gross_line: number
+          is_cancelled: boolean
+          is_delivered: boolean
+          is_returned: boolean
+          line_cogs: number
+          net_revenue: number
+          order_id: string
+          order_item_id: string
+          packaging_cost: number
+          payment_method: string
+          product_id: string
+          product_name: string
+          quantity: number
+          refund_alloc: number
+          sku: string
+          source: string
+          status: string
+          unit_cost: number
+          variant_id: string
+          variant_label: string
+        }[]
+      }
+      rpt_sales_breakdown: {
+        Args: {
+          _basis?: string
+          _brand_ids: string[]
+          _dim?: string
+          _from: string
+          _to: string
+        }
+        Returns: {
+          cogs: number
+          courier_cost: number
+          delivered_orders: number
+          gross_profit: number
+          label: string
+          net_revenue: number
+          orders: number
+          return_rate: number
+          units: number
+        }[]
+      }
+      rpt_sales_summary: {
+        Args: {
+          _basis?: string
+          _brand_ids: string[]
+          _from: string
+          _to: string
+        }
+        Returns: Json
+      }
+      rpt_sales_timeseries: {
+        Args: {
+          _basis?: string
+          _brand_ids: string[]
+          _from: string
+          _to: string
+        }
+        Returns: {
+          cogs: number
+          contribution_profit: number
+          courier_cost: number
+          day: string
+          delivered_orders: number
+          gross_profit: number
+          net_revenue: number
+          orders: number
+          units: number
+        }[]
+      }
       run_recurring_rules: { Args: { _brand_id?: string }; Returns: Json }
       seed_default_coa: { Args: { _brand_id: string }; Returns: number }
       set_product_stock: {
