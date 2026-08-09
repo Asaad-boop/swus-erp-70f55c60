@@ -20,6 +20,9 @@ import { exportAoaXlsx } from "@/lib/erp/utils/excel";
 import { Panel, KpiStrip, EmptyState, type Kpi } from "@/components/erp/reports/report-kit";
 import { CustomersTab } from "@/components/erp/reports/customers-tab";
 import { InventoryTab } from "@/components/erp/reports/inventory-tab";
+import { MarketingTab } from "@/components/erp/reports/marketing-tab";
+import { ReturnsTab } from "@/components/erp/reports/returns-tab";
+import { SupplyTab } from "@/components/erp/reports/supply-tab";
 
 export const Route = createFileRoute("/_authenticated/erp/reports")({
   head: () => ({
@@ -186,6 +189,9 @@ function ReportsHub() {
               <TabsTrigger value="products">Products</TabsTrigger>
               <TabsTrigger value="customers">Customers</TabsTrigger>
               <TabsTrigger value="inventory">Inventory</TabsTrigger>
+              <TabsTrigger value="marketing">Marketing</TabsTrigger>
+              <TabsTrigger value="returns">Returns</TabsTrigger>
+              <TabsTrigger value="supply">Supply chain</TabsTrigger>
             </TabsList>
 
             <TabsContent value="overview" className="mt-4 space-y-4">
@@ -213,6 +219,18 @@ function ReportsHub() {
 
             <TabsContent value="inventory" className="mt-4 space-y-4">
               <InventoryTab args={args} enabled={enabled} />
+            </TabsContent>
+
+            <TabsContent value="marketing" className="mt-4 space-y-4">
+              <MarketingTab args={args} enabled={enabled} />
+            </TabsContent>
+
+            <TabsContent value="returns" className="mt-4 space-y-4">
+              <ReturnsTab args={args} enabled={enabled} />
+            </TabsContent>
+
+            <TabsContent value="supply" className="mt-4 space-y-4">
+              <SupplyTab args={args} enabled={enabled} />
             </TabsContent>
           </Tabs>
         </>
