@@ -23,6 +23,12 @@ export type PnlV2 = {
 
 type Line = { label: string; value: number; kind?: "sub" | "total" | "grand"; hint?: string };
 
+type CourierCash = {
+  order_value: number; advance_total: number; cod_expected: number;
+  courier_collected: number; courier_charge: number; collection_diff: number;
+  reconciled_orders: number;
+};
+
 export function FinanceTab({ args, enabled }: { args: RpcArgs; enabled: boolean }) {
   const base = { _brand_ids: args._brand_ids, _from: args._from, _to: args._to };
   const key = JSON.stringify(base);
@@ -39,9 +45,34 @@ export function FinanceTab({ args, enabled }: { args: RpcArgs; enabled: boolean 
 
   const p = q.data;
 
+  const cashQ = useQuery({
+    queryKey: ["rpt-finance-courier-cash", JSON.stringify(args)],
+    enabled,
+    queryFn: async () => {
+      const { data, error } = await supabase.rpc("rpt_order_ledger_summary", {
+        ...args, _search: null, _status: "all", _courier: "all",
+      } as never);
+      if (error) throw error;
+      return data as unknown as CourierCash;
+    },
+  });
+  const c = cashQ.data;
+  const cashLines: Line[] = c
+    ? [
+        { label: "Order value (invoice total incl. delivery)", value: Number(c.order_value) },
+        { label: "Advance received (bKash / Nagad etc.)", value: Number(c.advance_total), kind: "sub" },
+        { label: "COD expected from courier", value: Number(c.cod_expected), kind: "sub" },
+        { label: "Received from courier (actual payout)", value: Number(c.courier_collected), kind: "total", hint: `${Number(c.reconciled_orders).toLocaleString()} orders reconciled` },
+        { label: "Courier charge deducted", value: -Number(c.courier_charge), kind: "sub" },
+        { label: "Collection difference (expected − received)", value: -Number(c.collection_diff), kind: "sub" },
+        { label: "Total cash in hand (advance + courier payout)", value: Number(c.advance_total) + Number(c.courier_collected), kind: "grand" },
+      ]
+    : [];
+
   const kpis: Kpi[] = p
     ? [
-        { label: "Total revenue", value: p.total_revenue ?? p.net_revenue, hint: `${p.delivered_orders} delivered orders · incl. delivery charge` },
+        { label: "Total revenue (accrual)", value: p.total_revenue ?? p.net_revenue, hint: `${p.delivered_orders} delivered orders · incl. delivery charge` },
+        { label: "Received from courier", value: Number(c?.courier_collected ?? 0), tone: "good", hint: c ? `after ৳${Number(c.courier_charge).toLocaleString()} courier charge · actual payout` : "actual payout" },
         { label: "Gross profit", value: p.gross_profit, tone: p.gross_profit >= 0 ? "good" : "bad", hint: `${p.gross_margin_pct}% margin` },
         { label: "Contribution profit", value: p.contribution_profit, tone: p.contribution_profit >= 0 ? "good" : "bad", hint: "after courier & returns" },
         { label: "Net profit", value: p.net_profit, tone: p.net_profit >= 0 ? "good" : "bad", hint: `${p.net_margin_pct}% net margin` },
@@ -124,6 +155,68 @@ export function FinanceTab({ args, enabled }: { args: RpcArgs; enabled: boolean 
                         "text-right tabular-nums",
                         l.value < 0 && "text-rose-600 dark:text-rose-400",
                         l.kind === "grand" && (l.value >= 0 ? "text-emerald-600 dark:text-emerald-400" : "text-rose-600 dark:text-rose-400"),
+                      )}
+                    >
+                      {fmtBdt(l.value)}
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </div>
+        )}
+      </Panel>
+
+      <Panel
+        title="Courier cash — actual money received"
+        subtitle="Reconciled courier payout (original amount after charges), not accrual revenue"
+        action={
+          <Button
+            variant="outline"
+            size="sm"
+            disabled={!c}
+            onClick={() =>
+              exportAoaXlsx(
+                [["Line", "Amount (BDT)"], ...cashLines.map((l) => [l.label, l.value])],
+                "Courier cash", `courier-cash-${base._from}-to-${base._to}`,
+              )
+            }
+          >
+            <FileSpreadsheet className="mr-1.5 h-3.5 w-3.5" />Excel
+          </Button>
+        }
+      >
+        {cashQ.isLoading ? (
+          <Skeleton className="h-[260px] rounded-lg" />
+        ) : !c ? (
+          <EmptyState text="No courier data in this range." />
+        ) : (
+          <div className="rounded-lg border">
+            <Table>
+              <TableHeader className="bg-muted/50">
+                <TableRow>
+                  <TableHead>Line</TableHead>
+                  <TableHead className="text-right">Amount</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {cashLines.map((l) => (
+                  <TableRow
+                    key={l.label}
+                    className={cn(
+                      l.kind === "total" && "bg-muted/40 font-semibold",
+                      l.kind === "grand" && "bg-primary/5 text-base font-bold",
+                    )}
+                  >
+                    <TableCell className={cn(l.kind === "sub" && "pl-8 text-muted-foreground")}>
+                      {l.label}
+                      {l.hint && <span className="ml-2 text-[11px] text-muted-foreground">{l.hint}</span>}
+                    </TableCell>
+                    <TableCell
+                      className={cn(
+                        "text-right tabular-nums",
+                        l.value < 0 && "text-rose-600 dark:text-rose-400",
+                        l.kind === "grand" && "text-emerald-600 dark:text-emerald-400",
                       )}
                     >
                       {fmtBdt(l.value)}
