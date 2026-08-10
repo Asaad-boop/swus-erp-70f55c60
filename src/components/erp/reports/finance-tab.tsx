@@ -23,6 +23,12 @@ export type PnlV2 = {
 
 type Line = { label: string; value: number; kind?: "sub" | "total" | "grand"; hint?: string };
 
+type CourierCash = {
+  order_value: number; advance_total: number; cod_expected: number;
+  courier_collected: number; courier_charge: number; collection_diff: number;
+  reconciled_orders: number;
+};
+
 export function FinanceTab({ args, enabled }: { args: RpcArgs; enabled: boolean }) {
   const base = { _brand_ids: args._brand_ids, _from: args._from, _to: args._to };
   const key = JSON.stringify(base);
