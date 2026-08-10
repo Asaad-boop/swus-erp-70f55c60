@@ -122,7 +122,7 @@ export const createPathaoReconciliationRun = createServerFn({ method: "POST" })
       );
       prior.forEach((p: any) => {
         const st = p.run?.status;
-        if (p.consignment_id && st !== "reverted" && st !== "draft" && (!brandFilter || p.run?.brand_id === brandFilter)) {
+        if (p.consignment_id && st !== "reverted" && (!brandFilter || p.run?.brand_id === brandFilter)) {
           seenConsignments.add(p.consignment_id);
         }
       });
@@ -249,12 +249,12 @@ export const createPathaoReconciliationRun = createServerFn({ method: "POST" })
       );
       ords.forEach((o) => orderById.set(o.id, { total: Number(o.total), brand_id: o.brand_id ?? null }));
 
-      const applied = await fetchInChunks<{ matched_order_id: string }>(matchedIds, (chunk) =>
+       const applied = await fetchInChunks<{ matched_order_id: string }>(matchedIds, (chunk) =>
         supabase
           .from("erp_reconciliation_rows")
           .select("matched_order_id")
           .in("matched_order_id", chunk)
-          .not("applied_income_txn_id", "is", null),
+           .or("applied_income_txn_id.not.is.null,applied_expense_txn_id.not.is.null"),
       );
       applied.forEach((a) => a.matched_order_id && appliedOrderIds.add(a.matched_order_id));
     }
