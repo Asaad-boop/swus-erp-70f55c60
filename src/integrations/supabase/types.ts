@@ -8779,10 +8779,6 @@ export type Database = {
         Args: { _carton: string; _new_stage: string; _notes?: string }
         Returns: undefined
       }
-      insert_reconciliation_rows_safe: {
-        Args: { _rows: Json }
-        Returns: number
-      }
       is_admin: { Args: never; Returns: boolean }
       is_finance_staff: { Args: { _uid: string }; Returns: boolean }
       is_guest_order: { Args: { _order_id: string }; Returns: boolean }

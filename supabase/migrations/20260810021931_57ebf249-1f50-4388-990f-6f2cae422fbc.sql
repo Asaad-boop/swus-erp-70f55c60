@@ -1,0 +1,1 @@
+DROP FUNCTION IF EXISTS public.insert_reconciliation_rows_safe(jsonb);
