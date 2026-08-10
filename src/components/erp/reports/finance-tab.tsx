@@ -71,7 +71,8 @@ export function FinanceTab({ args, enabled }: { args: RpcArgs; enabled: boolean 
 
   const kpis: Kpi[] = p
     ? [
-        { label: "Total revenue", value: p.total_revenue ?? p.net_revenue, hint: `${p.delivered_orders} delivered orders · incl. delivery charge` },
+        { label: "Total revenue (accrual)", value: p.total_revenue ?? p.net_revenue, hint: `${p.delivered_orders} delivered orders · incl. delivery charge` },
+        { label: "Received from courier", value: Number(c?.courier_collected ?? 0), tone: "good", hint: c ? `after ৳${Number(c.courier_charge).toLocaleString()} courier charge · actual payout` : "actual payout" },
         { label: "Gross profit", value: p.gross_profit, tone: p.gross_profit >= 0 ? "good" : "bad", hint: `${p.gross_margin_pct}% margin` },
         { label: "Contribution profit", value: p.contribution_profit, tone: p.contribution_profit >= 0 ? "good" : "bad", hint: "after courier & returns" },
         { label: "Net profit", value: p.net_profit, tone: p.net_profit >= 0 ? "good" : "bad", hint: `${p.net_margin_pct}% net margin` },
