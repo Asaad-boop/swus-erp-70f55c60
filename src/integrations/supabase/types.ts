@@ -9613,6 +9613,66 @@ export type Database = {
         Args: { _brand_ids: string[]; _from: string; _to: string }
         Returns: Json
       }
+      rpt_order_ledger: {
+        Args: {
+          _basis?: string
+          _brand_ids: string[]
+          _courier?: string
+          _from: string
+          _limit?: number
+          _offset?: number
+          _search?: string
+          _status?: string
+          _to: string
+        }
+        Returns: {
+          advance_amount: number
+          city: string
+          cod_expected: number
+          cogs: number
+          collection_diff: number
+          cost_missing_units: number
+          courier_charge: number
+          courier_collected: number
+          courier_name: string
+          created_at: string
+          customer_name: string
+          customer_phone: string
+          day: string
+          discounts: number
+          gross_profit: number
+          gross_sales: number
+          invoice_no: string
+          is_cancelled: boolean
+          is_delivered: boolean
+          is_returned: boolean
+          items: Json
+          net_profit: number
+          net_revenue: number
+          order_id: string
+          order_total: number
+          payment_method: string
+          reconciliation_status: string
+          shipping_fee: number
+          source: string
+          status: string
+          total_count: number
+          tracking_number: string
+          units: number
+        }[]
+      }
+      rpt_order_ledger_summary: {
+        Args: {
+          _basis?: string
+          _brand_ids: string[]
+          _courier?: string
+          _from: string
+          _search?: string
+          _status?: string
+          _to: string
+        }
+        Returns: Json
+      }
       rpt_order_ops_breakdown: {
         Args: {
           _basis?: string
