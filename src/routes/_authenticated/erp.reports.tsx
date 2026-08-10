@@ -24,6 +24,7 @@ import { MarketingTab } from "@/components/erp/reports/marketing-tab";
 import { ReturnsTab } from "@/components/erp/reports/returns-tab";
 import { SupplyTab } from "@/components/erp/reports/supply-tab";
 import { FinanceTab } from "@/components/erp/reports/finance-tab";
+import { OrderLedgerPanel } from "@/components/erp/reports/order-ledger";
 
 const TAB_VALUES = [
   "overview", "sales", "orders", "products", "customers",
@@ -710,6 +711,8 @@ function OrdersTab({ args, enabled }: { args: RpcArgs; enabled: boolean }) {
           </div>
         )}
       </Panel>
+
+      <OrderLedgerPanel args={args} enabled={enabled} />
     </>
   );
 }
