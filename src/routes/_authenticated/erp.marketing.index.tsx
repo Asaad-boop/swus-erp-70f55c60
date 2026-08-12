@@ -1,5 +1,5 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { z } from "zod";
 import { zodValidator, fallback } from "@tanstack/zod-adapter";
@@ -21,10 +21,18 @@ import {
   RefreshCcw,
   CalendarDays,
 } from "lucide-react";
-import { ResponsiveContainer, AreaChart, Area, XAxis, Tooltip } from "recharts";
 import { useBrand } from "@/contexts/brand-context";
 import { getMarketingOverview } from "@/lib/erp/marketing/overview.functions";
 import { syncSpendCapToWallet } from "@/lib/erp/marketing/meta.functions";
+import { getMarketingDashboard } from "@/lib/erp/marketing/dashboard.functions";
+import { DateRangePicker, buildPreset, type MktRangeValue } from "@/components/erp/marketing/date-range-picker";
+import {
+  KpiGrid,
+  TrendChart,
+  TopCampaigns,
+  TopProducts,
+  TopAds,
+} from "@/components/erp/marketing/dashboard-panels";
 
 const searchSchema = z.object({
   brand: fallback(z.string(), "all").default("all"),
@@ -108,16 +116,29 @@ function MarketingOverview() {
       replace: true,
     });
 
+  // ── Dashboard (range-based) ──────────────────────────────────────────
+  const [range, setRange] = useState<MktRangeValue>(() => buildPreset("30d"));
+  const [grain, setGrain] = useState<"day" | "week" | "month">("day");
+  const fetchDashboard = useServerFn(getMarketingDashboard);
+  const dash = useQuery({
+    queryKey: ["mkt-dashboard", selection.ids.slice().sort().join(","), range.from, range.to, grain],
+    queryFn: () =>
+      fetchDashboard({ data: { brandIds: selection.ids, from: range.from, to: range.to, grain } }),
+    enabled: selection.ids.length > 0,
+    staleTime: 60_000,
+    refetchOnWindowFocus: false,
+  });
+
   return (
-    <div className="p-4 md:p-6 max-w-7xl mx-auto space-y-4">
+    <div className="p-4 md:p-6 max-w-[1400px] mx-auto space-y-4">
       {/* Header */}
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
           <h1 className="text-xl md:text-2xl font-semibold tracking-tight">
-            Marketing Overview
+            Marketing Dashboard
           </h1>
           <p className="text-xs text-muted-foreground mt-0.5">
-            Aajker snapshot · Dhaka time · Data: canonical RPCs
+            {range.label} · Dhaka time · Data: canonical RPCs
           </p>
         </div>
         <div className="flex items-center gap-2">
@@ -127,6 +148,7 @@ function MarketingOverview() {
             loading={brandsLoading}
             onChange={setBrand}
           />
+          <DateRangePicker value={range} onChange={setRange} />
           <Link to="/erp/marketing/daily" search={{ brand: selection.key }}>
             <Button size="sm" variant="outline">
               <CalendarDays className="h-3.5 w-3.5 mr-1.5" />
@@ -136,10 +158,13 @@ function MarketingOverview() {
           <Button
             size="sm"
             variant="outline"
-            onClick={() => q.refetch()}
-            disabled={q.isFetching}
+            onClick={() => {
+              q.refetch();
+              dash.refetch();
+            }}
+            disabled={q.isFetching || dash.isFetching}
           >
-            <RefreshCcw className={`h-3.5 w-3.5 mr-1.5 ${q.isFetching ? "animate-spin" : ""}`} />
+            <RefreshCcw className={`h-3.5 w-3.5 mr-1.5 ${q.isFetching || dash.isFetching ? "animate-spin" : ""}`} />
             Refresh
           </Button>
           <Button
@@ -161,8 +186,24 @@ function MarketingOverview() {
       {/* Today card */}
       <TodayCard loading={q.isLoading} data={q.data?.today} />
 
-      {/* Sparkline */}
-      <SparklineCard loading={q.isLoading} data={q.data?.sparkline} />
+      {/* Range KPIs */}
+      <KpiGrid loading={dash.isLoading} k={dash.data?.kpis} />
+
+      <TrendChart loading={dash.isLoading} rows={dash.data?.trend} grain={grain} onGrain={setGrain} />
+
+      <div className="grid gap-4 lg:grid-cols-2">
+        <TopCampaigns loading={dash.isLoading} rows={dash.data?.topCampaigns} />
+        <TopProducts loading={dash.isLoading} rows={dash.data?.topProducts} />
+      </div>
+      <TopAds loading={dash.isLoading} rows={dash.data?.topAds} />
+
+      {dash.error && (
+        <Card className="border-destructive/40">
+          <CardContent className="py-3 text-sm text-destructive">
+            Dashboard load fail holo: {(dash.error as Error).message}
+          </CardContent>
+        </Card>
+      )}
 
       {q.error && (
         <Card className="border-destructive/40">
@@ -373,68 +414,5 @@ function Metric({
       </div>
       {hint && <div className="text-[10px] text-muted-foreground mt-0.5">{hint}</div>}
     </div>
-  );
-}
-
-function SparklineCard({
-  loading,
-  data,
-}: {
-  loading: boolean;
-  data?: { day: string; spend: number }[];
-}) {
-  const total = (data ?? []).reduce((a, b) => a + b.spend, 0);
-  return (
-    <Card>
-      <CardHeader className="pb-1 flex flex-row items-center justify-between">
-        <CardTitle className="text-sm font-semibold">Last 7 days · ad spend</CardTitle>
-        <div className="text-xs text-muted-foreground">
-          Total: <span className="font-semibold text-foreground">{loading ? "…" : bdt(total)}</span>
-        </div>
-      </CardHeader>
-      <CardContent className="pt-0">
-        {loading || !data ? (
-          <Skeleton className="h-32 w-full" />
-        ) : (
-          <div className="h-32">
-            <ResponsiveContainer width="100%" height="100%">
-              <AreaChart data={data} margin={{ top: 6, right: 6, bottom: 0, left: 0 }}>
-                <defs>
-                  <linearGradient id="mktSpendGrad" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="0%" stopColor="hsl(var(--primary))" stopOpacity={0.35} />
-                    <stop offset="100%" stopColor="hsl(var(--primary))" stopOpacity={0} />
-                  </linearGradient>
-                </defs>
-                <XAxis
-                  dataKey="day"
-                  tickFormatter={(d) => (d ? d.slice(5) : "")}
-                  tick={{ fontSize: 10 }}
-                  tickLine={false}
-                  axisLine={false}
-                  interval={0}
-                />
-                <Tooltip
-                  cursor={{ stroke: "hsl(var(--border))" }}
-                  contentStyle={{
-                    fontSize: 12,
-                    padding: "6px 8px",
-                    borderRadius: 6,
-                  }}
-                  formatter={(v: any) => [bdt(Number(v)), "Spend"]}
-                  labelFormatter={(l) => l}
-                />
-                <Area
-                  type="monotone"
-                  dataKey="spend"
-                  stroke="hsl(var(--primary))"
-                  strokeWidth={2}
-                  fill="url(#mktSpendGrad)"
-                />
-              </AreaChart>
-            </ResponsiveContainer>
-          </div>
-        )}
-      </CardContent>
-    </Card>
   );
 }

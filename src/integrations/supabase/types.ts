@@ -9236,6 +9236,56 @@ export type Database = {
           total_orders: number
         }[]
       }
+      mkt_dashboard_kpis: {
+        Args: { _brand_ids: string[]; _from: string; _to: string }
+        Returns: {
+          aov: number
+          booked_revenue: number
+          cac: number
+          cancel_rate: number
+          cancelled_orders: number
+          clicks: number
+          cogs: number
+          confirmed_orders: number
+          contribution_profit: number
+          conversion_rate: number
+          cost_missing_units: number
+          cpa: number
+          delivered_orders: number
+          delivered_revenue: number
+          delivered_roas: number
+          gross_profit: number
+          impressions: number
+          marketing_cost_pct: number
+          mer: number
+          new_customers: number
+          operating_cost: number
+          orders: number
+          reach: number
+          return_rate: number
+          returned_orders: number
+          returning_customers: number
+          roas: number
+          spend_bdt: number
+        }[]
+      }
+      mkt_dashboard_trend: {
+        Args: {
+          _brand_ids: string[]
+          _from: string
+          _grain?: string
+          _to: string
+        }
+        Returns: {
+          booked_revenue: number
+          bucket: string
+          delivered_orders: number
+          delivered_revenue: number
+          orders: number
+          roas: number
+          spend_bdt: number
+        }[]
+      }
       mkt_delivered_line_costs: {
         Args: { _brand_id: string; _from: string; _to: string }
         Returns: {

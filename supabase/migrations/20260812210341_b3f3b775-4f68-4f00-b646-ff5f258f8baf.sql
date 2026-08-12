@@ -1,0 +1,2 @@
+GRANT EXECUTE ON FUNCTION public.mkt_dashboard_kpis(uuid[], date, date) TO supabase_read_only_user;
+GRANT EXECUTE ON FUNCTION public.mkt_dashboard_trend(uuid[], date, date, text) TO supabase_read_only_user;
