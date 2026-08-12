@@ -28,6 +28,8 @@ import { SupplyTab } from "@/components/erp/reports/supply-tab";
 import { FinanceTab } from "@/components/erp/reports/finance-tab";
 import { OrderLedgerPanel } from "@/components/erp/reports/order-ledger";
 import { ControlTab } from "@/components/erp/reports/control-tab";
+import { AdsPanel } from "@/components/erp/reports/marketing-extras";
+import { CourierPerformancePanel, DeliveryAreaPanel } from "@/components/erp/reports/delivery-extras";
 import { ReportIndexDrawer } from "@/components/erp/reports/report-index-drawer";
 
 const TAB_VALUES = [
@@ -291,10 +293,13 @@ function ReportsHub() {
 
             <TabsContent value="marketing" className="mt-4 space-y-4">
               <MarketingTab args={args} enabled={enabled} />
+              <AdsPanel args={args} enabled={enabled} rangeLabel={rangeLabel} />
             </TabsContent>
 
             <TabsContent value="returns" className="mt-4 space-y-4">
               <ReturnsTab args={args} enabled={enabled} />
+              <CourierPerformancePanel args={args} enabled={enabled} rangeLabel={rangeLabel} />
+              <DeliveryAreaPanel args={args} enabled={enabled} rangeLabel={rangeLabel} />
             </TabsContent>
 
             <TabsContent value="supply" className="mt-4 space-y-4">

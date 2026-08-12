@@ -9622,6 +9622,10 @@ export type Database = {
         Args: { _brand_id: string; _month: string; _notes?: string }
         Returns: Json
       }
+      rpt_courier_performance: {
+        Args: { _brand_ids: string[]; _from: string; _to: string }
+        Returns: Json
+      }
       rpt_customer_segments: {
         Args: { _brand_ids: string[]; _to?: string }
         Returns: {
@@ -9678,6 +9682,15 @@ export type Database = {
         Returns: Json
       }
       rpt_delivered_statuses: { Args: never; Returns: string[] }
+      rpt_delivery_areas: {
+        Args: {
+          _brand_ids: string[]
+          _dim?: string
+          _from: string
+          _to: string
+        }
+        Returns: Json
+      }
       rpt_inventory_rows: {
         Args: {
           _brand_ids: string[]
@@ -9752,6 +9765,10 @@ export type Database = {
           variant_id: string
           variant_label: string
         }[]
+      }
+      rpt_marketing_ads: {
+        Args: { _brand_ids: string[]; _from: string; _to: string }
+        Returns: Json
       }
       rpt_marketing_campaigns: {
         Args: { _brand_ids: string[]; _from: string; _to: string }

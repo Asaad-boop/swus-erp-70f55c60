@@ -45,10 +45,13 @@ export const REPORT_REGISTRY: ReportEntry[] = [
   // Customers / marketing
   r({ id: "customers.summary", name: "Customer summary & RFM", category: "Customers", tab: "customers", source: "rpt_customer_summary", formula: "orders and revenue per normalised phone", basis: "delivered", status: "live" }),
   r({ id: "marketing.roas", name: "Campaign profit & ROAS", category: "Marketing", tab: "marketing", source: "get_campaign_profit", formula: "delivered revenue − COGS − opex vs spend", basis: "delivered", status: "live" }),
+  r({ id: "marketing.ads", name: "Ad-level performance", category: "Marketing", tab: "marketing", source: "rpt_marketing_ads", formula: "spend (FIFO BDT) vs attributed delivered revenue per ad", basis: "created", status: "live" }),
 
   // Returns
   r({ id: "returns.summary", name: "Returns & loss", category: "Returns", tab: "returns", source: "rpt_returns_summary", formula: "returned value, cost loss, courier loss", basis: "created", status: "live" }),
   r({ id: "returns.taxonomy", name: "Return / RTO / unpaid taxonomy", category: "Returns", tab: "control", source: "rpt_return_taxonomy", formula: "each failure type counted separately, never merged", basis: "created", status: "live" }),
+  r({ id: "delivery.courier", name: "Courier performance", category: "Returns", tab: "returns", source: "rpt_courier_performance", formula: "delivered ÷ (delivered + returned) per courier, on parcels shipped in range", basis: "created", status: "live" }),
+  r({ id: "delivery.area", name: "Delivery area performance", category: "Returns", tab: "returns", source: "rpt_delivery_areas", formula: "success and return rate per Pathao zone / city", basis: "created", status: "live" }),
 
   // Supply chain
   r({ id: "supply.po", name: "Purchase orders & landed cost", category: "Supply chain", tab: "supply", source: "imp_purchase_orders", formula: "PO value + freight allocated per unit", basis: "n/a", status: "live" }),
