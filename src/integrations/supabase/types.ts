@@ -7448,6 +7448,75 @@ export type Database = {
           },
         ]
       }
+      rpt_period_close: {
+        Row: {
+          brand_id: string
+          cash_received: number
+          closed_at: string
+          closed_by: string | null
+          cogs: number
+          created_at: string
+          definition_version: string
+          expenses: number
+          gross_profit: number
+          id: string
+          inventory_value: number
+          net_profit: number
+          notes: string | null
+          period_month: string
+          reopened_at: string | null
+          reopened_by: string | null
+          revenue: number
+          snapshot: Json
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          brand_id: string
+          cash_received?: number
+          closed_at?: string
+          closed_by?: string | null
+          cogs?: number
+          created_at?: string
+          definition_version?: string
+          expenses?: number
+          gross_profit?: number
+          id?: string
+          inventory_value?: number
+          net_profit?: number
+          notes?: string | null
+          period_month: string
+          reopened_at?: string | null
+          reopened_by?: string | null
+          revenue?: number
+          snapshot?: Json
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          brand_id?: string
+          cash_received?: number
+          closed_at?: string
+          closed_by?: string | null
+          cogs?: number
+          created_at?: string
+          definition_version?: string
+          expenses?: number
+          gross_profit?: number
+          id?: string
+          inventory_value?: number
+          net_profit?: number
+          notes?: string | null
+          period_month?: string
+          reopened_at?: string | null
+          reopened_by?: string | null
+          revenue?: number
+          snapshot?: Json
+          status?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       site_settings: {
         Row: {
           description: string | null
@@ -9506,6 +9575,10 @@ export type Database = {
         Returns: undefined
       }
       resolve_login_email: { Args: { p_identifier: string }; Returns: string }
+      rpt_close_period: {
+        Args: { _brand_id: string; _month: string; _notes?: string }
+        Returns: Json
+      }
       rpt_customer_segments: {
         Args: { _brand_ids: string[]; _to?: string }
         Returns: {
@@ -9593,6 +9666,10 @@ export type Database = {
       rpt_inventory_summary: {
         Args: { _brand_ids: string[]; _from: string; _to: string }
         Returns: Json
+      }
+      rpt_is_period_closed: {
+        Args: { _brand_id: string; _d: string }
+        Returns: boolean
       }
       rpt_lines: {
         Args: {
@@ -9774,6 +9851,10 @@ export type Database = {
         }
         Returns: Json
       }
+      rpt_period_snapshot: {
+        Args: { _brand_ids: string[]; _month: string }
+        Returns: Json
+      }
       rpt_pnl_v2: {
         Args: { _brand_ids: string[]; _from: string; _to: string }
         Returns: Json
@@ -9808,6 +9889,23 @@ export type Database = {
           variant_id: string
           variant_label: string
         }[]
+      }
+      rpt_reconcile_chain: {
+        Args: { _brand_ids: string[]; _from: string; _to: string }
+        Returns: Json
+      }
+      rpt_reopen_period: {
+        Args: { _brand_id: string; _month: string; _reason: string }
+        Returns: undefined
+      }
+      rpt_return_taxonomy: {
+        Args: {
+          _basis?: string
+          _brand_ids: string[]
+          _from: string
+          _to: string
+        }
+        Returns: Json
       }
       rpt_returned_statuses: { Args: never; Returns: string[] }
       rpt_returns_products: {
