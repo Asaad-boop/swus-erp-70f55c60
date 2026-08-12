@@ -9575,6 +9575,10 @@ export type Database = {
         Returns: undefined
       }
       resolve_login_email: { Args: { p_identifier: string }; Returns: string }
+      rpt_ar_ap: {
+        Args: { _brand_ids: string[]; _from: string; _to: string }
+        Returns: Json
+      }
       rpt_cargo_ledger: {
         Args: { _brand_ids: string[]; _from: string; _to: string }
         Returns: {
@@ -9586,6 +9590,32 @@ export type Database = {
           entries: number
           last_entry: string
           net: number
+        }[]
+      }
+      rpt_cash_accounts: {
+        Args: { _brand_ids: string[]; _from: string; _to: string }
+        Returns: {
+          account: string
+          account_id: string
+          account_type: string
+          cash_in: number
+          cash_out: number
+          current_balance: number
+          net: number
+          transfer_in: number
+          transfer_out: number
+          txns: number
+          wallet_type: string
+        }[]
+      }
+      rpt_cash_daily: {
+        Args: { _brand_ids: string[]; _from: string; _to: string }
+        Returns: {
+          cash_in: number
+          cash_out: number
+          d: string
+          net: number
+          txns: number
         }[]
       }
       rpt_close_period: {
