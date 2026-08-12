@@ -62,6 +62,8 @@ export function OrderLedgerPanel({ args, enabled }: { args: RpcArgs; enabled: bo
     queryKey: ["rpt-order-ledger", fkey, page],
     enabled,
     placeholderData: keepPreviousData,
+    staleTime: REPORT_QUERY_OPTS.staleTime,
+    refetchOnWindowFocus: false,
     queryFn: async () => {
       const { data, error } = await supabase.rpc("rpt_order_ledger", {
         ...args, ...filters, _limit: PAGE_SIZE, _offset: page * PAGE_SIZE,
@@ -75,6 +77,8 @@ export function OrderLedgerPanel({ args, enabled }: { args: RpcArgs; enabled: bo
     queryKey: ["rpt-order-ledger-summary", fkey],
     enabled,
     placeholderData: keepPreviousData,
+    staleTime: REPORT_QUERY_OPTS.staleTime,
+    refetchOnWindowFocus: false,
     queryFn: async () => {
       const { data, error } = await supabase.rpc("rpt_order_ledger_summary", { ...args, ...filters } as never);
       if (error) throw error;
