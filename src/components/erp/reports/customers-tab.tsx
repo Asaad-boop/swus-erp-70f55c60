@@ -1,7 +1,7 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { BarChart, Bar, CartesianGrid, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell } from "recharts";
-import { FileSpreadsheet, Search } from "lucide-react";
+import { ChevronLeft, ChevronRight, Search } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -10,8 +10,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Table, TableHeader, TableHead, TableBody, TableRow, TableCell } from "@/components/ui/table";
 import { fmtBdt } from "@/lib/erp/finance";
-import { exportAoaXlsx } from "@/lib/erp/utils/excel";
-import { Panel, KpiStrip, EmptyState, type Kpi } from "@/components/erp/reports/report-kit";
+import { Panel, KpiStrip, EmptyState, ExportMenu, REPORT_QUERY_OPTS, type Kpi } from "@/components/erp/reports/report-kit";
 
 export type RpcArgs = { _brand_ids: string[]; _from: string; _to: string; _basis: string };
 
@@ -26,6 +25,7 @@ type CustRow = {
   returned_orders: number; units: number; net_revenue: number; gross_profit: number;
   contribution_profit: number; aov: number; first_order: string | null; last_order: string | null;
   return_rate: number; is_new: boolean;
+  total_count?: number | null;
 };
 
 type SegRow = { segment: string; customers: number; orders: number; revenue: number; avg_recency_days: number };
@@ -47,14 +47,20 @@ const SORTS: { key: Sort; label: string }[] = [
   { key: "return_rate", label: "Return %" },
 ];
 
+const PAGE = 200;
+
 export function CustomersTab({ args, enabled }: { args: RpcArgs; enabled: boolean }) {
   const [sort, setSort] = useState<Sort>("net_revenue");
   const [search, setSearch] = useState("");
   const [only, setOnly] = useState<"all" | "new" | "repeat">("all");
+  const [page, setPage] = useState(0);
+
+  useEffect(() => { setPage(0); }, [args._brand_ids.join(","), args._from, args._to, args._basis]);
 
   const sumQ = useQuery({
     queryKey: ["rpt-cust-sum", JSON.stringify(args)],
     enabled,
+    ...REPORT_QUERY_OPTS,
     queryFn: async () => {
       const { data, error } = await supabase.rpc("rpt_customer_summary", args as never);
       if (error) throw error;
@@ -63,18 +69,23 @@ export function CustomersTab({ args, enabled }: { args: RpcArgs; enabled: boolea
   });
 
   const topQ = useQuery({
-    queryKey: ["rpt-cust-top", JSON.stringify(args)],
+    queryKey: ["rpt-cust-top", JSON.stringify(args), page],
     enabled,
+    ...REPORT_QUERY_OPTS,
     queryFn: async () => {
-      const { data, error } = await supabase.rpc("rpt_customer_top", { ...args, _limit: 500 } as never);
+      const { data, error } = await supabase.rpc("rpt_customer_top", {
+        ...args, _limit: PAGE, _offset: page * PAGE,
+      } as never);
       if (error) throw error;
       return (data ?? []) as unknown as CustRow[];
     },
+    placeholderData: (prev) => prev,
   });
 
   const segQ = useQuery({
     queryKey: ["rpt-cust-seg", args._brand_ids.join(","), args._to],
     enabled,
+    ...REPORT_QUERY_OPTS,
     queryFn: async () => {
       const { data, error } = await supabase.rpc("rpt_customer_segments", {
         _brand_ids: args._brand_ids, _to: args._to,
@@ -110,6 +121,30 @@ export function CustomersTab({ args, enabled }: { args: RpcArgs; enabled: boolea
   }, [topQ.data, search, sort, only]);
 
   const segs = segQ.data ?? [];
+  const total = Number(topQ.data?.[0]?.total_count ?? topQ.data?.length ?? 0);
+  const pages = Math.max(1, Math.ceil(total / PAGE));
+
+  /** Export every customer in range, not just the page on screen. */
+  const fetchAllRows = async (): Promise<CustRow[]> => {
+    const out: CustRow[] = [];
+    for (let off = 0; off < Math.max(total, 1); off += PAGE) {
+      const { data, error } = await supabase.rpc("rpt_customer_top", { ...args, _limit: PAGE, _offset: off } as never);
+      if (error) throw error;
+      const chunk = (data ?? []) as unknown as CustRow[];
+      out.push(...chunk);
+      if (chunk.length < PAGE) break;
+    }
+    return out;
+  };
+  const [allRows, setAllRows] = useState<CustRow[] | null>(null);
+  useEffect(() => { setAllRows(null); }, [JSON.stringify(args)]);
+  const exportAoa = () => {
+    const src = allRows ?? rows;
+    return [
+      ["Name", "Phone", "Orders", "Delivered", "Returned", "Units", "Net revenue", "Gross profit", "Contribution", "AOV", "First order", "Last order", "Return %", "New"],
+      ...src.map((r) => [r.customer_name ?? "", r.customer_phone, Number(r.orders), Number(r.delivered_orders), Number(r.returned_orders), Number(r.units), Number(r.net_revenue), Number(r.gross_profit), Number(r.contribution_profit), Number(r.aov), r.first_order ?? "", r.last_order ?? "", Number(r.return_rate), r.is_new ? "Yes" : "No"]),
+    ];
+  };
 
   return (
     <>
@@ -171,7 +206,7 @@ export function CustomersTab({ args, enabled }: { args: RpcArgs; enabled: boolea
 
       <Panel
         title="Top customers"
-        subtitle={`${rows.length} customers in range`}
+        subtitle={`${total.toLocaleString()} customers in range · page ${page + 1} of ${pages}`}
         action={
           <div className="flex flex-wrap items-center gap-2">
             <div className="flex gap-1">
@@ -187,19 +222,25 @@ export function CustomersTab({ args, enabled }: { args: RpcArgs; enabled: boolea
               <SelectTrigger className="h-7 w-[120px] text-xs"><SelectValue /></SelectTrigger>
               <SelectContent>{SORTS.map((x) => <SelectItem key={x.key} value={x.key}>{x.label}</SelectItem>)}</SelectContent>
             </Select>
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() =>
-                exportAoaXlsx(
-                  [["Name", "Phone", "Orders", "Delivered", "Returned", "Units", "Net revenue", "Gross profit", "Contribution", "AOV", "First order", "Last order", "Return %", "New"],
-                   ...rows.map((r) => [r.customer_name ?? "", r.customer_phone, r.orders, r.delivered_orders, r.returned_orders, r.units, r.net_revenue, r.gross_profit, r.contribution_profit, r.aov, r.first_order ?? "", r.last_order ?? "", r.return_rate, r.is_new ? "Yes" : "No"])],
-                  "Customers", "customers",
-                )
-              }
-            >
-              <FileSpreadsheet className="mr-1.5 h-3.5 w-3.5" />Excel
-            </Button>
+            {total > rows.length && !allRows && (
+              <Button
+                variant="outline"
+                size="sm"
+                className="h-7 px-2.5 text-xs"
+                onClick={async () => setAllRows(await fetchAllRows())}
+              >
+                Load all for export
+              </Button>
+            )}
+            <ExportMenu
+              title="Top customers"
+              subtitle={allRows ? "All customers in range" : "Current page"}
+              rangeLabel={`${args._from} → ${args._to}`}
+              kpis={kpis}
+              filename="customers"
+              note={`${(allRows ?? rows).length} of ${total.toLocaleString()} customers`}
+              aoa={exportAoa}
+            />
           </div>
         }
       >
@@ -247,6 +288,19 @@ export function CustomersTab({ args, enabled }: { args: RpcArgs; enabled: boolea
                 ))}
               </TableBody>
             </Table>
+          </div>
+        )}
+        {pages > 1 && (
+          <div className="mt-3 flex items-center justify-between text-xs text-muted-foreground">
+            <span>Showing {(page * PAGE + 1).toLocaleString()}–{Math.min((page + 1) * PAGE, total).toLocaleString()} of {total.toLocaleString()}</span>
+            <div className="flex items-center gap-1">
+              <Button variant="outline" size="sm" className="h-7 px-2" disabled={page === 0 || topQ.isFetching} onClick={() => setPage((p) => Math.max(0, p - 1))}>
+                <ChevronLeft className="h-3.5 w-3.5" />
+              </Button>
+              <Button variant="outline" size="sm" className="h-7 px-2" disabled={page + 1 >= pages || topQ.isFetching} onClick={() => setPage((p) => p + 1)}>
+                <ChevronRight className="h-3.5 w-3.5" />
+              </Button>
+            </div>
           </div>
         )}
       </Panel>

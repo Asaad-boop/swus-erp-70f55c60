@@ -2477,6 +2477,53 @@ export type Database = {
         }
         Relationships: []
       }
+      erp_recon_adjustments: {
+        Row: {
+          adj_date: string
+          amount: number
+          brand_id: string
+          courier: string
+          created_at: string
+          created_by: string | null
+          id: string
+          note: string | null
+          reason: string
+          updated_at: string
+        }
+        Insert: {
+          adj_date: string
+          amount?: number
+          brand_id: string
+          courier?: string
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          note?: string | null
+          reason: string
+          updated_at?: string
+        }
+        Update: {
+          adj_date?: string
+          amount?: number
+          brand_id?: string
+          courier?: string
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          note?: string | null
+          reason?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "erp_recon_adjustments_brand_id_fkey"
+            columns: ["brand_id"]
+            isOneToOne: false
+            referencedRelation: "brands"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       erp_reconciliation_rows: {
         Row: {
           amount_diff: number | null
@@ -9484,6 +9531,7 @@ export type Database = {
           _brand_ids: string[]
           _from: string
           _limit?: number
+          _offset?: number
           _to: string
         }
         Returns: {
@@ -9500,6 +9548,7 @@ export type Database = {
           orders: number
           return_rate: number
           returned_orders: number
+          total_count: number
           units: number
         }[]
       }
@@ -9708,6 +9757,15 @@ export type Database = {
         }[]
       }
       rpt_order_performance: {
+        Args: {
+          _basis?: string
+          _brand_ids: string[]
+          _from: string
+          _to: string
+        }
+        Returns: Json
+      }
+      rpt_overview: {
         Args: {
           _basis?: string
           _brand_ids: string[]

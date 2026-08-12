@@ -1,6 +1,6 @@
-import { Fragment, useMemo, useState } from "react";
+import { Fragment, useEffect, useMemo, useState } from "react";
 import { useQuery, keepPreviousData } from "@tanstack/react-query";
-import { ChevronDown, ChevronRight, FileSpreadsheet, Search } from "lucide-react";
+import { ChevronDown, ChevronRight, Search } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -9,8 +9,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { fmtBdt } from "@/lib/erp/finance";
-import { exportAoaXlsx } from "@/lib/erp/utils/excel";
-import { Panel, KpiStrip, EmptyState, type Kpi } from "@/components/erp/reports/report-kit";
+import { Panel, KpiStrip, EmptyState, ExportMenu, REPORT_QUERY_OPTS, type Kpi } from "@/components/erp/reports/report-kit";
 
 type RpcArgs = { _brand_ids: string[]; _from: string; _to: string; _basis: string };
 
@@ -63,6 +62,8 @@ export function OrderLedgerPanel({ args, enabled }: { args: RpcArgs; enabled: bo
     queryKey: ["rpt-order-ledger", fkey, page],
     enabled,
     placeholderData: keepPreviousData,
+    staleTime: REPORT_QUERY_OPTS.staleTime,
+    refetchOnWindowFocus: false,
     queryFn: async () => {
       const { data, error } = await supabase.rpc("rpt_order_ledger", {
         ...args, ...filters, _limit: PAGE_SIZE, _offset: page * PAGE_SIZE,
@@ -76,6 +77,8 @@ export function OrderLedgerPanel({ args, enabled }: { args: RpcArgs; enabled: bo
     queryKey: ["rpt-order-ledger-summary", fkey],
     enabled,
     placeholderData: keepPreviousData,
+    staleTime: REPORT_QUERY_OPTS.staleTime,
+    refetchOnWindowFocus: false,
     queryFn: async () => {
       const { data, error } = await supabase.rpc("rpt_order_ledger_summary", { ...args, ...filters } as never);
       if (error) throw error;
@@ -116,14 +119,28 @@ export function OrderLedgerPanel({ args, enabled }: { args: RpcArgs; enabled: bo
       ]
     : [];
 
-  const exportOrders = () => {
-    exportAoaXlsx(
-      [
+  /** Pull every page for the current filters so exports are never truncated. */
+  const fetchAllRows = async (): Promise<LedgerRow[]> => {
+    const out: LedgerRow[] = [];
+    const cap = Math.max(total, PAGE_SIZE);
+    for (let off = 0; off < cap; off += PAGE_SIZE) {
+      const { data, error } = await supabase.rpc("rpt_order_ledger", {
+        ...args, ...filters, _limit: PAGE_SIZE, _offset: off,
+      } as never);
+      if (error) throw error;
+      const chunk = (data ?? []) as unknown as LedgerRow[];
+      out.push(...chunk);
+      if (chunk.length < PAGE_SIZE) break;
+    }
+    return out;
+  };
+
+  const ordersAoa = (src: LedgerRow[]) => [
         ["Date", "Invoice", "Customer", "Phone", "City", "Courier", "Tracking", "Status", "Channel",
           "Units", "Products", "Gross", "Discount", "Net revenue", "Delivery charge", "Order total",
           "Advance", "COD expected", "Received from courier", "Courier charge", "Diff", "Recon",
           "COGS", "Gross profit", "Net profit"],
-        ...rows.map((r) => [
+        ...src.map((r) => [
           r.day, r.invoice_no ?? "", r.customer_name, r.customer_phone ?? "", r.city ?? "",
           r.courier_name, r.tracking_number ?? "", r.status, r.source,
           Number(r.units),
@@ -133,17 +150,12 @@ export function OrderLedgerPanel({ args, enabled }: { args: RpcArgs; enabled: bo
           Number(r.courier_collected), Number(r.courier_charge), Number(r.collection_diff),
           r.reconciliation_status, Number(r.cogs), Number(r.gross_profit), Number(r.net_profit),
         ]),
-      ],
-      "Orders", "all-orders",
-    );
-  };
+  ];
 
-  const exportLines = () => {
-    exportAoaXlsx(
-      [
+  const linesAoa = (src: LedgerRow[]) => [
         ["Date", "Invoice", "Customer", "Courier", "Status", "Product", "Variant", "SKU",
           "Qty", "Net revenue", "Unit cost", "Line COGS", "Line profit", "Received from courier (order)"],
-        ...rows.flatMap((r) =>
+        ...src.flatMap((r) =>
           (r.items ?? []).map((i) => [
             r.day, r.invoice_no ?? "", r.customer_name, r.courier_name, r.status,
             i.product_name, i.variant_label ?? "", i.sku ?? "",
@@ -151,10 +163,13 @@ export function OrderLedgerPanel({ args, enabled }: { args: RpcArgs; enabled: bo
             Number(i.line_cogs), Number(i.line_profit), Number(r.courier_collected),
           ]),
         ),
-      ],
-      "Order lines", "all-orders-productwise",
-    );
-  };
+  ];
+
+  const [allRows, setAllRows] = useState<LedgerRow[] | null>(null);
+  const [loadingAll, setLoadingAll] = useState(false);
+  useEffect(() => { setAllRows(null); }, [fkey]);
+  const src = allRows ?? rows;
+  const exportNote = `${src.length.toLocaleString()} of ${total.toLocaleString()} orders`;
 
   return (
     <>
@@ -188,12 +203,39 @@ export function OrderLedgerPanel({ args, enabled }: { args: RpcArgs; enabled: bo
                 {courierOptions.map((v) => <SelectItem key={v} value={v}>{v === "all" ? "All couriers" : v}</SelectItem>)}
               </SelectContent>
             </Select>
-            <Button variant="outline" size="sm" onClick={exportOrders}>
-              <FileSpreadsheet className="mr-1.5 h-3.5 w-3.5" />Orders
-            </Button>
-            <Button variant="outline" size="sm" onClick={exportLines}>
-              <FileSpreadsheet className="mr-1.5 h-3.5 w-3.5" />Product-wise
-            </Button>
+            {total > rows.length && !allRows && (
+              <Button
+                variant="outline"
+                size="sm"
+                className="h-7 px-2.5 text-xs"
+                disabled={loadingAll}
+                onClick={async () => {
+                  setLoadingAll(true);
+                  try { setAllRows(await fetchAllRows()); } finally { setLoadingAll(false); }
+                }}
+              >
+                {loadingAll ? "Loading…" : `Load all ${total.toLocaleString()} for export`}
+              </Button>
+            )}
+            <ExportMenu
+              label="Orders"
+              title="All orders"
+              subtitle={allRows ? "Every order matching the filters" : "Current page"}
+              rangeLabel={`${args._from} → ${args._to}`}
+              kpis={kpis}
+              note={exportNote}
+              filename="all-orders"
+              aoa={() => ordersAoa(src)}
+            />
+            <ExportMenu
+              label="Product-wise"
+              title="All orders — product wise"
+              subtitle={allRows ? "Every line matching the filters" : "Current page"}
+              rangeLabel={`${args._from} → ${args._to}`}
+              note={exportNote}
+              filename="all-orders-productwise"
+              aoa={() => linesAoa(src)}
+            />
           </div>
         }
       >

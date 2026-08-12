@@ -8,7 +8,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Table, TableHeader, TableHead, TableBody, TableRow, TableCell } from "@/components/ui/table";
 import { fmtBdt } from "@/lib/erp/finance";
 import { exportAoaXlsx } from "@/lib/erp/utils/excel";
-import { Panel, KpiStrip, EmptyState, type Kpi } from "@/components/erp/reports/report-kit";
+import { Panel, KpiStrip, EmptyState, type Kpi , REPORT_QUERY_OPTS } from "@/components/erp/reports/report-kit";
 import type { RpcArgs } from "@/components/erp/reports/customers-tab";
 
 type RetSummary = {
@@ -35,6 +35,7 @@ export function ReturnsTab({ args, enabled }: { args: RpcArgs; enabled: boolean 
   const sumQ = useQuery({
     queryKey: ["rpt-ret-sum", JSON.stringify(args)],
     enabled,
+    ...REPORT_QUERY_OPTS,
     queryFn: async () => {
       const { data, error } = await supabase.rpc("rpt_returns_summary", args as never);
       if (error) throw error;
@@ -45,6 +46,7 @@ export function ReturnsTab({ args, enabled }: { args: RpcArgs; enabled: boolean 
   const prodQ = useQuery({
     queryKey: ["rpt-ret-prod", JSON.stringify(args)],
     enabled,
+    ...REPORT_QUERY_OPTS,
     queryFn: async () => {
       const { data, error } = await supabase.rpc("rpt_returns_products", args as never);
       if (error) throw error;
@@ -55,6 +57,7 @@ export function ReturnsTab({ args, enabled }: { args: RpcArgs; enabled: boolean 
   const reasonQ = useQuery({
     queryKey: ["rpt-ret-reason", JSON.stringify(base)],
     enabled,
+    ...REPORT_QUERY_OPTS,
     queryFn: async () => {
       const { data, error } = await supabase.rpc("rpt_returns_reasons", base as never);
       if (error) throw error;

@@ -4,7 +4,7 @@ import { useQuery } from "@tanstack/react-query";
 import {
   AreaChart, Area, BarChart, Bar, CartesianGrid, XAxis, YAxis, Tooltip, ResponsiveContainer, Legend,
 } from "recharts";
-import { FileSpreadsheet, AlertTriangle, RefreshCw, Search } from "lucide-react";
+import { FileSpreadsheet, AlertTriangle, RefreshCw, Search, GitCompareArrows } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useMultiBrandPicker } from "@/components/erp/brand-picker-gate";
 import { DateRangePicker, buildPreset, type MktRangeValue } from "@/components/erp/marketing/date-range-picker";
@@ -17,7 +17,9 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Input } from "@/components/ui/input";
 import { fmtBdt } from "@/lib/erp/finance";
 import { exportAoaXlsx } from "@/lib/erp/utils/excel";
-import { Panel, KpiStrip, EmptyState, type Kpi } from "@/components/erp/reports/report-kit";
+import {
+  Panel, KpiStrip, EmptyState, ExportMenu, REPORT_QUERY_OPTS, type Kpi,
+} from "@/components/erp/reports/report-kit";
 import { CustomersTab } from "@/components/erp/reports/customers-tab";
 import { InventoryTab } from "@/components/erp/reports/inventory-tab";
 import { MarketingTab } from "@/components/erp/reports/marketing-tab";
@@ -102,59 +104,76 @@ const BASIS_LABEL: Record<Basis, string> = {
   confirmed: "Confirm date",
 };
 
+/** Immediately-preceding window of the same length (inclusive dates). */
+function prevPeriod(from: string, to: string) {
+  const f = new Date(`${from}T00:00:00Z`);
+  const t = new Date(`${to}T00:00:00Z`);
+  const days = Math.max(1, Math.round((t.getTime() - f.getTime()) / 86400000) + 1);
+  const pTo = new Date(f.getTime() - 86400000);
+  const pFrom = new Date(pTo.getTime() - (days - 1) * 86400000);
+  const iso = (d: Date) => d.toISOString().slice(0, 10);
+  return { from: iso(pFrom), to: iso(pTo) };
+}
+
 function ReportsHub() {
   const { brandIds, picker } = useMultiBrandPicker();
   const { tab } = Route.useSearch();
   const navigate = Route.useNavigate();
   const [range, setRange] = useState<MktRangeValue>(() => buildPreset("30d"));
   const [basis, setBasis] = useState<Basis>("delivered");
+  const [compare, setCompare] = useState(false);
 
   const enabled = brandIds.length > 0;
   const args = { _brand_ids: brandIds, _from: range.from, _to: range.to, _basis: basis };
   const key = [brandIds.join(","), range.from, range.to, basis];
+  const rangeLabel = `${range.from} → ${range.to} · ${BASIS_LABEL[basis]}`;
+  const prevRange = useMemo(() => prevPeriod(range.from, range.to), [range.from, range.to]);
 
-  const summaryQ = useQuery({
-    queryKey: ["rpt-summary", ...key],
+  // One round trip for summary + health + trend (was 3 separate RPCs).
+  const overviewQ = useQuery({
+    queryKey: ["rpt-overview", ...key],
     enabled,
+    ...REPORT_QUERY_OPTS,
     queryFn: async () => {
-      const { data, error } = await supabase.rpc("rpt_sales_summary", args);
+      const { data, error } = await supabase.rpc("rpt_overview", args as never);
+      if (error) throw error;
+      const d = (data ?? {}) as any;
+      return {
+        summary: d.summary as Summary,
+        health: d.health as Health,
+        series: (d.series ?? []) as SeriesRow[],
+      };
+    },
+  });
+
+  const prevQ = useQuery({
+    queryKey: ["rpt-summary-prev", brandIds.join(","), prevRange.from, prevRange.to, basis],
+    enabled: enabled && compare,
+    ...REPORT_QUERY_OPTS,
+    queryFn: async () => {
+      const { data, error } = await supabase.rpc("rpt_sales_summary", {
+        _brand_ids: brandIds, _from: prevRange.from, _to: prevRange.to, _basis: basis,
+      } as never);
       if (error) throw error;
       return data as unknown as Summary;
     },
   });
 
-  const healthQ = useQuery({
-    queryKey: ["rpt-health", ...key],
-    enabled,
-    queryFn: async () => {
-      const { data, error } = await supabase.rpc("rpt_data_health", args);
-      if (error) throw error;
-      return data as unknown as Health;
-    },
-  });
-
-  const seriesQ = useQuery({
-    queryKey: ["rpt-series", ...key],
-    enabled,
-    queryFn: async () => {
-      const { data, error } = await supabase.rpc("rpt_sales_timeseries", args);
-      if (error) throw error;
-      return (data ?? []) as unknown as SeriesRow[];
-    },
-  });
-
-  const s = summaryQ.data;
+  const s = overviewQ.data?.summary;
+  const series = overviewQ.data?.series ?? [];
+  const prev = compare ? prevQ.data : undefined;
+  const pv = (fn: (x: Summary) => number) => (prev ? Number(fn(prev)) : undefined);
 
   const kpis: Kpi[] = s
     ? [
-        { label: "Total revenue", value: s.total_revenue ?? s.net_revenue, hint: `${s.delivered_orders} delivered orders · incl. delivery charge` },
-        { label: "Gross profit", value: s.gross_profit, tone: s.gross_profit >= 0 ? "good" : "bad", hint: s.net_revenue > 0 ? `${((s.gross_profit / s.net_revenue) * 100).toFixed(1)}% margin` : undefined },
-        { label: "Contribution profit", value: s.contribution_profit, tone: s.contribution_profit >= 0 ? "good" : "bad", hint: "after courier, packaging, returns" },
-        { label: "COGS", value: s.cogs },
-        { label: "Units sold", value: s.units_sold, kind: "number" },
-        { label: "AOV", value: s.aov },
-        { label: "Delivery rate", value: s.delivery_rate, kind: "percent", hint: "orders placed in range" },
-        { label: "Return rate", value: s.return_rate, kind: "percent", tone: s.return_rate > 15 ? "bad" : "default" },
+        { label: "Total revenue", value: s.total_revenue ?? s.net_revenue, prev: pv((x) => x.total_revenue ?? x.net_revenue), hint: `${s.delivered_orders} delivered orders · incl. delivery charge` },
+        { label: "Gross profit", value: s.gross_profit, prev: pv((x) => x.gross_profit), tone: s.gross_profit >= 0 ? "good" : "bad", hint: s.net_revenue > 0 ? `${((s.gross_profit / s.net_revenue) * 100).toFixed(1)}% margin` : undefined },
+        { label: "Contribution profit", value: s.contribution_profit, prev: pv((x) => x.contribution_profit), tone: s.contribution_profit >= 0 ? "good" : "bad", hint: "after courier, packaging, returns" },
+        { label: "COGS", value: s.cogs, prev: pv((x) => x.cogs), goodWhen: "down" },
+        { label: "Units sold", value: s.units_sold, kind: "number", prev: pv((x) => x.units_sold) },
+        { label: "AOV", value: s.aov, prev: pv((x) => x.aov) },
+        { label: "Delivery rate", value: s.delivery_rate, kind: "percent", prev: pv((x) => x.delivery_rate), hint: "orders placed in range" },
+        { label: "Return rate", value: s.return_rate, kind: "percent", prev: pv((x) => x.return_rate), goodWhen: "down", tone: s.return_rate > 15 ? "bad" : "default" },
       ]
     : [];
 
@@ -179,10 +198,20 @@ function ReportsHub() {
             </SelectContent>
           </Select>
           <Button
+            variant={compare ? "default" : "outline"}
+            size="sm"
+            className="h-9"
+            onClick={() => setCompare((v) => !v)}
+            title={`Compare with ${prevRange.from} → ${prevRange.to}`}
+          >
+            <GitCompareArrows className="mr-1.5 h-3.5 w-3.5" />
+            Compare
+          </Button>
+          <Button
             variant="outline"
             size="icon"
             className="h-9 w-9"
-            onClick={() => { summaryQ.refetch(); healthQ.refetch(); seriesQ.refetch(); }}
+            onClick={() => { overviewQ.refetch(); prevQ.refetch(); }}
             aria-label="Refresh"
           >
             <RefreshCw className="h-4 w-4" />
@@ -194,7 +223,7 @@ function ReportsHub() {
         <Panel><EmptyState text="Pick at least one brand to see reports." /></Panel>
       ) : (
         <>
-          <DataHealth data={healthQ.data} loading={healthQ.isLoading} />
+          <DataHealth data={overviewQ.data?.health} loading={overviewQ.isLoading} />
 
           <Tabs
             value={tab ?? "overview"}
@@ -214,13 +243,19 @@ function ReportsHub() {
             </TabsList>
 
             <TabsContent value="overview" className="mt-4 space-y-4">
-              <KpiStrip items={kpis} loading={summaryQ.isLoading} />
-              <TrendPanel rows={seriesQ.data ?? []} loading={seriesQ.isLoading} />
+              {compare && (
+                <p className="text-xs text-muted-foreground">
+                  Comparing against previous period: <span className="font-medium">{prevRange.from} → {prevRange.to}</span>
+                  {prevQ.isLoading ? " (loading…)" : ""}
+                </p>
+              )}
+              <KpiStrip items={kpis} loading={overviewQ.isLoading} />
+              <TrendPanel rows={series} loading={overviewQ.isLoading} rangeLabel={rangeLabel} kpis={kpis} />
               {s && <ProfitBridge s={s} />}
             </TabsContent>
 
             <TabsContent value="sales" className="mt-4 space-y-4">
-              <TrendPanel rows={seriesQ.data ?? []} loading={seriesQ.isLoading} showTable />
+              <TrendPanel rows={series} loading={overviewQ.isLoading} showTable rangeLabel={rangeLabel} kpis={kpis} />
               <BreakdownPanel args={args} enabled={enabled} />
             </TabsContent>
 
@@ -294,7 +329,9 @@ function DataHealth({ data, loading }: { data?: Health; loading?: boolean }) {
   );
 }
 
-function TrendPanel({ rows, loading, showTable }: { rows: SeriesRow[]; loading?: boolean; showTable?: boolean }) {
+function TrendPanel({
+  rows, loading, showTable, rangeLabel, kpis,
+}: { rows: SeriesRow[]; loading?: boolean; showTable?: boolean; rangeLabel?: string; kpis?: Kpi[] }) {
   const data = useMemo(
     () => rows.map((r) => ({
       ...r,
@@ -311,19 +348,18 @@ function TrendPanel({ rows, loading, showTable }: { rows: SeriesRow[]; loading?:
       title="Daily revenue & profit"
       subtitle="Delivered lines only"
       action={
-        <Button
-          variant="outline"
-          size="sm"
-          onClick={() =>
-            exportAoaXlsx(
-              [["Day", "Orders", "Delivered", "Units", "Net revenue", "COGS", "Gross profit", "Courier", "Contribution"],
-               ...rows.map((r) => [r.day, r.orders, r.delivered_orders, r.units, r.net_revenue, r.cogs, r.gross_profit, r.courier_cost, r.contribution_profit])],
-              "Daily sales", "daily-sales",
-            )
-          }
-        >
-          <FileSpreadsheet className="mr-1.5 h-3.5 w-3.5" />Excel
-        </Button>
+        <ExportMenu
+          title="Daily revenue & profit"
+          subtitle="Delivered lines only"
+          rangeLabel={rangeLabel}
+          kpis={kpis}
+          filename="daily-sales"
+          disabled={rows.length === 0}
+          aoa={() => [
+            ["Day", "Orders", "Delivered", "Units", "Net revenue", "COGS", "Gross profit", "Courier", "Contribution"],
+            ...rows.map((r) => [r.day, Number(r.orders), Number(r.delivered_orders), Number(r.units), Number(r.net_revenue), Number(r.cogs), Number(r.gross_profit), Number(r.courier_cost), Number(r.contribution_profit)]),
+          ]}
+        />
       }
     >
       {loading ? (

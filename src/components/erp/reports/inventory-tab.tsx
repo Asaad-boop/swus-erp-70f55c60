@@ -10,7 +10,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Table, TableHeader, TableHead, TableBody, TableRow, TableCell } from "@/components/ui/table";
 import { fmtBdt } from "@/lib/erp/finance";
 import { exportAoaXlsx } from "@/lib/erp/utils/excel";
-import { Panel, KpiStrip, EmptyState, type Kpi } from "@/components/erp/reports/report-kit";
+import { Panel, KpiStrip, EmptyState, type Kpi , REPORT_QUERY_OPTS } from "@/components/erp/reports/report-kit";
 import type { RpcArgs } from "@/components/erp/reports/customers-tab";
 
 type InvSummary = {
@@ -49,6 +49,7 @@ export function InventoryTab({ args, enabled }: { args: RpcArgs; enabled: boolea
   const sumQ = useQuery({
     queryKey: ["rpt-inv-sum", JSON.stringify(base)],
     enabled,
+    ...REPORT_QUERY_OPTS,
     queryFn: async () => {
       const { data, error } = await supabase.rpc("rpt_inventory_summary", base as never);
       if (error) throw error;
@@ -59,6 +60,7 @@ export function InventoryTab({ args, enabled }: { args: RpcArgs; enabled: boolea
   const rowsQ = useQuery({
     queryKey: ["rpt-inv-rows", JSON.stringify(base), level],
     enabled,
+    ...REPORT_QUERY_OPTS,
     queryFn: async () => {
       const { data, error } = await supabase.rpc("rpt_inventory_rows", { ...base, _level: level } as never);
       if (error) throw error;
