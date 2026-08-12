@@ -22,7 +22,8 @@ import { cn } from "@/lib/utils";
 import {
   cancelPreorder, confirmPreorderToPipeline, daysLeft, markPreorderCalled,
   markPreordersReady, recordPreorderAdvance, stageMeta,
-  ADVANCE_SOURCES, PAYMENT_METHODS, type PreorderStage,
+  settlePreorderRefund, REFUND_METHODS,
+  ADVANCE_SOURCES, PAYMENT_METHODS, type PreorderStage, type RefundPlan,
 } from "@/lib/erp/preorders";
 import {
   Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle,
@@ -63,6 +64,11 @@ type Row = {
   advance_txn_id: string | null;
   due_amount: number;
   due_collect_method: string | null;
+  refund_amount: number | null;
+  refund_method: string | null;
+  refund_reference: string | null;
+  refund_status: string | null;
+  refunded_at: string | null;
   notes: string | null;
   ready_at: string | null;
   called_at: string | null;
@@ -103,6 +109,7 @@ function PreOrdersPage() {
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [advanceRow, setAdvanceRow] = useState<Row | null>(null);
   const [cancelRow, setCancelRow] = useState<Row | null>(null);
+  const [refundRow, setRefundRow] = useState<Row | null>(null);
   const [busyId, setBusyId] = useState<string | null>(null);
 
   const listQuery = useQuery({
@@ -113,7 +120,7 @@ function PreOrdersPage() {
         supabase
           .from("preorders")
           .select(
-            "id,order_id,brand_id,stage,promise_date,promise_days,advance_amount,advance_method,advance_source,advance_txn_id,due_amount,due_collect_method,notes,ready_at,called_at,confirmed_at,created_at," +
+            "id,order_id,brand_id,stage,promise_date,promise_days,advance_amount,advance_method,advance_source,advance_txn_id,due_amount,due_collect_method,refund_amount,refund_method,refund_reference,refund_status,refunded_at,notes,ready_at,called_at,confirmed_at,created_at," +
               "order:orders!preorders_order_id_fkey(id,invoice_no,created_at,status,total,source,shipping_name,shipping_phone,guest_name,guest_phone,items:order_items(id,name,image,quantity,variant_label))",
           ),
         scopeIds,
@@ -519,9 +526,35 @@ function PreOrdersPage() {
                         <X className="h-3.5 w-3.5" /> Cancel
                       </Button>
                     )}
+                    {r.stage === "cancelled" && Number(r.advance_amount || 0) > 0 && r.refund_status !== "refunded" && (
+                      <Button
+                        size="sm"
+                        className="h-8 gap-1.5 bg-amber-600 hover:bg-amber-700"
+                        disabled={busy}
+                        onClick={() => setRefundRow(r)}
+                      >
+                        <Wallet className="h-3.5 w-3.5" /> Refund ৳{Math.round(Number(r.refund_amount || r.advance_amount)).toLocaleString()}
+                      </Button>
+                    )}
                   </div>
                 </div>
                 <StageTrack stage={r.stage} />
+                {r.stage === "cancelled" && Number(r.advance_amount || 0) > 0 && (
+                  <div className="mt-2 ml-2">
+                    {r.refund_status === "refunded" ? (
+                      <span className="inline-flex items-center gap-1.5 rounded-full bg-emerald-100 px-2 py-0.5 text-[10px] font-bold text-emerald-800 ring-1 ring-inset ring-emerald-500/30 dark:bg-emerald-950 dark:text-emerald-300">
+                        <CheckCircle2 className="h-3 w-3" />
+                        Refunded {fmtBDT(Number(r.refund_amount || 0))} · {r.refund_method ?? "—"}
+                        {r.refund_reference ? ` · ${r.refund_reference}` : ""}
+                      </span>
+                    ) : (
+                      <span className="inline-flex items-center gap-1.5 rounded-full bg-amber-100 px-2 py-0.5 text-[10px] font-bold text-amber-900 ring-1 ring-inset ring-amber-500/30 dark:bg-amber-950 dark:text-amber-300">
+                        <AlertTriangle className="h-3 w-3" />
+                        Refund due {fmtBDT(Number(r.refund_amount || r.advance_amount || 0))}
+                      </span>
+                    )}
+                  </div>
+                )}
                 {r.notes && (
                   <div className="mt-2 ml-2 rounded-lg bg-muted/50 px-2 py-1 text-[11px] text-muted-foreground">{r.notes}</div>
                 )}
@@ -533,6 +566,7 @@ function PreOrdersPage() {
 
       <AdvanceDialog row={advanceRow} onClose={() => setAdvanceRow(null)} onSaved={refresh} />
       <CancelDialog row={cancelRow} onClose={() => setCancelRow(null)} onSaved={refresh} />
+      <RefundDialog row={refundRow} onClose={() => setRefundRow(null)} onSaved={refresh} />
 
       {tab === "open" && selectedRows.length > 0 && (
         <div className="fixed inset-x-0 bottom-4 z-40 flex justify-center px-4">
@@ -629,14 +663,49 @@ function Detail({ label, value, className }: { label: string; value: string; cla
 
 function CancelDialog({ row, onClose, onSaved }: { row: Row | null; onClose: () => void; onSaved: () => void }) {
   const [reason, setReason] = useState("");
+  const [mode, setMode] = useState<RefundPlan["mode"]>("refund");
+  const [amount, setAmount] = useState("");
+  const [method, setMethod] = useState<string>("bKash");
+  const [reference, setReference] = useState("");
+  const [note, setNote] = useState("");
+  const adv = Number(row?.advance_amount ?? 0);
+
+  useEffect(() => {
+    if (!row) return;
+    setAmount(Number(row.advance_amount) > 0 ? String(row.advance_amount) : "");
+    setMethod(row.advance_method ?? row.advance_source ?? "bKash");
+    setMode(Number(row.advance_amount) > 0 ? "refund" : "none");
+    setReference("");
+    setNote("");
+  }, [row]);
+
   const save = useMutation({
-    mutationFn: async () => { if (row) await cancelPreorder(row, reason || null); },
-    onSuccess: () => { toast.success("Pre-order cancelled"); setReason(""); onClose(); onSaved(); },
+    mutationFn: async () => {
+      if (!row) return;
+      const plan: RefundPlan = {
+        mode: adv > 0 ? mode : "none",
+        amount: Number(amount || 0),
+        method: method || null,
+        reference: reference.trim() || null,
+        note: note.trim() || null,
+      };
+      if (plan.mode !== "none") {
+        if (!(plan.amount > 0)) throw new Error("Refund amount দিন");
+        if (plan.amount > adv) throw new Error("Advance-এর চেয়ে বেশি refund করা যাবে না");
+      }
+      await cancelPreorder(row, reason || null, plan);
+    },
+    onSuccess: () => {
+      toast.success(adv > 0 && mode === "refund" ? "Cancelled & advance refunded" : "Pre-order cancelled");
+      setReason("");
+      onClose();
+      onSaved();
+    },
     onError: (e: Error) => toast.error(e.message),
   });
   return (
     <Dialog open={!!row} onOpenChange={(v) => { if (!v) onClose(); }}>
-      <DialogContent className="max-w-md">
+      <DialogContent className="max-w-md max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2 text-rose-600">
             <AlertTriangle className="h-4 w-4" /> Cancel pre-order
@@ -647,10 +716,120 @@ function CancelDialog({ row, onClose, onSaved }: { row: Row | null; onClose: () 
           <Label className="text-[11px]">Reason (optional)</Label>
           <Textarea rows={3} value={reason} onChange={(e) => setReason(e.target.value)} placeholder="Customer আর নিতে চায় না…" />
         </div>
+        {adv > 0 && (
+          <div className="space-y-3 rounded-xl border border-amber-500/30 bg-amber-500/5 p-3">
+            <div className="flex items-center justify-between">
+              <span className="inline-flex items-center gap-1.5 text-[11px] font-bold uppercase tracking-wider text-amber-700 dark:text-amber-400">
+                <Wallet className="h-3.5 w-3.5" /> Advance refund
+              </span>
+              <span className="text-xs font-semibold tabular-nums">Paid {fmtBDT(adv)}</span>
+            </div>
+            <Select value={mode} onValueChange={(v) => setMode(v as RefundPlan["mode"])}>
+              <SelectTrigger><SelectValue /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="refund">এখনই refund করেছি (wallet থেকে বাদ যাবে)</SelectItem>
+                <SelectItem value="pending">পরে refund করবো (due হিসেবে রাখো)</SelectItem>
+                <SelectItem value="none">Refund হবে না (forfeited)</SelectItem>
+              </SelectContent>
+            </Select>
+            {mode !== "none" && (
+              <div className="grid gap-3 sm:grid-cols-2">
+                <div className="space-y-1">
+                  <Label className="text-[11px]">Refund amount</Label>
+                  <Input type="number" min={0} max={adv} value={amount} onChange={(e) => setAmount(e.target.value)} />
+                </div>
+                <div className="space-y-1">
+                  <Label className="text-[11px]">Method</Label>
+                  <Select value={method} onValueChange={setMethod}>
+                    <SelectTrigger><SelectValue /></SelectTrigger>
+                    <SelectContent>{REFUND_METHODS.map((m) => <SelectItem key={m} value={m}>{m}</SelectItem>)}</SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-1 sm:col-span-2">
+                  <Label className="text-[11px]">Refund number / Txn ID</Label>
+                  <Input value={reference} onChange={(e) => setReference(e.target.value)} placeholder="01XXXXXXXXX / TRX ID" />
+                </div>
+                <div className="space-y-1 sm:col-span-2">
+                  <Label className="text-[11px]">Note (optional)</Label>
+                  <Input value={note} onChange={(e) => setNote(e.target.value)} placeholder="Refund note…" />
+                </div>
+              </div>
+            )}
+          </div>
+        )}
         <DialogFooter>
           <Button variant="outline" onClick={onClose}>Back</Button>
           <Button variant="destructive" onClick={() => save.mutate()} disabled={save.isPending}>
-            {save.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />} Cancel pre-order
+            {save.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+            {adv > 0 && mode === "refund" ? "Cancel & refund" : "Cancel pre-order"}
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+function RefundDialog({ row, onClose, onSaved }: { row: Row | null; onClose: () => void; onSaved: () => void }) {
+  const [amount, setAmount] = useState("");
+  const [method, setMethod] = useState<string>("bKash");
+  const [reference, setReference] = useState("");
+  const [note, setNote] = useState("");
+  const adv = Number(row?.advance_amount ?? 0);
+
+  useEffect(() => {
+    if (!row) return;
+    setAmount(String(Number(row.refund_amount || row.advance_amount || 0)));
+    setMethod(row.refund_method ?? row.advance_method ?? "bKash");
+    setReference(row.refund_reference ?? "");
+    setNote("");
+  }, [row]);
+
+  const save = useMutation({
+    mutationFn: async () => {
+      if (!row) return;
+      const amt = Number(amount || 0);
+      if (!(amt > 0)) throw new Error("Refund amount দিন");
+      if (amt > adv) throw new Error("Advance-এর চেয়ে বেশি refund করা যাবে না");
+      await settlePreorderRefund(row, { amount: amt, method, reference: reference.trim() || null, note: note.trim() || null });
+    },
+    onSuccess: () => { toast.success("Refund recorded"); onClose(); onSaved(); },
+    onError: (e: Error) => toast.error(e.message),
+  });
+
+  return (
+    <Dialog open={!!row} onOpenChange={(v) => { if (!v) onClose(); }}>
+      <DialogContent className="max-w-md">
+        <DialogHeader>
+          <DialogTitle className="flex items-center gap-2"><Wallet className="h-4 w-4" /> Refund advance</DialogTitle>
+          <DialogDescription>
+            Customer-কে ফেরত দেওয়া টাকা এখানে রাখুন — wallet balance থেকে বাদ যাবে (advance {fmtBDT(adv)})।
+          </DialogDescription>
+        </DialogHeader>
+        <div className="grid gap-3 sm:grid-cols-2">
+          <div className="space-y-1">
+            <Label className="text-[11px]">Amount</Label>
+            <Input type="number" min={0} max={adv} value={amount} onChange={(e) => setAmount(e.target.value)} />
+          </div>
+          <div className="space-y-1">
+            <Label className="text-[11px]">Method</Label>
+            <Select value={method} onValueChange={setMethod}>
+              <SelectTrigger><SelectValue /></SelectTrigger>
+              <SelectContent>{REFUND_METHODS.map((m) => <SelectItem key={m} value={m}>{m}</SelectItem>)}</SelectContent>
+            </Select>
+          </div>
+          <div className="space-y-1 sm:col-span-2">
+            <Label className="text-[11px]">Refund number / Txn ID</Label>
+            <Input value={reference} onChange={(e) => setReference(e.target.value)} placeholder="01XXXXXXXXX / TRX ID" />
+          </div>
+          <div className="space-y-1 sm:col-span-2">
+            <Label className="text-[11px]">Note (optional)</Label>
+            <Input value={note} onChange={(e) => setNote(e.target.value)} />
+          </div>
+        </div>
+        <DialogFooter>
+          <Button variant="outline" onClick={onClose}>Back</Button>
+          <Button onClick={() => save.mutate()} disabled={save.isPending}>
+            {save.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />} Mark refunded
           </Button>
         </DialogFooter>
       </DialogContent>

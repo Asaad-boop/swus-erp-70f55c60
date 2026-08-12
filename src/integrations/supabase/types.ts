@@ -6664,6 +6664,10 @@ export type Database = {
           refund_amount: number
           refund_method: string | null
           refund_note: string | null
+          refund_reference: string | null
+          refund_status: string
+          refund_txn_id: string | null
+          refunded_at: string | null
           stage: string
           updated_at: string
         }
@@ -6692,6 +6696,10 @@ export type Database = {
           refund_amount?: number
           refund_method?: string | null
           refund_note?: string | null
+          refund_reference?: string | null
+          refund_status?: string
+          refund_txn_id?: string | null
+          refunded_at?: string | null
           stage?: string
           updated_at?: string
         }
@@ -6720,6 +6728,10 @@ export type Database = {
           refund_amount?: number
           refund_method?: string | null
           refund_note?: string | null
+          refund_reference?: string | null
+          refund_status?: string
+          refund_txn_id?: string | null
+          refunded_at?: string | null
           stage?: string
           updated_at?: string
         }
