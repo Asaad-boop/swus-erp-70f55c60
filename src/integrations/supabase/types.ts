@@ -9575,6 +9575,19 @@ export type Database = {
         Returns: undefined
       }
       resolve_login_email: { Args: { p_identifier: string }; Returns: string }
+      rpt_cargo_ledger: {
+        Args: { _brand_ids: string[]; _from: string; _to: string }
+        Returns: {
+          agent: string
+          agent_id: string
+          balance: number
+          charges: number
+          deposits: number
+          entries: number
+          last_entry: string
+          net: number
+        }[]
+      }
       rpt_close_period: {
         Args: { _brand_id: string; _month: string; _notes?: string }
         Returns: Json
@@ -9991,6 +10004,99 @@ export type Database = {
           gross_profit: number
           net_revenue: number
           orders: number
+          units: number
+        }[]
+      }
+      rpt_stock_adjustment_rows: {
+        Args: {
+          _brand_ids: string[]
+          _from: string
+          _limit?: number
+          _to: string
+        }
+        Returns: {
+          day: string
+          delta: number
+          id: string
+          moved_at: string
+          movement_source: string
+          note: string
+          product_name: string
+          reason: string
+          reference_type: string
+          sku: string
+          stock_after: number
+          stock_before: number
+          unit_cost: number
+          user_email: string
+          value: number
+          variant_label: string
+          warehouse: string
+        }[]
+      }
+      rpt_stock_adjustments: {
+        Args: { _brand_ids: string[]; _from: string; _to: string }
+        Returns: {
+          movements: number
+          net_units: number
+          net_value: number
+          reason: string
+          units_in: number
+          units_out: number
+          value_in: number
+          value_out: number
+        }[]
+      }
+      rpt_stock_aging: {
+        Args: { _brand_ids: string[] }
+        Returns: {
+          age_days: number
+          bucket: string
+          last_in: string
+          last_sold: string
+          product_id: string
+          product_name: string
+          sku: string
+          stock: number
+          stock_value: number
+          unit_cost: number
+        }[]
+      }
+      rpt_stocktake_variance: {
+        Args: { _brand_ids: string[]; _from: string; _to: string }
+        Returns: {
+          accuracy_pct: number
+          completed_at: string
+          items_counted: number
+          items_with_variance: number
+          name: string
+          net_units: number
+          session_id: string
+          started_at: string
+          status: string
+          units_over: number
+          units_short: number
+          variance_value: number
+          warehouse: string
+        }[]
+      }
+      rpt_supplier_performance: {
+        Args: { _brand_ids: string[]; _from: string; _to: string }
+        Returns: {
+          avg_landed_cost: number
+          avg_lead_days: number
+          cancelled_pos: number
+          completed_pos: number
+          country: string
+          due: number
+          last_order: string
+          on_time_pct: number
+          paid: number
+          po_value: number
+          pos: number
+          supplier: string
+          supplier_id: string
+          supplier_type: string
           units: number
         }[]
       }
