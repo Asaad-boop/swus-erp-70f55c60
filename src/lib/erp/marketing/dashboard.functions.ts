@@ -156,8 +156,8 @@ export const getMarketingDashboard = createServerFn({ method: "POST" })
     const prodIds = Array.from(skuProfit.keys());
     let prodNames = new Map<string, string>();
     if (prodIds.length) {
-      const pn = await sb.from("products").select("id,name").in("id", prodIds);
-      for (const p of pn.data ?? []) prodNames.set(p.id, p.name ?? "—");
+      const pn = await sb.from("products").select("id,title").in("id", prodIds);
+      for (const p of pn.data ?? []) prodNames.set(p.id, p.title ?? "—");
     }
     const topProducts = prodIds
       .map((id) => ({ id, name: prodNames.get(id) ?? "—", ...skuProfit.get(id)! }))
