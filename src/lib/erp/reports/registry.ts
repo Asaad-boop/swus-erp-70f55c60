@@ -38,7 +38,9 @@ export const REPORT_REGISTRY: ReportEntry[] = [
   // Products / inventory
   r({ id: "products.profit", name: "Product profitability", category: "Products", tab: "products", source: "rpt_product_performance", formula: "net revenue − COGS − courier per SKU", basis: "delivered", status: "live" }),
   r({ id: "inventory.summary", name: "Inventory summary", category: "Inventory", tab: "inventory", source: "rpt_inventory_summary", formula: "stock × weighted average cost", basis: "n/a", status: "live" }),
-  r({ id: "inventory.adjustments", name: "Stock adjustments audit", category: "Inventory", tab: "inventory", source: "stock_movements", formula: "manual adjustments grouped by reason", basis: "n/a", status: "planned" }),
+  r({ id: "inventory.adjustments", name: "Stock adjustments audit", category: "Inventory", tab: "inventory", source: "rpt_stock_adjustments / rpt_stock_adjustment_rows", formula: "stock movements grouped by reason, with value at movement unit cost", basis: "n/a", status: "live" }),
+  r({ id: "inventory.aging", name: "Stock aging", category: "Inventory", tab: "inventory", source: "rpt_stock_aging", formula: "days since last stock-in per product, bucketed 0-30/31-60/61-90/91-180/180+", basis: "n/a", status: "live" }),
+  r({ id: "inventory.stocktake", name: "Stocktake variance", category: "Inventory", tab: "inventory", source: "rpt_stocktake_variance", formula: "counted qty − system qty per session, valued at unit cost", basis: "n/a", status: "live" }),
 
   // Customers / marketing
   r({ id: "customers.summary", name: "Customer summary & RFM", category: "Customers", tab: "customers", source: "rpt_customer_summary", formula: "orders and revenue per normalised phone", basis: "delivered", status: "live" }),
@@ -50,6 +52,8 @@ export const REPORT_REGISTRY: ReportEntry[] = [
 
   // Supply chain
   r({ id: "supply.po", name: "Purchase orders & landed cost", category: "Supply chain", tab: "supply", source: "imp_purchase_orders", formula: "PO value + freight allocated per unit", basis: "n/a", status: "live" }),
+  r({ id: "supply.supplier", name: "Supplier performance", category: "Supply chain", tab: "supply", source: "rpt_supplier_performance", formula: "POs, value, due, avg lead days, on-time % per supplier", basis: "n/a", status: "live" }),
+  r({ id: "supply.cargo", name: "Cargo agent ledger", category: "Supply chain", tab: "supply", source: "rpt_cargo_ledger", formula: "deposits − charges per agent, running balance to period end", basis: "transaction_date", status: "live" }),
 
   // Finance
   r({ id: "finance.pnl", name: "Profit & loss", category: "Finance", tab: "finance", source: "rpt_pnl_v2", formula: "revenue − COGS − variable − ad spend − opex", basis: "delivered", status: "live" }),

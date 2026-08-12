@@ -11,6 +11,7 @@ import { fmtBdt } from "@/lib/erp/finance";
 import { exportAoaXlsx } from "@/lib/erp/utils/excel";
 import { Panel, KpiStrip, EmptyState, type Kpi , REPORT_QUERY_OPTS } from "@/components/erp/reports/report-kit";
 import type { RpcArgs } from "@/components/erp/reports/customers-tab";
+import { SupplierPerformancePanel, CargoLedgerPanel } from "@/components/erp/reports/supply-extras";
 
 type SupSummary = {
   pos: number; import_pos: number; local_pos: number; units_ordered: number; po_value: number;
@@ -164,6 +165,9 @@ export function SupplyTab({ args, enabled }: { args: RpcArgs; enabled: boolean }
           </div>
         )}
       </Panel>
+
+      <SupplierPerformancePanel args={args} enabled={enabled} />
+      <CargoLedgerPanel args={args} enabled={enabled} />
     </>
   );
 }

@@ -12,6 +12,7 @@ import { fmtBdt } from "@/lib/erp/finance";
 import { exportAoaXlsx } from "@/lib/erp/utils/excel";
 import { Panel, KpiStrip, EmptyState, type Kpi , REPORT_QUERY_OPTS } from "@/components/erp/reports/report-kit";
 import type { RpcArgs } from "@/components/erp/reports/customers-tab";
+import { StockAdjustmentsPanel, StockAgingPanel, StocktakeVariancePanel } from "@/components/erp/reports/inventory-extras";
 
 type InvSummary = {
   skus: number; units_on_hand: number; stock_value: number; out_of_stock: number; low_stock: number;
@@ -220,6 +221,10 @@ export function InventoryTab({ args, enabled }: { args: RpcArgs; enabled: boolea
           </div>
         )}
       </Panel>
+
+      <StockAdjustmentsPanel args={args} enabled={enabled} />
+      <StockAgingPanel args={args} enabled={enabled} />
+      <StocktakeVariancePanel args={args} enabled={enabled} />
     </>
   );
 }
