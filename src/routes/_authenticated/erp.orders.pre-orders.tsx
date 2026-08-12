@@ -22,7 +22,8 @@ import { cn } from "@/lib/utils";
 import {
   cancelPreorder, confirmPreorderToPipeline, daysLeft, markPreorderCalled,
   markPreordersReady, recordPreorderAdvance, stageMeta,
-  ADVANCE_SOURCES, PAYMENT_METHODS, type PreorderStage,
+  settlePreorderRefund, REFUND_METHODS,
+  ADVANCE_SOURCES, PAYMENT_METHODS, type PreorderStage, type RefundPlan,
 } from "@/lib/erp/preorders";
 import {
   Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle,
@@ -63,6 +64,11 @@ type Row = {
   advance_txn_id: string | null;
   due_amount: number;
   due_collect_method: string | null;
+  refund_amount: number | null;
+  refund_method: string | null;
+  refund_reference: string | null;
+  refund_status: string | null;
+  refunded_at: string | null;
   notes: string | null;
   ready_at: string | null;
   called_at: string | null;
@@ -103,6 +109,7 @@ function PreOrdersPage() {
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [advanceRow, setAdvanceRow] = useState<Row | null>(null);
   const [cancelRow, setCancelRow] = useState<Row | null>(null);
+  const [refundRow, setRefundRow] = useState<Row | null>(null);
   const [busyId, setBusyId] = useState<string | null>(null);
 
   const listQuery = useQuery({
@@ -113,7 +120,7 @@ function PreOrdersPage() {
         supabase
           .from("preorders")
           .select(
-            "id,order_id,brand_id,stage,promise_date,promise_days,advance_amount,advance_method,advance_source,advance_txn_id,due_amount,due_collect_method,notes,ready_at,called_at,confirmed_at,created_at," +
+            "id,order_id,brand_id,stage,promise_date,promise_days,advance_amount,advance_method,advance_source,advance_txn_id,due_amount,due_collect_method,refund_amount,refund_method,refund_reference,refund_status,refunded_at,notes,ready_at,called_at,confirmed_at,created_at," +
               "order:orders!preorders_order_id_fkey(id,invoice_no,created_at,status,total,source,shipping_name,shipping_phone,guest_name,guest_phone,items:order_items(id,name,image,quantity,variant_label))",
           ),
         scopeIds,
@@ -519,9 +526,35 @@ function PreOrdersPage() {
                         <X className="h-3.5 w-3.5" /> Cancel
                       </Button>
                     )}
+                    {r.stage === "cancelled" && Number(r.advance_amount || 0) > 0 && r.refund_status !== "refunded" && (
+                      <Button
+                        size="sm"
+                        className="h-8 gap-1.5 bg-amber-600 hover:bg-amber-700"
+                        disabled={busy}
+                        onClick={() => setRefundRow(r)}
+                      >
+                        <Wallet className="h-3.5 w-3.5" /> Refund ৳{Math.round(Number(r.refund_amount || r.advance_amount)).toLocaleString()}
+                      </Button>
+                    )}
                   </div>
                 </div>
                 <StageTrack stage={r.stage} />
+                {r.stage === "cancelled" && Number(r.advance_amount || 0) > 0 && (
+                  <div className="mt-2 ml-2">
+                    {r.refund_status === "refunded" ? (
+                      <span className="inline-flex items-center gap-1.5 rounded-full bg-emerald-100 px-2 py-0.5 text-[10px] font-bold text-emerald-800 ring-1 ring-inset ring-emerald-500/30 dark:bg-emerald-950 dark:text-emerald-300">
+                        <CheckCircle2 className="h-3 w-3" />
+                        Refunded {fmtBDT(Number(r.refund_amount || 0))} · {r.refund_method ?? "—"}
+                        {r.refund_reference ? ` · ${r.refund_reference}` : ""}
+                      </span>
+                    ) : (
+                      <span className="inline-flex items-center gap-1.5 rounded-full bg-amber-100 px-2 py-0.5 text-[10px] font-bold text-amber-900 ring-1 ring-inset ring-amber-500/30 dark:bg-amber-950 dark:text-amber-300">
+                        <AlertTriangle className="h-3 w-3" />
+                        Refund due {fmtBDT(Number(r.refund_amount || r.advance_amount || 0))}
+                      </span>
+                    )}
+                  </div>
+                )}
                 {r.notes && (
                   <div className="mt-2 ml-2 rounded-lg bg-muted/50 px-2 py-1 text-[11px] text-muted-foreground">{r.notes}</div>
                 )}
@@ -533,6 +566,7 @@ function PreOrdersPage() {
 
       <AdvanceDialog row={advanceRow} onClose={() => setAdvanceRow(null)} onSaved={refresh} />
       <CancelDialog row={cancelRow} onClose={() => setCancelRow(null)} onSaved={refresh} />
+      <RefundDialog row={refundRow} onClose={() => setRefundRow(null)} onSaved={refresh} />
 
       {tab === "open" && selectedRows.length > 0 && (
         <div className="fixed inset-x-0 bottom-4 z-40 flex justify-center px-4">
