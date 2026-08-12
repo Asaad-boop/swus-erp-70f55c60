@@ -27,10 +27,12 @@ import { ReturnsTab } from "@/components/erp/reports/returns-tab";
 import { SupplyTab } from "@/components/erp/reports/supply-tab";
 import { FinanceTab } from "@/components/erp/reports/finance-tab";
 import { OrderLedgerPanel } from "@/components/erp/reports/order-ledger";
+import { ControlTab } from "@/components/erp/reports/control-tab";
+import { ReportIndexDrawer } from "@/components/erp/reports/report-index-drawer";
 
 const TAB_VALUES = [
   "overview", "sales", "orders", "products", "customers",
-  "inventory", "marketing", "returns", "supply", "finance",
+  "inventory", "marketing", "returns", "supply", "finance", "control",
 ] as const;
 type TabValue = (typeof TAB_VALUES)[number];
 
@@ -191,6 +193,7 @@ function ReportsHub() {
         </div>
         <div className="flex flex-wrap items-center gap-2">
           {picker}
+          <ReportIndexDrawer onOpenTab={(t) => navigate({ search: { tab: t as TabValue }, replace: true })} />
           <DateRangePicker value={range} onChange={setRange} />
           <Select value={basis} onValueChange={(v) => setBasis(v as Basis)}>
             <SelectTrigger className="h-9 w-[150px] text-xs"><SelectValue /></SelectTrigger>
@@ -240,7 +243,7 @@ function ReportsHub() {
                   ["overview", "Overview"], ["sales", "Sales"], ["orders", "Orders"],
                   ["products", "Products"], ["customers", "Customers"], ["inventory", "Inventory"],
                   ["marketing", "Marketing"], ["returns", "Returns"], ["supply", "Supply chain"],
-                  ["finance", "Finance"],
+                  ["finance", "Finance"], ["control", "Control"],
                 ].map(([v, label]) => (
                   <TabsTrigger
                     key={v}
@@ -300,6 +303,10 @@ function ReportsHub() {
 
             <TabsContent value="finance" className="mt-4 space-y-4">
               <FinanceTab args={args} enabled={enabled} />
+            </TabsContent>
+
+            <TabsContent value="control" className="mt-4 space-y-4">
+              <ControlTab args={args} enabled={enabled} />
             </TabsContent>
           </Tabs>
         </>
