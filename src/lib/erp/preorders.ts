@@ -1,5 +1,6 @@
 import { supabase } from "@/integrations/supabase/client";
 import { fireOrderSms, fireOrderSmsMany } from "@/lib/erp/sms/notify";
+import { refundOrderAdvanceFn } from "@/lib/erp/finance/advance-refund.functions";
 
 export type PreorderStage = "open" | "advance_paid" | "ready" | "called" | "confirmed" | "cancelled";
 
@@ -40,6 +41,12 @@ export type PreorderRecord = {
   confirmed_at: string | null;
   cancelled_at: string | null;
   cancel_reason: string | null;
+  refund_amount?: number | null;
+  refund_method?: string | null;
+  refund_note?: string | null;
+  refund_status?: string | null;
+  refund_reference?: string | null;
+  refunded_at?: string | null;
   notes: string | null;
   created_at: string;
   updated_at: string;
@@ -292,16 +299,107 @@ export async function confirmPreorderToPipeline(row: Pick<PreorderRecord, "id" |
   fireOrderSms(row.order_id, "preorder_confirmed");
 }
 
-export async function cancelPreorder(row: Pick<PreorderRecord, "id" | "order_id" | "brand_id">, reason: string | null) {
+export const REFUND_METHODS = ["bKash", "Nagad", "Rocket", "Bank Transfer", "Cash"] as const;
+
+export type RefundPlan = {
+  /** "refund" = money going back now, "pending" = customer will be paid later, "none" = nothing to return. */
+  mode: "none" | "refund" | "pending";
+  amount: number;
+  method: string | null;
+  reference: string | null;
+  note: string | null;
+};
+
+export async function cancelPreorder(
+  row: Pick<PreorderRecord, "id" | "order_id" | "brand_id">,
+  reason: string | null,
+  refund?: RefundPlan,
+) {
   const now = new Date().toISOString();
   const { error } = await supabase.from("orders").update({ status: "cancelled", cancelled_at: now } as never).eq("id", row.order_id);
   if (error) throw error;
+
+  let refundPatch: Record<string, unknown> = {};
+  if (refund && refund.mode !== "none" && refund.amount > 0) {
+    if (refund.mode === "refund") {
+      const res = await refundOrderAdvanceFn({
+        data: {
+          orderId: row.order_id,
+          amount: refund.amount,
+          method: refund.method ?? "bKash",
+          reference: refund.reference,
+          note: refund.note,
+        },
+      });
+      refundPatch = {
+        refund_amount: refund.amount,
+        refund_method: refund.method,
+        refund_note: refund.note,
+        refund_reference: refund.reference,
+        refund_status: "refunded",
+        refunded_at: now,
+        refund_txn_id: res.txnId,
+      };
+    } else {
+      refundPatch = {
+        refund_amount: refund.amount,
+        refund_method: refund.method,
+        refund_note: refund.note,
+        refund_reference: refund.reference,
+        refund_status: "pending",
+      };
+    }
+  }
+
   const { error: pErr } = await supabase
     .from("preorders")
-    .update({ stage: "cancelled", cancelled_at: now, cancel_reason: reason } as never)
+    .update({ stage: "cancelled", cancelled_at: now, cancel_reason: reason, ...refundPatch } as never)
     .eq("id", row.id);
   if (pErr) throw pErr;
   await logPreorderEvent({ preorderId: row.id, orderId: row.order_id, brandId: row.brand_id, event: "cancelled", detail: reason ?? "Pre-order cancelled" });
+  if (refund && refund.mode !== "none" && refund.amount > 0) {
+    await logPreorderEvent({
+      preorderId: row.id,
+      orderId: row.order_id,
+      brandId: row.brand_id,
+      event: refund.mode === "refund" ? "refunded" : "refund_pending",
+      detail:
+        refund.mode === "refund"
+          ? `Advance ৳${refund.amount.toLocaleString()} refunded via ${refund.method ?? "—"}${refund.reference ? ` (${refund.reference})` : ""}`
+          : `Refund ৳${refund.amount.toLocaleString()} pending — ${refund.method ?? "method not set"}`,
+      meta: { amount: refund.amount, method: refund.method, reference: refund.reference },
+    });
+  }
+}
+
+/** Settle a refund that was left pending at cancel time. */
+export async function settlePreorderRefund(
+  row: Pick<PreorderRecord, "id" | "order_id" | "brand_id">,
+  args: { amount: number; method: string; reference: string | null; note: string | null },
+) {
+  const res = await refundOrderAdvanceFn({
+    data: { orderId: row.order_id, amount: args.amount, method: args.method, reference: args.reference, note: args.note },
+  });
+  const { error } = await supabase
+    .from("preorders")
+    .update({
+      refund_amount: args.amount,
+      refund_method: args.method,
+      refund_reference: args.reference,
+      refund_note: args.note,
+      refund_status: "refunded",
+      refunded_at: new Date().toISOString(),
+      refund_txn_id: res.txnId,
+    } as never)
+    .eq("id", row.id);
+  if (error) throw error;
+  await logPreorderEvent({
+    preorderId: row.id,
+    orderId: row.order_id,
+    brandId: row.brand_id,
+    event: "refunded",
+    detail: `Advance ৳${args.amount.toLocaleString()} refunded via ${args.method}${args.reference ? ` (${args.reference})` : ""}`,
+  });
 }
 
 export async function updatePreorderPlan(row: Pick<PreorderRecord, "id" | "order_id" | "brand_id">, patch: {
