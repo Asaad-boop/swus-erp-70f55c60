@@ -454,15 +454,33 @@ function ProfitBridge({ s }: { s: Summary }) {
     { label: "Return courier loss", value: -s.return_courier_cost },
     { label: "Contribution profit", value: s.contribution_profit, strong: true },
   ];
+  const max = Math.max(1, ...rows.map((r) => Math.abs(Number(r.value) || 0)));
   return (
     <Panel title="Profit bridge" subtitle="Gross sales → contribution profit">
-      <div className="divide-y">
-        {rows.map((r) => (
-          <div key={r.label} className={`flex items-center justify-between py-2 text-sm ${r.strong ? "font-semibold" : ""}`}>
-            <span className={r.strong ? "" : "text-muted-foreground"}>{r.label}</span>
-            <span className={`tabular-nums ${r.value < 0 ? "text-rose-600 dark:text-rose-400" : ""}`}>{fmtBdt(r.value)}</span>
-          </div>
-        ))}
+      <div className="divide-y divide-border/50">
+        {rows.map((r) => {
+          const pct = (Math.abs(Number(r.value) || 0) / max) * 100;
+          const neg = Number(r.value) < 0;
+          return (
+            <div
+              key={r.label}
+              className={`group py-2 text-sm ${r.strong ? "font-semibold" : ""}`}
+            >
+              <div className="flex items-center justify-between gap-3">
+                <span className={r.strong ? "" : "text-muted-foreground"}>{r.label}</span>
+                <span className={`tabular-nums ${neg ? "text-rose-600 dark:text-rose-400" : ""}`}>{fmtBdt(r.value)}</span>
+              </div>
+              <div className="mt-1.5 h-1 w-full overflow-hidden rounded-full bg-muted">
+                <div
+                  className={`h-full rounded-full transition-all duration-500 ${
+                    neg ? "bg-rose-500/70" : r.strong ? "bg-primary" : "bg-primary/40"
+                  }`}
+                  style={{ width: `${Math.max(pct, 1.5)}%` }}
+                />
+              </div>
+            </div>
+          );
+        })}
       </div>
     </Panel>
   );
