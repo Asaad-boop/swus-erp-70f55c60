@@ -1,6 +1,6 @@
-import { Fragment, useMemo, useState } from "react";
+import { Fragment, useEffect, useMemo, useState } from "react";
 import { useQuery, keepPreviousData } from "@tanstack/react-query";
-import { ChevronDown, ChevronRight, FileSpreadsheet, Search } from "lucide-react";
+import { ChevronDown, ChevronRight, Search } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -9,8 +9,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { fmtBdt } from "@/lib/erp/finance";
-import { exportAoaXlsx } from "@/lib/erp/utils/excel";
-import { Panel, KpiStrip, EmptyState, type Kpi } from "@/components/erp/reports/report-kit";
+import { Panel, KpiStrip, EmptyState, ExportMenu, REPORT_QUERY_OPTS, type Kpi } from "@/components/erp/reports/report-kit";
 
 type RpcArgs = { _brand_ids: string[]; _from: string; _to: string; _basis: string };
 
