@@ -1,5 +1,5 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { z } from "zod";
 import { zodValidator, fallback } from "@tanstack/zod-adapter";
@@ -21,10 +21,18 @@ import {
   RefreshCcw,
   CalendarDays,
 } from "lucide-react";
-import { ResponsiveContainer, AreaChart, Area, XAxis, Tooltip } from "recharts";
 import { useBrand } from "@/contexts/brand-context";
 import { getMarketingOverview } from "@/lib/erp/marketing/overview.functions";
 import { syncSpendCapToWallet } from "@/lib/erp/marketing/meta.functions";
+import { getMarketingDashboard } from "@/lib/erp/marketing/dashboard.functions";
+import { DateRangePicker, buildPreset, type MktRangeValue } from "@/components/erp/marketing/date-range-picker";
+import {
+  KpiGrid,
+  TrendChart,
+  TopCampaigns,
+  TopProducts,
+  TopAds,
+} from "@/components/erp/marketing/dashboard-panels";
 
 const searchSchema = z.object({
   brand: fallback(z.string(), "all").default("all"),
