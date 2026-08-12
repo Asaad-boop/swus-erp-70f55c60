@@ -178,11 +178,14 @@ function ReportsHub() {
     : [];
 
   return (
-    <div className="space-y-5 p-4 md:p-6">
-      <header className="flex flex-wrap items-end justify-between gap-3">
+    <div className="space-y-5 pb-8">
+      <header className="sticky top-0 z-30 -mb-1 border-b border-border/60 bg-background/85 px-4 py-3 backdrop-blur-xl md:px-6">
+        <div className="flex flex-wrap items-end justify-between gap-3">
         <div>
-          <h1 className="text-2xl font-bold tracking-tight">Reports</h1>
-          <p className="text-sm text-muted-foreground">
+          <h1 className="font-display text-2xl font-bold tracking-tight">
+            Reports<span className="text-primary">.</span>
+          </h1>
+          <p className="text-xs text-muted-foreground md:text-sm">
             All numbers come from one accounting source — Dhaka time, {BASIS_LABEL[basis].toLowerCase()} basis.
           </p>
         </div>
@@ -214,11 +217,13 @@ function ReportsHub() {
             onClick={() => { overviewQ.refetch(); prevQ.refetch(); }}
             aria-label="Refresh"
           >
-            <RefreshCw className="h-4 w-4" />
+            <RefreshCw className={`h-4 w-4 ${overviewQ.isFetching ? "animate-spin" : ""}`} />
           </Button>
+        </div>
         </div>
       </header>
 
+      <div className="space-y-5 px-4 md:px-6">
       {!enabled ? (
         <Panel><EmptyState text="Pick at least one brand to see reports." /></Panel>
       ) : (
@@ -229,18 +234,24 @@ function ReportsHub() {
             value={tab ?? "overview"}
             onValueChange={(v) => navigate({ search: { tab: v as TabValue }, replace: true })}
           >
-            <TabsList className="flex-wrap">
-              <TabsTrigger value="overview">Overview</TabsTrigger>
-              <TabsTrigger value="sales">Sales</TabsTrigger>
-              <TabsTrigger value="orders">Orders</TabsTrigger>
-              <TabsTrigger value="products">Products</TabsTrigger>
-              <TabsTrigger value="customers">Customers</TabsTrigger>
-              <TabsTrigger value="inventory">Inventory</TabsTrigger>
-              <TabsTrigger value="marketing">Marketing</TabsTrigger>
-              <TabsTrigger value="returns">Returns</TabsTrigger>
-              <TabsTrigger value="supply">Supply chain</TabsTrigger>
-              <TabsTrigger value="finance">Finance</TabsTrigger>
-            </TabsList>
+            <div className="sticky top-[68px] z-20 -mx-1 overflow-x-auto px-1 py-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+              <TabsList className="h-auto w-max gap-1 rounded-full border border-border/60 bg-card/80 p-1 shadow-sm backdrop-blur-xl">
+                {[
+                  ["overview", "Overview"], ["sales", "Sales"], ["orders", "Orders"],
+                  ["products", "Products"], ["customers", "Customers"], ["inventory", "Inventory"],
+                  ["marketing", "Marketing"], ["returns", "Returns"], ["supply", "Supply chain"],
+                  ["finance", "Finance"],
+                ].map(([v, label]) => (
+                  <TabsTrigger
+                    key={v}
+                    value={v}
+                    className="rounded-full px-3.5 py-1.5 text-xs font-medium transition-colors data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:shadow-sm"
+                  >
+                    {label}
+                  </TabsTrigger>
+                ))}
+              </TabsList>
+            </div>
 
             <TabsContent value="overview" className="mt-4 space-y-4">
               {compare && (
@@ -293,6 +304,7 @@ function ReportsHub() {
           </Tabs>
         </>
       )}
+      </div>
     </div>
   );
 }
