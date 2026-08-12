@@ -58,6 +58,9 @@ export const REPORT_REGISTRY: ReportEntry[] = [
   // Finance
   r({ id: "finance.pnl", name: "Profit & loss", category: "Finance", tab: "finance", source: "rpt_pnl_v2", formula: "revenue − COGS − variable − ad spend − opex", basis: "delivered", status: "live" }),
   r({ id: "finance.cash", name: "Courier cash actually received", category: "Finance", tab: "finance", source: "rpt_order_ledger_summary", formula: "unique applied invoice payouts", basis: "transaction_date", status: "live" }),
+  r({ id: "finance.cash_daily", name: "Daily cash report", category: "Finance", tab: "finance", source: "rpt_cash_daily", formula: "income − expense per day (transfers excluded)", basis: "transaction_date", status: "live" }),
+  r({ id: "finance.wallets", name: "Bank & MFS account report", category: "Finance", tab: "finance", source: "rpt_cash_accounts", formula: "in, out, transfers and live balance per account", basis: "transaction_date", status: "live" }),
+  r({ id: "finance.arap", name: "Receivables & payables (AR/AP)", category: "Finance", tab: "finance", source: "rpt_ar_ap", formula: "courier COD + unpaid delivered vs PO due, cargo balance and unpaid bills", basis: "transaction_date", status: "live" }),
 
   // Control layer
   r({ id: "control.chain", name: "Sales → Cash reconciliation chain", category: "Control", tab: "control", source: "rpt_reconcile_chain", formula: "revenue vs finance vs cash vs courier charge, with status per check", basis: "delivered", status: "live" }),
