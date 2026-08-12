@@ -12,7 +12,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Table, TableHeader, TableHead, TableBody, TableRow, TableCell } from "@/components/ui/table";
 import { fmtBdt } from "@/lib/erp/finance";
 import { exportAoaXlsx } from "@/lib/erp/utils/excel";
-import { Panel, KpiStrip, EmptyState, type Kpi } from "@/components/erp/reports/report-kit";
+import { Panel, KpiStrip, EmptyState, type Kpi , REPORT_QUERY_OPTS } from "@/components/erp/reports/report-kit";
 import type { RpcArgs } from "@/components/erp/reports/customers-tab";
 
 type MktSummary = {
@@ -41,6 +41,7 @@ export function MarketingTab({ args, enabled }: { args: RpcArgs; enabled: boolea
   const sumQ = useQuery({
     queryKey: ["rpt-mkt-sum", key],
     enabled,
+    ...REPORT_QUERY_OPTS,
     queryFn: async () => {
       const { data, error } = await supabase.rpc("rpt_marketing_summary", base as never);
       if (error) throw error;
@@ -51,6 +52,7 @@ export function MarketingTab({ args, enabled }: { args: RpcArgs; enabled: boolea
   const dayQ = useQuery({
     queryKey: ["rpt-mkt-day", key],
     enabled,
+    ...REPORT_QUERY_OPTS,
     queryFn: async () => {
       const { data, error } = await supabase.rpc("rpt_marketing_daily", base as never);
       if (error) throw error;
@@ -61,6 +63,7 @@ export function MarketingTab({ args, enabled }: { args: RpcArgs; enabled: boolea
   const campQ = useQuery({
     queryKey: ["rpt-mkt-camp", key],
     enabled,
+    ...REPORT_QUERY_OPTS,
     queryFn: async () => {
       const { data, error } = await supabase.rpc("rpt_marketing_campaigns", base as never);
       if (error) throw error;

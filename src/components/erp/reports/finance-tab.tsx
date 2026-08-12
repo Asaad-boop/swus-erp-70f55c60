@@ -8,7 +8,7 @@ import { Table, TableHeader, TableHead, TableBody, TableRow, TableCell } from "@
 import { cn } from "@/lib/utils";
 import { fmtBdt } from "@/lib/erp/finance";
 import { exportAoaXlsx } from "@/lib/erp/utils/excel";
-import { Panel, KpiStrip, EmptyState, type Kpi } from "@/components/erp/reports/report-kit";
+import { Panel, KpiStrip, EmptyState, type Kpi , REPORT_QUERY_OPTS } from "@/components/erp/reports/report-kit";
 import type { RpcArgs } from "@/components/erp/reports/customers-tab";
 
 export type PnlV2 = {
@@ -36,6 +36,7 @@ export function FinanceTab({ args, enabled }: { args: RpcArgs; enabled: boolean 
   const q = useQuery({
     queryKey: ["rpt-pnl-v2", key],
     enabled,
+    ...REPORT_QUERY_OPTS,
     queryFn: async () => {
       const { data, error } = await supabase.rpc("rpt_pnl_v2", base as never);
       if (error) throw error;
@@ -48,6 +49,7 @@ export function FinanceTab({ args, enabled }: { args: RpcArgs; enabled: boolean 
   const cashQ = useQuery({
     queryKey: ["rpt-finance-courier-cash", JSON.stringify(args)],
     enabled,
+    ...REPORT_QUERY_OPTS,
     queryFn: async () => {
       const { data, error } = await supabase.rpc("rpt_order_ledger_summary", {
         ...args, _search: null, _status: "all", _courier: "all",
