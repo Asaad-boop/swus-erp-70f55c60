@@ -318,7 +318,9 @@ function DataHealth({ data, loading }: { data?: Health; loading?: boolean }) {
   );
 }
 
-function TrendPanel({ rows, loading, showTable }: { rows: SeriesRow[]; loading?: boolean; showTable?: boolean }) {
+function TrendPanel({
+  rows, loading, showTable, rangeLabel, kpis,
+}: { rows: SeriesRow[]; loading?: boolean; showTable?: boolean; rangeLabel?: string; kpis?: Kpi[] }) {
   const data = useMemo(
     () => rows.map((r) => ({
       ...r,
@@ -335,19 +337,18 @@ function TrendPanel({ rows, loading, showTable }: { rows: SeriesRow[]; loading?:
       title="Daily revenue & profit"
       subtitle="Delivered lines only"
       action={
-        <Button
-          variant="outline"
-          size="sm"
-          onClick={() =>
-            exportAoaXlsx(
-              [["Day", "Orders", "Delivered", "Units", "Net revenue", "COGS", "Gross profit", "Courier", "Contribution"],
-               ...rows.map((r) => [r.day, r.orders, r.delivered_orders, r.units, r.net_revenue, r.cogs, r.gross_profit, r.courier_cost, r.contribution_profit])],
-              "Daily sales", "daily-sales",
-            )
-          }
-        >
-          <FileSpreadsheet className="mr-1.5 h-3.5 w-3.5" />Excel
-        </Button>
+        <ExportMenu
+          title="Daily revenue & profit"
+          subtitle="Delivered lines only"
+          rangeLabel={rangeLabel}
+          kpis={kpis}
+          filename="daily-sales"
+          disabled={rows.length === 0}
+          aoa={() => [
+            ["Day", "Orders", "Delivered", "Units", "Net revenue", "COGS", "Gross profit", "Courier", "Contribution"],
+            ...rows.map((r) => [r.day, Number(r.orders), Number(r.delivered_orders), Number(r.units), Number(r.net_revenue), Number(r.cogs), Number(r.gross_profit), Number(r.courier_cost), Number(r.contribution_profit)]),
+          ]}
+        />
       }
     >
       {loading ? (
