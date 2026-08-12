@@ -59,6 +59,27 @@ export function FinanceTab({ args, enabled }: { args: RpcArgs; enabled: boolean 
     },
   });
   const c = cashQ.data;
+
+  // Verified manual corrections (e.g. courier portal vs imported invoice gaps).
+  const adjQ = useQuery({
+    queryKey: ["rpt-recon-adjustments", JSON.stringify(base)],
+    enabled,
+    ...REPORT_QUERY_OPTS,
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("erp_recon_adjustments")
+        .select("adj_date, courier, amount, reason, note")
+        .in("brand_id", base._brand_ids)
+        .gte("adj_date", base._from)
+        .lte("adj_date", base._to)
+        .order("adj_date");
+      if (error) throw error;
+      return data ?? [];
+    },
+  });
+  const adjustments = adjQ.data ?? [];
+  const adjTotal = adjustments.reduce((a, r) => a + Number(r.amount ?? 0), 0);
+
   const cashLines: Line[] = c
     ? [
         { label: "Order value (invoice total incl. delivery)", value: Number(c.order_value) },
@@ -67,6 +88,14 @@ export function FinanceTab({ args, enabled }: { args: RpcArgs; enabled: boolean 
         { label: "Received from courier (actual payout)", value: Number(c.courier_collected), kind: "total", hint: `${Number(c.reconciled_orders).toLocaleString()} orders reconciled` },
         { label: "Courier charge deducted", value: -Number(c.courier_charge), kind: "sub" },
         { label: "Collection difference (expected − received)", value: -Number(c.collection_diff), kind: "sub" },
+        ...(adjTotal !== 0
+          ? [{
+              label: "Verified corrections (courier portal reconciliation)",
+              value: adjTotal,
+              kind: "sub" as const,
+              hint: adjustments.map((a) => `${a.adj_date} ${a.courier}: ${fmtBdt(Number(a.amount))}${a.reason ? ` — ${a.reason}` : ""}`).join(" · "),
+            }]
+          : []),
         { label: "Total cash in hand (advance + courier payout)", value: Number(c.advance_total) + Number(c.courier_collected), kind: "grand" },
       ]
     : [];
