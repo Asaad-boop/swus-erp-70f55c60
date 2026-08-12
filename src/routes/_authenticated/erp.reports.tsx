@@ -348,37 +348,87 @@ function DataHealth({ data, loading }: { data?: Health; loading?: boolean }) {
   );
 }
 
+type Grain = "day" | "week" | "month";
+
+/** Roll a daily series up to week (Saturday start, Dhaka) or month buckets. */
+function rollup(rows: SeriesRow[], grain: Grain): SeriesRow[] {
+  if (grain === "day") return rows;
+  const bucketOf = (day: string) => {
+    if (grain === "month") return `${day.slice(0, 7)}-01`;
+    const d = new Date(`${day}T00:00:00Z`);
+    const back = (d.getUTCDay() + 1) % 7; // Saturday = week start
+    d.setUTCDate(d.getUTCDate() - back);
+    return d.toISOString().slice(0, 10);
+  };
+  const map = new Map<string, SeriesRow>();
+  for (const r of rows) {
+    const b = bucketOf(r.day);
+    const cur = map.get(b) ?? {
+      day: b, orders: 0, delivered_orders: 0, units: 0,
+      net_revenue: 0, cogs: 0, gross_profit: 0, courier_cost: 0, contribution_profit: 0,
+    };
+    cur.orders += Number(r.orders) || 0;
+    cur.delivered_orders += Number(r.delivered_orders) || 0;
+    cur.units += Number(r.units) || 0;
+    cur.net_revenue += Number(r.net_revenue) || 0;
+    cur.cogs += Number(r.cogs) || 0;
+    cur.gross_profit += Number(r.gross_profit) || 0;
+    cur.courier_cost += Number(r.courier_cost) || 0;
+    cur.contribution_profit += Number(r.contribution_profit) || 0;
+    map.set(b, cur);
+  }
+  return Array.from(map.values()).sort((a, b) => a.day.localeCompare(b.day));
+}
+
 function TrendPanel({
-  rows, loading, showTable, rangeLabel, kpis,
+  rows: rawRows, loading, showTable, rangeLabel, kpis,
 }: { rows: SeriesRow[]; loading?: boolean; showTable?: boolean; rangeLabel?: string; kpis?: Kpi[] }) {
+  const [grain, setGrain] = useState<Grain>("day");
+  const rows = useMemo(() => rollup(rawRows, grain), [rawRows, grain]);
+  const grainLabel = grain === "day" ? "Daily" : grain === "week" ? "Weekly" : "Monthly";
   const data = useMemo(
     () => rows.map((r) => ({
       ...r,
       net_revenue: Number(r.net_revenue),
       gross_profit: Number(r.gross_profit),
       contribution_profit: Number(r.contribution_profit),
-      label: r.day.slice(5),
+      label: grain === "month" ? r.day.slice(0, 7) : r.day.slice(5),
     })),
-    [rows],
+    [rows, grain],
   );
 
   return (
     <Panel
-      title="Daily revenue & profit"
-      subtitle="Delivered lines only"
+      title={`${grainLabel} revenue & profit`}
+      subtitle={grain === "week" ? "Delivered lines only · weeks start Saturday (Dhaka)" : "Delivered lines only"}
       action={
-        <ExportMenu
-          title="Daily revenue & profit"
-          subtitle="Delivered lines only"
-          rangeLabel={rangeLabel}
-          kpis={kpis}
-          filename="daily-sales"
-          disabled={rows.length === 0}
-          aoa={() => [
-            ["Day", "Orders", "Delivered", "Units", "Net revenue", "COGS", "Gross profit", "Courier", "Contribution"],
-            ...rows.map((r) => [r.day, Number(r.orders), Number(r.delivered_orders), Number(r.units), Number(r.net_revenue), Number(r.cogs), Number(r.gross_profit), Number(r.courier_cost), Number(r.contribution_profit)]),
-          ]}
-        />
+        <div className="flex items-center gap-2">
+          <div className="flex gap-1 rounded-full border border-border/60 bg-muted/40 p-0.5">
+            {(["day", "week", "month"] as Grain[]).map((g) => (
+              <Button
+                key={g}
+                size="sm"
+                variant={grain === g ? "default" : "ghost"}
+                className="h-7 rounded-full px-3 text-xs capitalize"
+                onClick={() => setGrain(g)}
+              >
+                {g}
+              </Button>
+            ))}
+          </div>
+          <ExportMenu
+            title={`${grainLabel} revenue & profit`}
+            subtitle="Delivered lines only"
+            rangeLabel={rangeLabel}
+            kpis={kpis}
+            filename={`${grain}-sales`}
+            disabled={rows.length === 0}
+            aoa={() => [
+              [grain === "day" ? "Day" : grain === "week" ? "Week starting" : "Month", "Orders", "Delivered", "Units", "Net revenue", "COGS", "Gross profit", "Courier", "Contribution"],
+              ...rows.map((r) => [grain === "month" ? r.day.slice(0, 7) : r.day, Number(r.orders), Number(r.delivered_orders), Number(r.units), Number(r.net_revenue), Number(r.cogs), Number(r.gross_profit), Number(r.courier_cost), Number(r.contribution_profit)]),
+            ]}
+          />
+        </div>
       }
     >
       {loading ? (
@@ -416,7 +466,7 @@ function TrendPanel({
               <Table>
                 <TableHeader className="sticky top-0 z-10 bg-muted/60 backdrop-blur">
                   <TableRow>
-                    <TableHead>Day</TableHead>
+                    <TableHead>{grain === "day" ? "Day" : grain === "week" ? "Week starting" : "Month"}</TableHead>
                     <TableHead className="text-right">Delivered</TableHead>
                     <TableHead className="text-right">Units</TableHead>
                     <TableHead className="text-right">Net revenue</TableHead>
@@ -428,7 +478,7 @@ function TrendPanel({
                 <TableBody>
                   {rows.map((r) => (
                     <TableRow key={r.day}>
-                      <TableCell className="font-medium">{r.day}</TableCell>
+                      <TableCell className="font-medium">{grain === "month" ? r.day.slice(0, 7) : r.day}</TableCell>
                       <TableCell className="text-right tabular-nums">{r.delivered_orders}</TableCell>
                       <TableCell className="text-right tabular-nums">{Number(r.units)}</TableCell>
                       <TableCell className="text-right tabular-nums">{fmtBdt(r.net_revenue)}</TableCell>
@@ -495,9 +545,11 @@ function ProfitBridge({ s }: { s: Summary }) {
 
 const DIMS = [
   { key: "source", label: "Channel" },
+  { key: "category", label: "Category" },
   { key: "payment", label: "Payment" },
   { key: "courier", label: "Courier" },
   { key: "city", label: "City" },
+  { key: "zone", label: "Zone" },
   { key: "brand", label: "Brand" },
   { key: "status", label: "Status" },
 ];

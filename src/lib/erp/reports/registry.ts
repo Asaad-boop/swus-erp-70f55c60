@@ -25,9 +25,10 @@ export const REPORT_REGISTRY: ReportEntry[] = [
   // Sales
   r({ id: "sales.summary", name: "Sales summary", category: "Sales", tab: "overview", source: "rpt_sales_summary", formula: "delivered lines aggregated", basis: "delivered", status: "live" }),
   r({ id: "sales.daily", name: "Daily revenue & profit", category: "Sales", tab: "sales", source: "rpt_sales_timeseries", formula: "delivered lines grouped by Dhaka day", basis: "delivered", status: "live" }),
-  r({ id: "sales.breakdown", name: "Sales by dimension", category: "Sales", tab: "sales", source: "rpt_sales_breakdown", formula: "delivered lines grouped by brand / channel / courier", basis: "delivered", status: "live" }),
-  r({ id: "sales.weekly", name: "Weekly / monthly roll-up", category: "Sales", tab: "sales", source: "rpt_sales_timeseries", formula: "daily series rolled up to ISO week / month", basis: "delivered", status: "planned" }),
-  r({ id: "sales.category", name: "Category-wise sales", category: "Sales", tab: "products", source: "rpt_lines × categories", formula: "delivered lines grouped by product category", basis: "delivered", status: "planned" }),
+  r({ id: "sales.breakdown", name: "Sales by dimension", category: "Sales", tab: "sales", source: "rpt_sales_breakdown", formula: "delivered lines grouped by channel / category / payment / courier / city / zone / brand / status", basis: "delivered", status: "live" }),
+  r({ id: "sales.weekly", name: "Weekly / monthly roll-up", category: "Sales", tab: "sales", source: "rpt_sales_timeseries", formula: "daily series rolled up to Saturday-start week / Dhaka month", basis: "delivered", status: "live" }),
+  r({ id: "sales.category", name: "Category-wise sales", category: "Sales", tab: "sales", source: "rpt_sales_breakdown (_dim = category)", formula: "delivered lines grouped by product category", basis: "delivered", status: "live" }),
+  r({ id: "sales.zone", name: "Zone-wise sales", category: "Sales", tab: "sales", source: "rpt_sales_breakdown (_dim = zone)", formula: "delivered lines grouped by Pathao delivery zone", basis: "delivered", status: "live" }),
 
   // Orders
   r({ id: "orders.funnel", name: "Order funnel", category: "Orders", tab: "orders", source: "rpt_order_funnel", formula: "placed → confirmed → shipped → delivered", basis: "created", status: "live" }),
