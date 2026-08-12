@@ -221,6 +221,10 @@ export function InventoryTab({ args, enabled }: { args: RpcArgs; enabled: boolea
           </div>
         )}
       </Panel>
+
+      <StockAdjustmentsPanel args={args} enabled={enabled} />
+      <StockAgingPanel args={args} enabled={enabled} />
+      <StocktakeVariancePanel args={args} enabled={enabled} />
     </>
   );
 }
