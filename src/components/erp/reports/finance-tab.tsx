@@ -90,7 +90,7 @@ export function FinanceTab({ args, enabled }: { args: RpcArgs; enabled: boolean 
         { label: "Collection difference (expected − received)", value: -Number(c.collection_diff), kind: "sub" },
         ...(adjTotal !== 0
           ? [{
-              label: "Verified corrections (courier portal reconciliation)",
+              label: "Verified corrections (already inside received above)",
               value: adjTotal,
               kind: "sub" as const,
               hint: adjustments.map((a) => `${a.adj_date} ${a.courier}: ${fmtBdt(Number(a.amount))}${a.reason ? ` — ${a.reason}` : ""}`).join(" · "),
