@@ -37,12 +37,20 @@ export function Panel({
   className?: string;
 }) {
   return (
-    <Card className={cn("overflow-hidden border-border/70", className)}>
+    <Card
+      className={cn(
+        "overflow-hidden border-border/60 bg-card/80 shadow-[0_1px_2px_rgba(16,24,40,0.04),0_8px_24px_-16px_rgba(16,24,40,0.25)] backdrop-blur-sm transition-shadow hover:shadow-[0_1px_2px_rgba(16,24,40,0.05),0_12px_32px_-16px_rgba(16,24,40,0.32)]",
+        className,
+      )}
+    >
       {(title || action) && (
-        <div className="flex flex-wrap items-center justify-between gap-2 border-b bg-muted/30 px-4 py-2.5">
-          <div>
-            {title && <h3 className="text-sm font-semibold tracking-tight">{title}</h3>}
-            {subtitle && <p className="text-xs text-muted-foreground">{subtitle}</p>}
+        <div className="flex flex-wrap items-center justify-between gap-2 border-b border-border/60 bg-gradient-to-r from-muted/50 to-transparent px-4 py-3">
+          <div className="flex items-start gap-2.5">
+            <span aria-hidden className="mt-0.5 h-4 w-1 shrink-0 rounded-full bg-primary/70" />
+            <div>
+              {title && <h3 className="font-display text-sm font-semibold tracking-tight">{title}</h3>}
+              {subtitle && <p className="text-xs text-muted-foreground">{subtitle}</p>}
+            </div>
           </div>
           {action}
         </div>
