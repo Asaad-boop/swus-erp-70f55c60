@@ -495,9 +495,11 @@ function ProfitBridge({ s }: { s: Summary }) {
 
 const DIMS = [
   { key: "source", label: "Channel" },
+  { key: "category", label: "Category" },
   { key: "payment", label: "Payment" },
   { key: "courier", label: "Courier" },
   { key: "city", label: "City" },
+  { key: "zone", label: "Zone" },
   { key: "brand", label: "Brand" },
   { key: "status", label: "Status" },
 ];
