@@ -104,6 +104,17 @@ const BASIS_LABEL: Record<Basis, string> = {
   confirmed: "Confirm date",
 };
 
+/** Immediately-preceding window of the same length (inclusive dates). */
+function prevPeriod(from: string, to: string) {
+  const f = new Date(`${from}T00:00:00Z`);
+  const t = new Date(`${to}T00:00:00Z`);
+  const days = Math.max(1, Math.round((t.getTime() - f.getTime()) / 86400000) + 1);
+  const pTo = new Date(f.getTime() - 86400000);
+  const pFrom = new Date(pTo.getTime() - (days - 1) * 86400000);
+  const iso = (d: Date) => d.toISOString().slice(0, 10);
+  return { from: iso(pFrom), to: iso(pTo) };
+}
+
 function ReportsHub() {
   const { brandIds, picker } = useMultiBrandPicker();
   const { tab } = Route.useSearch();
