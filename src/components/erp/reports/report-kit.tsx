@@ -119,14 +119,25 @@ export function KpiStrip({ items, loading }: { items: Kpi[]; loading?: boolean }
       {items.map((k) => (
         <div
           key={k.label}
-          className="rounded-xl border bg-card px-4 py-3 transition-colors hover:border-primary/40"
+          className={cn(
+            "group relative overflow-hidden rounded-xl border border-border/60 bg-card px-4 py-3",
+            "shadow-[0_1px_2px_rgba(16,24,40,0.04)] transition-all duration-200",
+            "hover:-translate-y-0.5 hover:border-primary/40 hover:shadow-[0_10px_28px_-18px_rgba(16,24,40,0.45)]",
+          )}
         >
+          <span
+            aria-hidden
+            className={cn(
+              "absolute inset-y-0 left-0 w-[3px] rounded-r-full opacity-70 transition-opacity group-hover:opacity-100",
+              k.tone === "good" ? "bg-emerald-500" : k.tone === "bad" ? "bg-rose-500" : "bg-primary/60",
+            )}
+          />
           <p className="text-[11px] font-medium uppercase tracking-wide text-muted-foreground">
             {k.label}
           </p>
           <p
             className={cn(
-              "mt-0.5 text-xl font-bold tabular-nums tracking-tight",
+              "mt-0.5 font-display text-[22px] font-bold leading-tight tabular-nums tracking-tight",
               k.tone === "good" && "text-emerald-600 dark:text-emerald-400",
               k.tone === "bad" && "text-rose-600 dark:text-rose-400",
             )}
