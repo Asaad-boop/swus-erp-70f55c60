@@ -373,21 +373,21 @@ function TrendPanel({
               <AreaChart data={data} margin={{ top: 8, right: 8, left: 0, bottom: 0 }}>
                 <defs>
                   <linearGradient id="revFill" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="0%" stopColor="hsl(var(--primary))" stopOpacity={0.35} />
-                    <stop offset="100%" stopColor="hsl(var(--primary))" stopOpacity={0} />
+                    <stop offset="0%" stopColor="var(--primary)" stopOpacity={0.35} />
+                    <stop offset="100%" stopColor="var(--primary)" stopOpacity={0} />
                   </linearGradient>
                 </defs>
-                <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" vertical={false} />
-                <XAxis dataKey="label" tick={{ fontSize: 11, fill: "hsl(var(--muted-foreground))" }} tickLine={false} axisLine={false} />
-                <YAxis tick={{ fontSize: 11, fill: "hsl(var(--muted-foreground))" }} tickLine={false} axisLine={false} width={64} />
+                <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" vertical={false} />
+                <XAxis dataKey="label" tick={{ fontSize: 11, fill: "var(--muted-foreground)" }} tickLine={false} axisLine={false} />
+                <YAxis tick={{ fontSize: 11, fill: "var(--muted-foreground)" }} tickLine={false} axisLine={false} width={64} />
                 <Tooltip
                   formatter={(v: number, n: string) => [fmtBdt(v), n]}
-                  contentStyle={{ background: "hsl(var(--popover))", border: "1px solid hsl(var(--border))", borderRadius: 10, fontSize: 12 }}
+                  contentStyle={{ background: "var(--popover)", border: "1px solid var(--border)", borderRadius: 10, fontSize: 12 }}
                 />
                 <Legend wrapperStyle={{ fontSize: 12 }} />
-                <Area type="monotone" dataKey="net_revenue" name="Net revenue" stroke="hsl(var(--primary))" fill="url(#revFill)" strokeWidth={2} />
-                <Area type="monotone" dataKey="gross_profit" name="Gross profit" stroke="hsl(var(--chart-2, 160 60% 45%))" fill="transparent" strokeWidth={2} />
-                <Area type="monotone" dataKey="contribution_profit" name="Contribution" stroke="hsl(var(--chart-4, 35 90% 55%))" fill="transparent" strokeWidth={2} strokeDasharray="4 3" />
+                <Area type="monotone" dataKey="net_revenue" name="Net revenue" stroke="var(--primary)" fill="url(#revFill)" strokeWidth={2} />
+                <Area type="monotone" dataKey="gross_profit" name="Gross profit" stroke="var(--chart-2)" fill="transparent" strokeWidth={2} />
+                <Area type="monotone" dataKey="contribution_profit" name="Contribution" stroke="var(--chart-4)" fill="transparent" strokeWidth={2} strokeDasharray="4 3" />
               </AreaChart>
             </ResponsiveContainer>
           </div>
@@ -521,11 +521,11 @@ function BreakdownPanel({ args, enabled }: { args: { _brand_ids: string[]; _from
           <div className="h-[280px]">
             <ResponsiveContainer width="100%" height="100%">
               <BarChart data={rows.slice(0, 10).map((r) => ({ ...r, net_revenue: Number(r.net_revenue) }))} layout="vertical" margin={{ left: 8, right: 12 }}>
-                <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" horizontal={false} />
-                <XAxis type="number" tick={{ fontSize: 11, fill: "hsl(var(--muted-foreground))" }} tickLine={false} axisLine={false} />
-                <YAxis type="category" dataKey="label" width={110} tick={{ fontSize: 11, fill: "hsl(var(--muted-foreground))" }} tickLine={false} axisLine={false} />
-                <Tooltip formatter={(v: number) => fmtBdt(v)} contentStyle={{ background: "hsl(var(--popover))", border: "1px solid hsl(var(--border))", borderRadius: 10, fontSize: 12 }} />
-                <Bar dataKey="net_revenue" name="Net revenue" fill="hsl(var(--primary))" radius={[0, 6, 6, 0]} />
+                <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" horizontal={false} />
+                <XAxis type="number" tick={{ fontSize: 11, fill: "var(--muted-foreground)" }} tickLine={false} axisLine={false} />
+                <YAxis type="category" dataKey="label" width={110} tick={{ fontSize: 11, fill: "var(--muted-foreground)" }} tickLine={false} axisLine={false} />
+                <Tooltip formatter={(v: number) => fmtBdt(v)} contentStyle={{ background: "var(--popover)", border: "1px solid var(--border)", borderRadius: 10, fontSize: 12 }} />
+                <Bar dataKey="net_revenue" name="Net revenue" fill="var(--primary)" radius={[0, 6, 6, 0]} />
               </BarChart>
             </ResponsiveContainer>
           </div>
@@ -821,13 +821,13 @@ function ProductsTab({ args, enabled }: { args: RpcArgs; enabled: boolean }) {
           <div className="h-[320px]">
             <ResponsiveContainer width="100%" height="100%">
               <BarChart data={chartRows} layout="vertical" margin={{ left: 8, right: 16 }}>
-                <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" horizontal={false} />
-                <XAxis type="number" tick={{ fontSize: 11, fill: "hsl(var(--muted-foreground))" }} tickLine={false} axisLine={false} />
-                <YAxis type="category" dataKey="label" width={170} tick={{ fontSize: 11, fill: "hsl(var(--muted-foreground))" }} tickLine={false} axisLine={false} />
-                <Tooltip formatter={(v: number, n: string) => [fmtBdt(v), n]} contentStyle={{ background: "hsl(var(--popover))", border: "1px solid hsl(var(--border))", borderRadius: 10, fontSize: 12 }} />
+                <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" horizontal={false} />
+                <XAxis type="number" tick={{ fontSize: 11, fill: "var(--muted-foreground)" }} tickLine={false} axisLine={false} />
+                <YAxis type="category" dataKey="label" width={170} tick={{ fontSize: 11, fill: "var(--muted-foreground)" }} tickLine={false} axisLine={false} />
+                <Tooltip formatter={(v: number, n: string) => [fmtBdt(v), n]} contentStyle={{ background: "var(--popover)", border: "1px solid var(--border)", borderRadius: 10, fontSize: 12 }} />
                 <Legend wrapperStyle={{ fontSize: 12 }} />
-                <Bar dataKey="net_revenue" name="Net revenue" fill="hsl(var(--primary))" radius={[0, 6, 6, 0]} />
-                <Bar dataKey="gross_profit" name="Gross profit" fill="hsl(var(--chart-2, 160 60% 45%))" radius={[0, 6, 6, 0]} />
+                <Bar dataKey="net_revenue" name="Net revenue" fill="var(--primary)" radius={[0, 6, 6, 0]} />
+                <Bar dataKey="gross_profit" name="Gross profit" fill="var(--chart-2)" radius={[0, 6, 6, 0]} />
               </BarChart>
             </ResponsiveContainer>
           </div>

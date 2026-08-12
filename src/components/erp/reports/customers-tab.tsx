@@ -160,15 +160,15 @@ export function CustomersTab({ args, enabled }: { args: RpcArgs; enabled: boolea
             <div className="h-[260px]">
               <ResponsiveContainer width="100%" height="100%">
                 <BarChart data={segs.map((x) => ({ ...x, customers: Number(x.customers) }))} margin={{ left: 4, right: 8 }}>
-                  <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" vertical={false} />
-                  <XAxis dataKey="segment" tick={{ fontSize: 11, fill: "hsl(var(--muted-foreground))" }} tickLine={false} axisLine={false} />
-                  <YAxis tick={{ fontSize: 11, fill: "hsl(var(--muted-foreground))" }} tickLine={false} axisLine={false} />
+                  <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" vertical={false} />
+                  <XAxis dataKey="segment" tick={{ fontSize: 11, fill: "var(--muted-foreground)" }} tickLine={false} axisLine={false} />
+                  <YAxis tick={{ fontSize: 11, fill: "var(--muted-foreground)" }} tickLine={false} axisLine={false} />
                   <Tooltip
                     formatter={(v: number) => [v.toLocaleString(), "Customers"]}
-                    contentStyle={{ background: "hsl(var(--popover))", border: "1px solid hsl(var(--border))", borderRadius: 10, fontSize: 12 }}
+                    contentStyle={{ background: "var(--popover)", border: "1px solid var(--border)", borderRadius: 10, fontSize: 12 }}
                   />
                   <Bar dataKey="customers" radius={[6, 6, 0, 0]}>
-                    {segs.map((x) => <Cell key={x.segment} fill={SEG_COLOR[x.segment] ?? "hsl(var(--primary))"} />)}
+                    {segs.map((x) => <Cell key={x.segment} fill={SEG_COLOR[x.segment] ?? "var(--primary)"} />)}
                   </Bar>
                 </BarChart>
               </ResponsiveContainer>
@@ -188,7 +188,7 @@ export function CustomersTab({ args, enabled }: { args: RpcArgs; enabled: boolea
                     <TableRow key={x.segment}>
                       <TableCell>
                         <span className="inline-flex items-center gap-2">
-                          <span className="h-2.5 w-2.5 rounded-full" style={{ background: SEG_COLOR[x.segment] ?? "hsl(var(--primary))" }} />
+                          <span className="h-2.5 w-2.5 rounded-full" style={{ background: SEG_COLOR[x.segment] ?? "var(--primary)" }} />
                           {x.segment}
                         </span>
                       </TableCell>
