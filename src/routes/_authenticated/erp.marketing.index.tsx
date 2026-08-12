@@ -116,16 +116,29 @@ function MarketingOverview() {
       replace: true,
     });
 
+  // ── Dashboard (range-based) ──────────────────────────────────────────
+  const [range, setRange] = useState<MktRangeValue>(() => buildPreset("30d"));
+  const [grain, setGrain] = useState<"day" | "week" | "month">("day");
+  const fetchDashboard = useServerFn(getMarketingDashboard);
+  const dash = useQuery({
+    queryKey: ["mkt-dashboard", selection.ids.slice().sort().join(","), range.from, range.to, grain],
+    queryFn: () =>
+      fetchDashboard({ data: { brandIds: selection.ids, from: range.from, to: range.to, grain } }),
+    enabled: selection.ids.length > 0,
+    staleTime: 60_000,
+    refetchOnWindowFocus: false,
+  });
+
   return (
-    <div className="p-4 md:p-6 max-w-7xl mx-auto space-y-4">
+    <div className="p-4 md:p-6 max-w-[1400px] mx-auto space-y-4">
       {/* Header */}
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
           <h1 className="text-xl md:text-2xl font-semibold tracking-tight">
-            Marketing Overview
+            Marketing Dashboard
           </h1>
           <p className="text-xs text-muted-foreground mt-0.5">
-            Aajker snapshot · Dhaka time · Data: canonical RPCs
+            {range.label} · Dhaka time · Data: canonical RPCs
           </p>
         </div>
         <div className="flex items-center gap-2">
@@ -135,6 +148,7 @@ function MarketingOverview() {
             loading={brandsLoading}
             onChange={setBrand}
           />
+          <DateRangePicker value={range} onChange={setRange} />
           <Link to="/erp/marketing/daily" search={{ brand: selection.key }}>
             <Button size="sm" variant="outline">
               <CalendarDays className="h-3.5 w-3.5 mr-1.5" />
@@ -144,10 +158,13 @@ function MarketingOverview() {
           <Button
             size="sm"
             variant="outline"
-            onClick={() => q.refetch()}
-            disabled={q.isFetching}
+            onClick={() => {
+              q.refetch();
+              dash.refetch();
+            }}
+            disabled={q.isFetching || dash.isFetching}
           >
-            <RefreshCcw className={`h-3.5 w-3.5 mr-1.5 ${q.isFetching ? "animate-spin" : ""}`} />
+            <RefreshCcw className={`h-3.5 w-3.5 mr-1.5 ${q.isFetching || dash.isFetching ? "animate-spin" : ""}`} />
             Refresh
           </Button>
           <Button
@@ -169,8 +186,24 @@ function MarketingOverview() {
       {/* Today card */}
       <TodayCard loading={q.isLoading} data={q.data?.today} />
 
-      {/* Sparkline */}
-      <SparklineCard loading={q.isLoading} data={q.data?.sparkline} />
+      {/* Range KPIs */}
+      <KpiGrid loading={dash.isLoading} k={dash.data?.kpis} />
+
+      <TrendChart loading={dash.isLoading} rows={dash.data?.trend} grain={grain} onGrain={setGrain} />
+
+      <div className="grid gap-4 lg:grid-cols-2">
+        <TopCampaigns loading={dash.isLoading} rows={dash.data?.topCampaigns} />
+        <TopProducts loading={dash.isLoading} rows={dash.data?.topProducts} />
+      </div>
+      <TopAds loading={dash.isLoading} rows={dash.data?.topAds} />
+
+      {dash.error && (
+        <Card className="border-destructive/40">
+          <CardContent className="py-3 text-sm text-destructive">
+            Dashboard load fail holo: {(dash.error as Error).message}
+          </CardContent>
+        </Card>
+      )}
 
       {q.error && (
         <Card className="border-destructive/40">
