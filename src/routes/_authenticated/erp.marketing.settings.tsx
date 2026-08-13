@@ -188,7 +188,7 @@ function MarketingSettingsPage() {
   }
 
   return (
-    <div className="space-y-5 p-4 md:p-6">
+    <div className="mx-auto max-w-[1500px] space-y-4 p-4 md:p-6">
       <div className="flex flex-wrap items-end justify-between gap-3">
         <div className="flex items-center gap-2.5">
           <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-primary/10 text-primary">

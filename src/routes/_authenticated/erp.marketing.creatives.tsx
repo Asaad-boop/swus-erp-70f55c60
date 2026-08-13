@@ -139,8 +139,8 @@ function CreativeLibrary() {
   }
 
   return (
-    <div className="p-4 md:p-6 max-w-[1500px] mx-auto space-y-4">
-      <div className="flex flex-wrap items-center justify-between gap-3">
+    <div className="mx-auto max-w-[1500px] space-y-4 p-4 md:p-6">
+      <div className="flex flex-wrap items-end justify-between gap-3">
         <div className="flex min-w-0 items-center gap-2.5">
           <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-primary/10 text-primary">
             <PageIcon className="h-4.5 w-4.5" />
