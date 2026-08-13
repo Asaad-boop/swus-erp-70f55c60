@@ -259,44 +259,6 @@ function AlertStrip({ brandIds }: { brandIds: string[] }) {
   );
 }
 
-function BrandTabs({
-  active,
-  brands,
-  loading,
-  onChange,
-}: {
-  active: string;
-  brands: { id: string; name: string; slug: string }[];
-  loading: boolean;
-  onChange: (slug: string) => void;
-}) {
-  const items = [{ slug: "all", name: "All" }, ...brands.map((b) => ({ slug: b.slug, name: b.name }))];
-  return (
-    <div className="inline-flex items-center rounded-md border bg-background p-0.5">
-      {loading && brands.length === 0 ? (
-        <Skeleton className="h-7 w-40" />
-      ) : (
-        items.map((it) => {
-          const on = active === it.slug;
-          return (
-            <button
-              key={it.slug}
-              onClick={() => onChange(it.slug)}
-              className={`px-3 h-7 text-xs font-medium rounded transition ${
-                on
-                  ? "bg-primary text-primary-foreground shadow-sm"
-                  : "text-muted-foreground hover:text-foreground"
-              }`}
-            >
-              {it.name}
-            </button>
-          );
-        })
-      )}
-    </div>
-  );
-}
-
 type Actions = NonNullable<Awaited<ReturnType<typeof getMarketingOverview>>>["actions"];
 
 function ActionStrip({ loading, data }: { loading: boolean; data?: Actions }) {
