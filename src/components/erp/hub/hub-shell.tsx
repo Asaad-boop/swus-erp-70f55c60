@@ -1,6 +1,6 @@
 import { Link, useLocation } from "@tanstack/react-router";
 import { useEffect, useRef, type ReactNode } from "react";
-import { Compass, Target, ListChecks, type LucideIcon } from "lucide-react";
+import { Compass, Target, ListChecks, Lightbulb, type LucideIcon } from "lucide-react";
 
 export type HubNavItem = {
   to: string;
@@ -14,6 +14,7 @@ export const HUB_NAV: HubNavItem[] = [
   { to: "/erp/hub", label: "Command Center", short: "Center", icon: Compass, exact: true },
   { to: "/erp/hub/goals", label: "Vision & Goals", short: "Goals", icon: Target },
   { to: "/erp/hub/tasks", label: "Task Board", short: "Tasks", icon: ListChecks },
+  { to: "/erp/hub/products", label: "Product Pipeline", short: "Products", icon: Lightbulb },
 ];
 
 /** Sticky horizontal sub-navigation shared by every Growth Hub page. */
