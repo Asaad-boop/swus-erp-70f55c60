@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import { Link, useLocation } from "@tanstack/react-router";
 import {
   LayoutDashboard, Globe, PlusCircle, Boxes, Wallet, Truck, Settings, Users, UserCog,
-  TrendingDown, TrendingUp, PackagePlus, Megaphone, Container, Heart, Image as ImageIcon, GitBranch,
+  TrendingDown, TrendingUp, PackagePlus, Megaphone, Container, Heart, Image as ImageIcon, GitBranch, Plug,
   ChevronsLeft, ChevronRight, Sparkles, ClipboardList, ClipboardCheck, PackageSearch,
   Activity, BarChart3, RotateCcw, FileSpreadsheet, Zap, Briefcase, Stethoscope, ChevronDown,
   Star, Filter, X, Receipt, BookOpen, Landmark, Coins, ArrowDownCircle, ArrowUpCircle, HandCoins, Scale,
@@ -133,6 +133,7 @@ const groups: Group[] = [
           { to: "/erp/marketing/planning", label: "Budgets & Calendar", icon: CalendarClock },
           { to: "/erp/marketing/alerts", label: "Alerts & Intelligence", icon: BellRing },
           { to: "/erp/marketing/daily", label: "Daily Performance", icon: BarChart3 },
+          { to: "/erp/marketing/channels", label: "Ad Channels", icon: Plug },
           { to: "/erp/marketing/reports", label: "Reports & Exports", icon: FileBarChart },
           { to: "/erp/marketing/settings", label: "Marketing Settings", icon: Settings },
         ],
