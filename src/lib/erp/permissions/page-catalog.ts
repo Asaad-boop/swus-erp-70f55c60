@@ -48,6 +48,8 @@ export const PAGE_CATALOG: PageEntry[] = [
   { group: "Finance", path: "/erp/finance/settings", label: "Finance Settings" },
 
   { group: "Marketing", path: "/erp/marketing", label: "Overview" },
+  { group: "Marketing", path: "/erp/marketing/campaigns", label: "Campaign Workspace" },
+  { group: "Marketing", path: "/erp/marketing/daily", label: "Daily Performance" },
 
   { group: "CRM", path: "/erp/crm", label: "Customers" },
   { group: "CRM", path: "/erp/users", label: "Registered Accounts" },
