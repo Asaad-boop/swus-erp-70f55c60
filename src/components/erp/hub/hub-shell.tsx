@@ -9,6 +9,7 @@ import {
   BarChart3,
   Repeat,
   Swords,
+  PackageSearch,
   type LucideIcon,
 } from "lucide-react";
 
@@ -25,6 +26,7 @@ export const HUB_NAV: HubNavItem[] = [
   { to: "/erp/hub/goals", label: "Vision & Goals", short: "Goals", icon: Target },
   { to: "/erp/hub/tasks", label: "Task Board", short: "Tasks", icon: ListChecks },
   { to: "/erp/hub/products", label: "Product Pipeline", short: "Products", icon: Lightbulb },
+  { to: "/erp/hub/sourcing", label: "Sourcing Desk", short: "Sourcing", icon: PackageSearch },
   { to: "/erp/hub/content", label: "Content Journey", short: "Content", icon: Clapperboard },
   { to: "/erp/hub/routines", label: "Routines & Calendar", short: "Routines", icon: Repeat },
   { to: "/erp/hub/rivals", label: "Rival Pages", short: "Rivals", icon: Swords },

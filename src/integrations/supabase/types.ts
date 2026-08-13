@@ -3910,6 +3910,7 @@ export type Database = {
           created_at: string
           id: string
           idea_id: string
+          rating: number | null
           updated_at: string
           user_id: string
           vote: number
@@ -3919,6 +3920,7 @@ export type Database = {
           created_at?: string
           id?: string
           idea_id: string
+          rating?: number | null
           updated_at?: string
           user_id?: string
           vote: number
@@ -3928,6 +3930,7 @@ export type Database = {
           created_at?: string
           id?: string
           idea_id?: string
+          rating?: number | null
           updated_at?: string
           user_id?: string
           vote?: number
@@ -4058,65 +4061,95 @@ export type Database = {
       }
       hub_product_ideas: {
         Row: {
+          approved_at: string | null
+          approved_by: string | null
           brand_id: string | null
           category: string | null
           created_at: string
           created_by: string | null
+          decision_note: string | null
           description: string | null
           est_sell_price: number
           est_unit_cost: number
           id: string
           image_url: string | null
+          images: string[]
           linked_product_id: string | null
           moq: number | null
           notes: string | null
+          order_qty: number | null
+          order_unit_price: number | null
+          ordered_at: string | null
+          selected_quote_id: string | null
           source_url: string | null
           status: string
           supplier_name: string | null
           supplier_url: string | null
           tags: string[]
+          target_price_max: number | null
+          target_price_min: number | null
           title: string
           updated_at: string
         }
         Insert: {
+          approved_at?: string | null
+          approved_by?: string | null
           brand_id?: string | null
           category?: string | null
           created_at?: string
           created_by?: string | null
+          decision_note?: string | null
           description?: string | null
           est_sell_price?: number
           est_unit_cost?: number
           id?: string
           image_url?: string | null
+          images?: string[]
           linked_product_id?: string | null
           moq?: number | null
           notes?: string | null
+          order_qty?: number | null
+          order_unit_price?: number | null
+          ordered_at?: string | null
+          selected_quote_id?: string | null
           source_url?: string | null
           status?: string
           supplier_name?: string | null
           supplier_url?: string | null
           tags?: string[]
+          target_price_max?: number | null
+          target_price_min?: number | null
           title: string
           updated_at?: string
         }
         Update: {
+          approved_at?: string | null
+          approved_by?: string | null
           brand_id?: string | null
           category?: string | null
           created_at?: string
           created_by?: string | null
+          decision_note?: string | null
           description?: string | null
           est_sell_price?: number
           est_unit_cost?: number
           id?: string
           image_url?: string | null
+          images?: string[]
           linked_product_id?: string | null
           moq?: number | null
           notes?: string | null
+          order_qty?: number | null
+          order_unit_price?: number | null
+          ordered_at?: string | null
+          selected_quote_id?: string | null
           source_url?: string | null
           status?: string
           supplier_name?: string | null
           supplier_url?: string | null
           tags?: string[]
+          target_price_max?: number | null
+          target_price_min?: number | null
           title?: string
           updated_at?: string
         }
@@ -4186,6 +4219,80 @@ export type Database = {
           weekday?: number | null
         }
         Relationships: []
+      }
+      hub_sourcing_quotes: {
+        Row: {
+          cny_rate: number
+          contact: string | null
+          created_at: string
+          created_by: string | null
+          id: string
+          idea_id: string
+          lead_time_days: number | null
+          moq: number | null
+          notes: string | null
+          platform: string
+          quality_rating: number | null
+          sample_status: string
+          shipping_cost_per_unit: number
+          shipping_mode: string
+          status: string
+          supplier_name: string
+          supplier_url: string | null
+          unit_price_cny: number
+          updated_at: string
+        }
+        Insert: {
+          cny_rate?: number
+          contact?: string | null
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          idea_id: string
+          lead_time_days?: number | null
+          moq?: number | null
+          notes?: string | null
+          platform?: string
+          quality_rating?: number | null
+          sample_status?: string
+          shipping_cost_per_unit?: number
+          shipping_mode?: string
+          status?: string
+          supplier_name: string
+          supplier_url?: string | null
+          unit_price_cny?: number
+          updated_at?: string
+        }
+        Update: {
+          cny_rate?: number
+          contact?: string | null
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          idea_id?: string
+          lead_time_days?: number | null
+          moq?: number | null
+          notes?: string | null
+          platform?: string
+          quality_rating?: number | null
+          sample_status?: string
+          shipping_cost_per_unit?: number
+          shipping_mode?: string
+          status?: string
+          supplier_name?: string
+          supplier_url?: string | null
+          unit_price_cny?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "hub_sourcing_quotes_idea_id_fkey"
+            columns: ["idea_id"]
+            isOneToOne: false
+            referencedRelation: "hub_product_ideas"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       hub_tasks: {
         Row: {
@@ -10154,10 +10261,14 @@ export type Database = {
       hub_idea_summary: {
         Args: { _brand_ids: string[] }
         Returns: {
+          avg_rating: number
+          best_landed_cost: number
           breakeven_roas: number
           down_votes: number
           idea_id: string
           monthly_profit: number
+          quote_count: number
+          rating_count: number
           score: number
           up_votes: number
           voters: number

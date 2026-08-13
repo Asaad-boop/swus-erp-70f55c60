@@ -11,10 +11,17 @@ import {
   Pencil,
   Calculator,
   ExternalLink,
+  Heart,
+  CheckCircle2,
+  XCircle,
+  PackageSearch,
 } from "lucide-react";
+import { Link } from "@tanstack/react-router";
 import { supabase } from "@/integrations/supabase/client";
 import { useBrand } from "@/contexts/brand-context";
+import { useCurrentRole } from "@/hooks/use-current-role";
 import { HubPageHeader } from "@/components/erp/hub/hub-shell";
+import { IdeaGallery, StarRating } from "@/components/erp/hub/idea-visuals";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -73,12 +80,15 @@ type Draft = {
   title: string;
   description: string;
   image_url: string;
+  images: string;
   source_url: string;
   supplier_name: string;
   supplier_url: string;
   category: string;
   est_unit_cost: string;
   est_sell_price: string;
+  target_price_min: string;
+  target_price_max: string;
   moq: string;
   status: string;
   notes: string;
@@ -88,16 +98,29 @@ const emptyDraft = (): Draft => ({
   title: "",
   description: "",
   image_url: "",
+  images: "",
   source_url: "",
   supplier_name: "",
   supplier_url: "",
   category: "",
   est_unit_cost: "",
   est_sell_price: "",
+  target_price_min: "",
+  target_price_max: "",
   moq: "",
   status: "voting",
   notes: "",
 });
+
+const STATUS_STYLE: Record<string, string> = {
+  idea: "bg-background/90 text-muted-foreground",
+  voting: "bg-indigo-500/90 text-white",
+  approved: "bg-emerald-500/90 text-white",
+  sourcing: "bg-amber-500/90 text-white",
+  ordered: "bg-sky-500/90 text-white",
+  launched: "bg-violet-500/90 text-white",
+  rejected: "bg-destructive/90 text-destructive-foreground",
+};
 
 type FDraft = {
   monthly_units: string;
@@ -143,6 +166,7 @@ function calcForecast(f: FDraft) {
 
 function ProductPipelinePage() {
   const { brandIds, activeBrand, isLoading: brandLoading } = useBrand();
+  const { isAdmin } = useCurrentRole();
   const qc = useQueryClient();
   const [open, setOpen] = useState(false);
   const [draft, setDraft] = useState<Draft>(emptyDraft());
@@ -181,12 +205,18 @@ function ProductPipelinePage() {
         title: d.title.trim(),
         description: d.description.trim() || null,
         image_url: d.image_url.trim() || null,
+        images: d.images
+          .split(/[\n,]/)
+          .map((s) => s.trim())
+          .filter(Boolean),
         source_url: d.source_url.trim() || null,
         supplier_name: d.supplier_name.trim() || null,
         supplier_url: d.supplier_url.trim() || null,
         category: d.category.trim() || null,
         est_unit_cost: Number(d.est_unit_cost || 0),
         est_sell_price: Number(d.est_sell_price || 0),
+        target_price_min: d.target_price_min ? Number(d.target_price_min) : null,
+        target_price_max: d.target_price_max ? Number(d.target_price_max) : null,
         moq: d.moq ? Number(d.moq) : null,
         status: d.status,
         notes: d.notes.trim() || null,
@@ -234,21 +264,71 @@ function ProductPipelinePage() {
       const uid = auth.user?.id;
       if (!uid) throw new Error("Not signed in");
       const existing = votesQ.data?.get(ideaId);
-      if (existing && existing.vote === value) {
+      if (existing && existing.vote === value && existing.rating == null) {
         const { error } = await supabase.from("hub_idea_votes").delete().eq("id", existing.id);
         if (error) throw error;
         return;
       }
       const { error } = await supabase
         .from("hub_idea_votes")
-        .upsert({ idea_id: ideaId, user_id: uid, vote: value } as never, {
-          onConflict: "idea_id,user_id",
-        });
+        .upsert(
+          {
+            idea_id: ideaId,
+            user_id: uid,
+            vote: existing && existing.vote === value ? 0 : value,
+            rating: existing?.rating ?? null,
+          } as never,
+          { onConflict: "idea_id,user_id" },
+        );
       if (error) throw error;
     },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["hub-my-votes"] });
       qc.invalidateQueries({ queryKey: ["hub-idea-summary"] });
+    },
+    onError: (e: Error) => toast.error(e.message),
+  });
+
+  const rate = useMutation({
+    mutationFn: async ({ ideaId, rating }: { ideaId: string; rating: number }) => {
+      const { data: auth } = await supabase.auth.getUser();
+      const uid = auth.user?.id;
+      if (!uid) throw new Error("Not signed in");
+      const existing = votesQ.data?.get(ideaId);
+      const { error } = await supabase.from("hub_idea_votes").upsert(
+        {
+          idea_id: ideaId,
+          user_id: uid,
+          vote: existing?.vote ?? 0,
+          rating: existing?.rating === rating ? null : rating,
+        } as never,
+        { onConflict: "idea_id,user_id" },
+      );
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["hub-my-votes"] });
+      qc.invalidateQueries({ queryKey: ["hub-idea-summary"] });
+    },
+    onError: (e: Error) => toast.error(e.message),
+  });
+
+  const decide = useMutation({
+    mutationFn: async ({ id, approve }: { id: string; approve: boolean }) => {
+      const { data: auth } = await supabase.auth.getUser();
+      const { error } = await supabase
+        .from("hub_product_ideas")
+        .update({
+          status: approve ? "approved" : "rejected",
+          approved_by: approve ? (auth.user?.id ?? null) : null,
+          approved_at: approve ? new Date().toISOString() : null,
+        } as never)
+        .eq("id", id);
+      if (error) throw error;
+    },
+    onSuccess: (_d, v) => {
+      toast.success(v.approve ? "Approved — Sourcing-এ পাঠানো হলো" : "Rejected");
+      invalidate();
     },
     onError: (e: Error) => toast.error(e.message),
   });
@@ -310,12 +390,15 @@ function ProductPipelinePage() {
       title: i.title,
       description: i.description ?? "",
       image_url: i.image_url ?? "",
+      images: (i.images ?? []).join("\n"),
       source_url: i.source_url ?? "",
       supplier_name: i.supplier_name ?? "",
       supplier_url: i.supplier_url ?? "",
       category: i.category ?? "",
       est_unit_cost: String(i.est_unit_cost || ""),
       est_sell_price: String(i.est_sell_price || ""),
+      target_price_min: i.target_price_min != null ? String(i.target_price_min) : "",
+      target_price_max: i.target_price_max != null ? String(i.target_price_max) : "",
       moq: i.moq ? String(i.moq) : "",
       status: i.status,
       notes: i.notes ?? "",
@@ -399,20 +482,56 @@ function ProductPipelinePage() {
       <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
         {filtered.map((i) => {
           const s = sumQ.data?.get(i.id);
-          const my = votesQ.data?.get(i.id)?.vote ?? 0;
+          const mine = votesQ.data?.get(i.id);
+          const my = mine?.vote ?? 0;
           const f = forecastQ.data?.get(i.id);
+          const imgs = i.images?.length ? i.images : i.image_url ? [i.image_url] : [];
+          const statusMeta = STATUS_STYLE[i.status] ?? STATUS_STYLE.idea;
           return (
-            <Card key={i.id} className="overflow-hidden">
-              {i.image_url && (
-                <div className="aspect-[16/9] w-full overflow-hidden bg-muted">
-                  <img
-                    src={i.image_url}
-                    alt={i.title}
-                    loading="lazy"
-                    className="h-full w-full object-cover"
-                  />
+            <Card
+              key={i.id}
+              className="group overflow-hidden border-border/70 transition-all duration-300 hover:-translate-y-0.5 hover:border-primary/30 hover:shadow-lg hover:shadow-primary/5"
+            >
+              <div className="relative">
+                <IdeaGallery images={imgs} title={i.title} />
+                <span
+                  className={`absolute left-2 top-2 rounded-full px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide ${statusMeta}`}
+                >
+                  {IDEA_STATUSES.find((x) => x.key === i.status)?.label ?? i.status}
+                </span>
+                <div className="absolute right-2 top-2 flex gap-1 opacity-0 transition-opacity group-hover:opacity-100">
+                  <button
+                    type="button"
+                    aria-label="Edit idea"
+                    onClick={() => openEdit(i)}
+                    className="rounded-full bg-background/90 p-1.5 shadow"
+                  >
+                    <Pencil className="h-3.5 w-3.5" />
+                  </button>
+                  <button
+                    type="button"
+                    aria-label="Delete idea"
+                    onClick={() => remove.mutate(i.id)}
+                    disabled={remove.isPending}
+                    className="rounded-full bg-background/90 p-1.5 shadow"
+                  >
+                    <Trash2 className="h-3.5 w-3.5 text-destructive" />
+                  </button>
                 </div>
-              )}
+                <button
+                  type="button"
+                  aria-label="Like"
+                  onClick={() => vote.mutate({ ideaId: i.id, value: 1 })}
+                  className="absolute bottom-2 right-2 inline-flex items-center gap-1 rounded-full bg-background/90 px-2.5 py-1 text-xs font-semibold shadow backdrop-blur transition-transform active:scale-95"
+                >
+                  <Heart
+                    className={`h-3.5 w-3.5 transition-colors ${
+                      my === 1 ? "fill-rose-500 text-rose-500" : "text-muted-foreground"
+                    }`}
+                  />
+                  {s?.up_votes ?? 0}
+                </button>
+              </div>
               <CardContent className="space-y-3 p-4">
                 <div className="flex items-start justify-between gap-2">
                   <div className="min-w-0">
@@ -423,18 +542,13 @@ function ProductPipelinePage() {
                       {i.moq ? ` · MOQ ${i.moq}` : ""}
                     </p>
                   </div>
-                  <div className="flex shrink-0 gap-1">
-                    <Button size="icon" variant="ghost" onClick={() => openEdit(i)}>
-                      <Pencil className="h-4 w-4" />
-                    </Button>
-                    <Button
-                      size="icon"
-                      variant="ghost"
-                      onClick={() => remove.mutate(i.id)}
-                      disabled={remove.isPending}
-                    >
-                      <Trash2 className="h-4 w-4 text-destructive" />
-                    </Button>
+                  <div className="shrink-0 text-right">
+                    <div className="flex items-center justify-end gap-1 text-xs font-semibold">
+                      <StarRating value={s?.avg_rating ?? 0} />
+                    </div>
+                    <p className="text-[10px] text-muted-foreground">
+                      {s?.avg_rating ? `${s.avg_rating.toFixed(1)} · ${s.rating_count} rating` : "no rating"}
+                    </p>
                   </div>
                 </div>
 
@@ -445,6 +559,12 @@ function ProductPipelinePage() {
                 <div className="flex flex-wrap items-center gap-1.5 text-xs">
                   <Badge variant="outline">Cost {fmtValue(i.est_unit_cost, "bdt")}</Badge>
                   <Badge variant="outline">Sell {fmtValue(i.est_sell_price, "bdt")}</Badge>
+                  {(i.target_price_min != null || i.target_price_max != null) && (
+                    <Badge variant="secondary">
+                      Target {fmtValue(i.target_price_min ?? 0, "bdt")}–
+                      {fmtValue(i.target_price_max ?? 0, "bdt")}
+                    </Badge>
+                  )}
                   {i.source_url && (
                     <a
                       href={i.source_url}
@@ -474,6 +594,10 @@ function ProductPipelinePage() {
 
                 <div className="flex flex-wrap items-center justify-between gap-2">
                   <div className="flex items-center gap-1.5">
+                    <StarRating
+                      value={mine?.rating ?? 0}
+                      onRate={(v) => rate.mutate({ ideaId: i.id, rating: v })}
+                    />
                     <Button
                       size="sm"
                       variant={my === 1 ? "default" : "outline"}
@@ -508,6 +632,36 @@ function ProductPipelinePage() {
                     </SelectContent>
                   </Select>
                 </div>
+
+                {isAdmin && ["idea", "voting"].includes(i.status) && (
+                  <div className="flex gap-2 border-t pt-3">
+                    <Button
+                      size="sm"
+                      className="flex-1 bg-emerald-600 text-white hover:bg-emerald-600/90"
+                      onClick={() => decide.mutate({ id: i.id, approve: true })}
+                      disabled={decide.isPending}
+                    >
+                      <CheckCircle2 className="mr-1.5 h-4 w-4" /> Approve → Sourcing
+                    </Button>
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={() => decide.mutate({ id: i.id, approve: false })}
+                      disabled={decide.isPending}
+                    >
+                      <XCircle className="mr-1.5 h-4 w-4 text-destructive" /> Reject
+                    </Button>
+                  </div>
+                )}
+
+                {["approved", "sourcing", "ordered"].includes(i.status) && (
+                  <Link
+                    to="/erp/hub/sourcing"
+                    className="inline-flex items-center gap-1.5 text-xs font-medium text-primary hover:underline"
+                  >
+                    <PackageSearch className="h-3.5 w-3.5" /> Sourcing desk-এ দেখুন
+                  </Link>
+                )}
               </CardContent>
             </Card>
           );
@@ -534,13 +688,37 @@ function ProductPipelinePage() {
                 onChange={(e) => setDraft({ ...draft, description: e.target.value })}
               />
             </Field>
-            <Field label="Image URL">
+            <Field label="Main image URL">
               <Input
                 value={draft.image_url}
                 onChange={(e) => setDraft({ ...draft, image_url: e.target.value })}
                 placeholder="https://..."
               />
             </Field>
+            <Field label="More images (এক লাইনে একটা URL)">
+              <Textarea
+                rows={3}
+                value={draft.images}
+                onChange={(e) => setDraft({ ...draft, images: e.target.value })}
+                placeholder={"https://...jpg\nhttps://...jpg"}
+              />
+            </Field>
+            <div className="grid grid-cols-2 gap-3">
+              <Field label="Target price min (৳)">
+                <Input
+                  type="number"
+                  value={draft.target_price_min}
+                  onChange={(e) => setDraft({ ...draft, target_price_min: e.target.value })}
+                />
+              </Field>
+              <Field label="Target price max (৳)">
+                <Input
+                  type="number"
+                  value={draft.target_price_max}
+                  onChange={(e) => setDraft({ ...draft, target_price_max: e.target.value })}
+                />
+              </Field>
+            </div>
             <Field label="Source / product link">
               <Input
                 value={draft.source_url}
