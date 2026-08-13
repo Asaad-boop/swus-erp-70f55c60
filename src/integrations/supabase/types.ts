@@ -3388,6 +3388,45 @@ export type Database = {
         }
         Relationships: []
       }
+      hub_capture_tokens: {
+        Row: {
+          created_at: string
+          default_brand_id: string | null
+          id: string
+          is_active: boolean
+          label: string
+          last_used_at: string | null
+          token_hash: string
+          token_hint: string
+          use_count: number
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          default_brand_id?: string | null
+          id?: string
+          is_active?: boolean
+          label?: string
+          last_used_at?: string | null
+          token_hash: string
+          token_hint?: string
+          use_count?: number
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          default_brand_id?: string | null
+          id?: string
+          is_active?: boolean
+          label?: string
+          last_used_at?: string | null
+          token_hash?: string
+          token_hint?: string
+          use_count?: number
+          user_id?: string
+        }
+        Relationships: []
+      }
       hub_comments: {
         Row: {
           author_id: string | null
@@ -3412,6 +3451,149 @@ export type Database = {
           entity_id?: string
           entity_type?: string
           id?: string
+        }
+        Relationships: []
+      }
+      hub_competitor_assets: {
+        Row: {
+          asset_type: string
+          brand_id: string | null
+          captured_at: string
+          captured_by: string | null
+          competitor_id: string | null
+          created_at: string
+          hook: string | null
+          id: string
+          image_url: string | null
+          is_favorite: boolean
+          note: string | null
+          offer: string | null
+          platform: string | null
+          price: number | null
+          rating: number | null
+          tags: string[]
+          thumbnail_url: string | null
+          title: string | null
+          updated_at: string
+          url: string | null
+        }
+        Insert: {
+          asset_type?: string
+          brand_id?: string | null
+          captured_at?: string
+          captured_by?: string | null
+          competitor_id?: string | null
+          created_at?: string
+          hook?: string | null
+          id?: string
+          image_url?: string | null
+          is_favorite?: boolean
+          note?: string | null
+          offer?: string | null
+          platform?: string | null
+          price?: number | null
+          rating?: number | null
+          tags?: string[]
+          thumbnail_url?: string | null
+          title?: string | null
+          updated_at?: string
+          url?: string | null
+        }
+        Update: {
+          asset_type?: string
+          brand_id?: string | null
+          captured_at?: string
+          captured_by?: string | null
+          competitor_id?: string | null
+          created_at?: string
+          hook?: string | null
+          id?: string
+          image_url?: string | null
+          is_favorite?: boolean
+          note?: string | null
+          offer?: string | null
+          platform?: string | null
+          price?: number | null
+          rating?: number | null
+          tags?: string[]
+          thumbnail_url?: string | null
+          title?: string | null
+          updated_at?: string
+          url?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "hub_competitor_assets_competitor_id_fkey"
+            columns: ["competitor_id"]
+            isOneToOne: false
+            referencedRelation: "hub_competitors"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      hub_competitors: {
+        Row: {
+          brand_id: string | null
+          country: string | null
+          created_at: string
+          created_by: string | null
+          facebook_url: string | null
+          favicon_url: string | null
+          id: string
+          instagram_url: string | null
+          is_active: boolean
+          last_checked_at: string | null
+          logo_url: string | null
+          name: string
+          note: string | null
+          price_range: string | null
+          tags: string[]
+          threat_level: string
+          tiktok_url: string | null
+          updated_at: string
+          website_url: string | null
+        }
+        Insert: {
+          brand_id?: string | null
+          country?: string | null
+          created_at?: string
+          created_by?: string | null
+          facebook_url?: string | null
+          favicon_url?: string | null
+          id?: string
+          instagram_url?: string | null
+          is_active?: boolean
+          last_checked_at?: string | null
+          logo_url?: string | null
+          name: string
+          note?: string | null
+          price_range?: string | null
+          tags?: string[]
+          threat_level?: string
+          tiktok_url?: string | null
+          updated_at?: string
+          website_url?: string | null
+        }
+        Update: {
+          brand_id?: string | null
+          country?: string | null
+          created_at?: string
+          created_by?: string | null
+          facebook_url?: string | null
+          favicon_url?: string | null
+          id?: string
+          instagram_url?: string | null
+          is_active?: boolean
+          last_checked_at?: string | null
+          logo_url?: string | null
+          name?: string
+          note?: string | null
+          price_range?: string | null
+          tags?: string[]
+          threat_level?: string
+          tiktok_url?: string | null
+          updated_at?: string
+          website_url?: string | null
         }
         Relationships: []
       }
@@ -3947,6 +4129,63 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      hub_routines: {
+        Row: {
+          active: boolean
+          brand_id: string | null
+          cadence: string
+          checklist: Json
+          created_at: string
+          created_by: string | null
+          day_of_month: number | null
+          details: string | null
+          id: string
+          last_spawned_on: string | null
+          owner_id: string | null
+          tags: string[]
+          time_of_day: string | null
+          title: string
+          updated_at: string
+          weekday: number | null
+        }
+        Insert: {
+          active?: boolean
+          brand_id?: string | null
+          cadence?: string
+          checklist?: Json
+          created_at?: string
+          created_by?: string | null
+          day_of_month?: number | null
+          details?: string | null
+          id?: string
+          last_spawned_on?: string | null
+          owner_id?: string | null
+          tags?: string[]
+          time_of_day?: string | null
+          title: string
+          updated_at?: string
+          weekday?: number | null
+        }
+        Update: {
+          active?: boolean
+          brand_id?: string | null
+          cadence?: string
+          checklist?: Json
+          created_at?: string
+          created_by?: string | null
+          day_of_month?: number | null
+          details?: string | null
+          id?: string
+          last_spawned_on?: string | null
+          owner_id?: string | null
+          tags?: string[]
+          time_of_day?: string | null
+          title?: string
+          updated_at?: string
+          weekday?: number | null
+        }
+        Relationships: []
       }
       hub_tasks: {
         Row: {
@@ -9927,6 +10166,10 @@ export type Database = {
       hub_month_projection: {
         Args: { _brand_ids: string[]; _month: string }
         Returns: Json
+      }
+      hub_spawn_due_routines: {
+        Args: { _brand_ids?: string[] }
+        Returns: number
       }
       imp_create_po: { Args: { _payload: Json }; Returns: Json }
       imp_delete_po: { Args: { _po_id: string }; Returns: Json }
