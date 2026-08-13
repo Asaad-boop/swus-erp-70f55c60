@@ -3493,6 +3493,165 @@ export type Database = {
           },
         ]
       }
+      hub_idea_forecast: {
+        Row: {
+          ad_cost_per_order: number
+          courier_cost: number
+          idea_id: string
+          monthly_units: number
+          notes: string | null
+          packaging_cost: number
+          return_rate: number
+          sell_price: number
+          unit_cost: number
+          updated_at: string
+        }
+        Insert: {
+          ad_cost_per_order?: number
+          courier_cost?: number
+          idea_id: string
+          monthly_units?: number
+          notes?: string | null
+          packaging_cost?: number
+          return_rate?: number
+          sell_price?: number
+          unit_cost?: number
+          updated_at?: string
+        }
+        Update: {
+          ad_cost_per_order?: number
+          courier_cost?: number
+          idea_id?: string
+          monthly_units?: number
+          notes?: string | null
+          packaging_cost?: number
+          return_rate?: number
+          sell_price?: number
+          unit_cost?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "hub_idea_forecast_idea_id_fkey"
+            columns: ["idea_id"]
+            isOneToOne: true
+            referencedRelation: "hub_product_ideas"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      hub_idea_votes: {
+        Row: {
+          comment: string | null
+          created_at: string
+          id: string
+          idea_id: string
+          updated_at: string
+          user_id: string
+          vote: number
+        }
+        Insert: {
+          comment?: string | null
+          created_at?: string
+          id?: string
+          idea_id: string
+          updated_at?: string
+          user_id?: string
+          vote: number
+        }
+        Update: {
+          comment?: string | null
+          created_at?: string
+          id?: string
+          idea_id?: string
+          updated_at?: string
+          user_id?: string
+          vote?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "hub_idea_votes_idea_id_fkey"
+            columns: ["idea_id"]
+            isOneToOne: false
+            referencedRelation: "hub_product_ideas"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      hub_product_ideas: {
+        Row: {
+          brand_id: string | null
+          category: string | null
+          created_at: string
+          created_by: string | null
+          description: string | null
+          est_sell_price: number
+          est_unit_cost: number
+          id: string
+          image_url: string | null
+          linked_product_id: string | null
+          moq: number | null
+          notes: string | null
+          source_url: string | null
+          status: string
+          supplier_name: string | null
+          supplier_url: string | null
+          tags: string[]
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          brand_id?: string | null
+          category?: string | null
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          est_sell_price?: number
+          est_unit_cost?: number
+          id?: string
+          image_url?: string | null
+          linked_product_id?: string | null
+          moq?: number | null
+          notes?: string | null
+          source_url?: string | null
+          status?: string
+          supplier_name?: string | null
+          supplier_url?: string | null
+          tags?: string[]
+          title: string
+          updated_at?: string
+        }
+        Update: {
+          brand_id?: string | null
+          category?: string | null
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          est_sell_price?: number
+          est_unit_cost?: number
+          id?: string
+          image_url?: string | null
+          linked_product_id?: string | null
+          moq?: number | null
+          notes?: string | null
+          source_url?: string | null
+          status?: string
+          supplier_name?: string | null
+          supplier_url?: string | null
+          tags?: string[]
+          title?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "hub_product_ideas_brand_id_fkey"
+            columns: ["brand_id"]
+            isOneToOne: false
+            referencedRelation: "brands"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       hub_tasks: {
         Row: {
           assignee_id: string | null
@@ -9455,6 +9614,18 @@ export type Database = {
         Returns: {
           actual: number
           goal_id: string
+        }[]
+      }
+      hub_idea_summary: {
+        Args: { _brand_ids: string[] }
+        Returns: {
+          breakeven_roas: number
+          down_votes: number
+          idea_id: string
+          monthly_profit: number
+          score: number
+          up_votes: number
+          voters: number
         }[]
       }
       imp_create_po: { Args: { _payload: Json }; Returns: Json }

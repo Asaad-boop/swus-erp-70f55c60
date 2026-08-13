@@ -11,6 +11,7 @@ import {
   BellRing,
   Compass,
   ListChecks,
+  Lightbulb,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useGlobalSearch } from "@/components/erp/global-search";
@@ -130,6 +131,7 @@ const groups: Group[] = [
           { to: "/erp/hub", label: "Command Center", icon: Compass, exact: true },
           { to: "/erp/hub/goals", label: "Vision & Goals", icon: Target },
           { to: "/erp/hub/tasks", label: "Task Board", icon: ListChecks },
+          { to: "/erp/hub/products", label: "Product Pipeline", icon: Lightbulb },
         ],
       },
       {

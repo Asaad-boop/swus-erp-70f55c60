@@ -102,3 +102,116 @@ export async function fetchTasks(brandIds: string[]) {
     tags: ((t as unknown as { tags?: string[] }).tags ?? []) as string[],
   })) as HubTask[];
 }
+
+export type HubIdea = {
+  id: string;
+  brand_id: string | null;
+  title: string;
+  description: string | null;
+  image_url: string | null;
+  source_url: string | null;
+  supplier_name: string | null;
+  supplier_url: string | null;
+  category: string | null;
+  est_unit_cost: number;
+  est_sell_price: number;
+  moq: number | null;
+  status: string;
+  tags: string[];
+  notes: string | null;
+  created_by: string | null;
+  created_at: string;
+};
+
+export type HubIdeaForecast = {
+  idea_id: string;
+  monthly_units: number;
+  sell_price: number;
+  unit_cost: number;
+  ad_cost_per_order: number;
+  courier_cost: number;
+  packaging_cost: number;
+  return_rate: number;
+  notes: string | null;
+};
+
+export type HubIdeaSummary = {
+  idea_id: string;
+  up_votes: number;
+  down_votes: number;
+  score: number;
+  voters: number;
+  monthly_profit: number | null;
+  breakeven_roas: number | null;
+};
+
+export type HubVote = {
+  id: string;
+  idea_id: string;
+  user_id: string;
+  vote: number;
+  comment: string | null;
+};
+
+export const IDEA_STATUSES = [
+  { key: "idea", label: "Idea" },
+  { key: "voting", label: "Voting" },
+  { key: "approved", label: "Approved" },
+  { key: "sourcing", label: "Sourcing" },
+  { key: "ordered", label: "Ordered" },
+  { key: "launched", label: "Launched" },
+  { key: "rejected", label: "Rejected" },
+] as const;
+
+export async function fetchIdeas(brandIds: string[]) {
+  let q = supabase
+    .from("hub_product_ideas")
+    .select("*")
+    .order("created_at", { ascending: false });
+  if (brandIds.length === 1) q = q.or(`brand_id.is.null,brand_id.eq.${brandIds[0]}`);
+  const { data, error } = await q;
+  if (error) throw error;
+  return (data ?? []).map((r) => ({
+    ...(r as unknown as HubIdea),
+    tags: ((r as unknown as { tags?: string[] }).tags ?? []) as string[],
+  })) as HubIdea[];
+}
+
+export async function fetchIdeaSummaries(brandIds: string[]) {
+  const { data, error } = await supabase.rpc("hub_idea_summary" as never, {
+    _brand_ids: brandIds,
+  } as never);
+  if (error) throw error;
+  const map = new Map<string, HubIdeaSummary>();
+  for (const row of (data ?? []) as HubIdeaSummary[]) {
+    map.set(row.idea_id, {
+      ...row,
+      monthly_profit: row.monthly_profit == null ? null : Number(row.monthly_profit),
+      breakeven_roas: row.breakeven_roas == null ? null : Number(row.breakeven_roas),
+    });
+  }
+  return map;
+}
+
+export async function fetchMyVotes() {
+  const { data: auth } = await supabase.auth.getUser();
+  const uid = auth.user?.id;
+  if (!uid) return new Map<string, HubVote>();
+  const { data, error } = await supabase.from("hub_idea_votes").select("*").eq("user_id", uid);
+  if (error) throw error;
+  const map = new Map<string, HubVote>();
+  for (const v of (data ?? []) as unknown as HubVote[]) map.set(v.idea_id, v);
+  return map;
+}
+
+export async function fetchForecasts(ideaIds: string[]) {
+  if (ideaIds.length === 0) return new Map<string, HubIdeaForecast>();
+  const { data, error } = await supabase
+    .from("hub_idea_forecast")
+    .select("*")
+    .in("idea_id", ideaIds);
+  if (error) throw error;
+  const map = new Map<string, HubIdeaForecast>();
+  for (const f of (data ?? []) as unknown as HubIdeaForecast[]) map.set(f.idea_id, f);
+  return map;
+}
