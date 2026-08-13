@@ -6,6 +6,7 @@ import {
   ListChecks,
   Lightbulb,
   Clapperboard,
+  BarChart3,
   type LucideIcon,
 } from "lucide-react";
 
@@ -23,6 +24,7 @@ export const HUB_NAV: HubNavItem[] = [
   { to: "/erp/hub/tasks", label: "Task Board", short: "Tasks", icon: ListChecks },
   { to: "/erp/hub/products", label: "Product Pipeline", short: "Products", icon: Lightbulb },
   { to: "/erp/hub/content", label: "Content Journey", short: "Content", icon: Clapperboard },
+  { to: "/erp/hub/planning", label: "Monthly Projection", short: "Planning", icon: BarChart3 },
 ];
 
 /** Sticky horizontal sub-navigation shared by every Growth Hub page. */
