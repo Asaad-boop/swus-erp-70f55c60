@@ -1,10 +1,9 @@
-import { createFileRoute, Link } from "@tanstack/react-router";
+import { createFileRoute } from "@tanstack/react-router";
 import { useMemo, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { toast } from "sonner";
 import {
-  LayoutDashboard,
   RefreshCcw,
   Search,
   Grid2X2,
@@ -13,6 +12,7 @@ import {
   BatteryLow,
   Pencil,
   Download,
+  Image as PageIcon,
 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -29,6 +29,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { useBrand } from "@/contexts/brand-context";
+import { BrandTabs } from "@/components/erp/marketing/marketing-shell";
 import {
   DateRangePicker,
   buildPreset,
@@ -66,7 +67,7 @@ type Filter = "all" | "winning" | "fatigued" | "active";
 type SortKey = "spend" | "roas" | "ctr" | "orders" | "revenue" | "frequency";
 
 function CreativeLibrary() {
-  const { brands, isLoading: brandsLoading } = useBrand();
+  const { brands } = useBrand();
   const [brandKey, setBrandKey] = useState("all");
   const [range, setRange] = useState<MktRangeValue>(() => buildPreset("30d"));
   const [q, setQ] = useState("");
@@ -121,15 +122,53 @@ function CreativeLibrary() {
 
   function exportCsv() {
     const head = [
-      "Creative","Hook","Angle","Creator","Type","Ads","Spend","Impressions","Clicks","CTR %","CPC","CPM","Frequency","Orders","Delivered","Delivered revenue","ROAS","CPA","Status",
+      "Creative",
+      "Hook",
+      "Angle",
+      "Creator",
+      "Type",
+      "Ads",
+      "Spend",
+      "Impressions",
+      "Clicks",
+      "CTR %",
+      "CPC",
+      "CPM",
+      "Frequency",
+      "Orders",
+      "Delivered",
+      "Delivered revenue",
+      "ROAS",
+      "CPA",
+      "Status",
     ];
-    const lines = [head, ...rows.map((r) => [
-      r.name, r.hook ?? "", r.angle ?? "", r.creator ?? "", r.creative_type ?? "", r.ad_count,
-      r.spend, r.impressions, r.clicks, r.ctr, r.cpc, r.cpm, r.frequency,
-      r.orders, r.delivered_orders, r.revenue, r.roas, r.cpa,
-      r.winning ? "Winning" : r.fatigued ? "Fatigued" : r.active ? "Active" : "Off",
-    ])];
-    const csv = "\uFEFF" + lines.map((l) => l.map((c) => `"${String(c).replace(/"/g, '""')}"`).join(",")).join("\n");
+    const lines = [
+      head,
+      ...rows.map((r) => [
+        r.name,
+        r.hook ?? "",
+        r.angle ?? "",
+        r.creator ?? "",
+        r.creative_type ?? "",
+        r.ad_count,
+        r.spend,
+        r.impressions,
+        r.clicks,
+        r.ctr,
+        r.cpc,
+        r.cpm,
+        r.frequency,
+        r.orders,
+        r.delivered_orders,
+        r.revenue,
+        r.roas,
+        r.cpa,
+        r.winning ? "Winning" : r.fatigued ? "Fatigued" : r.active ? "Active" : "Off",
+      ]),
+    ];
+    const csv =
+      "\uFEFF" +
+      lines.map((l) => l.map((c) => `"${String(c).replace(/"/g, '""')}"`).join(",")).join("\n");
     const url = URL.createObjectURL(new Blob([csv], { type: "text/csv;charset=utf-8" }));
     const a = document.createElement("a");
     a.href = url;
@@ -139,51 +178,37 @@ function CreativeLibrary() {
   }
 
   return (
-    <div className="p-4 md:p-6 max-w-[1500px] mx-auto space-y-4">
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <div>
-          <h1 className="text-xl md:text-2xl font-semibold tracking-tight">Creative Library</h1>
-          <p className="text-xs text-muted-foreground mt-0.5">
-            {range.label} · {rows.length} creatives · spend {bdt(totals.spend)} · delivered rev{" "}
-            {bdt(totals.revenue)} · ROAS{" "}
-            {totals.spend > 0 ? (totals.revenue / totals.spend).toFixed(2) : "—"}x
-          </p>
+    <div className="mx-auto max-w-[1500px] space-y-4 p-4 md:p-6">
+      <div className="flex flex-wrap items-end justify-between gap-3">
+        <div className="flex min-w-0 items-center gap-2.5">
+          <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-primary/10 text-primary">
+            <PageIcon className="h-4.5 w-4.5" />
+          </span>
+          <div className="min-w-0">
+            <h1 className="font-display text-xl font-bold tracking-tight">Creative Library</h1>
+            <p className="text-xs text-muted-foreground">
+              {range.label} · {rows.length} creatives · spend {bdt(totals.spend)} · delivered rev{" "}
+              {bdt(totals.revenue)} · ROAS{" "}
+              {totals.spend > 0 ? (totals.revenue / totals.spend).toFixed(2) : "—"}x
+            </p>
+          </div>
         </div>
         <div className="flex flex-wrap items-center gap-2">
-          <div className="inline-flex items-center rounded-md border bg-background p-0.5">
-            {brandsLoading && brands.length === 0 ? (
-              <Skeleton className="h-7 w-40" />
-            ) : (
-              [{ slug: "all", name: "All" }, ...brands.map((b) => ({ slug: b.slug, name: b.name }))].map(
-                (it) => (
-                  <button
-                    key={it.slug}
-                    onClick={() => setBrandKey(it.slug)}
-                    className={`px-3 h-7 text-xs font-medium rounded transition ${
-                      brandKey === it.slug
-                        ? "bg-primary text-primary-foreground shadow-sm"
-                        : "text-muted-foreground hover:text-foreground"
-                    }`}
-                  >
-                    {it.name}
-                  </button>
-                ),
-              )
-            )}
-          </div>
+          <BrandTabs value={brandKey} onChange={setBrandKey} />
           <DateRangePicker value={range} onChange={setRange} />
-          <Link to="/erp/marketing" search={{ brand: brandKey }}>
-            <Button size="sm" variant="outline">
-              <LayoutDashboard className="h-3.5 w-3.5 mr-1.5" />
-              Dashboard
-            </Button>
-          </Link>
           <Button size="sm" variant="outline" onClick={exportCsv} disabled={rows.length === 0}>
             <Download className="h-3.5 w-3.5 mr-1.5" />
             CSV
           </Button>
-          <Button size="sm" variant="outline" onClick={() => query.refetch()} disabled={query.isFetching}>
-            <RefreshCcw className={`h-3.5 w-3.5 mr-1.5 ${query.isFetching ? "animate-spin" : ""}`} />
+          <Button
+            size="sm"
+            variant="outline"
+            onClick={() => query.refetch()}
+            disabled={query.isFetching}
+          >
+            <RefreshCcw
+              className={`h-3.5 w-3.5 mr-1.5 ${query.isFetching ? "animate-spin" : ""}`}
+            />
             Refresh
           </Button>
         </div>
@@ -286,12 +311,18 @@ function StatusBadges({ row }: { row: MktCreativeRow }) {
   return (
     <div className="flex flex-wrap items-center gap-1">
       {row.winning && (
-        <Badge variant="outline" className="bg-emerald-500/10 text-emerald-600 border-emerald-500/20 font-normal">
+        <Badge
+          variant="outline"
+          className="bg-emerald-500/10 text-emerald-600 border-emerald-500/20 font-normal"
+        >
           <Trophy className="h-3 w-3 mr-1" /> Winning
         </Badge>
       )}
       {row.fatigued && (
-        <Badge variant="outline" className="bg-amber-500/10 text-amber-600 border-amber-500/20 font-normal">
+        <Badge
+          variant="outline"
+          className="bg-amber-500/10 text-amber-600 border-amber-500/20 font-normal"
+        >
           <BatteryLow className="h-3 w-3 mr-1" /> Fatigued
         </Badge>
       )}
@@ -323,7 +354,12 @@ function CreativeCard({ row, onEdit }: { row: MktCreativeRow; onEdit: () => void
     <div className="rounded-lg border bg-card overflow-hidden flex flex-col">
       <div className="relative aspect-[4/3] bg-muted">
         {row.thumbnail ? (
-          <img src={row.thumbnail} alt={row.name} loading="lazy" className="h-full w-full object-cover" />
+          <img
+            src={row.thumbnail}
+            alt={row.name}
+            loading="lazy"
+            className="h-full w-full object-cover"
+          />
         ) : (
           <div className="h-full w-full flex items-center justify-center text-xs text-muted-foreground">
             No thumbnail
@@ -360,7 +396,9 @@ function CreativeCard({ row, onEdit }: { row: MktCreativeRow; onEdit: () => void
           <Stat label="Freq." value={row.frequency.toFixed(2)} />
         </div>
         {row.body && (
-          <p className="text-[11px] text-muted-foreground line-clamp-3 whitespace-pre-line">{row.body}</p>
+          <p className="text-[11px] text-muted-foreground line-clamp-3 whitespace-pre-line">
+            {row.body}
+          </p>
         )}
       </div>
     </div>
@@ -417,7 +455,9 @@ function CreativeTable({
               </td>
               <td className="px-3 py-2 text-right tabular-nums">{r.ad_count}</td>
               <td className="px-3 py-2 text-right tabular-nums font-medium">{bdt(r.spend)}</td>
-              <td className="px-3 py-2 text-right tabular-nums">{r.impressions.toLocaleString()}</td>
+              <td className="px-3 py-2 text-right tabular-nums">
+                {r.impressions.toLocaleString()}
+              </td>
               <td className="px-3 py-2 text-right tabular-nums">{r.ctr.toFixed(2)}%</td>
               <td className="px-3 py-2 text-right tabular-nums">{bdt(r.cpc)}</td>
               <td className="px-3 py-2 text-right tabular-nums">{r.frequency.toFixed(2)}</td>
@@ -539,11 +579,7 @@ function MetaDialog({ row, onClose }: { row: MktCreativeRow | null; onClose: () 
           <Button size="sm" variant="outline" onClick={onClose}>
             Cancel
           </Button>
-          <Button
-            size="sm"
-            onClick={() => m.mutate()}
-            disabled={m.isPending || !row?.brand_id}
-          >
+          <Button size="sm" onClick={() => m.mutate()} disabled={m.isPending || !row?.brand_id}>
             {m.isPending ? "Saving…" : "Save"}
           </Button>
         </DialogFooter>

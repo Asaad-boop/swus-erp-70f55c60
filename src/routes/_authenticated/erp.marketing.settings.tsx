@@ -188,7 +188,7 @@ function MarketingSettingsPage() {
   }
 
   return (
-    <div className="space-y-5 p-4 md:p-6">
+    <div className="mx-auto max-w-[1500px] space-y-4 p-4 md:p-6">
       <div className="flex flex-wrap items-end justify-between gap-3">
         <div className="flex items-center gap-2.5">
           <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-primary/10 text-primary">
@@ -204,7 +204,11 @@ function MarketingSettingsPage() {
             </p>
           </div>
         </div>
-        <Button size="sm" disabled={!canEdit || !dirty || saveM.isPending} onClick={() => saveM.mutate()}>
+        <Button
+          size="sm"
+          disabled={!canEdit || !dirty || saveM.isPending}
+          onClick={() => saveM.mutate()}
+        >
           <Save className="mr-1.5 h-3.5 w-3.5" />
           {saveM.isPending ? "Saving…" : "Save changes"}
         </Button>
@@ -248,7 +252,9 @@ function MarketingSettingsPage() {
                     className="flex items-center justify-between rounded-lg border border-border/60 px-3 py-1.5"
                   >
                     <span className="text-xs">
-                      <Badge variant="outline" className="mr-2 text-[10px]">{i + 1}</Badge>
+                      <Badge variant="outline" className="mr-2 text-[10px]">
+                        {i + 1}
+                      </Badge>
                       {SOURCE_LABEL[s] ?? s}
                     </span>
                     <div className="flex gap-1">
@@ -416,7 +422,8 @@ function MarketingSettingsPage() {
                 onChange={(e) => patch("utm", { campaignNaming: e.target.value })}
               />
               <p className="text-[11px] text-muted-foreground">
-                Token: {"{brand}"} {"{objective}"} {"{product}"} {"{date}"} — team ke ei convention follow korte bolun.
+                Token: {"{brand}"} {"{objective}"} {"{product}"} {"{date}"} — team ke ei convention
+                follow korte bolun.
               </p>
             </div>
           </CardContent>
@@ -447,7 +454,15 @@ function MarketingSettingsPage() {
               <table className="w-full text-xs">
                 <thead className="bg-muted/60">
                   <tr>
-                    {["Account", "Platform", "Primary brand", "Status", "Token", "Auto-post", "Last insights sync"].map((h) => (
+                    {[
+                      "Account",
+                      "Platform",
+                      "Primary brand",
+                      "Status",
+                      "Token",
+                      "Auto-post",
+                      "Last insights sync",
+                    ].map((h) => (
                       <th key={h} className="whitespace-nowrap px-3 py-2 text-left font-medium">
                         {h}
                       </th>
@@ -464,7 +479,10 @@ function MarketingSettingsPage() {
                       <td className="px-3 py-2">Meta</td>
                       <td className="px-3 py-2">{brandName(a.primary_brand_id)}</td>
                       <td className="px-3 py-2">
-                        <Badge variant={a.status === "active" ? "default" : "secondary"} className="text-[10px]">
+                        <Badge
+                          variant={a.status === "active" ? "default" : "secondary"}
+                          className="text-[10px]"
+                        >
                           {a.status}
                         </Badge>
                       </td>

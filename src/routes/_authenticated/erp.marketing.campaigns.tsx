@@ -1,4 +1,4 @@
-import { createFileRoute, Link } from "@tanstack/react-router";
+import { createFileRoute } from "@tanstack/react-router";
 import { useMemo, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
@@ -8,9 +8,9 @@ import {
   ChevronDown,
   RefreshCcw,
   Target,
-  LayoutDashboard,
   Search,
   AlertTriangle,
+  Target as PageIcon,
 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -34,6 +34,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { useBrand } from "@/contexts/brand-context";
+import { BrandTabs } from "@/components/erp/marketing/marketing-shell";
 import {
   DateRangePicker,
   buildPreset,
@@ -79,7 +80,7 @@ function statusTone(s: string) {
 }
 
 function CampaignWorkspace() {
-  const { brands, isLoading: brandsLoading } = useBrand();
+  const { brands } = useBrand();
   const [brandKey, setBrandKey] = useState("all");
   const [range, setRange] = useState<MktRangeValue>(() => buildPreset("30d"));
   const [q, setQ] = useState("");
@@ -123,43 +124,22 @@ function CampaignWorkspace() {
   }, [rows]);
 
   return (
-    <div className="p-4 md:p-6 max-w-[1500px] mx-auto space-y-4">
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <div>
-          <h1 className="text-xl md:text-2xl font-semibold tracking-tight">Campaign Workspace</h1>
-          <p className="text-xs text-muted-foreground mt-0.5">
-            {range.label} · Campaign → Ad set → Ad · FIFO spend, canonical delivered revenue
-          </p>
+    <div className="mx-auto max-w-[1500px] space-y-4 p-4 md:p-6">
+      <div className="flex flex-wrap items-end justify-between gap-3">
+        <div className="flex min-w-0 items-center gap-2.5">
+          <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-primary/10 text-primary">
+            <PageIcon className="h-4.5 w-4.5" />
+          </span>
+          <div className="min-w-0">
+            <h1 className="font-display text-xl font-bold tracking-tight">Campaign Workspace</h1>
+            <p className="text-xs text-muted-foreground">
+              {range.label} · Campaign → Ad set → Ad · FIFO spend, canonical delivered revenue
+            </p>
+          </div>
         </div>
         <div className="flex flex-wrap items-center gap-2">
-          <div className="inline-flex items-center rounded-md border bg-background p-0.5">
-            {brandsLoading && brands.length === 0 ? (
-              <Skeleton className="h-7 w-40" />
-            ) : (
-              [{ slug: "all", name: "All" }, ...brands.map((b) => ({ slug: b.slug, name: b.name }))].map(
-                (it) => (
-                  <button
-                    key={it.slug}
-                    onClick={() => setBrandKey(it.slug)}
-                    className={`px-3 h-7 text-xs font-medium rounded transition ${
-                      brandKey === it.slug
-                        ? "bg-primary text-primary-foreground shadow-sm"
-                        : "text-muted-foreground hover:text-foreground"
-                    }`}
-                  >
-                    {it.name}
-                  </button>
-                ),
-              )
-            )}
-          </div>
+          <BrandTabs value={brandKey} onChange={setBrandKey} />
           <DateRangePicker value={range} onChange={setRange} />
-          <Link to="/erp/marketing" search={{ brand: brandKey }}>
-            <Button size="sm" variant="outline">
-              <LayoutDashboard className="h-3.5 w-3.5 mr-1.5" />
-              Dashboard
-            </Button>
-          </Link>
           <Button
             size="sm"
             variant="outline"
@@ -234,9 +214,7 @@ function CampaignWorkspace() {
                       brandIds={brandIds}
                       range={range}
                       open={!!expanded[r.id]}
-                      onToggle={() =>
-                        setExpanded((p) => ({ ...p, [r.id]: !p[r.id] }))
-                      }
+                      onToggle={() => setExpanded((p) => ({ ...p, [r.id]: !p[r.id] }))}
                       onEdit={() => setEditing(r)}
                     />
                   ))}
@@ -366,7 +344,14 @@ function ChildRows({
   const fetchLevel = useServerFn(getMktLevel);
   const [expanded, setExpanded] = useState<Record<string, boolean>>({});
   const q = useQuery({
-    queryKey: ["mkt-level", level, parentId, range.from, range.to, brandIds.slice().sort().join(",")],
+    queryKey: [
+      "mkt-level",
+      level,
+      parentId,
+      range.from,
+      range.to,
+      brandIds.slice().sort().join(","),
+    ],
     queryFn: () =>
       fetchLevel({ data: { brandIds, from: range.from, to: range.to, level, parentId } }),
     staleTime: 60_000,
@@ -488,7 +473,13 @@ function ChildRow({
         <td />
       </tr>
       {open && level === "adset" && (
-        <ChildRows level="ad" parentId={row.id} brandIds={brandIds} range={range} depth={depth + 1} />
+        <ChildRows
+          level="ad"
+          parentId={row.id}
+          brandIds={brandIds}
+          range={range}
+          depth={depth + 1}
+        />
       )}
     </>
   );

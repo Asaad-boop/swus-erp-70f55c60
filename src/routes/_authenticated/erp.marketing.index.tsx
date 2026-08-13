@@ -19,14 +19,18 @@ import {
   Tag,
   Wallet,
   RefreshCcw,
-  CalendarDays,
+  LayoutDashboard,
 } from "lucide-react";
 import { useBrand } from "@/contexts/brand-context";
 import { getMarketingOverview } from "@/lib/erp/marketing/overview.functions";
 import { syncSpendCapToWallet } from "@/lib/erp/marketing/meta.functions";
 import { getMarketingDashboard } from "@/lib/erp/marketing/dashboard.functions";
 import { getAlerts, type MktAlert } from "@/lib/erp/marketing/alerts.functions";
-import { DateRangePicker, buildPreset, type MktRangeValue } from "@/components/erp/marketing/date-range-picker";
+import {
+  DateRangePicker,
+  buildPreset,
+  type MktRangeValue,
+} from "@/components/erp/marketing/date-range-picker";
 import {
   KpiGrid,
   TrendChart,
@@ -34,13 +38,30 @@ import {
   TopProducts,
   TopAds,
 } from "@/components/erp/marketing/dashboard-panels";
+import { BrandTabs, MarketingPageHeader } from "@/components/erp/marketing/marketing-shell";
 
 const searchSchema = z.object({
   brand: fallback(z.string(), "all").default("all"),
 });
 
 export const Route = createFileRoute("/_authenticated/erp/marketing/")({
-  head: () => ({ meta: [{ title: "Marketing Overview — ERP" }] }),
+  head: () => ({
+    meta: [
+      { title: "Marketing Dashboard — Marketing ERP" },
+      {
+        name: "description",
+        content:
+          "Live marketing command centre: today's ad spend, delivered revenue, real ROAS, CPO, open alerts and top campaigns, creatives and products.",
+      },
+      { property: "og:title", content: "Marketing Dashboard — Marketing ERP" },
+      {
+        property: "og:description",
+        content: "Spend, delivered revenue, ROAS and profit for every brand in one view.",
+      },
+      { property: "og:type", content: "website" },
+      { name: "twitter:card", content: "summary" },
+    ],
+  }),
   validateSearch: zodValidator(searchSchema),
   component: MarketingOverview,
 });
@@ -57,15 +78,14 @@ function todayInDhaka(): string {
   return `${get("year")}-${get("month")}-${get("day")}`;
 }
 
-const bdt = (n: number) =>
-  "৳" + Math.round(n).toLocaleString("en-IN");
+const bdt = (n: number) => "৳" + Math.round(n).toLocaleString("en-IN");
 const usd = (n: number) =>
   "$" + n.toLocaleString("en-US", { maximumFractionDigits: 2, minimumFractionDigits: 2 });
 
 function MarketingOverview() {
   const { brand } = Route.useSearch();
   const navigate = useNavigate({ from: Route.fullPath });
-  const { brands, isLoading: brandsLoading } = useBrand();
+  const { brands } = useBrand();
 
   // Resolve URL brand → brandIds for RPC calls
   const selection = useMemo(() => {
@@ -104,7 +124,7 @@ function MarketingOverview() {
   });
 
   const q = useQuery({
-    queryKey: ["mkt-overview", selection.ids.sort().join(","), today],
+    queryKey: ["mkt-overview", selection.ids.slice().sort().join(","), today],
     queryFn: () => fetchOverview({ data: { brandIds: selection.ids, today } }),
     enabled: selection.ids.length > 0,
     staleTime: 60_000,
@@ -122,7 +142,13 @@ function MarketingOverview() {
   const [grain, setGrain] = useState<"day" | "week" | "month">("day");
   const fetchDashboard = useServerFn(getMarketingDashboard);
   const dash = useQuery({
-    queryKey: ["mkt-dashboard", selection.ids.slice().sort().join(","), range.from, range.to, grain],
+    queryKey: [
+      "mkt-dashboard",
+      selection.ids.slice().sort().join(","),
+      range.from,
+      range.to,
+      grain,
+    ],
     queryFn: () =>
       fetchDashboard({ data: { brandIds: selection.ids, from: range.from, to: range.to, grain } }),
     enabled: selection.ids.length > 0,
@@ -131,55 +157,44 @@ function MarketingOverview() {
   });
 
   return (
-    <div className="p-4 md:p-6 max-w-[1400px] mx-auto space-y-4">
-      {/* Header */}
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <div>
-          <h1 className="text-xl md:text-2xl font-semibold tracking-tight">
-            Marketing Dashboard
-          </h1>
-          <p className="text-xs text-muted-foreground mt-0.5">
-            {range.label} · Dhaka time · Data: canonical RPCs
-          </p>
-        </div>
-        <div className="flex items-center gap-2">
-          <BrandTabs
-            active={selection.key}
-            brands={brands}
-            loading={brandsLoading}
-            onChange={setBrand}
-          />
-          <DateRangePicker value={range} onChange={setRange} />
-          <Link to="/erp/marketing/daily" search={{ brand: selection.key }}>
-            <Button size="sm" variant="outline">
-              <CalendarDays className="h-3.5 w-3.5 mr-1.5" />
-              Daily
+    <div className="mx-auto max-w-[1500px] space-y-4 p-4 md:p-6">
+      <MarketingPageHeader
+        icon={LayoutDashboard}
+        title="Marketing Dashboard"
+        subtitle={`${selection.label} · ${range.label} · Dhaka time`}
+        actions={
+          <>
+            <BrandTabs value={selection.key} onChange={setBrand} />
+            <DateRangePicker value={range} onChange={setRange} />
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={() => {
+                q.refetch();
+                dash.refetch();
+              }}
+              disabled={q.isFetching || dash.isFetching}
+            >
+              <RefreshCcw
+                className={`h-3.5 w-3.5 mr-1.5 ${q.isFetching || dash.isFetching ? "animate-spin" : ""}`}
+              />
+              Refresh
             </Button>
-          </Link>
-          <Button
-            size="sm"
-            variant="outline"
-            onClick={() => {
-              q.refetch();
-              dash.refetch();
-            }}
-            disabled={q.isFetching || dash.isFetching}
-          >
-            <RefreshCcw className={`h-3.5 w-3.5 mr-1.5 ${q.isFetching || dash.isFetching ? "animate-spin" : ""}`} />
-            Refresh
-          </Button>
-          <Button
-            size="sm"
-            variant="outline"
-            onClick={() => capMutation.mutate()}
-            disabled={capMutation.isPending}
-            title="Meta Account Spending Limit = amount_spent + USD-on-hand"
-          >
-            <Wallet className={`h-3.5 w-3.5 mr-1.5 ${capMutation.isPending ? "animate-pulse" : ""}`} />
-            Sync spend cap
-          </Button>
-        </div>
-      </div>
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={() => capMutation.mutate()}
+              disabled={capMutation.isPending}
+              title="Meta Account Spending Limit = amount_spent + USD-on-hand"
+            >
+              <Wallet
+                className={`h-3.5 w-3.5 mr-1.5 ${capMutation.isPending ? "animate-pulse" : ""}`}
+              />
+              Sync spend cap
+            </Button>
+          </>
+        }
+      />
 
       {/* Alert strip */}
       <AlertStrip brandIds={selection.ids} />
@@ -193,7 +208,12 @@ function MarketingOverview() {
       {/* Range KPIs */}
       <KpiGrid loading={dash.isLoading} k={dash.data?.kpis} />
 
-      <TrendChart loading={dash.isLoading} rows={dash.data?.trend} grain={grain} onGrain={setGrain} />
+      <TrendChart
+        loading={dash.isLoading}
+        rows={dash.data?.trend}
+        grain={grain}
+        onGrain={setGrain}
+      />
 
       <div className="grid gap-4 lg:grid-cols-2">
         <TopCampaigns loading={dash.isLoading} rows={dash.data?.topCampaigns} />
@@ -231,7 +251,10 @@ function AlertStrip({ brandIds }: { brandIds: string[] }) {
   });
   const rows = ((q.data ?? []) as MktAlert[])
     .slice()
-    .sort((a: MktAlert, b: MktAlert) => (a.severity === "high" ? -1 : 1) - (b.severity === "high" ? -1 : 1));
+    .sort(
+      (a: MktAlert, b: MktAlert) =>
+        (a.severity === "high" ? -1 : 1) - (b.severity === "high" ? -1 : 1),
+    );
   if (q.isLoading || rows.length === 0) return null;
   const high = rows.filter((r: MktAlert) => r.severity === "high").length;
   return (
@@ -244,7 +267,10 @@ function AlertStrip({ brandIds }: { brandIds: string[] }) {
             {high > 0 ? ` · ${high} critical` : ""}
           </p>
           <p className="text-xs text-muted-foreground truncate">
-            {rows.slice(0, 2).map((r: MktAlert) => r.message).join("  ·  ")}
+            {rows
+              .slice(0, 2)
+              .map((r: MktAlert) => r.message)
+              .join("  ·  ")}
           </p>
         </div>
         <Link to="/erp/marketing/alerts">
@@ -254,44 +280,6 @@ function AlertStrip({ brandIds }: { brandIds: string[] }) {
         </Link>
       </CardContent>
     </Card>
-  );
-}
-
-function BrandTabs({
-  active,
-  brands,
-  loading,
-  onChange,
-}: {
-  active: string;
-  brands: { id: string; name: string; slug: string }[];
-  loading: boolean;
-  onChange: (slug: string) => void;
-}) {
-  const items = [{ slug: "all", name: "All" }, ...brands.map((b) => ({ slug: b.slug, name: b.name }))];
-  return (
-    <div className="inline-flex items-center rounded-md border bg-background p-0.5">
-      {loading && brands.length === 0 ? (
-        <Skeleton className="h-7 w-40" />
-      ) : (
-        items.map((it) => {
-          const on = active === it.slug;
-          return (
-            <button
-              key={it.slug}
-              onClick={() => onChange(it.slug)}
-              className={`px-3 h-7 text-xs font-medium rounded transition ${
-                on
-                  ? "bg-primary text-primary-foreground shadow-sm"
-                  : "text-muted-foreground hover:text-foreground"
-              }`}
-            >
-              {it.name}
-            </button>
-          );
-        })
-      )}
-    </div>
   );
 }
 
@@ -368,9 +356,7 @@ function ActionPill({
     <div className={`flex items-center gap-3 rounded-md border px-3 py-2 ${toneClass}`}>
       <div className="shrink-0">{icon}</div>
       <div className="min-w-0">
-        <div className="text-[10px] uppercase tracking-wide opacity-75 leading-tight">
-          {label}
-        </div>
+        <div className="text-[10px] uppercase tracking-wide opacity-75 leading-tight">{label}</div>
         <div className="text-sm font-semibold truncate">{value}</div>
       </div>
     </div>
@@ -395,29 +381,27 @@ function TodayCard({ loading, data }: { loading: boolean; data?: Today }) {
             label="Ad spend"
             icon={<DollarSign className="h-3.5 w-3.5" />}
             value={busy ? undefined : bdt(data.spend_bdt)}
-            hint="get_meta_spend_bdt"
+            hint="all connected ad accounts"
           />
           <Metric
             label="Delivered revenue"
             icon={<DollarSign className="h-3.5 w-3.5" />}
             value={busy ? undefined : bdt(data.revenue_bdt)}
-            hint="get_campaign_profit"
+            hint="delivered orders only"
           />
           <Metric
             label="Real ROAS"
             icon={<Percent className="h-3.5 w-3.5" />}
             value={busy ? undefined : data.roas > 0 ? `${data.roas.toFixed(2)}x` : "—"}
-            tone={data && data.roas >= 1 ? "positive" : data && data.roas > 0 ? "negative" : "neutral"}
+            tone={
+              data && data.roas >= 1 ? "positive" : data && data.roas > 0 ? "negative" : "neutral"
+            }
             hint="revenue ÷ spend"
           />
           <Metric
             label="Orders · CPO"
             icon={<Package className="h-3.5 w-3.5" />}
-            value={
-              busy
-                ? undefined
-                : `${data.orders} · ${data.cpo > 0 ? bdt(data.cpo) : "—"}`
-            }
+            value={busy ? undefined : `${data.orders} · ${data.cpo > 0 ? bdt(data.cpo) : "—"}`}
             hint="delivered orders"
           />
         </div>

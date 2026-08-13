@@ -18,7 +18,13 @@ import {
   buildPreset,
   type MktRangeValue,
 } from "@/components/erp/marketing/date-range-picker";
-import { Panel, ExportMenu, KpiStrip, EmptyState, type Kpi } from "@/components/erp/reports/report-kit";
+import {
+  Panel,
+  ExportMenu,
+  KpiStrip,
+  EmptyState,
+  type Kpi,
+} from "@/components/erp/reports/report-kit";
 import type { Aoa } from "@/lib/erp/reports/export";
 import { getMarketingDashboard } from "@/lib/erp/marketing/dashboard.functions";
 import { getMktLevel } from "@/lib/erp/marketing/campaigns.functions";
@@ -231,7 +237,11 @@ function MarketingReportsPage() {
         { label: "Ad spend", value: k.spend_bdt },
         { label: "Delivered revenue", value: k.delivered_revenue },
         { label: "Delivered ROAS", value: r2(k.delivered_roas), kind: "number" },
-        { label: "Contribution profit", value: k.contribution_profit, tone: k.contribution_profit >= 0 ? "good" : "bad" },
+        {
+          label: "Contribution profit",
+          value: k.contribution_profit,
+          tone: k.contribution_profit >= 0 ? "good" : "bad",
+        },
         { label: "Orders", value: k.orders, kind: "number" },
         { label: "Delivered orders", value: k.delivered_orders, kind: "number" },
         { label: "CAC", value: r2(k.cac) },
@@ -242,7 +252,15 @@ function MarketingReportsPage() {
   const trendAoa: Aoa = useMemo(() => {
     const rows = dashQ.data?.trend ?? [];
     return [
-      ["Period", "Ad spend", "Booked revenue", "Delivered revenue", "Orders", "Delivered orders", "ROAS"],
+      [
+        "Period",
+        "Ad spend",
+        "Booked revenue",
+        "Delivered revenue",
+        "Orders",
+        "Delivered orders",
+        "ROAS",
+      ],
       ...rows.map((r) => [
         r.bucket,
         r2(r.spend_bdt),
@@ -258,7 +276,21 @@ function MarketingReportsPage() {
   const levelAoa: Aoa = useMemo(() => {
     const rows = levelQ.data ?? [];
     return [
-      ["Name","Status","Objective","Spend","Impressions","Clicks","CTR %","CPC","Orders","Delivered orders","Delivered revenue","ROAS","CPA"],
+      [
+        "Name",
+        "Status",
+        "Objective",
+        "Spend",
+        "Impressions",
+        "Clicks",
+        "CTR %",
+        "CPC",
+        "Orders",
+        "Delivered orders",
+        "Delivered revenue",
+        "ROAS",
+        "CPA",
+      ],
       ...rows.map((r) => [
         r.name,
         r.status,
@@ -280,7 +312,22 @@ function MarketingReportsPage() {
   const creativeAoa: Aoa = useMemo(() => {
     const rows = creativeQ.data ?? [];
     return [
-      ["Creative","Type","Angle","Creator","Spend","Impressions","Clicks","CTR %","Frequency","Orders","Delivered revenue","ROAS","CPA","Signal"],
+      [
+        "Creative",
+        "Type",
+        "Angle",
+        "Creator",
+        "Spend",
+        "Impressions",
+        "Clicks",
+        "CTR %",
+        "Frequency",
+        "Orders",
+        "Delivered revenue",
+        "ROAS",
+        "CPA",
+        "Signal",
+      ],
       ...rows.map((r) => [
         r.name,
         r.creative_type ?? "—",
@@ -303,7 +350,22 @@ function MarketingReportsPage() {
   const productAoa: Aoa = useMemo(() => {
     const rows = productQ.data ?? [];
     return [
-      ["Product","SKU","Delivered units","Delivered orders","Delivered revenue","COGS","Operating cost","Gross profit","Ad spend","Net profit","Margin %","ROAS","CPA","AOV"],
+      [
+        "Product",
+        "SKU",
+        "Delivered units",
+        "Delivered orders",
+        "Delivered revenue",
+        "COGS",
+        "Operating cost",
+        "Gross profit",
+        "Ad spend",
+        "Net profit",
+        "Margin %",
+        "ROAS",
+        "CPA",
+        "AOV",
+      ],
       ...rows.map((r) => [
         r.title,
         r.sku ?? "—",
@@ -345,7 +407,15 @@ function MarketingReportsPage() {
   const cohortAoa: Aoa = useMemo(() => {
     const rows = acqQ.data?.cohorts ?? [];
     return [
-      ["Cohort month", "Customers", "Orders", "Revenue", "Repeat customers", "Repeat rate %", "LTV"],
+      [
+        "Cohort month",
+        "Customers",
+        "Orders",
+        "Revenue",
+        "Repeat customers",
+        "Repeat rate %",
+        "LTV",
+      ],
       ...rows.map((r) => [
         String(r.cohort_month).slice(0, 7),
         r.customers,
@@ -361,7 +431,19 @@ function MarketingReportsPage() {
   const utmAoa: Aoa = useMemo(() => {
     const rows = utmQ.data ?? [];
     return [
-      [dim.toUpperCase(),"Sessions","Orders","Confirmed","Delivered","Cancelled","Returned","Booked revenue","Delivered revenue","AOV","Delivery rate %"],
+      [
+        dim.toUpperCase(),
+        "Sessions",
+        "Orders",
+        "Confirmed",
+        "Delivered",
+        "Cancelled",
+        "Returned",
+        "Booked revenue",
+        "Delivered revenue",
+        "AOV",
+        "Delivery rate %",
+      ],
       ...rows.map((r) => [
         r.dim_value || "(none)",
         r.sessions,
@@ -402,7 +484,7 @@ function MarketingReportsPage() {
   }, [funnelQ.data]);
 
   return (
-    <div className="space-y-5 p-4 md:p-6">
+    <div className="mx-auto max-w-[1500px] space-y-4 p-4 md:p-6">
       <div className="flex flex-wrap items-end justify-between gap-3">
         <div className="flex items-center gap-2.5">
           <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-primary/10 text-primary">
@@ -457,9 +539,15 @@ function MarketingReportsPage() {
           action={
             <Tabs value={grain} onValueChange={(v) => setGrain(v as typeof grain)}>
               <TabsList className="h-7">
-                <TabsTrigger value="day" className="h-6 px-2 text-[11px]">Day</TabsTrigger>
-                <TabsTrigger value="week" className="h-6 px-2 text-[11px]">Week</TabsTrigger>
-                <TabsTrigger value="month" className="h-6 px-2 text-[11px]">Month</TabsTrigger>
+                <TabsTrigger value="day" className="h-6 px-2 text-[11px]">
+                  Day
+                </TabsTrigger>
+                <TabsTrigger value="week" className="h-6 px-2 text-[11px]">
+                  Week
+                </TabsTrigger>
+                <TabsTrigger value="month" className="h-6 px-2 text-[11px]">
+                  Month
+                </TabsTrigger>
               </TabsList>
             </Tabs>
           }
@@ -477,9 +565,15 @@ function MarketingReportsPage() {
           action={
             <Tabs value={level} onValueChange={(v) => setLevel(v as typeof level)}>
               <TabsList className="h-7">
-                <TabsTrigger value="campaign" className="h-6 px-2 text-[11px]">Campaign</TabsTrigger>
-                <TabsTrigger value="adset" className="h-6 px-2 text-[11px]">Ad set</TabsTrigger>
-                <TabsTrigger value="ad" className="h-6 px-2 text-[11px]">Ad</TabsTrigger>
+                <TabsTrigger value="campaign" className="h-6 px-2 text-[11px]">
+                  Campaign
+                </TabsTrigger>
+                <TabsTrigger value="adset" className="h-6 px-2 text-[11px]">
+                  Ad set
+                </TabsTrigger>
+                <TabsTrigger value="ad" className="h-6 px-2 text-[11px]">
+                  Ad
+                </TabsTrigger>
               </TabsList>
             </Tabs>
           }

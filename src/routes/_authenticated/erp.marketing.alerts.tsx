@@ -11,6 +11,7 @@ import {
   ShieldAlert,
   Sparkles,
   Undo2,
+  BellRing as PageIcon,
 } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -73,9 +74,12 @@ const sevClass = (s: string) =>
       : "bg-muted text-muted-foreground border-border";
 
 function entityLink(a: MktAlert): { to: string; label: string } | null {
-  if (a.entity_type === "campaign") return { to: "/erp/marketing/campaigns", label: "Open campaigns" };
-  if (a.entity_type === "creative") return { to: "/erp/marketing/creatives", label: "Open creatives" };
-  if (a.entity_type === "product") return { to: "/erp/marketing/products", label: "Open product P&L" };
+  if (a.entity_type === "campaign")
+    return { to: "/erp/marketing/campaigns", label: "Open campaigns" };
+  if (a.entity_type === "creative")
+    return { to: "/erp/marketing/creatives", label: "Open creatives" };
+  if (a.entity_type === "product")
+    return { to: "/erp/marketing/products", label: "Open product P&L" };
   if (a.entity_type === "budget") return { to: "/erp/marketing/planning", label: "Open budgets" };
   return null;
 }
@@ -134,23 +138,28 @@ function AlertsPage() {
 
   const counts = useMemo(() => {
     const c = { high: 0, medium: 0, low: 0 };
-    for (const r of rows) c[r.severity as keyof typeof c] = (c[r.severity as keyof typeof c] ?? 0) + 1;
+    for (const r of rows)
+      c[r.severity as keyof typeof c] = (c[r.severity as keyof typeof c] ?? 0) + 1;
     return c;
   }, [rows]);
 
   const brandName = (id: string | null) => brands.find((b) => b.id === id)?.name ?? "—";
 
   return (
-    <div className="p-4 md:p-6 max-w-[1400px] mx-auto space-y-4">
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <div>
-          <h1 className="text-xl md:text-2xl font-semibold tracking-tight flex items-center gap-2">
-            <BellRing className="h-5 w-5 text-primary" />
-            Marketing Intelligence
-          </h1>
-          <p className="text-xs text-muted-foreground mt-0.5">
-            Rule engine — ROAS, CPA, fatigue, budget, stock ar return signal ek jaygay
-          </p>
+    <div className="mx-auto max-w-[1500px] space-y-4 p-4 md:p-6">
+      <div className="flex flex-wrap items-end justify-between gap-3">
+        <div className="flex min-w-0 items-center gap-2.5">
+          <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-primary/10 text-primary">
+            <PageIcon className="h-4.5 w-4.5" />
+          </span>
+          <div className="min-w-0">
+            <h1 className="font-display text-xl font-bold tracking-tight">
+              Marketing Intelligence
+            </h1>
+            <p className="text-xs text-muted-foreground">
+              Rule engine — ROAS, CPA, fatigue, budget, stock ar return signal ek jaygay
+            </p>
+          </div>
         </div>
         <div className="flex flex-wrap items-center gap-2">
           <Select value={brandKey} onValueChange={setBrandKey}>
@@ -227,9 +236,7 @@ function AlertsPage() {
         <Card>
           <CardContent className="py-10 text-center text-sm text-muted-foreground">
             <CheckCircle2 className="h-6 w-6 mx-auto mb-2 text-emerald-500" />
-            {statusTab === "open"
-              ? "Kono open alert nei — sob rule clear."
-              : "Ei tab-e kichu nei."}
+            {statusTab === "open" ? "Kono open alert nei — sob rule clear." : "Ei tab-e kichu nei."}
           </CardContent>
         </Card>
       ) : (

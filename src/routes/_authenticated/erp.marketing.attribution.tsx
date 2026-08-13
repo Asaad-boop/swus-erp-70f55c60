@@ -3,13 +3,21 @@ import { useMemo, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { toast } from "sonner";
-import { LayoutDashboard, RefreshCcw, Download, Check, X, Filter } from "lucide-react";
+import { RefreshCcw, Download, Check, X, Filter, GitBranch as PageIcon } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
 import { useBrand } from "@/contexts/brand-context";
+import { BrandTabs } from "@/components/erp/marketing/marketing-shell";
 import {
   DateRangePicker,
   buildPreset,
@@ -59,7 +67,7 @@ const DIMS = [
 type Dim = (typeof DIMS)[number]["key"];
 
 function AttributionPage() {
-  const { brands, isLoading: brandsLoading } = useBrand();
+  const { brands } = useBrand();
   const [brandKey, setBrandKey] = useState("all");
   const [range, setRange] = useState<MktRangeValue>(() => buildPreset("30d"));
   const [dim, setDim] = useState<Dim>("source");
@@ -101,7 +109,8 @@ function AttributionPage() {
   });
 
   const resolveMut = useMutation({
-    mutationFn: (v: { candidateId: string; action: "approve" | "reject" }) => resolveFn({ data: v }),
+    mutationFn: (v: { candidateId: string; action: "approve" | "reject" }) =>
+      resolveFn({ data: v }),
     onSuccess: (_d, v) => {
       toast.success(v.action === "approve" ? "Attribution approved" : "Candidate rejected");
       qc.invalidateQueries({ queryKey: ["mkt-attr-queue"] });
@@ -175,33 +184,24 @@ function AttributionPage() {
   const top = steps.length ? Math.max(steps[0].value, 1) : 1;
 
   return (
-    <div className="space-y-6 p-4 md:p-6">
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <div>
-          <h1 className="text-2xl font-semibold tracking-tight">Attribution &amp; Funnel</h1>
-          <p className="text-sm text-muted-foreground">
-            UTM dimensions, landing pages, full funnel drop-off and pending attribution candidates.
-          </p>
+    <div className="mx-auto max-w-[1500px] space-y-4 p-4 md:p-6">
+      <div className="flex flex-wrap items-end justify-between gap-3">
+        <div className="flex min-w-0 items-center gap-2.5">
+          <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-primary/10 text-primary">
+            <PageIcon className="h-4.5 w-4.5" />
+          </span>
+          <div className="min-w-0">
+            <h1 className="font-display text-xl font-bold tracking-tight">
+              Attribution &amp; Funnel
+            </h1>
+            <p className="text-xs text-muted-foreground">
+              UTM dimensions, landing pages, full funnel drop-off and pending attribution
+              candidates.
+            </p>
+          </div>
         </div>
         <div className="flex flex-wrap items-center gap-2">
-          <Button asChild variant="outline" size="sm">
-            <Link to="/erp/marketing">
-              <LayoutDashboard className="mr-1.5 h-4 w-4" /> Overview
-            </Link>
-          </Button>
-          <select
-            className="h-9 rounded-md border bg-background px-2 text-sm"
-            value={brandKey}
-            onChange={(e) => setBrandKey(e.target.value)}
-            disabled={brandsLoading}
-          >
-            <option value="all">All brands</option>
-            {brands.map((b) => (
-              <option key={b.id} value={b.slug ?? b.id}>
-                {b.name}
-              </option>
-            ))}
-          </select>
+          <BrandTabs value={brandKey} onChange={setBrandKey} />
           <DateRangePicker value={range} onChange={setRange} />
           <Button
             variant="outline"
@@ -282,7 +282,13 @@ function AttributionPage() {
                 {d.label}
               </Button>
             ))}
-            <Button size="sm" variant="outline" className="h-7 text-xs" onClick={exportCsv} disabled={!rows.length}>
+            <Button
+              size="sm"
+              variant="outline"
+              className="h-7 text-xs"
+              onClick={exportCsv}
+              disabled={!rows.length}
+            >
               <Download className="mr-1 h-3.5 w-3.5" /> CSV
             </Button>
           </div>
@@ -291,7 +297,9 @@ function AttributionPage() {
           {utmQ.isLoading ? (
             <Skeleton className="h-64 rounded-lg" />
           ) : rows.length === 0 ? (
-            <p className="text-sm text-muted-foreground">No attributed traffic or orders in this range.</p>
+            <p className="text-sm text-muted-foreground">
+              No attributed traffic or orders in this range.
+            </p>
           ) : (
             <div className="max-h-[560px] overflow-auto rounded-lg border">
               <Table>
@@ -311,25 +319,47 @@ function AttributionPage() {
                 <TableBody>
                   {rows.map((r) => (
                     <TableRow key={r.dim_value}>
-                      <TableCell className="max-w-[320px] truncate font-medium">{r.dim_value}</TableCell>
-                      <TableCell className="text-right tabular-nums text-muted-foreground">{num(r.sessions)}</TableCell>
+                      <TableCell className="max-w-[320px] truncate font-medium">
+                        {r.dim_value}
+                      </TableCell>
+                      <TableCell className="text-right tabular-nums text-muted-foreground">
+                        {num(r.sessions)}
+                      </TableCell>
                       <TableCell className="text-right tabular-nums">{num(r.orders)}</TableCell>
-                      <TableCell className="text-right tabular-nums text-muted-foreground">{num(r.confirmed_orders)}</TableCell>
-                      <TableCell className="text-right tabular-nums">{num(r.delivered_orders)}</TableCell>
-                      <TableCell className="text-right tabular-nums">{bdt(r.booked_revenue)}</TableCell>
-                      <TableCell className="text-right tabular-nums font-medium">{bdt(r.delivered_revenue)}</TableCell>
-                      <TableCell className="text-right tabular-nums text-muted-foreground">{bdt(r.aov)}</TableCell>
-                      <TableCell className="text-right tabular-nums">{Number(r.delivery_rate).toFixed(1)}%</TableCell>
+                      <TableCell className="text-right tabular-nums text-muted-foreground">
+                        {num(r.confirmed_orders)}
+                      </TableCell>
+                      <TableCell className="text-right tabular-nums">
+                        {num(r.delivered_orders)}
+                      </TableCell>
+                      <TableCell className="text-right tabular-nums">
+                        {bdt(r.booked_revenue)}
+                      </TableCell>
+                      <TableCell className="text-right tabular-nums font-medium">
+                        {bdt(r.delivered_revenue)}
+                      </TableCell>
+                      <TableCell className="text-right tabular-nums text-muted-foreground">
+                        {bdt(r.aov)}
+                      </TableCell>
+                      <TableCell className="text-right tabular-nums">
+                        {Number(r.delivery_rate).toFixed(1)}%
+                      </TableCell>
                     </TableRow>
                   ))}
                   <TableRow className="bg-muted/40 font-medium">
                     <TableCell>Total</TableCell>
-                    <TableCell className="text-right tabular-nums">{num(totals.sessions)}</TableCell>
+                    <TableCell className="text-right tabular-nums">
+                      {num(totals.sessions)}
+                    </TableCell>
                     <TableCell className="text-right tabular-nums">{num(totals.orders)}</TableCell>
                     <TableCell />
-                    <TableCell className="text-right tabular-nums">{num(totals.delivered)}</TableCell>
+                    <TableCell className="text-right tabular-nums">
+                      {num(totals.delivered)}
+                    </TableCell>
                     <TableCell className="text-right tabular-nums">{bdt(totals.booked)}</TableCell>
-                    <TableCell className="text-right tabular-nums">{bdt(totals.deliveredRev)}</TableCell>
+                    <TableCell className="text-right tabular-nums">
+                      {bdt(totals.deliveredRev)}
+                    </TableCell>
                     <TableCell />
                     <TableCell />
                   </TableRow>
@@ -346,7 +376,9 @@ function AttributionPage() {
           <CardTitle className="text-base">
             Pending attribution candidates
             {queueQ.data?.length ? (
-              <Badge variant="secondary" className="ml-2">{queueQ.data.length}</Badge>
+              <Badge variant="secondary" className="ml-2">
+                {queueQ.data.length}
+              </Badge>
             ) : null}
           </CardTitle>
         </CardHeader>
@@ -354,7 +386,9 @@ function AttributionPage() {
           {queueQ.isLoading ? (
             <Skeleton className="h-40 rounded-lg" />
           ) : (queueQ.data ?? []).length === 0 ? (
-            <p className="text-sm text-muted-foreground">Queue clear — every order is attributed.</p>
+            <p className="text-sm text-muted-foreground">
+              Queue clear — every order is attributed.
+            </p>
           ) : (
             <div className="max-h-[420px] overflow-auto rounded-lg border">
               <Table>
@@ -384,10 +418,16 @@ function AttributionPage() {
                         </div>
                       </TableCell>
                       <TableCell className="max-w-[260px] truncate">
-                        {c.suggested_campaign_name ?? <span className="text-muted-foreground">None</span>}
+                        {c.suggested_campaign_name ?? (
+                          <span className="text-muted-foreground">None</span>
+                        )}
                       </TableCell>
-                      <TableCell className="text-xs text-muted-foreground">{c.source ?? "—"}</TableCell>
-                      <TableCell className="text-right tabular-nums">{bdt(c.order_total)}</TableCell>
+                      <TableCell className="text-xs text-muted-foreground">
+                        {c.source ?? "—"}
+                      </TableCell>
+                      <TableCell className="text-right tabular-nums">
+                        {bdt(c.order_total)}
+                      </TableCell>
                       <TableCell className="text-right tabular-nums">
                         {c.confidence != null ? Number(c.confidence).toFixed(2) : "—"}
                       </TableCell>
@@ -398,7 +438,9 @@ function AttributionPage() {
                             variant="outline"
                             className="h-7 px-2"
                             disabled={!c.suggested_campaign_id || resolveMut.isPending}
-                            onClick={() => resolveMut.mutate({ candidateId: c.id, action: "approve" })}
+                            onClick={() =>
+                              resolveMut.mutate({ candidateId: c.id, action: "approve" })
+                            }
                           >
                             <Check className="h-3.5 w-3.5" />
                           </Button>
@@ -407,7 +449,9 @@ function AttributionPage() {
                             variant="ghost"
                             className="h-7 px-2"
                             disabled={resolveMut.isPending}
-                            onClick={() => resolveMut.mutate({ candidateId: c.id, action: "reject" })}
+                            onClick={() =>
+                              resolveMut.mutate({ candidateId: c.id, action: "reject" })
+                            }
                           >
                             <X className="h-3.5 w-3.5" />
                           </Button>
