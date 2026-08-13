@@ -688,13 +688,37 @@ function ProductPipelinePage() {
                 onChange={(e) => setDraft({ ...draft, description: e.target.value })}
               />
             </Field>
-            <Field label="Image URL">
+            <Field label="Main image URL">
               <Input
                 value={draft.image_url}
                 onChange={(e) => setDraft({ ...draft, image_url: e.target.value })}
                 placeholder="https://..."
               />
             </Field>
+            <Field label="More images (এক লাইনে একটা URL)">
+              <Textarea
+                rows={3}
+                value={draft.images}
+                onChange={(e) => setDraft({ ...draft, images: e.target.value })}
+                placeholder={"https://...jpg\nhttps://...jpg"}
+              />
+            </Field>
+            <div className="grid grid-cols-2 gap-3">
+              <Field label="Target price min (৳)">
+                <Input
+                  type="number"
+                  value={draft.target_price_min}
+                  onChange={(e) => setDraft({ ...draft, target_price_min: e.target.value })}
+                />
+              </Field>
+              <Field label="Target price max (৳)">
+                <Input
+                  type="number"
+                  value={draft.target_price_max}
+                  onChange={(e) => setDraft({ ...draft, target_price_max: e.target.value })}
+                />
+              </Field>
+            </div>
             <Field label="Source / product link">
               <Input
                 value={draft.source_url}
