@@ -112,6 +112,34 @@ const emptyDraft = (): Draft => ({
   notes: "",
 });
 
+const STATUS_STYLE: Record<string, string> = {
+  idea: "bg-background/90 text-muted-foreground",
+  voting: "bg-indigo-500/90 text-white",
+  approved: "bg-emerald-500/90 text-white",
+  sourcing: "bg-amber-500/90 text-white",
+  ordered: "bg-sky-500/90 text-white",
+  launched: "bg-violet-500/90 text-white",
+  rejected: "bg-destructive/90 text-destructive-foreground",
+};
+
+const unusedDraft = (): Draft => ({
+  title: "",
+  description: "",
+  image_url: "",
+  images: "",
+  source_url: "",
+  supplier_name: "",
+  supplier_url: "",
+  category: "",
+  est_unit_cost: "",
+  est_sell_price: "",
+  target_price_min: "",
+  target_price_max: "",
+  moq: "",
+  status: "voting",
+  notes: "",
+});
+
 type FDraft = {
   monthly_units: string;
   sell_price: string;
