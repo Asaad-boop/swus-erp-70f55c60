@@ -197,27 +197,7 @@ function PlanningPage() {
           </p>
         </div>
         <div className="flex flex-wrap items-center gap-2">
-          <div className="inline-flex items-center rounded-md border bg-background p-0.5">
-            {brandsLoading && brands.length === 0 ? (
-              <Skeleton className="h-7 w-40" />
-            ) : (
-              [{ slug: "all", name: "All" }, ...brands.map((b) => ({ slug: b.slug, name: b.name }))].map(
-                (it) => (
-                  <button
-                    key={it.slug}
-                    onClick={() => setBrandKey(it.slug)}
-                    className={`px-3 h-7 text-xs font-medium rounded transition ${
-                      brandKey === it.slug
-                        ? "bg-primary text-primary-foreground shadow-sm"
-                        : "text-muted-foreground hover:text-foreground"
-                    }`}
-                  >
-                    {it.name}
-                  </button>
-                ),
-              )
-            )}
-          </div>
+          <BrandTabs value={brandKey} onChange={setBrandKey} />
           <DateRangePicker value={range} onChange={setRange} />
           <Link to="/erp/marketing">
             <Button size="sm" variant="outline">
