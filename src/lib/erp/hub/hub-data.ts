@@ -332,9 +332,12 @@ export async function fetchAssignments(planIds: string[]) {
 }
 
 export async function fetchProductOptions(brandIds: string[]) {
-  let q = supabase.from("products").select("id,name").order("name").limit(500);
+  let q = supabase.from("products").select("id,title").order("title").limit(500);
   if (brandIds.length === 1) q = q.eq("brand_id", brandIds[0]);
   const { data, error } = await q;
   if (error) throw error;
-  return (data ?? []) as { id: string; name: string }[];
+  return ((data ?? []) as { id: string; title: string }[]).map((p) => ({
+    id: p.id,
+    name: p.title,
+  }));
 }
