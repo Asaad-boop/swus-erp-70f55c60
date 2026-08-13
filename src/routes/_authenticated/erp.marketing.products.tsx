@@ -10,8 +10,7 @@ import {
   Users,
   Repeat,
   Wallet,
-  TrendingUp,
-} from "lucide-react";
+  TrendingUp,, PackagePlus as PageIcon } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -143,12 +142,6 @@ function ProductMarketingPage() {
         <div className="flex flex-wrap items-center gap-2">
           <BrandTabs value={brandKey} onChange={setBrandKey} />
           <DateRangePicker value={range} onChange={setRange} />
-          <Link to="/erp/marketing" search={{ brand: brandKey }}>
-            <Button size="sm" variant="outline">
-              <LayoutDashboard className="h-3.5 w-3.5 mr-1.5" />
-              Dashboard
-            </Button>
-          </Link>
           <Button size="sm" variant="outline" onClick={exportCsv} disabled={rows.length === 0}>
             <Download className="h-3.5 w-3.5 mr-1.5" />
             CSV

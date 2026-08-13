@@ -12,8 +12,7 @@ import {
   AlertTriangle,
   TrendingUp,
   ArrowLeft,
-  Loader2,
-} from "lucide-react";
+  Loader2,, BarChart3 as PageIcon } from "lucide-react";
 import {
   ResponsiveContainer,
   LineChart,
@@ -180,7 +179,7 @@ function DailyPerformancePage() {
   }
 
   return (
-    <div className="p-4 md:p-6 max-w-7xl mx-auto space-y-4">
+    <div className="mx-auto max-w-[1500px] space-y-4 p-4 md:p-6">
       {/* Header */}
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div className="flex items-center gap-2">

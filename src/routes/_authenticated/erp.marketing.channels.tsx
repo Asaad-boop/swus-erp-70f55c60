@@ -3,7 +3,7 @@ import { useMemo, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { toast } from "sonner";
-import { Plug, Plus, Trash2, Upload } from "lucide-react";
+import { Plug, Plus, Trash2, Upload, Plug as PageIcon } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -147,7 +147,7 @@ function ChannelsPage() {
   });
 
   return (
-    <div className="space-y-6 p-4 md:p-6">
+    <div className="mx-auto max-w-[1500px] space-y-4 p-4 md:p-6">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
           <h1 className="text-xl font-semibold tracking-tight">Ad Channels</h1>

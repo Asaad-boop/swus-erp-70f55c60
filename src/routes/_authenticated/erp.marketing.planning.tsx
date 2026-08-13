@@ -13,8 +13,7 @@ import {
   CalendarDays,
   FlaskConical,
   ChevronLeft,
-  ChevronRight,
-} from "lucide-react";
+  ChevronRight,, CalendarClock as PageIcon } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -199,12 +198,6 @@ function PlanningPage() {
         <div className="flex flex-wrap items-center gap-2">
           <BrandTabs value={brandKey} onChange={setBrandKey} />
           <DateRangePicker value={range} onChange={setRange} />
-          <Link to="/erp/marketing">
-            <Button size="sm" variant="outline">
-              <LayoutDashboard className="h-3.5 w-3.5 mr-1.5" />
-              Dashboard
-            </Button>
-          </Link>
           <Button
             size="sm"
             variant="outline"

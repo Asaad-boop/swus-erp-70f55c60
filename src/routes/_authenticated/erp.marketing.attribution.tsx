@@ -3,7 +3,7 @@ import { useMemo, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { toast } from "sonner";
-import { LayoutDashboard, RefreshCcw, Download, Check, X, Filter } from "lucide-react";
+import { LayoutDashboard, RefreshCcw, Download, Check, X, Filter, GitBranch as PageIcon } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -175,7 +175,7 @@ function AttributionPage() {
   const top = steps.length ? Math.max(steps[0].value, 1) : 1;
 
   return (
-    <div className="space-y-6 p-4 md:p-6">
+    <div className="mx-auto max-w-[1500px] space-y-4 p-4 md:p-6">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
           <h1 className="text-2xl font-semibold tracking-tight">Attribution &amp; Funnel</h1>
@@ -184,11 +184,6 @@ function AttributionPage() {
           </p>
         </div>
         <div className="flex flex-wrap items-center gap-2">
-          <Button asChild variant="outline" size="sm">
-            <Link to="/erp/marketing">
-              <LayoutDashboard className="mr-1.5 h-4 w-4" /> Overview
-            </Link>
-          </Button>
           <select
             className="h-9 rounded-md border bg-background px-2 text-sm"
             value={brandKey}
