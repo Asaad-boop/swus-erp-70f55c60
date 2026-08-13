@@ -147,10 +147,7 @@ function AlertsPage() {
             <PageIcon className="h-4.5 w-4.5" />
           </span>
           <div className="min-w-0">
-            <h1 className="font-display text-xl font-bold tracking-tight">
-            <BellRing className="h-5 w-5 text-primary" />
-            Marketing Intelligence
-          </h1>
+            <h1 className="font-display text-xl font-bold tracking-tight">Marketing Intelligence</h1>
           <p className="text-xs text-muted-foreground">
             Rule engine — ROAS, CPA, fatigue, budget, stock ar return signal ek jaygay
           </p>
