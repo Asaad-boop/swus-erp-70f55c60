@@ -10,6 +10,7 @@ import {
   Star,
   Copy,
   KeyRound,
+  Download,
   Search,
   ImageOff,
 } from "lucide-react";
@@ -258,7 +259,7 @@ function RivalsPage() {
 
   const origin = typeof window === "undefined" ? "" : window.location.origin;
   const bookmarklet = newToken
-    ? `javascript:(function(){var k=prompt('Type: idea / competitor','competitor');if(!k)return;var i=document.querySelector('meta[property="og:image"]');fetch('${origin}/api/public/hub/capture',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({token:'${newToken}',kind:k,title:document.title,url:location.href,image_url:i&&i.content,note:(window.getSelection()+'')||null})}).then(function(r){return r.json()}).then(function(d){alert(d.ok?'Saved to Growth Hub ✅':'Failed: '+(d.error||''))}).catch(function(e){alert('Failed: '+e)})})();`
+    ? `javascript:(function(){var k=prompt('Type: idea / swipe / competitor','swipe');if(!k)return;var i=document.querySelector('meta[property="og:image"]');fetch('${origin}/api/public/hub/capture',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({token:'${newToken}',kind:k,title:document.title,url:location.href,image_url:i&&i.content,note:(window.getSelection()+'')||null})}).then(function(r){return r.json()}).then(function(d){alert(d.ok?'Saved to Growth Hub ✅':'Failed: '+(d.error||''))}).catch(function(e){alert('Failed: '+e)})})();`
     : "";
 
   return (
