@@ -11,10 +11,17 @@ import {
   Pencil,
   Calculator,
   ExternalLink,
+  Heart,
+  CheckCircle2,
+  XCircle,
+  PackageSearch,
 } from "lucide-react";
+import { Link } from "@tanstack/react-router";
 import { supabase } from "@/integrations/supabase/client";
 import { useBrand } from "@/contexts/brand-context";
+import { useCurrentRole } from "@/hooks/use-current-role";
 import { HubPageHeader } from "@/components/erp/hub/hub-shell";
+import { IdeaGallery, StarRating } from "@/components/erp/hub/idea-visuals";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -73,12 +80,15 @@ type Draft = {
   title: string;
   description: string;
   image_url: string;
+  images: string;
   source_url: string;
   supplier_name: string;
   supplier_url: string;
   category: string;
   est_unit_cost: string;
   est_sell_price: string;
+  target_price_min: string;
+  target_price_max: string;
   moq: string;
   status: string;
   notes: string;
@@ -88,12 +98,15 @@ const emptyDraft = (): Draft => ({
   title: "",
   description: "",
   image_url: "",
+  images: "",
   source_url: "",
   supplier_name: "",
   supplier_url: "",
   category: "",
   est_unit_cost: "",
   est_sell_price: "",
+  target_price_min: "",
+  target_price_max: "",
   moq: "",
   status: "voting",
   notes: "",
