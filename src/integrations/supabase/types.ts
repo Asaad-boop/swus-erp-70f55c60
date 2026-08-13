@@ -5094,6 +5094,7 @@ export type Database = {
           last_insights_sync_at: string | null
           last_structure_sync_at: string | null
           name: string
+          platform: string
           status: Database["public"]["Enums"]["mkt_account_status"]
           timezone: string | null
           updated_at: string
@@ -5115,6 +5116,7 @@ export type Database = {
           last_insights_sync_at?: string | null
           last_structure_sync_at?: string | null
           name: string
+          platform?: string
           status?: Database["public"]["Enums"]["mkt_account_status"]
           timezone?: string | null
           updated_at?: string
@@ -5136,6 +5138,7 @@ export type Database = {
           last_insights_sync_at?: string | null
           last_structure_sync_at?: string | null
           name?: string
+          platform?: string
           status?: Database["public"]["Enums"]["mkt_account_status"]
           timezone?: string | null
           updated_at?: string
