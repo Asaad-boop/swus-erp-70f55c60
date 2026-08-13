@@ -13,6 +13,8 @@ import {
   ListChecks,
   Lightbulb,
   Clapperboard,
+  Repeat,
+  Swords,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useGlobalSearch } from "@/components/erp/global-search";
