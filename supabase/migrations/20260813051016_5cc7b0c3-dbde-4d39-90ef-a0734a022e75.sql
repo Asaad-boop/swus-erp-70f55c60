@@ -1,0 +1,1 @@
+GRANT EXECUTE ON FUNCTION public.mkt_hierarchy_perf(uuid[], date, date, text, uuid) TO supabase_read_only_user;
