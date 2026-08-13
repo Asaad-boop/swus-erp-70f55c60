@@ -5508,6 +5508,73 @@ export type Database = {
           },
         ]
       }
+      mkt_creative_meta: {
+        Row: {
+          angle: string | null
+          brand_id: string | null
+          created_at: string
+          creative_key: string
+          creative_type: string | null
+          creator: string | null
+          hook: string | null
+          id: string
+          notes: string | null
+          product_id: string | null
+          status: string | null
+          updated_at: string
+        }
+        Insert: {
+          angle?: string | null
+          brand_id?: string | null
+          created_at?: string
+          creative_key: string
+          creative_type?: string | null
+          creator?: string | null
+          hook?: string | null
+          id?: string
+          notes?: string | null
+          product_id?: string | null
+          status?: string | null
+          updated_at?: string
+        }
+        Update: {
+          angle?: string | null
+          brand_id?: string | null
+          created_at?: string
+          creative_key?: string
+          creative_type?: string | null
+          creator?: string | null
+          hook?: string | null
+          id?: string
+          notes?: string | null
+          product_id?: string | null
+          status?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "mkt_creative_meta_brand_id_fkey"
+            columns: ["brand_id"]
+            isOneToOne: false
+            referencedRelation: "brands"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "mkt_creative_meta_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "products"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "mkt_creative_meta_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "v_combo_summary"
+            referencedColumns: ["combo_product_id"]
+          },
+        ]
+      }
       mkt_insights_daily: {
         Row: {
           account_id: string
@@ -9241,6 +9308,10 @@ export type Database = {
           returned_orders: number
           total_orders: number
         }[]
+      }
+      mkt_creative_perf: {
+        Args: { _brand_ids: string[]; _from: string; _to: string }
+        Returns: Json
       }
       mkt_dashboard_kpis: {
         Args: { _brand_ids: string[]; _from: string; _to: string }
