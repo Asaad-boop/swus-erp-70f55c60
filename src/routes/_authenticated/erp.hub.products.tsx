@@ -194,12 +194,18 @@ function ProductPipelinePage() {
         title: d.title.trim(),
         description: d.description.trim() || null,
         image_url: d.image_url.trim() || null,
+        images: d.images
+          .split(/[\n,]/)
+          .map((s) => s.trim())
+          .filter(Boolean),
         source_url: d.source_url.trim() || null,
         supplier_name: d.supplier_name.trim() || null,
         supplier_url: d.supplier_url.trim() || null,
         category: d.category.trim() || null,
         est_unit_cost: Number(d.est_unit_cost || 0),
         est_sell_price: Number(d.est_sell_price || 0),
+        target_price_min: d.target_price_min ? Number(d.target_price_min) : null,
+        target_price_max: d.target_price_max ? Number(d.target_price_max) : null,
         moq: d.moq ? Number(d.moq) : null,
         status: d.status,
         notes: d.notes.trim() || null,
@@ -247,21 +253,71 @@ function ProductPipelinePage() {
       const uid = auth.user?.id;
       if (!uid) throw new Error("Not signed in");
       const existing = votesQ.data?.get(ideaId);
-      if (existing && existing.vote === value) {
+      if (existing && existing.vote === value && existing.rating == null) {
         const { error } = await supabase.from("hub_idea_votes").delete().eq("id", existing.id);
         if (error) throw error;
         return;
       }
       const { error } = await supabase
         .from("hub_idea_votes")
-        .upsert({ idea_id: ideaId, user_id: uid, vote: value } as never, {
-          onConflict: "idea_id,user_id",
-        });
+        .upsert(
+          {
+            idea_id: ideaId,
+            user_id: uid,
+            vote: existing && existing.vote === value ? 0 : value,
+            rating: existing?.rating ?? null,
+          } as never,
+          { onConflict: "idea_id,user_id" },
+        );
       if (error) throw error;
     },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["hub-my-votes"] });
       qc.invalidateQueries({ queryKey: ["hub-idea-summary"] });
+    },
+    onError: (e: Error) => toast.error(e.message),
+  });
+
+  const rate = useMutation({
+    mutationFn: async ({ ideaId, rating }: { ideaId: string; rating: number }) => {
+      const { data: auth } = await supabase.auth.getUser();
+      const uid = auth.user?.id;
+      if (!uid) throw new Error("Not signed in");
+      const existing = votesQ.data?.get(ideaId);
+      const { error } = await supabase.from("hub_idea_votes").upsert(
+        {
+          idea_id: ideaId,
+          user_id: uid,
+          vote: existing?.vote ?? 0,
+          rating: existing?.rating === rating ? null : rating,
+        } as never,
+        { onConflict: "idea_id,user_id" },
+      );
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["hub-my-votes"] });
+      qc.invalidateQueries({ queryKey: ["hub-idea-summary"] });
+    },
+    onError: (e: Error) => toast.error(e.message),
+  });
+
+  const decide = useMutation({
+    mutationFn: async ({ id, approve }: { id: string; approve: boolean }) => {
+      const { data: auth } = await supabase.auth.getUser();
+      const { error } = await supabase
+        .from("hub_product_ideas")
+        .update({
+          status: approve ? "approved" : "rejected",
+          approved_by: approve ? (auth.user?.id ?? null) : null,
+          approved_at: approve ? new Date().toISOString() : null,
+        } as never)
+        .eq("id", id);
+      if (error) throw error;
+    },
+    onSuccess: (_d, v) => {
+      toast.success(v.approve ? "Approved — Sourcing-এ পাঠানো হলো" : "Rejected");
+      invalidate();
     },
     onError: (e: Error) => toast.error(e.message),
   });
