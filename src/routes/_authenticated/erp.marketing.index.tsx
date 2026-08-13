@@ -19,7 +19,7 @@ import {
   Tag,
   Wallet,
   RefreshCcw,
-  CalendarDays,
+  LayoutDashboard,
 } from "lucide-react";
 import { useBrand } from "@/contexts/brand-context";
 import { getMarketingOverview } from "@/lib/erp/marketing/overview.functions";
@@ -34,13 +34,30 @@ import {
   TopProducts,
   TopAds,
 } from "@/components/erp/marketing/dashboard-panels";
+import { BrandTabs, MarketingPageHeader } from "@/components/erp/marketing/marketing-shell";
 
 const searchSchema = z.object({
   brand: fallback(z.string(), "all").default("all"),
 });
 
 export const Route = createFileRoute("/_authenticated/erp/marketing/")({
-  head: () => ({ meta: [{ title: "Marketing Overview — ERP" }] }),
+  head: () => ({
+    meta: [
+      { title: "Marketing Dashboard — Marketing ERP" },
+      {
+        name: "description",
+        content:
+          "Live marketing command centre: today's ad spend, delivered revenue, real ROAS, CPO, open alerts and top campaigns, creatives and products.",
+      },
+      { property: "og:title", content: "Marketing Dashboard — Marketing ERP" },
+      {
+        property: "og:description",
+        content: "Spend, delivered revenue, ROAS and profit for every brand in one view.",
+      },
+      { property: "og:type", content: "website" },
+      { name: "twitter:card", content: "summary" },
+    ],
+  }),
   validateSearch: zodValidator(searchSchema),
   component: MarketingOverview,
 });
@@ -65,7 +82,7 @@ const usd = (n: number) =>
 function MarketingOverview() {
   const { brand } = Route.useSearch();
   const navigate = useNavigate({ from: Route.fullPath });
-  const { brands, isLoading: brandsLoading } = useBrand();
+  const { brands } = useBrand();
 
   // Resolve URL brand → brandIds for RPC calls
   const selection = useMemo(() => {
@@ -104,7 +121,7 @@ function MarketingOverview() {
   });
 
   const q = useQuery({
-    queryKey: ["mkt-overview", selection.ids.sort().join(","), today],
+    queryKey: ["mkt-overview", selection.ids.slice().sort().join(","), today],
     queryFn: () => fetchOverview({ data: { brandIds: selection.ids, today } }),
     enabled: selection.ids.length > 0,
     staleTime: 60_000,
@@ -131,55 +148,40 @@ function MarketingOverview() {
   });
 
   return (
-    <div className="p-4 md:p-6 max-w-[1400px] mx-auto space-y-4">
-      {/* Header */}
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <div>
-          <h1 className="text-xl md:text-2xl font-semibold tracking-tight">
-            Marketing Dashboard
-          </h1>
-          <p className="text-xs text-muted-foreground mt-0.5">
-            {range.label} · Dhaka time · Data: canonical RPCs
-          </p>
-        </div>
-        <div className="flex items-center gap-2">
-          <BrandTabs
-            active={selection.key}
-            brands={brands}
-            loading={brandsLoading}
-            onChange={setBrand}
-          />
-          <DateRangePicker value={range} onChange={setRange} />
-          <Link to="/erp/marketing/daily" search={{ brand: selection.key }}>
-            <Button size="sm" variant="outline">
-              <CalendarDays className="h-3.5 w-3.5 mr-1.5" />
-              Daily
+    <div className="mx-auto max-w-[1500px] space-y-4 p-4 md:p-6">
+      <MarketingPageHeader
+        icon={LayoutDashboard}
+        title="Marketing Dashboard"
+        subtitle={`${selection.label} · ${range.label} · Dhaka time`}
+        actions={
+          <>
+            <BrandTabs value={selection.key} onChange={setBrand} />
+            <DateRangePicker value={range} onChange={setRange} />
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={() => {
+                q.refetch();
+                dash.refetch();
+              }}
+              disabled={q.isFetching || dash.isFetching}
+            >
+              <RefreshCcw className={`h-3.5 w-3.5 mr-1.5 ${q.isFetching || dash.isFetching ? "animate-spin" : ""}`} />
+              Refresh
             </Button>
-          </Link>
-          <Button
-            size="sm"
-            variant="outline"
-            onClick={() => {
-              q.refetch();
-              dash.refetch();
-            }}
-            disabled={q.isFetching || dash.isFetching}
-          >
-            <RefreshCcw className={`h-3.5 w-3.5 mr-1.5 ${q.isFetching || dash.isFetching ? "animate-spin" : ""}`} />
-            Refresh
-          </Button>
-          <Button
-            size="sm"
-            variant="outline"
-            onClick={() => capMutation.mutate()}
-            disabled={capMutation.isPending}
-            title="Meta Account Spending Limit = amount_spent + USD-on-hand"
-          >
-            <Wallet className={`h-3.5 w-3.5 mr-1.5 ${capMutation.isPending ? "animate-pulse" : ""}`} />
-            Sync spend cap
-          </Button>
-        </div>
-      </div>
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={() => capMutation.mutate()}
+              disabled={capMutation.isPending}
+              title="Meta Account Spending Limit = amount_spent + USD-on-hand"
+            >
+              <Wallet className={`h-3.5 w-3.5 mr-1.5 ${capMutation.isPending ? "animate-pulse" : ""}`} />
+              Sync spend cap
+            </Button>
+          </>
+        }
+      />
 
       {/* Alert strip */}
       <AlertStrip brandIds={selection.ids} />
