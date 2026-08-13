@@ -7,6 +7,7 @@ import {
   Activity, BarChart3, RotateCcw, FileSpreadsheet, Zap, Briefcase, Stethoscope, ChevronDown,
   Star, Filter, X, Receipt, BookOpen, Landmark, Coins, ArrowDownCircle, ArrowUpCircle, HandCoins, Scale,
   FileBarChart, Target, Banknote, Building2, Search, PackageCheck, ShieldCheck, CheckCircle2, Clock, LayoutGrid,
+  CalendarClock,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useGlobalSearch } from "@/components/erp/global-search";
@@ -128,6 +129,7 @@ const groups: Group[] = [
           { to: "/erp/marketing/creatives", label: "Creative Library", icon: ImageIcon },
           { to: "/erp/marketing/attribution", label: "Attribution & Funnel", icon: GitBranch },
           { to: "/erp/marketing/products", label: "Product & LTV", icon: PackagePlus },
+          { to: "/erp/marketing/planning", label: "Budgets & Calendar", icon: CalendarClock },
           { to: "/erp/marketing/daily", label: "Daily Performance", icon: BarChart3 },
         ],
       },
