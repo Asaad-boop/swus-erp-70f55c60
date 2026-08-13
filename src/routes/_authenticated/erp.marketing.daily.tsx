@@ -1,4 +1,4 @@
-import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
+import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useMemo, useState } from "react";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
@@ -11,7 +11,6 @@ import {
   Plus,
   AlertTriangle,
   TrendingUp,
-  ArrowLeft,
   Loader2,
   BarChart3 as PageIcon,
 } from "lucide-react";

@@ -1,4 +1,4 @@
-import { createFileRoute, Link } from "@tanstack/react-router";
+import { createFileRoute } from "@tanstack/react-router";
 import { useMemo, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
@@ -8,7 +8,6 @@ import {
   ChevronDown,
   RefreshCcw,
   Target,
-  LayoutDashboard,
   Search,
   AlertTriangle,
   Target as PageIcon,
