@@ -74,6 +74,7 @@ const PATH_RULES: { test: (p: string) => boolean; module: Module }[] = [
   { test: (p) => p.startsWith("/erp/suppliers") || p.startsWith("/erp/imports"), module: "supply" },
   { test: (p) => p.startsWith("/erp/finance"), module: "finance" },
   { test: (p) => p.startsWith("/erp/marketing"), module: "marketing" },
+  { test: (p) => p.startsWith("/erp/hub"), module: "marketing" },
   { test: (p) => p.startsWith("/erp/crm"), module: "crm" },
   { test: (p) => p.startsWith("/erp/analytics"), module: "analytics" },
   { test: (p) => p.startsWith("/erp/users"), module: "customer_accounts" },
