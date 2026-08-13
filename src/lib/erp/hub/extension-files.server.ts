@@ -445,18 +445,18 @@ async function init() {
   });
 
   document.querySelectorAll('.tab').forEach((t) => (t.onclick = () => setKind(t.dataset.kind)));
-  setKind('idea');
+  setKind(page.is_page ? 'competitor' : (page.is_product || page.platform === 'supplier' || page.platform === 'marketplace') ? 'idea' : 'swipe');
 
   try {
     const meta = await api({ action: 'meta' });
     const b = $('brand');
-    b.innerHTML = '<option value="">(brand ছাড়া)</option>';
+    b.innerHTML = '';
     (meta.brands || []).forEach((x) => {
       const o = document.createElement('option');
       o.value = x.id; o.textContent = x.name;
       b.appendChild(o);
     });
-    b.value = cfg.brandId || meta.default_brand_id || '';
+    b.value = cfg.brandId || meta.default_brand_id || ((meta.brands || [])[0] || {}).id || '';
     b.onchange = () => chrome.storage.sync.set({ brandId: b.value });
 
     const c = $('competitor');
@@ -480,20 +480,28 @@ async function save() {
   $('msg').textContent = 'সেভ হচ্ছে…';
   $('msg').className = 'msg';
   const tags = $('tags').value.split(',').map((s) => s.trim()).filter(Boolean);
+  const extra = [];
+  if (page.sku) extra.push('SKU: ' + page.sku);
+  if (page.currency && page.price) extra.push('Listed: ' + page.price + ' ' + page.currency);
+  (page.variants || []).forEach((v) => extra.push(v.name + ': ' + v.values.join(', ')));
+  if (page.followers) extra.push('Followers: ' + page.followers);
+  if (page.handle) extra.push('Handle: ' + page.handle);
+  const noteFull = [$('note').value.trim(), extra.join(' | ')].filter(Boolean).join('\\n');
   const body = {
     kind: kind,
     brand_id: $('brand').value || null,
+    name: $('title').value.trim(),
     title: $('title').value.trim(),
     url: page.url,
     image_url: chosen,
-    images: (page.images || []).slice(0, 6),
-    note: $('note').value.trim() || null,
+    images: (page.images || []).slice(0, 8),
+    note: noteFull || null,
     price: $('price').value ? Number($('price').value) : null,
     tags: tags,
     platform: page.platform,
     asset_type: $('assetType').value,
     competitor_id: $('competitor').value || null,
-    competitor_name: page.siteName || page.host,
+    competitor_name: page.handle || page.siteName || page.host,
     competitor_url: page.url
   };
   try {
@@ -749,6 +757,9 @@ Server: ${origin}
 - যেকোনো product page-এ আইকনে ক্লিক → **Idea** → সেভ → Product Pipeline-এ চলে আসবে (vote/rating সহ)।
 - Facebook / Instagram / TikTok ad বা ভালো লাগা content-এ → **Swipe** → Rivals-এর Swipe file-এ সেভ হবে, rival page auto তৈরি হবে।
 - কোনো rival-এর page-এ → **Rival** → Competitor registry-তে যোগ হবে।
+- যেকোনো পেজের ডানপাশে ছোট **🔖 clip** আইকন — ক্লিক করলেই brand সিলেক্ট করে সরাসরি সেভ (Product / Content / Page)।
+- Instagram / Facebook / TikTok profile-এ থাকলে **Page** মোড auto সিলেক্ট হয় (handle + follower সহ)।
+- Product page-এ JSON-LD থেকে দাম, currency, SKU ও color/size variant অটো ধরে।
 - Right-click মেনু থেকেও ছবি/লিংক/selected text এক ক্লিকে সেভ করা যায়।
 `;
 
