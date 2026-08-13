@@ -181,31 +181,20 @@ function DailyPerformancePage() {
   return (
     <div className="mx-auto max-w-[1500px] space-y-4 p-4 md:p-6">
       {/* Header */}
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <div className="flex items-center gap-2">
-          <Link
-            to="/erp/marketing"
-            className="text-muted-foreground hover:text-foreground"
-            aria-label="Back to overview"
-          >
-            <ArrowLeft className="h-4 w-4" />
-          </Link>
-          <div>
-            <h1 className="text-xl md:text-2xl font-semibold tracking-tight">
-              Daily Performance
-            </h1>
-            <p className="text-xs text-muted-foreground mt-0.5">
-              Real vs Meta · day-by-day drift track
+      <div className="flex flex-wrap items-end justify-between gap-3">
+        <div className="flex min-w-0 items-center gap-2.5">
+          <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-primary/10 text-primary">
+            <PageIcon className="h-4.5 w-4.5" />
+          </span>
+          <div className="min-w-0">
+            <h1 className="font-display text-xl font-bold tracking-tight">Daily Performance</h1>
+            <p className="text-xs text-muted-foreground">
+              {selection.label} · {range.label} · real vs Meta drift
             </p>
           </div>
         </div>
         <div className="flex flex-wrap items-center gap-2">
-          <BrandTabs
-            active={selection.key}
-            brands={brands}
-            loading={brandsLoading}
-            onChange={setBrand}
-          />
+          <BrandTabs value={selection.key} onChange={setBrand} />
           <DateRangePicker value={range} onChange={setRange} />
           <Tabs value={search.view} onValueChange={(v) => setView(v as any)}>
             <TabsList className="h-9">
