@@ -3760,6 +3760,120 @@ export type Database = {
           },
         ]
       }
+      hub_month_plans: {
+        Row: {
+          brand_id: string | null
+          created_at: string
+          created_by: string | null
+          id: string
+          month: string
+          notes: string | null
+          target_new_products: number
+          target_order_qty: number
+          target_order_value: number
+          target_profit: number
+          target_revenue: number
+          updated_at: string
+        }
+        Insert: {
+          brand_id?: string | null
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          month: string
+          notes?: string | null
+          target_new_products?: number
+          target_order_qty?: number
+          target_order_value?: number
+          target_profit?: number
+          target_revenue?: number
+          updated_at?: string
+        }
+        Update: {
+          brand_id?: string | null
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          month?: string
+          notes?: string | null
+          target_new_products?: number
+          target_order_qty?: number
+          target_order_value?: number
+          target_profit?: number
+          target_revenue?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "hub_month_plans_brand_id_fkey"
+            columns: ["brand_id"]
+            isOneToOne: false
+            referencedRelation: "brands"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      hub_plan_products: {
+        Row: {
+          brand_id: string | null
+          created_at: string
+          id: string
+          month: string
+          note: string | null
+          planned_price: number | null
+          planned_unit_cost: number | null
+          planned_units: number | null
+          product_id: string
+          updated_at: string
+        }
+        Insert: {
+          brand_id?: string | null
+          created_at?: string
+          id?: string
+          month: string
+          note?: string | null
+          planned_price?: number | null
+          planned_unit_cost?: number | null
+          planned_units?: number | null
+          product_id: string
+          updated_at?: string
+        }
+        Update: {
+          brand_id?: string | null
+          created_at?: string
+          id?: string
+          month?: string
+          note?: string | null
+          planned_price?: number | null
+          planned_unit_cost?: number | null
+          planned_units?: number | null
+          product_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "hub_plan_products_brand_id_fkey"
+            columns: ["brand_id"]
+            isOneToOne: false
+            referencedRelation: "brands"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "hub_plan_products_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "products"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "hub_plan_products_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "v_combo_summary"
+            referencedColumns: ["combo_product_id"]
+          },
+        ]
+      }
       hub_product_ideas: {
         Row: {
           brand_id: string | null
@@ -9809,6 +9923,10 @@ export type Database = {
           up_votes: number
           voters: number
         }[]
+      }
+      hub_month_projection: {
+        Args: { _brand_ids: string[]; _month: string }
+        Returns: Json
       }
       imp_create_po: { Args: { _payload: Json }; Returns: Json }
       imp_delete_po: { Args: { _po_id: string }; Returns: Json }

@@ -87,6 +87,7 @@ import { Route as AuthenticatedErpImportsReportsRouteImport } from './routes/_au
 import { Route as AuthenticatedErpImportsAgentsRouteImport } from './routes/_authenticated/erp.imports.agents'
 import { Route as AuthenticatedErpHubTasksRouteImport } from './routes/_authenticated/erp.hub.tasks'
 import { Route as AuthenticatedErpHubProductsRouteImport } from './routes/_authenticated/erp.hub.products'
+import { Route as AuthenticatedErpHubPlanningRouteImport } from './routes/_authenticated/erp.hub.planning'
 import { Route as AuthenticatedErpHubGoalsRouteImport } from './routes/_authenticated/erp.hub.goals'
 import { Route as AuthenticatedErpHubContentRouteImport } from './routes/_authenticated/erp.hub.content'
 import { Route as AuthenticatedErpFinanceWalletsRouteImport } from './routes/_authenticated/erp.finance.wallets'
@@ -555,6 +556,12 @@ const AuthenticatedErpHubProductsRoute =
     path: '/products',
     getParentRoute: () => AuthenticatedErpHubRoute,
   } as any)
+const AuthenticatedErpHubPlanningRoute =
+  AuthenticatedErpHubPlanningRouteImport.update({
+    id: '/planning',
+    path: '/planning',
+    getParentRoute: () => AuthenticatedErpHubRoute,
+  } as any)
 const AuthenticatedErpHubGoalsRoute =
   AuthenticatedErpHubGoalsRouteImport.update({
     id: '/goals',
@@ -708,6 +715,7 @@ export interface FileRoutesByFullPath {
   '/erp/finance/wallets': typeof AuthenticatedErpFinanceWalletsRoute
   '/erp/hub/content': typeof AuthenticatedErpHubContentRoute
   '/erp/hub/goals': typeof AuthenticatedErpHubGoalsRoute
+  '/erp/hub/planning': typeof AuthenticatedErpHubPlanningRoute
   '/erp/hub/products': typeof AuthenticatedErpHubProductsRoute
   '/erp/hub/tasks': typeof AuthenticatedErpHubTasksRoute
   '/erp/imports/agents': typeof AuthenticatedErpImportsAgentsRoute
@@ -796,6 +804,7 @@ export interface FileRoutesByTo {
   '/erp/finance/wallets': typeof AuthenticatedErpFinanceWalletsRoute
   '/erp/hub/content': typeof AuthenticatedErpHubContentRoute
   '/erp/hub/goals': typeof AuthenticatedErpHubGoalsRoute
+  '/erp/hub/planning': typeof AuthenticatedErpHubPlanningRoute
   '/erp/hub/products': typeof AuthenticatedErpHubProductsRoute
   '/erp/hub/tasks': typeof AuthenticatedErpHubTasksRoute
   '/erp/imports/agents': typeof AuthenticatedErpImportsAgentsRoute
@@ -895,6 +904,7 @@ export interface FileRoutesById {
   '/_authenticated/erp/finance/wallets': typeof AuthenticatedErpFinanceWalletsRoute
   '/_authenticated/erp/hub/content': typeof AuthenticatedErpHubContentRoute
   '/_authenticated/erp/hub/goals': typeof AuthenticatedErpHubGoalsRoute
+  '/_authenticated/erp/hub/planning': typeof AuthenticatedErpHubPlanningRoute
   '/_authenticated/erp/hub/products': typeof AuthenticatedErpHubProductsRoute
   '/_authenticated/erp/hub/tasks': typeof AuthenticatedErpHubTasksRoute
   '/_authenticated/erp/imports/agents': typeof AuthenticatedErpImportsAgentsRoute
@@ -994,6 +1004,7 @@ export interface FileRouteTypes {
     | '/erp/finance/wallets'
     | '/erp/hub/content'
     | '/erp/hub/goals'
+    | '/erp/hub/planning'
     | '/erp/hub/products'
     | '/erp/hub/tasks'
     | '/erp/imports/agents'
@@ -1082,6 +1093,7 @@ export interface FileRouteTypes {
     | '/erp/finance/wallets'
     | '/erp/hub/content'
     | '/erp/hub/goals'
+    | '/erp/hub/planning'
     | '/erp/hub/products'
     | '/erp/hub/tasks'
     | '/erp/imports/agents'
@@ -1180,6 +1192,7 @@ export interface FileRouteTypes {
     | '/_authenticated/erp/finance/wallets'
     | '/_authenticated/erp/hub/content'
     | '/_authenticated/erp/hub/goals'
+    | '/_authenticated/erp/hub/planning'
     | '/_authenticated/erp/hub/products'
     | '/_authenticated/erp/hub/tasks'
     | '/_authenticated/erp/imports/agents'
@@ -1801,6 +1814,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedErpHubProductsRouteImport
       parentRoute: typeof AuthenticatedErpHubRoute
     }
+    '/_authenticated/erp/hub/planning': {
+      id: '/_authenticated/erp/hub/planning'
+      path: '/planning'
+      fullPath: '/erp/hub/planning'
+      preLoaderRoute: typeof AuthenticatedErpHubPlanningRouteImport
+      parentRoute: typeof AuthenticatedErpHubRoute
+    }
     '/_authenticated/erp/hub/goals': {
       id: '/_authenticated/erp/hub/goals'
       path: '/goals'
@@ -1986,6 +2006,7 @@ const AuthenticatedErpFinanceRouteWithChildren =
 interface AuthenticatedErpHubRouteChildren {
   AuthenticatedErpHubContentRoute: typeof AuthenticatedErpHubContentRoute
   AuthenticatedErpHubGoalsRoute: typeof AuthenticatedErpHubGoalsRoute
+  AuthenticatedErpHubPlanningRoute: typeof AuthenticatedErpHubPlanningRoute
   AuthenticatedErpHubProductsRoute: typeof AuthenticatedErpHubProductsRoute
   AuthenticatedErpHubTasksRoute: typeof AuthenticatedErpHubTasksRoute
   AuthenticatedErpHubIndexRoute: typeof AuthenticatedErpHubIndexRoute
@@ -1994,6 +2015,7 @@ interface AuthenticatedErpHubRouteChildren {
 const AuthenticatedErpHubRouteChildren: AuthenticatedErpHubRouteChildren = {
   AuthenticatedErpHubContentRoute: AuthenticatedErpHubContentRoute,
   AuthenticatedErpHubGoalsRoute: AuthenticatedErpHubGoalsRoute,
+  AuthenticatedErpHubPlanningRoute: AuthenticatedErpHubPlanningRoute,
   AuthenticatedErpHubProductsRoute: AuthenticatedErpHubProductsRoute,
   AuthenticatedErpHubTasksRoute: AuthenticatedErpHubTasksRoute,
   AuthenticatedErpHubIndexRoute: AuthenticatedErpHubIndexRoute,

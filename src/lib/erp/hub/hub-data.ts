@@ -341,3 +341,149 @@ export async function fetchProductOptions(brandIds: string[]) {
     name: p.title,
   }));
 }
+
+/* ---------------- Phase 5: Monthly Planning ---------------- */
+
+export type HubPlanProductRow = {
+  product_id: string;
+  title: string;
+  sku: string | null;
+  image: string | null;
+  stock: number;
+  hist_units: number;
+  hist_revenue: number;
+  hist_profit: number;
+  mtd_units: number;
+  mtd_revenue: number;
+  mtd_profit: number;
+  run_rate_units: number;
+  planned_units: number | null;
+  planned_price: number | null;
+  planned_unit_cost: number | null;
+  note: string | null;
+  proj_units: number;
+  proj_price: number;
+  proj_cost: number;
+  proj_revenue: number;
+  proj_profit: number;
+  days_of_stock: number | null;
+};
+
+export type HubProjection = {
+  month: string;
+  days_total: number;
+  days_done: number;
+  products: HubPlanProductRow[];
+  sourcing: { po_count: number; units: number; value: number };
+  new_products: number;
+};
+
+export type HubMonthPlan = {
+  id: string;
+  brand_id: string | null;
+  month: string;
+  target_revenue: number;
+  target_profit: number;
+  target_new_products: number;
+  target_order_qty: number;
+  target_order_value: number;
+  notes: string | null;
+};
+
+export function monthStart(d = new Date()) {
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-01`;
+}
+
+export function shiftMonth(month: string, delta: number) {
+  const [y, m] = month.split("-").map(Number);
+  const d = new Date(Date.UTC(y, (m ?? 1) - 1 + delta, 1));
+  return `${d.getUTCFullYear()}-${String(d.getUTCMonth() + 1).padStart(2, "0")}-01`;
+}
+
+export function monthLabel(month: string) {
+  const [y, m] = month.split("-").map(Number);
+  return new Date(Date.UTC(y, (m ?? 1) - 1, 1)).toLocaleDateString("en-US", {
+    month: "long",
+    year: "numeric",
+    timeZone: "UTC",
+  });
+}
+
+export async function fetchProjection(brandIds: string[], month: string) {
+  const { data, error } = await supabase.rpc("hub_month_projection" as never, {
+    _brand_ids: brandIds,
+    _month: month,
+  } as never);
+  if (error) throw error;
+  const raw = (data ?? {}) as Partial<HubProjection>;
+  return {
+    month,
+    days_total: Number(raw.days_total ?? 30),
+    days_done: Number(raw.days_done ?? 1),
+    products: (raw.products ?? []).map((p) => ({
+      ...p,
+      hist_units: Number(p.hist_units ?? 0),
+      hist_revenue: Number(p.hist_revenue ?? 0),
+      hist_profit: Number(p.hist_profit ?? 0),
+      mtd_units: Number(p.mtd_units ?? 0),
+      mtd_revenue: Number(p.mtd_revenue ?? 0),
+      mtd_profit: Number(p.mtd_profit ?? 0),
+      run_rate_units: Number(p.run_rate_units ?? 0),
+      proj_units: Number(p.proj_units ?? 0),
+      proj_price: Number(p.proj_price ?? 0),
+      proj_cost: Number(p.proj_cost ?? 0),
+      proj_revenue: Number(p.proj_revenue ?? 0),
+      proj_profit: Number(p.proj_profit ?? 0),
+      stock: Number(p.stock ?? 0),
+      days_of_stock: p.days_of_stock == null ? null : Number(p.days_of_stock),
+    })) as HubPlanProductRow[],
+    sourcing: {
+      po_count: Number(raw.sourcing?.po_count ?? 0),
+      units: Number(raw.sourcing?.units ?? 0),
+      value: Number(raw.sourcing?.value ?? 0),
+    },
+    new_products: Number(raw.new_products ?? 0),
+  } satisfies HubProjection;
+}
+
+export async function fetchMonthPlan(brandId: string | null, month: string) {
+  let q = supabase.from("hub_month_plans").select("*").eq("month", month);
+  q = brandId ? q.eq("brand_id", brandId) : q.is("brand_id", null);
+  const { data, error } = await q.maybeSingle();
+  if (error) throw error;
+  return (data ?? null) as unknown as HubMonthPlan | null;
+}
+
+export async function saveMonthPlan(
+  brandId: string | null,
+  month: string,
+  patch: Partial<HubMonthPlan>,
+) {
+  const { error } = await supabase
+    .from("hub_month_plans")
+    .upsert({ brand_id: brandId, month, ...patch } as never, {
+      onConflict: "brand_id,month",
+    });
+  if (error) throw error;
+}
+
+export async function savePlanOverride(
+  brandId: string | null,
+  month: string,
+  productId: string,
+  patch: { planned_units?: number | null; planned_price?: number | null; planned_unit_cost?: number | null },
+) {
+  const { error } = await supabase
+    .from("hub_plan_products")
+    .upsert({ brand_id: brandId, month, product_id: productId, ...patch } as never, {
+      onConflict: "brand_id,month,product_id",
+    });
+  if (error) throw error;
+}
+
+export async function clearPlanOverride(brandId: string | null, month: string, productId: string) {
+  let q = supabase.from("hub_plan_products").delete().eq("month", month).eq("product_id", productId);
+  q = brandId ? q.eq("brand_id", brandId) : q.is("brand_id", null);
+  const { error } = await q;
+  if (error) throw error;
+}
