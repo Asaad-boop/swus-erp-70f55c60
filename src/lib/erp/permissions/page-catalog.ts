@@ -55,6 +55,7 @@ export const PAGE_CATALOG: PageEntry[] = [
   { group: "Marketing", path: "/erp/marketing/planning", label: "Budgets, Calendar & Experiments" },
   { group: "Marketing", path: "/erp/marketing/alerts", label: "Alerts & Intelligence" },
   { group: "Marketing", path: "/erp/marketing/daily", label: "Daily Performance" },
+  { group: "Marketing", path: "/erp/marketing/channels", label: "Ad Channels (Google/TikTok)" },
   { group: "Marketing", path: "/erp/marketing/reports", label: "Marketing Reports" },
   { group: "Marketing", path: "/erp/marketing/settings", label: "Marketing Settings" },
 
