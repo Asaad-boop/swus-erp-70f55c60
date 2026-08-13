@@ -52,6 +52,7 @@ export const PAGE_CATALOG: PageEntry[] = [
   { group: "Growth Hub", path: "/erp/hub/goals", label: "Vision & Goals" },
   { group: "Growth Hub", path: "/erp/hub/tasks", label: "Task Board" },
   { group: "Growth Hub", path: "/erp/hub/products", label: "Product Pipeline" },
+  { group: "Growth Hub", path: "/erp/hub/sourcing", label: "Sourcing Desk" },
   { group: "Growth Hub", path: "/erp/hub/content", label: "Content Journey" },
   { group: "Growth Hub", path: "/erp/hub/routines", label: "Routines & Calendar" },
   { group: "Growth Hub", path: "/erp/hub/rivals", label: "Rival Pages & Swipe File" },
