@@ -34,7 +34,7 @@ import {
   fetchTasks,
   fmtValue,
 } from "@/lib/erp/hub/hub-data";
-import { fetchRoutines, routineHitsDate } from "@/lib/erp/hub/hub-research";
+import { fetchCompetitorAssets, fetchRoutines, routineHitsDate } from "@/lib/erp/hub/hub-research";
 
 export const Route = createFileRoute("/_authenticated/erp/hub/")({
   head: () => ({
@@ -92,6 +92,11 @@ function HubHome() {
   const routinesQ = useQuery({
     queryKey: ["hub-routines", brandIds],
     queryFn: () => fetchRoutines(brandIds),
+    enabled: brandIds.length > 0,
+  });
+  const assetsQ = useQuery({
+    queryKey: ["hub-competitor-assets", brandIds],
+    queryFn: () => fetchCompetitorAssets(brandIds),
     enabled: brandIds.length > 0,
   });
 
@@ -378,9 +383,8 @@ function HubHome() {
           to="/erp/hub/rivals"
           icon={Swords}
           title="Rival pages"
-          value={0}
-          hint="swipe file দেখো"
-          hideValue
+          value={(assetsQ.data ?? []).length}
+          hint="swipe file items"
         />
       </div>
     </div>
@@ -420,14 +424,12 @@ function PulseCard({
   title,
   value,
   hint,
-  hideValue,
 }: {
   to: string;
   icon: typeof Lightbulb;
   title: string;
   value: number;
   hint: string;
-  hideValue?: boolean;
 }) {
   return (
     <Link to={to}>
@@ -439,7 +441,7 @@ function PulseCard({
           <div className="min-w-0">
             <p className="truncate text-xs text-muted-foreground">{title}</p>
             <p className="font-display text-lg font-bold leading-tight">
-              {hideValue ? "—" : value}{" "}
+              {value}{" "}
               <span className="text-[11px] font-normal text-muted-foreground">{hint}</span>
             </p>
           </div>
