@@ -3388,6 +3388,198 @@ export type Database = {
         }
         Relationships: []
       }
+      hub_comments: {
+        Row: {
+          author_id: string | null
+          body: string
+          created_at: string
+          entity_id: string
+          entity_type: string
+          id: string
+        }
+        Insert: {
+          author_id?: string | null
+          body: string
+          created_at?: string
+          entity_id: string
+          entity_type: string
+          id?: string
+        }
+        Update: {
+          author_id?: string | null
+          body?: string
+          created_at?: string
+          entity_id?: string
+          entity_type?: string
+          id?: string
+        }
+        Relationships: []
+      }
+      hub_goals: {
+        Row: {
+          brand_id: string | null
+          created_at: string
+          created_by: string | null
+          current_value: number
+          description: string | null
+          id: string
+          kind: string
+          metric_key: string | null
+          owner: string | null
+          parent_id: string | null
+          period_end: string
+          period_start: string
+          sort_order: number
+          status: string
+          target_value: number
+          title: string
+          unit: string
+          updated_at: string
+        }
+        Insert: {
+          brand_id?: string | null
+          created_at?: string
+          created_by?: string | null
+          current_value?: number
+          description?: string | null
+          id?: string
+          kind?: string
+          metric_key?: string | null
+          owner?: string | null
+          parent_id?: string | null
+          period_end?: string
+          period_start?: string
+          sort_order?: number
+          status?: string
+          target_value?: number
+          title: string
+          unit?: string
+          updated_at?: string
+        }
+        Update: {
+          brand_id?: string | null
+          created_at?: string
+          created_by?: string | null
+          current_value?: number
+          description?: string | null
+          id?: string
+          kind?: string
+          metric_key?: string | null
+          owner?: string | null
+          parent_id?: string | null
+          period_end?: string
+          period_start?: string
+          sort_order?: number
+          status?: string
+          target_value?: number
+          title?: string
+          unit?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "hub_goals_brand_id_fkey"
+            columns: ["brand_id"]
+            isOneToOne: false
+            referencedRelation: "brands"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "hub_goals_parent_id_fkey"
+            columns: ["parent_id"]
+            isOneToOne: false
+            referencedRelation: "hub_goals"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      hub_tasks: {
+        Row: {
+          assignee_id: string | null
+          brand_id: string | null
+          checklist: Json
+          completed_at: string | null
+          created_at: string
+          created_by: string | null
+          details: string | null
+          due_date: string | null
+          goal_id: string | null
+          id: string
+          last_spawned_on: string | null
+          link_id: string | null
+          link_label: string | null
+          link_type: string | null
+          position: number
+          priority: string
+          recurrence: string
+          status: string
+          tags: string[]
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          assignee_id?: string | null
+          brand_id?: string | null
+          checklist?: Json
+          completed_at?: string | null
+          created_at?: string
+          created_by?: string | null
+          details?: string | null
+          due_date?: string | null
+          goal_id?: string | null
+          id?: string
+          last_spawned_on?: string | null
+          link_id?: string | null
+          link_label?: string | null
+          link_type?: string | null
+          position?: number
+          priority?: string
+          recurrence?: string
+          status?: string
+          tags?: string[]
+          title: string
+          updated_at?: string
+        }
+        Update: {
+          assignee_id?: string | null
+          brand_id?: string | null
+          checklist?: Json
+          completed_at?: string | null
+          created_at?: string
+          created_by?: string | null
+          details?: string | null
+          due_date?: string | null
+          goal_id?: string | null
+          id?: string
+          last_spawned_on?: string | null
+          link_id?: string | null
+          link_label?: string | null
+          link_type?: string | null
+          position?: number
+          priority?: string
+          recurrence?: string
+          status?: string
+          tags?: string[]
+          title?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "hub_tasks_brand_id_fkey"
+            columns: ["brand_id"]
+            isOneToOne: false
+            referencedRelation: "brands"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "hub_tasks_goal_id_fkey"
+            columns: ["goal_id"]
+            isOneToOne: false
+            referencedRelation: "hub_goals"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       imp_cargo_agents: {
         Row: {
           address: string | null
@@ -9257,6 +9449,13 @@ export type Database = {
       hr_count_working_days: {
         Args: { _from: string; _to: string; _weekly_off?: number[] }
         Returns: number
+      }
+      hub_goal_actuals: {
+        Args: { _brand_ids: string[] }
+        Returns: {
+          actual: number
+          goal_id: string
+        }[]
       }
       imp_create_po: { Args: { _payload: Json }; Returns: Json }
       imp_delete_po: { Args: { _po_id: string }; Returns: Json }

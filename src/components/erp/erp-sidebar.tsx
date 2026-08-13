@@ -9,6 +9,8 @@ import {
   FileBarChart, Target, Banknote, Building2, Search, PackageCheck, ShieldCheck, CheckCircle2, Clock, LayoutGrid,
   CalendarClock,
   BellRing,
+  Compass,
+  ListChecks,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useGlobalSearch } from "@/components/erp/global-search";
@@ -120,6 +122,16 @@ const groups: Group[] = [
     kind: "accordion",
     label: "Growth",
     sections: [
+      {
+        key: "hub",
+        label: "Growth Hub",
+        icon: Compass,
+        items: [
+          { to: "/erp/hub", label: "Command Center", icon: Compass, exact: true },
+          { to: "/erp/hub/goals", label: "Vision & Goals", icon: Target },
+          { to: "/erp/hub/tasks", label: "Task Board", icon: ListChecks },
+        ],
+      },
       {
         key: "marketing",
         label: "Marketing",

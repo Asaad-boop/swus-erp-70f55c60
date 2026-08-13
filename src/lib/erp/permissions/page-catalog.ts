@@ -48,6 +48,9 @@ export const PAGE_CATALOG: PageEntry[] = [
   { group: "Finance", path: "/erp/finance/settings", label: "Finance Settings" },
 
   { group: "Marketing", path: "/erp/marketing", label: "Overview" },
+  { group: "Growth Hub", path: "/erp/hub", label: "Command Center" },
+  { group: "Growth Hub", path: "/erp/hub/goals", label: "Vision & Goals" },
+  { group: "Growth Hub", path: "/erp/hub/tasks", label: "Task Board" },
   { group: "Marketing", path: "/erp/marketing/campaigns", label: "Campaign Workspace" },
   { group: "Marketing", path: "/erp/marketing/creatives", label: "Creative Library" },
   { group: "Marketing", path: "/erp/marketing/attribution", label: "Attribution & Funnel" },
