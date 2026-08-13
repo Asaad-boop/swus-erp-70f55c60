@@ -41,6 +41,7 @@ import {
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { cn } from "@/lib/utils";
 import { useBrand } from "@/contexts/brand-context";
+import { BrandTabs } from "@/components/erp/marketing/marketing-shell";
 
 import {
   DateRangePicker,
@@ -60,7 +61,23 @@ const searchSchema = z.object({
 });
 
 export const Route = createFileRoute("/_authenticated/erp/marketing/daily")({
-  head: () => ({ meta: [{ title: "Daily Performance — Marketing" }] }),
+  head: () => ({
+    meta: [
+      { title: "Daily Performance — Marketing ERP" },
+      {
+        name: "description",
+        content:
+          "Day-by-day marketing performance: real ad spend versus Meta reported spend, delivered revenue, ROAS, CPO and dollar purchase drift.",
+      },
+      { property: "og:title", content: "Daily Performance — Marketing ERP" },
+      {
+        property: "og:description",
+        content: "Track daily spend drift between real dollar cost and Meta reported numbers.",
+      },
+      { property: "og:type", content: "website" },
+      { name: "twitter:card", content: "summary" },
+    ],
+  }),
   validateSearch: zodValidator(searchSchema),
   component: DailyPerformancePage,
 });
@@ -237,45 +254,6 @@ function DailyPerformancePage() {
         brandIds={selection.ids}
         onDone={() => q.refetch()}
       />
-    </div>
-  );
-}
-
-function BrandTabs({
-  active,
-  brands,
-  loading,
-  onChange,
-}: {
-  active: string;
-  brands: { id: string; name: string; slug: string }[];
-  loading: boolean;
-  onChange: (slug: string) => void;
-}) {
-  const items = [{ slug: "all", name: "All" }, ...brands.map((b) => ({ slug: b.slug, name: b.name }))];
-  return (
-    <div className="inline-flex items-center rounded-md border bg-background p-0.5">
-      {loading && brands.length === 0 ? (
-        <Skeleton className="h-7 w-40" />
-      ) : (
-        items.map((it) => {
-          const on = active === it.slug;
-          return (
-            <button
-              key={it.slug}
-              onClick={() => onChange(it.slug)}
-              className={cn(
-                "px-3 h-7 text-xs font-medium rounded transition",
-                on
-                  ? "bg-primary text-primary-foreground shadow-sm"
-                  : "text-muted-foreground hover:text-foreground",
-              )}
-            >
-              {it.name}
-            </button>
-          );
-        })
-      )}
     </div>
   );
 }
