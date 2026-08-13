@@ -5364,6 +5364,149 @@ export type Database = {
         }
         Relationships: []
       }
+      mkt_budgets: {
+        Row: {
+          brand_id: string | null
+          campaign_id: string | null
+          created_at: string
+          id: string
+          name: string
+          notes: string | null
+          period_end: string
+          period_start: string
+          planned_spend: number
+          scaling_status: string
+          target_revenue: number
+          target_roas: number | null
+          updated_at: string
+        }
+        Insert: {
+          brand_id?: string | null
+          campaign_id?: string | null
+          created_at?: string
+          id?: string
+          name: string
+          notes?: string | null
+          period_end: string
+          period_start: string
+          planned_spend?: number
+          scaling_status?: string
+          target_revenue?: number
+          target_roas?: number | null
+          updated_at?: string
+        }
+        Update: {
+          brand_id?: string | null
+          campaign_id?: string | null
+          created_at?: string
+          id?: string
+          name?: string
+          notes?: string | null
+          period_end?: string
+          period_start?: string
+          planned_spend?: number
+          scaling_status?: string
+          target_revenue?: number
+          target_roas?: number | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "mkt_budgets_brand_id_fkey"
+            columns: ["brand_id"]
+            isOneToOne: false
+            referencedRelation: "brands"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "mkt_budgets_campaign_id_fkey"
+            columns: ["campaign_id"]
+            isOneToOne: false
+            referencedRelation: "mkt_campaigns"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      mkt_calendar_events: {
+        Row: {
+          brand_id: string | null
+          campaign_id: string | null
+          color: string | null
+          created_at: string
+          end_date: string | null
+          event_type: string
+          id: string
+          notes: string | null
+          owner: string | null
+          product_id: string | null
+          start_date: string
+          status: string
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          brand_id?: string | null
+          campaign_id?: string | null
+          color?: string | null
+          created_at?: string
+          end_date?: string | null
+          event_type?: string
+          id?: string
+          notes?: string | null
+          owner?: string | null
+          product_id?: string | null
+          start_date: string
+          status?: string
+          title: string
+          updated_at?: string
+        }
+        Update: {
+          brand_id?: string | null
+          campaign_id?: string | null
+          color?: string | null
+          created_at?: string
+          end_date?: string | null
+          event_type?: string
+          id?: string
+          notes?: string | null
+          owner?: string | null
+          product_id?: string | null
+          start_date?: string
+          status?: string
+          title?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "mkt_calendar_events_brand_id_fkey"
+            columns: ["brand_id"]
+            isOneToOne: false
+            referencedRelation: "brands"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "mkt_calendar_events_campaign_id_fkey"
+            columns: ["campaign_id"]
+            isOneToOne: false
+            referencedRelation: "mkt_campaigns"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "mkt_calendar_events_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "products"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "mkt_calendar_events_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "v_combo_summary"
+            referencedColumns: ["combo_product_id"]
+          },
+        ]
+      }
       mkt_campaign_products: {
         Row: {
           brand_id: string
@@ -5572,6 +5715,87 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "v_combo_summary"
             referencedColumns: ["combo_product_id"]
+          },
+        ]
+      }
+      mkt_experiments: {
+        Row: {
+          brand_id: string | null
+          campaign_id: string | null
+          created_at: string
+          decision: string | null
+          end_date: string | null
+          hypothesis: string | null
+          id: string
+          learning: string | null
+          metric: string
+          name: string
+          result_a: number | null
+          result_b: number | null
+          start_date: string | null
+          status: string
+          test_type: string
+          updated_at: string
+          variant_a: string | null
+          variant_b: string | null
+          winner: string | null
+        }
+        Insert: {
+          brand_id?: string | null
+          campaign_id?: string | null
+          created_at?: string
+          decision?: string | null
+          end_date?: string | null
+          hypothesis?: string | null
+          id?: string
+          learning?: string | null
+          metric?: string
+          name: string
+          result_a?: number | null
+          result_b?: number | null
+          start_date?: string | null
+          status?: string
+          test_type?: string
+          updated_at?: string
+          variant_a?: string | null
+          variant_b?: string | null
+          winner?: string | null
+        }
+        Update: {
+          brand_id?: string | null
+          campaign_id?: string | null
+          created_at?: string
+          decision?: string | null
+          end_date?: string | null
+          hypothesis?: string | null
+          id?: string
+          learning?: string | null
+          metric?: string
+          name?: string
+          result_a?: number | null
+          result_b?: number | null
+          start_date?: string | null
+          status?: string
+          test_type?: string
+          updated_at?: string
+          variant_a?: string | null
+          variant_b?: string | null
+          winner?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "mkt_experiments_brand_id_fkey"
+            columns: ["brand_id"]
+            isOneToOne: false
+            referencedRelation: "brands"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "mkt_experiments_campaign_id_fkey"
+            columns: ["campaign_id"]
+            isOneToOne: false
+            referencedRelation: "mkt_campaigns"
+            referencedColumns: ["id"]
           },
         ]
       }
@@ -9307,6 +9531,10 @@ export type Database = {
           suggested_campaign_id: string
           suggested_campaign_name: string
         }[]
+      }
+      mkt_budget_status: {
+        Args: { _brand_ids: string[]; _from: string; _to: string }
+        Returns: Json
       }
       mkt_campaign_summary: {
         Args: {
