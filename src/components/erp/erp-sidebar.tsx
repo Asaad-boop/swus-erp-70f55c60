@@ -134,6 +134,8 @@ const groups: Group[] = [
           { to: "/erp/hub/tasks", label: "Task Board", icon: ListChecks },
           { to: "/erp/hub/products", label: "Product Pipeline", icon: Lightbulb },
           { to: "/erp/hub/content", label: "Content Journey", icon: Clapperboard },
+          { to: "/erp/hub/routines", label: "Routines & Calendar", icon: Repeat },
+          { to: "/erp/hub/rivals", label: "Rival Pages", icon: Swords },
           { to: "/erp/hub/planning", label: "Monthly Projection", icon: BarChart3 },
         ],
       },
