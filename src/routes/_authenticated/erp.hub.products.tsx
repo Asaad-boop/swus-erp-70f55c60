@@ -122,24 +122,6 @@ const STATUS_STYLE: Record<string, string> = {
   rejected: "bg-destructive/90 text-destructive-foreground",
 };
 
-const unusedDraft = (): Draft => ({
-  title: "",
-  description: "",
-  image_url: "",
-  images: "",
-  source_url: "",
-  supplier_name: "",
-  supplier_url: "",
-  category: "",
-  est_unit_cost: "",
-  est_sell_price: "",
-  target_price_min: "",
-  target_price_max: "",
-  moq: "",
-  status: "voting",
-  notes: "",
-});
-
 type FDraft = {
   monthly_units: string;
   sell_price: string;
