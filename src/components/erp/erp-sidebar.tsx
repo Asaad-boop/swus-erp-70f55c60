@@ -124,6 +124,8 @@ const groups: Group[] = [
         icon: Megaphone,
         items: [
           { to: "/erp/marketing", label: "Overview", icon: LayoutDashboard, exact: true },
+          { to: "/erp/marketing/campaigns", label: "Campaigns", icon: Target },
+          { to: "/erp/marketing/daily", label: "Daily Performance", icon: BarChart3 },
         ],
       },
       {

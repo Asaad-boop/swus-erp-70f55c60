@@ -5442,6 +5442,8 @@ export type Database = {
           start_time: string | null
           status: string | null
           stop_time: string | null
+          target_cpa: number | null
+          target_roas: number | null
           updated_at: string
         }
         Insert: {
@@ -5459,6 +5461,8 @@ export type Database = {
           start_time?: string | null
           status?: string | null
           stop_time?: string | null
+          target_cpa?: number | null
+          target_roas?: number | null
           updated_at?: string
         }
         Update: {
@@ -5476,6 +5480,8 @@ export type Database = {
           start_time?: string | null
           status?: string | null
           stop_time?: string | null
+          target_cpa?: number | null
+          target_roas?: number | null
           updated_at?: string
         }
         Relationships: [
@@ -9346,6 +9352,16 @@ export type Database = {
           severity: string
           title: string
         }[]
+      }
+      mkt_hierarchy_perf: {
+        Args: {
+          _brand_ids: string[]
+          _from: string
+          _level?: string
+          _parent_id?: string
+          _to: string
+        }
+        Returns: Json
       }
       mkt_ingest_track: {
         Args: {
