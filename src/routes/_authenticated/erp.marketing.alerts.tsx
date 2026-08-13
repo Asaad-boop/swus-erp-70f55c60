@@ -122,7 +122,7 @@ function AlertsPage() {
 
   const rows = useMemo(
     () =>
-      (q.data ?? [])
+      ((q.data ?? []) as MktAlert[])
         .slice()
         .sort(
           (a, b) =>
@@ -234,7 +234,7 @@ function AlertsPage() {
         </Card>
       ) : (
         <div className="space-y-2">
-          {rows.map((a) => {
+          {rows.map((a: MktAlert) => {
             const link = entityLink(a);
             return (
               <Card key={a.id} className={`border ${sevClass(a.severity).split(" ").pop()}`}>
