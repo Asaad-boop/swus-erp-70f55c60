@@ -45,7 +45,7 @@ export type MktCandidateRow = {
   customer_name: string | null;
   source: string | null;
   confidence: number | null;
-  matched_signal: Record<string, unknown> | null;
+  matched_signal: string | null;
   suggested_campaign_id: string | null;
   suggested_campaign_name: string | null;
   created_at: string;
