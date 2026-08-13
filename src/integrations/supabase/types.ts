@@ -9257,6 +9257,10 @@ export type Database = {
         Args: { _journal_line_id: string; _line_id: string }
         Returns: undefined
       }
+      mkt_acquisition: {
+        Args: { _brand_ids: string[]; _from: string; _to: string }
+        Returns: Json
+      }
       mkt_attribution_explorer: {
         Args: {
           p_brand_id: string
@@ -9572,6 +9576,10 @@ export type Database = {
           returned_units: number
           units_sold: number
         }[]
+      }
+      mkt_product_perf: {
+        Args: { _brand_ids: string[]; _from: string; _to: string }
+        Returns: Json
       }
       mkt_rebuild_window: {
         Args: { p_brand_id: string; p_days?: number; p_trigger?: string }
