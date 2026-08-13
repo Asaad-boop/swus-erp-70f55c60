@@ -53,6 +53,7 @@ import { Route as ApiPublicWebhooksShopifyOrderRouteImport } from './routes/api/
 import { Route as ApiPublicWebhookPathaoRouteImport } from './routes/api/public/webhook.pathao'
 import { Route as ApiPublicMktTrackerDotjsRouteImport } from './routes/api/public/mkt.tracker[.]js'
 import { Route as ApiPublicMktTrackRouteImport } from './routes/api/public/mkt.track'
+import { Route as ApiPublicHubExtensionDotzipRouteImport } from './routes/api/public/hub.extension[.]zip'
 import { Route as ApiPublicHubCaptureRouteImport } from './routes/api/public/hub.capture'
 import { Route as ApiPublicCronSyncMarketingRouteImport } from './routes/api/public/cron.sync-marketing'
 import { Route as ApiPublicCronSyncCourierRouteImport } from './routes/api/public/cron.sync-courier'
@@ -356,6 +357,12 @@ const ApiPublicMktTrackRoute = ApiPublicMktTrackRouteImport.update({
   path: '/api/public/mkt/track',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiPublicHubExtensionDotzipRoute =
+  ApiPublicHubExtensionDotzipRouteImport.update({
+    id: '/api/public/hub/extension.zip',
+    path: '/api/public/hub/extension.zip',
+    getParentRoute: () => rootRouteImport,
+  } as any)
 const ApiPublicHubCaptureRoute = ApiPublicHubCaptureRouteImport.update({
   id: '/api/public/hub/capture',
   path: '/api/public/hub/capture',
@@ -781,6 +788,7 @@ export interface FileRoutesByFullPath {
   '/api/public/cron/sync-courier': typeof ApiPublicCronSyncCourierRoute
   '/api/public/cron/sync-marketing': typeof ApiPublicCronSyncMarketingRoute
   '/api/public/hub/capture': typeof ApiPublicHubCaptureRoute
+  '/api/public/hub/extension.zip': typeof ApiPublicHubExtensionDotzipRoute
   '/api/public/mkt/track': typeof ApiPublicMktTrackRoute
   '/api/public/mkt/tracker.js': typeof ApiPublicMktTrackerDotjsRoute
   '/api/public/webhook/pathao': typeof ApiPublicWebhookPathaoRoute
@@ -874,6 +882,7 @@ export interface FileRoutesByTo {
   '/api/public/cron/sync-courier': typeof ApiPublicCronSyncCourierRoute
   '/api/public/cron/sync-marketing': typeof ApiPublicCronSyncMarketingRoute
   '/api/public/hub/capture': typeof ApiPublicHubCaptureRoute
+  '/api/public/hub/extension.zip': typeof ApiPublicHubExtensionDotzipRoute
   '/api/public/mkt/track': typeof ApiPublicMktTrackRoute
   '/api/public/mkt/tracker.js': typeof ApiPublicMktTrackerDotjsRoute
   '/api/public/webhook/pathao': typeof ApiPublicWebhookPathaoRoute
@@ -978,6 +987,7 @@ export interface FileRoutesById {
   '/api/public/cron/sync-courier': typeof ApiPublicCronSyncCourierRoute
   '/api/public/cron/sync-marketing': typeof ApiPublicCronSyncMarketingRoute
   '/api/public/hub/capture': typeof ApiPublicHubCaptureRoute
+  '/api/public/hub/extension.zip': typeof ApiPublicHubExtensionDotzipRoute
   '/api/public/mkt/track': typeof ApiPublicMktTrackRoute
   '/api/public/mkt/tracker.js': typeof ApiPublicMktTrackerDotjsRoute
   '/api/public/webhook/pathao': typeof ApiPublicWebhookPathaoRoute
@@ -1082,6 +1092,7 @@ export interface FileRouteTypes {
     | '/api/public/cron/sync-courier'
     | '/api/public/cron/sync-marketing'
     | '/api/public/hub/capture'
+    | '/api/public/hub/extension.zip'
     | '/api/public/mkt/track'
     | '/api/public/mkt/tracker.js'
     | '/api/public/webhook/pathao'
@@ -1175,6 +1186,7 @@ export interface FileRouteTypes {
     | '/api/public/cron/sync-courier'
     | '/api/public/cron/sync-marketing'
     | '/api/public/hub/capture'
+    | '/api/public/hub/extension.zip'
     | '/api/public/mkt/track'
     | '/api/public/mkt/tracker.js'
     | '/api/public/webhook/pathao'
@@ -1278,6 +1290,7 @@ export interface FileRouteTypes {
     | '/api/public/cron/sync-courier'
     | '/api/public/cron/sync-marketing'
     | '/api/public/hub/capture'
+    | '/api/public/hub/extension.zip'
     | '/api/public/mkt/track'
     | '/api/public/mkt/tracker.js'
     | '/api/public/webhook/pathao'
@@ -1312,6 +1325,7 @@ export interface RootRouteChildren {
   ApiPublicCronSyncCourierRoute: typeof ApiPublicCronSyncCourierRoute
   ApiPublicCronSyncMarketingRoute: typeof ApiPublicCronSyncMarketingRoute
   ApiPublicHubCaptureRoute: typeof ApiPublicHubCaptureRoute
+  ApiPublicHubExtensionDotzipRoute: typeof ApiPublicHubExtensionDotzipRoute
   ApiPublicMktTrackRoute: typeof ApiPublicMktTrackRoute
   ApiPublicMktTrackerDotjsRoute: typeof ApiPublicMktTrackerDotjsRoute
   ApiPublicWebhookPathaoRoute: typeof ApiPublicWebhookPathaoRoute
@@ -1626,6 +1640,13 @@ declare module '@tanstack/react-router' {
       path: '/api/public/mkt/track'
       fullPath: '/api/public/mkt/track'
       preLoaderRoute: typeof ApiPublicMktTrackRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/public/hub/extension.zip': {
+      id: '/api/public/hub/extension.zip'
+      path: '/api/public/hub/extension.zip'
+      fullPath: '/api/public/hub/extension.zip'
+      preLoaderRoute: typeof ApiPublicHubExtensionDotzipRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/api/public/hub/capture': {
@@ -2346,6 +2367,7 @@ const rootRouteChildren: RootRouteChildren = {
   ApiPublicCronSyncCourierRoute: ApiPublicCronSyncCourierRoute,
   ApiPublicCronSyncMarketingRoute: ApiPublicCronSyncMarketingRoute,
   ApiPublicHubCaptureRoute: ApiPublicHubCaptureRoute,
+  ApiPublicHubExtensionDotzipRoute: ApiPublicHubExtensionDotzipRoute,
   ApiPublicMktTrackRoute: ApiPublicMktTrackRoute,
   ApiPublicMktTrackerDotjsRoute: ApiPublicMktTrackerDotjsRoute,
   ApiPublicWebhookPathaoRoute: ApiPublicWebhookPathaoRoute,

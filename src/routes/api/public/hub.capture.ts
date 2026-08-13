@@ -14,6 +14,23 @@ const json = (body: unknown, status = 200) =>
 function str(v: unknown, max = 2000) {
   return typeof v === "string" && v.trim() ? v.trim().slice(0, max) : null;
 }
+function strArr(v: unknown, max = 8) {
+  return Array.isArray(v)
+    ? (v.map((x) => str(x, 2000)).filter(Boolean) as string[]).slice(0, max)
+    : [];
+}
+function hostOf(u: string | null) {
+  if (!u) return null;
+  try {
+    return new URL(u).hostname.replace(/^www\./, "");
+  } catch {
+    return null;
+  }
+}
+function faviconFor(u: string | null) {
+  const h = hostOf(u);
+  return h ? `https://www.google.com/s2/favicons?sz=64&domain=${h}` : null;
+}
 
 export const Route = createFileRoute("/api/public/hub/capture")({
   server: {
@@ -49,50 +66,170 @@ export const Route = createFileRoute("/api/public/hub/capture")({
           use_count: number;
         };
 
+        // Brands this token's owner can use.
+        const { data: brandIdsRaw } = await supabaseAdmin.rpc("get_user_brand_ids", {
+          _user_id: t.user_id,
+        } as never);
+        const allowedBrandIds = (brandIdsRaw ?? []) as string[];
+
+        /* ------------------------------- meta ------------------------------- */
+        if (str(payload.action, 20) === "meta") {
+          const [{ data: brands }, { data: comps }] = await Promise.all([
+            supabaseAdmin
+              .from("brands")
+              .select("id,name")
+              .in("id", allowedBrandIds.length ? allowedBrandIds : ["00000000-0000-0000-0000-000000000000"])
+              .eq("is_active", true)
+              .order("name"),
+            supabaseAdmin
+              .from("hub_competitors")
+              .select("id,name")
+              .order("name")
+              .limit(200),
+          ]);
+          return json({
+            ok: true,
+            brands: brands ?? [],
+            competitors: comps ?? [],
+            default_brand_id: t.default_brand_id,
+          });
+        }
+
+        /* ------------------------------- save ------------------------------- */
         const kind = str(payload.kind, 20) ?? "idea";
         const url = str(payload.url, 2000);
         const title = str(payload.title, 300);
         const image = str(payload.image_url, 2000);
+        const images = strArr(payload.images, 8);
         const note = str(payload.note, 2000);
+        const tags = strArr(payload.tags, 12).map((x) => x.slice(0, 40));
+        const platform = str(payload.platform, 40);
         const priceRaw = Number(payload.price);
         const price = Number.isFinite(priceRaw) && priceRaw > 0 ? priceRaw : null;
 
+        const requestedBrand = str(payload.brand_id, 60);
+        const brandId =
+          requestedBrand && allowedBrandIds.includes(requestedBrand)
+            ? requestedBrand
+            : t.default_brand_id;
+
         if (!title && !url) return json({ error: "title or url required" }, 400);
 
-        let inserted: { id: string } | null = null;
+        /** Find or create the rival page for this site. */
+        async function resolveCompetitor(): Promise<string | null> {
+          const given = str(payload.competitor_id, 60);
+          if (given) return given;
+          const cUrl = str(payload.competitor_url, 2000) ?? url;
+          const host = hostOf(cUrl);
+          const name = str(payload.competitor_name, 160) ?? host;
+          if (!name) return null;
 
-        if (kind === "competitor") {
+          const { data: existing } = await supabaseAdmin
+            .from("hub_competitors")
+            .select("id")
+            .ilike("name", name)
+            .limit(1)
+            .maybeSingle();
+          if (existing) return (existing as { id: string }).id;
+
+          const social =
+            platform === "facebook"
+              ? { facebook_url: cUrl }
+              : platform === "instagram"
+                ? { instagram_url: cUrl }
+                : platform === "tiktok"
+                  ? { tiktok_url: cUrl }
+                  : { website_url: cUrl };
+
+          const { data: created } = await supabaseAdmin
+            .from("hub_competitors")
+            .insert({
+              brand_id: brandId,
+              name,
+              favicon_url: faviconFor(cUrl),
+              tags,
+              created_by: t.user_id,
+              ...social,
+            } as never)
+            .select("id")
+            .single();
+          return created ? (created as { id: string }).id : null;
+        }
+
+        let inserted: { id: string } | null = null;
+        let savedKind = kind;
+
+        if (kind === "competitor" || kind === "rival") {
+          savedKind = "competitor";
+          const name = str(payload.name, 160) ?? str(payload.competitor_name, 160) ?? hostOf(url);
+          if (!name) return json({ error: "name required" }, 400);
+          const social =
+            platform === "facebook"
+              ? { facebook_url: url }
+              : platform === "instagram"
+                ? { instagram_url: url }
+                : platform === "tiktok"
+                  ? { tiktok_url: url }
+                  : { website_url: url };
+          const { data, error } = await supabaseAdmin
+            .from("hub_competitors")
+            .insert({
+              brand_id: brandId,
+              name,
+              note,
+              tags,
+              favicon_url: faviconFor(url),
+              logo_url: image,
+              created_by: t.user_id,
+              ...social,
+            } as never)
+            .select("id")
+            .single();
+          if (error) return json({ error: error.message }, 400);
+          inserted = data as { id: string };
+        } else if (kind === "swipe" || kind === "content" || kind === "competitor_asset") {
+          savedKind = "swipe";
+          const competitorId = await resolveCompetitor();
           const { data, error } = await supabaseAdmin
             .from("hub_competitor_assets")
             .insert({
-              brand_id: t.default_brand_id,
+              brand_id: brandId,
+              competitor_id: competitorId,
               asset_type: str(payload.asset_type, 20) ?? "ad",
-              platform: str(payload.platform, 40),
+              platform,
               title,
               url,
               image_url: image,
+              thumbnail_url: image,
               price,
               offer: str(payload.offer, 300),
+              hook: str(payload.hook, 300),
               note,
+              tags,
               captured_by: t.user_id,
-            })
+            } as never)
             .select("id")
             .single();
           if (error) return json({ error: error.message }, 400);
           inserted = data as { id: string };
         } else {
+          savedKind = "idea";
+          const gallery = images.length ? images : image ? [image] : [];
           const { data, error } = await supabaseAdmin
             .from("hub_product_ideas")
             .insert({
-              brand_id: t.default_brand_id,
+              brand_id: brandId,
               title: title ?? url ?? "Untitled idea",
               source_url: url,
-              image_url: image,
+              supplier_url: platform === "supplier" ? url : null,
+              image_url: image ?? gallery[0] ?? null,
+              images: gallery,
               notes: note,
+              tags,
               est_sell_price: price ?? 0,
               status: "idea",
               created_by: t.user_id,
-            })
+            } as never)
             .select("id")
             .single();
           if (error) return json({ error: error.message }, 400);
@@ -104,7 +241,7 @@ export const Route = createFileRoute("/api/public/hub/capture")({
           .update({ last_used_at: new Date().toISOString(), use_count: (t.use_count ?? 0) + 1 })
           .eq("id", t.id);
 
-        return json({ ok: true, kind, id: inserted?.id });
+        return json({ ok: true, kind: savedKind, id: inserted?.id });
       },
     },
   },

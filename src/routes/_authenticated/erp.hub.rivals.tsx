@@ -10,6 +10,7 @@ import {
   Star,
   Copy,
   KeyRound,
+  Download,
   Search,
   ImageOff,
 } from "lucide-react";
@@ -258,7 +259,7 @@ function RivalsPage() {
 
   const origin = typeof window === "undefined" ? "" : window.location.origin;
   const bookmarklet = newToken
-    ? `javascript:(function(){var k=prompt('Type: idea / competitor','competitor');if(!k)return;var i=document.querySelector('meta[property="og:image"]');fetch('${origin}/api/public/hub/capture',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({token:'${newToken}',kind:k,title:document.title,url:location.href,image_url:i&&i.content,note:(window.getSelection()+'')||null})}).then(function(r){return r.json()}).then(function(d){alert(d.ok?'Saved to Growth Hub ✅':'Failed: '+(d.error||''))}).catch(function(e){alert('Failed: '+e)})})();`
+    ? `javascript:(function(){var k=prompt('Type: idea / swipe / competitor','swipe');if(!k)return;var i=document.querySelector('meta[property="og:image"]');fetch('${origin}/api/public/hub/capture',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({token:'${newToken}',kind:k,title:document.title,url:location.href,image_url:i&&i.content,note:(window.getSelection()+'')||null})}).then(function(r){return r.json()}).then(function(d){alert(d.ok?'Saved to Growth Hub ✅':'Failed: '+(d.error||''))}).catch(function(e){alert('Failed: '+e)})})();`
     : "";
 
   return (
@@ -495,17 +496,67 @@ function RivalsPage() {
 
         {/* ----------------------------- CAPTURE ----------------------------- */}
         <TabsContent value="capture" className="mt-4 space-y-3">
+          <Card className="overflow-hidden border-primary/30">
+            <CardContent className="space-y-3 p-4 text-sm">
+              <div className="flex items-start gap-3">
+                <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-indigo-500 to-fuchsia-500 text-xs font-extrabold text-white">
+                  GH
+                </span>
+                <div>
+                  <p className="font-semibold">Growth Hub Capture — Chrome extension (recommended)</p>
+                  <p className="text-xs text-muted-foreground">
+                    যেকোনো website, product, Facebook/Instagram/TikTok ad বা ভালো লাগা content — এক
+                    ক্লিকে ছবি, দাম, note সহ Hub-এ চলে আসবে। Right-click মেনু থেকেও সেভ করা যায়।
+                  </p>
+                </div>
+              </div>
+
+              <div className="flex flex-wrap items-center gap-2">
+                <Button size="sm" onClick={() => makeToken.mutate()} disabled={makeToken.isPending}>
+                  <KeyRound className="mr-1.5 h-3.5 w-3.5" /> নতুন token বানাও
+                </Button>
+                <Button size="sm" variant="outline" asChild>
+                  <a
+                    href={`/api/public/hub/extension.zip?origin=${encodeURIComponent(origin)}${
+                      newToken ? `&token=${encodeURIComponent(newToken)}` : ""
+                    }`}
+                  >
+                    <Download className="mr-1.5 h-3.5 w-3.5" />
+                    Extension ডাউনলোড {newToken ? "(token সহ)" : ""}
+                  </a>
+                </Button>
+              </div>
+
+              <ol className="list-decimal space-y-1 pl-5 text-xs text-muted-foreground">
+                <li>Zip ডাউনলোড করে extract করো।</li>
+                <li>
+                  Chrome-এ <code>chrome://extensions</code> খোলো → উপরে ডানে{" "}
+                  <b>Developer mode</b> ON করো।
+                </li>
+                <li>
+                  <b>Load unpacked</b> চাপো → extract করা ফোল্ডারটা select করো।
+                </li>
+                <li>
+                  Toolbar-এর GH আইকনে ক্লিক → token পেস্ট করো (token সহ ডাউনলোড করলে আগেই বসানো
+                  থাকবে) → brand সিলেক্ট করো।
+                </li>
+              </ol>
+              <p className="text-[11px] text-muted-foreground">
+                Popup-এ ৩টা মোড: <b>💡 Idea</b> → Product Pipeline-এ (vote/rating সহ),{" "}
+                <b>🎨 Swipe</b> → Swipe file + rival page auto তৈরি, <b>🏴 Rival</b> → competitor
+                registry-তে।
+              </p>
+            </CardContent>
+          </Card>
+
           <Card>
             <CardContent className="space-y-3 p-4 text-sm">
-              <p className="font-semibold">এক ক্লিকে যেকোনো পেজ Hub-এ পাঠাও</p>
+              <p className="font-semibold">Bookmarklet (extension ছাড়া, মোবাইল/যেকোনো ব্রাউজারে)</p>
               <p className="text-xs text-muted-foreground">
-                নিচের বাটনে চাপ দিয়ে নিজের গোপন token বানাও, তারপর bookmarklet কোডটা কপি করে
+                token বানানোর পর নিচের bookmarklet কোডটা কপি করে
                 ব্রাউজারের bookmark bar-এ নতুন bookmark হিসেবে URL এর জায়গায় paste করো। যেকোনো
                 product বা competitor পেজে গিয়ে ওই bookmark-এ ক্লিক করলেই সেটা Growth Hub-এ সেভ হবে।
               </p>
-              <Button size="sm" onClick={() => makeToken.mutate()} disabled={makeToken.isPending}>
-                <KeyRound className="mr-1.5 h-3.5 w-3.5" /> নতুন token বানাও
-              </Button>
 
               {newToken && (
                 <div className="space-y-2 rounded-lg border border-primary/30 bg-primary/5 p-3">
