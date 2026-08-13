@@ -3415,6 +3415,188 @@ export type Database = {
         }
         Relationships: []
       }
+      hub_content_assignments: {
+        Row: {
+          actual_cost: number
+          agreed_budget: number
+          created_at: string
+          creator_id: string | null
+          deadline: string | null
+          deliverable: string | null
+          id: string
+          notes: string | null
+          plan_id: string
+          result_url: string | null
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          actual_cost?: number
+          agreed_budget?: number
+          created_at?: string
+          creator_id?: string | null
+          deadline?: string | null
+          deliverable?: string | null
+          id?: string
+          notes?: string | null
+          plan_id: string
+          result_url?: string | null
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          actual_cost?: number
+          agreed_budget?: number
+          created_at?: string
+          creator_id?: string | null
+          deadline?: string | null
+          deliverable?: string | null
+          id?: string
+          notes?: string | null
+          plan_id?: string
+          result_url?: string | null
+          status?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "hub_content_assignments_creator_id_fkey"
+            columns: ["creator_id"]
+            isOneToOne: false
+            referencedRelation: "hub_creators"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "hub_content_assignments_plan_id_fkey"
+            columns: ["plan_id"]
+            isOneToOne: false
+            referencedRelation: "hub_content_plans"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      hub_content_plans: {
+        Row: {
+          angle: string | null
+          asset_type: string
+          brand_id: string | null
+          budget: number
+          created_at: string
+          created_by: string | null
+          deadline: string | null
+          id: string
+          idea_id: string | null
+          launch_date: string | null
+          notes: string | null
+          owner_id: string | null
+          platform: string
+          product_id: string | null
+          status: string
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          angle?: string | null
+          asset_type?: string
+          brand_id?: string | null
+          budget?: number
+          created_at?: string
+          created_by?: string | null
+          deadline?: string | null
+          id?: string
+          idea_id?: string | null
+          launch_date?: string | null
+          notes?: string | null
+          owner_id?: string | null
+          platform?: string
+          product_id?: string | null
+          status?: string
+          title: string
+          updated_at?: string
+        }
+        Update: {
+          angle?: string | null
+          asset_type?: string
+          brand_id?: string | null
+          budget?: number
+          created_at?: string
+          created_by?: string | null
+          deadline?: string | null
+          id?: string
+          idea_id?: string | null
+          launch_date?: string | null
+          notes?: string | null
+          owner_id?: string | null
+          platform?: string
+          product_id?: string | null
+          status?: string
+          title?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "hub_content_plans_idea_id_fkey"
+            columns: ["idea_id"]
+            isOneToOne: false
+            referencedRelation: "hub_product_ideas"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      hub_creators: {
+        Row: {
+          brand_id: string | null
+          contact: string | null
+          created_at: string
+          created_by: string | null
+          followers: number | null
+          handle: string | null
+          id: string
+          name: string
+          niche: string | null
+          performance_note: string | null
+          platform: string
+          profile_url: string | null
+          rate: number
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          brand_id?: string | null
+          contact?: string | null
+          created_at?: string
+          created_by?: string | null
+          followers?: number | null
+          handle?: string | null
+          id?: string
+          name: string
+          niche?: string | null
+          performance_note?: string | null
+          platform?: string
+          profile_url?: string | null
+          rate?: number
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          brand_id?: string | null
+          contact?: string | null
+          created_at?: string
+          created_by?: string | null
+          followers?: number | null
+          handle?: string | null
+          id?: string
+          name?: string
+          niche?: string | null
+          performance_note?: string | null
+          platform?: string
+          profile_url?: string | null
+          rate?: number
+          status?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       hub_goals: {
         Row: {
           brand_id: string | null
