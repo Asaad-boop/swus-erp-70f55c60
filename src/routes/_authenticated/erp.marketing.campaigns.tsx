@@ -33,6 +33,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { useBrand } from "@/contexts/brand-context";
+import { BrandTabs } from "@/components/erp/marketing/marketing-shell";
 import {
   DateRangePicker,
   buildPreset,
@@ -124,11 +125,16 @@ function CampaignWorkspace() {
   return (
     <div className="p-4 md:p-6 max-w-[1500px] mx-auto space-y-4">
       <div className="flex flex-wrap items-center justify-between gap-3">
-        <div>
-          <h1 className="text-xl md:text-2xl font-semibold tracking-tight">Campaign Workspace</h1>
-          <p className="text-xs text-muted-foreground mt-0.5">
+        <div className="flex min-w-0 items-center gap-2.5">
+          <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-primary/10 text-primary">
+            <PageIcon className="h-4.5 w-4.5" />
+          </span>
+          <div className="min-w-0">
+            <h1 className="font-display text-xl font-bold tracking-tight">Campaign Workspace</h1>
+          <p className="text-xs text-muted-foreground">
             {range.label} · Campaign → Ad set → Ad · FIFO spend, canonical delivered revenue
           </p>
+          </div>
         </div>
         <div className="flex flex-wrap items-center gap-2">
           <BrandTabs value={brandKey} onChange={setBrandKey} />

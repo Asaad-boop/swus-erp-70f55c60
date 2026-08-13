@@ -149,12 +149,17 @@ function ChannelsPage() {
   return (
     <div className="mx-auto max-w-[1500px] space-y-4 p-4 md:p-6">
       <div className="flex flex-wrap items-center justify-between gap-3">
-        <div>
-          <h1 className="text-xl font-semibold tracking-tight">Ad Channels</h1>
-          <p className="text-sm text-muted-foreground">
+        <div className="flex min-w-0 items-center gap-2.5">
+          <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-primary/10 text-primary">
+            <PageIcon className="h-4.5 w-4.5" />
+          </span>
+          <div className="min-w-0">
+            <h1 className="font-display text-xl font-bold tracking-tight">Ad Channels</h1>
+          <p className="text-xs text-muted-foreground">
             Meta-r pashapashi Google Ads / TikTok Ads account rakho — spend import korle sob
             marketing report, ROAS ar profit calculation-e ek shathe ashbe.
           </p>
+          </div>
         </div>
         <Button onClick={() => { setForm(EMPTY_FORM); setShowForm((v) => !v); }}>
           <Plus className="h-4 w-4" /> New channel account

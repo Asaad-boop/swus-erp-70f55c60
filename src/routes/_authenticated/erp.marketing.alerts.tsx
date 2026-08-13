@@ -142,14 +142,19 @@ function AlertsPage() {
   return (
     <div className="p-4 md:p-6 max-w-[1400px] mx-auto space-y-4">
       <div className="flex flex-wrap items-center justify-between gap-3">
-        <div>
-          <h1 className="text-xl md:text-2xl font-semibold tracking-tight flex items-center gap-2">
+        <div className="flex min-w-0 items-center gap-2.5">
+          <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-primary/10 text-primary">
+            <PageIcon className="h-4.5 w-4.5" />
+          </span>
+          <div className="min-w-0">
+            <h1 className="font-display text-xl font-bold tracking-tight">
             <BellRing className="h-5 w-5 text-primary" />
             Marketing Intelligence
           </h1>
-          <p className="text-xs text-muted-foreground mt-0.5">
+          <p className="text-xs text-muted-foreground">
             Rule engine — ROAS, CPA, fatigue, budget, stock ar return signal ek jaygay
           </p>
+          </div>
         </div>
         <div className="flex flex-wrap items-center gap-2">
           <Select value={brandKey} onValueChange={setBrandKey}>
