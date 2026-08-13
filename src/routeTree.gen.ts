@@ -53,6 +53,7 @@ import { Route as ApiPublicWebhooksShopifyOrderRouteImport } from './routes/api/
 import { Route as ApiPublicWebhookPathaoRouteImport } from './routes/api/public/webhook.pathao'
 import { Route as ApiPublicMktTrackerDotjsRouteImport } from './routes/api/public/mkt.tracker[.]js'
 import { Route as ApiPublicMktTrackRouteImport } from './routes/api/public/mkt.track'
+import { Route as ApiPublicHubCaptureRouteImport } from './routes/api/public/hub.capture'
 import { Route as ApiPublicCronSyncMarketingRouteImport } from './routes/api/public/cron.sync-marketing'
 import { Route as ApiPublicCronSyncCourierRouteImport } from './routes/api/public/cron.sync-courier'
 import { Route as ApiPublicCronRunRecurringRouteImport } from './routes/api/public/cron.run-recurring'
@@ -86,6 +87,8 @@ import { Route as AuthenticatedErpImportsSettingsRouteImport } from './routes/_a
 import { Route as AuthenticatedErpImportsReportsRouteImport } from './routes/_authenticated/erp.imports.reports'
 import { Route as AuthenticatedErpImportsAgentsRouteImport } from './routes/_authenticated/erp.imports.agents'
 import { Route as AuthenticatedErpHubTasksRouteImport } from './routes/_authenticated/erp.hub.tasks'
+import { Route as AuthenticatedErpHubRoutinesRouteImport } from './routes/_authenticated/erp.hub.routines'
+import { Route as AuthenticatedErpHubRivalsRouteImport } from './routes/_authenticated/erp.hub.rivals'
 import { Route as AuthenticatedErpHubProductsRouteImport } from './routes/_authenticated/erp.hub.products'
 import { Route as AuthenticatedErpHubPlanningRouteImport } from './routes/_authenticated/erp.hub.planning'
 import { Route as AuthenticatedErpHubGoalsRouteImport } from './routes/_authenticated/erp.hub.goals'
@@ -352,6 +355,11 @@ const ApiPublicMktTrackRoute = ApiPublicMktTrackRouteImport.update({
   path: '/api/public/mkt/track',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiPublicHubCaptureRoute = ApiPublicHubCaptureRouteImport.update({
+  id: '/api/public/hub/capture',
+  path: '/api/public/hub/capture',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ApiPublicCronSyncMarketingRoute =
   ApiPublicCronSyncMarketingRouteImport.update({
     id: '/api/public/cron/sync-marketing',
@@ -550,6 +558,18 @@ const AuthenticatedErpHubTasksRoute =
     path: '/tasks',
     getParentRoute: () => AuthenticatedErpHubRoute,
   } as any)
+const AuthenticatedErpHubRoutinesRoute =
+  AuthenticatedErpHubRoutinesRouteImport.update({
+    id: '/routines',
+    path: '/routines',
+    getParentRoute: () => AuthenticatedErpHubRoute,
+  } as any)
+const AuthenticatedErpHubRivalsRoute =
+  AuthenticatedErpHubRivalsRouteImport.update({
+    id: '/rivals',
+    path: '/rivals',
+    getParentRoute: () => AuthenticatedErpHubRoute,
+  } as any)
 const AuthenticatedErpHubProductsRoute =
   AuthenticatedErpHubProductsRouteImport.update({
     id: '/products',
@@ -717,6 +737,8 @@ export interface FileRoutesByFullPath {
   '/erp/hub/goals': typeof AuthenticatedErpHubGoalsRoute
   '/erp/hub/planning': typeof AuthenticatedErpHubPlanningRoute
   '/erp/hub/products': typeof AuthenticatedErpHubProductsRoute
+  '/erp/hub/rivals': typeof AuthenticatedErpHubRivalsRoute
+  '/erp/hub/routines': typeof AuthenticatedErpHubRoutinesRoute
   '/erp/hub/tasks': typeof AuthenticatedErpHubTasksRoute
   '/erp/imports/agents': typeof AuthenticatedErpImportsAgentsRoute
   '/erp/imports/reports': typeof AuthenticatedErpImportsReportsRoute
@@ -750,6 +772,7 @@ export interface FileRoutesByFullPath {
   '/api/public/cron/run-recurring': typeof ApiPublicCronRunRecurringRoute
   '/api/public/cron/sync-courier': typeof ApiPublicCronSyncCourierRoute
   '/api/public/cron/sync-marketing': typeof ApiPublicCronSyncMarketingRoute
+  '/api/public/hub/capture': typeof ApiPublicHubCaptureRoute
   '/api/public/mkt/track': typeof ApiPublicMktTrackRoute
   '/api/public/mkt/tracker.js': typeof ApiPublicMktTrackerDotjsRoute
   '/api/public/webhook/pathao': typeof ApiPublicWebhookPathaoRoute
@@ -806,6 +829,8 @@ export interface FileRoutesByTo {
   '/erp/hub/goals': typeof AuthenticatedErpHubGoalsRoute
   '/erp/hub/planning': typeof AuthenticatedErpHubPlanningRoute
   '/erp/hub/products': typeof AuthenticatedErpHubProductsRoute
+  '/erp/hub/rivals': typeof AuthenticatedErpHubRivalsRoute
+  '/erp/hub/routines': typeof AuthenticatedErpHubRoutinesRoute
   '/erp/hub/tasks': typeof AuthenticatedErpHubTasksRoute
   '/erp/imports/agents': typeof AuthenticatedErpImportsAgentsRoute
   '/erp/imports/reports': typeof AuthenticatedErpImportsReportsRoute
@@ -839,6 +864,7 @@ export interface FileRoutesByTo {
   '/api/public/cron/run-recurring': typeof ApiPublicCronRunRecurringRoute
   '/api/public/cron/sync-courier': typeof ApiPublicCronSyncCourierRoute
   '/api/public/cron/sync-marketing': typeof ApiPublicCronSyncMarketingRoute
+  '/api/public/hub/capture': typeof ApiPublicHubCaptureRoute
   '/api/public/mkt/track': typeof ApiPublicMktTrackRoute
   '/api/public/mkt/tracker.js': typeof ApiPublicMktTrackerDotjsRoute
   '/api/public/webhook/pathao': typeof ApiPublicWebhookPathaoRoute
@@ -906,6 +932,8 @@ export interface FileRoutesById {
   '/_authenticated/erp/hub/goals': typeof AuthenticatedErpHubGoalsRoute
   '/_authenticated/erp/hub/planning': typeof AuthenticatedErpHubPlanningRoute
   '/_authenticated/erp/hub/products': typeof AuthenticatedErpHubProductsRoute
+  '/_authenticated/erp/hub/rivals': typeof AuthenticatedErpHubRivalsRoute
+  '/_authenticated/erp/hub/routines': typeof AuthenticatedErpHubRoutinesRoute
   '/_authenticated/erp/hub/tasks': typeof AuthenticatedErpHubTasksRoute
   '/_authenticated/erp/imports/agents': typeof AuthenticatedErpImportsAgentsRoute
   '/_authenticated/erp/imports/reports': typeof AuthenticatedErpImportsReportsRoute
@@ -939,6 +967,7 @@ export interface FileRoutesById {
   '/api/public/cron/run-recurring': typeof ApiPublicCronRunRecurringRoute
   '/api/public/cron/sync-courier': typeof ApiPublicCronSyncCourierRoute
   '/api/public/cron/sync-marketing': typeof ApiPublicCronSyncMarketingRoute
+  '/api/public/hub/capture': typeof ApiPublicHubCaptureRoute
   '/api/public/mkt/track': typeof ApiPublicMktTrackRoute
   '/api/public/mkt/tracker.js': typeof ApiPublicMktTrackerDotjsRoute
   '/api/public/webhook/pathao': typeof ApiPublicWebhookPathaoRoute
@@ -1006,6 +1035,8 @@ export interface FileRouteTypes {
     | '/erp/hub/goals'
     | '/erp/hub/planning'
     | '/erp/hub/products'
+    | '/erp/hub/rivals'
+    | '/erp/hub/routines'
     | '/erp/hub/tasks'
     | '/erp/imports/agents'
     | '/erp/imports/reports'
@@ -1039,6 +1070,7 @@ export interface FileRouteTypes {
     | '/api/public/cron/run-recurring'
     | '/api/public/cron/sync-courier'
     | '/api/public/cron/sync-marketing'
+    | '/api/public/hub/capture'
     | '/api/public/mkt/track'
     | '/api/public/mkt/tracker.js'
     | '/api/public/webhook/pathao'
@@ -1095,6 +1127,8 @@ export interface FileRouteTypes {
     | '/erp/hub/goals'
     | '/erp/hub/planning'
     | '/erp/hub/products'
+    | '/erp/hub/rivals'
+    | '/erp/hub/routines'
     | '/erp/hub/tasks'
     | '/erp/imports/agents'
     | '/erp/imports/reports'
@@ -1128,6 +1162,7 @@ export interface FileRouteTypes {
     | '/api/public/cron/run-recurring'
     | '/api/public/cron/sync-courier'
     | '/api/public/cron/sync-marketing'
+    | '/api/public/hub/capture'
     | '/api/public/mkt/track'
     | '/api/public/mkt/tracker.js'
     | '/api/public/webhook/pathao'
@@ -1194,6 +1229,8 @@ export interface FileRouteTypes {
     | '/_authenticated/erp/hub/goals'
     | '/_authenticated/erp/hub/planning'
     | '/_authenticated/erp/hub/products'
+    | '/_authenticated/erp/hub/rivals'
+    | '/_authenticated/erp/hub/routines'
     | '/_authenticated/erp/hub/tasks'
     | '/_authenticated/erp/imports/agents'
     | '/_authenticated/erp/imports/reports'
@@ -1227,6 +1264,7 @@ export interface FileRouteTypes {
     | '/api/public/cron/run-recurring'
     | '/api/public/cron/sync-courier'
     | '/api/public/cron/sync-marketing'
+    | '/api/public/hub/capture'
     | '/api/public/mkt/track'
     | '/api/public/mkt/tracker.js'
     | '/api/public/webhook/pathao'
@@ -1260,6 +1298,7 @@ export interface RootRouteChildren {
   ApiPublicCronRunRecurringRoute: typeof ApiPublicCronRunRecurringRoute
   ApiPublicCronSyncCourierRoute: typeof ApiPublicCronSyncCourierRoute
   ApiPublicCronSyncMarketingRoute: typeof ApiPublicCronSyncMarketingRoute
+  ApiPublicHubCaptureRoute: typeof ApiPublicHubCaptureRoute
   ApiPublicMktTrackRoute: typeof ApiPublicMktTrackRoute
   ApiPublicMktTrackerDotjsRoute: typeof ApiPublicMktTrackerDotjsRoute
   ApiPublicWebhookPathaoRoute: typeof ApiPublicWebhookPathaoRoute
@@ -1576,6 +1615,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiPublicMktTrackRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/public/hub/capture': {
+      id: '/api/public/hub/capture'
+      path: '/api/public/hub/capture'
+      fullPath: '/api/public/hub/capture'
+      preLoaderRoute: typeof ApiPublicHubCaptureRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/public/cron/sync-marketing': {
       id: '/api/public/cron/sync-marketing'
       path: '/api/public/cron/sync-marketing'
@@ -1807,6 +1853,20 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedErpHubTasksRouteImport
       parentRoute: typeof AuthenticatedErpHubRoute
     }
+    '/_authenticated/erp/hub/routines': {
+      id: '/_authenticated/erp/hub/routines'
+      path: '/routines'
+      fullPath: '/erp/hub/routines'
+      preLoaderRoute: typeof AuthenticatedErpHubRoutinesRouteImport
+      parentRoute: typeof AuthenticatedErpHubRoute
+    }
+    '/_authenticated/erp/hub/rivals': {
+      id: '/_authenticated/erp/hub/rivals'
+      path: '/rivals'
+      fullPath: '/erp/hub/rivals'
+      preLoaderRoute: typeof AuthenticatedErpHubRivalsRouteImport
+      parentRoute: typeof AuthenticatedErpHubRoute
+    }
     '/_authenticated/erp/hub/products': {
       id: '/_authenticated/erp/hub/products'
       path: '/products'
@@ -2008,6 +2068,8 @@ interface AuthenticatedErpHubRouteChildren {
   AuthenticatedErpHubGoalsRoute: typeof AuthenticatedErpHubGoalsRoute
   AuthenticatedErpHubPlanningRoute: typeof AuthenticatedErpHubPlanningRoute
   AuthenticatedErpHubProductsRoute: typeof AuthenticatedErpHubProductsRoute
+  AuthenticatedErpHubRivalsRoute: typeof AuthenticatedErpHubRivalsRoute
+  AuthenticatedErpHubRoutinesRoute: typeof AuthenticatedErpHubRoutinesRoute
   AuthenticatedErpHubTasksRoute: typeof AuthenticatedErpHubTasksRoute
   AuthenticatedErpHubIndexRoute: typeof AuthenticatedErpHubIndexRoute
 }
@@ -2017,6 +2079,8 @@ const AuthenticatedErpHubRouteChildren: AuthenticatedErpHubRouteChildren = {
   AuthenticatedErpHubGoalsRoute: AuthenticatedErpHubGoalsRoute,
   AuthenticatedErpHubPlanningRoute: AuthenticatedErpHubPlanningRoute,
   AuthenticatedErpHubProductsRoute: AuthenticatedErpHubProductsRoute,
+  AuthenticatedErpHubRivalsRoute: AuthenticatedErpHubRivalsRoute,
+  AuthenticatedErpHubRoutinesRoute: AuthenticatedErpHubRoutinesRoute,
   AuthenticatedErpHubTasksRoute: AuthenticatedErpHubTasksRoute,
   AuthenticatedErpHubIndexRoute: AuthenticatedErpHubIndexRoute,
 }
@@ -2259,6 +2323,7 @@ const rootRouteChildren: RootRouteChildren = {
   ApiPublicCronRunRecurringRoute: ApiPublicCronRunRecurringRoute,
   ApiPublicCronSyncCourierRoute: ApiPublicCronSyncCourierRoute,
   ApiPublicCronSyncMarketingRoute: ApiPublicCronSyncMarketingRoute,
+  ApiPublicHubCaptureRoute: ApiPublicHubCaptureRoute,
   ApiPublicMktTrackRoute: ApiPublicMktTrackRoute,
   ApiPublicMktTrackerDotjsRoute: ApiPublicMktTrackerDotjsRoute,
   ApiPublicWebhookPathaoRoute: ApiPublicWebhookPathaoRoute,
