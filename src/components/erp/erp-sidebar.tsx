@@ -125,6 +125,7 @@ const groups: Group[] = [
         items: [
           { to: "/erp/marketing", label: "Overview", icon: LayoutDashboard, exact: true },
           { to: "/erp/marketing/campaigns", label: "Campaigns", icon: Target },
+          { to: "/erp/marketing/creatives", label: "Creative Library", icon: Image },
           { to: "/erp/marketing/daily", label: "Daily Performance", icon: BarChart3 },
         ],
       },

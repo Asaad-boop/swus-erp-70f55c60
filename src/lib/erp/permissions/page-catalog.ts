@@ -49,6 +49,7 @@ export const PAGE_CATALOG: PageEntry[] = [
 
   { group: "Marketing", path: "/erp/marketing", label: "Overview" },
   { group: "Marketing", path: "/erp/marketing/campaigns", label: "Campaign Workspace" },
+  { group: "Marketing", path: "/erp/marketing/creatives", label: "Creative Library" },
   { group: "Marketing", path: "/erp/marketing/daily", label: "Daily Performance" },
 
   { group: "CRM", path: "/erp/crm", label: "Customers" },
