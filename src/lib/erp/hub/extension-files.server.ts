@@ -6,13 +6,16 @@ const MANIFEST = (origin: string) =>
     {
       manifest_version: 3,
       name: "Growth Hub Capture",
-      version: "1.1.0",
+      version: "1.2.0",
       description:
         "Save any product, competitor ad or content inspiration straight into your Growth Hub.",
-      permissions: ["activeTab", "scripting", "storage", "contextMenus", "notifications"],
+      permissions: ["activeTab", "scripting", "storage", "contextMenus", "notifications", "tabs"],
       host_permissions: ["<all_urls>"],
       background: { service_worker: "background.js", type: "module" },
       action: { default_popup: "popup.html", default_title: "Save to Growth Hub" },
+      content_scripts: [
+        { matches: ["<all_urls>"], js: ["content.js"], run_at: "document_idle", all_frames: false },
+      ],
       options_page: "options.html",
       icons: { 128: "icon128.png" },
       externally_connectable: { matches: [origin.replace(/\/$/, "") + "/*"] },
@@ -27,32 +30,95 @@ const CONFIG = (origin: string, token: string | null) =>
   ";\n";
 
 const SCRAPE = `
-// Injected into the page. Returns everything worth capturing.
+// Injected into the page. Deep product / page / content scraper.
 (() => {
   const meta = (sel, attr) => {
     const el = document.querySelector(sel);
     return el ? (el.getAttribute(attr || 'content') || '').trim() : '';
   };
   const abs = (u) => { try { return new URL(u, location.href).href; } catch { return null; } };
+  const txt = (el) => (el && el.innerText ? el.innerText.trim() : '');
+
+  /* ---------------- JSON-LD ---------------- */
+  const ld = [];
+  Array.from(document.querySelectorAll('script[type="application/ld+json"]')).forEach((n) => {
+    try {
+      const parsed = JSON.parse(n.textContent);
+      (Array.isArray(parsed) ? parsed : [parsed]).forEach((x) => {
+        if (x && x['@graph']) ld.push.apply(ld, x['@graph']); else if (x) ld.push(x);
+      });
+    } catch (e) {}
+  });
+  const typeOf = (x) => { const t = x && x['@type']; return Array.isArray(t) ? t.join(',') : (t || ''); };
+  const product = ld.find((x) => /Product/i.test(typeOf(x)));
+  const profile = ld.find((x) => /ProfilePage|Organization|Person/i.test(typeOf(x)));
+
+  /* ---------------- images ---------------- */
   const imgs = [];
-  const push = (u) => { const a = abs(u); if (a && a.startsWith('http') && !imgs.includes(a)) imgs.push(a); };
+  const push = (u) => { const a = abs(u); if (a && /^https?:/.test(a) && !imgs.includes(a) && !/\\.svg($|\\?)/i.test(a)) imgs.push(a); };
   push(meta('meta[property="og:image"]'));
   push(meta('meta[name="twitter:image"]'));
+  if (product && product.image) (Array.isArray(product.image) ? product.image : [product.image]).forEach((im) => push(typeof im === 'string' ? im : im && im.url));
   Array.from(document.querySelectorAll('img')).forEach((im) => {
     const w = im.naturalWidth || im.width, h = im.naturalHeight || im.height;
     if (w >= 200 && h >= 200) push(im.currentSrc || im.src);
+    else if (!w && im.getAttribute('data-src')) push(im.getAttribute('data-src'));
+  });
+  Array.from(document.querySelectorAll('[style*="background-image"]')).slice(0, 40).forEach((el) => {
+    const m = /url\\(["']?(.*?)["']?\\)/.exec(el.getAttribute('style') || '');
+    if (m) push(m[1]);
   });
   Array.from(document.querySelectorAll('video[poster]')).forEach((v) => push(v.getAttribute('poster')));
 
-  let price = null;
-  const pm = meta('meta[property="product:price:amount"]') || meta('meta[property="og:price:amount"]');
-  if (pm) price = parseFloat(pm.replace(/[^0-9.]/g, ''));
-  if (!price) {
+  /* ---------------- price + currency ---------------- */
+  const num = (v) => { const n = parseFloat(String(v == null ? '' : v).replace(/[^0-9.]/g, '')); return Number.isFinite(n) ? n : null; };
+  let price = null, currency = null, sku = null, availability = null, brandName = null;
+  if (product) {
+    const offer = Array.isArray(product.offers) ? product.offers[0] : product.offers;
+    if (offer) {
+      price = num(offer.price || offer.lowPrice || (offer.priceSpecification && offer.priceSpecification.price));
+      currency = offer.priceCurrency || null;
+      availability = typeof offer.availability === 'string' ? offer.availability.split('/').pop() : null;
+    }
+    sku = product.sku || product.mpn || null;
+    brandName = product.brand ? (typeof product.brand === 'string' ? product.brand : product.brand.name) : null;
+  }
+  if (price == null) price = num(meta('meta[property="product:price:amount"]') || meta('meta[property="og:price:amount"]'));
+  if (!currency) currency = meta('meta[property="product:price:currency"]') || meta('meta[property="og:price:currency"]') || null;
+  if (price == null) {
+    const cand = document.querySelector('[itemprop="price"],.price,.product-price,[class*="price" i]');
+    const t = txt(cand);
+    const m = t && t.match(/(?:৳|Tk\\.?|BDT|RM|\\$|¥|€|£|USD|CNY)\\s?([0-9][0-9,]{0,9}(?:\\.[0-9]{1,2})?)/i);
+    if (m) price = num(m[1]);
+  }
+  if (price == null) {
     const body = (document.body ? document.body.innerText : '').slice(0, 20000);
-    const m = body.match(/(?:৳|Tk\\.?|BDT|RM|\\$|¥|USD)\\s?([0-9][0-9,]{1,9}(?:\\.[0-9]{1,2})?)/i);
-    if (m) price = parseFloat(m[1].replace(/,/g, ''));
+    const m = body.match(/(?:৳|Tk\\.?|BDT|RM|\\$|¥|€|£|USD|CNY)\\s?([0-9][0-9,]{1,9}(?:\\.[0-9]{1,2})?)/i);
+    if (m) price = num(m[1]);
+  }
+  if (!currency) {
+    const b = (document.body ? document.body.innerText : '').slice(0, 4000);
+    currency = /৳|Tk\\.?|BDT/i.test(b) ? 'BDT' : /¥|CNY|RMB|元/i.test(b) ? 'CNY' : /\\$|USD/.test(b) ? 'USD' : null;
   }
 
+  /* ---------------- variants / options ---------------- */
+  const variants = [];
+  Array.from(document.querySelectorAll('select')).forEach((sel) => {
+    const name = (sel.getAttribute('name') || sel.getAttribute('aria-label') || '').toLowerCase();
+    if (!/color|colour|size|variant|option|style|model/.test(name)) return;
+    const vals = Array.from(sel.options).map((o) => o.text.trim()).filter((v) => v && !/select|choose/i.test(v));
+    if (vals.length) variants.push({ name: name, values: vals.slice(0, 20) });
+  });
+  Array.from(document.querySelectorAll('[data-option-name],[class*="swatch" i]')).slice(0, 40).forEach((el) => {
+    const v = txt(el) || el.getAttribute('title') || el.getAttribute('aria-label');
+    if (v && v.length < 30) {
+      let g = variants.find((x) => x.name === 'options');
+      if (!g) { g = { name: 'options', values: [] }; variants.push(g); }
+      if (!g.values.includes(v) && g.values.length < 24) g.values.push(v);
+    }
+  });
+
+  /* ---------------- platform / page ---------------- */
   const host = location.hostname.replace(/^www\\./, '');
   let platform = 'web';
   if (/facebook\\.com/.test(host)) platform = 'facebook';
@@ -60,19 +126,48 @@ const SCRAPE = `
   else if (/tiktok\\.com/.test(host)) platform = 'tiktok';
   else if (/youtube\\.com|youtu\\.be/.test(host)) platform = 'youtube';
   else if (/pinterest\\./.test(host)) platform = 'pinterest';
-  else if (/1688\\.com|alibaba\\.com|taobao\\.com|aliexpress\\./.test(host)) platform = 'supplier';
+  else if (/1688\\.com|alibaba\\.com|taobao\\.com|aliexpress\\.|made-in-china|dhgate/.test(host)) platform = 'supplier';
+  else if (/shopee|lazada|daraz|amazon\\./.test(host)) platform = 'marketplace';
 
-  let siteName = meta('meta[property="og:site_name"]') || host;
+  let handle = null, followers = null;
+  if (platform === 'instagram') {
+    const m = location.pathname.match(/^\\/([A-Za-z0-9_.]+)\\/?$/);
+    if (m) handle = '@' + m[1];
+  } else if (platform === 'facebook') {
+    const m = location.pathname.match(/^\\/([A-Za-z0-9_.-]+)\\/?$/);
+    if (m && !/profile\\.php|watch|marketplace|groups/.test(m[1])) handle = m[1];
+  } else if (platform === 'tiktok') {
+    const m = location.pathname.match(/^\\/@([A-Za-z0-9_.]+)/);
+    if (m) handle = '@' + m[1];
+  }
+  const fm = (document.body ? document.body.innerText : '').slice(0, 4000)
+    .match(/([0-9][0-9.,]*\\s?[KMkm]?)\\s*(followers|ফলোয়ার|Followers)/);
+  if (fm) followers = fm[1].trim();
+  const isPage = !!handle;
+
+  const siteName = meta('meta[property="og:site_name"]') || (profile && profile.name) || host;
   const heading = document.querySelector('h1');
+  const article = document.querySelector('article, [role="article"], main');
+
   return {
-    url: location.href,
-    title: (meta('meta[property="og:title"]') || (heading && heading.innerText) || document.title || '').trim().slice(0, 300),
-    description: (meta('meta[name="description"]') || meta('meta[property="og:description"]') || '').slice(0, 500),
+    url: (product && product.url ? abs(product.url) : null) || location.href,
+    title: ((product && product.name) || meta('meta[property="og:title"]') || txt(heading) || document.title || '').trim().slice(0, 300),
+    description: ((product && product.description) || meta('meta[name="description"]') || meta('meta[property="og:description"]') || '').slice(0, 800),
+    content: (txt(article) || '').slice(0, 4000),
     selection: (window.getSelection() + '').trim().slice(0, 2000),
     images: imgs.slice(0, 24),
-    price: Number.isFinite(price) ? price : null,
+    price: price,
+    currency: currency,
+    sku: sku,
+    availability: availability,
+    brand_name: brandName,
+    variants: variants.slice(0, 6),
     platform: platform,
     host: host,
+    handle: handle,
+    followers: followers,
+    is_page: isPage,
+    is_product: !!product || /product|\\/p\\/|\\/item\\//i.test(location.pathname),
     siteName: siteName
   };
 })();
@@ -111,6 +206,32 @@ chrome.runtime.onInstalled.addListener(() => {
     chrome.contextMenus.create({ id: 'gh-swipe', title: 'Growth Hub: swipe / inspiration সেভ', contexts: ['page', 'image', 'link', 'selection'] });
     chrome.contextMenus.create({ id: 'gh-rival', title: 'Growth Hub: rival page হিসেবে সেভ', contexts: ['page', 'link'] });
   });
+});
+
+
+/* ------- bridge for the in-page clip button ------- */
+chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
+  (async () => {
+    try {
+      if (msg && msg.type === 'gh-scrape') {
+        const [res] = await chrome.scripting.executeScript({ target: { tabId: sender.tab.id }, files: ['scrape.js'] });
+        const c = await cfg();
+        sendResponse({ ok: true, page: (res && res.result) || {}, brandId: c.brandId, hasToken: !!c.token });
+      } else if (msg && msg.type === 'gh-meta') {
+        const j = await api({ action: 'meta' });
+        sendResponse({ ok: true, meta: j });
+      } else if (msg && msg.type === 'gh-save') {
+        if (msg.payload && msg.payload.brand_id) await chrome.storage.sync.set({ brandId: msg.payload.brand_id });
+        const j = await api(msg.payload);
+        sendResponse({ ok: true, result: j });
+      } else {
+        sendResponse({ ok: false, error: 'unknown message' });
+      }
+    } catch (e) {
+      sendResponse({ ok: false, error: String(e.message || e) });
+    }
+  })();
+  return true;
 });
 
 chrome.contextMenus.onClicked.addListener(async (info, tab) => {
@@ -324,18 +445,18 @@ async function init() {
   });
 
   document.querySelectorAll('.tab').forEach((t) => (t.onclick = () => setKind(t.dataset.kind)));
-  setKind('idea');
+  setKind(page.is_page ? 'competitor' : (page.is_product || page.platform === 'supplier' || page.platform === 'marketplace') ? 'idea' : 'swipe');
 
   try {
     const meta = await api({ action: 'meta' });
     const b = $('brand');
-    b.innerHTML = '<option value="">(brand ছাড়া)</option>';
+    b.innerHTML = '';
     (meta.brands || []).forEach((x) => {
       const o = document.createElement('option');
       o.value = x.id; o.textContent = x.name;
       b.appendChild(o);
     });
-    b.value = cfg.brandId || meta.default_brand_id || '';
+    b.value = cfg.brandId || meta.default_brand_id || ((meta.brands || [])[0] || {}).id || '';
     b.onchange = () => chrome.storage.sync.set({ brandId: b.value });
 
     const c = $('competitor');
@@ -359,20 +480,28 @@ async function save() {
   $('msg').textContent = 'সেভ হচ্ছে…';
   $('msg').className = 'msg';
   const tags = $('tags').value.split(',').map((s) => s.trim()).filter(Boolean);
+  const extra = [];
+  if (page.sku) extra.push('SKU: ' + page.sku);
+  if (page.currency && page.price) extra.push('Listed: ' + page.price + ' ' + page.currency);
+  (page.variants || []).forEach((v) => extra.push(v.name + ': ' + v.values.join(', ')));
+  if (page.followers) extra.push('Followers: ' + page.followers);
+  if (page.handle) extra.push('Handle: ' + page.handle);
+  const noteFull = [$('note').value.trim(), extra.join(' | ')].filter(Boolean).join('\\n');
   const body = {
     kind: kind,
     brand_id: $('brand').value || null,
+    name: $('title').value.trim(),
     title: $('title').value.trim(),
     url: page.url,
     image_url: chosen,
-    images: (page.images || []).slice(0, 6),
-    note: $('note').value.trim() || null,
+    images: (page.images || []).slice(0, 8),
+    note: noteFull || null,
     price: $('price').value ? Number($('price').value) : null,
     tags: tags,
     platform: page.platform,
     asset_type: $('assetType').value,
     competitor_id: $('competitor').value || null,
-    competitor_name: page.siteName || page.host,
+    competitor_name: page.handle || page.siteName || page.host,
     competitor_url: page.url
   };
   try {
@@ -389,6 +518,177 @@ async function save() {
 }
 
 init();
+`;
+
+
+const CONTENT_JS = `
+/* Growth Hub — floating clip button + quick capture panel */
+(() => {
+  if (window.__ghClipMounted) return;
+  window.__ghClipMounted = true;
+
+  const send = (msg) => new Promise((res) => chrome.runtime.sendMessage(msg, (r) => res(r || { ok: false, error: 'no response' })));
+
+  const host = document.createElement('div');
+  host.id = 'gh-clip-host';
+  host.style.cssText = 'position:fixed;z-index:2147483647;top:0;left:0;width:0;height:0;';
+  const root = host.attachShadow({ mode: 'open' });
+  document.documentElement.appendChild(host);
+
+  const css = document.createElement('style');
+  css.textContent = \`
+    .fab{position:fixed;top:96px;right:14px;width:38px;height:38px;border-radius:12px;border:none;cursor:pointer;
+      background:linear-gradient(135deg,#6366f1,#a855f7);color:#fff;font-size:17px;line-height:1;
+      box-shadow:0 8px 22px rgba(79,70,229,.42);display:flex;align-items:center;justify-content:center;
+      opacity:.55;transition:opacity .18s, transform .18s;}
+    .fab:hover{opacity:1;transform:translateY(-1px) scale(1.05);}
+    .panel{position:fixed;top:96px;right:60px;width:320px;max-height:78vh;overflow:auto;border-radius:16px;
+      background:#0f1421;color:#e8ecf7;border:1px solid #26304a;box-shadow:0 24px 60px rgba(0,0,0,.5);
+      font:13px/1.45 ui-sans-serif,system-ui,"Segoe UI",Roboto,sans-serif;padding:12px;display:none;}
+    .panel.on{display:block;}
+    .hd{display:flex;align-items:center;gap:8px;margin-bottom:10px;}
+    .hd b{font-size:13px;} .hd small{color:#8e9ab8;font-size:11px;}
+    .x{margin-left:auto;background:none;border:none;color:#8e9ab8;cursor:pointer;font-size:15px;}
+    .tabs{display:flex;gap:5px;margin-bottom:9px;}
+    .tab{flex:1;padding:6px 0;font-size:11px;border-radius:8px;border:1px solid #26304a;background:transparent;color:#8e9ab8;cursor:pointer;}
+    .tab.on{border-color:#6366f1;background:rgba(99,102,241,.16);color:#c7cbff;}
+    label{display:block;font-size:10px;color:#8e9ab8;margin:8px 0 3px;text-transform:uppercase;letter-spacing:.04em;}
+    input,select,textarea{width:100%;padding:6px 8px;font-size:12px;border-radius:8px;border:1px solid #26304a;background:#141a2a;color:#e8ecf7;box-sizing:border-box;font-family:inherit;}
+    .shots{display:flex;gap:5px;overflow-x:auto;padding-bottom:4px;}
+    .shots img{height:52px;width:52px;object-fit:cover;border-radius:8px;border:2px solid transparent;cursor:pointer;flex:none;background:#222;}
+    .shots img.on{border-color:#6366f1;}
+    .row{display:flex;gap:7px;} .row>div{flex:1;min-width:0;}
+    .go{width:100%;margin-top:11px;padding:9px 0;border:none;border-radius:10px;cursor:pointer;font-weight:600;font-size:12.5px;
+      background:linear-gradient(135deg,#6366f1,#8b5cf6);color:#fff;}
+    .go:disabled{opacity:.6;cursor:default;}
+    .msg{font-size:11px;margin:7px 0 0;min-height:13px;color:#8e9ab8;}
+    .msg.ok{color:#4ade80;} .msg.err{color:#f87171;}
+    .chip{font-size:10px;color:#c7cbff;background:rgba(99,102,241,.16);border-radius:999px;padding:2px 7px;}
+  \`;
+  root.appendChild(css);
+
+  const wrap = document.createElement('div');
+  wrap.innerHTML = \`
+    <button class="fab" title="Growth Hub-এ clip করো">🔖</button>
+    <div class="panel">
+      <div class="hd"><b>Growth Hub Clip</b><span class="chip" id="ghPlat"></span><button class="x">✕</button></div>
+      <div class="tabs">
+        <button class="tab on" data-kind="idea">💡 Product</button>
+        <button class="tab" data-kind="swipe">🎨 Content</button>
+        <button class="tab" data-kind="competitor">🏴 Page</button>
+      </div>
+      <div class="shots" id="ghShots"></div>
+      <label>Title</label><input id="ghTitle" />
+      <label>Brand</label><select id="ghBrand"></select>
+      <div class="row">
+        <div><label>Price</label><input id="ghPrice" type="number" step="0.01" /></div>
+        <div id="ghTypeWrap"><label>Type</label>
+          <select id="ghType">
+            <option value="ad">Ad</option><option value="organic">Organic post</option>
+            <option value="landing">Landing page</option><option value="product">Product page</option>
+            <option value="creative">Creative</option>
+          </select>
+        </div>
+      </div>
+      <label>Note</label><textarea id="ghNote" rows="2"></textarea>
+      <label>Tags (কমা দিয়ে)</label><input id="ghTags" placeholder="winner, hook, ugc" />
+      <button class="go" id="ghGo">সেভ করো</button>
+      <p class="msg" id="ghMsg"></p>
+    </div>\`;
+  root.appendChild(wrap);
+
+  const $ = (id) => root.getElementById(id);
+  const panel = root.querySelector('.panel');
+  const fab = root.querySelector('.fab');
+  let page = {}, chosen = null, kind = 'idea', loaded = false;
+
+  function setKind(k) {
+    kind = k;
+    root.querySelectorAll('.tab').forEach((t) => t.classList.toggle('on', t.dataset.kind === k));
+    $('ghTypeWrap').style.visibility = k === 'swipe' ? 'visible' : 'hidden';
+  }
+  root.querySelectorAll('.tab').forEach((t) => (t.onclick = () => setKind(t.dataset.kind)));
+  root.querySelector('.x').onclick = () => panel.classList.remove('on');
+
+  async function load() {
+    const r = await send({ type: 'gh-scrape' });
+    if (!r.ok) { $('ghMsg').textContent = r.error; $('ghMsg').className = 'msg err'; return; }
+    page = r.page || {};
+    $('ghPlat').textContent = page.platform || 'web';
+    $('ghTitle').value = page.title || document.title;
+    $('ghNote').value = (page.selection || page.description || '').slice(0, 500);
+    if (page.price) $('ghPrice').value = page.price;
+    if (page.is_page) setKind('competitor'); else if (!page.is_product && page.platform !== 'web') setKind('swipe');
+
+    const shots = $('ghShots');
+    shots.innerHTML = '';
+    (page.images || []).forEach((src, i) => {
+      const im = document.createElement('img');
+      im.src = src; im.onerror = () => im.remove();
+      if (i === 0) { im.classList.add('on'); chosen = src; }
+      im.onclick = () => { shots.querySelectorAll('img').forEach((x) => x.classList.remove('on')); im.classList.add('on'); chosen = src; };
+      shots.appendChild(im);
+    });
+
+    const m = await send({ type: 'gh-meta' });
+    const b = $('ghBrand');
+    b.innerHTML = '';
+    if (m.ok) {
+      (m.meta.brands || []).forEach((x) => {
+        const o = document.createElement('option'); o.value = x.id; o.textContent = x.name; b.appendChild(o);
+      });
+      b.value = r.brandId || m.meta.default_brand_id || (m.meta.brands && m.meta.brands[0] ? m.meta.brands[0].id : '');
+    } else {
+      $('ghMsg').textContent = m.error; $('ghMsg').className = 'msg err';
+    }
+    loaded = true;
+  }
+
+  fab.onclick = async () => {
+    panel.classList.toggle('on');
+    if (panel.classList.contains('on') && !loaded) await load();
+    else if (panel.classList.contains('on')) {
+      const sel = (window.getSelection() + '').trim();
+      if (sel) $('ghNote').value = sel.slice(0, 2000);
+    }
+  };
+
+  $('ghGo').onclick = async () => {
+    const btn = $('ghGo');
+    btn.disabled = true;
+    $('ghMsg').textContent = 'সেভ হচ্ছে…'; $('ghMsg').className = 'msg';
+    const extra = [];
+    if (page.sku) extra.push('SKU: ' + page.sku);
+    if (page.currency && page.price) extra.push('Listed: ' + page.price + ' ' + page.currency);
+    (page.variants || []).forEach((v) => extra.push(v.name + ': ' + v.values.join(', ')));
+    if (page.followers) extra.push('Followers: ' + page.followers);
+    const note = [$('ghNote').value.trim(), extra.join(' | ')].filter(Boolean).join('\\n');
+    const payload = {
+      kind: kind,
+      brand_id: $('ghBrand').value || null,
+      title: $('ghTitle').value.trim(),
+      name: $('ghTitle').value.trim(),
+      url: page.url || location.href,
+      image_url: chosen,
+      images: (page.images || []).slice(0, 8),
+      note: note || null,
+      price: $('ghPrice').value ? Number($('ghPrice').value) : null,
+      tags: $('ghTags').value.split(',').map((s) => s.trim()).filter(Boolean),
+      platform: page.platform,
+      asset_type: $('ghType').value,
+      competitor_name: page.handle || page.siteName || page.host,
+      competitor_url: page.url || location.href
+    };
+    const r = await send({ type: 'gh-save', payload: payload });
+    if (r.ok) {
+      $('ghMsg').textContent = 'সেভ হয়েছে ✅'; $('ghMsg').className = 'msg ok';
+      setTimeout(() => panel.classList.remove('on'), 800);
+    } else {
+      $('ghMsg').textContent = r.error; $('ghMsg').className = 'msg err';
+    }
+    btn.disabled = false;
+  };
+})();
 `;
 
 const OPTIONS_HTML = `<!doctype html>
@@ -457,6 +757,9 @@ Server: ${origin}
 - যেকোনো product page-এ আইকনে ক্লিক → **Idea** → সেভ → Product Pipeline-এ চলে আসবে (vote/rating সহ)।
 - Facebook / Instagram / TikTok ad বা ভালো লাগা content-এ → **Swipe** → Rivals-এর Swipe file-এ সেভ হবে, rival page auto তৈরি হবে।
 - কোনো rival-এর page-এ → **Rival** → Competitor registry-তে যোগ হবে।
+- যেকোনো পেজের ডানপাশে ছোট **🔖 clip** আইকন — ক্লিক করলেই brand সিলেক্ট করে সরাসরি সেভ (Product / Content / Page)।
+- Instagram / Facebook / TikTok profile-এ থাকলে **Page** মোড auto সিলেক্ট হয় (handle + follower সহ)।
+- Product page-এ JSON-LD থেকে দাম, currency, SKU ও color/size variant অটো ধরে।
 - Right-click মেনু থেকেও ছবি/লিংক/selected text এক ক্লিকে সেভ করা যায়।
 `;
 
@@ -477,6 +780,7 @@ export function extensionFiles(origin: string, token: string | null): ZipEntry[]
     { name: "config.js", data: CONFIG(origin, token) },
     { name: "background.js", data: BACKGROUND },
     { name: "scrape.js", data: SCRAPE },
+    { name: "content.js", data: CONTENT_JS },
     { name: "popup.html", data: POPUP_HTML },
     { name: "popup.css", data: POPUP_CSS },
     { name: "popup.js", data: POPUP_JS },
