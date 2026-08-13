@@ -58,6 +58,8 @@ UI: Command Center (goal progress rings, today's + overdue task, quick add), Goa
 
 `/erp/hub/planning`: existing sales + profit RPC থেকে গত ৩ মাসের actual টেনে product-wise run-rate → এই মাসের projected revenue/profit; editable override; goal-এর সাথে gap দেখাবে; best-seller ranking + "stock ফুরাবে কবে" warning; scenario slider (ad spend ↑ হলে projection)।
 
+এর সাথে **Monthly sourcing target** — এই মাসে কয়টা নতুন product আনতে হবে, মোট কত quantity order দিতে হবে, কত টাকার order। Target vs actual (real PO data থেকে) progress bar। প্রতিটি planned product-এর জন্য quantity × price × cost → projected sell-through, revenue, profit; সব মিলিয়ে মাসের মোট projected profit।
+
 ## Technical notes
 - সব নতুন table `hub_` prefix, brand-scoped RLS `get_user_brand_ids()` + GRANT, `hub_` RPC-তে ভারী aggregation।
 - Server fn `*.functions.ts` thin wrapper, logic `.server.ts`-এ।
