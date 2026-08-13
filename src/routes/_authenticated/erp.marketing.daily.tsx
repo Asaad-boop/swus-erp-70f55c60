@@ -12,7 +12,7 @@ import {
   AlertTriangle,
   TrendingUp,
   ArrowLeft,
-  Loader2,, BarChart3 as PageIcon } from "lucide-react";
+  Loader2, BarChart3 as PageIcon } from "lucide-react";
 import {
   ResponsiveContainer,
   LineChart,
