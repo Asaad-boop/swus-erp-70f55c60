@@ -5325,6 +5325,83 @@ export type Database = {
           },
         ]
       }
+      mkt_alerts: {
+        Row: {
+          acked_at: string | null
+          acked_by: string | null
+          brand_id: string | null
+          created_at: string
+          dedupe_key: string
+          entity_id: string | null
+          entity_name: string | null
+          entity_type: string
+          first_seen_at: string
+          id: string
+          last_seen_at: string
+          message: string
+          metrics: Json
+          recommendation: string | null
+          resolved_at: string | null
+          rule: string
+          severity: string
+          status: string
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          acked_at?: string | null
+          acked_by?: string | null
+          brand_id?: string | null
+          created_at?: string
+          dedupe_key: string
+          entity_id?: string | null
+          entity_name?: string | null
+          entity_type: string
+          first_seen_at?: string
+          id?: string
+          last_seen_at?: string
+          message: string
+          metrics?: Json
+          recommendation?: string | null
+          resolved_at?: string | null
+          rule: string
+          severity?: string
+          status?: string
+          title: string
+          updated_at?: string
+        }
+        Update: {
+          acked_at?: string | null
+          acked_by?: string | null
+          brand_id?: string | null
+          created_at?: string
+          dedupe_key?: string
+          entity_id?: string | null
+          entity_name?: string | null
+          entity_type?: string
+          first_seen_at?: string
+          id?: string
+          last_seen_at?: string
+          message?: string
+          metrics?: Json
+          recommendation?: string | null
+          resolved_at?: string | null
+          rule?: string
+          severity?: string
+          status?: string
+          title?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "mkt_alerts_brand_id_fkey"
+            columns: ["brand_id"]
+            isOneToOne: false
+            referencedRelation: "brands"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       mkt_attribution_candidates: {
         Row: {
           brand_id: string
@@ -9634,6 +9711,10 @@ export type Database = {
           unit_cost: number
           variant_id: string
         }[]
+      }
+      mkt_evaluate_alerts: {
+        Args: { _brand_ids: string[]; _lookback?: number }
+        Returns: Json
       }
       mkt_funnel: {
         Args: { _brand_ids: string[]; _from: string; _to: string }

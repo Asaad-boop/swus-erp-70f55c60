@@ -92,6 +92,21 @@ export const Route = createFileRoute("/api/public/cron/sync-marketing")({
           ok: true,
           accounts: results.length,
           results,
+          alerts: await (async () => {
+            try {
+              const { data: bs } = await supabaseAdmin.from("brands").select("id");
+              const ids = (bs ?? []).map((b: any) => b.id);
+              if (ids.length === 0) return { ok: true, skipped: "no brands" };
+              const { data, error: aErr } = await supabaseAdmin.rpc("mkt_evaluate_alerts", {
+                _brand_ids: ids,
+                _lookback: 7,
+              } as never);
+              if (aErr) return { ok: false, error: aErr.message };
+              return data;
+            } catch (e: any) {
+              return { ok: false, error: String(e?.message ?? e) };
+            }
+          })(),
           finished_at: new Date().toISOString(),
         });
       },

@@ -1,0 +1,1 @@
+select public.mkt_evaluate_alerts(array(select id from public.brands), 7);

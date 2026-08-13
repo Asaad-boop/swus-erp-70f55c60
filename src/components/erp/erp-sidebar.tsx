@@ -8,6 +8,7 @@ import {
   Star, Filter, X, Receipt, BookOpen, Landmark, Coins, ArrowDownCircle, ArrowUpCircle, HandCoins, Scale,
   FileBarChart, Target, Banknote, Building2, Search, PackageCheck, ShieldCheck, CheckCircle2, Clock, LayoutGrid,
   CalendarClock,
+  BellRing,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useGlobalSearch } from "@/components/erp/global-search";
@@ -130,6 +131,7 @@ const groups: Group[] = [
           { to: "/erp/marketing/attribution", label: "Attribution & Funnel", icon: GitBranch },
           { to: "/erp/marketing/products", label: "Product & LTV", icon: PackagePlus },
           { to: "/erp/marketing/planning", label: "Budgets & Calendar", icon: CalendarClock },
+          { to: "/erp/marketing/alerts", label: "Alerts & Intelligence", icon: BellRing },
           { to: "/erp/marketing/daily", label: "Daily Performance", icon: BarChart3 },
         ],
       },

@@ -53,6 +53,7 @@ export const PAGE_CATALOG: PageEntry[] = [
   { group: "Marketing", path: "/erp/marketing/attribution", label: "Attribution & Funnel" },
   { group: "Marketing", path: "/erp/marketing/products", label: "Product Marketing & LTV" },
   { group: "Marketing", path: "/erp/marketing/planning", label: "Budgets, Calendar & Experiments" },
+  { group: "Marketing", path: "/erp/marketing/alerts", label: "Alerts & Intelligence" },
   { group: "Marketing", path: "/erp/marketing/daily", label: "Daily Performance" },
 
   { group: "CRM", path: "/erp/crm", label: "Customers" },
