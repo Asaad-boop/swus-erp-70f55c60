@@ -131,6 +131,7 @@ const groups: Group[] = [
           { to: "/erp/marketing/attribution", label: "Attribution & Funnel", icon: GitBranch },
           { to: "/erp/marketing/products", label: "Product & LTV", icon: PackagePlus },
           { to: "/erp/marketing/planning", label: "Budgets & Calendar", icon: CalendarClock },
+          { to: "/erp/marketing/alerts", label: "Alerts & Intelligence", icon: BellRing },
           { to: "/erp/marketing/daily", label: "Daily Performance", icon: BarChart3 },
         ],
       },
