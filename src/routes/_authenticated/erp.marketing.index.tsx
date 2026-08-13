@@ -25,6 +25,7 @@ import { useBrand } from "@/contexts/brand-context";
 import { getMarketingOverview } from "@/lib/erp/marketing/overview.functions";
 import { syncSpendCapToWallet } from "@/lib/erp/marketing/meta.functions";
 import { getMarketingDashboard } from "@/lib/erp/marketing/dashboard.functions";
+import { getAlerts, type MktAlert } from "@/lib/erp/marketing/alerts.functions";
 import { DateRangePicker, buildPreset, type MktRangeValue } from "@/components/erp/marketing/date-range-picker";
 import {
   KpiGrid,
@@ -180,6 +181,9 @@ function MarketingOverview() {
         </div>
       </div>
 
+      {/* Alert strip */}
+      <AlertStrip brandIds={selection.ids} />
+
       {/* Action strip */}
       <ActionStrip loading={q.isLoading} data={q.data?.actions} />
 
@@ -213,6 +217,43 @@ function MarketingOverview() {
         </Card>
       )}
     </div>
+  );
+}
+
+function AlertStrip({ brandIds }: { brandIds: string[] }) {
+  const fetchAlerts = useServerFn(getAlerts);
+  const q = useQuery({
+    queryKey: ["mkt-alerts-strip", brandIds.slice().sort().join(",")],
+    queryFn: () => fetchAlerts({ data: { brandIds, status: "open" as const } }),
+    enabled: brandIds.length > 0,
+    staleTime: 60_000,
+    refetchOnWindowFocus: false,
+  });
+  const rows = ((q.data ?? []) as MktAlert[])
+    .slice()
+    .sort((a: MktAlert, b: MktAlert) => (a.severity === "high" ? -1 : 1) - (b.severity === "high" ? -1 : 1));
+  if (q.isLoading || rows.length === 0) return null;
+  const high = rows.filter((r: MktAlert) => r.severity === "high").length;
+  return (
+    <Card className="border-amber-500/30 bg-amber-500/[0.04]">
+      <CardContent className="py-3 flex flex-wrap items-center gap-3">
+        <AlertTriangle className="h-4 w-4 text-amber-600 shrink-0" />
+        <div className="min-w-0 flex-1">
+          <p className="text-sm font-medium">
+            {rows.length} open marketing alert{rows.length > 1 ? "s" : ""}
+            {high > 0 ? ` · ${high} critical` : ""}
+          </p>
+          <p className="text-xs text-muted-foreground truncate">
+            {rows.slice(0, 2).map((r: MktAlert) => r.message).join("  ·  ")}
+          </p>
+        </div>
+        <Link to="/erp/marketing/alerts">
+          <Button size="sm" variant="outline">
+            View all
+          </Button>
+        </Link>
+      </CardContent>
+    </Card>
   );
 }
 
