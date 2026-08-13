@@ -26,7 +26,11 @@ import { getMarketingOverview } from "@/lib/erp/marketing/overview.functions";
 import { syncSpendCapToWallet } from "@/lib/erp/marketing/meta.functions";
 import { getMarketingDashboard } from "@/lib/erp/marketing/dashboard.functions";
 import { getAlerts, type MktAlert } from "@/lib/erp/marketing/alerts.functions";
-import { DateRangePicker, buildPreset, type MktRangeValue } from "@/components/erp/marketing/date-range-picker";
+import {
+  DateRangePicker,
+  buildPreset,
+  type MktRangeValue,
+} from "@/components/erp/marketing/date-range-picker";
 import {
   KpiGrid,
   TrendChart,
@@ -74,8 +78,7 @@ function todayInDhaka(): string {
   return `${get("year")}-${get("month")}-${get("day")}`;
 }
 
-const bdt = (n: number) =>
-  "৳" + Math.round(n).toLocaleString("en-IN");
+const bdt = (n: number) => "৳" + Math.round(n).toLocaleString("en-IN");
 const usd = (n: number) =>
   "$" + n.toLocaleString("en-US", { maximumFractionDigits: 2, minimumFractionDigits: 2 });
 
@@ -139,7 +142,13 @@ function MarketingOverview() {
   const [grain, setGrain] = useState<"day" | "week" | "month">("day");
   const fetchDashboard = useServerFn(getMarketingDashboard);
   const dash = useQuery({
-    queryKey: ["mkt-dashboard", selection.ids.slice().sort().join(","), range.from, range.to, grain],
+    queryKey: [
+      "mkt-dashboard",
+      selection.ids.slice().sort().join(","),
+      range.from,
+      range.to,
+      grain,
+    ],
     queryFn: () =>
       fetchDashboard({ data: { brandIds: selection.ids, from: range.from, to: range.to, grain } }),
     enabled: selection.ids.length > 0,
@@ -166,7 +175,9 @@ function MarketingOverview() {
               }}
               disabled={q.isFetching || dash.isFetching}
             >
-              <RefreshCcw className={`h-3.5 w-3.5 mr-1.5 ${q.isFetching || dash.isFetching ? "animate-spin" : ""}`} />
+              <RefreshCcw
+                className={`h-3.5 w-3.5 mr-1.5 ${q.isFetching || dash.isFetching ? "animate-spin" : ""}`}
+              />
               Refresh
             </Button>
             <Button
@@ -176,7 +187,9 @@ function MarketingOverview() {
               disabled={capMutation.isPending}
               title="Meta Account Spending Limit = amount_spent + USD-on-hand"
             >
-              <Wallet className={`h-3.5 w-3.5 mr-1.5 ${capMutation.isPending ? "animate-pulse" : ""}`} />
+              <Wallet
+                className={`h-3.5 w-3.5 mr-1.5 ${capMutation.isPending ? "animate-pulse" : ""}`}
+              />
               Sync spend cap
             </Button>
           </>
@@ -195,7 +208,12 @@ function MarketingOverview() {
       {/* Range KPIs */}
       <KpiGrid loading={dash.isLoading} k={dash.data?.kpis} />
 
-      <TrendChart loading={dash.isLoading} rows={dash.data?.trend} grain={grain} onGrain={setGrain} />
+      <TrendChart
+        loading={dash.isLoading}
+        rows={dash.data?.trend}
+        grain={grain}
+        onGrain={setGrain}
+      />
 
       <div className="grid gap-4 lg:grid-cols-2">
         <TopCampaigns loading={dash.isLoading} rows={dash.data?.topCampaigns} />
@@ -233,7 +251,10 @@ function AlertStrip({ brandIds }: { brandIds: string[] }) {
   });
   const rows = ((q.data ?? []) as MktAlert[])
     .slice()
-    .sort((a: MktAlert, b: MktAlert) => (a.severity === "high" ? -1 : 1) - (b.severity === "high" ? -1 : 1));
+    .sort(
+      (a: MktAlert, b: MktAlert) =>
+        (a.severity === "high" ? -1 : 1) - (b.severity === "high" ? -1 : 1),
+    );
   if (q.isLoading || rows.length === 0) return null;
   const high = rows.filter((r: MktAlert) => r.severity === "high").length;
   return (
@@ -246,7 +267,10 @@ function AlertStrip({ brandIds }: { brandIds: string[] }) {
             {high > 0 ? ` · ${high} critical` : ""}
           </p>
           <p className="text-xs text-muted-foreground truncate">
-            {rows.slice(0, 2).map((r: MktAlert) => r.message).join("  ·  ")}
+            {rows
+              .slice(0, 2)
+              .map((r: MktAlert) => r.message)
+              .join("  ·  ")}
           </p>
         </div>
         <Link to="/erp/marketing/alerts">
@@ -332,9 +356,7 @@ function ActionPill({
     <div className={`flex items-center gap-3 rounded-md border px-3 py-2 ${toneClass}`}>
       <div className="shrink-0">{icon}</div>
       <div className="min-w-0">
-        <div className="text-[10px] uppercase tracking-wide opacity-75 leading-tight">
-          {label}
-        </div>
+        <div className="text-[10px] uppercase tracking-wide opacity-75 leading-tight">{label}</div>
         <div className="text-sm font-semibold truncate">{value}</div>
       </div>
     </div>
@@ -371,17 +393,15 @@ function TodayCard({ loading, data }: { loading: boolean; data?: Today }) {
             label="Real ROAS"
             icon={<Percent className="h-3.5 w-3.5" />}
             value={busy ? undefined : data.roas > 0 ? `${data.roas.toFixed(2)}x` : "—"}
-            tone={data && data.roas >= 1 ? "positive" : data && data.roas > 0 ? "negative" : "neutral"}
+            tone={
+              data && data.roas >= 1 ? "positive" : data && data.roas > 0 ? "negative" : "neutral"
+            }
             hint="revenue ÷ spend"
           />
           <Metric
             label="Orders · CPO"
             icon={<Package className="h-3.5 w-3.5" />}
-            value={
-              busy
-                ? undefined
-                : `${data.orders} · ${data.cpo > 0 ? bdt(data.cpo) : "—"}`
-            }
+            value={busy ? undefined : `${data.orders} · ${data.cpo > 0 ? bdt(data.cpo) : "—"}`}
             hint="delivered orders"
           />
         </div>

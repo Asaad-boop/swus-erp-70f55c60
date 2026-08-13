@@ -12,7 +12,9 @@ import {
   AlertTriangle,
   TrendingUp,
   ArrowLeft,
-  Loader2, BarChart3 as PageIcon } from "lucide-react";
+  Loader2,
+  BarChart3 as PageIcon,
+} from "lucide-react";
 import {
   ResponsiveContainer,
   LineChart,
@@ -48,10 +50,7 @@ import {
   buildPreset,
   type MktRangeValue,
 } from "@/components/erp/marketing/date-range-picker";
-import {
-  getDailyPerformance,
-  quickAddDollarPurchase,
-} from "@/lib/erp/marketing/daily.functions";
+import { getDailyPerformance, quickAddDollarPurchase } from "@/lib/erp/marketing/daily.functions";
 
 const searchSchema = z.object({
   brand: fallback(z.string(), "all").default("all"),
@@ -99,8 +98,7 @@ function DailyPerformancePage() {
   const { brands, isLoading: brandsLoading } = useBrand();
 
   const selection = useMemo(() => {
-    if (search.brand === "all")
-      return { key: "all", label: "All", ids: brands.map((b) => b.id) };
+    if (search.brand === "all") return { key: "all", label: "All", ids: brands.map((b) => b.id) };
     const b = brands.find((x) => x.slug === search.brand || x.id === search.brand);
     if (b) return { key: b.slug, label: b.name, ids: [b.id] };
     return { key: "all", label: "All", ids: brands.map((b) => b.id) };
@@ -125,12 +123,7 @@ function DailyPerformancePage() {
 
   const fetchDaily = useServerFn(getDailyPerformance);
   const q = useQuery({
-    queryKey: [
-      "mkt-daily",
-      selection.ids.slice().sort().join(","),
-      range.from,
-      range.to,
-    ],
+    queryKey: ["mkt-daily", selection.ids.slice().sort().join(","), range.from, range.to],
     queryFn: () =>
       fetchDaily({
         data: { brandIds: selection.ids, from: range.from, to: range.to },
@@ -163,10 +156,7 @@ function DailyPerformancePage() {
     ];
     const lines = [header.join(",")];
     for (const r of rows) {
-      const flags = [
-        r.cost_missing ? "cost_missing" : "",
-        r.fx_estimated ? "fx_estimated" : "",
-      ]
+      const flags = [r.cost_missing ? "cost_missing" : "", r.fx_estimated ? "fx_estimated" : ""]
         .filter(Boolean)
         .join(";");
       lines.push(
@@ -215,8 +205,12 @@ function DailyPerformancePage() {
           <DateRangePicker value={range} onChange={setRange} />
           <Tabs value={search.view} onValueChange={(v) => setView(v as any)}>
             <TabsList className="h-9">
-              <TabsTrigger value="table" className="text-xs">Table</TabsTrigger>
-              <TabsTrigger value="chart" className="text-xs">Chart</TabsTrigger>
+              <TabsTrigger value="table" className="text-xs">
+                Table
+              </TabsTrigger>
+              <TabsTrigger value="chart" className="text-xs">
+                Chart
+              </TabsTrigger>
             </TabsList>
           </Tabs>
           <Button size="sm" variant="outline" onClick={() => q.refetch()} disabled={q.isFetching}>
@@ -269,15 +263,7 @@ function driftClass(drift: number | null): string {
   return "text-foreground";
 }
 
-function TableView({
-  loading,
-  rows,
-  totals,
-}: {
-  loading: boolean;
-  rows: Row[];
-  totals?: Totals;
-}) {
+function TableView({ loading, rows, totals }: { loading: boolean; rows: Row[]; totals?: Totals }) {
   if (loading) {
     return (
       <Card>
@@ -335,9 +321,7 @@ function TableView({
                   <td className="px-3 py-2 text-right tabular-nums text-muted-foreground">
                     {r.confirmed_orders || "—"}
                   </td>
-                  <td className="px-3 py-2 text-right tabular-nums">
-                    {r.delivered_orders || "—"}
-                  </td>
+                  <td className="px-3 py-2 text-right tabular-nums">{r.delivered_orders || "—"}</td>
                   <td className="px-3 py-2 text-right tabular-nums">
                     {r.delivered_revenue_bdt > 0 ? bdt(r.delivered_revenue_bdt) : "—"}
                   </td>
@@ -604,13 +588,15 @@ function QuickAddDialog({
         <DialogHeader>
           <DialogTitle>Add dollar purchase</DialogTitle>
           <DialogDescription>
-            Quick log — ad account + paid-from default se auto-pick hobe. Detail dorkar hole
-            Finance → Dollar Purchase page use koro.
+            Quick log — ad account + paid-from default se auto-pick hobe. Detail dorkar hole Finance
+            → Dollar Purchase page use koro.
           </DialogDescription>
         </DialogHeader>
         <div className="grid grid-cols-2 gap-3">
           <div className="col-span-1">
-            <Label htmlFor="qd-amount" className="text-xs">USD amount</Label>
+            <Label htmlFor="qd-amount" className="text-xs">
+              USD amount
+            </Label>
             <Input
               id="qd-amount"
               type="number"
@@ -621,7 +607,9 @@ function QuickAddDialog({
             />
           </div>
           <div className="col-span-1">
-            <Label htmlFor="qd-rate" className="text-xs">USD → BDT rate</Label>
+            <Label htmlFor="qd-rate" className="text-xs">
+              USD → BDT rate
+            </Label>
             <Input
               id="qd-rate"
               type="number"
@@ -632,7 +620,9 @@ function QuickAddDialog({
             />
           </div>
           <div className="col-span-2">
-            <Label htmlFor="qd-date" className="text-xs">Purchase date</Label>
+            <Label htmlFor="qd-date" className="text-xs">
+              Purchase date
+            </Label>
             <Input
               id="qd-date"
               type="date"
@@ -641,7 +631,9 @@ function QuickAddDialog({
             />
           </div>
           <div className="col-span-2">
-            <Label htmlFor="qd-note" className="text-xs">Note (optional)</Label>
+            <Label htmlFor="qd-note" className="text-xs">
+              Note (optional)
+            </Label>
             <Input
               id="qd-note"
               value={note}

@@ -13,7 +13,9 @@ import {
   CalendarDays,
   FlaskConical,
   ChevronLeft,
-  ChevronRight, CalendarClock as PageIcon } from "lucide-react";
+  ChevronRight,
+  CalendarClock as PageIcon,
+} from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -158,8 +160,10 @@ function PlanningPage() {
   });
 
   const delMut = useMutation({
-    mutationFn: (v: { table: "mkt_budgets" | "mkt_calendar_events" | "mkt_experiments"; id: string }) =>
-      del({ data: v }),
+    mutationFn: (v: {
+      table: "mkt_budgets" | "mkt_calendar_events" | "mkt_experiments";
+      id: string;
+    }) => del({ data: v }),
     onSuccess: () => {
       toast.success("Deleted");
       qc.invalidateQueries({ queryKey: ["mkt-budgets"] });
@@ -193,12 +197,12 @@ function PlanningPage() {
           </span>
           <div className="min-w-0">
             <h1 className="font-display text-xl font-bold tracking-tight">
-            Budgets, Calendar & Experiments
-          </h1>
-          <p className="text-xs text-muted-foreground">
-            {range.label} · planned {bdt(totals.planned)} · actual {bdt(totals.actual)} · delivered rev{" "}
-            {bdt(totals.revenue)}
-          </p>
+              Budgets, Calendar & Experiments
+            </h1>
+            <p className="text-xs text-muted-foreground">
+              {range.label} · planned {bdt(totals.planned)} · actual {bdt(totals.actual)} ·
+              delivered rev {bdt(totals.revenue)}
+            </p>
           </div>
         </div>
         <div className="flex flex-wrap items-center gap-2">
@@ -281,7 +285,10 @@ function PlanningPage() {
                   )}
                   {!budgetsQ.isLoading && budgets.length === 0 && (
                     <TableRow>
-                      <TableCell colSpan={10} className="py-10 text-center text-muted-foreground text-sm">
+                      <TableCell
+                        colSpan={10}
+                        className="py-10 text-center text-muted-foreground text-sm"
+                      >
                         No budgets in this period yet.
                       </TableCell>
                     </TableRow>
@@ -289,7 +296,9 @@ function PlanningPage() {
                   {budgets.map((b) => {
                     const util = Number(b.utilization) || 0;
                     const over = util > 100;
-                    const roasOk = b.target_roas ? Number(b.actual_roas) >= Number(b.target_roas) : null;
+                    const roasOk = b.target_roas
+                      ? Number(b.actual_roas) >= Number(b.target_roas)
+                      : null;
                     return (
                       <TableRow key={b.id}>
                         <TableCell>
@@ -318,7 +327,9 @@ function PlanningPage() {
                                 style={{ width: `${Math.min(100, util)}%` }}
                               />
                             </div>
-                            <span className={`text-xs font-mono ${over ? "text-red-600 font-semibold" : ""}`}>
+                            <span
+                              className={`text-xs font-mono ${over ? "text-red-600 font-semibold" : ""}`}
+                            >
                               {util}%
                             </span>
                           </div>
@@ -327,7 +338,11 @@ function PlanningPage() {
                           {bdt(b.actual_revenue)}
                         </TableCell>
                         <TableCell className="text-right font-mono text-sm">
-                          <span className={roasOk === false ? "text-red-600" : roasOk ? "text-emerald-600" : ""}>
+                          <span
+                            className={
+                              roasOk === false ? "text-red-600" : roasOk ? "text-emerald-600" : ""
+                            }
+                          >
                             {Number(b.actual_roas).toFixed(2)}x
                           </span>
                           {b.target_roas != null && (
@@ -493,7 +508,9 @@ function PlanningPage() {
                               Variant {v.toUpperCase()}
                             </div>
                             <div className="text-sm font-medium truncate">{label || "—"}</div>
-                            <div className="font-mono text-sm">{val == null ? "—" : Number(val)}</div>
+                            <div className="font-mono text-sm">
+                              {val == null ? "—" : Number(val)}
+                            </div>
                           </div>
                         );
                       })}
@@ -598,7 +615,9 @@ function MonthGrid({
             >
               {c && (
                 <>
-                  <div className="text-[11px] text-muted-foreground mb-1">{Number(c.slice(-2))}</div>
+                  <div className="text-[11px] text-muted-foreground mb-1">
+                    {Number(c.slice(-2))}
+                  </div>
                   <div className="space-y-1">
                     {(byDay.get(c) ?? []).slice(0, 3).map((e) => (
                       <button
@@ -690,7 +709,10 @@ function BudgetDialog({
           periodEnd: form.period_end!,
           plannedSpend: Number(form.planned_spend) || 0,
           targetRevenue: Number(form.target_revenue) || 0,
-          targetRoas: form.target_roas == null || form.target_roas === ("" as never) ? null : Number(form.target_roas),
+          targetRoas:
+            form.target_roas == null || form.target_roas === ("" as never)
+              ? null
+              : Number(form.target_roas),
           scalingStatus: (form.scaling_status ?? "hold") as "scale" | "hold" | "kill",
           notes: form.notes ?? null,
         },
@@ -718,7 +740,11 @@ function BudgetDialog({
               placeholder="August Meta budget"
             />
           </div>
-          <BrandSelect brands={brands} value={form.brand_id} onChange={(v) => setForm({ ...form, brand_id: v })} />
+          <BrandSelect
+            brands={brands}
+            value={form.brand_id}
+            onChange={(v) => setForm({ ...form, brand_id: v })}
+          />
           <div className="grid grid-cols-2 gap-3">
             <div>
               <Label className="text-xs">Period start</Label>
@@ -761,7 +787,10 @@ function BudgetDialog({
                 step="0.1"
                 value={form.target_roas ?? ""}
                 onChange={(e) =>
-                  setForm({ ...form, target_roas: e.target.value === "" ? null : Number(e.target.value) })
+                  setForm({
+                    ...form,
+                    target_roas: e.target.value === "" ? null : Number(e.target.value),
+                  })
                 }
               />
             </div>
@@ -857,9 +886,16 @@ function EventDialog({
         <div className="grid gap-3">
           <div>
             <Label className="text-xs">Title</Label>
-            <Input value={form.title ?? ""} onChange={(e) => setForm({ ...form, title: e.target.value })} />
+            <Input
+              value={form.title ?? ""}
+              onChange={(e) => setForm({ ...form, title: e.target.value })}
+            />
           </div>
-          <BrandSelect brands={brands} value={form.brand_id} onChange={(v) => setForm({ ...form, brand_id: v })} />
+          <BrandSelect
+            brands={brands}
+            value={form.brand_id}
+            onChange={(v) => setForm({ ...form, brand_id: v })}
+          />
           <div className="grid grid-cols-2 gap-3">
             <div>
               <Label className="text-xs">Type</Label>
@@ -881,7 +917,10 @@ function EventDialog({
             </div>
             <div>
               <Label className="text-xs">Status</Label>
-              <Select value={form.status ?? "planned"} onValueChange={(v) => setForm({ ...form, status: v })}>
+              <Select
+                value={form.status ?? "planned"}
+                onValueChange={(v) => setForm({ ...form, status: v })}
+              >
                 <SelectTrigger>
                   <SelectValue />
                 </SelectTrigger>
@@ -914,7 +953,10 @@ function EventDialog({
           </div>
           <div>
             <Label className="text-xs">Owner</Label>
-            <Input value={form.owner ?? ""} onChange={(e) => setForm({ ...form, owner: e.target.value })} />
+            <Input
+              value={form.owner ?? ""}
+              onChange={(e) => setForm({ ...form, owner: e.target.value })}
+            />
           </div>
           <div>
             <Label className="text-xs">Notes</Label>
@@ -931,7 +973,9 @@ function EventDialog({
           </Button>
           <Button
             onClick={() => mut.mutate()}
-            disabled={mut.isPending || !(form.title ?? "").trim() || !form.brand_id || !form.start_date}
+            disabled={
+              mut.isPending || !(form.title ?? "").trim() || !form.brand_id || !form.start_date
+            }
           >
             Save
           </Button>
@@ -974,8 +1018,10 @@ function ExperimentDialog({
           startDate: form.start_date || null,
           endDate: form.end_date || null,
           status: (form.status ?? "running") as "planned" | "running" | "completed" | "abandoned",
-          resultA: form.result_a == null || (form.result_a as never) === "" ? null : Number(form.result_a),
-          resultB: form.result_b == null || (form.result_b as never) === "" ? null : Number(form.result_b),
+          resultA:
+            form.result_a == null || (form.result_a as never) === "" ? null : Number(form.result_a),
+          resultB:
+            form.result_b == null || (form.result_b as never) === "" ? null : Number(form.result_b),
           winner: form.winner || null,
           learning: form.learning || null,
           decision: form.decision || null,
@@ -998,13 +1044,23 @@ function ExperimentDialog({
         <div className="grid gap-3">
           <div>
             <Label className="text-xs">Name</Label>
-            <Input value={form.name ?? ""} onChange={(e) => setForm({ ...form, name: e.target.value })} />
+            <Input
+              value={form.name ?? ""}
+              onChange={(e) => setForm({ ...form, name: e.target.value })}
+            />
           </div>
           <div className="grid grid-cols-2 gap-3">
-            <BrandSelect brands={brands} value={form.brand_id} onChange={(v) => setForm({ ...form, brand_id: v })} />
+            <BrandSelect
+              brands={brands}
+              value={form.brand_id}
+              onChange={(v) => setForm({ ...form, brand_id: v })}
+            />
             <div>
               <Label className="text-xs">Test type</Label>
-              <Select value={form.test_type ?? "creative"} onValueChange={(v) => setForm({ ...form, test_type: v })}>
+              <Select
+                value={form.test_type ?? "creative"}
+                onValueChange={(v) => setForm({ ...form, test_type: v })}
+              >
                 <SelectTrigger>
                   <SelectValue />
                 </SelectTrigger>
@@ -1048,7 +1104,10 @@ function ExperimentDialog({
                 step="0.01"
                 value={form.result_a ?? ""}
                 onChange={(e) =>
-                  setForm({ ...form, result_a: e.target.value === "" ? null : Number(e.target.value) })
+                  setForm({
+                    ...form,
+                    result_a: e.target.value === "" ? null : Number(e.target.value),
+                  })
                 }
               />
             </div>
@@ -1059,7 +1118,10 @@ function ExperimentDialog({
                 step="0.01"
                 value={form.result_b ?? ""}
                 onChange={(e) =>
-                  setForm({ ...form, result_b: e.target.value === "" ? null : Number(e.target.value) })
+                  setForm({
+                    ...form,
+                    result_b: e.target.value === "" ? null : Number(e.target.value),
+                  })
                 }
               />
             </div>
@@ -1067,7 +1129,10 @@ function ExperimentDialog({
           <div className="grid grid-cols-3 gap-3">
             <div>
               <Label className="text-xs">Metric</Label>
-              <Select value={form.metric ?? "roas"} onValueChange={(v) => setForm({ ...form, metric: v })}>
+              <Select
+                value={form.metric ?? "roas"}
+                onValueChange={(v) => setForm({ ...form, metric: v })}
+              >
                 <SelectTrigger>
                   <SelectValue />
                 </SelectTrigger>
@@ -1100,7 +1165,10 @@ function ExperimentDialog({
           <div className="grid grid-cols-2 gap-3">
             <div>
               <Label className="text-xs">Status</Label>
-              <Select value={form.status ?? "running"} onValueChange={(v) => setForm({ ...form, status: v })}>
+              <Select
+                value={form.status ?? "running"}
+                onValueChange={(v) => setForm({ ...form, status: v })}
+              >
                 <SelectTrigger>
                   <SelectValue />
                 </SelectTrigger>

@@ -10,7 +10,9 @@ import {
   Target,
   LayoutDashboard,
   Search,
-  AlertTriangle, Target as PageIcon } from "lucide-react";
+  AlertTriangle,
+  Target as PageIcon,
+} from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -131,9 +133,9 @@ function CampaignWorkspace() {
           </span>
           <div className="min-w-0">
             <h1 className="font-display text-xl font-bold tracking-tight">Campaign Workspace</h1>
-          <p className="text-xs text-muted-foreground">
-            {range.label} · Campaign → Ad set → Ad · FIFO spend, canonical delivered revenue
-          </p>
+            <p className="text-xs text-muted-foreground">
+              {range.label} · Campaign → Ad set → Ad · FIFO spend, canonical delivered revenue
+            </p>
           </div>
         </div>
         <div className="flex flex-wrap items-center gap-2">
@@ -213,9 +215,7 @@ function CampaignWorkspace() {
                       brandIds={brandIds}
                       range={range}
                       open={!!expanded[r.id]}
-                      onToggle={() =>
-                        setExpanded((p) => ({ ...p, [r.id]: !p[r.id] }))
-                      }
+                      onToggle={() => setExpanded((p) => ({ ...p, [r.id]: !p[r.id] }))}
                       onEdit={() => setEditing(r)}
                     />
                   ))}
@@ -345,7 +345,14 @@ function ChildRows({
   const fetchLevel = useServerFn(getMktLevel);
   const [expanded, setExpanded] = useState<Record<string, boolean>>({});
   const q = useQuery({
-    queryKey: ["mkt-level", level, parentId, range.from, range.to, brandIds.slice().sort().join(",")],
+    queryKey: [
+      "mkt-level",
+      level,
+      parentId,
+      range.from,
+      range.to,
+      brandIds.slice().sort().join(","),
+    ],
     queryFn: () =>
       fetchLevel({ data: { brandIds, from: range.from, to: range.to, level, parentId } }),
     staleTime: 60_000,
@@ -467,7 +474,13 @@ function ChildRow({
         <td />
       </tr>
       {open && level === "adset" && (
-        <ChildRows level="ad" parentId={row.id} brandIds={brandIds} range={range} depth={depth + 1} />
+        <ChildRows
+          level="ad"
+          parentId={row.id}
+          brandIds={brandIds}
+          range={range}
+          depth={depth + 1}
+        />
       )}
     </>
   );

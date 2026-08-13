@@ -45,15 +45,40 @@ export function buildPreset(key: string): MktRangeValue {
       return { presetKey: key, label: "Yesterday", from: ymd(y), to: ymd(y) };
     }
     case "7d":
-      return { presetKey: key, label: "Last 7 days", from: ymd(addDays(today, -6)), to: ymd(today) };
+      return {
+        presetKey: key,
+        label: "Last 7 days",
+        from: ymd(addDays(today, -6)),
+        to: ymd(today),
+      };
     case "14d":
-      return { presetKey: key, label: "Last 14 days", from: ymd(addDays(today, -13)), to: ymd(today) };
+      return {
+        presetKey: key,
+        label: "Last 14 days",
+        from: ymd(addDays(today, -13)),
+        to: ymd(today),
+      };
     case "30d":
-      return { presetKey: key, label: "Last 30 days", from: ymd(addDays(today, -29)), to: ymd(today) };
+      return {
+        presetKey: key,
+        label: "Last 30 days",
+        from: ymd(addDays(today, -29)),
+        to: ymd(today),
+      };
     case "90d":
-      return { presetKey: key, label: "Last 90 days", from: ymd(addDays(today, -89)), to: ymd(today) };
+      return {
+        presetKey: key,
+        label: "Last 90 days",
+        from: ymd(addDays(today, -89)),
+        to: ymd(today),
+      };
     case "this_month":
-      return { presetKey: key, label: "This month", from: ymd(startOfMonth(today)), to: ymd(today) };
+      return {
+        presetKey: key,
+        label: "This month",
+        from: ymd(startOfMonth(today)),
+        to: ymd(today),
+      };
     case "last_month": {
       const s = startOfMonth(addDays(startOfMonth(today), -1));
       const e = endOfMonth(s);
@@ -90,7 +115,12 @@ export function buildPreset(key: string): MktRangeValue {
     case "lifetime":
       return { presetKey: key, label: "Lifetime", from: "2020-01-01", to: ymd(today) };
     default:
-      return { presetKey: "7d", label: "Last 7 days", from: ymd(addDays(today, -6)), to: ymd(today) };
+      return {
+        presetKey: "7d",
+        label: "Last 7 days",
+        from: ymd(addDays(today, -6)),
+        to: ymd(today),
+      };
   }
 }
 
@@ -162,7 +192,10 @@ export function DateRangePicker({
     let parsed: Date | null = null;
     for (const fmt of candidates) {
       const p = parse(raw, fmt, new Date());
-      if (isValid(p)) { parsed = p; break; }
+      if (isValid(p)) {
+        parsed = p;
+        break;
+      }
     }
     if (!parsed) return;
     setDraft((prev) => ({
@@ -174,7 +207,8 @@ export function DateRangePicker({
   function applyLastN() {
     const n = parseInt(lastNDays, 10);
     if (!Number.isFinite(n) || n <= 0) return;
-    const today = new Date(); today.setHours(0, 0, 0, 0);
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
     onChange({
       presetKey: "custom",
       label: `Last ${n} days`,
@@ -203,11 +237,7 @@ export function DateRangePicker({
           {sub && <span className="text-xs text-muted-foreground hidden md:inline">· {sub}</span>}
         </Button>
       </PopoverTrigger>
-      <PopoverContent
-        className="w-auto p-0 pointer-events-auto"
-        align="end"
-        sideOffset={6}
-      >
+      <PopoverContent className="w-auto p-0 pointer-events-auto" align="end" sideOffset={6}>
         <div className="flex flex-col sm:flex-row">
           {/* Presets */}
           <div className="flex sm:flex-col gap-1 p-2 sm:border-r border-b sm:border-b-0 bg-muted/30 sm:w-48 sm:max-h-[26rem] overflow-auto">
@@ -245,7 +275,9 @@ export function DateRangePicker({
                   placeholder="e.g. 45"
                   value={lastNDays}
                   onChange={(e) => setLastNDays(e.target.value)}
-                  onKeyDown={(e) => { if (e.key === "Enter") applyLastN(); }}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter") applyLastN();
+                  }}
                   className="h-8 text-xs"
                 />
                 <Button size="sm" variant="secondary" className="h-8" onClick={applyLastN}>
@@ -259,24 +291,34 @@ export function DateRangePicker({
           <div className="p-2">
             <div className="grid grid-cols-2 gap-2 px-1 pb-2">
               <div>
-                <Label className="text-[10px] uppercase tracking-wide text-muted-foreground">From</Label>
+                <Label className="text-[10px] uppercase tracking-wide text-muted-foreground">
+                  From
+                </Label>
                 <Input
                   value={fromText}
                   placeholder="YYYY-MM-DD"
                   onChange={(e) => setFromText(e.target.value)}
                   onBlur={(e) => commitTextInput("from", e.target.value)}
-                  onKeyDown={(e) => { if (e.key === "Enter") commitTextInput("from", (e.target as HTMLInputElement).value); }}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter")
+                      commitTextInput("from", (e.target as HTMLInputElement).value);
+                  }}
                   className="h-8 text-xs font-mono"
                 />
               </div>
               <div>
-                <Label className="text-[10px] uppercase tracking-wide text-muted-foreground">To</Label>
+                <Label className="text-[10px] uppercase tracking-wide text-muted-foreground">
+                  To
+                </Label>
                 <Input
                   value={toText}
                   placeholder="YYYY-MM-DD"
                   onChange={(e) => setToText(e.target.value)}
                   onBlur={(e) => commitTextInput("to", e.target.value)}
-                  onKeyDown={(e) => { if (e.key === "Enter") commitTextInput("to", (e.target as HTMLInputElement).value); }}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter")
+                      commitTextInput("to", (e.target as HTMLInputElement).value);
+                  }}
                   className="h-8 text-xs font-mono"
                 />
               </div>

@@ -17,19 +17,51 @@ import {
 import { Skeleton } from "@/components/ui/skeleton";
 import { useBrand } from "@/contexts/brand-context";
 
-export type MarketingNavItem = { to: string; label: string; short: string; icon: LucideIcon; exact?: boolean };
+export type MarketingNavItem = {
+  to: string;
+  label: string;
+  short: string;
+  icon: LucideIcon;
+  exact?: boolean;
+};
 
 export const MARKETING_NAV: MarketingNavItem[] = [
-  { to: "/erp/marketing", label: "Overview", short: "Overview", icon: LayoutDashboard, exact: true },
+  {
+    to: "/erp/marketing",
+    label: "Overview",
+    short: "Overview",
+    icon: LayoutDashboard,
+    exact: true,
+  },
   { to: "/erp/marketing/daily", label: "Daily Performance", short: "Daily", icon: BarChart3 },
   { to: "/erp/marketing/campaigns", label: "Campaign Workspace", short: "Campaigns", icon: Target },
-  { to: "/erp/marketing/creatives", label: "Creative Library", short: "Creatives", icon: ImageIcon },
-  { to: "/erp/marketing/attribution", label: "Attribution & Funnel", short: "Attribution", icon: GitBranch },
+  {
+    to: "/erp/marketing/creatives",
+    label: "Creative Library",
+    short: "Creatives",
+    icon: ImageIcon,
+  },
+  {
+    to: "/erp/marketing/attribution",
+    label: "Attribution & Funnel",
+    short: "Attribution",
+    icon: GitBranch,
+  },
   { to: "/erp/marketing/products", label: "Product & LTV", short: "Products", icon: PackagePlus },
-  { to: "/erp/marketing/planning", label: "Budgets & Calendar", short: "Planning", icon: CalendarClock },
+  {
+    to: "/erp/marketing/planning",
+    label: "Budgets & Calendar",
+    short: "Planning",
+    icon: CalendarClock,
+  },
   { to: "/erp/marketing/alerts", label: "Alerts & Intelligence", short: "Alerts", icon: BellRing },
   { to: "/erp/marketing/channels", label: "Ad Channels", short: "Channels", icon: Plug },
-  { to: "/erp/marketing/reports", label: "Reports & Exports", short: "Reports", icon: FileBarChart },
+  {
+    to: "/erp/marketing/reports",
+    label: "Reports & Exports",
+    short: "Reports",
+    icon: FileBarChart,
+  },
   { to: "/erp/marketing/settings", label: "Settings", short: "Settings", icon: Settings },
 ];
 
@@ -121,7 +153,10 @@ export function BrandTabs({
   if (isLoading && brands.length === 0) {
     return <Skeleton className="h-8 w-40 rounded-md" />;
   }
-  const items = [{ slug: "all", name: "All" }, ...brands.map((b) => ({ slug: b.slug, name: b.name }))];
+  const items = [
+    { slug: "all", name: "All" },
+    ...brands.map((b) => ({ slug: b.slug, name: b.name })),
+  ];
   return (
     <div className="inline-flex items-center rounded-md border bg-background p-0.5">
       {items.map((it) => {

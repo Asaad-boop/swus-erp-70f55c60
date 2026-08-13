@@ -10,7 +10,9 @@ import {
   RefreshCcw,
   ShieldAlert,
   Sparkles,
-  Undo2, BellRing as PageIcon } from "lucide-react";
+  Undo2,
+  BellRing as PageIcon,
+} from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -72,9 +74,12 @@ const sevClass = (s: string) =>
       : "bg-muted text-muted-foreground border-border";
 
 function entityLink(a: MktAlert): { to: string; label: string } | null {
-  if (a.entity_type === "campaign") return { to: "/erp/marketing/campaigns", label: "Open campaigns" };
-  if (a.entity_type === "creative") return { to: "/erp/marketing/creatives", label: "Open creatives" };
-  if (a.entity_type === "product") return { to: "/erp/marketing/products", label: "Open product P&L" };
+  if (a.entity_type === "campaign")
+    return { to: "/erp/marketing/campaigns", label: "Open campaigns" };
+  if (a.entity_type === "creative")
+    return { to: "/erp/marketing/creatives", label: "Open creatives" };
+  if (a.entity_type === "product")
+    return { to: "/erp/marketing/products", label: "Open product P&L" };
   if (a.entity_type === "budget") return { to: "/erp/marketing/planning", label: "Open budgets" };
   return null;
 }
@@ -133,7 +138,8 @@ function AlertsPage() {
 
   const counts = useMemo(() => {
     const c = { high: 0, medium: 0, low: 0 };
-    for (const r of rows) c[r.severity as keyof typeof c] = (c[r.severity as keyof typeof c] ?? 0) + 1;
+    for (const r of rows)
+      c[r.severity as keyof typeof c] = (c[r.severity as keyof typeof c] ?? 0) + 1;
     return c;
   }, [rows]);
 
@@ -147,10 +153,12 @@ function AlertsPage() {
             <PageIcon className="h-4.5 w-4.5" />
           </span>
           <div className="min-w-0">
-            <h1 className="font-display text-xl font-bold tracking-tight">Marketing Intelligence</h1>
-          <p className="text-xs text-muted-foreground">
-            Rule engine — ROAS, CPA, fatigue, budget, stock ar return signal ek jaygay
-          </p>
+            <h1 className="font-display text-xl font-bold tracking-tight">
+              Marketing Intelligence
+            </h1>
+            <p className="text-xs text-muted-foreground">
+              Rule engine — ROAS, CPA, fatigue, budget, stock ar return signal ek jaygay
+            </p>
           </div>
         </div>
         <div className="flex flex-wrap items-center gap-2">
@@ -228,9 +236,7 @@ function AlertsPage() {
         <Card>
           <CardContent className="py-10 text-center text-sm text-muted-foreground">
             <CheckCircle2 className="h-6 w-6 mx-auto mb-2 text-emerald-500" />
-            {statusTab === "open"
-              ? "Kono open alert nei — sob rule clear."
-              : "Ei tab-e kichu nei."}
+            {statusTab === "open" ? "Kono open alert nei — sob rule clear." : "Ei tab-e kichu nei."}
           </CardContent>
         </Card>
       ) : (

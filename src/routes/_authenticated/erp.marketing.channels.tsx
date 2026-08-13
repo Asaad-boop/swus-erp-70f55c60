@@ -155,13 +155,18 @@ function ChannelsPage() {
           </span>
           <div className="min-w-0">
             <h1 className="font-display text-xl font-bold tracking-tight">Ad Channels</h1>
-          <p className="text-xs text-muted-foreground">
-            Meta-r pashapashi Google Ads / TikTok Ads account rakho — spend import korle sob
-            marketing report, ROAS ar profit calculation-e ek shathe ashbe.
-          </p>
+            <p className="text-xs text-muted-foreground">
+              Meta-r pashapashi Google Ads / TikTok Ads account rakho — spend import korle sob
+              marketing report, ROAS ar profit calculation-e ek shathe ashbe.
+            </p>
           </div>
         </div>
-        <Button onClick={() => { setForm(EMPTY_FORM); setShowForm((v) => !v); }}>
+        <Button
+          onClick={() => {
+            setForm(EMPTY_FORM);
+            setShowForm((v) => !v);
+          }}
+        >
           <Plus className="h-4 w-4" /> New channel account
         </Button>
       </div>
@@ -178,7 +183,9 @@ function ChannelsPage() {
                 value={form.platform}
                 onValueChange={(v) => setForm({ ...form, platform: v as FormState["platform"] })}
               >
-                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="google">Google Ads</SelectItem>
                   <SelectItem value="tiktok">TikTok Ads</SelectItem>
@@ -253,7 +260,9 @@ function ChannelsPage() {
               />
             </div>
             <div className="flex justify-end gap-2 md:col-span-2">
-              <Button variant="ghost" onClick={() => setShowForm(false)}>Cancel</Button>
+              <Button variant="ghost" onClick={() => setShowForm(false)}>
+                Cancel
+              </Button>
               <Button onClick={() => save.mutate()} disabled={save.isPending}>
                 {save.isPending ? "Saving..." : "Save account"}
               </Button>
@@ -327,8 +336,8 @@ function ChannelsPage() {
           ))}
           {metaAccounts.length > 0 && (
             <p className="text-xs text-muted-foreground">
-              {metaAccounts.length} Meta account API theke auto-sync hoy — segulo Marketing
-              Settings theke manage koro.
+              {metaAccounts.length} Meta account API theke auto-sync hoy — segulo Marketing Settings
+              theke manage koro.
             </p>
           )}
         </CardContent>
@@ -350,7 +359,9 @@ function ChannelsPage() {
             <div className="space-y-1.5">
               <Label className="text-xs">Account</Label>
               <Select value={importAccount} onValueChange={setImportAccount}>
-                <SelectTrigger><SelectValue placeholder="Select account" /></SelectTrigger>
+                <SelectTrigger>
+                  <SelectValue placeholder="Select account" />
+                </SelectTrigger>
                 <SelectContent>
                   {channelAccounts.map((a: any) => (
                     <SelectItem key={a.id} value={a.id}>
@@ -374,11 +385,13 @@ function ChannelsPage() {
           {csv.trim() && (
             <div className="rounded-lg border bg-muted/40 p-3 text-xs">
               <p>
-                {parsed.rows.length} valid row ·{" "}
-                {bdt(parsed.rows.reduce((s, r) => s + r.spend, 0))} total spend
+                {parsed.rows.length} valid row · {bdt(parsed.rows.reduce((s, r) => s + r.spend, 0))}{" "}
+                total spend
               </p>
               {parsed.errors.slice(0, 5).map((e) => (
-                <p key={e} className="text-destructive">{e}</p>
+                <p key={e} className="text-destructive">
+                  {e}
+                </p>
               ))}
             </div>
           )}

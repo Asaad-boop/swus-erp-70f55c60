@@ -10,7 +10,9 @@ import {
   Users,
   Repeat,
   Wallet,
-  TrendingUp, PackagePlus as PageIcon } from "lucide-react";
+  TrendingUp,
+  PackagePlus as PageIcon,
+} from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -51,7 +53,13 @@ export const Route = createFileRoute("/_authenticated/erp/marketing/products")({
 });
 
 const bdt = (n: number) => "৳" + Math.round(n || 0).toLocaleString("en-IN");
-type SortKey = "net_profit" | "delivered_revenue" | "ad_spend" | "roas" | "delivered_units" | "margin_pct";
+type SortKey =
+  | "net_profit"
+  | "delivered_revenue"
+  | "ad_spend"
+  | "roas"
+  | "delivered_units"
+  | "margin_pct";
 
 function ProductMarketingPage() {
   const { brands, isLoading: brandsLoading } = useBrand();
@@ -115,13 +123,45 @@ function ProductMarketingPage() {
 
   function exportCsv() {
     const head = [
-      "Product","SKU","Delivered units","Delivered orders","Delivered revenue","COGS","Operating cost","Gross profit","Ad spend","Net profit","Margin %","ROAS","CPA","AOV","Attributed orders",
+      "Product",
+      "SKU",
+      "Delivered units",
+      "Delivered orders",
+      "Delivered revenue",
+      "COGS",
+      "Operating cost",
+      "Gross profit",
+      "Ad spend",
+      "Net profit",
+      "Margin %",
+      "ROAS",
+      "CPA",
+      "AOV",
+      "Attributed orders",
     ];
-    const lines = [head, ...rows.map((r) => [
-      r.title, r.sku ?? "", r.delivered_units, r.delivered_orders, r.delivered_revenue, r.cogs,
-      r.operating_cost, r.gross_profit, r.ad_spend, r.net_profit, r.margin_pct, r.roas, r.cpa, r.aov, r.attributed_orders,
-    ])];
-    const csv = "\uFEFF" + lines.map((l) => l.map((c) => `"${String(c).replace(/"/g, '""')}"`).join(",")).join("\n");
+    const lines = [
+      head,
+      ...rows.map((r) => [
+        r.title,
+        r.sku ?? "",
+        r.delivered_units,
+        r.delivered_orders,
+        r.delivered_revenue,
+        r.cogs,
+        r.operating_cost,
+        r.gross_profit,
+        r.ad_spend,
+        r.net_profit,
+        r.margin_pct,
+        r.roas,
+        r.cpa,
+        r.aov,
+        r.attributed_orders,
+      ]),
+    ];
+    const csv =
+      "\uFEFF" +
+      lines.map((l) => l.map((c) => `"${String(c).replace(/"/g, '""')}"`).join(",")).join("\n");
     const url = URL.createObjectURL(new Blob([csv], { type: "text/csv;charset=utf-8" }));
     const a = document.createElement("a");
     a.href = url;
@@ -138,11 +178,13 @@ function ProductMarketingPage() {
             <PageIcon className="h-4.5 w-4.5" />
           </span>
           <div className="min-w-0">
-            <h1 className="font-display text-xl font-bold tracking-tight">Product Marketing &amp; LTV</h1>
-          <p className="text-xs text-muted-foreground">
-            {range.label} · {rows.length} products · ad spend {bdt(totals.spend)} · delivered rev{" "}
-            {bdt(totals.revenue)} · net profit {bdt(totals.net)}
-          </p>
+            <h1 className="font-display text-xl font-bold tracking-tight">
+              Product Marketing &amp; LTV
+            </h1>
+            <p className="text-xs text-muted-foreground">
+              {range.label} · {rows.length} products · ad spend {bdt(totals.spend)} · delivered rev{" "}
+              {bdt(totals.revenue)} · net profit {bdt(totals.net)}
+            </p>
           </div>
         </div>
         <div className="flex flex-wrap items-center gap-2">
@@ -161,7 +203,9 @@ function ProductMarketingPage() {
             }}
             disabled={prodQ.isFetching || acqQ.isFetching}
           >
-            <RefreshCcw className={`h-3.5 w-3.5 mr-1.5 ${prodQ.isFetching ? "animate-spin" : ""}`} />
+            <RefreshCcw
+              className={`h-3.5 w-3.5 mr-1.5 ${prodQ.isFetching ? "animate-spin" : ""}`}
+            />
             Refresh
           </Button>
         </div>
@@ -253,11 +297,19 @@ function ProductMarketingPage() {
                 </thead>
                 <tbody>
                   {rows.map((r) => (
-                    <tr key={r.product_id} className="border-t hover:bg-muted/30 [&>td]:px-3 [&>td]:py-2 [&>td]:text-right [&>td:first-child]:text-left">
+                    <tr
+                      key={r.product_id}
+                      className="border-t hover:bg-muted/30 [&>td]:px-3 [&>td]:py-2 [&>td]:text-right [&>td:first-child]:text-left"
+                    >
                       <td>
                         <div className="flex items-center gap-2 max-w-[320px]">
                           {r.image ? (
-                            <img src={r.image} alt={r.title} loading="lazy" className="h-8 w-8 rounded object-cover border" />
+                            <img
+                              src={r.image}
+                              alt={r.title}
+                              loading="lazy"
+                              className="h-8 w-8 rounded object-cover border"
+                            />
                           ) : (
                             <div className="h-8 w-8 rounded bg-muted" />
                           )}
@@ -277,7 +329,13 @@ function ProductMarketingPage() {
                       <td>{bdt(r.cogs)}</td>
                       <td>{bdt(r.operating_cost)}</td>
                       <td>{bdt(r.ad_spend)}</td>
-                      <td className={r.net_profit >= 0 ? "text-emerald-600 font-medium" : "text-destructive font-medium"}>
+                      <td
+                        className={
+                          r.net_profit >= 0
+                            ? "text-emerald-600 font-medium"
+                            : "text-destructive font-medium"
+                        }
+                      >
                         {bdt(r.net_profit)}
                       </td>
                       <td>{r.margin_pct.toFixed(1)}%</td>
@@ -295,11 +353,18 @@ function ProductMarketingPage() {
                     <td>{bdt(totals.cogs)}</td>
                     <td>{bdt(totals.opex)}</td>
                     <td>{bdt(totals.spend)}</td>
-                    <td className={totals.net >= 0 ? "text-emerald-600" : "text-destructive"}>{bdt(totals.net)}</td>
-                    <td>
-                      {totals.revenue > 0 ? ((100 * totals.net) / totals.revenue).toFixed(1) : "0.0"}%
+                    <td className={totals.net >= 0 ? "text-emerald-600" : "text-destructive"}>
+                      {bdt(totals.net)}
                     </td>
-                    <td>{totals.spend > 0 ? `${(totals.revenue / totals.spend).toFixed(2)}x` : "—"}</td>
+                    <td>
+                      {totals.revenue > 0
+                        ? ((100 * totals.net) / totals.revenue).toFixed(1)
+                        : "0.0"}
+                      %
+                    </td>
+                    <td>
+                      {totals.spend > 0 ? `${(totals.revenue / totals.spend).toFixed(2)}x` : "—"}
+                    </td>
                     <td />
                   </tr>
                 </tfoot>
@@ -338,7 +403,10 @@ function ProductMarketingPage() {
                 </thead>
                 <tbody>
                   {cohorts.map((c) => (
-                    <tr key={c.cohort_month} className="border-t [&>td]:px-3 [&>td]:py-2 [&>td]:text-right [&>td:first-child]:text-left">
+                    <tr
+                      key={c.cohort_month}
+                      className="border-t [&>td]:px-3 [&>td]:py-2 [&>td]:text-right [&>td:first-child]:text-left"
+                    >
                       <td className="font-medium">{c.cohort_month}</td>
                       <td>{c.customers}</td>
                       <td>{c.orders}</td>
