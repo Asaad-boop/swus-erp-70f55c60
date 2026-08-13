@@ -166,6 +166,7 @@ function calcForecast(f: FDraft) {
 
 function ProductPipelinePage() {
   const { brandIds, activeBrand, isLoading: brandLoading } = useBrand();
+  const { isAdmin } = useCurrentRole();
   const qc = useQueryClient();
   const [open, setOpen] = useState(false);
   const [draft, setDraft] = useState<Draft>(emptyDraft());
