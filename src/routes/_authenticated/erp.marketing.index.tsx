@@ -339,12 +339,13 @@ function ActionPill({
 type Today = NonNullable<Awaited<ReturnType<typeof getMarketingOverview>>>["today"];
 
 function TodayCard({ loading, data }: { loading: boolean; data?: Today }) {
+  const busy = loading || !data;
   return (
     <Card>
       <CardHeader className="pb-2 flex flex-row items-center justify-between">
         <CardTitle className="text-sm font-semibold">Today</CardTitle>
         <Badge variant="outline" className="text-[10px] font-normal">
-          {loading ? "…" : data?.date}
+          {busy ? "…" : data.date}
         </Badge>
       </CardHeader>
       <CardContent>
@@ -352,19 +353,19 @@ function TodayCard({ loading, data }: { loading: boolean; data?: Today }) {
           <Metric
             label="Ad spend"
             icon={<DollarSign className="h-3.5 w-3.5" />}
-            value={loading ? undefined : bdt(data!.spend_bdt)}
+            value={busy ? undefined : bdt(data.spend_bdt)}
             hint="get_meta_spend_bdt"
           />
           <Metric
             label="Delivered revenue"
             icon={<DollarSign className="h-3.5 w-3.5" />}
-            value={loading ? undefined : bdt(data!.revenue_bdt)}
+            value={busy ? undefined : bdt(data.revenue_bdt)}
             hint="get_campaign_profit"
           />
           <Metric
             label="Real ROAS"
             icon={<Percent className="h-3.5 w-3.5" />}
-            value={loading ? undefined : data!.roas > 0 ? `${data!.roas.toFixed(2)}x` : "—"}
+            value={busy ? undefined : data.roas > 0 ? `${data.roas.toFixed(2)}x` : "—"}
             tone={data && data.roas >= 1 ? "positive" : data && data.roas > 0 ? "negative" : "neutral"}
             hint="revenue ÷ spend"
           />
@@ -372,9 +373,9 @@ function TodayCard({ loading, data }: { loading: boolean; data?: Today }) {
             label="Orders · CPO"
             icon={<Package className="h-3.5 w-3.5" />}
             value={
-              loading
+              busy
                 ? undefined
-                : `${data!.orders} · ${data!.cpo > 0 ? bdt(data!.cpo) : "—"}`
+                : `${data.orders} · ${data.cpo > 0 ? bdt(data.cpo) : "—"}`
             }
             hint="delivered orders"
           />
