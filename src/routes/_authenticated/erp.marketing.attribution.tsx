@@ -17,6 +17,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { useBrand } from "@/contexts/brand-context";
+import { BrandTabs } from "@/components/erp/marketing/marketing-shell";
 import {
   DateRangePicker,
   buildPreset,
@@ -200,19 +201,7 @@ function AttributionPage() {
           </div>
         </div>
         <div className="flex flex-wrap items-center gap-2">
-          <select
-            className="h-9 rounded-md border bg-background px-2 text-sm"
-            value={brandKey}
-            onChange={(e) => setBrandKey(e.target.value)}
-            disabled={brandsLoading}
-          >
-            <option value="all">All brands</option>
-            {brands.map((b) => (
-              <option key={b.id} value={b.slug ?? b.id}>
-                {b.name}
-              </option>
-            ))}
-          </select>
+          <BrandTabs value={brandKey} onChange={setBrandKey} />
           <DateRangePicker value={range} onChange={setRange} />
           <Button
             variant="outline"
