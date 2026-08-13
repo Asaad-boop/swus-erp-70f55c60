@@ -133,6 +133,8 @@ const groups: Group[] = [
           { to: "/erp/marketing/planning", label: "Budgets & Calendar", icon: CalendarClock },
           { to: "/erp/marketing/alerts", label: "Alerts & Intelligence", icon: BellRing },
           { to: "/erp/marketing/daily", label: "Daily Performance", icon: BarChart3 },
+          { to: "/erp/marketing/reports", label: "Reports & Exports", icon: FileBarChart },
+          { to: "/erp/marketing/settings", label: "Marketing Settings", icon: Settings },
         ],
       },
       {
