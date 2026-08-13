@@ -9285,6 +9285,25 @@ export type Database = {
           source: string
         }[]
       }
+      mkt_attribution_queue: {
+        Args: { _brand_ids: string[]; _limit?: number }
+        Returns: {
+          brand_id: string
+          confidence: number
+          created_at: string
+          customer_name: string
+          id: string
+          invoice_no: string
+          matched_signal: Json
+          order_created_at: string
+          order_id: string
+          order_status: string
+          order_total: number
+          source: string
+          suggested_campaign_id: string
+          suggested_campaign_name: string
+        }[]
+      }
       mkt_campaign_summary: {
         Args: {
           p_brand_id: string
@@ -9382,6 +9401,24 @@ export type Database = {
           refund_amount_allocated: number
           unit_cost: number
           variant_id: string
+        }[]
+      }
+      mkt_funnel: {
+        Args: { _brand_ids: string[]; _from: string; _to: string }
+        Returns: {
+          cancelled_orders: number
+          clicks: number
+          confirmed_orders: number
+          delivered_orders: number
+          delivered_revenue: number
+          impressions: number
+          orders: number
+          page_views: number
+          reach: number
+          returned_orders: number
+          sessions: number
+          shipped_orders: number
+          spend: number
         }[]
       }
       mkt_get_campaign_daily_rollup: {
@@ -9558,6 +9595,27 @@ export type Database = {
           _utm_term?: string
         }
         Returns: Json
+      }
+      mkt_utm_breakdown: {
+        Args: {
+          _brand_ids: string[]
+          _dim?: string
+          _from: string
+          _to: string
+        }
+        Returns: {
+          aov: number
+          booked_revenue: number
+          cancelled_orders: number
+          confirmed_orders: number
+          delivered_orders: number
+          delivered_revenue: number
+          delivery_rate: number
+          dim_value: string
+          orders: number
+          returned_orders: number
+          sessions: number
+        }[]
       }
       next_invoice_no: { Args: { _brand_id: string }; Returns: string }
       normalize_mobile_bd: { Args: { p_phone: string }; Returns: string }
