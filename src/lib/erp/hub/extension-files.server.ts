@@ -6,13 +6,16 @@ const MANIFEST = (origin: string) =>
     {
       manifest_version: 3,
       name: "Growth Hub Capture",
-      version: "1.1.0",
+      version: "1.2.0",
       description:
         "Save any product, competitor ad or content inspiration straight into your Growth Hub.",
-      permissions: ["activeTab", "scripting", "storage", "contextMenus", "notifications"],
+      permissions: ["activeTab", "scripting", "storage", "contextMenus", "notifications", "tabs"],
       host_permissions: ["<all_urls>"],
       background: { service_worker: "background.js", type: "module" },
       action: { default_popup: "popup.html", default_title: "Save to Growth Hub" },
+      content_scripts: [
+        { matches: ["<all_urls>"], js: ["content.js"], run_at: "document_idle", all_frames: false },
+      ],
       options_page: "options.html",
       icons: { 128: "icon128.png" },
       externally_connectable: { matches: [origin.replace(/\/$/, "") + "/*"] },
@@ -27,32 +30,95 @@ const CONFIG = (origin: string, token: string | null) =>
   ";\n";
 
 const SCRAPE = `
-// Injected into the page. Returns everything worth capturing.
+// Injected into the page. Deep product / page / content scraper.
 (() => {
   const meta = (sel, attr) => {
     const el = document.querySelector(sel);
     return el ? (el.getAttribute(attr || 'content') || '').trim() : '';
   };
   const abs = (u) => { try { return new URL(u, location.href).href; } catch { return null; } };
+  const txt = (el) => (el && el.innerText ? el.innerText.trim() : '');
+
+  /* ---------------- JSON-LD ---------------- */
+  const ld = [];
+  Array.from(document.querySelectorAll('script[type="application/ld+json"]')).forEach((n) => {
+    try {
+      const parsed = JSON.parse(n.textContent);
+      (Array.isArray(parsed) ? parsed : [parsed]).forEach((x) => {
+        if (x && x['@graph']) ld.push.apply(ld, x['@graph']); else if (x) ld.push(x);
+      });
+    } catch (e) {}
+  });
+  const typeOf = (x) => { const t = x && x['@type']; return Array.isArray(t) ? t.join(',') : (t || ''); };
+  const product = ld.find((x) => /Product/i.test(typeOf(x)));
+  const profile = ld.find((x) => /ProfilePage|Organization|Person/i.test(typeOf(x)));
+
+  /* ---------------- images ---------------- */
   const imgs = [];
-  const push = (u) => { const a = abs(u); if (a && a.startsWith('http') && !imgs.includes(a)) imgs.push(a); };
+  const push = (u) => { const a = abs(u); if (a && /^https?:/.test(a) && !imgs.includes(a) && !/\\.svg($|\\?)/i.test(a)) imgs.push(a); };
   push(meta('meta[property="og:image"]'));
   push(meta('meta[name="twitter:image"]'));
+  if (product && product.image) (Array.isArray(product.image) ? product.image : [product.image]).forEach((im) => push(typeof im === 'string' ? im : im && im.url));
   Array.from(document.querySelectorAll('img')).forEach((im) => {
     const w = im.naturalWidth || im.width, h = im.naturalHeight || im.height;
     if (w >= 200 && h >= 200) push(im.currentSrc || im.src);
+    else if (!w && im.getAttribute('data-src')) push(im.getAttribute('data-src'));
+  });
+  Array.from(document.querySelectorAll('[style*="background-image"]')).slice(0, 40).forEach((el) => {
+    const m = /url\\(["']?(.*?)["']?\\)/.exec(el.getAttribute('style') || '');
+    if (m) push(m[1]);
   });
   Array.from(document.querySelectorAll('video[poster]')).forEach((v) => push(v.getAttribute('poster')));
 
-  let price = null;
-  const pm = meta('meta[property="product:price:amount"]') || meta('meta[property="og:price:amount"]');
-  if (pm) price = parseFloat(pm.replace(/[^0-9.]/g, ''));
-  if (!price) {
+  /* ---------------- price + currency ---------------- */
+  const num = (v) => { const n = parseFloat(String(v == null ? '' : v).replace(/[^0-9.]/g, '')); return Number.isFinite(n) ? n : null; };
+  let price = null, currency = null, sku = null, availability = null, brandName = null;
+  if (product) {
+    const offer = Array.isArray(product.offers) ? product.offers[0] : product.offers;
+    if (offer) {
+      price = num(offer.price || offer.lowPrice || (offer.priceSpecification && offer.priceSpecification.price));
+      currency = offer.priceCurrency || null;
+      availability = typeof offer.availability === 'string' ? offer.availability.split('/').pop() : null;
+    }
+    sku = product.sku || product.mpn || null;
+    brandName = product.brand ? (typeof product.brand === 'string' ? product.brand : product.brand.name) : null;
+  }
+  if (price == null) price = num(meta('meta[property="product:price:amount"]') || meta('meta[property="og:price:amount"]'));
+  if (!currency) currency = meta('meta[property="product:price:currency"]') || meta('meta[property="og:price:currency"]') || null;
+  if (price == null) {
+    const cand = document.querySelector('[itemprop="price"],.price,.product-price,[class*="price" i]');
+    const t = txt(cand);
+    const m = t && t.match(/(?:৳|Tk\\.?|BDT|RM|\\$|¥|€|£|USD|CNY)\\s?([0-9][0-9,]{0,9}(?:\\.[0-9]{1,2})?)/i);
+    if (m) price = num(m[1]);
+  }
+  if (price == null) {
     const body = (document.body ? document.body.innerText : '').slice(0, 20000);
-    const m = body.match(/(?:৳|Tk\\.?|BDT|RM|\\$|¥|USD)\\s?([0-9][0-9,]{1,9}(?:\\.[0-9]{1,2})?)/i);
-    if (m) price = parseFloat(m[1].replace(/,/g, ''));
+    const m = body.match(/(?:৳|Tk\\.?|BDT|RM|\\$|¥|€|£|USD|CNY)\\s?([0-9][0-9,]{1,9}(?:\\.[0-9]{1,2})?)/i);
+    if (m) price = num(m[1]);
+  }
+  if (!currency) {
+    const b = (document.body ? document.body.innerText : '').slice(0, 4000);
+    currency = /৳|Tk\\.?|BDT/i.test(b) ? 'BDT' : /¥|CNY|RMB|元/i.test(b) ? 'CNY' : /\\$|USD/.test(b) ? 'USD' : null;
   }
 
+  /* ---------------- variants / options ---------------- */
+  const variants = [];
+  Array.from(document.querySelectorAll('select')).forEach((sel) => {
+    const name = (sel.getAttribute('name') || sel.getAttribute('aria-label') || '').toLowerCase();
+    if (!/color|colour|size|variant|option|style|model/.test(name)) return;
+    const vals = Array.from(sel.options).map((o) => o.text.trim()).filter((v) => v && !/select|choose/i.test(v));
+    if (vals.length) variants.push({ name: name, values: vals.slice(0, 20) });
+  });
+  Array.from(document.querySelectorAll('[data-option-name],[class*="swatch" i]')).slice(0, 40).forEach((el) => {
+    const v = txt(el) || el.getAttribute('title') || el.getAttribute('aria-label');
+    if (v && v.length < 30) {
+      let g = variants.find((x) => x.name === 'options');
+      if (!g) { g = { name: 'options', values: [] }; variants.push(g); }
+      if (!g.values.includes(v) && g.values.length < 24) g.values.push(v);
+    }
+  });
+
+  /* ---------------- platform / page ---------------- */
   const host = location.hostname.replace(/^www\\./, '');
   let platform = 'web';
   if (/facebook\\.com/.test(host)) platform = 'facebook';
@@ -60,19 +126,48 @@ const SCRAPE = `
   else if (/tiktok\\.com/.test(host)) platform = 'tiktok';
   else if (/youtube\\.com|youtu\\.be/.test(host)) platform = 'youtube';
   else if (/pinterest\\./.test(host)) platform = 'pinterest';
-  else if (/1688\\.com|alibaba\\.com|taobao\\.com|aliexpress\\./.test(host)) platform = 'supplier';
+  else if (/1688\\.com|alibaba\\.com|taobao\\.com|aliexpress\\.|made-in-china|dhgate/.test(host)) platform = 'supplier';
+  else if (/shopee|lazada|daraz|amazon\\./.test(host)) platform = 'marketplace';
 
-  let siteName = meta('meta[property="og:site_name"]') || host;
+  let handle = null, followers = null;
+  if (platform === 'instagram') {
+    const m = location.pathname.match(/^\\/([A-Za-z0-9_.]+)\\/?$/);
+    if (m) handle = '@' + m[1];
+  } else if (platform === 'facebook') {
+    const m = location.pathname.match(/^\\/([A-Za-z0-9_.-]+)\\/?$/);
+    if (m && !/profile\\.php|watch|marketplace|groups/.test(m[1])) handle = m[1];
+  } else if (platform === 'tiktok') {
+    const m = location.pathname.match(/^\\/@([A-Za-z0-9_.]+)/);
+    if (m) handle = '@' + m[1];
+  }
+  const fm = (document.body ? document.body.innerText : '').slice(0, 4000)
+    .match(/([0-9][0-9.,]*\\s?[KMkm]?)\\s*(followers|ফলোয়ার|Followers)/);
+  if (fm) followers = fm[1].trim();
+  const isPage = !!handle;
+
+  const siteName = meta('meta[property="og:site_name"]') || (profile && profile.name) || host;
   const heading = document.querySelector('h1');
+  const article = document.querySelector('article, [role="article"], main');
+
   return {
-    url: location.href,
-    title: (meta('meta[property="og:title"]') || (heading && heading.innerText) || document.title || '').trim().slice(0, 300),
-    description: (meta('meta[name="description"]') || meta('meta[property="og:description"]') || '').slice(0, 500),
+    url: (product && product.url ? abs(product.url) : null) || location.href,
+    title: ((product && product.name) || meta('meta[property="og:title"]') || txt(heading) || document.title || '').trim().slice(0, 300),
+    description: ((product && product.description) || meta('meta[name="description"]') || meta('meta[property="og:description"]') || '').slice(0, 800),
+    content: (txt(article) || '').slice(0, 4000),
     selection: (window.getSelection() + '').trim().slice(0, 2000),
     images: imgs.slice(0, 24),
-    price: Number.isFinite(price) ? price : null,
+    price: price,
+    currency: currency,
+    sku: sku,
+    availability: availability,
+    brand_name: brandName,
+    variants: variants.slice(0, 6),
     platform: platform,
     host: host,
+    handle: handle,
+    followers: followers,
+    is_page: isPage,
+    is_product: !!product || /product|\\/p\\/|\\/item\\//i.test(location.pathname),
     siteName: siteName
   };
 })();
