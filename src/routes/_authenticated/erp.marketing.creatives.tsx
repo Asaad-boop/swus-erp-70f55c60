@@ -67,7 +67,7 @@ type Filter = "all" | "winning" | "fatigued" | "active";
 type SortKey = "spend" | "roas" | "ctr" | "orders" | "revenue" | "frequency";
 
 function CreativeLibrary() {
-  const { brands, isLoading: brandsLoading } = useBrand();
+  const { brands } = useBrand();
   const [brandKey, setBrandKey] = useState("all");
   const [range, setRange] = useState<MktRangeValue>(() => buildPreset("30d"));
   const [q, setQ] = useState("");

@@ -80,7 +80,7 @@ function statusTone(s: string) {
 }
 
 function CampaignWorkspace() {
-  const { brands, isLoading: brandsLoading } = useBrand();
+  const { brands } = useBrand();
   const [brandKey, setBrandKey] = useState("all");
   const [range, setRange] = useState<MktRangeValue>(() => buildPreset("30d"));
   const [q, setQ] = useState("");

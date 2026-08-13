@@ -112,7 +112,7 @@ const EVENT_COLOR: Record<string, string> = {
 const TEST_TYPES = ["creative", "hook", "offer", "price", "audience", "landing_page", "product"];
 
 function PlanningPage() {
-  const { brands, isLoading: brandsLoading } = useBrand();
+  const { brands } = useBrand();
   const [brandKey, setBrandKey] = useState("all");
   const [range, setRange] = useState<MktRangeValue>(() => buildPreset("30d"));
   const qc = useQueryClient();

@@ -67,7 +67,7 @@ const DIMS = [
 type Dim = (typeof DIMS)[number]["key"];
 
 function AttributionPage() {
-  const { brands, isLoading: brandsLoading } = useBrand();
+  const { brands } = useBrand();
   const [brandKey, setBrandKey] = useState("all");
   const [range, setRange] = useState<MktRangeValue>(() => buildPreset("30d"));
   const [dim, setDim] = useState<Dim>("source");

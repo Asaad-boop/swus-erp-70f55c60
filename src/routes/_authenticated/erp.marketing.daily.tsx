@@ -94,7 +94,7 @@ function isRecentDay(day: string): boolean {
 function DailyPerformancePage() {
   const search = Route.useSearch();
   const navigate = useNavigate({ from: Route.fullPath });
-  const { brands, isLoading: brandsLoading } = useBrand();
+  const { brands } = useBrand();
 
   const selection = useMemo(() => {
     if (search.brand === "all") return { key: "all", label: "All", ids: brands.map((b) => b.id) };
