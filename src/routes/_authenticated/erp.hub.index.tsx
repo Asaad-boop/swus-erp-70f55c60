@@ -1,15 +1,40 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useMemo } from "react";
-import { useQuery } from "@tanstack/react-query";
-import { Compass, Target, ListChecks, AlertTriangle, CheckCircle2 } from "lucide-react";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { toast } from "sonner";
+import {
+  Compass,
+  Target,
+  ListChecks,
+  AlertTriangle,
+  CheckCircle2,
+  Lightbulb,
+  Clapperboard,
+  Repeat,
+  Swords,
+  Check,
+  Inbox,
+  ArrowRight,
+} from "lucide-react";
 import { useBrand } from "@/contexts/brand-context";
+import { supabase } from "@/integrations/supabase/client";
+import { useCurrentRole } from "@/hooks/use-current-role";
 import { HubPageHeader } from "@/components/erp/hub/hub-shell";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
 import { Skeleton } from "@/components/ui/skeleton";
-import { fetchGoalActuals, fetchGoals, fetchTasks, fmtValue } from "@/lib/erp/hub/hub-data";
+import {
+  fetchContentPlans,
+  fetchGoalActuals,
+  fetchGoals,
+  fetchIdeas,
+  fetchMyVotes,
+  fetchTasks,
+  fmtValue,
+} from "@/lib/erp/hub/hub-data";
+import { fetchCompetitorAssets, fetchRoutines, routineHitsDate } from "@/lib/erp/hub/hub-research";
 
 export const Route = createFileRoute("/_authenticated/erp/hub/")({
   head: () => ({
@@ -34,6 +59,8 @@ export const Route = createFileRoute("/_authenticated/erp/hub/")({
 
 function HubHome() {
   const { brandIds, activeBrand } = useBrand();
+  const qc = useQueryClient();
+  const { userId } = useCurrentRole();
   const today = new Date().toISOString().slice(0, 10);
 
   const goalsQ = useQuery({
@@ -50,6 +77,42 @@ function HubHome() {
     queryKey: ["hub-tasks", brandIds],
     queryFn: () => fetchTasks(brandIds),
     enabled: brandIds.length > 0,
+  });
+  const ideasQ = useQuery({
+    queryKey: ["hub-ideas", brandIds],
+    queryFn: () => fetchIdeas(brandIds),
+    enabled: brandIds.length > 0,
+  });
+  const myVotesQ = useQuery({ queryKey: ["hub-my-votes"], queryFn: fetchMyVotes });
+  const plansQ = useQuery({
+    queryKey: ["hub-content-plans", brandIds],
+    queryFn: () => fetchContentPlans(brandIds),
+    enabled: brandIds.length > 0,
+  });
+  const routinesQ = useQuery({
+    queryKey: ["hub-routines", brandIds],
+    queryFn: () => fetchRoutines(brandIds),
+    enabled: brandIds.length > 0,
+  });
+  const assetsQ = useQuery({
+    queryKey: ["hub-competitor-assets", brandIds],
+    queryFn: () => fetchCompetitorAssets(brandIds),
+    enabled: brandIds.length > 0,
+  });
+
+  const completeTask = useMutation({
+    mutationFn: async (id: string) => {
+      const { error } = await supabase
+        .from("hub_tasks")
+        .update({ status: "done", completed_at: new Date().toISOString() } as never)
+        .eq("id", id);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      toast.success("Task done ✅");
+      qc.invalidateQueries({ queryKey: ["hub-tasks"] });
+    },
+    onError: (e: Error) => toast.error(e.message),
   });
 
   const goals = goalsQ.data ?? [];
@@ -71,6 +134,47 @@ function HubHome() {
   );
 
   const loading = goalsQ.isLoading || tasksQ.isLoading;
+
+  /* ---- Needs my action ---- */
+  const myTasks = useMemo(
+    () =>
+      tasks
+        .filter(
+          (t) =>
+            t.status !== "done" &&
+            userId &&
+            t.assignee_id === userId &&
+            (!t.due_date || t.due_date <= today),
+        )
+        .sort((a, b) => (a.due_date ?? "9999").localeCompare(b.due_date ?? "9999")),
+    [tasks, userId, today],
+  );
+
+  const ideasToVote = useMemo(() => {
+    const votes = myVotesQ.data;
+    return (ideasQ.data ?? []).filter(
+      (i) => (i.status === "voting" || i.status === "idea") && !votes?.get(i.id),
+    );
+  }, [ideasQ.data, myVotesQ.data]);
+
+  const contentLate = useMemo(
+    () =>
+      (plansQ.data ?? []).filter(
+        (p) =>
+          !["live", "cancelled"].includes(p.status) && p.deadline && p.deadline <= today,
+      ),
+    [plansQ.data, today],
+  );
+
+  const routinesToday = useMemo(() => {
+    const now = new Date();
+    return (routinesQ.data ?? []).filter(
+      (r) => routineHitsDate(r, now) && r.last_spawned_on !== today,
+    );
+  }, [routinesQ.data, today]);
+
+  const actionCount =
+    myTasks.length + ideasToVote.length + contentLate.length + routinesToday.length;
 
   return (
     <div className="mx-auto max-w-[1500px] space-y-4 p-3 md:p-6">
@@ -106,6 +210,75 @@ function HubHome() {
         <Stat label="In progress" value={doing.length} />
         <Stat label="Done (7 days)" value={doneThisWeek.length} tone="success" />
       </div>
+
+      {/* Needs my action */}
+      <Card className="border-primary/25 bg-primary/[0.03]">
+        <CardContent className="space-y-3 p-4">
+          <div className="flex items-center justify-between">
+            <h2 className="inline-flex items-center gap-1.5 font-display text-sm font-semibold">
+              <Inbox className="h-4 w-4 text-primary" /> আমার অ্যাকশন দরকার
+              {actionCount > 0 && (
+                <Badge className="ml-1 h-5 px-1.5 text-[10px]">{actionCount}</Badge>
+              )}
+            </h2>
+          </div>
+
+          {actionCount === 0 ? (
+            <p className="inline-flex items-center gap-1.5 py-3 text-sm text-muted-foreground">
+              <CheckCircle2 className="h-4 w-4 text-emerald-500" /> সব clear — তোমার জন্য কিছু বাকি
+              নেই।
+            </p>
+          ) : (
+            <div className="grid gap-2 lg:grid-cols-2">
+              {myTasks.slice(0, 5).map((t) => (
+                <div
+                  key={t.id}
+                  className="flex items-center justify-between gap-2 rounded-lg border bg-background px-3 py-2"
+                >
+                  <div className="min-w-0">
+                    <p className="truncate text-sm">{t.title}</p>
+                    <p className="text-[11px] text-muted-foreground">
+                      {t.due_date ? `Due ${t.due_date}` : "No due date"} · {t.priority}
+                    </p>
+                  </div>
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    className="h-7 shrink-0 px-2"
+                    disabled={completeTask.isPending}
+                    onClick={() => completeTask.mutate(t.id)}
+                  >
+                    <Check className="h-3.5 w-3.5" />
+                  </Button>
+                </div>
+              ))}
+
+              {ideasToVote.length > 0 && (
+                <ActionLink
+                  to="/erp/hub/products"
+                  icon={Lightbulb}
+                  label={`${ideasToVote.length}টা product idea তোমার vote-এর অপেক্ষায়`}
+                />
+              )}
+              {contentLate.length > 0 && (
+                <ActionLink
+                  to="/erp/hub/content"
+                  icon={Clapperboard}
+                  label={`${contentLate.length}টা content plan deadline পার করেছে`}
+                  tone="destructive"
+                />
+              )}
+              {routinesToday.length > 0 && (
+                <ActionLink
+                  to="/erp/hub/routines"
+                  icon={Repeat}
+                  label={`আজকের ${routinesToday.length}টা routine এখনো task হয়নি`}
+                />
+              )}
+            </div>
+          )}
+        </CardContent>
+      </Card>
 
       <div className="grid gap-4 lg:grid-cols-2">
         <Card>
@@ -182,7 +355,99 @@ function HubHome() {
           </CardContent>
         </Card>
       </div>
+
+      {/* Module pulse */}
+      <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+        <PulseCard
+          to="/erp/hub/products"
+          icon={Lightbulb}
+          title="Product pipeline"
+          value={(ideasQ.data ?? []).filter((i) => i.status !== "rejected").length}
+          hint="active ideas"
+        />
+        <PulseCard
+          to="/erp/hub/content"
+          icon={Clapperboard}
+          title="Content journey"
+          value={(plansQ.data ?? []).filter((p) => !["live", "cancelled"].includes(p.status)).length}
+          hint="in production"
+        />
+        <PulseCard
+          to="/erp/hub/routines"
+          icon={Repeat}
+          title="Routines"
+          value={(routinesQ.data ?? []).filter((r) => r.active).length}
+          hint="active routines"
+        />
+        <PulseCard
+          to="/erp/hub/rivals"
+          icon={Swords}
+          title="Rival pages"
+          value={(assetsQ.data ?? []).length}
+          hint="swipe file items"
+        />
+      </div>
     </div>
+  );
+}
+
+function ActionLink({
+  to,
+  icon: Icon,
+  label,
+  tone,
+}: {
+  to: string;
+  icon: typeof Lightbulb;
+  label: string;
+  tone?: "destructive";
+}) {
+  return (
+    <Link
+      to={to}
+      className={`flex items-center justify-between gap-2 rounded-lg border bg-background px-3 py-2 text-sm transition-colors hover:bg-muted ${
+        tone === "destructive" ? "border-destructive/40 text-destructive" : ""
+      }`}
+    >
+      <span className="inline-flex min-w-0 items-center gap-2">
+        <Icon className="h-4 w-4 shrink-0" />
+        <span className="truncate">{label}</span>
+      </span>
+      <ArrowRight className="h-3.5 w-3.5 shrink-0 opacity-60" />
+    </Link>
+  );
+}
+
+function PulseCard({
+  to,
+  icon: Icon,
+  title,
+  value,
+  hint,
+}: {
+  to: string;
+  icon: typeof Lightbulb;
+  title: string;
+  value: number;
+  hint: string;
+}) {
+  return (
+    <Link to={to}>
+      <Card className="h-full transition-colors hover:border-primary/40 hover:bg-muted/40">
+        <CardContent className="flex items-center gap-3 p-4">
+          <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-primary/10 text-primary">
+            <Icon className="h-4 w-4" />
+          </span>
+          <div className="min-w-0">
+            <p className="truncate text-xs text-muted-foreground">{title}</p>
+            <p className="font-display text-lg font-bold leading-tight">
+              {value}{" "}
+              <span className="text-[11px] font-normal text-muted-foreground">{hint}</span>
+            </p>
+          </div>
+        </CardContent>
+      </Card>
+    </Link>
   );
 }
 
