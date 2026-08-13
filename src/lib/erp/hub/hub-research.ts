@@ -35,13 +35,16 @@ export const WEEKDAYS = [
   { key: 6, label: "শনি" },
 ] as const;
 
-function brandFilter<T extends { or: (s: string) => T }>(q: T, brandIds: string[]) {
-  return brandIds.length === 1 ? q.or(`brand_id.is.null,brand_id.eq.${brandIds[0]}`) : q;
+function brandFilter<T>(q: T, brandIds: string[]): T {
+  if (brandIds.length !== 1) return q;
+  return (q as unknown as { or: (s: string) => T }).or(
+    `brand_id.is.null,brand_id.eq.${brandIds[0]}`,
+  );
 }
 
 export async function fetchRoutines(brandIds: string[]) {
   const q = supabase.from("hub_routines").select("*").order("created_at");
-  const { data, error } = await brandFilter(q as never, brandIds);
+  const { data, error } = await brandFilter(q, brandIds);
   if (error) throw error;
   return (data ?? []).map((r: Record<string, unknown>) => ({
     ...(r as unknown as HubRoutine),
@@ -144,7 +147,7 @@ export function hostOf(url: string | null | undefined) {
 
 export async function fetchCompetitors(brandIds: string[]) {
   const q = supabase.from("hub_competitors").select("*").order("created_at", { ascending: false });
-  const { data, error } = await brandFilter(q as never, brandIds);
+  const { data, error } = await brandFilter(q, brandIds);
   if (error) throw error;
   return (data ?? []).map((r: Record<string, unknown>) => ({
     ...(r as unknown as HubCompetitor),
@@ -158,7 +161,7 @@ export async function fetchCompetitorAssets(brandIds: string[]) {
     .select("*")
     .order("captured_at", { ascending: false })
     .limit(400);
-  const { data, error } = await brandFilter(q as never, brandIds);
+  const { data, error } = await brandFilter(q, brandIds);
   if (error) throw error;
   return (data ?? []).map((r: Record<string, unknown>) => ({
     ...(r as unknown as HubCompetitorAsset),
