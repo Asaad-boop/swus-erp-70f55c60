@@ -471,20 +471,56 @@ function ProductPipelinePage() {
       <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
         {filtered.map((i) => {
           const s = sumQ.data?.get(i.id);
-          const my = votesQ.data?.get(i.id)?.vote ?? 0;
+          const mine = votesQ.data?.get(i.id);
+          const my = mine?.vote ?? 0;
           const f = forecastQ.data?.get(i.id);
+          const imgs = i.images?.length ? i.images : i.image_url ? [i.image_url] : [];
+          const statusMeta = STATUS_STYLE[i.status] ?? STATUS_STYLE.idea;
           return (
-            <Card key={i.id} className="overflow-hidden">
-              {i.image_url && (
-                <div className="aspect-[16/9] w-full overflow-hidden bg-muted">
-                  <img
-                    src={i.image_url}
-                    alt={i.title}
-                    loading="lazy"
-                    className="h-full w-full object-cover"
-                  />
+            <Card
+              key={i.id}
+              className="group overflow-hidden border-border/70 transition-all duration-300 hover:-translate-y-0.5 hover:border-primary/30 hover:shadow-lg hover:shadow-primary/5"
+            >
+              <div className="relative">
+                <IdeaGallery images={imgs} title={i.title} />
+                <span
+                  className={`absolute left-2 top-2 rounded-full px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide ${statusMeta}`}
+                >
+                  {IDEA_STATUSES.find((x) => x.key === i.status)?.label ?? i.status}
+                </span>
+                <div className="absolute right-2 top-2 flex gap-1 opacity-0 transition-opacity group-hover:opacity-100">
+                  <button
+                    type="button"
+                    aria-label="Edit idea"
+                    onClick={() => openEdit(i)}
+                    className="rounded-full bg-background/90 p-1.5 shadow"
+                  >
+                    <Pencil className="h-3.5 w-3.5" />
+                  </button>
+                  <button
+                    type="button"
+                    aria-label="Delete idea"
+                    onClick={() => remove.mutate(i.id)}
+                    disabled={remove.isPending}
+                    className="rounded-full bg-background/90 p-1.5 shadow"
+                  >
+                    <Trash2 className="h-3.5 w-3.5 text-destructive" />
+                  </button>
                 </div>
-              )}
+                <button
+                  type="button"
+                  aria-label="Like"
+                  onClick={() => vote.mutate({ ideaId: i.id, value: 1 })}
+                  className="absolute bottom-2 right-2 inline-flex items-center gap-1 rounded-full bg-background/90 px-2.5 py-1 text-xs font-semibold shadow backdrop-blur transition-transform active:scale-95"
+                >
+                  <Heart
+                    className={`h-3.5 w-3.5 transition-colors ${
+                      my === 1 ? "fill-rose-500 text-rose-500" : "text-muted-foreground"
+                    }`}
+                  />
+                  {s?.up_votes ?? 0}
+                </button>
+              </div>
               <CardContent className="space-y-3 p-4">
                 <div className="flex items-start justify-between gap-2">
                   <div className="min-w-0">
@@ -495,18 +531,13 @@ function ProductPipelinePage() {
                       {i.moq ? ` · MOQ ${i.moq}` : ""}
                     </p>
                   </div>
-                  <div className="flex shrink-0 gap-1">
-                    <Button size="icon" variant="ghost" onClick={() => openEdit(i)}>
-                      <Pencil className="h-4 w-4" />
-                    </Button>
-                    <Button
-                      size="icon"
-                      variant="ghost"
-                      onClick={() => remove.mutate(i.id)}
-                      disabled={remove.isPending}
-                    >
-                      <Trash2 className="h-4 w-4 text-destructive" />
-                    </Button>
+                  <div className="shrink-0 text-right">
+                    <div className="flex items-center justify-end gap-1 text-xs font-semibold">
+                      <StarRating value={s?.avg_rating ?? 0} />
+                    </div>
+                    <p className="text-[10px] text-muted-foreground">
+                      {s?.avg_rating ? `${s.avg_rating.toFixed(1)} · ${s.rating_count} rating` : "no rating"}
+                    </p>
                   </div>
                 </div>
 
@@ -517,6 +548,12 @@ function ProductPipelinePage() {
                 <div className="flex flex-wrap items-center gap-1.5 text-xs">
                   <Badge variant="outline">Cost {fmtValue(i.est_unit_cost, "bdt")}</Badge>
                   <Badge variant="outline">Sell {fmtValue(i.est_sell_price, "bdt")}</Badge>
+                  {(i.target_price_min != null || i.target_price_max != null) && (
+                    <Badge variant="secondary">
+                      Target {fmtValue(i.target_price_min ?? 0, "bdt")}–
+                      {fmtValue(i.target_price_max ?? 0, "bdt")}
+                    </Badge>
+                  )}
                   {i.source_url && (
                     <a
                       href={i.source_url}
@@ -546,6 +583,10 @@ function ProductPipelinePage() {
 
                 <div className="flex flex-wrap items-center justify-between gap-2">
                   <div className="flex items-center gap-1.5">
+                    <StarRating
+                      value={mine?.rating ?? 0}
+                      onRate={(v) => rate.mutate({ ideaId: i.id, rating: v })}
+                    />
                     <Button
                       size="sm"
                       variant={my === 1 ? "default" : "outline"}
