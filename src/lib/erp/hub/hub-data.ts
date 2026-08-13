@@ -109,6 +109,7 @@ export type HubIdea = {
   title: string;
   description: string | null;
   image_url: string | null;
+  images: string[];
   source_url: string | null;
   supplier_name: string | null;
   supplier_url: string | null;
@@ -119,6 +120,15 @@ export type HubIdea = {
   status: string;
   tags: string[];
   notes: string | null;
+  target_price_min: number | null;
+  target_price_max: number | null;
+  approved_by: string | null;
+  approved_at: string | null;
+  decision_note: string | null;
+  selected_quote_id: string | null;
+  ordered_at: string | null;
+  order_qty: number | null;
+  order_unit_price: number | null;
   created_by: string | null;
   created_at: string;
 };
@@ -141,6 +151,10 @@ export type HubIdeaSummary = {
   down_votes: number;
   score: number;
   voters: number;
+  avg_rating: number | null;
+  rating_count: number;
+  quote_count: number;
+  best_landed_cost: number | null;
   monthly_profit: number | null;
   breakeven_roas: number | null;
 };
@@ -150,8 +164,61 @@ export type HubVote = {
   idea_id: string;
   user_id: string;
   vote: number;
+  rating: number | null;
   comment: string | null;
 };
+
+export type HubSourcingQuote = {
+  id: string;
+  idea_id: string;
+  supplier_name: string;
+  supplier_url: string | null;
+  contact: string | null;
+  platform: string;
+  unit_price_cny: number;
+  cny_rate: number;
+  moq: number | null;
+  lead_time_days: number | null;
+  shipping_mode: string;
+  shipping_cost_per_unit: number;
+  sample_status: string;
+  quality_rating: number | null;
+  status: string;
+  notes: string | null;
+  created_at: string;
+};
+
+/** Landed per-unit cost in BDT for a supplier quote. */
+export function quoteLandedCost(q: {
+  unit_price_cny: number;
+  cny_rate: number;
+  shipping_cost_per_unit: number;
+}) {
+  return Number(q.unit_price_cny || 0) * Number(q.cny_rate || 0) + Number(q.shipping_cost_per_unit || 0);
+}
+
+export async function fetchSourcingQuotes(ideaIds: string[]) {
+  const map = new Map<string, HubSourcingQuote[]>();
+  if (ideaIds.length === 0) return map;
+  const { data, error } = await supabase
+    .from("hub_sourcing_quotes")
+    .select("*")
+    .in("idea_id", ideaIds)
+    .order("created_at", { ascending: true });
+  if (error) throw error;
+  for (const raw of (data ?? []) as unknown as HubSourcingQuote[]) {
+    const q: HubSourcingQuote = {
+      ...raw,
+      unit_price_cny: Number(raw.unit_price_cny ?? 0),
+      cny_rate: Number(raw.cny_rate ?? 0),
+      shipping_cost_per_unit: Number(raw.shipping_cost_per_unit ?? 0),
+    };
+    const arr = map.get(q.idea_id) ?? [];
+    arr.push(q);
+    map.set(q.idea_id, arr);
+  }
+  return map;
+}
 
 export const IDEA_STATUSES = [
   { key: "idea", label: "Idea" },
@@ -174,6 +241,7 @@ export async function fetchIdeas(brandIds: string[]) {
   return (data ?? []).map((r) => ({
     ...(r as unknown as HubIdea),
     tags: ((r as unknown as { tags?: string[] }).tags ?? []) as string[],
+    images: ((r as unknown as { images?: string[] }).images ?? []) as string[],
   })) as HubIdea[];
 }
 
@@ -186,6 +254,8 @@ export async function fetchIdeaSummaries(brandIds: string[]) {
   for (const row of (data ?? []) as HubIdeaSummary[]) {
     map.set(row.idea_id, {
       ...row,
+      avg_rating: row.avg_rating == null ? null : Number(row.avg_rating),
+      best_landed_cost: row.best_landed_cost == null ? null : Number(row.best_landed_cost),
       monthly_profit: row.monthly_profit == null ? null : Number(row.monthly_profit),
       breakeven_roas: row.breakeven_roas == null ? null : Number(row.breakeven_roas),
     });
