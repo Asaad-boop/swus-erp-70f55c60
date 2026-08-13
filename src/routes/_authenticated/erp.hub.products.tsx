@@ -631,6 +631,36 @@ function ProductPipelinePage() {
                     </SelectContent>
                   </Select>
                 </div>
+
+                {isAdmin && ["idea", "voting"].includes(i.status) && (
+                  <div className="flex gap-2 border-t pt-3">
+                    <Button
+                      size="sm"
+                      className="flex-1 bg-emerald-600 text-white hover:bg-emerald-600/90"
+                      onClick={() => decide.mutate({ id: i.id, approve: true })}
+                      disabled={decide.isPending}
+                    >
+                      <CheckCircle2 className="mr-1.5 h-4 w-4" /> Approve → Sourcing
+                    </Button>
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={() => decide.mutate({ id: i.id, approve: false })}
+                      disabled={decide.isPending}
+                    >
+                      <XCircle className="mr-1.5 h-4 w-4 text-destructive" /> Reject
+                    </Button>
+                  </div>
+                )}
+
+                {["approved", "sourcing", "ordered"].includes(i.status) && (
+                  <Link
+                    to="/erp/hub/sourcing"
+                    className="inline-flex items-center gap-1.5 text-xs font-medium text-primary hover:underline"
+                  >
+                    <PackageSearch className="h-3.5 w-3.5" /> Sourcing desk-এ দেখুন
+                  </Link>
+                )}
               </CardContent>
             </Card>
           );
