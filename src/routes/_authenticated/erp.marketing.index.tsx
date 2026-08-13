@@ -359,13 +359,13 @@ function TodayCard({ loading, data }: { loading: boolean; data?: Today }) {
             label="Ad spend"
             icon={<DollarSign className="h-3.5 w-3.5" />}
             value={busy ? undefined : bdt(data.spend_bdt)}
-            hint="get_meta_spend_bdt"
+            hint="all connected ad accounts"
           />
           <Metric
             label="Delivered revenue"
             icon={<DollarSign className="h-3.5 w-3.5" />}
             value={busy ? undefined : bdt(data.revenue_bdt)}
-            hint="get_campaign_profit"
+            hint="delivered orders only"
           />
           <Metric
             label="Real ROAS"
