@@ -11,7 +11,7 @@ const MANIFEST = (origin: string) =>
         "Save any product, competitor ad or content inspiration straight into your Growth Hub.",
       permissions: ["activeTab", "scripting", "storage", "contextMenus", "notifications"],
       host_permissions: ["<all_urls>"],
-      background: { service_worker: "background.js" },
+      background: { service_worker: "background.js", type: "module" },
       action: { default_popup: "popup.html", default_title: "Save to Growth Hub" },
       options_page: "options.html",
       icons: { 128: "icon128.png" },
