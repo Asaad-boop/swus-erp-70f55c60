@@ -215,3 +215,126 @@ export async function fetchForecasts(ideaIds: string[]) {
   for (const f of (data ?? []) as unknown as HubIdeaForecast[]) map.set(f.idea_id, f);
   return map;
 }
+
+/* ---------------- Phase 3: Content Journey ---------------- */
+
+export type HubCreator = {
+  id: string;
+  brand_id: string | null;
+  name: string;
+  handle: string | null;
+  platform: string;
+  followers: number | null;
+  niche: string | null;
+  rate: number;
+  contact: string | null;
+  profile_url: string | null;
+  performance_note: string | null;
+  status: string;
+  created_at: string;
+};
+
+export type HubContentPlan = {
+  id: string;
+  brand_id: string | null;
+  product_id: string | null;
+  idea_id: string | null;
+  title: string;
+  angle: string | null;
+  platform: string;
+  asset_type: string;
+  owner_id: string | null;
+  budget: number;
+  launch_date: string | null;
+  deadline: string | null;
+  status: string;
+  notes: string | null;
+  created_at: string;
+};
+
+export type HubContentAssignment = {
+  id: string;
+  plan_id: string;
+  creator_id: string | null;
+  deliverable: string | null;
+  agreed_budget: number;
+  actual_cost: number;
+  deadline: string | null;
+  status: string;
+  result_url: string | null;
+  notes: string | null;
+  created_at: string;
+};
+
+export const CONTENT_STATUSES = [
+  { key: "planned", label: "Planned" },
+  { key: "briefing", label: "Briefing" },
+  { key: "shooting", label: "Shooting" },
+  { key: "editing", label: "Editing" },
+  { key: "scheduled", label: "Scheduled" },
+  { key: "live", label: "Live" },
+  { key: "cancelled", label: "Cancelled" },
+] as const;
+
+export const ASSIGNMENT_STATUSES = [
+  { key: "briefed", label: "Briefed" },
+  { key: "shooting", label: "Shooting" },
+  { key: "delivered", label: "Delivered" },
+  { key: "posted", label: "Posted" },
+  { key: "cancelled", label: "Cancelled" },
+] as const;
+
+export const CONTENT_PLATFORMS = [
+  { key: "facebook", label: "Facebook" },
+  { key: "instagram", label: "Instagram" },
+  { key: "tiktok", label: "TikTok" },
+  { key: "youtube", label: "YouTube" },
+  { key: "website", label: "Website" },
+] as const;
+
+export const ASSET_TYPES = [
+  { key: "photoshoot", label: "Photoshoot" },
+  { key: "ugc", label: "UGC" },
+  { key: "reel", label: "Reel / Short" },
+  { key: "review", label: "Influencer review" },
+  { key: "unboxing", label: "Unboxing" },
+  { key: "static", label: "Static creative" },
+] as const;
+
+export async function fetchContentPlans(brandIds: string[]) {
+  let q = supabase
+    .from("hub_content_plans")
+    .select("*")
+    .order("created_at", { ascending: false });
+  if (brandIds.length === 1) q = q.or(`brand_id.is.null,brand_id.eq.${brandIds[0]}`);
+  const { data, error } = await q;
+  if (error) throw error;
+  return (data ?? []) as unknown as HubContentPlan[];
+}
+
+export async function fetchCreators(brandIds: string[]) {
+  let q = supabase.from("hub_creators").select("*").order("name");
+  if (brandIds.length === 1) q = q.or(`brand_id.is.null,brand_id.eq.${brandIds[0]}`);
+  const { data, error } = await q;
+  if (error) throw error;
+  return (data ?? []) as unknown as HubCreator[];
+}
+
+export async function fetchAssignments(planIds: string[]) {
+  if (planIds.length === 0) return [] as HubContentAssignment[];
+  const { data, error } = await supabase
+    .from("hub_content_assignments")
+    .select("*")
+    .in("plan_id", planIds)
+    .order("created_at");
+  if (error) throw error;
+  return (data ?? []) as unknown as HubContentAssignment[];
+}
+
+export async function fetchProductOptions(brandIds: string[]) {
+  let q = supabase.from("products").select("id,name").order("name").limit(500);
+  if (brandIds.length === 1) q = q.eq("brand_id", brandIds[0]);
+  const { data, error } = await q;
+  if (error) throw error;
+  return (data ?? []) as { id: string; name: string }[];
+}
