@@ -14,7 +14,7 @@ export type MktAlert = {
   entity_name: string | null;
   title: string;
   message: string;
-  metrics: Record<string, unknown>;
+  metrics: Record<string, any>;
   recommendation: string | null;
   status: "open" | "ack" | "resolved";
   first_seen_at: string;
