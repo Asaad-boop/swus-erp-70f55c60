@@ -344,6 +344,11 @@ const POPUP_HTML = `<!doctype html>
 
   <main id="app" class="hidden">
     <div class="who"><span id="who"></span><button id="logout" class="link">Logout</button></div>
+    <div class="views">
+      <button class="vt on" data-v="capture">Capture</button>
+      <button class="vt" data-v="recent">Recent</button>
+    </div>
+    <div id="vCapture">
     <div class="tabs">
       <button class="tab on" data-kind="idea">💡 Idea</button>
       <button class="tab" data-kind="swipe">🎨 Swipe</button>
@@ -390,7 +395,10 @@ const POPUP_HTML = `<!doctype html>
     <input id="tags" placeholder="winner, hook, ugc" />
 
     <button id="save" class="primary block">Synq করো</button>
+    <button id="bulk" class="ghostbtn block hidden">এই পেজের সব product ধরো</button>
     <p id="msg" class="msg"></p>
+    </div>
+    <div id="vRecent" class="hidden feed"></div>
   </main>
 </body>
 <script type="module" src="popup.js"></script>
