@@ -741,11 +741,22 @@ function SourcingPage() {
               const imgs = i.images?.length ? i.images : i.image_url ? [i.image_url] : [];
               const qs = quotesQ.data?.get(i.id) ?? [];
               const st = stageOf.get(i.id) ?? "to_source";
+              const po = i.imp_po_id ? posQ.data?.get(i.imp_po_id) : undefined;
+              const ageDays = Math.max(
+                0,
+                Math.round(
+                  (Date.now() - new Date(i.approved_at ?? i.created_at).getTime()) / 86400000,
+                ),
+              );
               return (
-                <button
+                <div
                   key={i.id}
-                  type="button"
+                  role="button"
+                  tabIndex={0}
                   onClick={() => setSelectedId(i.id)}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter" || e.key === " ") setSelectedId(i.id);
+                  }}
                   className={`flex w-full items-center gap-3 rounded-xl border p-2.5 text-left transition-all ${
                     on
                       ? "border-primary/40 bg-primary/5 shadow-sm"
@@ -761,9 +772,19 @@ function SourcingPage() {
                       {qs.length} quote{qs.length === 1 ? "" : "s"}
                       {i.target_price_max ? ` · target ≤ ${fmtValue(i.target_price_max, "bdt")}` : ""}
                     </p>
+                    <p className="truncate text-[10px] text-muted-foreground">
+                      {po ? `${po.po_number} · ` : ""}
+                      {po && Number(po.due_bdt) > 0
+                        ? `${fmtValue(Math.round(Number(po.due_bdt)), "bdt")} due · `
+                        : ""}
+                      {ageDays}d in pipeline
+                    </p>
                   </div>
-                  <StageBadge stage={st} className="shrink-0" />
-                </button>
+                  <div className="flex shrink-0 flex-col items-end gap-1">
+                    <StageBadge stage={st} className="shrink-0" />
+                    <StageMenu idea={i} />
+                  </div>
+                </div>
               );
             })}
           </div>
