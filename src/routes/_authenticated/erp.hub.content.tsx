@@ -1169,8 +1169,8 @@ function CreativeDeskPage() {
         <SheetContent side="right" className="w-full overflow-y-auto p-0 sm:max-w-xl">
           {selected && (
             <div>
-              <SheetHeader className="space-y-2 border-b bg-muted/30 p-4">
-                <SheetTitle className="pr-6 text-base leading-snug">{selected.title}</SheetTitle>
+              <SheetHeader className="sticky top-0 z-10 space-y-2 border-b bg-background/95 p-3 backdrop-blur sm:p-4">
+                <SheetTitle className="pr-8 text-base leading-snug">{selected.title}</SheetTitle>
                 <div className="flex flex-wrap items-center gap-1.5">
                   <Badge variant="secondary" className={STATUS_TONE[selected.status] ?? ""}>
                     {statusLabel(selected.status)}
