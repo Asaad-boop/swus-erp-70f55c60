@@ -171,6 +171,97 @@ export const Route = createFileRoute("/api/public/hub/capture")({
           });
         }
 
+        /* ------------------------------ recent ------------------------------ */
+        if (action === "recent") {
+          const [{ data: ideas }, { data: swipes }, { data: rivals }] = await Promise.all([
+            supabaseAdmin
+              .from("hub_product_ideas")
+              .select("id,title,image_url,created_at")
+              .eq("created_by", t.user_id)
+              .order("created_at", { ascending: false })
+              .limit(8),
+            supabaseAdmin
+              .from("hub_competitor_assets")
+              .select("id,title,image_url,created_at")
+              .eq("captured_by", t.user_id)
+              .order("created_at", { ascending: false })
+              .limit(8),
+            supabaseAdmin
+              .from("hub_competitors")
+              .select("id,name,favicon_url,created_at")
+              .eq("created_by", t.user_id)
+              .order("created_at", { ascending: false })
+              .limit(8),
+          ]);
+          const items = [
+            ...((ideas ?? []) as any[]).map((r) => ({
+              kind: "idea",
+              id: r.id,
+              title: r.title,
+              image: r.image_url,
+              at: r.created_at,
+            })),
+            ...((swipes ?? []) as any[]).map((r) => ({
+              kind: "swipe",
+              id: r.id,
+              title: r.title,
+              image: r.image_url,
+              at: r.created_at,
+            })),
+            ...((rivals ?? []) as any[]).map((r) => ({
+              kind: "competitor",
+              id: r.id,
+              title: r.name,
+              image: r.favicon_url,
+              at: r.created_at,
+            })),
+          ]
+            .sort((a, b) => String(b.at).localeCompare(String(a.at)))
+            .slice(0, 12);
+          return json({ ok: true, items });
+        }
+
+        /* ------------------------------- bulk ------------------------------- */
+        // Save many product ideas at once (listing page grab).
+        if (action === "bulk") {
+          const requestedBrandB = str(payload.brand_id, 60);
+          const brandIdB =
+            requestedBrandB && allowedBrandIds.includes(requestedBrandB)
+              ? requestedBrandB
+              : t.default_brand_id;
+          const raw = Array.isArray(payload.items) ? payload.items.slice(0, 40) : [];
+          const rows = raw
+            .map((x: any) => {
+              const title = str(x?.title, 300);
+              const link = str(x?.url, 2000);
+              if (!title && !link) return null;
+              const img = str(x?.image_url, 2000);
+              const p = Number(x?.price);
+              return {
+                brand_id: brandIdB,
+                title: title ?? link ?? "Untitled idea",
+                source_url: link,
+                image_url: img,
+                images: img ? [img] : [],
+                tags: strArr(payload.tags, 12).map((s) => s.slice(0, 40)),
+                est_sell_price: Number.isFinite(p) && p > 0 ? p : 0,
+                status: "idea",
+                created_by: t.user_id,
+              };
+            })
+            .filter(Boolean);
+          if (!rows.length) return json({ error: "কিছু পাওয়া যায়নি" }, 400);
+          const { error } = await supabaseAdmin
+            .from("hub_product_ideas")
+            .insert(rows as never);
+          if (error) return json({ error: error.message }, 400);
+          await supabaseAdmin
+            .from("hub_capture_tokens")
+            .update({ last_used_at: new Date().toISOString(), use_count: (t.use_count ?? 0) + 1 })
+            .eq("id", t.id);
+          return json({ ok: true, kind: "bulk", count: rows.length });
+        }
+
         /* ------------------------------- save ------------------------------- */
         const kind = str(payload.kind, 20) ?? "idea";
         const url = str(payload.url, 2000);
