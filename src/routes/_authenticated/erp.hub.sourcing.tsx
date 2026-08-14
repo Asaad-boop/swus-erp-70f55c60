@@ -23,7 +23,12 @@ import { supabase } from "@/integrations/supabase/client";
 import { useBrand } from "@/contexts/brand-context";
 import { useAccounts } from "@/hooks/erp/use-finance-query";
 import { Switch } from "@/components/ui/switch";
-import { createImportPo, listImportSuppliers } from "@/lib/erp/imports/imports.functions";
+import {
+  createImportPo,
+  listImportSuppliers,
+  listCargoAgents,
+  setPoCargoAgent,
+} from "@/lib/erp/imports/imports.functions";
 import { newIdemKey } from "@/lib/erp/imports/types";
 import { HubPageHeader } from "@/components/erp/hub/hub-shell";
 import { IdeaGallery, StarRating } from "@/components/erp/hub/idea-visuals";
@@ -129,6 +134,7 @@ function SourcingPage() {
   const [poSupplierId, setPoSupplierId] = useState<string>("");
   const [poSupplierName, setPoSupplierName] = useState("");
   const [poSupplierUrl, setPoSupplierUrl] = useState("");
+  const [poAgentId, setPoAgentId] = useState<string>("");
   const [poNotes, setPoNotes] = useState("");
   const [payEnabled, setPayEnabled] = useState(false);
   const [payAmount, setPayAmount] = useState("");
@@ -182,10 +188,17 @@ function SourcingPage() {
   const poBrandId = selected?.brand_id ?? activeBrand?.id ?? brandIds[0] ?? null;
   const suppliersFn = useServerFn(listImportSuppliers);
   const createPoFn = useServerFn(createImportPo);
+  const agentsFn = useServerFn(listCargoAgents);
+  const setAgentFn = useServerFn(setPoCargoAgent);
   const suppliersQ = useQuery({
     queryKey: ["imp-suppliers", poBrandId],
     enabled: !!poBrandId && orderOpen,
     queryFn: () => suppliersFn({ data: { brandId: poBrandId! } }),
+  });
+  const agentsQ = useQuery({
+    queryKey: ["imp-cargo-agents", poBrandId],
+    enabled: !!poBrandId && orderOpen,
+    queryFn: () => agentsFn({ data: { brandId: poBrandId!, activeOnly: true } }),
   });
   const { data: wallets = [] } = useAccounts(poBrandId ? [poBrandId] : []);
 
@@ -324,6 +337,7 @@ function SourcingPage() {
       const fx = Number(poFx || 0);
       if (qty <= 0) throw new Error("Quantity দিন");
       if (fx <= 0) throw new Error("FX rate দিন");
+      if (!poAgentId) throw new Error("Cargo agent select করুন");
 
       const supplier = poSupplierId
         ? { id: poSupplierId }
@@ -371,6 +385,8 @@ function SourcingPage() {
           idempotency_key: newIdemKey("hubpo"),
         },
       })) as { po_id: string; po_number: string };
+
+      await setAgentFn({ data: { po_id: res.po_id, cargo_agent_id: poAgentId } });
 
       const { error } = await supabase
         .from("hub_product_ideas")
