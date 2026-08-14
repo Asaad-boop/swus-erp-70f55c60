@@ -1123,6 +1123,10 @@ function ProductPipelinePage() {
           <DialogHeader>
             <DialogTitle>Forecast — {fcIdea?.title}</DialogTitle>
           </DialogHeader>
+        <DialogContent className="max-h-[90vh] max-w-lg overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Forecast — {fcIdea?.title}</DialogTitle>
+          </DialogHeader>
           <div className="grid grid-cols-2 gap-3">
             <Field label="Monthly units">
               <Input
