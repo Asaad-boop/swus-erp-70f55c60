@@ -563,6 +563,37 @@ async function init() {
   document.querySelectorAll('.tab').forEach((t) => (t.onclick = () => setKind(t.dataset.kind)));
   setKind(page.is_page ? 'competitor' : (page.is_product || page.platform === 'supplier' || page.platform === 'marketplace') ? 'idea' : 'swipe');
 
+  /* view switcher */
+  document.querySelectorAll('.vt').forEach((v) => (v.onclick = () => {
+    document.querySelectorAll('.vt').forEach((x) => x.classList.toggle('on', x === v));
+    const rec = v.dataset.v === 'recent';
+    $('vCapture').classList.toggle('hidden', rec);
+    $('vRecent').classList.toggle('hidden', !rec);
+    if (rec) loadRecent();
+  }));
+
+  /* bulk grab from listing pages */
+  const list = (page.listing || []).filter((x) => x && x.title);
+  if (list.length >= 3) {
+    const b = $('bulk');
+    b.classList.remove('hidden');
+    b.textContent = 'এই পেজের সব product ধরো (' + list.length + ')';
+    b.onclick = async () => {
+      b.disabled = true;
+      $('msg').textContent = list.length + ' টা সেভ হচ্ছে…';
+      $('msg').className = 'msg';
+      try {
+        const r = await api({ action: 'bulk', brand_id: $('brand').value || null, items: list, tags: ['bulk'] });
+        $('msg').textContent = (r.count || 0) + ' টা idea সেভ হয়েছে ✅';
+        $('msg').className = 'msg ok';
+      } catch (e) {
+        $('msg').textContent = String(e.message || e);
+        $('msg').className = 'msg err';
+      }
+      b.disabled = false;
+    };
+  }
+
   try {
     const meta = await api({ action: 'meta' });
     const b = $('brand');
@@ -588,6 +619,35 @@ async function init() {
   }
 
   $('save').onclick = save;
+}
+
+async function loadRecent() {
+  const box = $('vRecent');
+  box.innerHTML = '<p class="muted">লোড হচ্ছে…</p>';
+  try {
+    const r = await api({ action: 'recent' });
+    const items = r.items || [];
+    if (!items.length) { box.innerHTML = '<p class="muted">এখনো কিছু সেভ করোনি।</p>'; return; }
+    const icon = { idea: '💡', swipe: '🎨', competitor: '🏴' };
+    box.innerHTML = '';
+    items.forEach((it) => {
+      const d = document.createElement('div');
+      d.className = 'it';
+      const img = document.createElement('img');
+      img.src = it.image || '';
+      img.onerror = () => { img.style.visibility = 'hidden'; };
+      const t = document.createElement('div');
+      t.style.minWidth = '0';
+      t.innerHTML = '<b></b><small></small>';
+      t.querySelector('b').textContent = it.title || '(no title)';
+      t.querySelector('small').textContent = (icon[it.kind] || '') + ' ' + it.kind + ' · ' + String(it.at || '').slice(0, 10);
+      d.appendChild(img); d.appendChild(t);
+      box.appendChild(d);
+    });
+  } catch (e) {
+    box.innerHTML = '<p class="msg err"></p>';
+    box.querySelector('p').textContent = String(e.message || e);
+  }
 }
 
 async function save() {
