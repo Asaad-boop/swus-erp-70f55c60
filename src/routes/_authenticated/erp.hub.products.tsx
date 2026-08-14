@@ -387,11 +387,34 @@ function ProductPipelinePage() {
 
   const filtered = useMemo(() => {
     const sums = sumQ.data;
-    const list = statusFilter === "all" ? ideas : ideas.filter((i) => i.status === statusFilter);
-    return [...list].sort(
-      (a, b) => (sums?.get(b.id)?.score ?? 0) - (sums?.get(a.id)?.score ?? 0),
-    );
-  }, [ideas, statusFilter, sumQ.data]);
+    const q = search.trim().toLowerCase();
+    let list = statusFilter === "all" ? ideas : ideas.filter((i) => i.status === statusFilter);
+    if (q) {
+      list = list.filter((i) =>
+        [i.title, i.category, i.supplier_name, i.description, ...(i.tags ?? [])]
+          .filter(Boolean)
+          .some((v) => String(v).toLowerCase().includes(q)),
+      );
+    }
+    const margin = (i: HubIdea) =>
+      i.est_sell_price > 0 ? ((i.est_sell_price - i.est_unit_cost) / i.est_sell_price) * 100 : -1;
+    const cmp: Record<string, (a: HubIdea, b: HubIdea) => number> = {
+      score: (a, b) => (sums?.get(b.id)?.score ?? 0) - (sums?.get(a.id)?.score ?? 0),
+      rating: (a, b) => (sums?.get(b.id)?.avg_rating ?? 0) - (sums?.get(a.id)?.avg_rating ?? 0),
+      profit: (a, b) =>
+        (sums?.get(b.id)?.monthly_profit ?? 0) - (sums?.get(a.id)?.monthly_profit ?? 0),
+      margin: (a, b) => margin(b) - margin(a),
+      newest: (a, b) => String(b.created_at).localeCompare(String(a.created_at)),
+      title: (a, b) => a.title.localeCompare(b.title),
+    };
+    return [...list].sort(cmp[sortBy] ?? cmp.score);
+  }, [ideas, statusFilter, sumQ.data, search, sortBy]);
+
+  const statusCounts = useMemo(() => {
+    const m = new Map<string, number>();
+    for (const i of ideas) m.set(i.status, (m.get(i.status) ?? 0) + 1);
+    return m;
+  }, [ideas]);
 
   const stats = useMemo(() => {
     const approved = ideas.filter((i) =>
@@ -402,8 +425,51 @@ function ProductPipelinePage() {
       const p = sumQ.data?.get(i.id)?.monthly_profit;
       if (p && ["approved", "sourcing", "ordered", "launched"].includes(i.status)) projected += p;
     }
-    return { total: ideas.length, approved, projected };
+    const margins = ideas
+      .filter((i) => i.est_sell_price > 0)
+      .map((i) => ((i.est_sell_price - i.est_unit_cost) / i.est_sell_price) * 100);
+    const avgMargin = margins.length
+      ? margins.reduce((a, b) => a + b, 0) / margins.length
+      : 0;
+    const awaiting = ideas.filter((i) => ["idea", "voting"].includes(i.status)).length;
+    return { total: ideas.length, approved, projected, avgMargin, awaiting };
   }, [ideas, sumQ.data]);
+
+  const clone = useMutation({
+    mutationFn: async (i: HubIdea) => {
+      const { error } = await supabase.from("hub_product_ideas").insert({
+        brand_id: i.brand_id,
+        title: `${i.title} (copy)`,
+        description: i.description,
+        image_url: i.image_url,
+        images: i.images ?? [],
+        source_url: i.source_url,
+        supplier_name: i.supplier_name,
+        supplier_url: i.supplier_url,
+        category: i.category,
+        est_unit_cost: i.est_unit_cost,
+        est_sell_price: i.est_sell_price,
+        target_price_min: i.target_price_min,
+        target_price_max: i.target_price_max,
+        moq: i.moq,
+        status: "idea",
+        notes: i.notes,
+      } as never);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      toast.success("Duplicate তৈরি হয়েছে");
+      invalidate();
+    },
+    onError: (e: Error) => toast.error(e.message),
+  });
+
+  const moveStage = (i: HubIdea, dir: -1 | 1) => {
+    const order = IDEA_STATUSES.map((s) => s.key);
+    const idx = order.indexOf(i.status as (typeof order)[number]);
+    const next = order[Math.min(order.length - 1, Math.max(0, idx + dir))];
+    if (next && next !== i.status) setStatus.mutate({ id: i.id, status: next });
+  };
 
   const openNew = () => {
     setDraft(emptyDraft());
