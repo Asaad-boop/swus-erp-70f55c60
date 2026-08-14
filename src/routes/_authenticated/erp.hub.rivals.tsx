@@ -1,4 +1,4 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, Link } from "@tanstack/react-router";
 import { useMemo, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
@@ -495,109 +495,22 @@ function RivalsPage() {
         </TabsContent>
 
         {/* ----------------------------- CAPTURE ----------------------------- */}
-        <TabsContent value="capture" className="mt-4 space-y-3">
+        <TabsContent value="capture" className="mt-4">
           <Card className="overflow-hidden border-primary/30">
-            <CardContent className="space-y-3 p-4 text-sm">
-              <div className="flex items-start gap-3">
-                <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-indigo-500 to-fuchsia-500 text-xs font-extrabold text-white">
-                  S
-                </span>
-                <div>
-                  <p className="font-semibold">Synq With Us — Chrome extension (recommended)</p>
-                  <p className="text-xs text-muted-foreground">
-                    Email + password দিয়ে login করলেই যেকোনো website, product,
-                    Facebook/Instagram/TikTok ad বা ভালো লাগা content — এক ক্লিকে ছবি, দাম, note সহ
-                    Hub-এ চলে আসবে। Token লাগবে না।
-                  </p>
-                </div>
+            <CardContent className="flex flex-wrap items-center gap-4 p-5">
+              <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-indigo-500 to-fuchsia-500 text-sm font-extrabold text-white">
+                S
+              </span>
+              <div className="min-w-[220px] flex-1">
+                <p className="text-sm font-semibold">Synq With Us — browser extension</p>
+                <p className="text-xs text-muted-foreground">
+                  Install, login, device token আর bookmarklet — সব এখন ERP-র নিজস্ব Extension
+                  পেজে।
+                </p>
               </div>
-
-              <div className="flex flex-wrap items-center gap-2">
-                <Button size="sm" onClick={() => makeToken.mutate()} disabled={makeToken.isPending}>
-                  <KeyRound className="mr-1.5 h-3.5 w-3.5" /> নতুন token বানাও
-                </Button>
-                <Button size="sm" variant="outline" asChild>
-                  <a
-                    href={`/api/public/hub/extension.zip?origin=${encodeURIComponent(origin)}${
-                      newToken ? `&token=${encodeURIComponent(newToken)}` : ""
-                    }`}
-                  >
-                    <Download className="mr-1.5 h-3.5 w-3.5" />
-                    Extension ডাউনলোড {newToken ? "(token সহ)" : ""}
-                  </a>
-                </Button>
-              </div>
-
-              <ol className="list-decimal space-y-1 pl-5 text-xs text-muted-foreground">
-                <li>Zip ডাউনলোড করে extract করো।</li>
-                <li>
-                  Chrome-এ <code>chrome://extensions</code> খোলো → উপরে ডানে{" "}
-                  <b>Developer mode</b> ON করো।
-                </li>
-                <li>
-                  <b>Load unpacked</b> চাপো → extract করা ফোল্ডারটা select করো।
-                </li>
-                <li>
-                  Toolbar-এর <b>Synq</b> আইকনে ক্লিক → তোমার ERP <b>email + password</b> দিয়ে Login
-                  → brand সিলেক্ট করো। (চাইলে Advanced-এ token-ও দেওয়া যায়।)
-                </li>
-              </ol>
-              <p className="text-[11px] text-muted-foreground">
-                Popup-এ ৩টা মোড: <b>💡 Idea</b> → Product Pipeline-এ (vote/rating সহ),{" "}
-                <b>🎨 Swipe</b> → Swipe file + rival page auto তৈরি, <b>🏴 Rival</b> → competitor
-                registry-তে।
-              </p>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardContent className="space-y-3 p-4 text-sm">
-              <p className="font-semibold">Bookmarklet (extension ছাড়া, মোবাইল/যেকোনো ব্রাউজারে)</p>
-              <p className="text-xs text-muted-foreground">
-                token বানানোর পর নিচের bookmarklet কোডটা কপি করে
-                ব্রাউজারের bookmark bar-এ নতুন bookmark হিসেবে URL এর জায়গায় paste করো। যেকোনো
-                product বা competitor পেজে গিয়ে ওই bookmark-এ ক্লিক করলেই সেটা Growth Hub-এ সেভ হবে।
-              </p>
-
-              {newToken && (
-                <div className="space-y-2 rounded-lg border border-primary/30 bg-primary/5 p-3">
-                  <p className="text-xs font-medium text-primary">
-                    Token একবারই দেখা যাবে — bookmarklet কপি করে রাখো।
-                  </p>
-                  <Textarea readOnly rows={4} value={bookmarklet} className="text-[10px]" />
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    onClick={() => {
-                      navigator.clipboard.writeText(bookmarklet);
-                      toast.success("Bookmarklet কপি হয়েছে");
-                    }}
-                  >
-                    <Copy className="mr-1.5 h-3.5 w-3.5" /> Copy bookmarklet
-                  </Button>
-                </div>
-              )}
-
-              <div className="space-y-1.5 pt-1">
-                <p className="text-xs font-medium">আমার tokens</p>
-                {(tokensQ.data ?? []).length === 0 ? (
-                  <p className="text-xs text-muted-foreground">এখনো কোনো token নেই।</p>
-                ) : (
-                  (tokensQ.data ?? []).map((t) => (
-                    <div
-                      key={t.id}
-                      className="flex items-center justify-between rounded-md border border-border/60 px-2.5 py-1.5 text-xs"
-                    >
-                      <span>
-                        {t.label} · <span className="text-muted-foreground">{t.token_hint}</span>
-                      </span>
-                      <span className="text-muted-foreground">
-                        {t.use_count} বার · {t.last_used_at?.slice(0, 10) ?? "unused"}
-                      </span>
-                    </div>
-                  ))
-                )}
-              </div>
+              <Button asChild size="sm">
+                <Link to="/erp/extension">Extension পেজে যাও</Link>
+              </Button>
             </CardContent>
           </Card>
         </TabsContent>

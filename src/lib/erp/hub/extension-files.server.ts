@@ -6,13 +6,19 @@ const MANIFEST = (origin: string) =>
     {
       manifest_version: 3,
       name: "Synq With Us",
-      version: "1.3.0",
+      version: "2.0.0",
       description:
-        "Sign in and sync any product, rival page or content inspiration straight into your Growth Hub.",
+        "Synq any product, rival page or content inspiration from any website straight into your ERP.",
       permissions: ["activeTab", "scripting", "storage", "contextMenus", "notifications", "tabs"],
       host_permissions: ["<all_urls>"],
       background: { service_worker: "background.js", type: "module" },
       action: { default_popup: "popup.html", default_title: "Synq With Us" },
+      commands: {
+        "toggle-clip": {
+          suggested_key: { default: "Alt+Shift+S" },
+          description: "Synq Clip panel খোলো/বন্ধ করো",
+        },
+      },
       content_scripts: [
         { matches: ["<all_urls>"], js: ["content.js"], run_at: "document_idle", all_frames: false },
       ],
@@ -149,6 +155,25 @@ const SCRAPE = `
   const heading = document.querySelector('h1');
   const article = document.querySelector('article, [role="article"], main');
 
+  /* ---------------- listing grid (bulk grab) ---------------- */
+  const listing = [];
+  try {
+    const seen = {};
+    Array.from(document.querySelectorAll('a[href]')).forEach((a) => {
+      if (listing.length >= 40) return;
+      const href = abs(a.getAttribute('href'));
+      if (!href || seen[href]) return;
+      if (!/\\/(product|products|item|p|dp|goods|offer)[\\/-]/i.test(href)) return;
+      const im = a.querySelector('img');
+      const src = im ? (im.currentSrc || im.src || im.getAttribute('data-src')) : null;
+      const label = (a.getAttribute('title') || (im && im.getAttribute('alt')) || txt(a) || '').trim();
+      if (!label) return;
+      const pm = txt(a).match(/(?:৳|Tk\\.?|BDT|\\$|¥|€|£)\\s?([0-9][0-9,]{0,9}(?:\\.[0-9]{1,2})?)/i);
+      seen[href] = 1;
+      listing.push({ url: href, title: label.slice(0, 160), image_url: abs(src || ''), price: pm ? num(pm[1]) : null });
+    });
+  } catch (e) {}
+
   return {
     url: (product && product.url ? abs(product.url) : null) || location.href,
     title: ((product && product.name) || meta('meta[property="og:title"]') || txt(heading) || document.title || '').trim().slice(0, 300),
@@ -168,7 +193,8 @@ const SCRAPE = `
     followers: followers,
     is_page: isPage,
     is_product: !!product || /product|\\/p\\/|\\/item\\//i.test(location.pathname),
-    siteName: siteName
+    siteName: siteName,
+    listing: listing
   };
 })();
 `;
@@ -263,6 +289,19 @@ chrome.contextMenus.onClicked.addListener(async (info, tab) => {
     notify('Synq — ব্যর্থ', String(e.message || e));
   }
 });
+
+/* ------- keyboard shortcut: toggle the in-page clip panel ------- */
+chrome.commands.onCommand.addListener(async (command) => {
+  if (command !== 'toggle-clip') return;
+  const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
+  if (!tab || !tab.id) return;
+  try {
+    await chrome.scripting.executeScript({ target: { tabId: tab.id }, files: ['content.js'] });
+  } catch (e) { /* already injected */ }
+  try {
+    await chrome.tabs.sendMessage(tab.id, { type: 'gh-toggle' });
+  } catch (e) { /* ignore */ }
+});
 `;
 
 const POPUP_HTML = `<!doctype html>
@@ -305,6 +344,11 @@ const POPUP_HTML = `<!doctype html>
 
   <main id="app" class="hidden">
     <div class="who"><span id="who"></span><button id="logout" class="link">Logout</button></div>
+    <div class="views">
+      <button class="vt on" data-v="capture">Capture</button>
+      <button class="vt" data-v="recent">Recent</button>
+    </div>
+    <div id="vCapture">
     <div class="tabs">
       <button class="tab on" data-kind="idea">💡 Idea</button>
       <button class="tab" data-kind="swipe">🎨 Swipe</button>
@@ -351,7 +395,10 @@ const POPUP_HTML = `<!doctype html>
     <input id="tags" placeholder="winner, hook, ugc" />
 
     <button id="save" class="primary block">Synq করো</button>
+    <button id="bulk" class="ghostbtn block hidden">এই পেজের সব product ধরো</button>
     <p id="msg" class="msg"></p>
+    </div>
+    <div id="vRecent" class="hidden feed"></div>
   </main>
 </body>
 <script type="module" src="popup.js"></script>
@@ -392,6 +439,16 @@ textarea { resize:vertical; }
 .adv summary { color:var(--mut); font-size:11px; cursor:pointer; }
 .who { display:flex; align-items:center; gap:8px; font-size:11px; color:var(--mut); margin-bottom:8px; }
 .link { margin-left:auto; background:none; border:none; color:#a5b4fc; font-size:11px; cursor:pointer; text-decoration:underline; }
+.views { display:flex; gap:4px; padding:3px; border-radius:10px; background:var(--card); border:1px solid var(--line); margin-bottom:10px; }
+.vt { flex:1; padding:6px 0; font-size:11.5px; border:none; border-radius:8px; background:transparent; color:var(--mut); cursor:pointer; }
+.vt.on { background:rgba(99,102,241,.2); color:#c7cbff; font-weight:600; }
+.ghostbtn { background:transparent; border:1px dashed var(--line); color:var(--mut); border-radius:9px; padding:8px 0; font-size:12px; cursor:pointer; }
+.ghostbtn:hover { color:#c7cbff; border-color:var(--acc); }
+.feed { display:flex; flex-direction:column; gap:6px; }
+.feed .it { display:flex; gap:8px; align-items:center; padding:6px; border:1px solid var(--line); border-radius:10px; background:var(--card); }
+.feed .it img { width:34px; height:34px; border-radius:7px; object-fit:cover; background:#222; flex:none; }
+.feed .it b { font-size:11.5px; font-weight:500; display:block; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.feed .it small { color:var(--mut); font-size:10px; }
 `;
 
 
@@ -506,6 +563,37 @@ async function init() {
   document.querySelectorAll('.tab').forEach((t) => (t.onclick = () => setKind(t.dataset.kind)));
   setKind(page.is_page ? 'competitor' : (page.is_product || page.platform === 'supplier' || page.platform === 'marketplace') ? 'idea' : 'swipe');
 
+  /* view switcher */
+  document.querySelectorAll('.vt').forEach((v) => (v.onclick = () => {
+    document.querySelectorAll('.vt').forEach((x) => x.classList.toggle('on', x === v));
+    const rec = v.dataset.v === 'recent';
+    $('vCapture').classList.toggle('hidden', rec);
+    $('vRecent').classList.toggle('hidden', !rec);
+    if (rec) loadRecent();
+  }));
+
+  /* bulk grab from listing pages */
+  const list = (page.listing || []).filter((x) => x && x.title);
+  if (list.length >= 3) {
+    const b = $('bulk');
+    b.classList.remove('hidden');
+    b.textContent = 'এই পেজের সব product ধরো (' + list.length + ')';
+    b.onclick = async () => {
+      b.disabled = true;
+      $('msg').textContent = list.length + ' টা সেভ হচ্ছে…';
+      $('msg').className = 'msg';
+      try {
+        const r = await api({ action: 'bulk', brand_id: $('brand').value || null, items: list, tags: ['bulk'] });
+        $('msg').textContent = (r.count || 0) + ' টা idea সেভ হয়েছে ✅';
+        $('msg').className = 'msg ok';
+      } catch (e) {
+        $('msg').textContent = String(e.message || e);
+        $('msg').className = 'msg err';
+      }
+      b.disabled = false;
+    };
+  }
+
   try {
     const meta = await api({ action: 'meta' });
     const b = $('brand');
@@ -531,6 +619,35 @@ async function init() {
   }
 
   $('save').onclick = save;
+}
+
+async function loadRecent() {
+  const box = $('vRecent');
+  box.innerHTML = '<p class="muted">লোড হচ্ছে…</p>';
+  try {
+    const r = await api({ action: 'recent' });
+    const items = r.items || [];
+    if (!items.length) { box.innerHTML = '<p class="muted">এখনো কিছু সেভ করোনি।</p>'; return; }
+    const icon = { idea: '💡', swipe: '🎨', competitor: '🏴' };
+    box.innerHTML = '';
+    items.forEach((it) => {
+      const d = document.createElement('div');
+      d.className = 'it';
+      const img = document.createElement('img');
+      img.src = it.image || '';
+      img.onerror = () => { img.style.visibility = 'hidden'; };
+      const t = document.createElement('div');
+      t.style.minWidth = '0';
+      t.innerHTML = '<b></b><small></small>';
+      t.querySelector('b').textContent = it.title || '(no title)';
+      t.querySelector('small').textContent = (icon[it.kind] || '') + ' ' + it.kind + ' · ' + String(it.at || '').slice(0, 10);
+      d.appendChild(img); d.appendChild(t);
+      box.appendChild(d);
+    });
+  } catch (e) {
+    box.innerHTML = '<p class="msg err"></p>';
+    box.querySelector('p').textContent = String(e.message || e);
+  }
 }
 
 async function save() {
@@ -715,6 +832,10 @@ const CONTENT_JS = `
       if (sel) $('ghNote').value = sel.slice(0, 2000);
     }
   };
+
+  chrome.runtime.onMessage.addListener((msg) => {
+    if (msg && msg.type === 'gh-toggle') fab.onclick();
+  });
 
   $('ghGo').onclick = async () => {
     const btn = $('ghGo');
