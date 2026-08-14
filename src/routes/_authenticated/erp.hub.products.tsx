@@ -648,7 +648,81 @@ function ProductPipelinePage() {
         </Card>
       )}
 
-      <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
+      {view === "board" && filtered.length > 0 && (
+        <div className="flex gap-3 overflow-x-auto pb-2">
+          {IDEA_STATUSES.map((st) => {
+            const col = filtered.filter((i) => i.status === st.key);
+            return (
+              <div key={st.key} className="w-[260px] shrink-0 rounded-xl border bg-muted/30 p-2">
+                <div className="mb-2 flex items-center justify-between px-1">
+                  <span className="text-xs font-semibold uppercase tracking-wide">{st.label}</span>
+                  <span className="rounded-full bg-background px-1.5 text-[10px] font-semibold">
+                    {col.length}
+                  </span>
+                </div>
+                <div className="space-y-2">
+                  {col.map((i) => {
+                    const s = sumQ.data?.get(i.id);
+                    const thumb = i.image_url || i.images?.[0];
+                    return (
+                      <div key={i.id} className="rounded-lg border bg-background p-2 shadow-sm">
+                        <div className="flex gap-2">
+                          {thumb ? (
+                            <img
+                              src={thumb}
+                              alt={i.title}
+                              loading="lazy"
+                              className="h-10 w-10 shrink-0 rounded object-cover"
+                            />
+                          ) : (
+                            <div className="h-10 w-10 shrink-0 rounded bg-muted" />
+                          )}
+                          <div className="min-w-0 flex-1">
+                            <p className="truncate text-xs font-semibold">{i.title}</p>
+                            <p className="text-[10px] text-muted-foreground">
+                              ♥ {s?.up_votes ?? 0} · ★ {(s?.avg_rating ?? 0).toFixed(1)}
+                            </p>
+                          </div>
+                        </div>
+                        <div className="mt-2 flex items-center justify-between">
+                          <button
+                            type="button"
+                            aria-label="Previous stage"
+                            onClick={() => moveStage(i, -1)}
+                            className="rounded p-1 text-muted-foreground hover:bg-muted"
+                          >
+                            <ChevronLeft className="h-3.5 w-3.5" />
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => openEdit(i)}
+                            className="text-[10px] font-medium text-primary hover:underline"
+                          >
+                            Details
+                          </button>
+                          <button
+                            type="button"
+                            aria-label="Next stage"
+                            onClick={() => moveStage(i, 1)}
+                            className="rounded p-1 text-muted-foreground hover:bg-muted"
+                          >
+                            <ChevronRight className="h-3.5 w-3.5" />
+                          </button>
+                        </div>
+                      </div>
+                    );
+                  })}
+                  {col.length === 0 && (
+                    <p className="px-1 py-3 text-center text-[11px] text-muted-foreground">খালি</p>
+                  )}
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      )}
+
+      <div className={cn("grid gap-3 md:grid-cols-2 xl:grid-cols-3", view === "board" && "hidden")}>
         {filtered.map((i) => {
           const s = sumQ.data?.get(i.id);
           const mine = votesQ.data?.get(i.id);
