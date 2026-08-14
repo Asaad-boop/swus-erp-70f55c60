@@ -262,6 +262,10 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
 
 chrome.contextMenus.onClicked.addListener(async (info, tab) => {
   try {
+    // ensure content script is present on pages loaded before install
+    await chrome.scripting.executeScript({ target: { tabId: tab.id }, files: ['content.js'] });
+  } catch (e) { /* ignore */ }
+  try {
     const c = await cfg();
     const [res] = await chrome.scripting.executeScript({ target: { tabId: tab.id }, files: ['scrape.js'] });
     const page = (res && res.result) || {};
