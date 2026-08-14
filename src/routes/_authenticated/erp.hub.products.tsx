@@ -746,6 +746,7 @@ function ProductPipelinePage() {
           const mine = votesQ.data?.get(i.id);
           const my = mine?.vote ?? 0;
           const f = forecastQ.data?.get(i.id);
+          const people = peopleQ.data?.get(i.id);
           const imgs = i.images?.length ? i.images : i.image_url ? [i.image_url] : [];
           const statusMeta = STATUS_STYLE[i.status] ?? STATUS_STYLE.idea;
           return (
@@ -824,6 +825,12 @@ function ProductPipelinePage() {
                 {i.description && (
                   <p className="line-clamp-2 text-xs text-muted-foreground">{i.description}</p>
                 )}
+
+                <PeopleStrip
+                  addedBy={people?.created_by_name ?? null}
+                  addedAt={i.created_at}
+                  voters={people?.voters ?? []}
+                />
 
                 <div className="flex flex-wrap items-center gap-1.5 text-xs">
                   <Badge variant="outline">Cost {fmtValue(i.est_unit_cost, "bdt")}</Badge>
