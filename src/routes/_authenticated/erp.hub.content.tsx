@@ -1259,29 +1259,56 @@ function CreativeDeskPage() {
                 </div>
               </SheetHeader>
 
-              <Tabs defaultValue="brief" className="p-4">
+              <Tabs defaultValue="overview" className="p-3 sm:p-4">
                 <TabsList className="w-full">
-                  <TabsTrigger value="brief" className="flex-1">
-                    Brief
+                  <TabsTrigger value="overview" className="flex-1 text-xs">
+                    Overview
                   </TabsTrigger>
-                  <TabsTrigger value="production" className="flex-1">
-                    Production ({(asgByPlan.get(selected.id) ?? []).length})
+                  <TabsTrigger value="script" className="flex-1 text-xs">
+                    Script
                   </TabsTrigger>
-                  <TabsTrigger value="results" className="flex-1">
+                  <TabsTrigger value="production" className="flex-1 text-xs">
+                    Crew ({(asgByPlan.get(selected.id) ?? []).length})
+                  </TabsTrigger>
+                  <TabsTrigger value="results" className="flex-1 text-xs">
                     Results
                   </TabsTrigger>
                 </TabsList>
 
-                <TabsContent value="brief" className="space-y-3 pt-3">
-                  <div className="grid grid-cols-2 gap-3 rounded-lg border p-3 text-xs">
-                    <div>
-                      <p className="text-muted-foreground">Product</p>
-                      <p className="font-medium">
-                        {selected.product_id
-                          ? (productName.get(selected.product_id) ?? "Product")
-                          : "—"}
-                      </p>
-                    </div>
+                <TabsContent value="overview" className="space-y-3 pt-3">
+                  <ProductBlock
+                    product={selected.product_id ? productById.get(selected.product_id) : undefined}
+                  />
+                  {(selected.video_url ||
+                    (selected.product_id
+                      ? productById.get(selected.product_id)?.video_url
+                      : null)) && (
+                    <Field label="Video">
+                      <div className="space-y-1.5">
+                        <VideoEmbed
+                          url={
+                            selected.video_url ||
+                            productById.get(selected.product_id ?? "")?.video_url ||
+                            ""
+                          }
+                          title={selected.title}
+                        />
+                        <a
+                          href={
+                            selected.video_url ||
+                            productById.get(selected.product_id ?? "")?.video_url ||
+                            "#"
+                          }
+                          target="_blank"
+                          rel="noreferrer"
+                          className="inline-flex items-center gap-1 text-[11px] text-primary hover:underline"
+                        >
+                          Open <ExternalLink className="h-3 w-3" />
+                        </a>
+                      </div>
+                    </Field>
+                  )}
+                  <div className="grid grid-cols-2 gap-x-3 gap-y-2.5 rounded-xl border p-3 text-xs">
                     <div>
                       <p className="text-muted-foreground">Hook / angle</p>
                       <p className="font-medium">{selected.angle || "—"}</p>
@@ -1295,37 +1322,18 @@ function CreativeDeskPage() {
                       <p className="font-medium">{selected.deadline || "—"}</p>
                     </div>
                     <div>
-                      <p className="text-muted-foreground">Budget</p>
-                      <p className="font-medium">{fmtValue(Number(selected.budget || 0), "bdt")}</p>
-                    </div>
-                    <div>
-                      <p className="text-muted-foreground">Spent</p>
+                      <p className="text-muted-foreground">Budget / spent</p>
                       <p className="font-medium">
-                        {fmtValue(spendByPlan.get(selected.id) ?? 0, "bdt")}
+                        {fmtValue(spendByPlan.get(selected.id) ?? 0, "bdt")} /{" "}
+                        {fmtValue(Number(selected.budget || 0), "bdt")}
                       </p>
                     </div>
                   </div>
                   {selected.brief && (
                     <Field label="Brief">
-                      <p className="whitespace-pre-wrap rounded-lg border bg-muted/30 p-3 text-xs">
+                      <p className="whitespace-pre-wrap rounded-xl border bg-muted/30 p-3 text-xs">
                         {selected.brief}
                       </p>
-                    </Field>
-                  )}
-                  {selected.script && (
-                    <Field label="Script">
-                      <p className="whitespace-pre-wrap rounded-lg border bg-muted/30 p-3 text-xs">
-                        {selected.script}
-                      </p>
-                    </Field>
-                  )}
-                  {(selected.caption || selected.cta || selected.hashtags) && (
-                    <Field label="Copy">
-                      <div className="space-y-1 rounded-lg border bg-muted/30 p-3 text-xs">
-                        {selected.caption && <p className="whitespace-pre-wrap">{selected.caption}</p>}
-                        {selected.cta && <p className="text-muted-foreground">CTA: {selected.cta}</p>}
-                        {selected.hashtags && <p className="text-primary">{selected.hashtags}</p>}
-                      </div>
                     </Field>
                   )}
                   {(selected.reference_urls ?? []).length > 0 && (
@@ -1352,6 +1360,16 @@ function CreativeDeskPage() {
                       </p>
                     </Field>
                   )}
+                </TabsContent>
+
+                <TabsContent value="script" className="pt-3">
+                  <ScriptStudio
+                    key={selected.id}
+                    plan={selected}
+                    saving={patchPlan.isPending}
+                    onSave={(patch) => patchPlan.mutate({ id: selected.id, patch })}
+                    onCopy={() => copyBrief(selected)}
+                  />
                 </TabsContent>
 
                 <TabsContent value="production" className="space-y-2 pt-3">
