@@ -595,6 +595,8 @@ function IntakeCard({
   row,
   compact,
   selected,
+  skipped,
+  onSkip,
   onToggle,
   onPreview,
   onPush,
@@ -602,6 +604,8 @@ function IntakeCard({
   row: Enriched;
   compact: boolean;
   selected: boolean;
+  skipped: boolean;
+  onSkip: () => void;
   onToggle: () => void;
   onPreview: () => void;
   onPush: () => void;
@@ -704,9 +708,28 @@ function IntakeCard({
         <span className="truncate text-[11px] text-muted-foreground">
           {row.plan_id ? `Plan active · ${bdt(row._value)} value` : `কোনো plan নেই · ${bdt(row._value)} value`}
         </span>
-        <Button size="sm" className="h-7 shrink-0 text-xs" onClick={onPush}>
-          <Plus className="mr-1 h-3 w-3" /> Push
-        </Button>
+        <div className="flex shrink-0 items-center gap-1.5">
+          {skipped ? (
+            <Button size="sm" variant="outline" className="h-7 text-xs" onClick={onSkip}>
+              <Undo2 className="mr-1 h-3 w-3" /> Restore
+            </Button>
+          ) : (
+            <>
+              <Button
+                size="sm"
+                variant="ghost"
+                className="h-7 px-2 text-xs text-muted-foreground hover:text-destructive"
+                title="Content লাগবে না — list থেকে বাদ দাও"
+                onClick={onSkip}
+              >
+                <EyeOff className="h-3.5 w-3.5" />
+              </Button>
+              <Button size="sm" className="h-7 text-xs" onClick={onPush}>
+                <Plus className="mr-1 h-3 w-3" /> Push
+              </Button>
+            </>
+          )}
+        </div>
       </div>
     </div>
   );
