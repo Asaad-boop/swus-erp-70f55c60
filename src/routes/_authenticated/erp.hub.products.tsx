@@ -26,6 +26,7 @@ import {
   TrendingUp,
   X,
 } from "lucide-react";
+import { PlayCircle } from "lucide-react";
 import { Link } from "@tanstack/react-router";
 import { supabase } from "@/integrations/supabase/client";
 import { useBrand } from "@/contexts/brand-context";
@@ -106,6 +107,7 @@ type Draft = {
   image_url: string;
   images: string;
   source_url: string;
+  video_url: string;
   supplier_name: string;
   supplier_url: string;
   category: string;
@@ -124,6 +126,7 @@ const emptyDraft = (): Draft => ({
   image_url: "",
   images: "",
   source_url: "",
+  video_url: "",
   supplier_name: "",
   supplier_url: "",
   category: "",
@@ -201,6 +204,7 @@ function ProductPipelinePage() {
   const [confirmDelete, setConfirmDelete] = useState<HubIdea | null>(null);
   const [fcIdea, setFcIdea] = useState<HubIdea | null>(null);
   const [fc, setFc] = useState<FDraft>(emptyForecast());
+  const [videoIdea, setVideoIdea] = useState<HubIdea | null>(null);
 
   const ideasQ = useQuery({
     queryKey: ["hub-ideas", brandIds],
@@ -244,6 +248,7 @@ function ProductPipelinePage() {
           .map((s) => s.trim())
           .filter(Boolean),
         source_url: d.source_url.trim() || null,
+        video_url: d.video_url.trim() || null,
         supplier_name: d.supplier_name.trim() || null,
         supplier_url: d.supplier_url.trim() || null,
         category: d.category.trim() || null,
@@ -463,6 +468,7 @@ function ProductPipelinePage() {
         image_url: i.image_url,
         images: i.images ?? [],
         source_url: i.source_url,
+        video_url: i.video_url ?? null,
         supplier_name: i.supplier_name,
         supplier_url: i.supplier_url,
         category: i.category,
@@ -502,6 +508,7 @@ function ProductPipelinePage() {
       image_url: i.image_url ?? "",
       images: (i.images ?? []).join("\n"),
       source_url: i.source_url ?? "",
+      video_url: i.video_url ?? "",
       supplier_name: i.supplier_name ?? "",
       supplier_url: i.supplier_url ?? "",
       category: i.category ?? "",
@@ -868,6 +875,15 @@ function ProductPipelinePage() {
                       source <ExternalLink className="h-3 w-3" />
                     </a>
                   )}
+                  {i.video_url && (
+                    <button
+                      type="button"
+                      onClick={() => setVideoIdea(i)}
+                      className="inline-flex items-center gap-1 rounded-full bg-primary/10 px-2 py-0.5 font-medium text-primary hover:bg-primary/20"
+                    >
+                      <PlayCircle className="h-3.5 w-3.5" /> Video
+                    </button>
+                  )}
                 </div>
 
                 {f && (
@@ -1017,6 +1033,13 @@ function ProductPipelinePage() {
                 value={draft.source_url}
                 onChange={(e) => setDraft({ ...draft, source_url: e.target.value })}
                 placeholder="1688 / Alibaba link"
+              />
+            </Field>
+            <Field label="Video link (YouTube / TikTok / MP4)">
+              <Input
+                value={draft.video_url}
+                onChange={(e) => setDraft({ ...draft, video_url: e.target.value })}
+                placeholder="https://youtube.com/watch?v=..."
               />
             </Field>
             <div className="grid grid-cols-2 gap-3">
