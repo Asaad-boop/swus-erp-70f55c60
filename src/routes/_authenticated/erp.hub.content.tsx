@@ -1485,7 +1485,7 @@ function CreativeDeskPage() {
               <Label>Title</Label>
               <Input value={plan.title} onChange={(e) => setPlan({ ...plan, title: e.target.value })} />
             </div>
-            <div className="grid grid-cols-2 gap-3">
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
               <div>
                 <Label>Product</Label>
                 <Select value={plan.product_id} onValueChange={(v) => setPlan({ ...plan, product_id: v })}>
@@ -1518,7 +1518,7 @@ function CreativeDeskPage() {
                 </Select>
               </div>
             </div>
-            <div className="grid grid-cols-2 gap-3">
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
               <div>
                 <Label>Platform</Label>
                 <Select value={plan.platform} onValueChange={(v) => setPlan({ ...plan, platform: v })}>
@@ -1554,7 +1554,7 @@ function CreativeDeskPage() {
               <Label>Angle / hook</Label>
               <Input value={plan.angle} onChange={(e) => setPlan({ ...plan, angle: e.target.value })} />
             </div>
-            <div className="grid grid-cols-4 gap-3">
+            <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
               <div>
                 <Label>Budget (৳)</Label>
                 <Input
@@ -1607,7 +1607,7 @@ function CreativeDeskPage() {
               <Label>Caption</Label>
               <Textarea rows={2} value={plan.caption} onChange={(e) => setPlan({ ...plan, caption: e.target.value })} />
             </div>
-            <div className="grid grid-cols-2 gap-3">
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
               <div>
                 <Label>CTA</Label>
                 <Input value={plan.cta} onChange={(e) => setPlan({ ...plan, cta: e.target.value })} />
@@ -1656,7 +1656,7 @@ function CreativeDeskPage() {
             <DialogTitle>{creator.id ? "Edit creator" : "Add creator"}</DialogTitle>
           </DialogHeader>
           <div className="space-y-3">
-            <div className="grid grid-cols-2 gap-3">
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
               <div>
                 <Label>Name</Label>
                 <Input value={creator.name} onChange={(e) => setCreator({ ...creator, name: e.target.value })} />
@@ -1666,7 +1666,7 @@ function CreativeDeskPage() {
                 <Input value={creator.handle} onChange={(e) => setCreator({ ...creator, handle: e.target.value })} />
               </div>
             </div>
-            <div className="grid grid-cols-3 gap-3">
+            <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
               <div>
                 <Label>Platform</Label>
                 <Select value={creator.platform} onValueChange={(v) => setCreator({ ...creator, platform: v })}>
@@ -1699,7 +1699,7 @@ function CreativeDeskPage() {
                 />
               </div>
             </div>
-            <div className="grid grid-cols-3 gap-3">
+            <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
               <div>
                 <Label>Niche</Label>
                 <Input value={creator.niche} onChange={(e) => setCreator({ ...creator, niche: e.target.value })} />
@@ -1726,7 +1726,7 @@ function CreativeDeskPage() {
                 </Select>
               </div>
             </div>
-            <div className="grid grid-cols-2 gap-3">
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
               <div>
                 <Label>Contact</Label>
                 <Input value={creator.contact} onChange={(e) => setCreator({ ...creator, contact: e.target.value })} />
@@ -1796,7 +1796,7 @@ function CreativeDeskPage() {
               <Label>Deliverable</Label>
               <Input value={asg.deliverable} onChange={(e) => setAsg({ ...asg, deliverable: e.target.value })} />
             </div>
-            <div className="grid grid-cols-3 gap-3">
+            <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
               <div>
                 <Label>Agreed (৳)</Label>
                 <Input
@@ -1822,7 +1822,7 @@ function CreativeDeskPage() {
                 />
               </div>
             </div>
-            <div className="grid grid-cols-2 gap-3">
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
               <div>
                 <Label>Status</Label>
                 <Select value={asg.status} onValueChange={(v) => setAsg({ ...asg, status: v })}>
@@ -2041,7 +2041,7 @@ function ResultsForm({
       <p className="inline-flex items-center gap-1.5 rounded-md bg-muted/50 px-2 py-1 text-xs text-muted-foreground">
         <Sparkles className="h-3.5 w-3.5" /> Engagement rate {engRate.toFixed(2)}%
       </p>
-      <div className="grid grid-cols-3 gap-3">
+      <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
         <div>
           <Label className="text-xs">Views</Label>
           <Input inputMode="numeric" value={views} onChange={(e) => setViews(e.target.value)} />
@@ -2055,7 +2055,7 @@ function ResultsForm({
           <Input inputMode="numeric" value={orders} onChange={(e) => setOrders(e.target.value)} />
         </div>
       </div>
-      <div className="grid grid-cols-2 gap-3">
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
         <div>
           <Label className="text-xs">Published URL</Label>
           <Input value={url} onChange={(e) => setUrl(e.target.value)} />
