@@ -701,6 +701,42 @@ function SourcingPage() {
                       <p className="text-xs text-muted-foreground">{selected.description}</p>
                     )}
 
+                    <SourcingTimeline
+                      current={stageOf.get(selected.id) ?? "to_source"}
+                      steps={[
+                        { stage: "to_source", date: selected.approved_at, note: "approved" },
+                        {
+                          stage: "sourcing",
+                          date: quotes.length ? quotes[quotes.length - 1]!.created_at : null,
+                          note: quotes.length ? `${quotes.length} quote${quotes.length === 1 ? "" : "s"}` : "no quote yet",
+                        },
+                        {
+                          stage: "sourced",
+                          date: null,
+                          note: selected.selected_quote_id
+                            ? `supplier: ${selected.supplier_name ?? "selected"}`
+                            : "supplier pending",
+                        },
+                        {
+                          stage: "ordered",
+                          date: selected.ordered_at,
+                          note: linkedPoQ.data?.po_number ?? (selected.order_qty ? `${selected.order_qty} pcs` : null),
+                        },
+                        {
+                          stage: "in_transit",
+                          date: null,
+                          note: linkedPoQ.data
+                            ? String(linkedPoQ.data.status).replace(/_/g, " ")
+                            : "not shipped",
+                        },
+                        {
+                          stage: "received",
+                          date: null,
+                          note: linkedPoQ.data?.status === "completed" ? "stock in" : "pending",
+                        },
+                      ]}
+                    />
+
                     <div className="flex flex-wrap gap-1.5 text-xs">
                       <Badge variant="outline">
                         Planned sell {fmtValue(selected.est_sell_price, "bdt")}
