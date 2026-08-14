@@ -976,17 +976,26 @@ function SourcingPage() {
       {pipeline.length > 0 && (
         <div className="space-y-3">
           <div className="grid grid-cols-2 gap-2 sm:grid-cols-4 lg:grid-cols-7">
-            <StageKpi label="In pipeline" value={String(stageCounts.all)} sub="approved → ordered" />
+            <StageKpi
+              label="In pipeline"
+              value={String(stageCounts.all)}
+              sub="approved → received"
+              active={stageFilter === "all"}
+              onClick={() => setStageFilter("all")}
+            />
             {STAGE_ORDER.map((s) => (
               <StageKpi
                 key={s}
                 label={STAGE_META[s].label}
                 value={String(stageCounts[s])}
+                dot={STAGE_META[s].dot}
+                active={stageFilter === s}
+                onClick={() => setStageFilter(s)}
                 sub={s === "ordered" && dueTotal > 0 ? `${fmtValue(Math.round(dueTotal), "bdt")} due` : undefined}
               />
             ))}
           </div>
-          <div className="flex flex-wrap items-center gap-2">
+          <div className="sticky top-2 z-20 flex flex-wrap items-center gap-2 rounded-xl border border-border/60 bg-background/85 p-2 shadow-sm backdrop-blur-md supports-[backdrop-filter]:bg-background/70">
             <StageFilterBar counts={stageCounts} value={stageFilter} onChange={setStageFilter} />
             <button
               type="button"
@@ -1065,10 +1074,10 @@ function SourcingPage() {
                   }}
                   className={`flex w-full items-center gap-3 rounded-xl border p-2.5 text-left transition-all ${
                     on
-                      ? "border-primary/40 bg-primary/5 shadow-sm"
+                      ? "border-primary/50 bg-primary/5 shadow-sm ring-1 ring-primary/20"
                       : due
-                        ? "border-amber-500/40 bg-amber-500/5 hover:bg-amber-500/10"
-                        : "border-border/70 hover:bg-muted/50"
+                        ? "border-amber-500/40 bg-amber-500/5 hover:-translate-y-0.5 hover:bg-amber-500/10 hover:shadow-sm"
+                        : "border-border/70 hover:-translate-y-0.5 hover:bg-muted/50 hover:shadow-sm"
                   }`}
                 >
                   <div className="h-14 w-14 shrink-0 overflow-hidden rounded-lg">
