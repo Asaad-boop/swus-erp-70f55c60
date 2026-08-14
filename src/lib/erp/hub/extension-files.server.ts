@@ -262,10 +262,6 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
 
 chrome.contextMenus.onClicked.addListener(async (info, tab) => {
   try {
-    // ensure content script is present on pages loaded before install
-    await chrome.scripting.executeScript({ target: { tabId: tab.id }, files: ['content.js'] });
-  } catch (e) { /* ignore */ }
-  try {
     const c = await cfg();
     const [res] = await chrome.scripting.executeScript({ target: { tabId: tab.id }, files: ['scrape.js'] });
     const page = (res && res.result) || {};
@@ -292,6 +288,19 @@ chrome.contextMenus.onClicked.addListener(async (info, tab) => {
   } catch (e) {
     notify('Synq — ব্যর্থ', String(e.message || e));
   }
+});
+
+/* ------- keyboard shortcut: toggle the in-page clip panel ------- */
+chrome.commands.onCommand.addListener(async (command) => {
+  if (command !== 'toggle-clip') return;
+  const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
+  if (!tab || !tab.id) return;
+  try {
+    await chrome.scripting.executeScript({ target: { tabId: tab.id }, files: ['content.js'] });
+  } catch (e) { /* already injected */ }
+  try {
+    await chrome.tabs.sendMessage(tab.id, { type: 'gh-toggle' });
+  } catch (e) { /* ignore */ }
 });
 `;
 
