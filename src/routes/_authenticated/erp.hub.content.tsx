@@ -1856,6 +1856,144 @@ function CreativeDeskPage() {
 
 /* ---------------- Results tab form ---------------- */
 
+function ProductBlock({ product }: { product?: HubProductOption }) {
+  if (!product)
+    return (
+      <div className="flex items-center gap-2 rounded-xl border border-dashed p-3 text-xs text-muted-foreground">
+        <Package className="h-4 w-4" /> কোনো product link করা নেই — Edit করে product select করো।
+      </div>
+    );
+  return (
+    <div className="flex items-center gap-3 rounded-xl border bg-muted/20 p-3">
+      {product.image ? (
+        <img
+          src={product.image}
+          alt={product.name}
+          loading="lazy"
+          className="h-14 w-14 shrink-0 rounded-lg border object-cover"
+        />
+      ) : (
+        <span className="grid h-14 w-14 shrink-0 place-items-center rounded-lg border bg-muted text-muted-foreground">
+          <ImageOff className="h-4 w-4 opacity-60" />
+        </span>
+      )}
+      <div className="min-w-0 flex-1">
+        <p className="truncate text-sm font-semibold">{product.name}</p>
+        <p className="truncate text-[11px] text-muted-foreground">
+          {product.sku ? `SKU ${product.sku}` : "No SKU"}
+          {product.price != null ? ` • ${fmtValue(product.price, "bdt")}` : ""}
+          {product.stock != null ? ` • Stock ${product.stock}` : ""}
+        </p>
+      </div>
+    </div>
+  );
+}
+
+/* ---------------- Script studio ---------------- */
+
+function ScriptStudio({
+  plan,
+  onSave,
+  saving,
+  onCopy,
+}: {
+  plan: HubContentPlan;
+  onSave: (patch: Record<string, unknown>) => void;
+  saving: boolean;
+  onCopy: () => void;
+}) {
+  const [angle, setAngle] = useState(plan.angle ?? "");
+  const [script, setScript] = useState(plan.script ?? "");
+  const [caption, setCaption] = useState(plan.caption ?? "");
+  const [cta, setCta] = useState(plan.cta ?? "");
+  const [tags, setTags] = useState(plan.hashtags ?? "");
+  const [video, setVideo] = useState(plan.video_url ?? "");
+
+  const dirty =
+    angle !== (plan.angle ?? "") ||
+    script !== (plan.script ?? "") ||
+    caption !== (plan.caption ?? "") ||
+    cta !== (plan.cta ?? "") ||
+    tags !== (plan.hashtags ?? "") ||
+    video !== (plan.video_url ?? "");
+
+  const words = script.trim() ? script.trim().split(/\s+/).length : 0;
+
+  return (
+    <div className="space-y-3">
+      <div className="flex flex-wrap items-center gap-2 text-[11px] text-muted-foreground">
+        <span>{words} words</span>
+        <span>• ~{Math.max(1, Math.round((words / 140) * 60))}s read</span>
+        {plan.script_updated_at && (
+          <span>• last edit {plan.script_updated_at.slice(0, 10)}</span>
+        )}
+        <Button variant="ghost" size="sm" className="ml-auto h-7 text-xs" onClick={onCopy}>
+          <Copy className="mr-1 h-3.5 w-3.5" /> Copy brief
+        </Button>
+      </div>
+
+      <Field label="Hook / angle">
+        <Input value={angle} onChange={(e) => setAngle(e.target.value)} className="h-9 text-sm" />
+      </Field>
+      <Field label="Script">
+        <Textarea
+          rows={12}
+          value={script}
+          onChange={(e) => setScript(e.target.value)}
+          placeholder={"Hook…\nProblem…\nProduct demo…\nOffer + CTA…"}
+          className="text-sm leading-relaxed"
+        />
+      </Field>
+      <Field label="Caption">
+        <Textarea
+          rows={3}
+          value={caption}
+          onChange={(e) => setCaption(e.target.value)}
+          className="text-sm"
+        />
+      </Field>
+      <div className="grid gap-3 sm:grid-cols-2">
+        <Field label="CTA">
+          <Input value={cta} onChange={(e) => setCta(e.target.value)} className="h-9 text-sm" />
+        </Field>
+        <Field label="Hashtags">
+          <Input value={tags} onChange={(e) => setTags(e.target.value)} className="h-9 text-sm" />
+        </Field>
+      </div>
+      <Field label="Video link (YouTube / TikTok / Facebook / MP4)">
+        <Input
+          value={video}
+          onChange={(e) => setVideo(e.target.value)}
+          placeholder="https://…"
+          className="h-9 text-sm"
+        />
+      </Field>
+      {video.trim() && <VideoEmbed url={video.trim()} title={plan.title} />}
+
+      <div className="sticky bottom-0 -mx-3 flex items-center gap-2 border-t bg-background/95 px-3 py-2 backdrop-blur sm:-mx-4 sm:px-4">
+        <Button
+          size="sm"
+          disabled={saving || !dirty}
+          onClick={() =>
+            onSave({
+              angle: angle.trim() || null,
+              script: script.trim() || null,
+              caption: caption.trim() || null,
+              cta: cta.trim() || null,
+              hashtags: tags.trim() || null,
+              video_url: video.trim() || null,
+              script_updated_at: new Date().toISOString(),
+            })
+          }
+        >
+          <Save className="mr-1.5 h-3.5 w-3.5" /> Save script
+        </Button>
+        {dirty && <span className="text-[11px] text-amber-600 dark:text-amber-400">Unsaved</span>}
+      </div>
+    </div>
+  );
+}
+
 function ResultsForm({
   plan,
   onSave,
