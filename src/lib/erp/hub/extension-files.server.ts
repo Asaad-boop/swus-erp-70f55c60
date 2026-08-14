@@ -6,13 +6,19 @@ const MANIFEST = (origin: string) =>
     {
       manifest_version: 3,
       name: "Synq With Us",
-      version: "1.3.0",
+      version: "2.0.0",
       description:
-        "Sign in and sync any product, rival page or content inspiration straight into your Growth Hub.",
+        "Synq any product, rival page or content inspiration from any website straight into your ERP.",
       permissions: ["activeTab", "scripting", "storage", "contextMenus", "notifications", "tabs"],
       host_permissions: ["<all_urls>"],
       background: { service_worker: "background.js", type: "module" },
       action: { default_popup: "popup.html", default_title: "Synq With Us" },
+      commands: {
+        "toggle-clip": {
+          suggested_key: { default: "Alt+Shift+S" },
+          description: "Synq Clip panel খোলো/বন্ধ করো",
+        },
+      },
       content_scripts: [
         { matches: ["<all_urls>"], js: ["content.js"], run_at: "document_idle", all_frames: false },
       ],
