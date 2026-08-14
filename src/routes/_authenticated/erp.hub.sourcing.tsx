@@ -914,6 +914,28 @@ function SourcingPage() {
                       ]}
                     />
 
+                    {(() => {
+                      const st = stageOf.get(selected.id) ?? "to_source";
+                      const hint =
+                        st === "to_source"
+                          ? "পরবর্তী ধাপ: supplier quote add করো (Add quote)।"
+                          : st === "sourcing"
+                            ? "পরবর্তী ধাপ: সেরা quote টা Select করো, নাহলে ⋯ মেনু থেকে Sourcing done দিলে সবচেয়ে কম landed cost auto select হবে।"
+                            : st === "sourced"
+                              ? "পরবর্তী ধাপ: Place order দিয়ে cargo agent সহ Purchase Order তৈরি করো।"
+                              : st === "ordered"
+                                ? "পরবর্তী ধাপ: মাল shipment-এ উঠলে ⋯ মেনু থেকে In transit করো।"
+                                : st === "in_transit"
+                                  ? "মাল পথে আছে — warehouse receive করলে Received auto হয়ে যাবে।"
+                                  : "সব ধাপ শেষ — stock ঢুকে গেছে।";
+                      return (
+                        <div className="flex items-start gap-2 rounded-lg border border-primary/25 bg-primary/5 p-2.5 text-[11px]">
+                          <Target className="mt-0.5 h-3.5 w-3.5 shrink-0 text-primary" />
+                          <span>{hint}</span>
+                        </div>
+                      );
+                    })()}
+
                     <div className="flex flex-wrap gap-1.5 text-xs">
                       <Badge variant="outline">
                         Planned sell {fmtValue(selected.est_sell_price, "bdt")}
