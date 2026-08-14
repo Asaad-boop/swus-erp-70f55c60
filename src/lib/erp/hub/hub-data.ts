@@ -111,6 +111,7 @@ export type HubIdea = {
   image_url: string | null;
   images: string[];
   source_url: string | null;
+  video_url?: string | null;
   supplier_name: string | null;
   supplier_url: string | null;
   category: string | null;

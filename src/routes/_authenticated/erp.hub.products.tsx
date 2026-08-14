@@ -26,6 +26,7 @@ import {
   TrendingUp,
   X,
 } from "lucide-react";
+import { PlayCircle } from "lucide-react";
 import { Link } from "@tanstack/react-router";
 import { supabase } from "@/integrations/supabase/client";
 import { useBrand } from "@/contexts/brand-context";
@@ -106,6 +107,7 @@ type Draft = {
   image_url: string;
   images: string;
   source_url: string;
+  video_url: string;
   supplier_name: string;
   supplier_url: string;
   category: string;
@@ -124,6 +126,7 @@ const emptyDraft = (): Draft => ({
   image_url: "",
   images: "",
   source_url: "",
+  video_url: "",
   supplier_name: "",
   supplier_url: "",
   category: "",
@@ -201,6 +204,7 @@ function ProductPipelinePage() {
   const [confirmDelete, setConfirmDelete] = useState<HubIdea | null>(null);
   const [fcIdea, setFcIdea] = useState<HubIdea | null>(null);
   const [fc, setFc] = useState<FDraft>(emptyForecast());
+  const [videoIdea, setVideoIdea] = useState<HubIdea | null>(null);
 
   const ideasQ = useQuery({
     queryKey: ["hub-ideas", brandIds],
@@ -244,6 +248,7 @@ function ProductPipelinePage() {
           .map((s) => s.trim())
           .filter(Boolean),
         source_url: d.source_url.trim() || null,
+        video_url: d.video_url.trim() || null,
         supplier_name: d.supplier_name.trim() || null,
         supplier_url: d.supplier_url.trim() || null,
         category: d.category.trim() || null,
@@ -463,6 +468,7 @@ function ProductPipelinePage() {
         image_url: i.image_url,
         images: i.images ?? [],
         source_url: i.source_url,
+        video_url: i.video_url ?? null,
         supplier_name: i.supplier_name,
         supplier_url: i.supplier_url,
         category: i.category,
@@ -502,6 +508,7 @@ function ProductPipelinePage() {
       image_url: i.image_url ?? "",
       images: (i.images ?? []).join("\n"),
       source_url: i.source_url ?? "",
+      video_url: i.video_url ?? "",
       supplier_name: i.supplier_name ?? "",
       supplier_url: i.supplier_url ?? "",
       category: i.category ?? "",
@@ -868,6 +875,15 @@ function ProductPipelinePage() {
                       source <ExternalLink className="h-3 w-3" />
                     </a>
                   )}
+                  {i.video_url && (
+                    <button
+                      type="button"
+                      onClick={() => setVideoIdea(i)}
+                      className="inline-flex items-center gap-1 rounded-full bg-primary/10 px-2 py-0.5 font-medium text-primary hover:bg-primary/20"
+                    >
+                      <PlayCircle className="h-3.5 w-3.5" /> Video
+                    </button>
+                  )}
                 </div>
 
                 {f && (
@@ -1019,6 +1035,13 @@ function ProductPipelinePage() {
                 placeholder="1688 / Alibaba link"
               />
             </Field>
+            <Field label="Video link (YouTube / TikTok / MP4)">
+              <Input
+                value={draft.video_url}
+                onChange={(e) => setDraft({ ...draft, video_url: e.target.value })}
+                placeholder="https://youtube.com/watch?v=..."
+              />
+            </Field>
             <div className="grid grid-cols-2 gap-3">
               <Field label="Supplier name">
                 <Input
@@ -1095,6 +1118,24 @@ function ProductPipelinePage() {
         </DialogContent>
       </Dialog>
 
+      <Dialog open={!!videoIdea} onOpenChange={(o) => !o && setVideoIdea(null)}>
+        <DialogContent className="max-w-3xl">
+          <DialogHeader>
+            <DialogTitle>{videoIdea?.title} — Video</DialogTitle>
+          </DialogHeader>
+          {videoIdea?.video_url ? <VideoPlayer url={videoIdea.video_url} /> : null}
+          {videoIdea?.video_url && (
+            <a
+              href={videoIdea.video_url}
+              target="_blank"
+              rel="noreferrer noopener"
+              className="inline-flex items-center gap-1 text-xs text-primary hover:underline"
+            >
+              নতুন ট্যাবে খুলুন <ExternalLink className="h-3 w-3" />
+            </a>
+          )}
+        </DialogContent>
+      </Dialog>
       <Dialog open={!!fcIdea} onOpenChange={(o) => !o && setFcIdea(null)}>
         <DialogContent className="max-h-[90vh] max-w-lg overflow-y-auto">
           <DialogHeader>
@@ -1325,5 +1366,56 @@ function FunnelChip({
         {count}
       </span>
     </button>
+  );
+}
+
+
+function toEmbedUrl(url: string) {
+  try {
+    const u = new URL(url);
+    const host = u.hostname.replace(/^www\./, "");
+    if (host === "youtu.be") return `https://www.youtube.com/embed/${u.pathname.slice(1)}`;
+    if (host.endsWith("youtube.com")) {
+      const v = u.searchParams.get("v");
+      if (v) return `https://www.youtube.com/embed/${v}`;
+      if (u.pathname.startsWith("/shorts/"))
+        return `https://www.youtube.com/embed/${u.pathname.split("/")[2]}`;
+      if (u.pathname.startsWith("/embed/")) return url;
+    }
+    if (host.endsWith("vimeo.com")) return `https://player.vimeo.com/video/${u.pathname.slice(1)}`;
+    if (host.endsWith("facebook.com") || host.endsWith("fb.watch"))
+      return `https://www.facebook.com/plugins/video.php?href=${encodeURIComponent(url)}&show_text=false`;
+    if (host.endsWith("tiktok.com")) {
+      const id = u.pathname.split("/video/")[1]?.split(/[/?]/)[0];
+      if (id) return `https://www.tiktok.com/embed/v2/${id}`;
+    }
+  } catch {
+    return null;
+  }
+  return null;
+}
+
+function VideoPlayer({ url }: { url: string }) {
+  const embed = toEmbedUrl(url);
+  if (embed) {
+    return (
+      <div className="aspect-video w-full overflow-hidden rounded-lg bg-black">
+        <iframe
+          src={embed}
+          title="Product video"
+          allow="accelerometer; autoplay; clipboard-write; encrypted-media; picture-in-picture"
+          allowFullScreen
+          className="h-full w-full border-0"
+        />
+      </div>
+    );
+  }
+  if (/\.(mp4|webm|ogg|mov)(\?|$)/i.test(url)) {
+    return <video src={url} controls className="w-full rounded-lg bg-black" />;
+  }
+  return (
+    <p className="text-sm text-muted-foreground">
+      এই লিংকটি এখানে play করা যাচ্ছে না — নিচের বাটনে ক্লিক করে নতুন ট্যাবে দেখুন।
+    </p>
   );
 }
