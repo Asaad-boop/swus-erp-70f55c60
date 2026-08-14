@@ -164,6 +164,7 @@ function SourcingPage() {
   const [tMax, setTMax] = useState("");
   const [search, setSearch] = useState("");
   const [stageFilter, setStageFilter] = useState<SourcingStage | "all">("all");
+  const [sortBy, setSortBy] = useState<"stage" | "age" | "due" | "quotes" | "cost">("stage");
 
   const ideasQ = useQuery({
     queryKey: ["hub-ideas", brandIds],
