@@ -660,6 +660,58 @@ function SourcingPage() {
                           : ""}
                       </div>
                     )}
+
+                    {selected.imp_po_id && linkedPoQ.data && (
+                      <div className="rounded-lg border border-primary/30 bg-primary/5 p-3">
+                        <div className="flex flex-wrap items-center justify-between gap-2">
+                          <p className="flex items-center gap-1.5 text-xs font-semibold">
+                            <Factory className="h-3.5 w-3.5 text-primary" />
+                            Supply chain PO {linkedPoQ.data.po_number}
+                            <Badge variant="secondary" className="text-[10px] capitalize">
+                              {String(linkedPoQ.data.status).replace(/_/g, " ")}
+                            </Badge>
+                          </p>
+                          <Link
+                            to="/erp/imports/orders/$orderId"
+                            params={{ orderId: selected.imp_po_id }}
+                          >
+                            <Button size="sm" variant="outline" className="h-7 text-xs">
+                              Open PO <ExternalLink className="ml-1 h-3 w-3" />
+                            </Button>
+                          </Link>
+                        </div>
+                        <div className="mt-2 grid grid-cols-2 gap-2 text-xs sm:grid-cols-4">
+                          <Info
+                            label="Units"
+                            value={String(linkedPoQ.data.total_units ?? selected.order_qty ?? 0)}
+                          />
+                          <Info
+                            label="PO total"
+                            value={fmtValue(
+                              Math.round(Number(linkedPoQ.data.grand_total_bdt ?? 0)),
+                              "bdt",
+                            )}
+                          />
+                          <Info
+                            label="Paid"
+                            value={fmtValue(Math.round(Number(linkedPoQ.data.paid_bdt ?? 0)), "bdt")}
+                          />
+                          <Info
+                            label="Due"
+                            value={fmtValue(Math.round(Number(linkedPoQ.data.due_bdt ?? 0)), "bdt")}
+                          />
+                        </div>
+                        {Number(linkedPoQ.data.landed_cost_per_unit_bdt ?? 0) > 0 && (
+                          <p className="mt-1.5 text-[11px] text-muted-foreground">
+                            Actual landed / unit:{" "}
+                            {fmtValue(
+                              Math.round(Number(linkedPoQ.data.landed_cost_per_unit_bdt)),
+                              "bdt",
+                            )}
+                          </p>
+                        )}
+                      </div>
+                    )}
                   </CardContent>
                 </div>
               </Card>
