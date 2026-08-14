@@ -38,6 +38,7 @@ import { Route as AuthenticatedErpDispatchRouteImport } from './routes/_authenti
 import { Route as AuthenticatedErpDiagnosticsRouteImport } from './routes/_authenticated/erp.diagnostics'
 import { Route as AuthenticatedErpCrmRouteImport } from './routes/_authenticated/erp.crm'
 import { Route as AuthenticatedErpCourierRouteImport } from './routes/_authenticated/erp.courier'
+import { Route as AuthenticatedErpContentRouteImport } from './routes/_authenticated/erp.content'
 import { Route as Char91DotmcpChar93InvokeToolToolRouteImport } from './routes/[.mcp]/invoke-tool/$tool'
 import { Route as AuthenticatedErpStocktakeIndexRouteImport } from './routes/_authenticated/erp.stocktake.index'
 import { Route as AuthenticatedErpReturnsIndexRouteImport } from './routes/_authenticated/erp.returns.index'
@@ -49,6 +50,7 @@ import { Route as AuthenticatedErpImportsIndexRouteImport } from './routes/_auth
 import { Route as AuthenticatedErpHubIndexRouteImport } from './routes/_authenticated/erp.hub.index'
 import { Route as AuthenticatedErpFinanceIndexRouteImport } from './routes/_authenticated/erp.finance.index'
 import { Route as AuthenticatedErpCrmIndexRouteImport } from './routes/_authenticated/erp.crm.index'
+import { Route as AuthenticatedErpContentIndexRouteImport } from './routes/_authenticated/erp.content.index'
 import { Route as AuthenticatedErpAnalyticsIndexRouteImport } from './routes/_authenticated/erp.analytics.index'
 import { Route as ApiPublicWebhooksShopifyOrderRouteImport } from './routes/api/public/webhooks.shopify-order'
 import { Route as ApiPublicWebhookPathaoRouteImport } from './routes/api/public/webhook.pathao'
@@ -108,6 +110,12 @@ import { Route as AuthenticatedErpFinanceChartAccountsRouteImport } from './rout
 import { Route as AuthenticatedErpFinanceBudgetsRouteImport } from './routes/_authenticated/erp.finance.budgets'
 import { Route as AuthenticatedErpFinanceAccountsRouteImport } from './routes/_authenticated/erp.finance.accounts'
 import { Route as AuthenticatedErpCrmCustomerIdRouteImport } from './routes/_authenticated/erp.crm.$customerId'
+import { Route as AuthenticatedErpContentPipelineRouteImport } from './routes/_authenticated/erp.content.pipeline'
+import { Route as AuthenticatedErpContentMediaPlansRouteImport } from './routes/_authenticated/erp.content.media-plans'
+import { Route as AuthenticatedErpContentMatchingRouteImport } from './routes/_authenticated/erp.content.matching'
+import { Route as AuthenticatedErpContentIntakeRouteImport } from './routes/_authenticated/erp.content.intake'
+import { Route as AuthenticatedErpContentCreatorsRouteImport } from './routes/_authenticated/erp.content.creators'
+import { Route as AuthenticatedErpContentAgenciesRouteImport } from './routes/_authenticated/erp.content.agencies'
 import { Route as AuthenticatedErpAnalyticsLiveRouteImport } from './routes/_authenticated/erp.analytics.live'
 import { Route as AuthenticatedErpImportsOrdersIndexRouteImport } from './routes/_authenticated/erp.imports.orders.index'
 import { Route as AuthenticatedErpImportsOrdersNewRouteImport } from './routes/_authenticated/erp.imports.orders.new'
@@ -270,6 +278,11 @@ const AuthenticatedErpCourierRoute = AuthenticatedErpCourierRouteImport.update({
   path: '/courier',
   getParentRoute: () => AuthenticatedErpRoute,
 } as any)
+const AuthenticatedErpContentRoute = AuthenticatedErpContentRouteImport.update({
+  id: '/content',
+  path: '/content',
+  getParentRoute: () => AuthenticatedErpRoute,
+} as any)
 const Char91DotmcpChar93InvokeToolToolRoute =
   Char91DotmcpChar93InvokeToolToolRouteImport.update({
     id: '/.mcp/invoke-tool/$tool',
@@ -335,6 +348,12 @@ const AuthenticatedErpCrmIndexRoute =
     id: '/',
     path: '/',
     getParentRoute: () => AuthenticatedErpCrmRoute,
+  } as any)
+const AuthenticatedErpContentIndexRoute =
+  AuthenticatedErpContentIndexRouteImport.update({
+    id: '/',
+    path: '/',
+    getParentRoute: () => AuthenticatedErpContentRoute,
   } as any)
 const AuthenticatedErpAnalyticsIndexRoute =
   AuthenticatedErpAnalyticsIndexRouteImport.update({
@@ -687,6 +706,42 @@ const AuthenticatedErpCrmCustomerIdRoute =
     path: '/$customerId',
     getParentRoute: () => AuthenticatedErpCrmRoute,
   } as any)
+const AuthenticatedErpContentPipelineRoute =
+  AuthenticatedErpContentPipelineRouteImport.update({
+    id: '/pipeline',
+    path: '/pipeline',
+    getParentRoute: () => AuthenticatedErpContentRoute,
+  } as any)
+const AuthenticatedErpContentMediaPlansRoute =
+  AuthenticatedErpContentMediaPlansRouteImport.update({
+    id: '/media-plans',
+    path: '/media-plans',
+    getParentRoute: () => AuthenticatedErpContentRoute,
+  } as any)
+const AuthenticatedErpContentMatchingRoute =
+  AuthenticatedErpContentMatchingRouteImport.update({
+    id: '/matching',
+    path: '/matching',
+    getParentRoute: () => AuthenticatedErpContentRoute,
+  } as any)
+const AuthenticatedErpContentIntakeRoute =
+  AuthenticatedErpContentIntakeRouteImport.update({
+    id: '/intake',
+    path: '/intake',
+    getParentRoute: () => AuthenticatedErpContentRoute,
+  } as any)
+const AuthenticatedErpContentCreatorsRoute =
+  AuthenticatedErpContentCreatorsRouteImport.update({
+    id: '/creators',
+    path: '/creators',
+    getParentRoute: () => AuthenticatedErpContentRoute,
+  } as any)
+const AuthenticatedErpContentAgenciesRoute =
+  AuthenticatedErpContentAgenciesRouteImport.update({
+    id: '/agencies',
+    path: '/agencies',
+    getParentRoute: () => AuthenticatedErpContentRoute,
+  } as any)
 const AuthenticatedErpAnalyticsLiveRoute =
   AuthenticatedErpAnalyticsLiveRouteImport.update({
     id: '/analytics/live',
@@ -720,6 +775,7 @@ export interface FileRoutesByFullPath {
   '/.well-known/oauth-protected-resource': typeof Char91DotwellKnownChar93OauthProtectedResourceRoute
   '/erp': typeof AuthenticatedErpRouteWithChildren
   '/.mcp/invoke-tool/$tool': typeof Char91DotmcpChar93InvokeToolToolRoute
+  '/erp/content': typeof AuthenticatedErpContentRouteWithChildren
   '/erp/courier': typeof AuthenticatedErpCourierRoute
   '/erp/crm': typeof AuthenticatedErpCrmRouteWithChildren
   '/erp/diagnostics': typeof AuthenticatedErpDiagnosticsRoute
@@ -743,6 +799,12 @@ export interface FileRoutesByFullPath {
   '/api/webhooks/shopify-order': typeof ApiWebhooksShopifyOrderRoute
   '/erp/': typeof AuthenticatedErpIndexRoute
   '/erp/analytics/live': typeof AuthenticatedErpAnalyticsLiveRoute
+  '/erp/content/agencies': typeof AuthenticatedErpContentAgenciesRoute
+  '/erp/content/creators': typeof AuthenticatedErpContentCreatorsRoute
+  '/erp/content/intake': typeof AuthenticatedErpContentIntakeRoute
+  '/erp/content/matching': typeof AuthenticatedErpContentMatchingRoute
+  '/erp/content/media-plans': typeof AuthenticatedErpContentMediaPlansRoute
+  '/erp/content/pipeline': typeof AuthenticatedErpContentPipelineRoute
   '/erp/crm/$customerId': typeof AuthenticatedErpCrmCustomerIdRoute
   '/erp/finance/accounts': typeof AuthenticatedErpFinanceAccountsRoute
   '/erp/finance/budgets': typeof AuthenticatedErpFinanceBudgetsRoute
@@ -802,6 +864,7 @@ export interface FileRoutesByFullPath {
   '/api/public/webhook/pathao': typeof ApiPublicWebhookPathaoRoute
   '/api/public/webhooks/shopify-order': typeof ApiPublicWebhooksShopifyOrderRoute
   '/erp/analytics/': typeof AuthenticatedErpAnalyticsIndexRoute
+  '/erp/content/': typeof AuthenticatedErpContentIndexRoute
   '/erp/crm/': typeof AuthenticatedErpCrmIndexRoute
   '/erp/finance/': typeof AuthenticatedErpFinanceIndexRoute
   '/erp/hub/': typeof AuthenticatedErpHubIndexRoute
@@ -838,6 +901,12 @@ export interface FileRoutesByTo {
   '/api/webhooks/shopify-order': typeof ApiWebhooksShopifyOrderRoute
   '/erp': typeof AuthenticatedErpIndexRoute
   '/erp/analytics/live': typeof AuthenticatedErpAnalyticsLiveRoute
+  '/erp/content/agencies': typeof AuthenticatedErpContentAgenciesRoute
+  '/erp/content/creators': typeof AuthenticatedErpContentCreatorsRoute
+  '/erp/content/intake': typeof AuthenticatedErpContentIntakeRoute
+  '/erp/content/matching': typeof AuthenticatedErpContentMatchingRoute
+  '/erp/content/media-plans': typeof AuthenticatedErpContentMediaPlansRoute
+  '/erp/content/pipeline': typeof AuthenticatedErpContentPipelineRoute
   '/erp/crm/$customerId': typeof AuthenticatedErpCrmCustomerIdRoute
   '/erp/finance/accounts': typeof AuthenticatedErpFinanceAccountsRoute
   '/erp/finance/budgets': typeof AuthenticatedErpFinanceBudgetsRoute
@@ -897,6 +966,7 @@ export interface FileRoutesByTo {
   '/api/public/webhook/pathao': typeof ApiPublicWebhookPathaoRoute
   '/api/public/webhooks/shopify-order': typeof ApiPublicWebhooksShopifyOrderRoute
   '/erp/analytics': typeof AuthenticatedErpAnalyticsIndexRoute
+  '/erp/content': typeof AuthenticatedErpContentIndexRoute
   '/erp/crm': typeof AuthenticatedErpCrmIndexRoute
   '/erp/finance': typeof AuthenticatedErpFinanceIndexRoute
   '/erp/hub': typeof AuthenticatedErpHubIndexRoute
@@ -921,6 +991,7 @@ export interface FileRoutesById {
   '/.well-known/oauth-protected-resource': typeof Char91DotwellKnownChar93OauthProtectedResourceRoute
   '/_authenticated/erp': typeof AuthenticatedErpRouteWithChildren
   '/.mcp/invoke-tool/$tool': typeof Char91DotmcpChar93InvokeToolToolRoute
+  '/_authenticated/erp/content': typeof AuthenticatedErpContentRouteWithChildren
   '/_authenticated/erp/courier': typeof AuthenticatedErpCourierRoute
   '/_authenticated/erp/crm': typeof AuthenticatedErpCrmRouteWithChildren
   '/_authenticated/erp/diagnostics': typeof AuthenticatedErpDiagnosticsRoute
@@ -944,6 +1015,12 @@ export interface FileRoutesById {
   '/api/webhooks/shopify-order': typeof ApiWebhooksShopifyOrderRoute
   '/_authenticated/erp/': typeof AuthenticatedErpIndexRoute
   '/_authenticated/erp/analytics/live': typeof AuthenticatedErpAnalyticsLiveRoute
+  '/_authenticated/erp/content/agencies': typeof AuthenticatedErpContentAgenciesRoute
+  '/_authenticated/erp/content/creators': typeof AuthenticatedErpContentCreatorsRoute
+  '/_authenticated/erp/content/intake': typeof AuthenticatedErpContentIntakeRoute
+  '/_authenticated/erp/content/matching': typeof AuthenticatedErpContentMatchingRoute
+  '/_authenticated/erp/content/media-plans': typeof AuthenticatedErpContentMediaPlansRoute
+  '/_authenticated/erp/content/pipeline': typeof AuthenticatedErpContentPipelineRoute
   '/_authenticated/erp/crm/$customerId': typeof AuthenticatedErpCrmCustomerIdRoute
   '/_authenticated/erp/finance/accounts': typeof AuthenticatedErpFinanceAccountsRoute
   '/_authenticated/erp/finance/budgets': typeof AuthenticatedErpFinanceBudgetsRoute
@@ -1003,6 +1080,7 @@ export interface FileRoutesById {
   '/api/public/webhook/pathao': typeof ApiPublicWebhookPathaoRoute
   '/api/public/webhooks/shopify-order': typeof ApiPublicWebhooksShopifyOrderRoute
   '/_authenticated/erp/analytics/': typeof AuthenticatedErpAnalyticsIndexRoute
+  '/_authenticated/erp/content/': typeof AuthenticatedErpContentIndexRoute
   '/_authenticated/erp/crm/': typeof AuthenticatedErpCrmIndexRoute
   '/_authenticated/erp/finance/': typeof AuthenticatedErpFinanceIndexRoute
   '/_authenticated/erp/hub/': typeof AuthenticatedErpHubIndexRoute
@@ -1027,6 +1105,7 @@ export interface FileRouteTypes {
     | '/.well-known/oauth-protected-resource'
     | '/erp'
     | '/.mcp/invoke-tool/$tool'
+    | '/erp/content'
     | '/erp/courier'
     | '/erp/crm'
     | '/erp/diagnostics'
@@ -1050,6 +1129,12 @@ export interface FileRouteTypes {
     | '/api/webhooks/shopify-order'
     | '/erp/'
     | '/erp/analytics/live'
+    | '/erp/content/agencies'
+    | '/erp/content/creators'
+    | '/erp/content/intake'
+    | '/erp/content/matching'
+    | '/erp/content/media-plans'
+    | '/erp/content/pipeline'
     | '/erp/crm/$customerId'
     | '/erp/finance/accounts'
     | '/erp/finance/budgets'
@@ -1109,6 +1194,7 @@ export interface FileRouteTypes {
     | '/api/public/webhook/pathao'
     | '/api/public/webhooks/shopify-order'
     | '/erp/analytics/'
+    | '/erp/content/'
     | '/erp/crm/'
     | '/erp/finance/'
     | '/erp/hub/'
@@ -1145,6 +1231,12 @@ export interface FileRouteTypes {
     | '/api/webhooks/shopify-order'
     | '/erp'
     | '/erp/analytics/live'
+    | '/erp/content/agencies'
+    | '/erp/content/creators'
+    | '/erp/content/intake'
+    | '/erp/content/matching'
+    | '/erp/content/media-plans'
+    | '/erp/content/pipeline'
     | '/erp/crm/$customerId'
     | '/erp/finance/accounts'
     | '/erp/finance/budgets'
@@ -1204,6 +1296,7 @@ export interface FileRouteTypes {
     | '/api/public/webhook/pathao'
     | '/api/public/webhooks/shopify-order'
     | '/erp/analytics'
+    | '/erp/content'
     | '/erp/crm'
     | '/erp/finance'
     | '/erp/hub'
@@ -1227,6 +1320,7 @@ export interface FileRouteTypes {
     | '/.well-known/oauth-protected-resource'
     | '/_authenticated/erp'
     | '/.mcp/invoke-tool/$tool'
+    | '/_authenticated/erp/content'
     | '/_authenticated/erp/courier'
     | '/_authenticated/erp/crm'
     | '/_authenticated/erp/diagnostics'
@@ -1250,6 +1344,12 @@ export interface FileRouteTypes {
     | '/api/webhooks/shopify-order'
     | '/_authenticated/erp/'
     | '/_authenticated/erp/analytics/live'
+    | '/_authenticated/erp/content/agencies'
+    | '/_authenticated/erp/content/creators'
+    | '/_authenticated/erp/content/intake'
+    | '/_authenticated/erp/content/matching'
+    | '/_authenticated/erp/content/media-plans'
+    | '/_authenticated/erp/content/pipeline'
     | '/_authenticated/erp/crm/$customerId'
     | '/_authenticated/erp/finance/accounts'
     | '/_authenticated/erp/finance/budgets'
@@ -1309,6 +1409,7 @@ export interface FileRouteTypes {
     | '/api/public/webhook/pathao'
     | '/api/public/webhooks/shopify-order'
     | '/_authenticated/erp/analytics/'
+    | '/_authenticated/erp/content/'
     | '/_authenticated/erp/crm/'
     | '/_authenticated/erp/finance/'
     | '/_authenticated/erp/hub/'
@@ -1550,6 +1651,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedErpCourierRouteImport
       parentRoute: typeof AuthenticatedErpRoute
     }
+    '/_authenticated/erp/content': {
+      id: '/_authenticated/erp/content'
+      path: '/content'
+      fullPath: '/erp/content'
+      preLoaderRoute: typeof AuthenticatedErpContentRouteImport
+      parentRoute: typeof AuthenticatedErpRoute
+    }
     '/.mcp/invoke-tool/$tool': {
       id: '/.mcp/invoke-tool/$tool'
       path: '/.mcp/invoke-tool/$tool'
@@ -1626,6 +1734,13 @@ declare module '@tanstack/react-router' {
       fullPath: '/erp/crm/'
       preLoaderRoute: typeof AuthenticatedErpCrmIndexRouteImport
       parentRoute: typeof AuthenticatedErpCrmRoute
+    }
+    '/_authenticated/erp/content/': {
+      id: '/_authenticated/erp/content/'
+      path: '/'
+      fullPath: '/erp/content/'
+      preLoaderRoute: typeof AuthenticatedErpContentIndexRouteImport
+      parentRoute: typeof AuthenticatedErpContentRoute
     }
     '/_authenticated/erp/analytics/': {
       id: '/_authenticated/erp/analytics/'
@@ -2040,6 +2155,48 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedErpCrmCustomerIdRouteImport
       parentRoute: typeof AuthenticatedErpCrmRoute
     }
+    '/_authenticated/erp/content/pipeline': {
+      id: '/_authenticated/erp/content/pipeline'
+      path: '/pipeline'
+      fullPath: '/erp/content/pipeline'
+      preLoaderRoute: typeof AuthenticatedErpContentPipelineRouteImport
+      parentRoute: typeof AuthenticatedErpContentRoute
+    }
+    '/_authenticated/erp/content/media-plans': {
+      id: '/_authenticated/erp/content/media-plans'
+      path: '/media-plans'
+      fullPath: '/erp/content/media-plans'
+      preLoaderRoute: typeof AuthenticatedErpContentMediaPlansRouteImport
+      parentRoute: typeof AuthenticatedErpContentRoute
+    }
+    '/_authenticated/erp/content/matching': {
+      id: '/_authenticated/erp/content/matching'
+      path: '/matching'
+      fullPath: '/erp/content/matching'
+      preLoaderRoute: typeof AuthenticatedErpContentMatchingRouteImport
+      parentRoute: typeof AuthenticatedErpContentRoute
+    }
+    '/_authenticated/erp/content/intake': {
+      id: '/_authenticated/erp/content/intake'
+      path: '/intake'
+      fullPath: '/erp/content/intake'
+      preLoaderRoute: typeof AuthenticatedErpContentIntakeRouteImport
+      parentRoute: typeof AuthenticatedErpContentRoute
+    }
+    '/_authenticated/erp/content/creators': {
+      id: '/_authenticated/erp/content/creators'
+      path: '/creators'
+      fullPath: '/erp/content/creators'
+      preLoaderRoute: typeof AuthenticatedErpContentCreatorsRouteImport
+      parentRoute: typeof AuthenticatedErpContentRoute
+    }
+    '/_authenticated/erp/content/agencies': {
+      id: '/_authenticated/erp/content/agencies'
+      path: '/agencies'
+      fullPath: '/erp/content/agencies'
+      preLoaderRoute: typeof AuthenticatedErpContentAgenciesRouteImport
+      parentRoute: typeof AuthenticatedErpContentRoute
+    }
     '/_authenticated/erp/analytics/live': {
       id: '/_authenticated/erp/analytics/live'
       path: '/analytics/live'
@@ -2070,6 +2227,33 @@ declare module '@tanstack/react-router' {
     }
   }
 }
+
+interface AuthenticatedErpContentRouteChildren {
+  AuthenticatedErpContentAgenciesRoute: typeof AuthenticatedErpContentAgenciesRoute
+  AuthenticatedErpContentCreatorsRoute: typeof AuthenticatedErpContentCreatorsRoute
+  AuthenticatedErpContentIntakeRoute: typeof AuthenticatedErpContentIntakeRoute
+  AuthenticatedErpContentMatchingRoute: typeof AuthenticatedErpContentMatchingRoute
+  AuthenticatedErpContentMediaPlansRoute: typeof AuthenticatedErpContentMediaPlansRoute
+  AuthenticatedErpContentPipelineRoute: typeof AuthenticatedErpContentPipelineRoute
+  AuthenticatedErpContentIndexRoute: typeof AuthenticatedErpContentIndexRoute
+}
+
+const AuthenticatedErpContentRouteChildren: AuthenticatedErpContentRouteChildren =
+  {
+    AuthenticatedErpContentAgenciesRoute: AuthenticatedErpContentAgenciesRoute,
+    AuthenticatedErpContentCreatorsRoute: AuthenticatedErpContentCreatorsRoute,
+    AuthenticatedErpContentIntakeRoute: AuthenticatedErpContentIntakeRoute,
+    AuthenticatedErpContentMatchingRoute: AuthenticatedErpContentMatchingRoute,
+    AuthenticatedErpContentMediaPlansRoute:
+      AuthenticatedErpContentMediaPlansRoute,
+    AuthenticatedErpContentPipelineRoute: AuthenticatedErpContentPipelineRoute,
+    AuthenticatedErpContentIndexRoute: AuthenticatedErpContentIndexRoute,
+  }
+
+const AuthenticatedErpContentRouteWithChildren =
+  AuthenticatedErpContentRoute._addFileChildren(
+    AuthenticatedErpContentRouteChildren,
+  )
 
 interface AuthenticatedErpCrmRouteChildren {
   AuthenticatedErpCrmCustomerIdRoute: typeof AuthenticatedErpCrmCustomerIdRoute
@@ -2292,6 +2476,7 @@ const AuthenticatedErpReturnsRouteWithChildren =
   )
 
 interface AuthenticatedErpRouteChildren {
+  AuthenticatedErpContentRoute: typeof AuthenticatedErpContentRouteWithChildren
   AuthenticatedErpCourierRoute: typeof AuthenticatedErpCourierRoute
   AuthenticatedErpCrmRoute: typeof AuthenticatedErpCrmRouteWithChildren
   AuthenticatedErpDiagnosticsRoute: typeof AuthenticatedErpDiagnosticsRoute
@@ -2324,6 +2509,7 @@ interface AuthenticatedErpRouteChildren {
 }
 
 const AuthenticatedErpRouteChildren: AuthenticatedErpRouteChildren = {
+  AuthenticatedErpContentRoute: AuthenticatedErpContentRouteWithChildren,
   AuthenticatedErpCourierRoute: AuthenticatedErpCourierRoute,
   AuthenticatedErpCrmRoute: AuthenticatedErpCrmRouteWithChildren,
   AuthenticatedErpDiagnosticsRoute: AuthenticatedErpDiagnosticsRoute,

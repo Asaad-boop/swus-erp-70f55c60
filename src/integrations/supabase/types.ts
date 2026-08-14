@@ -856,6 +856,665 @@ export type Database = {
           },
         ]
       }
+      content_agencies: {
+        Row: {
+          brand_id: string | null
+          commission_pct: number
+          contact_person: string | null
+          created_at: string
+          created_by: string | null
+          email: string | null
+          id: string
+          name: string
+          notes: string | null
+          phone: string | null
+          rating: number | null
+          retainer_fee: number
+          services: string[]
+          status: string
+          updated_at: string
+          website: string | null
+        }
+        Insert: {
+          brand_id?: string | null
+          commission_pct?: number
+          contact_person?: string | null
+          created_at?: string
+          created_by?: string | null
+          email?: string | null
+          id?: string
+          name: string
+          notes?: string | null
+          phone?: string | null
+          rating?: number | null
+          retainer_fee?: number
+          services?: string[]
+          status?: string
+          updated_at?: string
+          website?: string | null
+        }
+        Update: {
+          brand_id?: string | null
+          commission_pct?: number
+          contact_person?: string | null
+          created_at?: string
+          created_by?: string | null
+          email?: string | null
+          id?: string
+          name?: string
+          notes?: string | null
+          phone?: string | null
+          rating?: number | null
+          retainer_fee?: number
+          services?: string[]
+          status?: string
+          updated_at?: string
+          website?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "content_agencies_brand_id_fkey"
+            columns: ["brand_id"]
+            isOneToOne: false
+            referencedRelation: "brands"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      content_briefs: {
+        Row: {
+          agency_id: string | null
+          approval_status: string
+          brand_id: string | null
+          cost: number
+          created_at: string
+          created_by: string | null
+          creator_id: string | null
+          cta: string | null
+          deliverable_type: string
+          due_date: string | null
+          hook: string | null
+          id: string
+          item_id: string | null
+          media_plan_id: string | null
+          notes: string | null
+          reference_url: string | null
+          revision_note: string | null
+          script: string | null
+          updated_at: string
+        }
+        Insert: {
+          agency_id?: string | null
+          approval_status?: string
+          brand_id?: string | null
+          cost?: number
+          created_at?: string
+          created_by?: string | null
+          creator_id?: string | null
+          cta?: string | null
+          deliverable_type?: string
+          due_date?: string | null
+          hook?: string | null
+          id?: string
+          item_id?: string | null
+          media_plan_id?: string | null
+          notes?: string | null
+          reference_url?: string | null
+          revision_note?: string | null
+          script?: string | null
+          updated_at?: string
+        }
+        Update: {
+          agency_id?: string | null
+          approval_status?: string
+          brand_id?: string | null
+          cost?: number
+          created_at?: string
+          created_by?: string | null
+          creator_id?: string | null
+          cta?: string | null
+          deliverable_type?: string
+          due_date?: string | null
+          hook?: string | null
+          id?: string
+          item_id?: string | null
+          media_plan_id?: string | null
+          notes?: string | null
+          reference_url?: string | null
+          revision_note?: string | null
+          script?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "content_briefs_agency_id_fkey"
+            columns: ["agency_id"]
+            isOneToOne: false
+            referencedRelation: "content_agencies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "content_briefs_brand_id_fkey"
+            columns: ["brand_id"]
+            isOneToOne: false
+            referencedRelation: "brands"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "content_briefs_creator_id_fkey"
+            columns: ["creator_id"]
+            isOneToOne: false
+            referencedRelation: "hub_creators"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "content_briefs_item_id_fkey"
+            columns: ["item_id"]
+            isOneToOne: false
+            referencedRelation: "content_items"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "content_briefs_media_plan_id_fkey"
+            columns: ["media_plan_id"]
+            isOneToOne: false
+            referencedRelation: "content_media_plans"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      content_creator_contacts: {
+        Row: {
+          brand_id: string | null
+          channel: string
+          created_at: string
+          created_by: string | null
+          creator_id: string
+          direction: string
+          id: string
+          next_follow_up: string | null
+          outcome: string | null
+          quoted_amount: number | null
+          summary: string
+        }
+        Insert: {
+          brand_id?: string | null
+          channel?: string
+          created_at?: string
+          created_by?: string | null
+          creator_id: string
+          direction?: string
+          id?: string
+          next_follow_up?: string | null
+          outcome?: string | null
+          quoted_amount?: number | null
+          summary: string
+        }
+        Update: {
+          brand_id?: string | null
+          channel?: string
+          created_at?: string
+          created_by?: string | null
+          creator_id?: string
+          direction?: string
+          id?: string
+          next_follow_up?: string | null
+          outcome?: string | null
+          quoted_amount?: number | null
+          summary?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "content_creator_contacts_brand_id_fkey"
+            columns: ["brand_id"]
+            isOneToOne: false
+            referencedRelation: "brands"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "content_creator_contacts_creator_id_fkey"
+            columns: ["creator_id"]
+            isOneToOne: false
+            referencedRelation: "hub_creators"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      content_creator_shipments: {
+        Row: {
+          brand_id: string | null
+          cost: number
+          courier: string | null
+          created_at: string
+          created_by: string | null
+          creator_id: string
+          delivered_date: string | null
+          id: string
+          item_id: string | null
+          notes: string | null
+          product_id: string | null
+          qty: number
+          sent_date: string | null
+          status: string
+          tracking_no: string | null
+          updated_at: string
+        }
+        Insert: {
+          brand_id?: string | null
+          cost?: number
+          courier?: string | null
+          created_at?: string
+          created_by?: string | null
+          creator_id: string
+          delivered_date?: string | null
+          id?: string
+          item_id?: string | null
+          notes?: string | null
+          product_id?: string | null
+          qty?: number
+          sent_date?: string | null
+          status?: string
+          tracking_no?: string | null
+          updated_at?: string
+        }
+        Update: {
+          brand_id?: string | null
+          cost?: number
+          courier?: string | null
+          created_at?: string
+          created_by?: string | null
+          creator_id?: string
+          delivered_date?: string | null
+          id?: string
+          item_id?: string | null
+          notes?: string | null
+          product_id?: string | null
+          qty?: number
+          sent_date?: string | null
+          status?: string
+          tracking_no?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "content_creator_shipments_brand_id_fkey"
+            columns: ["brand_id"]
+            isOneToOne: false
+            referencedRelation: "brands"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "content_creator_shipments_creator_id_fkey"
+            columns: ["creator_id"]
+            isOneToOne: false
+            referencedRelation: "hub_creators"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "content_creator_shipments_item_id_fkey"
+            columns: ["item_id"]
+            isOneToOne: false
+            referencedRelation: "content_items"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "content_creator_shipments_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "products"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "content_creator_shipments_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "v_combo_summary"
+            referencedColumns: ["combo_product_id"]
+          },
+        ]
+      }
+      content_items: {
+        Row: {
+          agency_id: string | null
+          angle: string | null
+          attributed_orders: number
+          brand_id: string | null
+          caption: string | null
+          code: string
+          comments: number
+          content_type: string
+          cost: number
+          created_at: string
+          created_by: string | null
+          creator_id: string | null
+          cta: string | null
+          due_date: string | null
+          hashtags: string | null
+          hook: string | null
+          id: string
+          likes: number
+          media_plan_id: string | null
+          plan_id: string | null
+          platform: string
+          position: number
+          product_id: string | null
+          published_at: string | null
+          published_url: string | null
+          reference_urls: string[]
+          revision_note: string | null
+          script: string | null
+          shares: number
+          source: string
+          stage: string
+          status: string
+          title: string
+          updated_at: string
+          video_url: string | null
+          views: number
+        }
+        Insert: {
+          agency_id?: string | null
+          angle?: string | null
+          attributed_orders?: number
+          brand_id?: string | null
+          caption?: string | null
+          code?: string
+          comments?: number
+          content_type?: string
+          cost?: number
+          created_at?: string
+          created_by?: string | null
+          creator_id?: string | null
+          cta?: string | null
+          due_date?: string | null
+          hashtags?: string | null
+          hook?: string | null
+          id?: string
+          likes?: number
+          media_plan_id?: string | null
+          plan_id?: string | null
+          platform?: string
+          position?: number
+          product_id?: string | null
+          published_at?: string | null
+          published_url?: string | null
+          reference_urls?: string[]
+          revision_note?: string | null
+          script?: string | null
+          shares?: number
+          source?: string
+          stage?: string
+          status?: string
+          title?: string
+          updated_at?: string
+          video_url?: string | null
+          views?: number
+        }
+        Update: {
+          agency_id?: string | null
+          angle?: string | null
+          attributed_orders?: number
+          brand_id?: string | null
+          caption?: string | null
+          code?: string
+          comments?: number
+          content_type?: string
+          cost?: number
+          created_at?: string
+          created_by?: string | null
+          creator_id?: string | null
+          cta?: string | null
+          due_date?: string | null
+          hashtags?: string | null
+          hook?: string | null
+          id?: string
+          likes?: number
+          media_plan_id?: string | null
+          plan_id?: string | null
+          platform?: string
+          position?: number
+          product_id?: string | null
+          published_at?: string | null
+          published_url?: string | null
+          reference_urls?: string[]
+          revision_note?: string | null
+          script?: string | null
+          shares?: number
+          source?: string
+          stage?: string
+          status?: string
+          title?: string
+          updated_at?: string
+          video_url?: string | null
+          views?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "content_items_agency_id_fkey"
+            columns: ["agency_id"]
+            isOneToOne: false
+            referencedRelation: "content_agencies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "content_items_brand_id_fkey"
+            columns: ["brand_id"]
+            isOneToOne: false
+            referencedRelation: "brands"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "content_items_creator_id_fkey"
+            columns: ["creator_id"]
+            isOneToOne: false
+            referencedRelation: "hub_creators"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "content_items_media_plan_id_fkey"
+            columns: ["media_plan_id"]
+            isOneToOne: false
+            referencedRelation: "content_media_plans"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "content_items_plan_id_fkey"
+            columns: ["plan_id"]
+            isOneToOne: false
+            referencedRelation: "content_plans"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "content_items_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "products"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "content_items_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "v_combo_summary"
+            referencedColumns: ["combo_product_id"]
+          },
+        ]
+      }
+      content_media_plans: {
+        Row: {
+          ad_budget: number
+          audience: string | null
+          brand_id: string | null
+          channels: string[]
+          content_budget: number
+          created_at: string
+          created_by: string | null
+          creator_budget: number
+          end_date: string | null
+          id: string
+          notes: string | null
+          plan_id: string | null
+          product_id: string | null
+          selling_price: number
+          start_date: string | null
+          status: string
+          target_qty: number
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          ad_budget?: number
+          audience?: string | null
+          brand_id?: string | null
+          channels?: string[]
+          content_budget?: number
+          created_at?: string
+          created_by?: string | null
+          creator_budget?: number
+          end_date?: string | null
+          id?: string
+          notes?: string | null
+          plan_id?: string | null
+          product_id?: string | null
+          selling_price?: number
+          start_date?: string | null
+          status?: string
+          target_qty?: number
+          title: string
+          updated_at?: string
+        }
+        Update: {
+          ad_budget?: number
+          audience?: string | null
+          brand_id?: string | null
+          channels?: string[]
+          content_budget?: number
+          created_at?: string
+          created_by?: string | null
+          creator_budget?: number
+          end_date?: string | null
+          id?: string
+          notes?: string | null
+          plan_id?: string | null
+          product_id?: string | null
+          selling_price?: number
+          start_date?: string | null
+          status?: string
+          target_qty?: number
+          title?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "content_media_plans_brand_id_fkey"
+            columns: ["brand_id"]
+            isOneToOne: false
+            referencedRelation: "brands"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "content_media_plans_plan_id_fkey"
+            columns: ["plan_id"]
+            isOneToOne: false
+            referencedRelation: "content_plans"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "content_media_plans_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "products"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "content_media_plans_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "v_combo_summary"
+            referencedColumns: ["combo_product_id"]
+          },
+        ]
+      }
+      content_plans: {
+        Row: {
+          brand_id: string | null
+          budget: number
+          created_at: string
+          created_by: string | null
+          id: string
+          idea_id: string | null
+          owner_id: string | null
+          product_id: string | null
+          status: string
+          strategy: string | null
+          target_count: number
+          target_date: string | null
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          brand_id?: string | null
+          budget?: number
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          idea_id?: string | null
+          owner_id?: string | null
+          product_id?: string | null
+          status?: string
+          strategy?: string | null
+          target_count?: number
+          target_date?: string | null
+          title: string
+          updated_at?: string
+        }
+        Update: {
+          brand_id?: string | null
+          budget?: number
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          idea_id?: string | null
+          owner_id?: string | null
+          product_id?: string | null
+          status?: string
+          strategy?: string | null
+          target_count?: number
+          target_date?: string | null
+          title?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "content_plans_brand_id_fkey"
+            columns: ["brand_id"]
+            isOneToOne: false
+            referencedRelation: "brands"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "content_plans_idea_id_fkey"
+            columns: ["idea_id"]
+            isOneToOne: false
+            referencedRelation: "hub_product_ideas"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "content_plans_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "products"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "content_plans_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "v_combo_summary"
+            referencedColumns: ["combo_product_id"]
+          },
+        ]
+      }
       coupon_usage: {
         Row: {
           coupon_id: string
@@ -3769,16 +4428,23 @@ export type Database = {
       }
       hub_creators: {
         Row: {
+          address: string | null
+          agency_id: string | null
           brand_id: string | null
           contact: string | null
           created_at: string
           created_by: string | null
+          email: string | null
           followers: number | null
           handle: string | null
           id: string
+          max_charge: number
+          min_charge: number
           name: string
+          negotiation_status: string
           niche: string | null
           performance_note: string | null
+          phone: string | null
           platform: string
           profile_url: string | null
           rate: number
@@ -3788,16 +4454,23 @@ export type Database = {
           updated_at: string
         }
         Insert: {
+          address?: string | null
+          agency_id?: string | null
           brand_id?: string | null
           contact?: string | null
           created_at?: string
           created_by?: string | null
+          email?: string | null
           followers?: number | null
           handle?: string | null
           id?: string
+          max_charge?: number
+          min_charge?: number
           name: string
+          negotiation_status?: string
           niche?: string | null
           performance_note?: string | null
+          phone?: string | null
           platform?: string
           profile_url?: string | null
           rate?: number
@@ -3807,16 +4480,23 @@ export type Database = {
           updated_at?: string
         }
         Update: {
+          address?: string | null
+          agency_id?: string | null
           brand_id?: string | null
           contact?: string | null
           created_at?: string
           created_by?: string | null
+          email?: string | null
           followers?: number | null
           handle?: string | null
           id?: string
+          max_charge?: number
+          min_charge?: number
           name?: string
+          negotiation_status?: string
           niche?: string | null
           performance_note?: string | null
+          phone?: string | null
           platform?: string
           profile_url?: string | null
           rate?: number
@@ -3825,7 +4505,15 @@ export type Database = {
           tags?: string[]
           updated_at?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "hub_creators_agency_id_fkey"
+            columns: ["agency_id"]
+            isOneToOne: false
+            referencedRelation: "content_agencies"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       hub_goals: {
         Row: {
@@ -10007,6 +10695,26 @@ export type Database = {
           _usd_spend: number
         }
         Returns: Json
+      }
+      content_intake_feed: {
+        Args: { _brand_ids: string[] }
+        Returns: {
+          brand_id: string
+          content_count: number
+          image: string
+          incoming_qty: number
+          phase: string
+          plan_id: string
+          plan_target: number
+          po_numbers: string[]
+          price: number
+          product_id: string
+          published_count: number
+          since: string
+          sku: string
+          stock: number
+          title: string
+        }[]
       }
       create_bill: {
         Args: {
