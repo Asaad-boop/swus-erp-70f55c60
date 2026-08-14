@@ -462,9 +462,16 @@ function SourcingPage() {
               <Button size="sm" variant="outline" onClick={openNewQuote}>
                 <Plus className="mr-1.5 h-4 w-4" /> Add quote
               </Button>
+              {selected.imp_po_id && (
+                <Link to="/erp/imports/orders/$orderId" params={{ orderId: selected.imp_po_id }}>
+                  <Button size="sm" variant="outline">
+                    <Factory className="mr-1.5 h-4 w-4" /> View PO
+                  </Button>
+                </Link>
+              )}
               <Button
                 size="sm"
-                disabled={selected.status === "ordered"}
+                disabled={!!selected.imp_po_id}
                 onClick={() => {
                   setOrderQty(selected.order_qty ? String(selected.order_qty) : "");
                   setOrderPrice(
@@ -474,11 +481,20 @@ function SourcingPage() {
                         ? String(Math.round(quoteLandedCost(bestQuote)))
                         : "",
                   );
+                  setPoUnitCny(bestQuote ? String(bestQuote.unit_price_cny ?? "") : "");
+                  setPoFx(bestQuote?.cny_rate ? String(bestQuote.cny_rate) : "17");
+                  setPoSupplierId("");
+                  setPoSupplierName(bestQuote?.supplier_name ?? selected.supplier_name ?? "");
+                  setPoSupplierUrl(bestQuote?.supplier_url ?? selected.supplier_url ?? "");
+                  setPoNotes("");
+                  setPayEnabled(false);
+                  setPayAmount("");
+                  setPayRef("");
                   setOrderOpen(true);
                 }}
               >
                 <ShoppingCart className="mr-1.5 h-4 w-4" />
-                {selected.status === "ordered" ? "Ordered" : "Place order"}
+                {selected.imp_po_id ? "Ordered" : "Place order"}
               </Button>
             </>
           ) : null
