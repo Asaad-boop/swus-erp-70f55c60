@@ -131,6 +131,7 @@ function IntakePage() {
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [pushRows, setPushRows] = useState<IntakeRow[] | null>(null);
   const [preview, setPreview] = useState<Enriched | null>(null);
+  const [showSkipped, setShowSkipped] = useState(false);
 
   const rowsQ = useQuery({
     queryKey: ["content-intake", brandIds],
@@ -140,6 +141,20 @@ function IntakePage() {
     queryKey: ["content-inspirations", brandIds],
     queryFn: () => fetchInspirations(brandIds),
   });
+  const skippedQ = useQuery({
+    queryKey: ["content-intake-skipped", brandIds],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("content_intake_excluded")
+        .select("product_id, reason, created_at");
+      if (error) throw error;
+      return (data ?? []) as { product_id: string; reason: string | null; created_at: string }[];
+    },
+  });
+  const skippedIds = useMemo(
+    () => new Set((skippedQ.data ?? []).map((s) => s.product_id)),
+    [skippedQ.data],
+  );
 
   const rows = useMemo(
     () =>
