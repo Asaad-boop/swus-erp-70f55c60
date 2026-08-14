@@ -1389,113 +1389,20 @@ function SourcingPage() {
                   </Card>
                 )}
 
-                <div className="grid gap-2 md:grid-cols-2">
-                  {[...quotes]
-                    .sort((a, b) => quoteLandedCost(a) - quoteLandedCost(b))
-                    .map((q) => {
-                      const landed = quoteLandedCost(q);
-                      const ok = inTarget(landed);
-                      const isSelected = selected.selected_quote_id === q.id;
-                      return (
-                        <Card
-                          key={q.id}
-                          className={`transition-all ${
-                            isSelected ? "border-primary/50 shadow-sm shadow-primary/10" : ""
-                          }`}
-                        >
-                          <CardContent className="space-y-2 p-3.5">
-                            <div className="flex items-start justify-between gap-2">
-                              <div className="min-w-0">
-                                <p className="flex items-center gap-1.5 truncate text-sm font-semibold">
-                                  {isSelected && <Crown className="h-3.5 w-3.5 text-amber-500" />}
-                                  {q.supplier_name}
-                                </p>
-                                <p className="text-[11px] uppercase text-muted-foreground">
-                                  {q.platform}
-                                  {q.contact ? ` · ${q.contact}` : ""}
-                                </p>
-                              </div>
-                              <div className="flex shrink-0 gap-1">
-                                <Button size="icon" variant="ghost" onClick={() => openEditQuote(q)}>
-                                  <Pencil className="h-3.5 w-3.5" />
-                                </Button>
-                                <Button
-                                  size="icon"
-                                  variant="ghost"
-                                  onClick={() => removeQuote.mutate(q.id)}
-                                  disabled={removeQuote.isPending}
-                                >
-                                  <Trash2 className="h-3.5 w-3.5 text-destructive" />
-                                </Button>
-                              </div>
-                            </div>
+                {quotes.length > 0 && (
+                  <QuoteCompareTable
+                    quotes={quotes}
+                    selectedQuoteId={selected.selected_quote_id ?? null}
+                    targetMax={selected.target_price_max ?? null}
+                    onSelect={(q) => chooseQuote.mutate(q)}
+                    onEdit={openEditQuote}
+                    onDuplicate={openDuplicateQuote}
+                    onRemove={(q) => removeQuote.mutate(q.id)}
+                    busy={chooseQuote.isPending || removeQuote.isPending}
+                  />
+                )}
 
-                            <div className="grid grid-cols-2 gap-2 text-xs">
-                              <Info label="Unit price" value={`¥${q.unit_price_cny} @ ${q.cny_rate}`} />
-                              <Info
-                                label="Shipping/unit"
-                                value={`${fmtValue(q.shipping_cost_per_unit, "bdt")} · ${q.shipping_mode}`}
-                              />
-                              <Info label="MOQ" value={q.moq ? String(q.moq) : "—"} />
-                              <Info
-                                label="Lead time"
-                                value={q.lead_time_days ? `${q.lead_time_days}d` : "—"}
-                              />
-                            </div>
-
-                            <div className="flex flex-wrap items-center justify-between gap-2 border-t pt-2">
-                              <div>
-                                <p className="text-[10px] text-muted-foreground">Landed / unit</p>
-                                <p
-                                  className={`font-display text-lg font-bold ${
-                                    ok === false
-                                      ? "text-destructive"
-                                      : ok === true
-                                        ? "text-emerald-600"
-                                        : ""
-                                  }`}
-                                >
-                                  {fmtValue(Math.round(landed), "bdt")}
-                                </p>
-                              </div>
-                              <div className="flex items-center gap-1.5">
-                                {q.quality_rating ? <StarRating value={q.quality_rating} /> : null}
-                                <Badge variant="outline" className="text-[10px] capitalize">
-                                  <Timer className="mr-1 h-3 w-3" /> {q.sample_status}
-                                </Badge>
-                                {q.supplier_url && (
-                                  <a
-                                    href={q.supplier_url}
-                                    target="_blank"
-                                    rel="noreferrer noopener"
-                                    className="text-primary"
-                                    aria-label="Open supplier link"
-                                  >
-                                    <ExternalLink className="h-3.5 w-3.5" />
-                                  </a>
-                                )}
-                              </div>
-                            </div>
-
-                            {q.notes && (
-                              <p className="text-[11px] text-muted-foreground">{q.notes}</p>
-                            )}
-
-                            <Button
-                              size="sm"
-                              variant={isSelected ? "secondary" : "outline"}
-                              className="w-full"
-                              onClick={() => chooseQuote.mutate(q)}
-                              disabled={chooseQuote.isPending}
-                            >
-                              <CheckCircle2 className="mr-1.5 h-3.5 w-3.5" />
-                              {isSelected ? "Selected supplier" : "Select this supplier"}
-                            </Button>
-                          </CardContent>
-                        </Card>
-                      );
-                    })}
-                </div>
+                <SourcingActivity events={eventsQ.data ?? []} loading={eventsQ.isLoading} />
               </div>
             </div>
           )}
