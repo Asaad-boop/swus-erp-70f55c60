@@ -604,13 +604,46 @@ function SourcingPage() {
       )}
 
       {pipeline.length > 0 && (
+        <div className="space-y-3">
+          <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-6">
+            <StageKpi label="In pipeline" value={String(stageCounts.all)} sub="approved → ordered" />
+            {STAGE_ORDER.map((s) => (
+              <StageKpi
+                key={s}
+                label={STAGE_META[s].label}
+                value={String(stageCounts[s])}
+                sub={s === "ordered" && dueTotal > 0 ? `${fmtValue(Math.round(dueTotal), "bdt")} due` : undefined}
+              />
+            )).slice(0, 5)}
+          </div>
+          <div className="flex flex-wrap items-center gap-2">
+            <StageFilterBar counts={stageCounts} value={stageFilter} onChange={setStageFilter} />
+            <Input
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              placeholder="Search product / supplier…"
+              className="h-8 w-full max-w-[240px] sm:ml-auto"
+            />
+          </div>
+        </div>
+      )}
+
+      {pipeline.length > 0 && (
         <div className="grid gap-4 lg:grid-cols-[320px_1fr]">
           {/* Queue */}
           <div className="space-y-2">
-            {pipeline.map((i) => {
+            {visible.length === 0 && (
+              <Card>
+                <CardContent className="p-6 text-center text-xs text-muted-foreground">
+                  এই stage-এ কিছু নেই।
+                </CardContent>
+              </Card>
+            )}
+            {visible.map((i) => {
               const on = i.id === selectedId;
               const imgs = i.images?.length ? i.images : i.image_url ? [i.image_url] : [];
               const qs = quotesQ.data?.get(i.id) ?? [];
+              const st = stageOf.get(i.id) ?? "to_source";
               return (
                 <button
                   key={i.id}
@@ -632,12 +665,7 @@ function SourcingPage() {
                       {i.target_price_max ? ` · target ≤ ${fmtValue(i.target_price_max, "bdt")}` : ""}
                     </p>
                   </div>
-                  <Badge
-                    variant={i.status === "ordered" ? "default" : "secondary"}
-                    className="shrink-0 text-[10px] capitalize"
-                  >
-                    {i.status}
-                  </Badge>
+                  <StageBadge stage={st} className="shrink-0" />
                 </button>
               );
             })}
