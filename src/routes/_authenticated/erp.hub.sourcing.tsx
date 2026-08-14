@@ -1,6 +1,7 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, Link } from "@tanstack/react-router";
 import { useEffect, useMemo, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useServerFn } from "@tanstack/react-start";
 import { toast } from "sonner";
 import {
   PackageSearch,
@@ -14,9 +15,16 @@ import {
   ShoppingCart,
   Crown,
   Timer,
+  Wallet,
+  Factory,
+  Loader2,
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useBrand } from "@/contexts/brand-context";
+import { useAccounts } from "@/hooks/erp/use-finance-query";
+import { Switch } from "@/components/ui/switch";
+import { createImportPo, listImportSuppliers } from "@/lib/erp/imports/imports.functions";
+import { newIdemKey } from "@/lib/erp/imports/types";
 import { HubPageHeader } from "@/components/erp/hub/hub-shell";
 import { IdeaGallery, StarRating } from "@/components/erp/hub/idea-visuals";
 import { Card, CardContent } from "@/components/ui/card";
@@ -115,6 +123,18 @@ function SourcingPage() {
   const [orderOpen, setOrderOpen] = useState(false);
   const [orderQty, setOrderQty] = useState("");
   const [orderPrice, setOrderPrice] = useState("");
+  // PO fields
+  const [poUnitCny, setPoUnitCny] = useState("");
+  const [poFx, setPoFx] = useState("17");
+  const [poSupplierId, setPoSupplierId] = useState<string>("");
+  const [poSupplierName, setPoSupplierName] = useState("");
+  const [poSupplierUrl, setPoSupplierUrl] = useState("");
+  const [poNotes, setPoNotes] = useState("");
+  const [payEnabled, setPayEnabled] = useState(false);
+  const [payAmount, setPayAmount] = useState("");
+  const [payWalletId, setPayWalletId] = useState("");
+  const [payDate, setPayDate] = useState(() => new Date().toISOString().slice(0, 10));
+  const [payRef, setPayRef] = useState("");
   const [tMin, setTMin] = useState("");
   const [tMax, setTMax] = useState("");
 
