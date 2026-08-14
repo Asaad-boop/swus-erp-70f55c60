@@ -1131,15 +1131,6 @@ function ProductPipelinePage() {
                 onChange={(e) => setFc({ ...fc, monthly_units: e.target.value })}
               />
             </Field>
-          </DialogHeader>
-          <div className="grid grid-cols-2 gap-3">
-            <Field label="Monthly units">
-              <Input
-                type="number"
-                value={fc.monthly_units}
-                onChange={(e) => setFc({ ...fc, monthly_units: e.target.value })}
-              />
-            </Field>
             <Field label="Return rate (%)">
               <Input
                 type="number"
