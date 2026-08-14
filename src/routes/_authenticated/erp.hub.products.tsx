@@ -1228,6 +1228,81 @@ function StatCard({ label, value, hint }: { label: string; value: string; hint?:
   );
 }
 
+function initials(name: string) {
+  return name
+    .split(/\s+/)
+    .filter(Boolean)
+    .slice(0, 2)
+    .map((w) => w[0]?.toUpperCase())
+    .join("");
+}
+
+function PeopleStrip({
+  addedBy,
+  addedAt,
+  voters,
+}: {
+  addedBy: string | null;
+  addedAt: string;
+  voters: HubIdeaVoter[];
+}) {
+  const likers = voters.filter((v) => v.vote === 1);
+  const dislikers = voters.filter((v) => v.vote === -1);
+  const raters = voters.filter((v) => v.rating != null);
+  return (
+    <div className="space-y-1.5 rounded-lg border border-dashed border-border/70 bg-muted/30 p-2 text-[11px]">
+      <p className="text-muted-foreground">
+        Added by <span className="font-semibold text-foreground">{addedBy ?? "Unknown"}</span> ·{" "}
+        {new Date(addedAt).toLocaleDateString("en-GB", {
+          day: "2-digit",
+          month: "short",
+          year: "numeric",
+        })}
+      </p>
+      {likers.length > 0 ? (
+        <div className="flex flex-wrap items-center gap-1">
+          <Heart className="h-3 w-3 fill-rose-500 text-rose-500" />
+          {likers.map((v) => (
+            <span
+              key={v.user_id}
+              title={v.comment ?? v.name}
+              className="inline-flex items-center gap-1 rounded-full bg-background px-1.5 py-0.5 font-medium shadow-sm"
+            >
+              <span className="inline-flex h-4 w-4 items-center justify-center rounded-full bg-primary/15 text-[8px] font-bold text-primary">
+                {initials(v.name)}
+              </span>
+              {v.name}
+            </span>
+          ))}
+        </div>
+      ) : (
+        <p className="text-muted-foreground">এখনো কেউ like দেয়নি</p>
+      )}
+      {(dislikers.length > 0 || raters.length > 0) && (
+        <p className="text-muted-foreground">
+          {dislikers.length > 0 && <>👎 {dislikers.map((v) => v.name).join(", ")}</>}
+          {dislikers.length > 0 && raters.length > 0 && " · "}
+          {raters.length > 0 && (
+            <>★ {raters.map((v) => `${v.name} (${v.rating})`).join(", ")}</>
+          )}
+        </p>
+      )}
+    </div>
+  );
+}
+
+function StatCardUnused({ label, value, hint }: { label: string; value: string; hint?: string }) {
+  return (
+    <Card>
+      <CardContent className="p-4">
+        <p className="text-xs text-muted-foreground">{label}</p>
+        <p className="font-display text-2xl font-bold">{value}</p>
+        {hint && <p className="mt-0.5 text-[11px] text-muted-foreground">{hint}</p>}
+      </CardContent>
+    </Card>
+  );
+}
+
 function FunnelChip({
   label,
   count,
