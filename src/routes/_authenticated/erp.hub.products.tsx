@@ -16,6 +16,16 @@ import {
   XCircle,
   PackageSearch,
 } from "lucide-react";
+import {
+  Search,
+  Copy,
+  LayoutGrid,
+  Columns3,
+  ChevronLeft,
+  ChevronRight,
+  TrendingUp,
+  X,
+} from "lucide-react";
 import { Link } from "@tanstack/react-router";
 import { supabase } from "@/integrations/supabase/client";
 import { useBrand } from "@/contexts/brand-context";
@@ -43,6 +53,17 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import { cn } from "@/lib/utils";
 import {
   IDEA_STATUSES,
   fetchForecasts,
@@ -171,6 +192,10 @@ function ProductPipelinePage() {
   const [open, setOpen] = useState(false);
   const [draft, setDraft] = useState<Draft>(emptyDraft());
   const [statusFilter, setStatusFilter] = useState<string>("all");
+  const [search, setSearch] = useState("");
+  const [sortBy, setSortBy] = useState<string>("score");
+  const [view, setView] = useState<"grid" | "board">("grid");
+  const [confirmDelete, setConfirmDelete] = useState<HubIdea | null>(null);
   const [fcIdea, setFcIdea] = useState<HubIdea | null>(null);
   const [fc, setFc] = useState<FDraft>(emptyForecast());
 
@@ -362,11 +387,34 @@ function ProductPipelinePage() {
 
   const filtered = useMemo(() => {
     const sums = sumQ.data;
-    const list = statusFilter === "all" ? ideas : ideas.filter((i) => i.status === statusFilter);
-    return [...list].sort(
-      (a, b) => (sums?.get(b.id)?.score ?? 0) - (sums?.get(a.id)?.score ?? 0),
-    );
-  }, [ideas, statusFilter, sumQ.data]);
+    const q = search.trim().toLowerCase();
+    let list = statusFilter === "all" ? ideas : ideas.filter((i) => i.status === statusFilter);
+    if (q) {
+      list = list.filter((i) =>
+        [i.title, i.category, i.supplier_name, i.description, ...(i.tags ?? [])]
+          .filter(Boolean)
+          .some((v) => String(v).toLowerCase().includes(q)),
+      );
+    }
+    const margin = (i: HubIdea) =>
+      i.est_sell_price > 0 ? ((i.est_sell_price - i.est_unit_cost) / i.est_sell_price) * 100 : -1;
+    const cmp: Record<string, (a: HubIdea, b: HubIdea) => number> = {
+      score: (a, b) => (sums?.get(b.id)?.score ?? 0) - (sums?.get(a.id)?.score ?? 0),
+      rating: (a, b) => (sums?.get(b.id)?.avg_rating ?? 0) - (sums?.get(a.id)?.avg_rating ?? 0),
+      profit: (a, b) =>
+        (sums?.get(b.id)?.monthly_profit ?? 0) - (sums?.get(a.id)?.monthly_profit ?? 0),
+      margin: (a, b) => margin(b) - margin(a),
+      newest: (a, b) => String(b.created_at).localeCompare(String(a.created_at)),
+      title: (a, b) => a.title.localeCompare(b.title),
+    };
+    return [...list].sort(cmp[sortBy] ?? cmp.score);
+  }, [ideas, statusFilter, sumQ.data, search, sortBy]);
+
+  const statusCounts = useMemo(() => {
+    const m = new Map<string, number>();
+    for (const i of ideas) m.set(i.status, (m.get(i.status) ?? 0) + 1);
+    return m;
+  }, [ideas]);
 
   const stats = useMemo(() => {
     const approved = ideas.filter((i) =>
@@ -377,8 +425,51 @@ function ProductPipelinePage() {
       const p = sumQ.data?.get(i.id)?.monthly_profit;
       if (p && ["approved", "sourcing", "ordered", "launched"].includes(i.status)) projected += p;
     }
-    return { total: ideas.length, approved, projected };
+    const margins = ideas
+      .filter((i) => i.est_sell_price > 0)
+      .map((i) => ((i.est_sell_price - i.est_unit_cost) / i.est_sell_price) * 100);
+    const avgMargin = margins.length
+      ? margins.reduce((a, b) => a + b, 0) / margins.length
+      : 0;
+    const awaiting = ideas.filter((i) => ["idea", "voting"].includes(i.status)).length;
+    return { total: ideas.length, approved, projected, avgMargin, awaiting };
   }, [ideas, sumQ.data]);
+
+  const clone = useMutation({
+    mutationFn: async (i: HubIdea) => {
+      const { error } = await supabase.from("hub_product_ideas").insert({
+        brand_id: i.brand_id,
+        title: `${i.title} (copy)`,
+        description: i.description,
+        image_url: i.image_url,
+        images: i.images ?? [],
+        source_url: i.source_url,
+        supplier_name: i.supplier_name,
+        supplier_url: i.supplier_url,
+        category: i.category,
+        est_unit_cost: i.est_unit_cost,
+        est_sell_price: i.est_sell_price,
+        target_price_min: i.target_price_min,
+        target_price_max: i.target_price_max,
+        moq: i.moq,
+        status: "idea",
+        notes: i.notes,
+      } as never);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      toast.success("Duplicate তৈরি হয়েছে");
+      invalidate();
+    },
+    onError: (e: Error) => toast.error(e.message),
+  });
+
+  const moveStage = (i: HubIdea, dir: -1 | 1) => {
+    const order = IDEA_STATUSES.map((s) => s.key);
+    const idx = order.indexOf(i.status as (typeof order)[number]);
+    const next = order[Math.min(order.length - 1, Math.max(0, idx + dir))];
+    if (next && next !== i.status) setStatus.mutate({ id: i.id, status: next });
+  };
 
   const openNew = () => {
     setDraft(emptyDraft());
@@ -437,6 +528,38 @@ function ProductPipelinePage() {
         }
         actions={
           <>
+            <div className="relative">
+              <Search className="pointer-events-none absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+              <Input
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                placeholder="Search idea, supplier, category…"
+                className="h-9 w-[220px] pl-8"
+              />
+              {search && (
+                <button
+                  type="button"
+                  aria-label="Clear search"
+                  onClick={() => setSearch("")}
+                  className="absolute right-2 top-2.5 text-muted-foreground hover:text-foreground"
+                >
+                  <X className="h-4 w-4" />
+                </button>
+              )}
+            </div>
+            <Select value={sortBy} onValueChange={setSortBy}>
+              <SelectTrigger className="h-9 w-[150px]">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="score">Top voted</SelectItem>
+                <SelectItem value="rating">Best rated</SelectItem>
+                <SelectItem value="profit">Forecast profit</SelectItem>
+                <SelectItem value="margin">Best margin</SelectItem>
+                <SelectItem value="newest">Newest</SelectItem>
+                <SelectItem value="title">A → Z</SelectItem>
+              </SelectContent>
+            </Select>
             <Select value={statusFilter} onValueChange={setStatusFilter}>
               <SelectTrigger className="h-9 w-[150px]">
                 <SelectValue />
@@ -450,6 +573,30 @@ function ProductPipelinePage() {
                 ))}
               </SelectContent>
             </Select>
+            <div className="flex h-9 items-center rounded-md border border-border p-0.5">
+              <button
+                type="button"
+                aria-label="Grid view"
+                onClick={() => setView("grid")}
+                className={cn(
+                  "flex h-8 w-8 items-center justify-center rounded",
+                  view === "grid" ? "bg-muted text-foreground" : "text-muted-foreground",
+                )}
+              >
+                <LayoutGrid className="h-4 w-4" />
+              </button>
+              <button
+                type="button"
+                aria-label="Pipeline board view"
+                onClick={() => setView("board")}
+                className={cn(
+                  "flex h-8 w-8 items-center justify-center rounded",
+                  view === "board" ? "bg-muted text-foreground" : "text-muted-foreground",
+                )}
+              >
+                <Columns3 className="h-4 w-4" />
+              </button>
+            </div>
             <Button size="sm" onClick={openNew}>
               <Plus className="mr-1.5 h-4 w-4" /> New idea
             </Button>
@@ -458,14 +605,36 @@ function ProductPipelinePage() {
       />
 
       {ideas.length > 0 && (
-        <div className="grid gap-3 sm:grid-cols-3">
-          <StatCard label="Total ideas" value={String(stats.total)} />
-          <StatCard label="Approved+" value={String(stats.approved)} />
-          <StatCard
-            label="Projected monthly profit"
-            value={fmtValue(Math.round(stats.projected), "bdt")}
-          />
-        </div>
+        <>
+          <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+            <StatCard label="Total ideas" value={String(stats.total)} />
+            <StatCard label="Awaiting decision" value={String(stats.awaiting)} />
+            <StatCard label="Approved+" value={String(stats.approved)} />
+            <StatCard
+              label="Projected monthly profit"
+              value={fmtValue(Math.round(stats.projected), "bdt")}
+              hint={`Avg margin ${stats.avgMargin.toFixed(0)}%`}
+            />
+          </div>
+
+          <div className="flex flex-wrap items-center gap-2">
+            <FunnelChip
+              label="All"
+              count={ideas.length}
+              active={statusFilter === "all"}
+              onClick={() => setStatusFilter("all")}
+            />
+            {IDEA_STATUSES.map((s) => (
+              <FunnelChip
+                key={s.key}
+                label={s.label}
+                count={statusCounts.get(s.key) ?? 0}
+                active={statusFilter === s.key}
+                onClick={() => setStatusFilter(s.key)}
+              />
+            ))}
+          </div>
+        </>
       )}
 
       {(ideasQ.isLoading || brandLoading) && <Skeleton className="h-40 w-full rounded-xl" />}
@@ -479,7 +648,81 @@ function ProductPipelinePage() {
         </Card>
       )}
 
-      <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
+      {view === "board" && filtered.length > 0 && (
+        <div className="flex gap-3 overflow-x-auto pb-2">
+          {IDEA_STATUSES.map((st) => {
+            const col = filtered.filter((i) => i.status === st.key);
+            return (
+              <div key={st.key} className="w-[260px] shrink-0 rounded-xl border bg-muted/30 p-2">
+                <div className="mb-2 flex items-center justify-between px-1">
+                  <span className="text-xs font-semibold uppercase tracking-wide">{st.label}</span>
+                  <span className="rounded-full bg-background px-1.5 text-[10px] font-semibold">
+                    {col.length}
+                  </span>
+                </div>
+                <div className="space-y-2">
+                  {col.map((i) => {
+                    const s = sumQ.data?.get(i.id);
+                    const thumb = i.image_url || i.images?.[0];
+                    return (
+                      <div key={i.id} className="rounded-lg border bg-background p-2 shadow-sm">
+                        <div className="flex gap-2">
+                          {thumb ? (
+                            <img
+                              src={thumb}
+                              alt={i.title}
+                              loading="lazy"
+                              className="h-10 w-10 shrink-0 rounded object-cover"
+                            />
+                          ) : (
+                            <div className="h-10 w-10 shrink-0 rounded bg-muted" />
+                          )}
+                          <div className="min-w-0 flex-1">
+                            <p className="truncate text-xs font-semibold">{i.title}</p>
+                            <p className="text-[10px] text-muted-foreground">
+                              ♥ {s?.up_votes ?? 0} · ★ {(s?.avg_rating ?? 0).toFixed(1)}
+                            </p>
+                          </div>
+                        </div>
+                        <div className="mt-2 flex items-center justify-between">
+                          <button
+                            type="button"
+                            aria-label="Previous stage"
+                            onClick={() => moveStage(i, -1)}
+                            className="rounded p-1 text-muted-foreground hover:bg-muted"
+                          >
+                            <ChevronLeft className="h-3.5 w-3.5" />
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => openEdit(i)}
+                            className="text-[10px] font-medium text-primary hover:underline"
+                          >
+                            Details
+                          </button>
+                          <button
+                            type="button"
+                            aria-label="Next stage"
+                            onClick={() => moveStage(i, 1)}
+                            className="rounded p-1 text-muted-foreground hover:bg-muted"
+                          >
+                            <ChevronRight className="h-3.5 w-3.5" />
+                          </button>
+                        </div>
+                      </div>
+                    );
+                  })}
+                  {col.length === 0 && (
+                    <p className="px-1 py-3 text-center text-[11px] text-muted-foreground">খালি</p>
+                  )}
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      )}
+
+      <div className={cn("grid gap-3 md:grid-cols-2 xl:grid-cols-3", view === "board" && "hidden")}>
         {filtered.map((i) => {
           const s = sumQ.data?.get(i.id);
           const mine = votesQ.data?.get(i.id);
@@ -510,9 +753,17 @@ function ProductPipelinePage() {
                   </button>
                   <button
                     type="button"
+                    aria-label="Duplicate idea"
+                    onClick={() => clone.mutate(i)}
+                    disabled={clone.isPending}
+                    className="rounded-full bg-background/90 p-1.5 shadow"
+                  >
+                    <Copy className="h-3.5 w-3.5" />
+                  </button>
+                  <button
+                    type="button"
                     aria-label="Delete idea"
-                    onClick={() => remove.mutate(i.id)}
-                    disabled={remove.isPending}
+                    onClick={() => setConfirmDelete(i)}
                     className="rounded-full bg-background/90 p-1.5 shadow"
                   >
                     <Trash2 className="h-3.5 w-3.5 text-destructive" />
@@ -559,6 +810,22 @@ function ProductPipelinePage() {
                 <div className="flex flex-wrap items-center gap-1.5 text-xs">
                   <Badge variant="outline">Cost {fmtValue(i.est_unit_cost, "bdt")}</Badge>
                   <Badge variant="outline">Sell {fmtValue(i.est_sell_price, "bdt")}</Badge>
+                  {i.est_sell_price > 0 && (
+                    <Badge
+                      className={cn(
+                        "border-0 text-white",
+                        (i.est_sell_price - i.est_unit_cost) / i.est_sell_price >= 0.4
+                          ? "bg-emerald-600"
+                          : (i.est_sell_price - i.est_unit_cost) / i.est_sell_price >= 0.2
+                            ? "bg-amber-500"
+                            : "bg-destructive",
+                      )}
+                    >
+                      <TrendingUp className="mr-1 h-3 w-3" />
+                      {(((i.est_sell_price - i.est_unit_cost) / i.est_sell_price) * 100).toFixed(0)}%
+                      margin
+                    </Badge>
+                  )}
                   {(i.target_price_min != null || i.target_price_max != null) && (
                     <Badge variant="secondary">
                       Target {fmtValue(i.target_price_min ?? 0, "bdt")}–
@@ -878,6 +1145,30 @@ function ProductPipelinePage() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      <AlertDialog open={!!confirmDelete} onOpenChange={(o) => !o && setConfirmDelete(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Idea delete করব?</AlertDialogTitle>
+            <AlertDialogDescription>
+              "{confirmDelete?.title}" এবং এর vote/forecast/quote সব মুছে যাবে। এটা undo করা যাবে
+              না।
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              onClick={() => {
+                if (confirmDelete) remove.mutate(confirmDelete.id);
+                setConfirmDelete(null);
+              }}
+            >
+              Delete
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
@@ -900,13 +1191,49 @@ function Metric({ label, value }: { label: string; value: string }) {
   );
 }
 
-function StatCard({ label, value }: { label: string; value: string }) {
+function StatCard({ label, value, hint }: { label: string; value: string; hint?: string }) {
   return (
     <Card>
       <CardContent className="p-4">
         <p className="text-xs text-muted-foreground">{label}</p>
         <p className="font-display text-2xl font-bold">{value}</p>
+        {hint && <p className="mt-0.5 text-[11px] text-muted-foreground">{hint}</p>}
       </CardContent>
     </Card>
+  );
+}
+
+function FunnelChip({
+  label,
+  count,
+  active,
+  onClick,
+}: {
+  label: string;
+  count: number;
+  active: boolean;
+  onClick: () => void;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className={cn(
+        "inline-flex items-center gap-1.5 rounded-full border px-3 py-1 text-xs font-medium transition-colors",
+        active
+          ? "border-primary bg-primary text-primary-foreground"
+          : "border-border bg-background text-muted-foreground hover:bg-muted",
+      )}
+    >
+      {label}
+      <span
+        className={cn(
+          "rounded-full px-1.5 text-[10px] font-semibold",
+          active ? "bg-primary-foreground/20" : "bg-muted",
+        )}
+      >
+        {count}
+      </span>
+    </button>
   );
 }
