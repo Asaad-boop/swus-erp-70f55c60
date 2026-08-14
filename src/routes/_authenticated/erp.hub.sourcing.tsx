@@ -1074,10 +1074,10 @@ function SourcingPage() {
                   }}
                   className={`flex w-full items-center gap-3 rounded-xl border p-2.5 text-left transition-all ${
                     on
-                      ? "border-primary/40 bg-primary/5 shadow-sm"
+                      ? "border-primary/50 bg-primary/5 shadow-sm ring-1 ring-primary/20"
                       : due
-                        ? "border-amber-500/40 bg-amber-500/5 hover:bg-amber-500/10"
-                        : "border-border/70 hover:bg-muted/50"
+                        ? "border-amber-500/40 bg-amber-500/5 hover:-translate-y-0.5 hover:bg-amber-500/10 hover:shadow-sm"
+                        : "border-border/70 hover:-translate-y-0.5 hover:bg-muted/50 hover:shadow-sm"
                   }`}
                 >
                   <div className="h-14 w-14 shrink-0 overflow-hidden rounded-lg">
