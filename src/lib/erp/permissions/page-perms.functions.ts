@@ -2,12 +2,6 @@ import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 
-async function assertAdmin(supabase: any, userId: string) {
-  const { data, error } = await supabase.rpc("has_role", { _user_id: userId, _role: "admin" });
-  if (error) throw error;
-  if (!data) throw new Error("Admin only");
-}
-
 /** Current user's own allowed pages. null = no override row (use role defaults). */
 export const getMyAllowedPages = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
@@ -25,6 +19,7 @@ export const getMyAllowedPages = createServerFn({ method: "POST" })
 export const listAllowedPages = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .handler(async ({ context }) => {
+    const { assertAdmin } = await import("./page-perms.server");
     await assertAdmin(context.supabase, context.userId);
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
     const { data, error } = await supabaseAdmin
@@ -49,6 +44,7 @@ export const setUserAllowedPages = createServerFn({ method: "POST" })
     }).parse(d),
   )
   .handler(async ({ data, context }) => {
+    const { assertAdmin } = await import("./page-perms.server");
     await assertAdmin(context.supabase, context.userId);
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
 
