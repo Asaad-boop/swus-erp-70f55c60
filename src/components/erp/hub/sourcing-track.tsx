@@ -71,12 +71,17 @@ export function StageFilterBar({
   value: SourcingStage | "all";
   onChange: (v: SourcingStage | "all") => void;
 }) {
-  const items: Array<{ key: SourcingStage | "all"; label: string; n: number }> = [
+  const items: Array<{ key: SourcingStage | "all"; label: string; n: number; dot?: string }> = [
     { key: "all", label: "All", n: counts.all },
-    ...STAGE_ORDER.map((s) => ({ key: s, label: STAGE_META[s].label, n: counts[s] })),
+    ...STAGE_ORDER.map((s) => ({
+      key: s,
+      label: STAGE_META[s].short,
+      n: counts[s],
+      dot: STAGE_META[s].dot,
+    })),
   ];
   return (
-    <div className="flex flex-wrap gap-1.5">
+    <div className="flex flex-wrap gap-1 rounded-full border border-border/60 bg-muted/40 p-1">
       {items.map((it) => {
         const on = value === it.key;
         return (
@@ -84,16 +89,21 @@ export function StageFilterBar({
             key={it.key}
             type="button"
             onClick={() => onChange(it.key)}
-            className={`inline-flex items-center gap-1.5 rounded-full border px-3 py-1 text-xs transition-colors ${
+            className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs transition-all ${
               on
-                ? "border-primary bg-primary text-primary-foreground"
-                : "border-border/70 bg-card hover:bg-muted/60"
+                ? "bg-card font-semibold text-foreground shadow-sm ring-1 ring-border"
+                : "text-muted-foreground hover:bg-card/60 hover:text-foreground"
             }`}
           >
+            {it.dot && (
+              <span
+                className={`h-1.5 w-1.5 rounded-full ${it.dot} ${on ? "" : "opacity-60"}`}
+              />
+            )}
             {it.label}
             <span
               className={`rounded-full px-1.5 text-[10px] tabular-nums ${
-                on ? "bg-primary-foreground/20" : "bg-muted text-muted-foreground"
+                on ? "bg-primary/10 text-primary" : "bg-background/70 text-muted-foreground"
               }`}
             >
               {it.n}
@@ -187,20 +197,40 @@ export function StageKpi({
   sub,
   tone = "",
   loading,
+  dot,
+  active,
+  onClick,
 }: {
   label: string;
   value: string;
   sub?: string;
   tone?: string;
   loading?: boolean;
+  dot?: string;
+  active?: boolean;
+  onClick?: () => void;
 }) {
+  const Tag = onClick ? "button" : "div";
   return (
-    <div className="rounded-xl border bg-card p-3">
-      <p className="text-[10px] uppercase tracking-wide text-muted-foreground">{label}</p>
-      <p className={`mt-0.5 font-display text-lg font-bold tabular-nums ${tone}`}>
+    <Tag
+      {...(onClick ? { type: "button" as const, onClick } : {})}
+      className={`group relative overflow-hidden rounded-xl border bg-card p-3 text-left transition-all ${
+        onClick ? "hover:-translate-y-0.5 hover:shadow-md" : ""
+      } ${active ? "border-primary/50 ring-1 ring-primary/30" : "border-border/70"}`}
+    >
+      {dot && (
+        <span
+          className={`absolute inset-x-0 top-0 h-0.5 ${dot} ${active ? "" : "opacity-50"}`}
+        />
+      )}
+      <p className="flex items-center gap-1.5 text-[10px] uppercase tracking-wide text-muted-foreground">
+        {dot && <span className={`h-1.5 w-1.5 rounded-full ${dot}`} />}
+        {label}
+      </p>
+      <p className={`mt-0.5 font-display text-xl font-bold tabular-nums ${tone}`}>
         {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : value}
       </p>
-      {sub && <p className="text-[10px] text-muted-foreground">{sub}</p>}
-    </div>
+      {sub && <p className="truncate text-[10px] text-muted-foreground">{sub}</p>}
+    </Tag>
   );
 }
