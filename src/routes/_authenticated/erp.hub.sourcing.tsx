@@ -1444,10 +1444,20 @@ function SourcingPage() {
             <Field label="Supplier link">
               <Input
                 value={qDraft.supplier_url}
-                onChange={(e) => setQDraft({ ...qDraft, supplier_url: e.target.value })}
+                onChange={(e) => {
+                  const url = e.target.value;
+                  const p = detectPlatform(url);
+                  setQDraft({ ...qDraft, supplier_url: url, ...(p ? { platform: p } : {}) });
+                }}
                 placeholder="https://detail.1688.com/..."
               />
             </Field>
+            {dupQuote && (
+              <p className="flex items-center gap-1.5 rounded-md border border-amber-500/40 bg-amber-500/10 p-2 text-[11px] text-amber-700 dark:text-amber-400">
+                <AlertTriangle className="h-3.5 w-3.5 shrink-0" />
+                এই supplier ("{dupQuote.supplier_name}") ইতিমধ্যে quote list-এ আছে — duplicate হয়ে যাবে।
+              </p>
+            )}
             <Field label="Contact (WeChat / phone)">
               <Input
                 value={qDraft.contact}
@@ -1540,6 +1550,30 @@ function SourcingPage() {
                 />
               </Field>
             </div>
+            {qDraft.sample_status !== "none" && (
+              <div className="grid grid-cols-3 gap-3 rounded-lg border bg-muted/30 p-3">
+                <Field label="Sample cost (৳)">
+                  <Input
+                    type="number"
+                    value={qDraft.sample_cost}
+                    onChange={(e) => setQDraft({ ...qDraft, sample_cost: e.target.value })}
+                  />
+                </Field>
+                <Field label="Sample tracking">
+                  <Input
+                    value={qDraft.sample_tracking}
+                    onChange={(e) => setQDraft({ ...qDraft, sample_tracking: e.target.value })}
+                  />
+                </Field>
+                <Field label="Received on">
+                  <Input
+                    type="date"
+                    value={qDraft.sample_received_at}
+                    onChange={(e) => setQDraft({ ...qDraft, sample_received_at: e.target.value })}
+                  />
+                </Field>
+              </div>
+            )}
             <Field label="Notes">
               <Textarea
                 rows={2}
@@ -1551,12 +1585,42 @@ function SourcingPage() {
               <span className="flex items-center gap-1.5 text-muted-foreground">
                 <Truck className="h-4 w-4" /> Landed cost / unit
               </span>
-              <span className="font-display text-lg font-bold">
-                {fmtValue(Math.round(draftLanded), "bdt")}
+              <span className="text-right">
+                <span className="font-display text-lg font-bold">
+                  {fmtValue(Math.round(draftLanded), "bdt")}
+                </span>
+                {selected?.target_price_max ? (
+                  <span
+                    className={`block text-[10px] ${
+                      draftLanded <= selected.target_price_max
+                        ? "text-emerald-600"
+                        : "text-destructive"
+                    }`}
+                  >
+                    target ≤ {fmtValue(selected.target_price_max, "bdt")}
+                  </span>
+                ) : null}
+                {qDraft.moq && Number(qDraft.moq) > 0 ? (
+                  <span className="block text-[10px] text-muted-foreground">
+                    MOQ {qDraft.moq} pcs ≈{" "}
+                    {fmtValue(Math.round(draftLanded * Number(qDraft.moq)), "bdt")} order
+                  </span>
+                ) : null}
               </span>
             </div>
           </div>
           <DialogFooter>
+            {!qDraft.id && (
+              <label className="mr-auto flex items-center gap-1.5 text-xs text-muted-foreground">
+                <input
+                  type="checkbox"
+                  className="h-3.5 w-3.5 accent-primary"
+                  checked={addAnother}
+                  onChange={(e) => setAddAnother(e.target.checked)}
+                />
+                Save & add another
+              </label>
+            )}
             <Button variant="outline" onClick={() => setQOpen(false)}>
               Cancel
             </Button>
