@@ -2,14 +2,31 @@ import { createFileRoute } from "@tanstack/react-router";
 import { useMemo, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
-import { KanbanSquare, Plus, Search, ChevronLeft, ChevronRight, Play } from "lucide-react";
+import {
+  KanbanSquare,
+  Plus,
+  ChevronLeft,
+  ChevronRight,
+  Play,
+  CalendarDays,
+  List,
+  LayoutGrid,
+  AlertTriangle,
+  Eye,
+  ShoppingCart,
+  Wallet,
+  Clock,
+  GripVertical,
+  CheckCircle2,
+  Users,
+} from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useBrand } from "@/contexts/brand-context";
-import { ContentKpi, ContentPageHeader } from "@/components/erp/content/content-shell";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
+import { Checkbox } from "@/components/ui/checkbox";
 import { Textarea } from "@/components/ui/textarea";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
@@ -25,6 +42,9 @@ import {
   bdt,
   CONTENT_SOURCES,
   CONTENT_TYPES,
+  costPerOrder,
+  daysUntil,
+  engagementRate,
   fetchAgencies,
   fetchCreators,
   fetchItems,
@@ -35,6 +55,23 @@ import {
   PLATFORMS,
   type ContentItem,
 } from "@/lib/erp/content/content-data";
+import {
+  ContentHero,
+  EmptyState,
+  ExportButton,
+  Kpi,
+  KpiStrip,
+  MiniBar,
+  Pill,
+  SearchBox,
+  Segmented,
+  Toolbar,
+  downloadCsv,
+  fmtNum,
+  sortBy,
+  usePersistedState,
+} from "@/components/erp/content/content-ui";
+import { cn } from "@/lib/utils";
 
 export const Route = createFileRoute("/_authenticated/erp/content/pipeline")({
   head: () => ({
@@ -43,12 +80,12 @@ export const Route = createFileRoute("/_authenticated/erp/content/pipeline")({
       {
         name: "description",
         content:
-          "Kanban of every content piece across Ideation, Create, Editing, Published and Performance stages.",
+          "Drag-and-drop kanban, list and calendar views for every content piece from ideation to published performance.",
       },
       { property: "og:title", content: "Content Pipeline — Content Studio" },
       {
         property: "og:description",
-        content: "Track every content piece from idea to published performance.",
+        content: "Track every content piece from idea to published performance with due dates and ROI.",
       },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary" },
@@ -69,15 +106,28 @@ const emptyDraft = {
   cost: 0,
 };
 
+type ViewMode = "board" | "list" | "calendar";
+
 function PipelinePage() {
   const { brandIds, activeBrand } = useBrand();
   const qc = useQueryClient();
-  const [search, setSearch] = useState("");
-  const [platform, setPlatform] = useState("all");
-  const [source, setSource] = useState("all");
+
+  const [view, patchView] = usePersistedState("pipeline", {
+    search: "",
+    platform: "all",
+    source: "all",
+    stage: "all",
+    mode: "board" as ViewMode,
+    swimlane: "none" as "none" | "creator" | "product",
+    onlyOverdue: false,
+  });
+
   const [open, setOpen] = useState<ContentItem | null>(null);
   const [creating, setCreating] = useState(false);
   const [draft, setDraft] = useState(emptyDraft);
+  const [selected, setSelected] = useState<Set<string>>(new Set());
+  const [dragId, setDragId] = useState<string | null>(null);
+  const [dragOver, setDragOver] = useState<string | null>(null);
 
   const itemsQ = useQuery({
     queryKey: ["content-items", brandIds],
@@ -102,31 +152,58 @@ function PipelinePage() {
     for (const p of productsQ.data ?? []) m.set(p.id, p.title);
     return m;
   }, [productsQ.data]);
+  const creatorName = useMemo(() => {
+    const m = new Map<string, string>();
+    for (const c of creatorsQ.data ?? []) m.set(c.id, c.name);
+    return m;
+  }, [creatorsQ.data]);
 
   const filtered = useMemo(() => {
-    const s = search.trim().toLowerCase();
+    const s = view.search.trim().toLowerCase();
     return items.filter((i) => {
-      if (platform !== "all" && i.platform !== platform) return false;
-      if (source !== "all" && i.source !== source) return false;
+      if (view.platform !== "all" && i.platform !== view.platform) return false;
+      if (view.source !== "all" && i.source !== view.source) return false;
+      if (view.stage !== "all" && i.stage !== view.stage) return false;
+      if (view.onlyOverdue) {
+        const d = daysUntil(i.due_date);
+        const done = i.stage === "published" || i.stage === "performance";
+        if (done || d == null || d >= 0) return false;
+      }
       if (!s) return true;
       return (
         i.title.toLowerCase().includes(s) ||
         (i.code ?? "").toLowerCase().includes(s) ||
-        (i.hook ?? "").toLowerCase().includes(s)
+        (i.hook ?? "").toLowerCase().includes(s) ||
+        (i.script ?? "").toLowerCase().includes(s)
       );
     });
-  }, [items, search, platform, source]);
+  }, [items, view]);
 
   const kpis = useMemo(() => {
     const live = filtered.filter((i) => i.stage === "published" || i.stage === "performance");
+    const overdue = filtered.filter((i) => {
+      const d = daysUntil(i.due_date);
+      const done = i.stage === "published" || i.stage === "performance";
+      return !done && d != null && d < 0;
+    }).length;
+    const spend = filtered.reduce((s, i) => s + (Number(i.cost) || 0), 0);
+    const orders = live.reduce((s, i) => s + (Number(i.attributed_orders) || 0), 0);
     return {
       total: filtered.length,
       wip: filtered.filter((i) => i.stage === "create" || i.stage === "editing").length,
       live: live.length,
-      spend: filtered.reduce((s, i) => s + (Number(i.cost) || 0), 0),
+      overdue,
+      spend,
       views: live.reduce((s, i) => s + (Number(i.views) || 0), 0),
-      orders: live.reduce((s, i) => s + (Number(i.attributed_orders) || 0), 0),
+      orders,
+      cpo: costPerOrder(spend, orders),
     };
+  }, [filtered]);
+
+  const stageCounts = useMemo(() => {
+    const m = new Map<string, number>();
+    for (const i of filtered) m.set(i.stage, (m.get(i.stage) ?? 0) + 1);
+    return m;
   }, [filtered]);
 
   const saveMut = useMutation({
@@ -141,6 +218,24 @@ function PipelinePage() {
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["content-items"] });
       qc.invalidateQueries({ queryKey: ["content-intake"] });
+    },
+    onError: (e: Error) => toast.error(e.message),
+  });
+
+  const bulkMut = useMutation({
+    mutationFn: async (patch: Partial<ContentItem>) => {
+      const ids = [...selected];
+      const { error } = await supabase
+        .from("content_items")
+        .update(patch as never)
+        .in("id", ids);
+      if (error) throw error;
+      return ids.length;
+    },
+    onSuccess: (n) => {
+      toast.success(`${n}টি content আপডেট হয়েছে`);
+      setSelected(new Set());
+      qc.invalidateQueries({ queryKey: ["content-items"] });
     },
     onError: (e: Error) => toast.error(e.message),
   });
@@ -171,54 +266,122 @@ function PipelinePage() {
     onError: (e: Error) => toast.error(e.message),
   });
 
+  function stagePatch(item: ContentItem, stageKey: string) {
+    const patch: Partial<ContentItem> & { id: string } = { id: item.id, stage: stageKey };
+    if (stageKey === "published" && !item.published_at) {
+      patch.published_at = new Date().toISOString();
+      patch.status = "published";
+    }
+    return patch;
+  }
+
   function move(item: ContentItem, dir: -1 | 1) {
     const idx = PIPELINE_STAGES.findIndex((s) => s.key === item.stage);
     const next = PIPELINE_STAGES[Math.min(PIPELINE_STAGES.length - 1, Math.max(0, idx + dir))];
     if (!next || next.key === item.stage) return;
-    const patch: Partial<ContentItem> & { id: string } = { id: item.id, stage: next.key };
-    if (next.key === "published" && !item.published_at) {
-      patch.published_at = new Date().toISOString();
-      patch.status = "published";
-    }
-    saveMut.mutate(patch);
+    saveMut.mutate(stagePatch(item, next.key));
   }
 
+  function dropOn(stageKey: string) {
+    const item = items.find((i) => i.id === dragId);
+    setDragId(null);
+    setDragOver(null);
+    if (!item || item.stage === stageKey) return;
+    saveMut.mutate(stagePatch(item, stageKey));
+    toast.success(`"${item.title}" → ${labelOf(PIPELINE_STAGES, stageKey)}`);
+  }
+
+  const exportCsv = () =>
+    downloadCsv(`content-pipeline-${new Date().toISOString().slice(0, 10)}.csv`, [
+      ["Code", "Title", "Product", "Stage", "Status", "Type", "Platform", "Source", "Creator", "Due", "Cost", "Views", "Orders", "Cost/Order"],
+      ...filtered.map((i) => [
+        i.code,
+        i.title,
+        i.product_id ? (productName.get(i.product_id) ?? "") : "",
+        labelOf(PIPELINE_STAGES, i.stage),
+        labelOf(ITEM_STATUSES, i.status),
+        labelOf(CONTENT_TYPES, i.content_type),
+        labelOf(PLATFORMS, i.platform),
+        labelOf(CONTENT_SOURCES, i.source),
+        i.creator_id ? (creatorName.get(i.creator_id) ?? "") : "",
+        i.due_date ?? "",
+        i.cost,
+        i.views,
+        i.attributed_orders,
+        costPerOrder(i.cost, i.attributed_orders)?.toFixed(0) ?? "",
+      ]),
+    ]);
+
+  const toggleSel = (id: string) =>
+    setSelected((s) => {
+      const n = new Set(s);
+      if (n.has(id)) n.delete(id);
+      else n.add(id);
+      return n;
+    });
+
+  const cardProps = {
+    productName,
+    creatorName,
+    selected,
+    onToggle: toggleSel,
+    onOpen: setOpen,
+    onMove: move,
+    onDragStart: (id: string) => setDragId(id),
+  };
+
   return (
-    <div className="mx-auto max-w-[1500px] space-y-4 p-3 md:p-6">
-      <ContentPageHeader
+    <div className="mx-auto max-w-[1600px] space-y-4 p-3 md:p-6">
+      <ContentHero
         icon={KanbanSquare}
         title="Content Pipeline"
-        subtitle="Ideation → Create/Shoot → Editing → Published → Performance"
+        subtitle="Ideation → Create/Shoot → Editing → Published → Performance. Card টেনে stage বদলাও।"
         actions={
-          <Button size="sm" onClick={() => setCreating(true)}>
+          <Button size="sm" className="h-9" onClick={() => setCreating(true)}>
             <Plus className="mr-1.5 h-3.5 w-3.5" /> New content
           </Button>
         }
-      />
-
-      <div className="grid grid-cols-2 gap-2 md:grid-cols-5">
-        <ContentKpi label="Pieces" value={kpis.total} />
-        <ContentKpi label="In production" value={kpis.wip} tone="warn" />
-        <ContentKpi label="Live" value={kpis.live} tone="good" />
-        <ContentKpi label="Content spend" value={bdt(kpis.spend)} />
-        <ContentKpi
-          label="Views / orders"
-          value={`${kpis.views.toLocaleString()} / ${kpis.orders}`}
-        />
-      </div>
-
-      <div className="sticky top-[46px] z-20 flex flex-wrap items-center gap-2 rounded-xl border bg-background/85 p-2 backdrop-blur">
-        <div className="relative min-w-40 flex-1">
-          <Search className="absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-muted-foreground" />
-          <Input
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            placeholder="Search title, code, hook..."
-            className="h-9 pl-8 text-sm"
+      >
+        <KpiStrip cols={6}>
+          <Kpi label="Pieces" value={kpis.total} icon={LayoutGrid} />
+          <Kpi label="In production" value={kpis.wip} icon={Clock} tone="warn" />
+          <Kpi label="Live" value={kpis.live} icon={CheckCircle2} tone="good" />
+          <Kpi
+            label="Overdue"
+            value={kpis.overdue}
+            icon={AlertTriangle}
+            tone="bad"
+            onClick={() => patchView({ onlyOverdue: !view.onlyOverdue })}
+            active={view.onlyOverdue}
           />
-        </div>
-        <Select value={platform} onValueChange={setPlatform}>
-          <SelectTrigger className="h-9 w-32 text-xs">
+          <Kpi label="Spend" value={bdt(kpis.spend)} icon={Wallet} />
+          <Kpi
+            label="Views / orders"
+            value={`${fmtNum(kpis.views)} / ${kpis.orders}`}
+            icon={Eye}
+            tone="info"
+            hint={kpis.cpo != null ? `${bdt(kpis.cpo)} per order` : "no attributed order"}
+          />
+        </KpiStrip>
+      </ContentHero>
+
+      <Toolbar>
+        <SearchBox
+          value={view.search}
+          onChange={(v) => patchView({ search: v })}
+          placeholder="Title, code, hook, script…  ( / )"
+        />
+        <Segmented
+          value={view.mode}
+          onChange={(v) => patchView({ mode: v })}
+          options={[
+            { key: "board", label: "Board", icon: LayoutGrid },
+            { key: "list", label: "List", icon: List },
+            { key: "calendar", label: "Calendar", icon: CalendarDays },
+          ]}
+        />
+        <Select value={view.platform} onValueChange={(v) => patchView({ platform: v })}>
+          <SelectTrigger className="h-9 w-[130px] text-xs">
             <SelectValue placeholder="Platform" />
           </SelectTrigger>
           <SelectContent>
@@ -230,8 +393,8 @@ function PipelinePage() {
             ))}
           </SelectContent>
         </Select>
-        <Select value={source} onValueChange={setSource}>
-          <SelectTrigger className="h-9 w-32 text-xs">
+        <Select value={view.source} onValueChange={(v) => patchView({ source: v })}>
+          <SelectTrigger className="h-9 w-[120px] text-xs">
             <SelectValue placeholder="Source" />
           </SelectTrigger>
           <SelectContent>
@@ -243,7 +406,56 @@ function PipelinePage() {
             ))}
           </SelectContent>
         </Select>
-      </div>
+        {view.mode === "board" && (
+          <Select value={view.swimlane} onValueChange={(v) => patchView({ swimlane: v as "none" | "creator" | "product" })}>
+            <SelectTrigger className="h-9 w-[140px] text-xs">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="none" className="text-xs">No swimlane</SelectItem>
+              <SelectItem value="creator" className="text-xs">Group: Creator</SelectItem>
+              <SelectItem value="product" className="text-xs">Group: Product</SelectItem>
+            </SelectContent>
+          </Select>
+        )}
+        <div className="ml-auto">
+          <ExportButton onClick={exportCsv} />
+        </div>
+      </Toolbar>
+
+      {selected.size > 0 && (
+        <div className="flex flex-wrap items-center gap-2 rounded-xl border border-primary/30 bg-primary/5 px-3 py-2">
+          <span className="text-xs font-medium">{selected.size} selected</span>
+          <Select onValueChange={(v) => bulkMut.mutate({ stage: v })}>
+            <SelectTrigger className="h-8 w-[150px] text-xs">
+              <SelectValue placeholder="Move to stage" />
+            </SelectTrigger>
+            <SelectContent>
+              {PIPELINE_STAGES.map((s) => (
+                <SelectItem key={s.key} value={s.key} className="text-xs">
+                  {s.label}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          <Select onValueChange={(v) => bulkMut.mutate({ creator_id: v === "none" ? null : v })}>
+            <SelectTrigger className="h-8 w-[150px] text-xs">
+              <SelectValue placeholder="Assign creator" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="none" className="text-xs">Unassign</SelectItem>
+              {(creatorsQ.data ?? []).map((c) => (
+                <SelectItem key={c.id} value={c.id} className="text-xs">
+                  {c.name}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          <Button variant="ghost" size="sm" className="ml-auto h-8" onClick={() => setSelected(new Set())}>
+            Clear
+          </Button>
+        </div>
+      )}
 
       {itemsQ.isLoading ? (
         <div className="grid gap-2 md:grid-cols-5">
@@ -251,98 +463,40 @@ function PipelinePage() {
             <Skeleton key={i} className="h-64 rounded-xl" />
           ))}
         </div>
+      ) : filtered.length === 0 ? (
+        <EmptyState
+          icon={KanbanSquare}
+          title="কোনো content নেই"
+          description="Intake থেকে product push করো, অথবা এখানে নতুন content piece যোগ করো।"
+          action={
+            <Button size="sm" onClick={() => setCreating(true)}>
+              <Plus className="mr-1.5 h-3.5 w-3.5" /> New content
+            </Button>
+          }
+        />
+      ) : view.mode === "board" ? (
+        <BoardView
+          items={filtered}
+          swimlane={view.swimlane}
+          stageCounts={stageCounts}
+          dragOver={dragOver}
+          setDragOver={setDragOver}
+          onDrop={dropOn}
+          creatorName={creatorName}
+          productName={productName}
+          cardProps={cardProps}
+        />
+      ) : view.mode === "list" ? (
+        <ListView
+          items={filtered}
+          productName={productName}
+          creatorName={creatorName}
+          selected={selected}
+          onToggle={toggleSel}
+          onOpen={setOpen}
+        />
       ) : (
-        <div className="flex snap-x gap-3 overflow-x-auto pb-2 md:grid md:grid-cols-5 md:overflow-visible">
-          {PIPELINE_STAGES.map((st) => {
-            const list = filtered.filter((i) => i.stage === st.key);
-            return (
-              <div
-                key={st.key}
-                className="w-[86vw] shrink-0 snap-start rounded-xl border bg-muted/30 p-2 md:w-auto"
-              >
-                <div className="mb-2 flex items-center justify-between px-1">
-                  <span className="text-xs font-semibold">{st.label}</span>
-                  <Badge variant="secondary" className="text-[10px]">
-                    {list.length}
-                  </Badge>
-                </div>
-                <div className="space-y-2">
-                  {list.map((i) => (
-                    <div
-                      key={i.id}
-                      className="rounded-lg border bg-card p-2.5 shadow-sm transition-colors hover:border-primary/40"
-                    >
-                      <button
-                        className="w-full text-left"
-                        onClick={() => setOpen(i)}
-                        type="button"
-                      >
-                        <p className="line-clamp-2 text-xs font-semibold">{i.title}</p>
-                        <p className="mt-0.5 truncate text-[10px] text-muted-foreground">
-                          {i.code} · {labelOf(CONTENT_TYPES, i.content_type)} ·{" "}
-                          {labelOf(PLATFORMS, i.platform)}
-                        </p>
-                        {i.product_id && productName.get(i.product_id) && (
-                          <p className="mt-1 truncate text-[10px] text-muted-foreground">
-                            📦 {productName.get(i.product_id)}
-                          </p>
-                        )}
-                        <div className="mt-1.5 flex flex-wrap items-center gap-1">
-                          <Badge variant="outline" className="text-[10px]">
-                            {labelOf(ITEM_STATUSES, i.status)}
-                          </Badge>
-                          {i.cost > 0 && (
-                            <Badge variant="outline" className="text-[10px]">
-                              {bdt(i.cost)}
-                            </Badge>
-                          )}
-                          {i.views > 0 && (
-                            <Badge variant="secondary" className="text-[10px]">
-                              {i.views.toLocaleString()} views
-                            </Badge>
-                          )}
-                        </div>
-                      </button>
-                      <div className="mt-2 flex items-center justify-between">
-                        <Button
-                          size="icon"
-                          variant="ghost"
-                          className="h-6 w-6"
-                          onClick={() => move(i, -1)}
-                        >
-                          <ChevronLeft className="h-3.5 w-3.5" />
-                        </Button>
-                        {i.video_url && (
-                          <a
-                            href={i.video_url}
-                            target="_blank"
-                            rel="noreferrer"
-                            className="text-muted-foreground hover:text-primary"
-                          >
-                            <Play className="h-3.5 w-3.5" />
-                          </a>
-                        )}
-                        <Button
-                          size="icon"
-                          variant="ghost"
-                          className="h-6 w-6"
-                          onClick={() => move(i, 1)}
-                        >
-                          <ChevronRight className="h-3.5 w-3.5" />
-                        </Button>
-                      </div>
-                    </div>
-                  ))}
-                  {list.length === 0 && (
-                    <p className="px-1 py-6 text-center text-[11px] text-muted-foreground">
-                      খালি
-                    </p>
-                  )}
-                </div>
-              </div>
-            );
-          })}
-        </div>
+        <CalendarView items={filtered} onOpen={setOpen} />
       )}
 
       <ItemSheet
@@ -462,9 +616,7 @@ function PipelinePage() {
                 <Label className="text-[11px]">Creator</Label>
                 <Select
                   value={draft.creator_id || "none"}
-                  onValueChange={(v) =>
-                    setDraft({ ...draft, creator_id: v === "none" ? "" : v })
-                  }
+                  onValueChange={(v) => setDraft({ ...draft, creator_id: v === "none" ? "" : v })}
                 >
                   <SelectTrigger className="h-9 text-xs">
                     <SelectValue />
@@ -524,6 +676,429 @@ function PipelinePage() {
   );
 }
 
+/* ---------------- Board ---------------- */
+
+type CardProps = {
+  productName: Map<string, string>;
+  creatorName: Map<string, string>;
+  selected: Set<string>;
+  onToggle: (id: string) => void;
+  onOpen: (i: ContentItem) => void;
+  onMove: (i: ContentItem, dir: -1 | 1) => void;
+  onDragStart: (id: string) => void;
+};
+
+function BoardView({
+  items,
+  swimlane,
+  stageCounts,
+  dragOver,
+  setDragOver,
+  onDrop,
+  creatorName,
+  productName,
+  cardProps,
+}: {
+  items: ContentItem[];
+  swimlane: "none" | "creator" | "product";
+  stageCounts: Map<string, number>;
+  dragOver: string | null;
+  setDragOver: (v: string | null) => void;
+  onDrop: (stage: string) => void;
+  creatorName: Map<string, string>;
+  productName: Map<string, string>;
+  cardProps: CardProps;
+}) {
+  const lanes = useMemo(() => {
+    if (swimlane === "none") return [{ key: "all", label: "", items }];
+    const m = new Map<string, ContentItem[]>();
+    for (const i of items) {
+      const id = swimlane === "creator" ? i.creator_id : i.product_id;
+      const label =
+        id == null
+          ? "Unassigned"
+          : swimlane === "creator"
+            ? (creatorName.get(id) ?? "Unknown creator")
+            : (productName.get(id) ?? "Unknown product");
+      const arr = m.get(label) ?? [];
+      arr.push(i);
+      m.set(label, arr);
+    }
+    return [...m.entries()]
+      .sort((a, b) => b[1].length - a[1].length)
+      .map(([label, list]) => ({ key: label, label, items: list }));
+  }, [items, swimlane, creatorName, productName]);
+
+  return (
+    <div className="space-y-4">
+      {lanes.map((lane) => (
+        <div key={lane.key} className="space-y-2">
+          {lane.label && (
+            <div className="flex items-center gap-2">
+              <Users className="h-3.5 w-3.5 text-muted-foreground" />
+              <p className="text-xs font-semibold">{lane.label}</p>
+              <Badge variant="secondary" className="text-[10px]">
+                {lane.items.length}
+              </Badge>
+            </div>
+          )}
+          <div className="flex snap-x gap-3 overflow-x-auto pb-2 md:grid md:grid-cols-5 md:overflow-visible">
+            {PIPELINE_STAGES.map((st) => {
+              const list = lane.items.filter((i) => i.stage === st.key);
+              const dropKey = `${lane.key}:${st.key}`;
+              return (
+                <div
+                  key={st.key}
+                  onDragOver={(e) => {
+                    e.preventDefault();
+                    setDragOver(dropKey);
+                  }}
+                  onDragLeave={() => setDragOver(null)}
+                  onDrop={(e) => {
+                    e.preventDefault();
+                    onDrop(st.key);
+                  }}
+                  className={cn(
+                    "w-[86vw] shrink-0 snap-start rounded-xl border border-border/60 bg-muted/25 p-2 transition-colors md:w-auto",
+                    dragOver === dropKey && "border-primary/50 bg-primary/5 ring-1 ring-primary/20",
+                  )}
+                >
+                  <div className="mb-2 flex items-center justify-between px-1">
+                    <span className="text-xs font-semibold">{st.label}</span>
+                    <Badge variant="secondary" className="text-[10px] tabular-nums">
+                      {swimlane === "none" ? (stageCounts.get(st.key) ?? 0) : list.length}
+                    </Badge>
+                  </div>
+                  <div className="space-y-2">
+                    {list.map((i) => (
+                      <PipelineCard key={i.id} item={i} {...cardProps} />
+                    ))}
+                    {list.length === 0 && (
+                      <p className="px-1 py-6 text-center text-[11px] text-muted-foreground">খালি</p>
+                    )}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+function PipelineCard({
+  item: i,
+  productName,
+  creatorName,
+  selected,
+  onToggle,
+  onOpen,
+  onMove,
+  onDragStart,
+}: CardProps & { item: ContentItem }) {
+  const due = daysUntil(i.due_date);
+  const done = i.stage === "published" || i.stage === "performance";
+  const overdue = !done && due != null && due < 0;
+  const isSel = selected.has(i.id);
+
+  return (
+    <div
+      draggable
+      onDragStart={() => onDragStart(i.id)}
+      className={cn(
+        "group cursor-grab rounded-lg border bg-card p-2.5 shadow-sm transition-all hover:-translate-y-0.5 hover:border-primary/40 hover:shadow-md active:cursor-grabbing",
+        overdue ? "border-destructive/40" : "border-border/70",
+        isSel && "ring-1 ring-primary/40",
+      )}
+    >
+      <div className="flex items-start gap-2">
+        <Checkbox
+          checked={isSel}
+          onCheckedChange={() => onToggle(i.id)}
+          className="mt-0.5 h-3.5 w-3.5"
+        />
+        <button className="min-w-0 flex-1 text-left" onClick={() => onOpen(i)} type="button">
+          <p className="line-clamp-2 text-xs font-semibold">{i.title}</p>
+          <p className="mt-0.5 truncate text-[10px] text-muted-foreground">
+            {i.code} · {labelOf(CONTENT_TYPES, i.content_type)} · {labelOf(PLATFORMS, i.platform)}
+          </p>
+          {i.product_id && productName.get(i.product_id) && (
+            <p className="mt-1 truncate text-[10px] text-muted-foreground">
+              📦 {productName.get(i.product_id)}
+            </p>
+          )}
+          {i.creator_id && creatorName.get(i.creator_id) && (
+            <p className="truncate text-[10px] text-muted-foreground">
+              🎬 {creatorName.get(i.creator_id)}
+            </p>
+          )}
+          <div className="mt-1.5 flex flex-wrap items-center gap-1">
+            <Badge variant="outline" className="text-[10px]">
+              {labelOf(ITEM_STATUSES, i.status)}
+            </Badge>
+            {i.cost > 0 && (
+              <Badge variant="outline" className="text-[10px]">
+                {bdt(i.cost)}
+              </Badge>
+            )}
+            {i.views > 0 && (
+              <Badge variant="secondary" className="text-[10px]">
+                {fmtNum(i.views)} views
+              </Badge>
+            )}
+            {due != null && !done && (
+              <Pill tone={overdue ? "bad" : due <= 2 ? "warn" : "default"}>
+                <Clock className="h-3 w-3" />
+                {overdue ? `${Math.abs(due)}d late` : `${due}d left`}
+              </Pill>
+            )}
+          </div>
+        </button>
+        <GripVertical className="mt-0.5 h-3.5 w-3.5 shrink-0 text-muted-foreground/40 opacity-0 transition-opacity group-hover:opacity-100" />
+      </div>
+      <div className="mt-2 flex items-center justify-between">
+        <Button size="icon" variant="ghost" className="h-6 w-6" onClick={() => onMove(i, -1)}>
+          <ChevronLeft className="h-3.5 w-3.5" />
+        </Button>
+        {i.video_url && (
+          <a
+            href={i.video_url}
+            target="_blank"
+            rel="noreferrer"
+            className="text-muted-foreground hover:text-primary"
+          >
+            <Play className="h-3.5 w-3.5" />
+          </a>
+        )}
+        <Button size="icon" variant="ghost" className="h-6 w-6" onClick={() => onMove(i, 1)}>
+          <ChevronRight className="h-3.5 w-3.5" />
+        </Button>
+      </div>
+    </div>
+  );
+}
+
+/* ---------------- List ---------------- */
+
+function ListView({
+  items,
+  productName,
+  creatorName,
+  selected,
+  onToggle,
+  onOpen,
+}: {
+  items: ContentItem[];
+  productName: Map<string, string>;
+  creatorName: Map<string, string>;
+  selected: Set<string>;
+  onToggle: (id: string) => void;
+  onOpen: (i: ContentItem) => void;
+}) {
+  const rows = sortBy(items, (i) => i.due_date ?? "9999", "asc");
+  return (
+    <div className="overflow-hidden rounded-xl border border-border/70 bg-card">
+      <div className="hidden grid-cols-[28px_1.6fr_1fr_100px_100px_90px_90px_90px] gap-2 border-b bg-muted/40 px-3 py-2 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground md:grid">
+        <span />
+        <span>Content</span>
+        <span>Product / creator</span>
+        <span>Stage</span>
+        <span>Status</span>
+        <span>Due</span>
+        <span className="text-right">Cost</span>
+        <span className="text-right">Views</span>
+      </div>
+      <div className="divide-y divide-border/60">
+        {rows.map((i) => {
+          const due = daysUntil(i.due_date);
+          const done = i.stage === "published" || i.stage === "performance";
+          const overdue = !done && due != null && due < 0;
+          return (
+            <div
+              key={i.id}
+              className="grid grid-cols-[28px_1fr] gap-2 px-3 py-2 text-xs transition-colors hover:bg-muted/40 md:grid-cols-[28px_1.6fr_1fr_100px_100px_90px_90px_90px] md:items-center"
+            >
+              <Checkbox
+                checked={selected.has(i.id)}
+                onCheckedChange={() => onToggle(i.id)}
+                className="h-3.5 w-3.5"
+              />
+              <button className="min-w-0 text-left" onClick={() => onOpen(i)} type="button">
+                <p className="truncate font-medium">{i.title}</p>
+                <p className="truncate text-[10px] text-muted-foreground">
+                  {i.code} · {labelOf(PLATFORMS, i.platform)}
+                </p>
+              </button>
+              <span className="truncate text-[11px] text-muted-foreground">
+                {(i.product_id ? productName.get(i.product_id) : null) ?? "—"}
+                {i.creator_id ? ` · ${creatorName.get(i.creator_id) ?? ""}` : ""}
+              </span>
+              <span className="hidden md:block">
+                <Badge variant="outline" className="text-[10px]">
+                  {labelOf(PIPELINE_STAGES, i.stage)}
+                </Badge>
+              </span>
+              <span className="hidden text-[11px] md:block">{labelOf(ITEM_STATUSES, i.status)}</span>
+              <span className={cn("hidden text-[11px] md:block", overdue && "font-semibold text-destructive")}>
+                {i.due_date ?? "—"}
+              </span>
+              <span className="hidden text-right text-[11px] tabular-nums md:block">{bdt(i.cost)}</span>
+              <span className="hidden text-right text-[11px] tabular-nums md:block">{fmtNum(i.views)}</span>
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
+/* ---------------- Calendar ---------------- */
+
+function CalendarView({ items, onOpen }: { items: ContentItem[]; onOpen: (i: ContentItem) => void }) {
+  const [month, setMonth] = useState(() => {
+    const d = new Date();
+    return new Date(d.getFullYear(), d.getMonth(), 1);
+  });
+
+  const byDay = useMemo(() => {
+    const m = new Map<string, ContentItem[]>();
+    for (const i of items) {
+      if (!i.due_date) continue;
+      const key = i.due_date.slice(0, 10);
+      const arr = m.get(key) ?? [];
+      arr.push(i);
+      m.set(key, arr);
+    }
+    return m;
+  }, [items]);
+
+  const first = new Date(month.getFullYear(), month.getMonth(), 1);
+  const startPad = first.getDay();
+  const daysInMonth = new Date(month.getFullYear(), month.getMonth() + 1, 0).getDate();
+  const cells: (Date | null)[] = [
+    ...Array.from({ length: startPad }, () => null),
+    ...Array.from({ length: daysInMonth }, (_, i) => new Date(month.getFullYear(), month.getMonth(), i + 1)),
+  ];
+  const todayKey = new Date().toISOString().slice(0, 10);
+  const undated = items.filter((i) => !i.due_date);
+
+  return (
+    <div className="space-y-3">
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-1">
+          <Button
+            size="icon"
+            variant="ghost"
+            className="h-8 w-8"
+            onClick={() => setMonth(new Date(month.getFullYear(), month.getMonth() - 1, 1))}
+          >
+            <ChevronLeft className="h-4 w-4" />
+          </Button>
+          <p className="min-w-[140px] text-center text-sm font-semibold">
+            {month.toLocaleDateString("en-US", { month: "long", year: "numeric" })}
+          </p>
+          <Button
+            size="icon"
+            variant="ghost"
+            className="h-8 w-8"
+            onClick={() => setMonth(new Date(month.getFullYear(), month.getMonth() + 1, 1))}
+          >
+            <ChevronRight className="h-4 w-4" />
+          </Button>
+        </div>
+        <Button
+          variant="outline"
+          size="sm"
+          className="h-8"
+          onClick={() => {
+            const d = new Date();
+            setMonth(new Date(d.getFullYear(), d.getMonth(), 1));
+          }}
+        >
+          Today
+        </Button>
+      </div>
+
+      <div className="overflow-hidden rounded-xl border border-border/70 bg-card">
+        <div className="grid grid-cols-7 border-b bg-muted/40 text-center text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
+          {["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"].map((d) => (
+            <span key={d} className="py-1.5">
+              {d}
+            </span>
+          ))}
+        </div>
+        <div className="grid grid-cols-7">
+          {cells.map((d, idx) => {
+            const key = d ? `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}` : "";
+            const list = d ? (byDay.get(key) ?? []) : [];
+            return (
+              <div
+                key={idx}
+                className={cn(
+                  "min-h-[86px] border-b border-r border-border/50 p-1",
+                  !d && "bg-muted/20",
+                  key === todayKey && "bg-primary/5",
+                )}
+              >
+                {d && (
+                  <>
+                    <p
+                      className={cn(
+                        "mb-1 text-[10px] font-semibold tabular-nums",
+                        key === todayKey ? "text-primary" : "text-muted-foreground",
+                      )}
+                    >
+                      {d.getDate()}
+                    </p>
+                    <div className="space-y-1">
+                      {list.slice(0, 3).map((i) => (
+                        <button
+                          key={i.id}
+                          type="button"
+                          onClick={() => onOpen(i)}
+                          className="block w-full truncate rounded bg-primary/10 px-1 py-0.5 text-left text-[10px] font-medium text-primary hover:bg-primary/20"
+                        >
+                          {i.title}
+                        </button>
+                      ))}
+                      {list.length > 3 && (
+                        <p className="px-1 text-[9px] text-muted-foreground">+{list.length - 3} more</p>
+                      )}
+                    </div>
+                  </>
+                )}
+              </div>
+            );
+          })}
+        </div>
+      </div>
+
+      {undated.length > 0 && (
+        <div className="rounded-xl border border-dashed border-border/70 p-3">
+          <p className="mb-2 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
+            Due date নেই ({undated.length})
+          </p>
+          <div className="flex flex-wrap gap-1.5">
+            {undated.map((i) => (
+              <button
+                key={i.id}
+                type="button"
+                onClick={() => onOpen(i)}
+                className="rounded-full border border-border/70 px-2.5 py-1 text-[11px] hover:border-primary/40 hover:text-primary"
+              >
+                {i.title}
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+/* ---------------- Detail sheet ---------------- */
+
 function ItemSheet({
   item,
   onClose,
@@ -550,6 +1125,15 @@ function ItemSheet({
 
   const set = (patch: Partial<ContentItem>) => setD({ ...d, ...patch });
   const words = (d.script ?? "").trim() ? (d.script ?? "").trim().split(/\s+/).length : 0;
+  const checklist = [
+    { label: "Hook", ok: !!d.hook?.trim() },
+    { label: "Script", ok: words >= 20 },
+    { label: "Caption", ok: !!d.caption?.trim() },
+    { label: "CTA", ok: !!d.cta?.trim() },
+    { label: "Hashtags", ok: !!d.hashtags?.trim() },
+  ];
+  const ready = checklist.filter((c) => c.ok).length;
+  const er = engagementRate(d);
 
   return (
     <Sheet open onOpenChange={(o) => !o && onClose()}>
@@ -557,13 +1141,13 @@ function ItemSheet({
         <SheetHeader>
           <SheetTitle className="text-base">{d.title}</SheetTitle>
           <p className="text-[11px] text-muted-foreground">
-            {d.code} · {productLabel ?? "No product"}
+            {d.code} · {productLabel ?? "No product"} · {labelOf(PIPELINE_STAGES, d.stage)}
           </p>
         </SheetHeader>
         <Tabs defaultValue="script" className="py-3">
           <TabsList className="grid w-full grid-cols-3">
             <TabsTrigger value="script" className="text-xs">
-              Script
+              Script Studio
             </TabsTrigger>
             <TabsTrigger value="prod" className="text-xs">
               Production
@@ -574,21 +1158,30 @@ function ItemSheet({
           </TabsList>
 
           <TabsContent value="script" className="space-y-3 pt-3">
+            <div className="rounded-xl border border-border/70 bg-muted/30 p-2.5">
+              <div className="mb-1.5 flex items-center justify-between">
+                <p className="text-[11px] font-semibold">Readiness</p>
+                <span className="text-[11px] tabular-nums text-muted-foreground">
+                  {ready}/{checklist.length}
+                </span>
+              </div>
+              <MiniBar value={ready} max={checklist.length} tone={ready === checklist.length ? "good" : "warn"} />
+              <div className="mt-2 flex flex-wrap gap-1.5">
+                {checklist.map((c) => (
+                  <Pill key={c.label} tone={c.ok ? "good" : "default"}>
+                    {c.ok ? <CheckCircle2 className="h-3 w-3" /> : <Clock className="h-3 w-3" />}
+                    {c.label}
+                  </Pill>
+                ))}
+              </div>
+            </div>
             <div>
               <Label className="text-[11px]">Hook</Label>
-              <Input
-                value={d.hook ?? ""}
-                onChange={(e) => set({ hook: e.target.value })}
-                className="h-9"
-              />
+              <Input value={d.hook ?? ""} onChange={(e) => set({ hook: e.target.value })} className="h-9" />
             </div>
             <div>
               <Label className="text-[11px]">Angle</Label>
-              <Input
-                value={d.angle ?? ""}
-                onChange={(e) => set({ angle: e.target.value })}
-                className="h-9"
-              />
+              <Input value={d.angle ?? ""} onChange={(e) => set({ angle: e.target.value })} className="h-9" />
             </div>
             <div>
               <div className="flex items-center justify-between">
@@ -600,7 +1193,7 @@ function ItemSheet({
               <Textarea
                 value={d.script ?? ""}
                 onChange={(e) => set({ script: e.target.value })}
-                className="min-h-40 text-sm"
+                className="min-h-48 text-sm leading-relaxed"
               />
             </div>
             <div>
@@ -614,11 +1207,7 @@ function ItemSheet({
             <div className="grid grid-cols-2 gap-3">
               <div>
                 <Label className="text-[11px]">CTA</Label>
-                <Input
-                  value={d.cta ?? ""}
-                  onChange={(e) => set({ cta: e.target.value })}
-                  className="h-9"
-                />
+                <Input value={d.cta ?? ""} onChange={(e) => set({ cta: e.target.value })} className="h-9" />
               </div>
               <div>
                 <Label className="text-[11px]">Hashtags</Label>
@@ -732,6 +1321,7 @@ function ItemSheet({
                 className="h-9"
               />
             </div>
+            {d.video_url && <VideoEmbed url={d.video_url} />}
             <div>
               <Label className="text-[11px]">Revision note</Label>
               <Textarea
@@ -772,10 +1362,17 @@ function ItemSheet({
                 </div>
               ))}
             </div>
-            <p className="rounded-lg border bg-muted/40 p-2 text-[11px] text-muted-foreground">
-              Cost per order:{" "}
-              {d.attributed_orders > 0 ? bdt(d.cost / d.attributed_orders) : "—"}
-            </p>
+            <div className="grid grid-cols-3 gap-2">
+              <Metric label="Engagement" value={`${(er * 100).toFixed(1)}%`} />
+              <Metric
+                label="Cost / order"
+                value={costPerOrder(d.cost, d.attributed_orders) != null ? bdt(costPerOrder(d.cost, d.attributed_orders)!) : "—"}
+              />
+              <Metric
+                label="Cost / 1k views"
+                value={d.views > 0 ? bdt((d.cost / d.views) * 1000) : "—"}
+              />
+            </div>
           </TabsContent>
         </Tabs>
         <div className="sticky bottom-0 flex gap-2 border-t bg-background py-3">
@@ -815,5 +1412,55 @@ function ItemSheet({
         </div>
       </SheetContent>
     </Sheet>
+  );
+}
+
+function Metric({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="rounded-lg border border-border/70 bg-muted/30 px-2 py-1.5 text-center">
+      <p className="text-[9px] font-medium uppercase tracking-wider text-muted-foreground">{label}</p>
+      <p className="text-sm font-bold tabular-nums">{value}</p>
+    </div>
+  );
+}
+
+function VideoEmbed({ url }: { url: string }) {
+  const src = useMemo(() => {
+    try {
+      const u = new URL(url);
+      if (u.hostname.includes("youtube.com")) {
+        const v = u.searchParams.get("v");
+        return v ? `https://www.youtube.com/embed/${v}` : null;
+      }
+      if (u.hostname === "youtu.be") return `https://www.youtube.com/embed${u.pathname}`;
+      if (u.hostname.includes("vimeo.com")) return `https://player.vimeo.com/video${u.pathname}`;
+      return null;
+    } catch {
+      return null;
+    }
+  }, [url]);
+
+  if (/\.(mp4|webm|mov)$/i.test(url)) {
+    return <video src={url} controls className="w-full rounded-xl border" />;
+  }
+  if (src) {
+    return (
+      <iframe
+        src={src}
+        title="Content preview"
+        allowFullScreen
+        className="aspect-video w-full rounded-xl border"
+      />
+    );
+  }
+  return (
+    <a
+      href={url}
+      target="_blank"
+      rel="noreferrer"
+      className="flex items-center gap-2 rounded-xl border border-border/70 bg-muted/30 px-3 py-2 text-xs text-primary hover:underline"
+    >
+      <Play className="h-3.5 w-3.5" /> Open video
+    </a>
   );
 }

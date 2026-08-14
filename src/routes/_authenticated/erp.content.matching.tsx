@@ -2,10 +2,20 @@ import { createFileRoute } from "@tanstack/react-router";
 import { useMemo, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
-import { Network, Plus } from "lucide-react";
+import { Network, Plus, Truck, PackageCheck, ShoppingCart, Coins, Table2, LayoutGrid } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useBrand } from "@/contexts/brand-context";
-import { ContentKpi, ContentPageHeader } from "@/components/erp/content/content-shell";
+import {
+  ContentHero,
+  EmptyState,
+  ExportButton,
+  Kpi,
+  KpiStrip,
+  SearchBox,
+  Segmented,
+  Toolbar,
+  downloadCsv,
+} from "@/components/erp/content/content-ui";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -66,6 +76,8 @@ function MatchingPage() {
   const qc = useQueryClient();
   const [creating, setCreating] = useState(false);
   const [draft, setDraft] = useState(empty);
+  const [search, setSearch] = useState("");
+  const [mode, setMode] = useState<"table" | "matrix">("table");
 
   const shipQ = useQuery({
     queryKey: ["content-shipments", brandIds],
@@ -145,6 +157,16 @@ function MatchingPage() {
     return Array.from(m.values()).sort((a, b) => b.content - a.content);
   }, [shipments, itemsQ.data]);
 
+  const visiblePairs = useMemo(() => {
+    const q = search.trim().toLowerCase();
+    if (!q) return pairs;
+    return pairs.filter(
+      (p) =>
+        (creatorName.get(p.creator_id) ?? "").toLowerCase().includes(q) ||
+        (p.product_id ? (productName.get(p.product_id) ?? "") : "").toLowerCase().includes(q),
+    );
+  }, [pairs, search, creatorName, productName]);
+
   const createMut = useMutation({
     mutationFn: async () => {
       if (!draft.creator_id) throw new Error("Creator select করো");
@@ -172,37 +194,107 @@ function MatchingPage() {
 
   return (
     <div className="mx-auto max-w-[1500px] space-y-4 p-3 md:p-6">
-      <ContentPageHeader
+      <ContentHero
         icon={Network}
         title="Product ↔ Creator"
-        subtitle="কোন creator কোন product নিয়ে কাজ করছে, কী ship হয়েছে, কী content এসেছে"
+        subtitle="কোন creator কোন product নিয়ে কাজ করছে, কী ship হয়েছে আর কী content ফেরত এসেছে।"
         actions={
-          <Button size="sm" onClick={() => setCreating(true)}>
+          <Button size="sm" className="h-9" onClick={() => setCreating(true)}>
             <Plus className="mr-1.5 h-3.5 w-3.5" /> Log shipment
           </Button>
         }
-      />
+      >
+        <KpiStrip cols={5}>
+          <Kpi label="Active pairs" value={pairs.length} icon={Network} />
+          <Kpi label="Shipments" value={shipments.length} icon={Truck} />
+          <Kpi
+            label="Pending delivery"
+            value={shipments.filter((s) => s.status !== "delivered").length}
+            icon={PackageCheck}
+            tone="warn"
+          />
+          <Kpi
+            label="Attributed orders"
+            value={pairs.reduce((s, p) => s + p.orders, 0)}
+            icon={ShoppingCart}
+            tone="good"
+          />
+          <Kpi label="Sample cost" value={bdt(shipments.reduce((s, x) => s + x.cost, 0))} icon={Coins} />
+        </KpiStrip>
+      </ContentHero>
 
-      <div className="grid grid-cols-2 gap-2 md:grid-cols-4">
-        <ContentKpi label="Active pairs" value={pairs.length} />
-        <ContentKpi label="Shipments" value={shipments.length} />
-        <ContentKpi
-          label="Pending delivery"
-          value={shipments.filter((s) => s.status !== "delivered").length}
-          tone="warn"
+      <Toolbar>
+        <SearchBox value={search} onChange={setSearch} placeholder="Creator বা product…" />
+        <Segmented
+          value={mode}
+          onChange={setMode}
+          options={[
+            { key: "table", label: "Table", icon: Table2 },
+            { key: "matrix", label: "Matrix", icon: LayoutGrid },
+          ]}
         />
-        <ContentKpi
-          label="Sample cost"
-          value={bdt(shipments.reduce((s, x) => s + x.cost, 0))}
-        />
-      </div>
+        <div className="ml-auto">
+          <ExportButton
+            onClick={() =>
+              downloadCsv("product-creator.csv", [
+                ["Creator", "Product", "Shipped", "Ship status", "Content", "Live", "Orders", "Cost"],
+                ...visiblePairs.map((p) => [
+                  creatorName.get(p.creator_id) ?? "",
+                  p.product_id ? (productName.get(p.product_id) ?? "") : "",
+                  p.shipped,
+                  p.shipStatus,
+                  p.content,
+                  p.published,
+                  p.orders,
+                  p.cost,
+                ]),
+              ])
+            }
+          />
+        </div>
+      </Toolbar>
 
       {shipQ.isLoading ? (
         <Skeleton className="h-64 rounded-xl" />
-      ) : pairs.length === 0 ? (
-        <p className="rounded-xl border border-dashed p-8 text-center text-sm text-muted-foreground">
-          এখনো কোনো creator–product pair নেই।
-        </p>
+      ) : visiblePairs.length === 0 ? (
+        <EmptyState
+          icon={Network}
+          title="এখনো কোনো creator–product pair নেই"
+          description="Creator-কে sample পাঠালে বা content assign করলে pair এখানে দেখাবে।"
+        />
+      ) : mode === "matrix" ? (
+        <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
+          {visiblePairs.map((p) => (
+            <div
+              key={p.key}
+              className="rounded-xl border border-border/70 bg-card p-3 shadow-sm transition-all hover:-translate-y-0.5 hover:border-primary/40"
+            >
+              <p className="truncate text-sm font-semibold">{creatorName.get(p.creator_id) ?? "—"}</p>
+              <p className="truncate text-[11px] text-muted-foreground">
+                {p.product_id ? (productName.get(p.product_id) ?? "—") : "No product"}
+              </p>
+              <div className="mt-2 grid grid-cols-4 gap-1.5 text-center">
+                {[
+                  ["Ship", String(p.shipped)],
+                  ["Content", String(p.content)],
+                  ["Live", String(p.published)],
+                  ["Orders", String(p.orders)],
+                ].map(([l, v]) => (
+                  <div key={l} className="rounded-lg bg-muted/50 px-1.5 py-1">
+                    <p className="text-[9px] uppercase text-muted-foreground">{l}</p>
+                    <p className="text-xs font-semibold tabular-nums">{v}</p>
+                  </div>
+                ))}
+              </div>
+              <div className="mt-2 flex items-center justify-between text-[10px] text-muted-foreground">
+                <Badge variant="outline" className="text-[10px]">
+                  {p.shipStatus === "—" ? "—" : labelOf(SHIPMENT_STATUSES, p.shipStatus)}
+                </Badge>
+                <span>{bdt(p.cost)}</span>
+              </div>
+            </div>
+          ))}
+        </div>
       ) : (
         <div className="overflow-x-auto rounded-xl border">
           <table className="w-full text-sm">
@@ -219,7 +311,7 @@ function MatchingPage() {
               </tr>
             </thead>
             <tbody>
-              {pairs.map((p) => (
+              {visiblePairs.map((p) => (
                 <tr key={p.key} className="border-t">
                   <td className="px-3 py-2 font-medium">
                     {creatorName.get(p.creator_id) ?? "—"}

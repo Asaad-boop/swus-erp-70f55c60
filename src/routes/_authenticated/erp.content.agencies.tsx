@@ -2,10 +2,20 @@ import { createFileRoute } from "@tanstack/react-router";
 import { useMemo, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
-import { Building2, Plus } from "lucide-react";
+import { Building2, Plus, Coins, FileVideo, ShoppingCart, Percent } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useBrand } from "@/contexts/brand-context";
-import { ContentKpi, ContentPageHeader } from "@/components/erp/content/content-shell";
+import {
+  ContentHero,
+  EmptyState,
+  ExportButton,
+  Kpi,
+  KpiStrip,
+  Pill,
+  SearchBox,
+  Toolbar,
+  downloadCsv,
+} from "@/components/erp/content/content-ui";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -52,6 +62,7 @@ function AgenciesPage() {
   const qc = useQueryClient();
   const [creating, setCreating] = useState(false);
   const [draft, setDraft] = useState(empty);
+  const [search, setSearch] = useState("");
 
   const agenciesQ = useQuery({
     queryKey: ["content-agencies", brandIds],
@@ -77,6 +88,19 @@ function AgenciesPage() {
 
   const agencies = agenciesQ.data ?? [];
   const retainer = agencies.reduce((s, a) => s + a.retainer_fee, 0);
+  const filtered = useMemo(() => {
+    const q = search.trim().toLowerCase();
+    if (!q) return agencies;
+    return agencies.filter(
+      (a) =>
+        a.name.toLowerCase().includes(q) ||
+        (a.contact_person ?? "").toLowerCase().includes(q) ||
+        (a.email ?? "").toLowerCase().includes(q),
+    );
+  }, [agencies, search]);
+  const totalPieces = Array.from(perf.values()).reduce((s, p) => s + p.pieces, 0);
+  const totalOrders = Array.from(perf.values()).reduce((s, p) => s + p.orders, 0);
+  const totalSpend = Array.from(perf.values()).reduce((s, p) => s + p.spend, 0);
 
   const createMut = useMutation({
     mutationFn: async () => {
@@ -105,25 +129,56 @@ function AgenciesPage() {
 
   return (
     <div className="mx-auto max-w-[1500px] space-y-4 p-3 md:p-6">
-      <ContentPageHeader
+      <ContentHero
         icon={Building2}
         title="Agency Partners"
-        subtitle="Production ও media buying agency — retainer, commission আর output"
+        subtitle="Production ও media buying agency — retainer, commission আর delivered output একসাথে।"
         actions={
-          <Button size="sm" onClick={() => setCreating(true)}>
+          <Button size="sm" className="h-9" onClick={() => setCreating(true)}>
             <Plus className="mr-1.5 h-3.5 w-3.5" /> Add agency
           </Button>
         }
-      />
+      >
+        <KpiStrip cols={5}>
+          <Kpi label="Agencies" value={agencies.length} icon={Building2} />
+          <Kpi label="Monthly retainer" value={bdt(retainer)} icon={Coins} tone="warn" />
+          <Kpi label="Agency content" value={totalPieces} icon={FileVideo} />
+          <Kpi label="Attributed orders" value={totalOrders} icon={ShoppingCart} tone="good" />
+          <Kpi
+            label="Cost / order"
+            value={totalOrders > 0 ? bdt(totalSpend / totalOrders) : "—"}
+            icon={Percent}
+          />
+        </KpiStrip>
+      </ContentHero>
 
-      <div className="grid grid-cols-2 gap-2 md:grid-cols-3">
-        <ContentKpi label="Agencies" value={agencies.length} />
-        <ContentKpi label="Monthly retainer" value={bdt(retainer)} />
-        <ContentKpi
-          label="Agency content"
-          value={Array.from(perf.values()).reduce((s, p) => s + p.pieces, 0)}
-        />
-      </div>
+      <Toolbar>
+        <SearchBox value={search} onChange={setSearch} placeholder="Agency, contact…" />
+        <div className="ml-auto">
+          <ExportButton
+            onClick={() =>
+              downloadCsv("agencies.csv", [
+                ["Agency", "Contact", "Phone", "Email", "Status", "Retainer", "Commission %", "Content", "Spend", "Orders"],
+                ...filtered.map((a) => {
+                  const p = perf.get(a.id);
+                  return [
+                    a.name,
+                    a.contact_person ?? "",
+                    a.phone ?? "",
+                    a.email ?? "",
+                    a.status,
+                    a.retainer_fee,
+                    a.commission_pct,
+                    p?.pieces ?? 0,
+                    p?.spend ?? 0,
+                    p?.orders ?? 0,
+                  ];
+                }),
+              ])
+            }
+          />
+        </div>
+      </Toolbar>
 
       {agenciesQ.isLoading ? (
         <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
@@ -131,16 +186,21 @@ function AgenciesPage() {
             <Skeleton key={i} className="h-28 rounded-xl" />
           ))}
         </div>
-      ) : agencies.length === 0 ? (
-        <p className="rounded-xl border border-dashed p-8 text-center text-sm text-muted-foreground">
-          কোনো agency নেই।
-        </p>
+      ) : filtered.length === 0 ? (
+        <EmptyState
+          icon={Building2}
+          title="কোনো agency নেই"
+          description="Production বা media buying partner যোগ করলে তাদের retainer আর output এখানে rollup হবে।"
+        />
       ) : (
         <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
-          {agencies.map((a) => {
+          {filtered.map((a) => {
             const p = perf.get(a.id);
             return (
-              <div key={a.id} className="rounded-xl border bg-card p-3 shadow-sm">
+              <div
+                key={a.id}
+                className="rounded-xl border border-border/70 bg-card p-3 shadow-sm transition-all hover:-translate-y-0.5 hover:border-primary/40 hover:shadow-md"
+              >
                 <div className="flex items-start justify-between gap-2">
                   <div className="min-w-0">
                     <p className="truncate text-sm font-semibold">{a.name}</p>
@@ -158,9 +218,16 @@ function AgenciesPage() {
                     <Badge variant="outline">{a.commission_pct}% commission</Badge>
                   )}
                 </div>
-                <p className="mt-2 text-[10px] text-muted-foreground">
-                  {p?.pieces ?? 0} content · {bdt(p?.spend ?? 0)} spend · {p?.orders ?? 0} orders
-                </p>
+                <div className="mt-2 grid grid-cols-3 gap-1.5">
+                  <Cell label="Content" value={String(p?.pieces ?? 0)} />
+                  <Cell label="Spend" value={bdt(p?.spend ?? 0)} />
+                  <Cell label="Orders" value={String(p?.orders ?? 0)} />
+                </div>
+                {(p?.orders ?? 0) > 0 && (
+                  <div className="mt-2">
+                    <Pill tone="good">Cost/order {bdt((p!.spend + a.retainer_fee) / p!.orders)}</Pill>
+                  </div>
+                )}
               </div>
             );
           })}
@@ -233,6 +300,15 @@ function AgenciesPage() {
           </div>
         </SheetContent>
       </Sheet>
+    </div>
+  );
+}
+
+function Cell({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="rounded-lg bg-muted/50 px-2 py-1.5">
+      <p className="text-[9px] uppercase tracking-wide text-muted-foreground">{label}</p>
+      <p className="text-xs font-semibold tabular-nums">{value}</p>
     </div>
   );
 }
