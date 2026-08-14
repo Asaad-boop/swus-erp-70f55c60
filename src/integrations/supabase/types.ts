@@ -1182,6 +1182,7 @@ export type Database = {
           caption: string | null
           code: string
           comments: number
+          content_style: string | null
           content_type: string
           cost: number
           created_at: string
@@ -1220,6 +1221,7 @@ export type Database = {
           caption?: string | null
           code?: string
           comments?: number
+          content_style?: string | null
           content_type?: string
           cost?: number
           created_at?: string
@@ -1258,6 +1260,7 @@ export type Database = {
           caption?: string | null
           code?: string
           comments?: number
+          content_style?: string | null
           content_type?: string
           cost?: number
           created_at?: string
@@ -1439,6 +1442,7 @@ export type Database = {
         Row: {
           brand_id: string | null
           budget: number
+          content_style: string | null
           created_at: string
           created_by: string | null
           id: string
@@ -1455,6 +1459,7 @@ export type Database = {
         Insert: {
           brand_id?: string | null
           budget?: number
+          content_style?: string | null
           created_at?: string
           created_by?: string | null
           id?: string
@@ -1471,6 +1476,7 @@ export type Database = {
         Update: {
           brand_id?: string | null
           budget?: number
+          content_style?: string | null
           created_at?: string
           created_by?: string | null
           id?: string
