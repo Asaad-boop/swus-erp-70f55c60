@@ -15,6 +15,7 @@ import {
   Clapperboard,
   Repeat,
   Swords,
+  Chrome,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useGlobalSearch } from "@/components/erp/global-search";
@@ -140,6 +141,7 @@ const groups: Group[] = [
           { to: "/erp/hub/routines", label: "Routines & Calendar", icon: Repeat },
           { to: "/erp/hub/rivals", label: "Rival Pages", icon: Swords },
           { to: "/erp/hub/planning", label: "Monthly Projection", icon: BarChart3 },
+          { to: "/erp/extension", label: "Synq Extension", icon: Chrome },
         ],
       },
       {
