@@ -164,6 +164,7 @@ function SourcingPage() {
   const [tMax, setTMax] = useState("");
   const [search, setSearch] = useState("");
   const [stageFilter, setStageFilter] = useState<SourcingStage | "all">("all");
+  const [sortBy, setSortBy] = useState<"stage" | "age" | "due" | "quotes" | "cost">("stage");
 
   const ideasQ = useQuery({
     queryKey: ["hub-ideas", brandIds],
@@ -241,7 +242,7 @@ function SourcingPage() {
 
   const visible = useMemo(() => {
     const term = search.trim().toLowerCase();
-    return pipeline.filter((i) => {
+    const rows = pipeline.filter((i) => {
       if (stageFilter !== "all" && (stageOf.get(i.id) ?? "to_source") !== stageFilter) return false;
       if (!term) return true;
       return (
@@ -250,7 +251,30 @@ function SourcingPage() {
         (i.supplier_name ?? "").toLowerCase().includes(term)
       );
     });
-  }, [pipeline, stageFilter, stageOf, search]);
+    const ageOf = (i: HubIdea) =>
+      Date.now() - new Date(i.approved_at ?? i.created_at).getTime();
+    const dueOf = (i: HubIdea) =>
+      i.imp_po_id ? Number(posQ.data?.get(i.imp_po_id)?.due_bdt ?? 0) : 0;
+    const sorted = [...rows];
+    sorted.sort((a, b) => {
+      switch (sortBy) {
+        case "age":
+          return ageOf(b) - ageOf(a);
+        case "due":
+          return dueOf(b) - dueOf(a);
+        case "quotes":
+          return (quotesQ.data?.get(b.id)?.length ?? 0) - (quotesQ.data?.get(a.id)?.length ?? 0);
+        case "cost":
+          return (a.est_unit_cost || Infinity) - (b.est_unit_cost || Infinity);
+        default:
+          return (
+            STAGE_ORDER.indexOf(stageOf.get(a.id) ?? "to_source") -
+            STAGE_ORDER.indexOf(stageOf.get(b.id) ?? "to_source")
+          );
+      }
+    });
+    return sorted;
+  }, [pipeline, stageFilter, stageOf, search, sortBy, posQ.data, quotesQ.data]);
 
   const dueTotal = useMemo(() => {
     let t = 0;
@@ -434,13 +458,32 @@ function SourcingPage() {
         return;
       }
       if (poId) throw new Error("PO তৈরি হয়ে গেছে — আগের stage-এ ফেরানো যাবে না");
-      if (stage === "sourced" && !idea.selected_quote_id) {
-        throw new Error("Sourcing done করতে আগে একটা supplier quote select করুন");
-      }
       const patch: Record<string, unknown> = {
         status: stage === "to_source" ? "approved" : "sourcing",
       };
       if (stage === "to_source") patch.selected_quote_id = null;
+      if (stage === "sourced" && !idea.selected_quote_id) {
+        // Auto-pick the cheapest landed-cost quote so the user never gets stuck.
+        const qs = (quotesQ.data?.get(idea.id) ?? []).filter((q) => q.status !== "rejected");
+        if (qs.length === 0) {
+          throw new Error("এই product-এ কোনো supplier quote নেই — আগে একটা quote add করুন");
+        }
+        const best = [...qs].sort((a, b) => quoteLandedCost(a) - quoteLandedCost(b))[0]!;
+        await supabase
+          .from("hub_sourcing_quotes")
+          .update({ status: "selected" } as never)
+          .eq("id", best.id);
+        await supabase
+          .from("hub_sourcing_quotes")
+          .update({ status: "quoted" } as never)
+          .eq("idea_id", idea.id)
+          .neq("id", best.id)
+          .eq("status", "selected");
+        patch.selected_quote_id = best.id;
+        patch.supplier_name = best.supplier_name;
+        patch.supplier_url = best.supplier_url;
+        patch.est_unit_cost = quoteLandedCost(best);
+      }
       const { error } = await supabase
         .from("hub_product_ideas")
         .update(patch as never)
@@ -721,6 +764,18 @@ function SourcingPage() {
               placeholder="Search product / supplier…"
               className="h-8 w-full max-w-[240px] sm:ml-auto"
             />
+            <Select value={sortBy} onValueChange={(v) => setSortBy(v as typeof sortBy)}>
+              <SelectTrigger className="h-8 w-[150px]">
+                <SelectValue placeholder="Sort" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="stage">Sort: Stage</SelectItem>
+                <SelectItem value="age">Sort: Oldest first</SelectItem>
+                <SelectItem value="due">Sort: Due amount</SelectItem>
+                <SelectItem value="quotes">Sort: Most quotes</SelectItem>
+                <SelectItem value="cost">Sort: Lowest cost</SelectItem>
+              </SelectContent>
+            </Select>
           </div>
         </div>
       )}
@@ -858,6 +913,28 @@ function SourcingPage() {
                         },
                       ]}
                     />
+
+                    {(() => {
+                      const st = stageOf.get(selected.id) ?? "to_source";
+                      const hint =
+                        st === "to_source"
+                          ? "পরবর্তী ধাপ: supplier quote add করো (Add quote)।"
+                          : st === "sourcing"
+                            ? "পরবর্তী ধাপ: সেরা quote টা Select করো, নাহলে ⋯ মেনু থেকে Sourcing done দিলে সবচেয়ে কম landed cost auto select হবে।"
+                            : st === "sourced"
+                              ? "পরবর্তী ধাপ: Place order দিয়ে cargo agent সহ Purchase Order তৈরি করো।"
+                              : st === "ordered"
+                                ? "পরবর্তী ধাপ: মাল shipment-এ উঠলে ⋯ মেনু থেকে In transit করো।"
+                                : st === "in_transit"
+                                  ? "মাল পথে আছে — warehouse receive করলে Received auto হয়ে যাবে।"
+                                  : "সব ধাপ শেষ — stock ঢুকে গেছে।";
+                      return (
+                        <div className="flex items-start gap-2 rounded-lg border border-primary/25 bg-primary/5 p-2.5 text-[11px]">
+                          <Target className="mt-0.5 h-3.5 w-3.5 shrink-0 text-primary" />
+                          <span>{hint}</span>
+                        </div>
+                      );
+                    })()}
 
                     <div className="flex flex-wrap gap-1.5 text-xs">
                       <Badge variant="outline">
