@@ -131,7 +131,7 @@ export function SourcingTimeline({
 }) {
   const curIdx = STAGE_ORDER.indexOf(current);
   return (
-    <div className="rounded-lg border bg-muted/30 p-3">
+    <div className="rounded-xl border bg-gradient-to-b from-muted/50 to-muted/10 p-3">
       <div className="flex flex-col gap-3 sm:flex-row sm:items-start">
         {steps.map((st, i) => {
           const idx = STAGE_ORDER.indexOf(st.stage);
@@ -165,7 +165,11 @@ export function SourcingTimeline({
                 {i < steps.length - 1 && (
                   <span
                     className={`hidden h-0.5 flex-1 rounded-full sm:block ${
-                      done ? "bg-emerald-500/50" : "bg-border"
+                      done
+                        ? "bg-gradient-to-r from-emerald-500/60 to-emerald-500/30"
+                        : active
+                          ? "bg-gradient-to-r from-primary/60 to-border"
+                          : "bg-border"
                     }`}
                   />
                 )}
