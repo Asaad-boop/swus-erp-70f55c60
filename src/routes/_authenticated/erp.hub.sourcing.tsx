@@ -605,7 +605,7 @@ function SourcingPage() {
 
       {pipeline.length > 0 && (
         <div className="space-y-3">
-          <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-6">
+          <div className="grid grid-cols-2 gap-2 sm:grid-cols-4 lg:grid-cols-7">
             <StageKpi label="In pipeline" value={String(stageCounts.all)} sub="approved → ordered" />
             {STAGE_ORDER.map((s) => (
               <StageKpi
@@ -614,7 +614,7 @@ function SourcingPage() {
                 value={String(stageCounts[s])}
                 sub={s === "ordered" && dueTotal > 0 ? `${fmtValue(Math.round(dueTotal), "bdt")} due` : undefined}
               />
-            )).slice(0, 5)}
+            ))}
           </div>
           <div className="flex flex-wrap items-center gap-2">
             <StageFilterBar counts={stageCounts} value={stageFilter} onChange={setStageFilter} />
