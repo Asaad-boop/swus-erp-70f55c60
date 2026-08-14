@@ -753,9 +753,17 @@ function ProductPipelinePage() {
                   </button>
                   <button
                     type="button"
+                    aria-label="Duplicate idea"
+                    onClick={() => clone.mutate(i)}
+                    disabled={clone.isPending}
+                    className="rounded-full bg-background/90 p-1.5 shadow"
+                  >
+                    <Copy className="h-3.5 w-3.5" />
+                  </button>
+                  <button
+                    type="button"
                     aria-label="Delete idea"
-                    onClick={() => remove.mutate(i.id)}
-                    disabled={remove.isPending}
+                    onClick={() => setConfirmDelete(i)}
                     className="rounded-full bg-background/90 p-1.5 shadow"
                   >
                     <Trash2 className="h-3.5 w-3.5 text-destructive" />
@@ -802,6 +810,22 @@ function ProductPipelinePage() {
                 <div className="flex flex-wrap items-center gap-1.5 text-xs">
                   <Badge variant="outline">Cost {fmtValue(i.est_unit_cost, "bdt")}</Badge>
                   <Badge variant="outline">Sell {fmtValue(i.est_sell_price, "bdt")}</Badge>
+                  {i.est_sell_price > 0 && (
+                    <Badge
+                      className={cn(
+                        "border-0 text-white",
+                        (i.est_sell_price - i.est_unit_cost) / i.est_sell_price >= 0.4
+                          ? "bg-emerald-600"
+                          : (i.est_sell_price - i.est_unit_cost) / i.est_sell_price >= 0.2
+                            ? "bg-amber-500"
+                            : "bg-destructive",
+                      )}
+                    >
+                      <TrendingUp className="mr-1 h-3 w-3" />
+                      {(((i.est_sell_price - i.est_unit_cost) / i.est_sell_price) * 100).toFixed(0)}%
+                      margin
+                    </Badge>
+                  )}
                   {(i.target_price_min != null || i.target_price_max != null) && (
                     <Badge variant="secondary">
                       Target {fmtValue(i.target_price_min ?? 0, "bdt")}–
