@@ -41,6 +41,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   bdt,
   CONTENT_SOURCES,
+  CONTENT_STYLES,
   CONTENT_TYPES,
   costPerOrder,
   daysUntil,
@@ -98,6 +99,7 @@ const emptyDraft = {
   title: "",
   product_id: "",
   content_type: "ugc",
+  content_style: "",
   platform: "facebook",
   source: "in_house",
   creator_id: "",
@@ -174,7 +176,8 @@ function PipelinePage() {
         i.title.toLowerCase().includes(s) ||
         (i.code ?? "").toLowerCase().includes(s) ||
         (i.hook ?? "").toLowerCase().includes(s) ||
-        (i.script ?? "").toLowerCase().includes(s)
+        (i.script ?? "").toLowerCase().includes(s) ||
+        (i.content_style ?? "").toLowerCase().includes(s)
       );
     });
   }, [items, view]);
@@ -248,6 +251,7 @@ function PipelinePage() {
         title: draft.title.trim(),
         product_id: draft.product_id || null,
         content_type: draft.content_type,
+        content_style: draft.content_style || null,
         platform: draft.platform,
         source: draft.source,
         creator_id: draft.creator_id || null,
@@ -293,7 +297,7 @@ function PipelinePage() {
 
   const exportCsv = () =>
     downloadCsv(`content-pipeline-${new Date().toISOString().slice(0, 10)}.csv`, [
-      ["Code", "Title", "Product", "Stage", "Status", "Type", "Platform", "Source", "Creator", "Due", "Cost", "Views", "Orders", "Cost/Order"],
+      ["Code", "Title", "Product", "Stage", "Status", "Type", "Style", "Platform", "Source", "Creator", "Due", "Cost", "Views", "Orders", "Cost/Order"],
       ...filtered.map((i) => [
         i.code,
         i.title,
@@ -301,6 +305,7 @@ function PipelinePage() {
         labelOf(PIPELINE_STAGES, i.stage),
         labelOf(ITEM_STATUSES, i.status),
         labelOf(CONTENT_TYPES, i.content_type),
+        i.content_style ? labelOf(CONTENT_STYLES, i.content_style) : "",
         labelOf(PLATFORMS, i.platform),
         labelOf(CONTENT_SOURCES, i.source),
         i.creator_id ? (creatorName.get(i.creator_id) ?? "") : "",
@@ -563,6 +568,26 @@ function PipelinePage() {
                   </SelectContent>
                 </Select>
               </div>
+              <div>
+                <Label className="text-[11px]">Style</Label>
+                <Select
+                  value={draft.content_style}
+                  onValueChange={(v) => setDraft({ ...draft, content_style: v })}
+                >
+                  <SelectTrigger className="h-9 text-xs">
+                    <SelectValue placeholder="Optional" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {CONTENT_STYLES.map((t) => (
+                      <SelectItem key={t.key} value={t.key}>
+                        {t.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+            <div className="grid grid-cols-2 gap-3">
               <div>
                 <Label className="text-[11px]">Platform</Label>
                 <Select
@@ -837,6 +862,11 @@ function PipelineCard({
             <Badge variant="outline" className="text-[10px]">
               {labelOf(ITEM_STATUSES, i.status)}
             </Badge>
+            {i.content_style && (
+              <Badge variant="secondary" className="text-[10px]">
+                {labelOf(CONTENT_STYLES, i.content_style)}
+              </Badge>
+            )}
             {i.cost > 0 && (
               <Badge variant="outline" className="text-[10px]">
                 {bdt(i.cost)}
@@ -1238,6 +1268,27 @@ function ItemSheet({
                 </Select>
               </div>
               <div>
+                <Label className="text-[11px]">Style</Label>
+                <Select
+                  value={d.content_style ?? "none"}
+                  onValueChange={(v) => set({ content_style: v === "none" ? null : v })}
+                >
+                  <SelectTrigger className="h-9 text-xs">
+                    <SelectValue placeholder="No style" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="none">No style</SelectItem>
+                    {CONTENT_STYLES.map((t) => (
+                      <SelectItem key={t.key} value={t.key}>
+                        {t.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+            <div className="grid grid-cols-2 gap-3">
+              <div>
                 <Label className="text-[11px]">Status</Label>
                 <Select value={d.status} onValueChange={(v) => set({ status: v })}>
                   <SelectTrigger className="h-9 text-xs">
@@ -1392,6 +1443,7 @@ function ItemSheet({
                 hashtags: d.hashtags,
                 stage: d.stage,
                 status: d.status,
+                content_style: d.content_style,
                 creator_id: d.creator_id,
                 agency_id: d.agency_id,
                 due_date: d.due_date,

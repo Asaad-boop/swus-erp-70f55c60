@@ -49,12 +49,14 @@ import {
 } from "@/components/ui/sheet";
 import {
   bdt,
+  CONTENT_STYLES,
   contentRiskScore,
   coverageBucket,
   elapsedMs,
   fetchIntake,
   fetchInspirations,
   fmtElapsed,
+  labelOf,
   riskTone,
   type IntakeRow,
 } from "@/lib/erp/content/content-data";
@@ -226,6 +228,7 @@ function IntakePage() {
       targetDate: string;
       budget: number;
       strategy: string;
+      content_style: string;
     }) => {
       for (const row of input.rows) {
         const brand_id = row.brand_id ?? activeBrand?.id ?? null;
@@ -239,6 +242,7 @@ function IntakePage() {
             target_date: input.targetDate || null,
             budget: input.budget,
             strategy: input.strategy || null,
+            content_style: input.content_style || null,
           } as never)
           .select("id")
           .single();
@@ -251,6 +255,7 @@ function IntakePage() {
           title: `${row.title} — content ${i + 1}`,
           due_date: input.targetDate || null,
           cost: input.count > 0 ? Math.round(input.budget / input.count) : 0,
+          content_style: input.content_style || null,
         }));
         const { error: e2 } = await supabase.from("content_items").insert(items as never);
         if (e2) throw e2;
@@ -698,13 +703,14 @@ function PushDialog({
   rows: IntakeRow[] | null;
   saving: boolean;
   onClose: () => void;
-  onSave: (v: { count: number; targetDate: string; budget: number; strategy: string }) => void;
+  onSave: (v: { count: number; targetDate: string; budget: number; strategy: string; content_style: string }) => void;
 }) {
   const [count, setCount] = useState(3);
   const [targetDate, setTargetDate] = useState("");
   const [budget, setBudget] = useState(0);
   const [strategy, setStrategy] = useState("");
   const [template, setTemplate] = useState("");
+  const [contentStyle, setContentStyle] = useState("");
 
   useEffect(() => {
     if (rows) {
@@ -715,6 +721,7 @@ function PushDialog({
       setBudget(0);
       setStrategy("");
       setTemplate("");
+      setContentStyle("");
     }
   }, [rows]);
 
@@ -786,6 +793,25 @@ function PushDialog({
             </Select>
           </div>
           <div>
+            <Label className="text-[11px]">Content style</Label>
+            <Select
+              value={contentStyle}
+              onValueChange={(v) => setContentStyle(v)}
+            >
+              <SelectTrigger className="h-9 text-xs">
+                <SelectValue placeholder="Style বাছো" />
+              </SelectTrigger>
+              <SelectContent>
+                {CONTENT_STYLES.map((t) => (
+                  <SelectItem key={t.key} value={t.key} className="text-xs">
+                    {t.label}
+                    {t.hint && <span className="ml-1.5 text-muted-foreground">— {t.hint}</span>}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+          <div>
             <Label className="text-[11px]">Strategy / angle note</Label>
             <Textarea
               value={strategy}
@@ -809,7 +835,7 @@ function PushDialog({
           <Button variant="ghost" onClick={onClose}>
             Cancel
           </Button>
-          <Button disabled={saving} onClick={() => onSave({ count, targetDate, budget, strategy })}>
+          <Button disabled={saving} onClick={() => onSave({ count, targetDate, budget, strategy, content_style: contentStyle })}>
             {saving ? "তৈরি হচ্ছে…" : n > 1 ? `${n}টি plan তৈরি করো` : "Create plan"}
           </Button>
         </DialogFooter>
