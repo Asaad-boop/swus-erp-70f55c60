@@ -32,6 +32,16 @@ import {
 import { newIdemKey } from "@/lib/erp/imports/types";
 import { HubPageHeader } from "@/components/erp/hub/hub-shell";
 import { IdeaGallery, StarRating } from "@/components/erp/hub/idea-visuals";
+import {
+  deriveStage,
+  StageBadge,
+  StageFilterBar,
+  SourcingTimeline,
+  StageKpi,
+  STAGE_ORDER,
+  STAGE_META,
+  type SourcingStage,
+} from "@/components/erp/hub/sourcing-track";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -143,6 +153,8 @@ function SourcingPage() {
   const [payRef, setPayRef] = useState("");
   const [tMin, setTMin] = useState("");
   const [tMax, setTMax] = useState("");
+  const [search, setSearch] = useState("");
+  const [stageFilter, setStageFilter] = useState<SourcingStage | "all">("all");
 
   const ideasQ = useQuery({
     queryKey: ["hub-ideas", brandIds],
@@ -172,6 +184,70 @@ function SourcingPage() {
   useEffect(() => {
     if (!selectedId && pipeline.length > 0) setSelectedId(pipeline[0]!.id);
   }, [pipeline, selectedId]);
+
+  // Live PO status for every ordered idea (for stage tracking).
+  const pipelinePoIds = useMemo(
+    () => pipeline.map((i) => i.imp_po_id).filter(Boolean) as string[],
+    [pipeline],
+  );
+  const posQ = useQuery({
+    queryKey: ["hub-sourcing-pos", pipelinePoIds],
+    enabled: pipelinePoIds.length > 0,
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("imp_purchase_orders")
+        .select("id,po_number,status,paid_bdt,due_bdt,grand_total_bdt")
+        .in("id", pipelinePoIds);
+      if (error) throw error;
+      const m = new Map<string, { id: string; po_number: string; status: string; paid_bdt: number; due_bdt: number; grand_total_bdt: number }>();
+      for (const r of (data ?? []) as never[]) m.set((r as { id: string }).id, r as never);
+      return m;
+    },
+  });
+
+  const stageOf = useMemo(() => {
+    const m = new Map<string, SourcingStage>();
+    for (const i of pipeline) {
+      const po = i.imp_po_id ? posQ.data?.get(i.imp_po_id) : undefined;
+      m.set(
+        i.id,
+        deriveStage({
+          status: i.status,
+          quoteCount: quotesQ.data?.get(i.id)?.length ?? 0,
+          selectedQuoteId: i.selected_quote_id,
+          impPoId: i.imp_po_id,
+          poStatus: po?.status ?? null,
+        }),
+      );
+    }
+    return m;
+  }, [pipeline, posQ.data, quotesQ.data]);
+
+  const stageCounts = useMemo(() => {
+    const c = { all: pipeline.length } as Record<SourcingStage, number> & { all: number };
+    for (const s of STAGE_ORDER) c[s] = 0;
+    for (const i of pipeline) c[stageOf.get(i.id) ?? "to_source"]++;
+    return c;
+  }, [pipeline, stageOf]);
+
+  const visible = useMemo(() => {
+    const term = search.trim().toLowerCase();
+    return pipeline.filter((i) => {
+      if (stageFilter !== "all" && (stageOf.get(i.id) ?? "to_source") !== stageFilter) return false;
+      if (!term) return true;
+      return (
+        i.title.toLowerCase().includes(term) ||
+        (i.category ?? "").toLowerCase().includes(term) ||
+        (i.supplier_name ?? "").toLowerCase().includes(term)
+      );
+    });
+  }, [pipeline, stageFilter, stageOf, search]);
+
+  const dueTotal = useMemo(() => {
+    let t = 0;
+    posQ.data?.forEach((p) => { t += Number(p.due_bdt ?? 0); });
+    return t;
+  }, [posQ.data]);
 
   const selected: HubIdea | null = useMemo(
     () => pipeline.find((i) => i.id === selectedId) ?? null,
@@ -528,13 +604,46 @@ function SourcingPage() {
       )}
 
       {pipeline.length > 0 && (
+        <div className="space-y-3">
+          <div className="grid grid-cols-2 gap-2 sm:grid-cols-4 lg:grid-cols-7">
+            <StageKpi label="In pipeline" value={String(stageCounts.all)} sub="approved → ordered" />
+            {STAGE_ORDER.map((s) => (
+              <StageKpi
+                key={s}
+                label={STAGE_META[s].label}
+                value={String(stageCounts[s])}
+                sub={s === "ordered" && dueTotal > 0 ? `${fmtValue(Math.round(dueTotal), "bdt")} due` : undefined}
+              />
+            ))}
+          </div>
+          <div className="flex flex-wrap items-center gap-2">
+            <StageFilterBar counts={stageCounts} value={stageFilter} onChange={setStageFilter} />
+            <Input
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              placeholder="Search product / supplier…"
+              className="h-8 w-full max-w-[240px] sm:ml-auto"
+            />
+          </div>
+        </div>
+      )}
+
+      {pipeline.length > 0 && (
         <div className="grid gap-4 lg:grid-cols-[320px_1fr]">
           {/* Queue */}
           <div className="space-y-2">
-            {pipeline.map((i) => {
+            {visible.length === 0 && (
+              <Card>
+                <CardContent className="p-6 text-center text-xs text-muted-foreground">
+                  এই stage-এ কিছু নেই।
+                </CardContent>
+              </Card>
+            )}
+            {visible.map((i) => {
               const on = i.id === selectedId;
               const imgs = i.images?.length ? i.images : i.image_url ? [i.image_url] : [];
               const qs = quotesQ.data?.get(i.id) ?? [];
+              const st = stageOf.get(i.id) ?? "to_source";
               return (
                 <button
                   key={i.id}
@@ -556,12 +665,7 @@ function SourcingPage() {
                       {i.target_price_max ? ` · target ≤ ${fmtValue(i.target_price_max, "bdt")}` : ""}
                     </p>
                   </div>
-                  <Badge
-                    variant={i.status === "ordered" ? "default" : "secondary"}
-                    className="shrink-0 text-[10px] capitalize"
-                  >
-                    {i.status}
-                  </Badge>
+                  <StageBadge stage={st} className="shrink-0" />
                 </button>
               );
             })}
@@ -596,6 +700,42 @@ function SourcingPage() {
                     {selected.description && (
                       <p className="text-xs text-muted-foreground">{selected.description}</p>
                     )}
+
+                    <SourcingTimeline
+                      current={stageOf.get(selected.id) ?? "to_source"}
+                      steps={[
+                        { stage: "to_source", date: selected.approved_at, note: "approved" },
+                        {
+                          stage: "sourcing",
+                          date: quotes.length ? quotes[quotes.length - 1]!.created_at : null,
+                          note: quotes.length ? `${quotes.length} quote${quotes.length === 1 ? "" : "s"}` : "no quote yet",
+                        },
+                        {
+                          stage: "sourced",
+                          date: null,
+                          note: selected.selected_quote_id
+                            ? `supplier: ${selected.supplier_name ?? "selected"}`
+                            : "supplier pending",
+                        },
+                        {
+                          stage: "ordered",
+                          date: selected.ordered_at,
+                          note: linkedPoQ.data?.po_number ?? (selected.order_qty ? `${selected.order_qty} pcs` : null),
+                        },
+                        {
+                          stage: "in_transit",
+                          date: null,
+                          note: linkedPoQ.data
+                            ? String(linkedPoQ.data.status).replace(/_/g, " ")
+                            : "not shipped",
+                        },
+                        {
+                          stage: "received",
+                          date: null,
+                          note: linkedPoQ.data?.status === "completed" ? "stock in" : "pending",
+                        },
+                      ]}
+                    />
 
                     <div className="flex flex-wrap gap-1.5 text-xs">
                       <Badge variant="outline">
