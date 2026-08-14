@@ -1,10 +1,11 @@
 import { useCallback, useEffect, useRef, useState, type ReactNode } from "react";
-import { Search, X, LayoutGrid, Rows3, Download, Inbox, Filter } from "lucide-react";
+import { Search, X, LayoutGrid, Rows3, Download, Inbox, Filter, Tag } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
+import { useBrand } from "@/contexts/brand-context";
 
 /* ------------------------------------------------------------------ *
  * Page hero — gradient header shared by every Content Studio screen
@@ -579,4 +580,126 @@ export function fmtNum(n: number | null | undefined) {
   if (Math.abs(v) >= 1_000_000) return `${(v / 1_000_000).toFixed(1)}M`;
   if (Math.abs(v) >= 1_000) return `${(v / 1_000).toFixed(1)}k`;
   return String(Math.round(v));
+}
+
+/* ------------------------------------------------------------------ *
+ * Brand helpers — every content record belongs to a brand
+ * ------------------------------------------------------------------ */
+
+export function useBrandLookup() {
+  const { brands } = useBrand();
+  return useCallback(
+    (id: string | null | undefined) => (id ? (brands.find((b) => b.id === id) ?? null) : null),
+    [brands],
+  );
+}
+
+/** Small brand chip shown on cards / rows so it's always clear which brand owns a piece. */
+export function BrandTag({
+  brandId,
+  className,
+}: {
+  brandId: string | null | undefined;
+  className?: string;
+}) {
+  const { brands } = useBrand();
+  const brand = brandId ? brands.find((b) => b.id === brandId) : null;
+  if (!brandId) {
+    return (
+      <span
+        className={cn(
+          "inline-flex items-center gap-1 rounded-full border border-dashed border-amber-500/40 bg-amber-500/10 px-2 py-0.5 text-[10px] font-medium text-amber-600 dark:text-amber-400",
+          className,
+        )}
+      >
+        No brand
+      </span>
+    );
+  }
+  return (
+    <span
+      className={cn(
+        "inline-flex items-center gap-1 rounded-full border border-border/70 bg-background/70 px-2 py-0.5 text-[10px] font-medium text-foreground/80",
+        className,
+      )}
+    >
+      {brand?.logo_url ? (
+        <img src={brand.logo_url} alt="" className="h-3 w-3 rounded-full object-cover" />
+      ) : (
+        <Tag className="h-2.5 w-2.5 opacity-60" />
+      )}
+      {brand?.name ?? "Unknown brand"}
+    </span>
+  );
+}
+
+/** Brand picker for create/edit forms. Required whenever the user is in "All brands" mode. */
+export function BrandSelect({
+  value,
+  onChange,
+  label = "Brand",
+  className,
+}: {
+  value: string | null;
+  onChange: (id: string | null) => void;
+  label?: string;
+  className?: string;
+}) {
+  const { brands } = useBrand();
+  return (
+    <div className={cn("space-y-1.5", className)}>
+      <label className="text-xs font-medium text-muted-foreground">{label}</label>
+      <select
+        value={value ?? ""}
+        onChange={(e) => onChange(e.target.value || null)}
+        className="h-9 w-full rounded-md border border-input bg-background px-2 text-sm"
+      >
+        <option value="">Brand বাছাই করুন…</option>
+        {brands.map((b) => (
+          <option key={b.id} value={b.id}>
+            {b.name}
+          </option>
+        ))}
+      </select>
+    </div>
+  );
+}
+
+/** Chip row to filter a list by brand. Returns "all" or a brand id. */
+export function BrandFilter({
+  value,
+  onChange,
+  counts,
+}: {
+  value: string;
+  onChange: (v: string) => void;
+  counts?: Map<string | null, number>;
+}) {
+  const { brands } = useBrand();
+  if (brands.length < 2) return null;
+  const opts = [{ id: "all", name: "All brands" }, ...brands.map((b) => ({ id: b.id, name: b.name }))];
+  return (
+    <div className="flex flex-wrap items-center gap-1.5">
+      {opts.map((o) => {
+        const n = o.id === "all" ? undefined : counts?.get(o.id);
+        const active = value === o.id;
+        return (
+          <button
+            key={o.id}
+            type="button"
+            onClick={() => onChange(o.id)}
+            className={cn(
+              "inline-flex items-center gap-1 rounded-full border px-2.5 py-1 text-[11px] font-medium transition",
+              active
+                ? "border-primary/40 bg-primary/10 text-primary"
+                : "border-border/70 bg-background/60 text-muted-foreground hover:text-foreground",
+            )}
+          >
+            {o.name}
+            {n !== undefined && <span className="opacity-60">{n}</span>}
+          </button>
+        );
+      })}
+    </div>
+  );
 }
