@@ -688,6 +688,74 @@ function CreativeDeskPage() {
 
   const loading = brandLoading || plansQ.isLoading;
 
+  const filterSelects = (
+    <>
+      <Select value={platformFilter} onValueChange={setPlatformFilter}>
+        <SelectTrigger className="h-8 w-[120px] text-xs">
+          <SelectValue />
+        </SelectTrigger>
+        <SelectContent>
+          <SelectItem value="all">All platforms</SelectItem>
+          {CONTENT_PLATFORMS.map((p) => (
+            <SelectItem key={p.key} value={p.key}>
+              {p.label}
+            </SelectItem>
+          ))}
+        </SelectContent>
+      </Select>
+      <Select value={assetFilter} onValueChange={setAssetFilter}>
+        <SelectTrigger className="h-8 w-[130px] text-xs">
+          <SelectValue />
+        </SelectTrigger>
+        <SelectContent>
+          <SelectItem value="all">All asset types</SelectItem>
+          {ASSET_TYPES.map((a) => (
+            <SelectItem key={a.key} value={a.key}>
+              {a.label}
+            </SelectItem>
+          ))}
+        </SelectContent>
+      </Select>
+      <Select value={priorityFilter} onValueChange={setPriorityFilter}>
+        <SelectTrigger className="h-8 w-[110px] text-xs">
+          <SelectValue />
+        </SelectTrigger>
+        <SelectContent>
+          <SelectItem value="all">All priority</SelectItem>
+          {CONTENT_PRIORITIES.map((p) => (
+            <SelectItem key={p.key} value={p.key}>
+              {p.label}
+            </SelectItem>
+          ))}
+        </SelectContent>
+      </Select>
+      <Select value={creatorFilter} onValueChange={setCreatorFilter}>
+        <SelectTrigger className="h-8 w-[130px] text-xs">
+          <SelectValue />
+        </SelectTrigger>
+        <SelectContent>
+          <SelectItem value="all">All creators</SelectItem>
+          {creators.map((c) => (
+            <SelectItem key={c.id} value={c.id}>
+              {c.name}
+            </SelectItem>
+          ))}
+        </SelectContent>
+      </Select>
+      <Select value={sortBy} onValueChange={(v) => setSortBy(v as typeof sortBy)}>
+        <SelectTrigger className="h-8 w-[130px] text-xs">
+          <SelectValue />
+        </SelectTrigger>
+        <SelectContent>
+          <SelectItem value="deadline">Sort: Deadline</SelectItem>
+          <SelectItem value="launch">Sort: Launch date</SelectItem>
+          <SelectItem value="created">Sort: Newest</SelectItem>
+          <SelectItem value="budget">Sort: Budget</SelectItem>
+        </SelectContent>
+      </Select>
+    </>
+  );
+
   const PlanCard = ({ p, compact }: { p: HubContentPlan; compact?: boolean }) => {
     const list = asgByPlan.get(p.id) ?? [];
     const spent = spendByPlan.get(p.id) ?? 0;
