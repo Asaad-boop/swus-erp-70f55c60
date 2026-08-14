@@ -19,6 +19,7 @@ import {
   Factory,
   Loader2,
 } from "lucide-react";
+import { MoreHorizontal } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useBrand } from "@/contexts/brand-context";
 import { useAccounts } from "@/hooks/erp/use-finance-query";
