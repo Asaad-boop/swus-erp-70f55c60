@@ -30,6 +30,7 @@ export type ContentPlan = {
   target_date: string | null;
   budget: number;
   strategy: string | null;
+  content_style: string | null;
   status: string;
   created_at: string;
 };
@@ -47,6 +48,7 @@ export type ContentItem = {
   content_type: string;
   platform: string;
   source: string;
+  content_style: string | null;
   angle: string | null;
   hook: string | null;
   script: string | null;
@@ -191,6 +193,17 @@ export const CONTENT_TYPES = [
   { key: "unboxing", label: "Unboxing" },
   { key: "review", label: "Review" },
   { key: "photoshoot", label: "Photoshoot" },
+] as const;
+
+export const CONTENT_STYLES = [
+  { key: "lifestyle", label: "Lifestyle", hint: "Real-life use scene" },
+  { key: "ugc", label: "UGC style", hint: "Creator-shot / casual" },
+  { key: "demo", label: "Product demo", hint: "Feature close-up / how it works" },
+  { key: "testimonial", label: "Testimonial", hint: "Customer result / review" },
+  { key: "problem_solution", label: "Problem → Solution", hint: "Pain point then reveal" },
+  { key: "behind_the_scenes", label: "Behind the scenes", hint: "Making / packing / unfiltered" },
+  { key: "high_energy", label: "High energy", hint: "Fast cuts, hooks, trending audio" },
+  { key: "minimal", label: "Minimal / clean", hint: "Aesthetic, simple, no clutter" },
 ] as const;
 
 export const CONTENT_SOURCES = [
