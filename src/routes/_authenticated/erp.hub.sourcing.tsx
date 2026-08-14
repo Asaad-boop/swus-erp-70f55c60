@@ -242,7 +242,7 @@ function SourcingPage() {
 
   const visible = useMemo(() => {
     const term = search.trim().toLowerCase();
-    return pipeline.filter((i) => {
+    const rows = pipeline.filter((i) => {
       if (stageFilter !== "all" && (stageOf.get(i.id) ?? "to_source") !== stageFilter) return false;
       if (!term) return true;
       return (
@@ -251,7 +251,30 @@ function SourcingPage() {
         (i.supplier_name ?? "").toLowerCase().includes(term)
       );
     });
-  }, [pipeline, stageFilter, stageOf, search]);
+    const ageOf = (i: HubIdea) =>
+      Date.now() - new Date(i.approved_at ?? i.created_at).getTime();
+    const dueOf = (i: HubIdea) =>
+      i.imp_po_id ? Number(posQ.data?.get(i.imp_po_id)?.due_bdt ?? 0) : 0;
+    const sorted = [...rows];
+    sorted.sort((a, b) => {
+      switch (sortBy) {
+        case "age":
+          return ageOf(b) - ageOf(a);
+        case "due":
+          return dueOf(b) - dueOf(a);
+        case "quotes":
+          return (quotesQ.data?.get(b.id)?.length ?? 0) - (quotesQ.data?.get(a.id)?.length ?? 0);
+        case "cost":
+          return (a.est_unit_cost || Infinity) - (b.est_unit_cost || Infinity);
+        default:
+          return (
+            STAGE_ORDER.indexOf(stageOf.get(a.id) ?? "to_source") -
+            STAGE_ORDER.indexOf(stageOf.get(b.id) ?? "to_source")
+          );
+      }
+    });
+    return sorted;
+  }, [pipeline, stageFilter, stageOf, search, sortBy, posQ.data, quotesQ.data]);
 
   const dueTotal = useMemo(() => {
     let t = 0;
