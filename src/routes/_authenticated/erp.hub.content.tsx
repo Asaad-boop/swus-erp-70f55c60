@@ -983,12 +983,12 @@ function CreativeDeskPage() {
           </div>
         </div>
         {(view === "list" || view === "board") && (
-          <div className="mt-2 flex flex-wrap gap-1.5">
+          <div className="mt-2 flex gap-1.5 overflow-x-auto pb-0.5 md:flex-wrap">
             {[{ key: "all", label: "All stages" }, ...CONTENT_STATUSES].map((s) => (
               <button
                 key={s.key}
                 onClick={() => setStatusFilter(s.key)}
-                className={`inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-[11px] transition-colors ${
+                className={`inline-flex shrink-0 items-center gap-1.5 rounded-full border px-2.5 py-1 text-[11px] transition-colors ${
                   statusFilter === s.key
                     ? "border-primary/30 bg-primary/10 text-primary"
                     : "border-border text-muted-foreground hover:bg-muted"
@@ -1016,11 +1016,11 @@ function CreativeDeskPage() {
           ))}
         </div>
       ) : view === "board" ? (
-        <div className="flex gap-3 overflow-x-auto pb-2">
+        <div className="flex snap-x gap-3 overflow-x-auto pb-2">
           {BOARD_STAGES.map((s) => {
             const items = filtered.filter((p) => p.status === s.key);
             return (
-              <div key={s.key} className="w-[280px] shrink-0 space-y-2">
+              <div key={s.key} className="w-[250px] shrink-0 snap-start space-y-2 sm:w-[280px]">
                 <div className="flex items-center justify-between rounded-lg border bg-muted/40 px-2.5 py-1.5">
                   <span className="inline-flex items-center gap-1.5 text-xs font-semibold">
                     <span className={`h-2 w-2 rounded-full ${STATUS_DOT[s.key] ?? ""}`} />
