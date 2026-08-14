@@ -448,6 +448,18 @@ function IntakePage() {
           </SelectContent>
         </Select>
         <div className="ml-auto flex items-center gap-2">
+          <Button
+            variant={showSkipped ? "default" : "outline"}
+            size="sm"
+            className="h-9 gap-1.5 text-xs"
+            onClick={() => {
+              setShowSkipped((v) => !v);
+              setSelected(new Set());
+            }}
+          >
+            <EyeOff className="h-3.5 w-3.5" />
+            Skipped ({skippedIds.size})
+          </Button>
           <DensityToggle value={view.density} onChange={(v) => patchView({ density: v })} />
           <ExportButton onClick={exportCsv} />
         </div>
@@ -464,9 +476,31 @@ function IntakePage() {
             <Button variant="ghost" size="sm" className="h-8" onClick={() => setSelected(new Set())}>
               Clear
             </Button>
-            <Button size="sm" className="h-8" onClick={() => setPushRows(selectedRows)}>
-              <Plus className="mr-1 h-3.5 w-3.5" /> Bulk push to plan
-            </Button>
+            {showSkipped ? (
+              <Button
+                size="sm"
+                className="h-8"
+                disabled={unskipMut.isPending}
+                onClick={() => unskipMut.mutate(selectedRows.map((r) => r.product_id))}
+              >
+                <Undo2 className="mr-1 h-3.5 w-3.5" /> Restore
+              </Button>
+            ) : (
+              <>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="h-8"
+                  disabled={skipMut.isPending}
+                  onClick={() => skipMut.mutate({ rows: selectedRows })}
+                >
+                  <EyeOff className="mr-1 h-3.5 w-3.5" /> Content লাগবে না
+                </Button>
+                <Button size="sm" className="h-8" onClick={() => setPushRows(selectedRows)}>
+                  <Plus className="mr-1 h-3.5 w-3.5" /> Bulk push to plan
+                </Button>
+              </>
+            )}
           </div>
         </div>
       )}
@@ -476,8 +510,12 @@ function IntakePage() {
       ) : filtered.length === 0 ? (
         <EmptyState
           icon={PackageOpen}
-          title="কোনো product পাওয়া যায়নি"
-          description="Filter বদলাও, অথবা Supply Chain থেকে নতুন stock এলে এখানে নিজে থেকেই দেখাবে।"
+          title={showSkipped ? "কোনো skipped product নেই" : "কোনো product পাওয়া যায়নি"}
+          description={
+            showSkipped
+              ? "যেসব product-এর content দরকার নেই সেগুলো এখানে জমা হবে — যেকোনো সময় restore করা যাবে।"
+              : "Filter বদলাও, অথবা Supply Chain থেকে নতুন stock এলে এখানে নিজে থেকেই দেখাবে।"
+          }
         />
       ) : (
         <div
@@ -492,6 +530,12 @@ function IntakePage() {
               row={r}
               compact={compact}
               selected={selected.has(r.product_id)}
+              skipped={showSkipped}
+              onSkip={() =>
+                showSkipped
+                  ? unskipMut.mutate([r.product_id])
+                  : skipMut.mutate({ rows: [r] })
+              }
               onToggle={() => toggle(r.product_id)}
               onPreview={() => setPreview(r)}
               onPush={() => setPushRows([r])}
