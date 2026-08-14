@@ -1228,9 +1228,13 @@ function SourcingPage() {
                     })()}
 
                     <FollowupCard
-                      idea={selected}
+                      ideaId={selected.id}
+                      nextActionAt={selected.next_action_at ?? null}
+                      nextActionNote={selected.next_action_note ?? null}
+                      owner={selected.sourcing_owner ?? null}
+                      priority={selected.priority ?? "normal"}
                       saving={saveFollowup.isPending}
-                      onSave={(patch) => saveFollowup.mutate({ idea: selected, patch })}
+                      onSave={(v) => saveFollowup.mutate(v)}
                     />
 
                     <div className="flex flex-wrap gap-1.5 text-xs">
