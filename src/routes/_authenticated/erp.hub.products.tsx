@@ -75,6 +75,7 @@ import {
   fmtValue,
   type HubIdea,
   type HubIdeaForecast,
+  type HubIdeaVoter,
 } from "@/lib/erp/hub/hub-data";
 
 export const Route = createFileRoute("/_authenticated/erp/hub/products")({
@@ -1291,17 +1292,6 @@ function PeopleStrip({
   );
 }
 
-function StatCardUnused({ label, value, hint }: { label: string; value: string; hint?: string }) {
-  return (
-    <Card>
-      <CardContent className="p-4">
-        <p className="text-xs text-muted-foreground">{label}</p>
-        <p className="font-display text-2xl font-bold">{value}</p>
-        {hint && <p className="mt-0.5 text-[11px] text-muted-foreground">{hint}</p>}
-      </CardContent>
-    </Card>
-  );
-}
 
 function FunnelChip({
   label,
