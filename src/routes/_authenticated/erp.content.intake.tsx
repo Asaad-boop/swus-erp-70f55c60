@@ -239,8 +239,45 @@ function IntakePage() {
       return n;
     });
 
+  const skipMut = useMutation({
+    mutationFn: async (input: { rows: IntakeRow[]; reason?: string }) => {
+      const payload = input.rows.map((r) => ({
+        product_id: r.product_id,
+        brand_id: r.brand_id ?? activeBrand?.id ?? null,
+        reason: input.reason ?? null,
+      }));
+      const { error } = await supabase
+        .from("content_intake_excluded")
+        .upsert(payload as never, { onConflict: "product_id" });
+      if (error) throw error;
+      return payload.length;
+    },
+    onSuccess: (n) => {
+      toast.success(`${n}টি product content list থেকে বাদ দেওয়া হয়েছে`);
+      setSelected(new Set());
+      qc.invalidateQueries({ queryKey: ["content-intake-skipped"] });
+    },
+    onError: (e: Error) => toast.error(e.message),
+  });
+
+  const unskipMut = useMutation({
+    mutationFn: async (productIds: string[]) => {
+      const { error } = await supabase
+        .from("content_intake_excluded")
+        .delete()
+        .in("product_id", productIds);
+      if (error) throw error;
+      return productIds.length;
+    },
+    onSuccess: (n) => {
+      toast.success(`${n}টি product আবার list-এ ফিরে এসেছে`);
+      setSelected(new Set());
+      qc.invalidateQueries({ queryKey: ["content-intake-skipped"] });
+    },
+    onError: (e: Error) => toast.error(e.message),
+  });
+
   const pushMut = useMutation({
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     mutationFn: async (input: {
       rows: IntakeRow[];
       count: number;
