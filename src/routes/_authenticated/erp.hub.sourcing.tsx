@@ -1,5 +1,5 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { toast } from "sonner";
@@ -7,17 +7,14 @@ import {
   PackageSearch,
   Plus,
   ExternalLink,
-  Trash2,
-  Pencil,
   Target,
-  Truck,
   CheckCircle2,
   ShoppingCart,
-  Crown,
-  Timer,
   Wallet,
   Factory,
   Loader2,
+  AlertTriangle,
+  Keyboard,
 } from "lucide-react";
 import { MoreHorizontal } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
@@ -81,6 +78,18 @@ import {
   type HubIdea,
   type HubSourcingQuote,
 } from "@/lib/erp/hub/hub-data";
+import { QuoteCompareTable } from "@/components/erp/hub/sourcing-quote-table";
+import { SourcingActivity } from "@/components/erp/hub/sourcing-activity";
+import {
+  FollowupCard,
+  PRIORITY_TONE,
+  isFollowupDue,
+} from "@/components/erp/hub/sourcing-followup";
+import {
+  fetchSourcingEvents,
+  logSourcingEvent,
+  stageDates,
+} from "@/lib/erp/hub/sourcing-events";
 
 export const Route = createFileRoute("/_authenticated/erp/hub/sourcing")({
   head: () => ({
@@ -118,25 +127,52 @@ type QDraft = {
   shipping_mode: string;
   shipping_cost_per_unit: string;
   sample_status: string;
+  sample_cost: string;
+  sample_tracking: string;
+  sample_received_at: string;
   quality_rating: string;
   notes: string;
 };
 
-const emptyQuote = (): QDraft => ({
+const SAMPLE_STAGES = [
+  "none",
+  "requested",
+  "paid",
+  "shipped",
+  "received",
+  "approved",
+  "rejected",
+] as const;
+
+const detectPlatform = (url: string) => {
+  const u = url.toLowerCase();
+  if (u.includes("1688.")) return "1688";
+  if (u.includes("alibaba.")) return "Alibaba";
+  if (u.includes("taobao.") || u.includes("tmall.")) return "Taobao";
+  return null;
+};
+
+const emptyQuote = (fx = "17"): QDraft => ({
   supplier_name: "",
   supplier_url: "",
   contact: "",
   platform: "1688",
   unit_price_cny: "",
-  cny_rate: "17",
+  cny_rate: fx,
   moq: "",
   lead_time_days: "",
   shipping_mode: "air",
   shipping_cost_per_unit: "",
   sample_status: "none",
+  sample_cost: "",
+  sample_tracking: "",
+  sample_received_at: "",
   quality_rating: "",
   notes: "",
 });
+
+const FX_KEY = "hub.sourcing.lastFx";
+const STUCK_DAYS = 7;
 
 function SourcingPage() {
   const { brandIds, activeBrand, isLoading: brandLoading } = useBrand();
@@ -144,6 +180,8 @@ function SourcingPage() {
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [qOpen, setQOpen] = useState(false);
   const [qDraft, setQDraft] = useState<QDraft>(emptyQuote());
+  const [lastFx, setLastFx] = useState("17");
+  const [addAnother, setAddAnother] = useState(false);
   const [orderOpen, setOrderOpen] = useState(false);
   const [orderQty, setOrderQty] = useState("");
   const [orderPrice, setOrderPrice] = useState("");
@@ -164,7 +202,14 @@ function SourcingPage() {
   const [tMax, setTMax] = useState("");
   const [search, setSearch] = useState("");
   const [stageFilter, setStageFilter] = useState<SourcingStage | "all">("all");
+  const [attentionOnly, setAttentionOnly] = useState(false);
   const [sortBy, setSortBy] = useState<"stage" | "age" | "due" | "quotes" | "cost">("stage");
+  const searchRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    const v = typeof window !== "undefined" ? window.localStorage.getItem(FX_KEY) : null;
+    if (v) setLastFx(v);
+  }, []);
 
   const ideasQ = useQuery({
     queryKey: ["hub-ideas", brandIds],
@@ -240,10 +285,32 @@ function SourcingPage() {
     return c;
   }, [pipeline, stageOf]);
 
+  const ageDaysOf = useCallback(
+    (i: HubIdea) =>
+      Math.max(
+        0,
+        Math.round((Date.now() - new Date(i.approved_at ?? i.created_at).getTime()) / 86400000),
+      ),
+    [],
+  );
+
+  /** Needs attention = overdue follow-up, urgent priority, or stuck pre-order for too long. */
+  const attentionSet = useMemo(() => {
+    const s = new Set<string>();
+    for (const i of pipeline) {
+      const st = stageOf.get(i.id) ?? "to_source";
+      const stuck =
+        (st === "to_source" || st === "sourcing" || st === "sourced") && ageDaysOf(i) >= STUCK_DAYS;
+      if (isFollowupDue(i.next_action_at) || i.priority === "urgent" || stuck) s.add(i.id);
+    }
+    return s;
+  }, [pipeline, stageOf, ageDaysOf]);
+
   const visible = useMemo(() => {
     const term = search.trim().toLowerCase();
     const rows = pipeline.filter((i) => {
       if (stageFilter !== "all" && (stageOf.get(i.id) ?? "to_source") !== stageFilter) return false;
+      if (attentionOnly && !attentionSet.has(i.id)) return false;
       if (!term) return true;
       return (
         i.title.toLowerCase().includes(term) ||
@@ -274,7 +341,7 @@ function SourcingPage() {
       }
     });
     return sorted;
-  }, [pipeline, stageFilter, stageOf, search, sortBy, posQ.data, quotesQ.data]);
+  }, [pipeline, stageFilter, stageOf, search, sortBy, posQ.data, quotesQ.data, attentionOnly, attentionSet]);
 
   const dueTotal = useMemo(() => {
     let t = 0;
@@ -331,11 +398,22 @@ function SourcingPage() {
     qc.invalidateQueries({ queryKey: ["hub-ideas"] });
     qc.invalidateQueries({ queryKey: ["hub-idea-summary"] });
     qc.invalidateQueries({ queryKey: ["hub-quotes"] });
+    qc.invalidateQueries({ queryKey: ["hub-sourcing-events"] });
   };
+
+  const eventsQ = useQuery({
+    queryKey: ["hub-sourcing-events", selectedId],
+    enabled: !!selectedId,
+    queryFn: () => fetchSourcingEvents(selectedId!),
+  });
+  const eventDates = useMemo(() => stageDates(eventsQ.data ?? []), [eventsQ.data]);
 
   const saveQuote = useMutation({
     mutationFn: async (d: QDraft) => {
       if (!selected) throw new Error("Select a product first");
+      if (!d.supplier_name.trim()) throw new Error("Supplier name দিন");
+      if (Number(d.unit_price_cny || 0) <= 0) throw new Error("Unit price (¥) দিন");
+      if (Number(d.cny_rate || 0) <= 0) throw new Error("FX rate দিন");
       const { data: auth } = await supabase.auth.getUser();
       const row = {
         idea_id: selected.id,
@@ -350,6 +428,9 @@ function SourcingPage() {
         shipping_mode: d.shipping_mode,
         shipping_cost_per_unit: Number(d.shipping_cost_per_unit || 0),
         sample_status: d.sample_status,
+        sample_cost: Number(d.sample_cost || 0),
+        sample_tracking: d.sample_tracking.trim() || null,
+        sample_received_at: d.sample_received_at || null,
         quality_rating: d.quality_rating ? Number(d.quality_rating) : null,
         notes: d.notes.trim() || null,
         created_by: auth.user?.id ?? null,
@@ -359,25 +440,49 @@ function SourcingPage() {
         ? await supabase.from("hub_sourcing_quotes").update(row as never).eq("id", d.id)
         : await supabase.from("hub_sourcing_quotes").insert(row as never);
       if (error) throw error;
+      await logSourcingEvent({
+        ideaId: selected.id,
+        type: d.id ? "quote_updated" : "quote_added",
+        quoteId: d.id ?? null,
+        note: `${row.supplier_name} · ${fmtValue(
+          Math.round(row.unit_price_cny * row.cny_rate + row.shipping_cost_per_unit),
+          "bdt",
+        )} landed`,
+      });
       if (selected.status === "approved") {
         await supabase
           .from("hub_product_ideas")
           .update({ status: "sourcing" } as never)
           .eq("id", selected.id);
+        await logSourcingEvent({
+          ideaId: selected.id,
+          type: "stage_change",
+          fromStage: "to_source",
+          toStage: "sourcing",
+          note: "প্রথম quote যোগ হওয়ায় auto",
+        });
       }
+      if (typeof window !== "undefined") window.localStorage.setItem(FX_KEY, d.cny_rate);
+      setLastFx(d.cny_rate);
     },
     onSuccess: () => {
       toast.success("Quote saved");
-      setQOpen(false);
+      if (addAnother) setQDraft(emptyQuote(lastFx));
+      else setQOpen(false);
       invalidate();
     },
     onError: (e: Error) => toast.error(e.message),
   });
 
   const removeQuote = useMutation({
-    mutationFn: async (id: string) => {
-      const { error } = await supabase.from("hub_sourcing_quotes").delete().eq("id", id);
+    mutationFn: async (q: HubSourcingQuote) => {
+      const { error } = await supabase.from("hub_sourcing_quotes").delete().eq("id", q.id);
       if (error) throw error;
+      await logSourcingEvent({
+        ideaId: q.idea_id,
+        type: "quote_removed",
+        note: q.supplier_name,
+      });
     },
     onSuccess: () => {
       toast.success("Quote removed");
@@ -410,6 +515,12 @@ function SourcingPage() {
         } as never)
         .eq("id", q.idea_id);
       if (e2) throw e2;
+      await logSourcingEvent({
+        ideaId: q.idea_id,
+        type: "supplier_selected",
+        quoteId: q.id,
+        note: `${q.supplier_name} · ${fmtValue(Math.round(quoteLandedCost(q)), "bdt")} landed`,
+      });
     },
     onSuccess: () => {
       toast.success("Supplier selected");
@@ -429,6 +540,11 @@ function SourcingPage() {
         } as never)
         .eq("id", selected.id);
       if (error) throw error;
+      await logSourcingEvent({
+        ideaId: selected.id,
+        type: "target_updated",
+        note: `${tMin || "—"} → ${tMax || "—"} ৳`,
+      });
     },
     onSuccess: () => {
       toast.success("Target price saved");
@@ -437,9 +553,43 @@ function SourcingPage() {
     onError: (e: Error) => toast.error(e.message),
   });
 
+  const saveFollowup = useMutation({
+    mutationFn: async (v: {
+      next_action_at: string | null;
+      next_action_note: string | null;
+      sourcing_owner: string | null;
+      priority: string;
+    }) => {
+      if (!selected) return;
+      const { error } = await supabase
+        .from("hub_product_ideas")
+        .update(v as never)
+        .eq("id", selected.id);
+      if (error) throw error;
+      await logSourcingEvent({
+        ideaId: selected.id,
+        type: "followup_set",
+        note: [
+          v.next_action_at ? `due ${v.next_action_at}` : "no date",
+          v.sourcing_owner ? `owner ${v.sourcing_owner}` : null,
+          `priority ${v.priority}`,
+          v.next_action_note,
+        ]
+          .filter(Boolean)
+          .join(" · "),
+      });
+    },
+    onSuccess: () => {
+      toast.success("Follow-up saved");
+      invalidate();
+    },
+    onError: (e: Error) => toast.error(e.message),
+  });
+
   /** Manual stage change — pre-order stages write idea.status, post-order stages write PO status. */
   const changeStage = useMutation({
     mutationFn: async ({ idea, stage }: { idea: HubIdea; stage: SourcingStage }) => {
+      const from = stageOf.get(idea.id) ?? "to_source";
       const poId = idea.imp_po_id ?? null;
       if (stage === "ordered" || stage === "in_transit" || stage === "received") {
         if (!poId) {
@@ -455,6 +605,12 @@ function SourcingPage() {
           .update({ status: poStatus } as never)
           .eq("id", poId);
         if (error) throw error;
+        await logSourcingEvent({
+          ideaId: idea.id,
+          type: "stage_change",
+          fromStage: from,
+          toStage: stage,
+        });
         return;
       }
       if (poId) throw new Error("PO তৈরি হয়ে গেছে — আগের stage-এ ফেরানো যাবে না");
@@ -489,6 +645,13 @@ function SourcingPage() {
         .update(patch as never)
         .eq("id", idea.id);
       if (error) throw error;
+      await logSourcingEvent({
+        ideaId: idea.id,
+        type: "stage_change",
+        fromStage: from,
+        toStage: stage,
+        note: patch.supplier_name ? `auto supplier: ${patch.supplier_name}` : null,
+      });
     },
     onSuccess: () => {
       toast.success("Status updated");
@@ -615,6 +778,19 @@ function SourcingPage() {
         } as never)
         .eq("id", selected.id);
       if (error) throw error;
+      await logSourcingEvent({
+        ideaId: selected.id,
+        type: "po_created",
+        note: `${res.po_number} · ${qty} pcs @ ¥${unitCny} (FX ${fx})`,
+        meta: { po_id: res.po_id, qty },
+      });
+      await logSourcingEvent({
+        ideaId: selected.id,
+        type: "stage_change",
+        fromStage: "sourced",
+        toStage: "ordered",
+        note: res.po_number,
+      });
       return res;
     },
     onSuccess: (res) => {
@@ -642,12 +818,12 @@ function SourcingPage() {
   };
 
   const openNewQuote = () => {
-    setQDraft(emptyQuote());
+    setAddAnother(false);
+    setQDraft(emptyQuote(lastFx));
     setQOpen(true);
   };
-  const openEditQuote = (q: HubSourcingQuote) => {
-    setQDraft({
-      id: q.id,
+  const quoteToDraft = (q: HubSourcingQuote, keepId: boolean): QDraft => ({
+      ...(keepId ? { id: q.id } : {}),
       supplier_name: q.supplier_name,
       supplier_url: q.supplier_url ?? "",
       contact: q.contact ?? "",
@@ -659,11 +835,65 @@ function SourcingPage() {
       shipping_mode: q.shipping_mode,
       shipping_cost_per_unit: String(q.shipping_cost_per_unit || ""),
       sample_status: q.sample_status,
+      sample_cost: q.sample_cost ? String(q.sample_cost) : "",
+      sample_tracking: q.sample_tracking ?? "",
+      sample_received_at: q.sample_received_at ?? "",
       quality_rating: q.quality_rating ? String(q.quality_rating) : "",
       notes: q.notes ?? "",
-    });
+  });
+  const openEditQuote = (q: HubSourcingQuote) => {
+    setAddAnother(false);
+    setQDraft(quoteToDraft(q, true));
     setQOpen(true);
   };
+  const openDuplicateQuote = (q: HubSourcingQuote) => {
+    setAddAnother(false);
+    setQDraft({ ...quoteToDraft(q, false), supplier_name: `${q.supplier_name} (copy)` });
+    setQOpen(true);
+  };
+
+  /** Duplicate supplier guard while typing a new quote. */
+  const dupQuote = useMemo(() => {
+    if (qDraft.id) return null;
+    const name = qDraft.supplier_name.trim().toLowerCase();
+    const url = qDraft.supplier_url.trim().toLowerCase();
+    if (!name && !url) return null;
+    return (
+      quotes.find(
+        (q) =>
+          (name && q.supplier_name.trim().toLowerCase() === name) ||
+          (url && (q.supplier_url ?? "").trim().toLowerCase() === url),
+      ) ?? null
+    );
+  }, [qDraft.id, qDraft.supplier_name, qDraft.supplier_url, quotes]);
+
+  /** Keyboard: j/k move, Enter select, a = add quote, / = search. */
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      const t = e.target as HTMLElement | null;
+      const typing =
+        !!t && (t.tagName === "INPUT" || t.tagName === "TEXTAREA" || t.isContentEditable);
+      if (qOpen || orderOpen) return;
+      if (e.key === "/" && !typing) {
+        e.preventDefault();
+        searchRef.current?.focus();
+        return;
+      }
+      if (typing) return;
+      if (e.key === "a") {
+        e.preventDefault();
+        if (selected) openNewQuote();
+        return;
+      }
+      if (e.key !== "j" && e.key !== "k") return;
+      e.preventDefault();
+      const idx = visible.findIndex((i) => i.id === selectedId);
+      const next = e.key === "j" ? idx + 1 : idx - 1;
+      if (next >= 0 && next < visible.length) setSelectedId(visible[next]!.id);
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [visible, selectedId, qOpen, orderOpen, selected, lastFx]);
 
   const draftLanded =
     Number(qDraft.unit_price_cny || 0) * Number(qDraft.cny_rate || 0) +
@@ -758,10 +988,25 @@ function SourcingPage() {
           </div>
           <div className="flex flex-wrap items-center gap-2">
             <StageFilterBar counts={stageCounts} value={stageFilter} onChange={setStageFilter} />
+            <button
+              type="button"
+              onClick={() => setAttentionOnly((v) => !v)}
+              className={`inline-flex items-center gap-1.5 rounded-full border px-3 py-1 text-xs transition-colors ${
+                attentionOnly
+                  ? "border-amber-500 bg-amber-500 text-white"
+                  : "border-amber-500/40 bg-amber-500/10 text-amber-700 hover:bg-amber-500/20 dark:text-amber-400"
+              }`}
+            >
+              <AlertTriangle className="h-3 w-3" /> Needs attention
+              <span className="rounded-full bg-black/10 px-1.5 text-[10px] tabular-nums dark:bg-white/10">
+                {attentionSet.size}
+              </span>
+            </button>
             <Input
+              ref={searchRef}
               value={search}
               onChange={(e) => setSearch(e.target.value)}
-              placeholder="Search product / supplier…"
+              placeholder="Search product / supplier…  ( / )"
               className="h-8 w-full max-w-[240px] sm:ml-auto"
             />
             <Select value={sortBy} onValueChange={(v) => setSortBy(v as typeof sortBy)}>
@@ -776,6 +1021,9 @@ function SourcingPage() {
                 <SelectItem value="cost">Sort: Lowest cost</SelectItem>
               </SelectContent>
             </Select>
+            <span className="hidden items-center gap-1 text-[10px] text-muted-foreground lg:inline-flex">
+              <Keyboard className="h-3 w-3" /> j/k move · a = add quote
+            </span>
           </div>
         </div>
       )}
@@ -783,7 +1031,7 @@ function SourcingPage() {
       {pipeline.length > 0 && (
         <div className="grid gap-4 lg:grid-cols-[320px_1fr]">
           {/* Queue */}
-          <div className="space-y-2">
+          <div className="space-y-2 lg:max-h-[calc(100vh-140px)] lg:overflow-y-auto lg:pr-1">
             {visible.length === 0 && (
               <Card>
                 <CardContent className="p-6 text-center text-xs text-muted-foreground">
@@ -791,21 +1039,24 @@ function SourcingPage() {
                 </CardContent>
               </Card>
             )}
-            {visible.map((i) => {
+            {visible.map((i, idx) => {
               const on = i.id === selectedId;
               const imgs = i.images?.length ? i.images : i.image_url ? [i.image_url] : [];
               const qs = quotesQ.data?.get(i.id) ?? [];
               const st = stageOf.get(i.id) ?? "to_source";
               const po = i.imp_po_id ? posQ.data?.get(i.imp_po_id) : undefined;
-              const ageDays = Math.max(
-                0,
-                Math.round(
-                  (Date.now() - new Date(i.approved_at ?? i.created_at).getTime()) / 86400000,
-                ),
-              );
+              const ageDays = ageDaysOf(i);
+              const prevStage = idx > 0 ? stageOf.get(visible[idx - 1]!.id) ?? "to_source" : null;
+              const showHead = sortBy === "stage" && st !== prevStage;
+              const due = isFollowupDue(i.next_action_at);
               return (
+                <div key={i.id}>
+                {showHead && (
+                  <p className="px-1 pb-1 pt-2 text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
+                    {STAGE_META[st].label}
+                  </p>
+                )}
                 <div
-                  key={i.id}
                   role="button"
                   tabIndex={0}
                   onClick={() => setSelectedId(i.id)}
@@ -815,14 +1066,26 @@ function SourcingPage() {
                   className={`flex w-full items-center gap-3 rounded-xl border p-2.5 text-left transition-all ${
                     on
                       ? "border-primary/40 bg-primary/5 shadow-sm"
-                      : "border-border/70 hover:bg-muted/50"
+                      : due
+                        ? "border-amber-500/40 bg-amber-500/5 hover:bg-amber-500/10"
+                        : "border-border/70 hover:bg-muted/50"
                   }`}
                 >
                   <div className="h-14 w-14 shrink-0 overflow-hidden rounded-lg">
                     <IdeaGallery images={imgs.slice(0, 1)} title={i.title} className="h-14" />
                   </div>
                   <div className="min-w-0 flex-1">
-                    <p className="truncate text-sm font-semibold">{i.title}</p>
+                    <p className="flex items-center gap-1 truncate text-sm font-semibold">
+                      <span className="truncate">{i.title}</span>
+                      {(i.priority === "urgent" || i.priority === "high") && (
+                        <Badge
+                          variant="outline"
+                          className={`shrink-0 px-1 py-0 text-[9px] uppercase ${PRIORITY_TONE[i.priority!]}`}
+                        >
+                          {i.priority}
+                        </Badge>
+                      )}
+                    </p>
                     <p className="text-[11px] text-muted-foreground">
                       {qs.length} quote{qs.length === 1 ? "" : "s"}
                       {i.target_price_max ? ` · target ≤ ${fmtValue(i.target_price_max, "bdt")}` : ""}
@@ -833,12 +1096,24 @@ function SourcingPage() {
                         ? `${fmtValue(Math.round(Number(po.due_bdt)), "bdt")} due · `
                         : ""}
                       {ageDays}d in pipeline
+                      {i.sourcing_owner ? ` · ${i.sourcing_owner}` : ""}
                     </p>
+                    {i.next_action_at && (
+                      <p
+                        className={`truncate text-[10px] ${
+                          due ? "font-medium text-amber-600 dark:text-amber-400" : "text-muted-foreground"
+                        }`}
+                      >
+                        ⏰ {i.next_action_at}
+                        {i.next_action_note ? ` · ${i.next_action_note}` : ""}
+                      </p>
+                    )}
                   </div>
                   <div className="flex shrink-0 flex-col items-end gap-1">
                     <StageBadge stage={st} className="shrink-0" />
                     <StageMenu idea={i} />
                   </div>
+                </div>
                 </div>
               );
             })}
@@ -846,7 +1121,7 @@ function SourcingPage() {
 
           {/* Detail */}
           {selected && (
-            <div className="space-y-4">
+            <div className="space-y-4 lg:max-h-[calc(100vh-140px)] lg:overflow-y-auto lg:pr-1">
               <Card className="overflow-hidden">
                 <div className="grid gap-0 md:grid-cols-[280px_1fr]">
                   <IdeaGallery images={selImages} title={selected.title} className="aspect-[4/3]" />
