@@ -957,28 +957,150 @@ function SourcingPage() {
 
       {/* Order dialog */}
       <Dialog open={orderOpen} onOpenChange={setOrderOpen}>
-        <DialogContent className="max-w-md">
+        <DialogContent className="max-h-[92vh] max-w-2xl overflow-y-auto">
           <DialogHeader>
-            <DialogTitle>Place order — {selected?.title}</DialogTitle>
+            <DialogTitle>Place order → Purchase Order — {selected?.title}</DialogTitle>
           </DialogHeader>
-          <div className="grid gap-3">
-            <Field label="Quantity (pcs)">
-              <Input
-                type="number"
-                value={orderQty}
-                onChange={(e) => setOrderQty(e.target.value)}
+          <div className="grid gap-4">
+            <div className="grid gap-3 sm:grid-cols-3">
+              <Field label="Quantity (pcs)">
+                <Input
+                  type="number"
+                  value={orderQty}
+                  onChange={(e) => setOrderQty(e.target.value)}
+                />
+              </Field>
+              <Field label="Unit price (¥ CNY)">
+                <Input
+                  type="number"
+                  step="0.01"
+                  value={poUnitCny}
+                  onChange={(e) => setPoUnitCny(e.target.value)}
+                />
+              </Field>
+              <Field label="FX rate (৳ / ¥)">
+                <Input
+                  type="number"
+                  step="0.01"
+                  value={poFx}
+                  onChange={(e) => setPoFx(e.target.value)}
+                />
+              </Field>
+            </div>
+
+            <div className="grid gap-3 sm:grid-cols-2">
+              <Field label="Supplier (existing)">
+                <Select
+                  value={poSupplierId || "new"}
+                  onValueChange={(v) => setPoSupplierId(v === "new" ? "" : v)}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="New supplier" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="new">+ New supplier</SelectItem>
+                    {(suppliersQ.data ?? []).map((s: { id: string; name: string }) => (
+                      <SelectItem key={s.id} value={s.id}>
+                        {s.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </Field>
+              {!poSupplierId && (
+                <Field label="New supplier name">
+                  <Input
+                    value={poSupplierName}
+                    onChange={(e) => setPoSupplierName(e.target.value)}
+                    placeholder="1688 seller / factory"
+                  />
+                </Field>
+              )}
+              {!poSupplierId && (
+                <Field label="Supplier link (optional)">
+                  <Input
+                    value={poSupplierUrl}
+                    onChange={(e) => setPoSupplierUrl(e.target.value)}
+                    placeholder="https://detail.1688.com/..."
+                  />
+                </Field>
+              )}
+              <Field label="Planned landed / unit (৳)">
+                <Input
+                  type="number"
+                  value={orderPrice}
+                  onChange={(e) => setOrderPrice(e.target.value)}
+                />
+              </Field>
+            </div>
+
+            <Field label="PO note (optional)">
+              <Textarea
+                rows={2}
+                value={poNotes}
+                onChange={(e) => setPoNotes(e.target.value)}
+                placeholder="Color mix, packaging instruction..."
               />
             </Field>
-            <Field label="Unit landed price (৳)">
-              <Input
-                type="number"
-                value={orderPrice}
-                onChange={(e) => setOrderPrice(e.target.value)}
-              />
-            </Field>
+
+            <div className="rounded-lg border p-3">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2 text-sm font-medium">
+                  <Wallet className="h-4 w-4 text-primary" /> Advance payment এখনই record করবো?
+                </div>
+                <Switch checked={payEnabled} onCheckedChange={setPayEnabled} />
+              </div>
+              {payEnabled && (
+                <div className="mt-3 grid gap-3 sm:grid-cols-2">
+                  <Field label="Amount (৳)">
+                    <Input
+                      type="number"
+                      value={payAmount}
+                      onChange={(e) => setPayAmount(e.target.value)}
+                    />
+                  </Field>
+                  <Field label="Pay from wallet">
+                    <Select value={payWalletId} onValueChange={setPayWalletId}>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select account" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {wallets.map((w) => (
+                          <SelectItem key={w.id} value={w.id}>
+                            {w.name}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </Field>
+                  <Field label="Payment date">
+                    <Input
+                      type="date"
+                      value={payDate}
+                      onChange={(e) => setPayDate(e.target.value)}
+                    />
+                  </Field>
+                  <Field label="Reference (optional)">
+                    <Input value={payRef} onChange={(e) => setPayRef(e.target.value)} />
+                  </Field>
+                </div>
+              )}
+            </div>
+
             <div className="rounded-lg border bg-muted/40 p-3 text-sm">
               <div className="flex justify-between">
-                <span className="text-muted-foreground">Total order value</span>
+                <span className="text-muted-foreground">PO value (product, ৳)</span>
+                <span className="font-semibold">
+                  {fmtValue(
+                    Math.round(
+                      Number(orderQty || 0) * Number(poUnitCny || 0) * Number(poFx || 0),
+                    ),
+                    "bdt",
+                  )}
+                </span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-muted-foreground">Planned landed total</span>
                 <span className="font-display text-lg font-bold">
                   {fmtValue(
                     Math.round(Number(orderQty || 0) * Number(orderPrice || 0)),
@@ -986,6 +1108,9 @@ function SourcingPage() {
                   )}
                 </span>
               </div>
+              <p className="mt-1 text-[11px] text-muted-foreground">
+                Quantity mode PO তৈরি হবে — Supply Chain থেকে piece by piece release করা যাবে।
+              </p>
               {selected?.target_price_max != null &&
                 Number(orderPrice || 0) > selected.target_price_max && (
                   <p className="mt-1 text-xs text-destructive">
@@ -1000,9 +1125,16 @@ function SourcingPage() {
             </Button>
             <Button
               onClick={() => placeOrder.mutate()}
-              disabled={!orderQty || !orderPrice || placeOrder.isPending}
+              disabled={
+                !orderQty ||
+                Number(poFx || 0) <= 0 ||
+                (!poSupplierId && !poSupplierName.trim()) ||
+                (payEnabled && (!payWalletId || Number(payAmount || 0) <= 0)) ||
+                placeOrder.isPending
+              }
             >
-              Confirm order
+              {placeOrder.isPending && <Loader2 className="mr-1.5 h-4 w-4 animate-spin" />}
+              Create PO & order
             </Button>
           </DialogFooter>
         </DialogContent>
