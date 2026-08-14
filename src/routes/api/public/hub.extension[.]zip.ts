@@ -13,7 +13,7 @@ export const Route = createFileRoute("/api/public/hub/extension.zip")({
         return new Response(zip as unknown as BodyInit, {
           headers: {
             "Content-Type": "application/zip",
-            "Content-Disposition": 'attachment; filename="growth-hub-capture.zip"',
+            "Content-Disposition": 'attachment; filename="synq-with-us.zip"',
             "Cache-Control": "no-store",
           },
         });

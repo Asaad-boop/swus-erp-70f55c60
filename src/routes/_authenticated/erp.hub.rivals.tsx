@@ -500,13 +500,14 @@ function RivalsPage() {
             <CardContent className="space-y-3 p-4 text-sm">
               <div className="flex items-start gap-3">
                 <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-indigo-500 to-fuchsia-500 text-xs font-extrabold text-white">
-                  GH
+                  S
                 </span>
                 <div>
-                  <p className="font-semibold">Growth Hub Capture — Chrome extension (recommended)</p>
+                  <p className="font-semibold">Synq With Us — Chrome extension (recommended)</p>
                   <p className="text-xs text-muted-foreground">
-                    যেকোনো website, product, Facebook/Instagram/TikTok ad বা ভালো লাগা content — এক
-                    ক্লিকে ছবি, দাম, note সহ Hub-এ চলে আসবে। Right-click মেনু থেকেও সেভ করা যায়।
+                    Email + password দিয়ে login করলেই যেকোনো website, product,
+                    Facebook/Instagram/TikTok ad বা ভালো লাগা content — এক ক্লিকে ছবি, দাম, note সহ
+                    Hub-এ চলে আসবে। Token লাগবে না।
                   </p>
                 </div>
               </div>
@@ -537,8 +538,8 @@ function RivalsPage() {
                   <b>Load unpacked</b> চাপো → extract করা ফোল্ডারটা select করো।
                 </li>
                 <li>
-                  Toolbar-এর GH আইকনে ক্লিক → token পেস্ট করো (token সহ ডাউনলোড করলে আগেই বসানো
-                  থাকবে) → brand সিলেক্ট করো।
+                  Toolbar-এর <b>Synq</b> আইকনে ক্লিক → তোমার ERP <b>email + password</b> দিয়ে Login
+                  → brand সিলেক্ট করো। (চাইলে Advanced-এ token-ও দেওয়া যায়।)
                 </li>
               </ol>
               <p className="text-[11px] text-muted-foreground">
