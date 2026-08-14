@@ -155,6 +155,25 @@ const SCRAPE = `
   const heading = document.querySelector('h1');
   const article = document.querySelector('article, [role="article"], main');
 
+  /* ---------------- listing grid (bulk grab) ---------------- */
+  const listing = [];
+  try {
+    const seen = {};
+    Array.from(document.querySelectorAll('a[href]')).forEach((a) => {
+      if (listing.length >= 40) return;
+      const href = abs(a.getAttribute('href'));
+      if (!href || seen[href]) return;
+      if (!/\\/(product|products|item|p|dp|goods|offer)[\\/-]/i.test(href)) return;
+      const im = a.querySelector('img');
+      const src = im ? (im.currentSrc || im.src || im.getAttribute('data-src')) : null;
+      const label = (a.getAttribute('title') || (im && im.getAttribute('alt')) || txt(a) || '').trim();
+      if (!label) return;
+      const pm = txt(a).match(/(?:৳|Tk\\.?|BDT|\\$|¥|€|£)\\s?([0-9][0-9,]{0,9}(?:\\.[0-9]{1,2})?)/i);
+      seen[href] = 1;
+      listing.push({ url: href, title: label.slice(0, 160), image_url: abs(src || ''), price: pm ? num(pm[1]) : null });
+    });
+  } catch (e) {}
+
   return {
     url: (product && product.url ? abs(product.url) : null) || location.href,
     title: ((product && product.name) || meta('meta[property="og:title"]') || txt(heading) || document.title || '').trim().slice(0, 300),
@@ -174,7 +193,8 @@ const SCRAPE = `
     followers: followers,
     is_page: isPage,
     is_product: !!product || /product|\\/p\\/|\\/item\\//i.test(location.pathname),
-    siteName: siteName
+    siteName: siteName,
+    listing: listing
   };
 })();
 `;
