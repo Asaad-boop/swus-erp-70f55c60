@@ -2,10 +2,25 @@ import { createFileRoute } from "@tanstack/react-router";
 import { useMemo, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
-import { Users, Plus, Search, Star, ExternalLink } from "lucide-react";
+import {
+  Users,
+  Plus,
+  Star,
+  ExternalLink,
+  LayoutGrid,
+  KanbanSquare,
+  Trophy,
+  Phone,
+  Mail,
+  MapPin,
+  Wallet,
+  Eye,
+  ShoppingCart,
+  CalendarClock,
+  Handshake,
+} from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useBrand } from "@/contexts/brand-context";
-import { ContentKpi, ContentPageHeader } from "@/components/erp/content/content-shell";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -22,15 +37,36 @@ import {
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import {
   bdt,
+  costPerOrder,
+  daysUntil,
   fetchAgencies,
   fetchCreatorContacts,
   fetchCreators,
   fetchItems,
+  fetchShipments,
   labelOf,
   NEGOTIATION_STATUSES,
   PLATFORMS,
   type Creator,
+  type CreatorContact,
 } from "@/lib/erp/content/content-data";
+import {
+  Avatar,
+  ContentHero,
+  EmptyState,
+  ExportButton,
+  Kpi,
+  KpiStrip,
+  Pill,
+  SearchBox,
+  Segmented,
+  Toolbar,
+  downloadCsv,
+  fmtNum,
+  sortBy,
+  usePersistedState,
+} from "@/components/erp/content/content-ui";
+import { cn } from "@/lib/utils";
 
 export const Route = createFileRoute("/_authenticated/erp/content/creators")({
   head: () => ({
@@ -39,12 +75,12 @@ export const Route = createFileRoute("/_authenticated/erp/content/creators")({
       {
         name: "description",
         content:
-          "Influencer database with rates, negotiation stage, contact log and delivered content performance.",
+          "Influencer database with rates, negotiation pipeline, follow-up reminders and cost-per-order leaderboard.",
       },
       { property: "og:title", content: "Creator CRM — Content Studio" },
       {
         property: "og:description",
-        content: "Track creator rates, negotiations and past performance in one place.",
+        content: "Track creator rates, negotiations, shipments and delivered performance in one place.",
       },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary" },
@@ -70,11 +106,20 @@ const emptyDraft = {
   negotiation_status: "new",
 };
 
+type Perf = { pieces: number; views: number; orders: number; spend: number };
+type ViewMode = "grid" | "pipeline" | "leaderboard";
+
 function CreatorsPage() {
   const { brandIds, activeBrand } = useBrand();
   const qc = useQueryClient();
-  const [search, setSearch] = useState("");
-  const [stage, setStage] = useState("all");
+
+  const [view, patchView] = usePersistedState("creators", {
+    search: "",
+    stage: "all",
+    platform: "all",
+    mode: "grid" as ViewMode,
+    sort: "orders" as "orders" | "cpo" | "rate" | "followers" | "name",
+  });
   const [creating, setCreating] = useState(false);
   const [draft, setDraft] = useState(emptyDraft);
   const [open, setOpen] = useState<Creator | null>(null);
@@ -91,16 +136,30 @@ function CreatorsPage() {
     queryKey: ["content-items", brandIds],
     queryFn: () => fetchItems(brandIds),
   });
+  const shipmentsQ = useQuery({
+    queryKey: ["content-shipments", brandIds],
+    queryFn: () => fetchShipments(brandIds),
+  });
   const contactsQ = useQuery({
     queryKey: ["content-creator-contacts", open?.id],
     enabled: !!open,
     queryFn: () => fetchCreatorContacts(open ? [open.id] : []),
   });
+  const allContactsQ = useQuery({
+    queryKey: ["content-creator-contacts-all", (creatorsQ.data ?? []).length],
+    enabled: (creatorsQ.data ?? []).length > 0,
+    queryFn: () => fetchCreatorContacts((creatorsQ.data ?? []).map((c) => c.id)),
+  });
 
   const creators = creatorsQ.data ?? [];
+  const agencyName = useMemo(() => {
+    const m = new Map<string, string>();
+    for (const a of agenciesQ.data ?? []) m.set(a.id, a.name);
+    return m;
+  }, [agenciesQ.data]);
 
   const perf = useMemo(() => {
-    const m = new Map<string, { pieces: number; views: number; orders: number; spend: number }>();
+    const m = new Map<string, Perf>();
     for (const i of itemsQ.data ?? []) {
       if (!i.creator_id) continue;
       const cur = m.get(i.creator_id) ?? { pieces: 0, views: 0, orders: 0, spend: 0 };
@@ -113,18 +172,70 @@ function CreatorsPage() {
     return m;
   }, [itemsQ.data]);
 
+  /** Next follow-up date per creator, from the contact log. */
+  const followUp = useMemo(() => {
+    const m = new Map<string, string>();
+    for (const [cid, list] of allContactsQ.data ?? new Map<string, CreatorContact[]>()) {
+      const dates = list.map((c: CreatorContact) => c.next_follow_up).filter(Boolean) as string[];
+      if (dates.length) m.set(cid, dates.sort()[0]!);
+    }
+    return m;
+  }, [allContactsQ.data]);
+
+  const shipmentsByCreator = useMemo(() => {
+    const m = new Map<string, number>();
+    for (const s of shipmentsQ.data ?? []) m.set(s.creator_id, (m.get(s.creator_id) ?? 0) + 1);
+    return m;
+  }, [shipmentsQ.data]);
+
   const filtered = useMemo(() => {
-    const s = search.trim().toLowerCase();
-    return creators.filter((c) => {
-      if (stage !== "all" && c.negotiation_status !== stage) return false;
+    const s = view.search.trim().toLowerCase();
+    const out = creators.filter((c) => {
+      if (view.stage !== "all" && c.negotiation_status !== view.stage) return false;
+      if (view.platform !== "all" && c.platform !== view.platform) return false;
       if (!s) return true;
       return (
         c.name.toLowerCase().includes(s) ||
         (c.handle ?? "").toLowerCase().includes(s) ||
-        (c.niche ?? "").toLowerCase().includes(s)
+        (c.niche ?? "").toLowerCase().includes(s) ||
+        (c.phone ?? "").includes(s)
       );
     });
-  }, [creators, search, stage]);
+    switch (view.sort) {
+      case "cpo":
+        return sortBy(out, (c) => {
+          const p = perf.get(c.id);
+          const v = p ? costPerOrder(p.spend, p.orders) : null;
+          return v == null ? Number.MAX_SAFE_INTEGER : v;
+        }, "asc");
+      case "rate":
+        return sortBy(out, (c) => c.rate);
+      case "followers":
+        return sortBy(out, (c) => c.followers ?? 0);
+      case "name":
+        return sortBy(out, (c) => c.name.toLowerCase(), "asc");
+      default:
+        return sortBy(out, (c) => perf.get(c.id)?.orders ?? 0);
+    }
+  }, [creators, view, perf]);
+
+  const kpis = useMemo(() => {
+    const spend = [...perf.values()].reduce((s, p) => s + p.spend, 0);
+    const orders = [...perf.values()].reduce((s, p) => s + p.orders, 0);
+    const dueToday = creators.filter((c) => {
+      const d = daysUntil(followUp.get(c.id));
+      return d != null && d <= 0;
+    }).length;
+    return {
+      total: creators.length,
+      working: creators.filter((c) => c.negotiation_status === "working").length,
+      negotiating: creators.filter((c) => c.negotiation_status === "negotiating").length,
+      spend,
+      orders,
+      cpo: costPerOrder(spend, orders),
+      dueToday,
+    };
+  }, [creators, perf, followUp]);
 
   const createMut = useMutation({
     mutationFn: async () => {
@@ -188,55 +299,96 @@ function CreatorsPage() {
     onSuccess: () => {
       toast.success("Contact log হয়েছে");
       qc.invalidateQueries({ queryKey: ["content-creator-contacts"] });
+      qc.invalidateQueries({ queryKey: ["content-creator-contacts-all"] });
     },
     onError: (e: Error) => toast.error(e.message),
   });
 
-  const totalSpend = useMemo(
-    () => Array.from(perf.values()).reduce((s, p) => s + p.spend, 0),
-    [perf],
-  );
+  const exportCsv = () =>
+    downloadCsv(`creators-${new Date().toISOString().slice(0, 10)}.csv`, [
+      ["Name", "Handle", "Platform", "Followers", "Niche", "Stage", "Rate", "Agency", "Content", "Views", "Orders", "Spend", "Cost/Order", "Next follow-up"],
+      ...filtered.map((c) => {
+        const p = perf.get(c.id);
+        return [
+          c.name,
+          c.handle ?? "",
+          labelOf(PLATFORMS, c.platform),
+          c.followers ?? 0,
+          c.niche ?? "",
+          labelOf(NEGOTIATION_STATUSES, c.negotiation_status),
+          c.rate,
+          c.agency_id ? (agencyName.get(c.agency_id) ?? "") : "",
+          p?.pieces ?? 0,
+          p?.views ?? 0,
+          p?.orders ?? 0,
+          p?.spend ?? 0,
+          p ? (costPerOrder(p.spend, p.orders)?.toFixed(0) ?? "") : "",
+          followUp.get(c.id) ?? "",
+        ];
+      }),
+    ]);
 
   return (
     <div className="mx-auto max-w-[1500px] space-y-4 p-3 md:p-6">
-      <ContentPageHeader
+      <ContentHero
         icon={Users}
         title="Creator CRM"
-        subtitle="Influencer database, rate negotiation আর past performance"
+        subtitle="Influencer database, rate negotiation, follow-up reminder আর delivered performance — সব এক জায়গায়।"
         actions={
-          <Button size="sm" onClick={() => setCreating(true)}>
+          <Button size="sm" className="h-9" onClick={() => setCreating(true)}>
             <Plus className="mr-1.5 h-3.5 w-3.5" /> Add creator
           </Button>
         }
-      />
-
-      <div className="grid grid-cols-2 gap-2 md:grid-cols-4">
-        <ContentKpi label="Creators" value={creators.length} />
-        <ContentKpi
-          label="Working"
-          value={creators.filter((c) => c.negotiation_status === "working").length}
-          tone="good"
-        />
-        <ContentKpi
-          label="Negotiating"
-          value={creators.filter((c) => c.negotiation_status === "negotiating").length}
-          tone="warn"
-        />
-        <ContentKpi label="Creator spend" value={bdt(totalSpend)} />
-      </div>
-
-      <div className="sticky top-[46px] z-20 flex flex-wrap items-center gap-2 rounded-xl border bg-background/85 p-2 backdrop-blur">
-        <div className="relative min-w-40 flex-1">
-          <Search className="absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-muted-foreground" />
-          <Input
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            placeholder="Name, handle, niche..."
-            className="h-9 pl-8 text-sm"
+      >
+        <KpiStrip cols={5}>
+          <Kpi label="Creators" value={kpis.total} icon={Users} />
+          <Kpi
+            label="Working"
+            value={kpis.working}
+            icon={Handshake}
+            tone="good"
+            onClick={() => patchView({ stage: view.stage === "working" ? "all" : "working" })}
+            active={view.stage === "working"}
           />
-        </div>
-        <Select value={stage} onValueChange={setStage}>
-          <SelectTrigger className="h-9 w-36 text-xs">
+          <Kpi
+            label="Negotiating"
+            value={kpis.negotiating}
+            tone="warn"
+            onClick={() => patchView({ stage: view.stage === "negotiating" ? "all" : "negotiating" })}
+            active={view.stage === "negotiating"}
+          />
+          <Kpi
+            label="Follow-up due"
+            value={kpis.dueToday}
+            icon={CalendarClock}
+            tone={kpis.dueToday > 0 ? "bad" : "good"}
+          />
+          <Kpi
+            label="Creator spend"
+            value={bdt(kpis.spend)}
+            icon={Wallet}
+            hint={kpis.cpo != null ? `${bdt(kpis.cpo)} / order · ${kpis.orders} orders` : "no attributed order"}
+          />
+        </KpiStrip>
+      </ContentHero>
+
+      <Toolbar>
+        <SearchBox
+          value={view.search}
+          onChange={(v) => patchView({ search: v })}
+          placeholder="Name, handle, niche, phone…  ( / )"
+        />
+        <Segmented
+          value={view.mode}
+          onChange={(v) => patchView({ mode: v })}
+          options={[
+            { key: "grid", label: "Grid", icon: LayoutGrid },
+            { key: "pipeline", label: "Pipeline", icon: KanbanSquare },
+            { key: "leaderboard", label: "Leaderboard", icon: Trophy },
+          ]}
+        />
+        <Select value={view.stage} onValueChange={(v) => patchView({ stage: v })}>
+          <SelectTrigger className="h-9 w-[130px] text-xs">
             <SelectValue />
           </SelectTrigger>
           <SelectContent>
@@ -248,58 +400,108 @@ function CreatorsPage() {
             ))}
           </SelectContent>
         </Select>
-      </div>
+        <Select value={view.platform} onValueChange={(v) => patchView({ platform: v })}>
+          <SelectTrigger className="h-9 w-[130px] text-xs">
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">All platforms</SelectItem>
+            {PLATFORMS.map((s) => (
+              <SelectItem key={s.key} value={s.key}>
+                {s.label}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+        <Select value={view.sort} onValueChange={(v) => patchView({ sort: v as typeof view.sort })}>
+          <SelectTrigger className="h-9 w-[150px] text-xs">
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="orders" className="text-xs">Sort: Orders</SelectItem>
+            <SelectItem value="cpo" className="text-xs">Sort: Cost / order</SelectItem>
+            <SelectItem value="rate" className="text-xs">Sort: Rate</SelectItem>
+            <SelectItem value="followers" className="text-xs">Sort: Followers</SelectItem>
+            <SelectItem value="name" className="text-xs">Sort: Name</SelectItem>
+          </SelectContent>
+        </Select>
+        <div className="ml-auto">
+          <ExportButton onClick={exportCsv} />
+        </div>
+      </Toolbar>
 
       {creatorsQ.isLoading ? (
         <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
           {Array.from({ length: 6 }).map((_, i) => (
-            <Skeleton key={i} className="h-32 rounded-xl" />
+            <Skeleton key={i} className="h-36 rounded-xl" />
           ))}
         </div>
       ) : filtered.length === 0 ? (
-        <p className="rounded-xl border border-dashed p-8 text-center text-sm text-muted-foreground">
-          কোনো creator নেই।
-        </p>
-      ) : (
-        <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
-          {filtered.map((c) => {
-            const p = perf.get(c.id);
+        <EmptyState
+          icon={Users}
+          title="কোনো creator নেই"
+          description="নতুন creator যোগ করো অথবা filter বদলাও।"
+          action={
+            <Button size="sm" onClick={() => setCreating(true)}>
+              <Plus className="mr-1.5 h-3.5 w-3.5" /> Add creator
+            </Button>
+          }
+        />
+      ) : view.mode === "pipeline" ? (
+        <div className="flex snap-x gap-3 overflow-x-auto pb-2 md:grid md:grid-cols-6 md:overflow-visible">
+          {NEGOTIATION_STATUSES.map((st) => {
+            const list = filtered.filter((c) => c.negotiation_status === st.key);
             return (
-              <button
-                key={c.id}
-                onClick={() => setOpen(c)}
-                className="rounded-xl border bg-card p-3 text-left shadow-sm transition-colors hover:border-primary/40"
+              <div
+                key={st.key}
+                className="w-[80vw] shrink-0 snap-start rounded-xl border border-border/60 bg-muted/25 p-2 md:w-auto"
               >
-                <div className="flex items-start justify-between gap-2">
-                  <div className="min-w-0">
-                    <p className="truncate text-sm font-semibold">{c.name}</p>
-                    <p className="truncate text-[11px] text-muted-foreground">
-                      {c.handle ?? "—"} · {labelOf(PLATFORMS, c.platform)} ·{" "}
-                      {(c.followers ?? 0).toLocaleString()} followers
-                    </p>
-                  </div>
-                  <Badge variant="outline" className="shrink-0 text-[10px]">
-                    {labelOf(NEGOTIATION_STATUSES, c.negotiation_status)}
+                <div className="mb-2 flex items-center justify-between px-1">
+                  <span className="text-xs font-semibold">{st.label}</span>
+                  <Badge variant="secondary" className="text-[10px]">
+                    {list.length}
                   </Badge>
                 </div>
-                <div className="mt-2 flex flex-wrap gap-1.5 text-[10px]">
-                  <Badge variant="secondary">Rate {bdt(c.rate)}</Badge>
-                  {c.niche && <Badge variant="outline">{c.niche}</Badge>}
-                  {c.rating != null && (
-                    <Badge variant="outline" className="gap-0.5">
-                      <Star className="h-2.5 w-2.5" /> {c.rating}
-                    </Badge>
+                <div className="space-y-2">
+                  {list.map((c) => (
+                    <button
+                      key={c.id}
+                      type="button"
+                      onClick={() => setOpen(c)}
+                      className="flex w-full items-center gap-2 rounded-lg border border-border/70 bg-card p-2 text-left transition-colors hover:border-primary/40"
+                    >
+                      <Avatar name={c.name} size={26} />
+                      <div className="min-w-0 flex-1">
+                        <p className="truncate text-xs font-semibold">{c.name}</p>
+                        <p className="truncate text-[10px] text-muted-foreground">
+                          {bdt(c.rate)} · {fmtNum(c.followers ?? 0)} followers
+                        </p>
+                      </div>
+                    </button>
+                  ))}
+                  {list.length === 0 && (
+                    <p className="px-1 py-5 text-center text-[11px] text-muted-foreground">খালি</p>
                   )}
                 </div>
-                {p && (
-                  <p className="mt-2 text-[10px] text-muted-foreground">
-                    {p.pieces} content · {p.views.toLocaleString()} views · {p.orders} orders ·{" "}
-                    {bdt(p.spend)} spend
-                  </p>
-                )}
-              </button>
+              </div>
             );
           })}
+        </div>
+      ) : view.mode === "leaderboard" ? (
+        <Leaderboard creators={filtered} perf={perf} onOpen={setOpen} />
+      ) : (
+        <div className="grid gap-2 sm:grid-cols-2 xl:grid-cols-3">
+          {filtered.map((c) => (
+            <CreatorCard
+              key={c.id}
+              creator={c}
+              perf={perf.get(c.id)}
+              agency={c.agency_id ? (agencyName.get(c.agency_id) ?? null) : null}
+              shipments={shipmentsByCreator.get(c.id) ?? 0}
+              followUp={followUp.get(c.id) ?? null}
+              onOpen={() => setOpen(c)}
+            />
+          ))}
         </div>
       )}
 
@@ -348,9 +550,7 @@ function CreatorsPage() {
                 <Input
                   type="number"
                   value={draft.followers}
-                  onChange={(e) =>
-                    setDraft({ ...draft, followers: Number(e.target.value) || 0 })
-                  }
+                  onChange={(e) => setDraft({ ...draft, followers: Number(e.target.value) || 0 })}
                   className="h-9"
                 />
               </Field>
@@ -428,11 +628,7 @@ function CreatorsPage() {
                 </SelectContent>
               </Select>
             </Field>
-            <Button
-              className="w-full"
-              disabled={createMut.isPending}
-              onClick={() => createMut.mutate()}
-            >
+            <Button className="w-full" disabled={createMut.isPending} onClick={() => createMut.mutate()}>
               Add
             </Button>
           </div>
@@ -446,7 +642,10 @@ function CreatorsPage() {
             <CreatorDetail
               creator={open}
               perf={perf.get(open.id)}
-              contacts={(open ? (contactsQ.data?.get(open.id) ?? []) : [])}
+              agency={open.agency_id ? (agencyName.get(open.agency_id) ?? null) : null}
+              contacts={contactsQ.data?.get(open.id) ?? []}
+              shipments={(shipmentsQ.data ?? []).filter((s) => s.creator_id === open.id)}
+              items={(itemsQ.data ?? []).filter((i) => i.creator_id === open.id)}
               onStage={(v) => {
                 updateMut.mutate({ id: open.id, negotiation_status: v });
                 setOpen({ ...open, negotiation_status: v });
@@ -454,6 +653,11 @@ function CreatorsPage() {
               onRate={(v) => {
                 updateMut.mutate({ id: open.id, rate: v });
                 setOpen({ ...open, rate: v });
+                toast.success("Rate সেভ হয়েছে");
+              }}
+              onRating={(v) => {
+                updateMut.mutate({ id: open.id, rating: v });
+                setOpen({ ...open, rating: v });
               }}
               onLog={(v) => logMut.mutate({ creator: open, ...v })}
               logging={logMut.isPending}
@@ -474,27 +678,193 @@ function Field({ label, children }: { label: string; children: React.ReactNode }
   );
 }
 
+function CreatorCard({
+  creator: c,
+  perf: p,
+  agency,
+  shipments,
+  followUp,
+  onOpen,
+}: {
+  creator: Creator;
+  perf?: Perf;
+  agency: string | null;
+  shipments: number;
+  followUp: string | null;
+  onOpen: () => void;
+}) {
+  const due = daysUntil(followUp);
+  const cpo = p ? costPerOrder(p.spend, p.orders) : null;
+  return (
+    <button
+      onClick={onOpen}
+      className="group rounded-xl border border-border/70 bg-card p-3 text-left shadow-sm transition-all hover:-translate-y-0.5 hover:border-primary/40 hover:shadow-md"
+    >
+      <div className="flex items-start gap-2.5">
+        <Avatar name={c.name} size={38} />
+        <div className="min-w-0 flex-1">
+          <div className="flex items-start justify-between gap-2">
+            <div className="min-w-0">
+              <p className="truncate text-sm font-semibold group-hover:text-primary">{c.name}</p>
+              <p className="truncate text-[11px] text-muted-foreground">
+                {c.handle ?? "—"} · {labelOf(PLATFORMS, c.platform)} · {fmtNum(c.followers ?? 0)} followers
+              </p>
+            </div>
+            <Badge variant="outline" className="shrink-0 text-[10px]">
+              {labelOf(NEGOTIATION_STATUSES, c.negotiation_status)}
+            </Badge>
+          </div>
+          <div className="mt-1.5 flex flex-wrap gap-1.5">
+            <Pill tone="info">{bdt(c.rate)} rate</Pill>
+            {c.niche && <Pill>{c.niche}</Pill>}
+            {agency && <Pill>{agency}</Pill>}
+            {c.rating != null && (
+              <Pill tone="warn">
+                <Star className="h-3 w-3" /> {c.rating}
+              </Pill>
+            )}
+            {shipments > 0 && <Pill>{shipments} shipment</Pill>}
+            {due != null && (
+              <Pill tone={due < 0 ? "bad" : due <= 1 ? "warn" : "default"}>
+                <CalendarClock className="h-3 w-3" />
+                {due < 0 ? `${Math.abs(due)}d overdue` : due === 0 ? "Today" : `${due}d`}
+              </Pill>
+            )}
+          </div>
+        </div>
+      </div>
+      <div className="mt-2.5 grid grid-cols-4 gap-1.5 border-t border-border/60 pt-2 text-center">
+        <Stat label="Content" value={String(p?.pieces ?? 0)} />
+        <Stat label="Views" value={fmtNum(p?.views ?? 0)} />
+        <Stat label="Orders" value={String(p?.orders ?? 0)} />
+        <Stat label="৳/order" value={cpo != null ? bdt(cpo) : "—"} />
+      </div>
+    </button>
+  );
+}
+
+function Stat({ label, value }: { label: string; value: string }) {
+  return (
+    <div>
+      <p className="text-[9px] font-medium uppercase tracking-wider text-muted-foreground">{label}</p>
+      <p className="text-xs font-bold tabular-nums">{value}</p>
+    </div>
+  );
+}
+
+function Leaderboard({
+  creators,
+  perf,
+  onOpen,
+}: {
+  creators: Creator[];
+  perf: Map<string, Perf>;
+  onOpen: (c: Creator) => void;
+}) {
+  const rows = useMemo(() => {
+    const withPerf = creators
+      .map((c) => ({ c, p: perf.get(c.id) }))
+      .filter((r) => r.p && r.p.orders > 0) as { c: Creator; p: Perf }[];
+    return sortBy(withPerf, (r) => costPerOrder(r.p.spend, r.p.orders) ?? Number.MAX_SAFE_INTEGER, "asc");
+  }, [creators, perf]);
+
+  if (rows.length === 0) {
+    return (
+      <EmptyState
+        icon={Trophy}
+        title="এখনো attributed order নেই"
+        description="Pipeline-এ content-এর attributed orders বসালে এখানে creator leaderboard দেখাবে।"
+      />
+    );
+  }
+
+  const best = costPerOrder(rows[0]!.p.spend, rows[0]!.p.orders) ?? 1;
+
+  return (
+    <div className="overflow-hidden rounded-xl border border-border/70 bg-card">
+      {rows.map((r, idx) => {
+        const cpo = costPerOrder(r.p.spend, r.p.orders) ?? 0;
+        const ratio = best > 0 ? best / Math.max(cpo, 1) : 0;
+        return (
+          <button
+            key={r.c.id}
+            type="button"
+            onClick={() => onOpen(r.c)}
+            className="flex w-full items-center gap-3 border-b border-border/60 px-3 py-2.5 text-left transition-colors last:border-0 hover:bg-muted/40"
+          >
+            <span
+              className={cn(
+                "flex h-6 w-6 shrink-0 items-center justify-center rounded-full text-[11px] font-bold",
+                idx === 0
+                  ? "bg-amber-500/15 text-amber-600 dark:text-amber-400"
+                  : idx === 1
+                    ? "bg-slate-500/15 text-slate-600 dark:text-slate-300"
+                    : idx === 2
+                      ? "bg-orange-500/15 text-orange-600 dark:text-orange-400"
+                      : "bg-muted text-muted-foreground",
+              )}
+            >
+              {idx + 1}
+            </span>
+            <Avatar name={r.c.name} size={30} />
+            <div className="min-w-0 flex-1">
+              <p className="truncate text-sm font-semibold">{r.c.name}</p>
+              <p className="truncate text-[11px] text-muted-foreground">
+                {r.p.pieces} content · {fmtNum(r.p.views)} views · {r.p.orders} orders · {bdt(r.p.spend)} spend
+              </p>
+            </div>
+            <div className="shrink-0 text-right">
+              <p className="text-sm font-bold tabular-nums text-emerald-600 dark:text-emerald-400">
+                {bdt(cpo)}
+              </p>
+              <p className="text-[10px] text-muted-foreground">per order</p>
+            </div>
+            <div className="hidden w-24 sm:block">
+              <div className="h-1.5 w-full overflow-hidden rounded-full bg-muted">
+                <div
+                  className="h-full rounded-full bg-emerald-500"
+                  style={{ width: `${Math.min(100, ratio * 100)}%` }}
+                />
+              </div>
+            </div>
+          </button>
+        );
+      })}
+    </div>
+  );
+}
+
 function CreatorDetail({
   creator,
   perf,
+  agency,
   contacts,
+  shipments,
+  items,
   onStage,
   onRate,
+  onRating,
   onLog,
   logging,
 }: {
   creator: Creator;
-  perf?: { pieces: number; views: number; orders: number; spend: number };
-  contacts: { id: string; channel: string; summary: string; outcome: string | null; quoted_amount: number | null; created_at: string }[];
-  onStage: (v: string) => void;
-  onRate: (v: number) => void;
-  onLog: (v: {
+  perf?: Perf;
+  agency: string | null;
+  contacts: {
+    id: string;
     channel: string;
     summary: string;
-    outcome: string;
-    quoted: number;
-    next: string;
-  }) => void;
+    outcome: string | null;
+    quoted_amount: number | null;
+    next_follow_up: string | null;
+    created_at: string;
+  }[];
+  shipments: { id: string; status: string; qty: number; sent_date: string | null; tracking_no: string | null }[];
+  items: { id: string; title: string; stage: string; views: number; attributed_orders: number; cost: number }[];
+  onStage: (v: string) => void;
+  onRate: (v: number) => void;
+  onRating: (v: number) => void;
+  onLog: (v: { channel: string; summary: string; outcome: string; quoted: number; next: string }) => void;
   logging: boolean;
 }) {
   const [channel, setChannel] = useState("whatsapp");
@@ -503,32 +873,39 @@ function CreatorDetail({
   const [quoted, setQuoted] = useState(0);
   const [next, setNext] = useState("");
   const [rate, setRate] = useState(creator.rate);
+  const cpo = perf ? costPerOrder(perf.spend, perf.orders) : null;
 
   return (
     <>
       <SheetHeader>
-        <SheetTitle className="text-base">{creator.name}</SheetTitle>
-        <p className="text-[11px] text-muted-foreground">
-          {creator.handle ?? "—"} · {labelOf(PLATFORMS, creator.platform)}
-          {creator.profile_url && (
-            <a
-              href={creator.profile_url}
-              target="_blank"
-              rel="noreferrer"
-              className="ml-1.5 inline-flex items-center text-primary"
-            >
-              profile <ExternalLink className="ml-0.5 h-3 w-3" />
-            </a>
-          )}
-        </p>
+        <div className="flex items-center gap-3">
+          <Avatar name={creator.name} size={44} />
+          <div className="min-w-0">
+            <SheetTitle className="truncate text-base">{creator.name}</SheetTitle>
+            <p className="truncate text-[11px] text-muted-foreground">
+              {creator.handle ?? "—"} · {labelOf(PLATFORMS, creator.platform)}
+              {agency ? ` · ${agency}` : ""}
+              {creator.profile_url && (
+                <a
+                  href={creator.profile_url}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="ml-1.5 inline-flex items-center text-primary"
+                >
+                  profile <ExternalLink className="ml-0.5 h-3 w-3" />
+                </a>
+              )}
+            </p>
+          </div>
+        </div>
       </SheetHeader>
       <div className="space-y-4 py-3">
-        <div className="grid grid-cols-2 gap-2">
-          <ContentKpi label="Content delivered" value={perf?.pieces ?? 0} />
-          <ContentKpi label="Views" value={(perf?.views ?? 0).toLocaleString()} />
-          <ContentKpi label="Attributed orders" value={perf?.orders ?? 0} tone="good" />
-          <ContentKpi label="Paid" value={bdt(perf?.spend ?? 0)} />
-        </div>
+        <KpiStrip cols={4}>
+          <Kpi label="Content" value={perf?.pieces ?? 0} />
+          <Kpi label="Views" value={fmtNum(perf?.views ?? 0)} icon={Eye} tone="info" />
+          <Kpi label="Orders" value={perf?.orders ?? 0} icon={ShoppingCart} tone="good" />
+          <Kpi label="৳ / order" value={cpo != null ? bdt(cpo) : "—"} icon={Wallet} />
+        </KpiStrip>
 
         <div className="grid grid-cols-2 gap-3">
           <Field label="Negotiation stage">
@@ -560,11 +937,88 @@ function CreatorDetail({
           </Field>
         </div>
 
+        <div>
+          <Label className="text-[11px]">Rating</Label>
+          <div className="mt-1 flex gap-1">
+            {[1, 2, 3, 4, 5].map((n) => (
+              <button key={n} type="button" onClick={() => onRating(n)} aria-label={`Rate ${n}`}>
+                <Star
+                  className={cn(
+                    "h-5 w-5 transition-colors",
+                    (creator.rating ?? 0) >= n
+                      ? "fill-amber-400 text-amber-400"
+                      : "text-muted-foreground/40",
+                  )}
+                />
+              </button>
+            ))}
+          </div>
+        </div>
+
         {(creator.phone || creator.email || creator.address) && (
-          <div className="rounded-lg border bg-muted/40 p-2 text-[11px]">
-            {creator.phone && <p>📞 {creator.phone}</p>}
-            {creator.email && <p>✉️ {creator.email}</p>}
-            {creator.address && <p>📍 {creator.address}</p>}
+          <div className="space-y-1 rounded-xl border border-border/70 bg-muted/30 p-2.5 text-[11px]">
+            {creator.phone && (
+              <p className="flex items-center gap-1.5">
+                <Phone className="h-3 w-3 text-muted-foreground" />
+                <a href={`tel:${creator.phone}`} className="hover:text-primary">
+                  {creator.phone}
+                </a>
+              </p>
+            )}
+            {creator.email && (
+              <p className="flex items-center gap-1.5">
+                <Mail className="h-3 w-3 text-muted-foreground" /> {creator.email}
+              </p>
+            )}
+            {creator.address && (
+              <p className="flex items-start gap-1.5">
+                <MapPin className="mt-0.5 h-3 w-3 shrink-0 text-muted-foreground" /> {creator.address}
+              </p>
+            )}
+          </div>
+        )}
+
+        {items.length > 0 && (
+          <div>
+            <h3 className="mb-1.5 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+              Delivered content ({items.length})
+            </h3>
+            <div className="space-y-1.5">
+              {items.slice(0, 8).map((i) => (
+                <div
+                  key={i.id}
+                  className="flex items-center justify-between gap-2 rounded-lg border border-border/70 bg-card px-2.5 py-1.5"
+                >
+                  <p className="truncate text-xs">{i.title}</p>
+                  <p className="shrink-0 text-[10px] tabular-nums text-muted-foreground">
+                    {fmtNum(i.views)} views · {i.attributed_orders} orders
+                  </p>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {shipments.length > 0 && (
+          <div>
+            <h3 className="mb-1.5 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+              Product shipments ({shipments.length})
+            </h3>
+            <div className="space-y-1.5">
+              {shipments.map((s) => (
+                <div
+                  key={s.id}
+                  className="flex items-center justify-between gap-2 rounded-lg border border-border/70 bg-card px-2.5 py-1.5 text-[11px]"
+                >
+                  <span>
+                    {s.qty} pcs {s.tracking_no ? `· ${s.tracking_no}` : ""}
+                  </span>
+                  <Pill tone={s.status === "delivered" ? "good" : s.status === "returned" ? "bad" : "warn"}>
+                    {s.status}
+                  </Pill>
+                </div>
+              ))}
+            </div>
           </div>
         )}
 
@@ -572,32 +1026,38 @@ function CreatorDetail({
           <h3 className="mb-1.5 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
             Contact log
           </h3>
-          <div className="space-y-1.5">
+          <div className="space-y-2 border-l border-border/70 pl-3">
             {contacts.map((c) => (
-              <div key={c.id} className="rounded-lg border bg-card px-2.5 py-2">
+              <div key={c.id} className="relative rounded-lg border border-border/70 bg-card px-2.5 py-2">
+                <span className="absolute -left-[19px] top-3 h-2 w-2 rounded-full bg-primary" />
                 <p className="text-xs">{c.summary}</p>
                 <p className="text-[10px] text-muted-foreground">
                   {c.channel} · {new Date(c.created_at).toLocaleDateString()}
                   {c.quoted_amount ? ` · quoted ${bdt(c.quoted_amount)}` : ""}
                   {c.outcome ? ` · ${c.outcome}` : ""}
+                  {c.next_follow_up ? ` · next ${c.next_follow_up}` : ""}
                 </p>
               </div>
             ))}
-            {contacts.length === 0 && (
-              <p className="text-[11px] text-muted-foreground">কোনো log নেই।</p>
-            )}
+            {contacts.length === 0 && <p className="text-[11px] text-muted-foreground">কোনো log নেই।</p>}
           </div>
         </div>
 
-        <div className="space-y-2 rounded-xl border p-2.5">
+        <div className="space-y-2 rounded-xl border border-border/70 p-2.5">
           <p className="text-xs font-semibold">নতুন contact log</p>
           <div className="grid grid-cols-2 gap-2">
-            <Input
-              value={channel}
-              onChange={(e) => setChannel(e.target.value)}
-              placeholder="Channel"
-              className="h-9"
-            />
+            <Select value={channel} onValueChange={setChannel}>
+              <SelectTrigger className="h-9 text-xs">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {["whatsapp", "call", "messenger", "instagram", "email", "meeting"].map((c) => (
+                  <SelectItem key={c} value={c} className="text-xs">
+                    {c}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
             <Input
               type="number"
               value={quoted}
@@ -624,6 +1084,7 @@ function CreatorDetail({
               value={next}
               onChange={(e) => setNext(e.target.value)}
               className="h-9"
+              title="Next follow-up"
             />
           </div>
           <Button

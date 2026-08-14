@@ -471,3 +471,87 @@ export async function fetchInspirations(brandIds: string[]) {
   if (error) throw error;
   return (data ?? []) as unknown as Inspiration[];
 }
+/* ---------------- Derived metrics (v2) ---------------- */
+
+/**
+ * Content risk score 0..100 — higher means the product urgently needs creative.
+ * Blends idle time, stock value at risk and existing coverage.
+ */
+export function contentRiskScore(row: {
+  since: string | null;
+  stock: number;
+  incoming_qty: number;
+  price: number | null;
+  content_count: number;
+  published_count: number;
+  plan_target: number | null;
+}, now = Date.now()) {
+  const days = elapsedMs(row.since, now) / 86_400_000;
+  const idle = Math.min(45, days * 1.5); // up to 45 pts after ~30 days
+  const value = (row.stock + row.incoming_qty) * (row.price ?? 0);
+  const valuePts = Math.min(30, Math.log10(Math.max(1, value)) * 6); // up to 30 pts
+  const target = Math.max(1, row.plan_target ?? 3);
+  const coverage = Math.min(1, row.content_count / target);
+  const gapPts = (1 - coverage) * 20;
+  const publishedPenalty = row.published_count > 0 ? -8 : 0;
+  return Math.max(0, Math.min(100, Math.round(idle + valuePts + gapPts + publishedPenalty)));
+}
+
+export function riskTone(score: number): "good" | "warn" | "bad" {
+  if (score >= 70) return "bad";
+  if (score >= 40) return "warn";
+  return "good";
+}
+
+export type CoverageBucket = "none" | "under" | "covered";
+
+export function coverageBucket(contentCount: number, target: number | null): CoverageBucket {
+  const t = Math.max(1, target ?? 3);
+  if (contentCount <= 0) return "none";
+  if (contentCount < t) return "under";
+  return "covered";
+}
+
+/** Engagement rate for a published item. */
+export function engagementRate(i: { views: number; likes: number; comments: number; shares: number }) {
+  const v = Number(i.views ?? 0);
+  if (v <= 0) return 0;
+  return (Number(i.likes ?? 0) + Number(i.comments ?? 0) + Number(i.shares ?? 0)) / v;
+}
+
+/** Cost per attributed order; null when there are no orders. */
+export function costPerOrder(cost: number, orders: number) {
+  const o = Number(orders ?? 0);
+  if (o <= 0) return null;
+  return Number(cost ?? 0) / o;
+}
+
+export function mediaPlanEconomics(p: {
+  target_qty: number;
+  selling_price: number;
+  ad_budget: number;
+  content_budget: number;
+  creator_budget: number;
+}) {
+  const totalBudget = p.ad_budget + p.content_budget + p.creator_budget;
+  const revenue = p.target_qty * p.selling_price;
+  const breakEvenRoas = totalBudget > 0 ? revenue / totalBudget : 0;
+  const cac = p.target_qty > 0 ? totalBudget / p.target_qty : 0;
+  const grossProfit = revenue - totalBudget;
+  const margin = revenue > 0 ? grossProfit / revenue : 0;
+  return { totalBudget, revenue, breakEvenRoas, cac, grossProfit, margin };
+}
+
+export function daysUntil(date: string | null | undefined, now = Date.now()) {
+  if (!date) return null;
+  const t = new Date(date).getTime();
+  if (Number.isNaN(t)) return null;
+  return Math.ceil((t - now) / 86_400_000);
+}
+
+export function dueTone(days: number | null): "good" | "warn" | "bad" | "default" {
+  if (days == null) return "default";
+  if (days < 0) return "bad";
+  if (days <= 2) return "warn";
+  return "good";
+}
