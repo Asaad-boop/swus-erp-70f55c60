@@ -130,6 +130,7 @@ export type HubIdea = {
   ordered_at: string | null;
   order_qty: number | null;
   order_unit_price: number | null;
+  imp_po_id?: string | null;
   created_by: string | null;
   created_at: string;
 };

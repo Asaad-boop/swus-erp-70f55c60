@@ -1,6 +1,7 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, Link } from "@tanstack/react-router";
 import { useEffect, useMemo, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useServerFn } from "@tanstack/react-start";
 import { toast } from "sonner";
 import {
   PackageSearch,
@@ -14,9 +15,16 @@ import {
   ShoppingCart,
   Crown,
   Timer,
+  Wallet,
+  Factory,
+  Loader2,
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useBrand } from "@/contexts/brand-context";
+import { useAccounts } from "@/hooks/erp/use-finance-query";
+import { Switch } from "@/components/ui/switch";
+import { createImportPo, listImportSuppliers } from "@/lib/erp/imports/imports.functions";
+import { newIdemKey } from "@/lib/erp/imports/types";
 import { HubPageHeader } from "@/components/erp/hub/hub-shell";
 import { IdeaGallery, StarRating } from "@/components/erp/hub/idea-visuals";
 import { Card, CardContent } from "@/components/ui/card";
@@ -115,6 +123,18 @@ function SourcingPage() {
   const [orderOpen, setOrderOpen] = useState(false);
   const [orderQty, setOrderQty] = useState("");
   const [orderPrice, setOrderPrice] = useState("");
+  // PO fields
+  const [poUnitCny, setPoUnitCny] = useState("");
+  const [poFx, setPoFx] = useState("17");
+  const [poSupplierId, setPoSupplierId] = useState<string>("");
+  const [poSupplierName, setPoSupplierName] = useState("");
+  const [poSupplierUrl, setPoSupplierUrl] = useState("");
+  const [poNotes, setPoNotes] = useState("");
+  const [payEnabled, setPayEnabled] = useState(false);
+  const [payAmount, setPayAmount] = useState("");
+  const [payWalletId, setPayWalletId] = useState("");
+  const [payDate, setPayDate] = useState(() => new Date().toISOString().slice(0, 10));
+  const [payRef, setPayRef] = useState("");
   const [tMin, setTMin] = useState("");
   const [tMax, setTMax] = useState("");
 
@@ -158,6 +178,32 @@ function SourcingPage() {
   }, [selected?.id, selected?.target_price_min, selected?.target_price_max]);
 
   const quotes = (selectedId && quotesQ.data?.get(selectedId)) || [];
+
+  const poBrandId = selected?.brand_id ?? activeBrand?.id ?? brandIds[0] ?? null;
+  const suppliersFn = useServerFn(listImportSuppliers);
+  const createPoFn = useServerFn(createImportPo);
+  const suppliersQ = useQuery({
+    queryKey: ["imp-suppliers", poBrandId],
+    enabled: !!poBrandId && orderOpen,
+    queryFn: () => suppliersFn({ data: { brandId: poBrandId! } }),
+  });
+  const { data: wallets = [] } = useAccounts(poBrandId ? [poBrandId] : []);
+
+  const linkedPoQ = useQuery({
+    queryKey: ["hub-idea-po", selected?.imp_po_id],
+    enabled: !!selected?.imp_po_id,
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("imp_purchase_orders")
+        .select(
+          "id,po_number,status,order_date,currency,fx_rate,grand_total_bdt,paid_bdt,due_bdt,total_units,landed_cost_per_unit_bdt",
+        )
+        .eq("id", selected!.imp_po_id!)
+        .maybeSingle();
+      if (error) throw error;
+      return data;
+    },
+  });
 
   const invalidate = () => {
     qc.invalidateQueries({ queryKey: ["hub-ideas"] });
@@ -272,21 +318,79 @@ function SourcingPage() {
   const placeOrder = useMutation({
     mutationFn: async () => {
       if (!selected) return;
+      if (!poBrandId) throw new Error("Brand পাওয়া যায়নি");
+      const qty = Number(orderQty || 0);
+      const unitCny = Number(poUnitCny || 0);
+      const fx = Number(poFx || 0);
+      if (qty <= 0) throw new Error("Quantity দিন");
+      if (fx <= 0) throw new Error("FX rate দিন");
+
+      const supplier = poSupplierId
+        ? { id: poSupplierId }
+        : poSupplierName.trim()
+          ? {
+              name: poSupplierName.trim(),
+              source_link: poSupplierUrl.trim() || undefined,
+              supplier_type: "import" as const,
+              currency: "CNY",
+            }
+          : undefined;
+
+      const advance = Number(payAmount || 0);
+      const res = (await createPoFn({
+        data: {
+          brand_id: poBrandId,
+          order_date: new Date().toISOString().slice(0, 10),
+          currency: "CNY",
+          fx_rate: fx,
+          notes:
+            `Growth Hub sourcing — ${selected.title}` +
+            (poNotes.trim() ? ` | ${poNotes.trim()}` : ""),
+          supplier,
+          items: [
+            {
+              name_snapshot: selected.title,
+              quantity: qty,
+              unit_cost_foreign: unitCny,
+              image_snapshot: selected.image_url ?? undefined,
+            },
+          ],
+          cartons: [],
+          receive_mode: "quantity",
+          initial_payment:
+            payEnabled && advance > 0 && payWalletId
+              ? {
+                  amount_bdt: advance,
+                  wallet_id: payWalletId,
+                  payment_date: payDate,
+                  reference: payRef.trim() || undefined,
+                  payment_type: "supplier_advance" as const,
+                  idempotency_key: newIdemKey("hubpay"),
+                }
+              : undefined,
+          idempotency_key: newIdemKey("hubpo"),
+        },
+      })) as { po_id: string; po_number: string };
+
       const { error } = await supabase
         .from("hub_product_ideas")
         .update({
           status: "ordered",
           ordered_at: new Date().toISOString(),
-          order_qty: orderQty ? Number(orderQty) : null,
+          order_qty: qty,
           order_unit_price: orderPrice ? Number(orderPrice) : null,
+          imp_po_id: res.po_id,
         } as never)
         .eq("id", selected.id);
       if (error) throw error;
+      return res;
     },
-    onSuccess: () => {
-      toast.success("Order placed 🎉");
+    onSuccess: (res) => {
+      toast.success(res ? `PO ${res.po_number} তৈরি হয়েছে 🎉` : "Order placed 🎉");
       setOrderOpen(false);
       invalidate();
+      qc.invalidateQueries({ queryKey: ["hub-idea-po"] });
+      qc.invalidateQueries({ queryKey: ["imp-pos"] });
     },
     onError: (e: Error) => toast.error(e.message),
   });
@@ -358,9 +462,16 @@ function SourcingPage() {
               <Button size="sm" variant="outline" onClick={openNewQuote}>
                 <Plus className="mr-1.5 h-4 w-4" /> Add quote
               </Button>
+              {selected.imp_po_id && (
+                <Link to="/erp/imports/orders/$orderId" params={{ orderId: selected.imp_po_id }}>
+                  <Button size="sm" variant="outline">
+                    <Factory className="mr-1.5 h-4 w-4" /> View PO
+                  </Button>
+                </Link>
+              )}
               <Button
                 size="sm"
-                disabled={selected.status === "ordered"}
+                disabled={!!selected.imp_po_id}
                 onClick={() => {
                   setOrderQty(selected.order_qty ? String(selected.order_qty) : "");
                   setOrderPrice(
@@ -370,11 +481,20 @@ function SourcingPage() {
                         ? String(Math.round(quoteLandedCost(bestQuote)))
                         : "",
                   );
+                  setPoUnitCny(bestQuote ? String(bestQuote.unit_price_cny ?? "") : "");
+                  setPoFx(bestQuote?.cny_rate ? String(bestQuote.cny_rate) : "17");
+                  setPoSupplierId("");
+                  setPoSupplierName(bestQuote?.supplier_name ?? selected.supplier_name ?? "");
+                  setPoSupplierUrl(bestQuote?.supplier_url ?? selected.supplier_url ?? "");
+                  setPoNotes("");
+                  setPayEnabled(false);
+                  setPayAmount("");
+                  setPayRef("");
                   setOrderOpen(true);
                 }}
               >
                 <ShoppingCart className="mr-1.5 h-4 w-4" />
-                {selected.status === "ordered" ? "Ordered" : "Place order"}
+                {selected.imp_po_id ? "Ordered" : "Place order"}
               </Button>
             </>
           ) : null
@@ -538,6 +658,58 @@ function SourcingPage() {
                         {selected.ordered_at
                           ? new Date(selected.ordered_at).toLocaleDateString()
                           : ""}
+                      </div>
+                    )}
+
+                    {selected.imp_po_id && linkedPoQ.data && (
+                      <div className="rounded-lg border border-primary/30 bg-primary/5 p-3">
+                        <div className="flex flex-wrap items-center justify-between gap-2">
+                          <p className="flex items-center gap-1.5 text-xs font-semibold">
+                            <Factory className="h-3.5 w-3.5 text-primary" />
+                            Supply chain PO {linkedPoQ.data.po_number}
+                            <Badge variant="secondary" className="text-[10px] capitalize">
+                              {String(linkedPoQ.data.status).replace(/_/g, " ")}
+                            </Badge>
+                          </p>
+                          <Link
+                            to="/erp/imports/orders/$orderId"
+                            params={{ orderId: selected.imp_po_id }}
+                          >
+                            <Button size="sm" variant="outline" className="h-7 text-xs">
+                              Open PO <ExternalLink className="ml-1 h-3 w-3" />
+                            </Button>
+                          </Link>
+                        </div>
+                        <div className="mt-2 grid grid-cols-2 gap-2 text-xs sm:grid-cols-4">
+                          <Info
+                            label="Units"
+                            value={String(linkedPoQ.data.total_units ?? selected.order_qty ?? 0)}
+                          />
+                          <Info
+                            label="PO total"
+                            value={fmtValue(
+                              Math.round(Number(linkedPoQ.data.grand_total_bdt ?? 0)),
+                              "bdt",
+                            )}
+                          />
+                          <Info
+                            label="Paid"
+                            value={fmtValue(Math.round(Number(linkedPoQ.data.paid_bdt ?? 0)), "bdt")}
+                          />
+                          <Info
+                            label="Due"
+                            value={fmtValue(Math.round(Number(linkedPoQ.data.due_bdt ?? 0)), "bdt")}
+                          />
+                        </div>
+                        {Number(linkedPoQ.data.landed_cost_per_unit_bdt ?? 0) > 0 && (
+                          <p className="mt-1.5 text-[11px] text-muted-foreground">
+                            Actual landed / unit:{" "}
+                            {fmtValue(
+                              Math.round(Number(linkedPoQ.data.landed_cost_per_unit_bdt)),
+                              "bdt",
+                            )}
+                          </p>
+                        )}
                       </div>
                     )}
                   </CardContent>
@@ -837,28 +1009,150 @@ function SourcingPage() {
 
       {/* Order dialog */}
       <Dialog open={orderOpen} onOpenChange={setOrderOpen}>
-        <DialogContent className="max-w-md">
+        <DialogContent className="max-h-[92vh] max-w-2xl overflow-y-auto">
           <DialogHeader>
-            <DialogTitle>Place order — {selected?.title}</DialogTitle>
+            <DialogTitle>Place order → Purchase Order — {selected?.title}</DialogTitle>
           </DialogHeader>
-          <div className="grid gap-3">
-            <Field label="Quantity (pcs)">
-              <Input
-                type="number"
-                value={orderQty}
-                onChange={(e) => setOrderQty(e.target.value)}
+          <div className="grid gap-4">
+            <div className="grid gap-3 sm:grid-cols-3">
+              <Field label="Quantity (pcs)">
+                <Input
+                  type="number"
+                  value={orderQty}
+                  onChange={(e) => setOrderQty(e.target.value)}
+                />
+              </Field>
+              <Field label="Unit price (¥ CNY)">
+                <Input
+                  type="number"
+                  step="0.01"
+                  value={poUnitCny}
+                  onChange={(e) => setPoUnitCny(e.target.value)}
+                />
+              </Field>
+              <Field label="FX rate (৳ / ¥)">
+                <Input
+                  type="number"
+                  step="0.01"
+                  value={poFx}
+                  onChange={(e) => setPoFx(e.target.value)}
+                />
+              </Field>
+            </div>
+
+            <div className="grid gap-3 sm:grid-cols-2">
+              <Field label="Supplier (existing)">
+                <Select
+                  value={poSupplierId || "new"}
+                  onValueChange={(v) => setPoSupplierId(v === "new" ? "" : v)}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="New supplier" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="new">+ New supplier</SelectItem>
+                    {(suppliersQ.data ?? []).map((s: { id: string; name: string }) => (
+                      <SelectItem key={s.id} value={s.id}>
+                        {s.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </Field>
+              {!poSupplierId && (
+                <Field label="New supplier name">
+                  <Input
+                    value={poSupplierName}
+                    onChange={(e) => setPoSupplierName(e.target.value)}
+                    placeholder="1688 seller / factory"
+                  />
+                </Field>
+              )}
+              {!poSupplierId && (
+                <Field label="Supplier link (optional)">
+                  <Input
+                    value={poSupplierUrl}
+                    onChange={(e) => setPoSupplierUrl(e.target.value)}
+                    placeholder="https://detail.1688.com/..."
+                  />
+                </Field>
+              )}
+              <Field label="Planned landed / unit (৳)">
+                <Input
+                  type="number"
+                  value={orderPrice}
+                  onChange={(e) => setOrderPrice(e.target.value)}
+                />
+              </Field>
+            </div>
+
+            <Field label="PO note (optional)">
+              <Textarea
+                rows={2}
+                value={poNotes}
+                onChange={(e) => setPoNotes(e.target.value)}
+                placeholder="Color mix, packaging instruction..."
               />
             </Field>
-            <Field label="Unit landed price (৳)">
-              <Input
-                type="number"
-                value={orderPrice}
-                onChange={(e) => setOrderPrice(e.target.value)}
-              />
-            </Field>
+
+            <div className="rounded-lg border p-3">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2 text-sm font-medium">
+                  <Wallet className="h-4 w-4 text-primary" /> Advance payment এখনই record করবো?
+                </div>
+                <Switch checked={payEnabled} onCheckedChange={setPayEnabled} />
+              </div>
+              {payEnabled && (
+                <div className="mt-3 grid gap-3 sm:grid-cols-2">
+                  <Field label="Amount (৳)">
+                    <Input
+                      type="number"
+                      value={payAmount}
+                      onChange={(e) => setPayAmount(e.target.value)}
+                    />
+                  </Field>
+                  <Field label="Pay from wallet">
+                    <Select value={payWalletId} onValueChange={setPayWalletId}>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select account" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {wallets.map((w) => (
+                          <SelectItem key={w.id} value={w.id}>
+                            {w.name}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </Field>
+                  <Field label="Payment date">
+                    <Input
+                      type="date"
+                      value={payDate}
+                      onChange={(e) => setPayDate(e.target.value)}
+                    />
+                  </Field>
+                  <Field label="Reference (optional)">
+                    <Input value={payRef} onChange={(e) => setPayRef(e.target.value)} />
+                  </Field>
+                </div>
+              )}
+            </div>
+
             <div className="rounded-lg border bg-muted/40 p-3 text-sm">
               <div className="flex justify-between">
-                <span className="text-muted-foreground">Total order value</span>
+                <span className="text-muted-foreground">PO value (product, ৳)</span>
+                <span className="font-semibold">
+                  {fmtValue(
+                    Math.round(
+                      Number(orderQty || 0) * Number(poUnitCny || 0) * Number(poFx || 0),
+                    ),
+                    "bdt",
+                  )}
+                </span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-muted-foreground">Planned landed total</span>
                 <span className="font-display text-lg font-bold">
                   {fmtValue(
                     Math.round(Number(orderQty || 0) * Number(orderPrice || 0)),
@@ -866,6 +1160,9 @@ function SourcingPage() {
                   )}
                 </span>
               </div>
+              <p className="mt-1 text-[11px] text-muted-foreground">
+                Quantity mode PO তৈরি হবে — Supply Chain থেকে piece by piece release করা যাবে।
+              </p>
               {selected?.target_price_max != null &&
                 Number(orderPrice || 0) > selected.target_price_max && (
                   <p className="mt-1 text-xs text-destructive">
@@ -880,9 +1177,16 @@ function SourcingPage() {
             </Button>
             <Button
               onClick={() => placeOrder.mutate()}
-              disabled={!orderQty || !orderPrice || placeOrder.isPending}
+              disabled={
+                !orderQty ||
+                Number(poFx || 0) <= 0 ||
+                (!poSupplierId && !poSupplierName.trim()) ||
+                (payEnabled && (!payWalletId || Number(payAmount || 0) <= 0)) ||
+                placeOrder.isPending
+              }
             >
-              Confirm order
+              {placeOrder.isPending && <Loader2 className="mr-1.5 h-4 w-4 animate-spin" />}
+              Create PO & order
             </Button>
           </DialogFooter>
         </DialogContent>

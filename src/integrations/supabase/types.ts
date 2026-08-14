@@ -4074,6 +4074,7 @@ export type Database = {
           id: string
           image_url: string | null
           images: string[]
+          imp_po_id: string | null
           linked_product_id: string | null
           moq: number | null
           notes: string | null
@@ -4106,6 +4107,7 @@ export type Database = {
           id?: string
           image_url?: string | null
           images?: string[]
+          imp_po_id?: string | null
           linked_product_id?: string | null
           moq?: number | null
           notes?: string | null
@@ -4138,6 +4140,7 @@ export type Database = {
           id?: string
           image_url?: string | null
           images?: string[]
+          imp_po_id?: string | null
           linked_product_id?: string | null
           moq?: number | null
           notes?: string | null
@@ -4162,6 +4165,13 @@ export type Database = {
             columns: ["brand_id"]
             isOneToOne: false
             referencedRelation: "brands"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "hub_product_ideas_imp_po_id_fkey"
+            columns: ["imp_po_id"]
+            isOneToOne: false
+            referencedRelation: "imp_purchase_orders"
             referencedColumns: ["id"]
           },
         ]
