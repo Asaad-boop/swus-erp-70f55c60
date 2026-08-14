@@ -66,10 +66,12 @@ import {
 import { cn } from "@/lib/utils";
 import {
   IDEA_STATUSES,
+  IDEA_FUNNEL_ORDER,
   fetchForecasts,
   fetchIdeaSummaries,
   fetchIdeas,
   fetchMyVotes,
+  fetchIdeaPeople,
   fmtValue,
   type HubIdea,
   type HubIdeaForecast,
