@@ -422,7 +422,10 @@ function SourcingPage() {
           throw new Error("আগে Place order দিয়ে PO তৈরি করুন");
         }
         const poStatus =
-          stage === "ordered" ? "ordered" : stage === "in_transit" ? "in_transit" : "arrived_bd";
+          stage === "ordered" ? "ordered" : "in_transit";
+        if (stage === "received") {
+          throw new Error("Received status warehouse receipt থেকে auto আসে");
+        }
         const { error } = await supabase
           .from("imp_purchase_orders")
           .update({ status: poStatus } as never)
@@ -475,7 +478,8 @@ function SourcingPage() {
             const m = STAGE_META[s];
             const Icon = m.icon;
             const postOrder = s === "ordered" || s === "in_transit" || s === "received";
-            const disabled = cur === s || (postOrder ? !hasPo : hasPo);
+            const disabled =
+              cur === s || s === "received" || (postOrder ? !hasPo : hasPo);
             return (
               <DropdownMenuItem
                 key={s}
