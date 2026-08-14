@@ -67,6 +67,9 @@ import {
   SearchBox,
   Segmented,
   Toolbar,
+  BrandTag,
+  BrandSelect,
+  BrandFilter,
   downloadCsv,
   fmtNum,
   sortBy,
@@ -97,6 +100,7 @@ export const Route = createFileRoute("/_authenticated/erp/content/pipeline")({
 
 const emptyDraft = {
   title: "",
+  brand_id: "",
   product_id: "",
   content_type: "ugc",
   content_style: "",
@@ -119,6 +123,7 @@ function PipelinePage() {
     platform: "all",
     source: "all",
     stage: "all",
+    brand: "all",
     mode: "board" as ViewMode,
     swimlane: "none" as "none" | "creator" | "product",
     onlyOverdue: false,
@@ -166,6 +171,7 @@ function PipelinePage() {
       if (view.platform !== "all" && i.platform !== view.platform) return false;
       if (view.source !== "all" && i.source !== view.source) return false;
       if (view.stage !== "all" && i.stage !== view.stage) return false;
+      if (view.brand !== "all" && i.brand_id !== view.brand) return false;
       if (view.onlyOverdue) {
         const d = daysUntil(i.due_date);
         const done = i.stage === "published" || i.stage === "performance";
@@ -246,8 +252,9 @@ function PipelinePage() {
   const createMut = useMutation({
     mutationFn: async () => {
       if (!draft.title.trim()) throw new Error("Title দাও");
+      if (!(draft.brand_id || activeBrand?.id)) throw new Error("Brand বাছাই করুন");
       const { error } = await supabase.from("content_items").insert({
-        brand_id: activeBrand?.id ?? brandIds[0] ?? null,
+        brand_id: draft.brand_id || activeBrand?.id || null,
         title: draft.title.trim(),
         product_id: draft.product_id || null,
         content_type: draft.content_type,
