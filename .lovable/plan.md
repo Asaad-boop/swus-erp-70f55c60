@@ -1,5 +1,7 @@
 # Content Module — ৬ Screen Full Build
 
+স্পেকটা reference হিসেবে নিচ্ছি — hubhub-এর existing Growth Hub style (glass toolbar, KPI tile, stage chip, mobile bottom-sheet filter) দিয়েই বানাবো, hubhub copy না।
+
 আলাদা একটা **Content** module বানাবো (`/erp/content/*`) নিজস্ব subnav সহ — ৬টা screen। বর্তমান Creative Desk (`/erp/hub/content`) এর data (plans, creators, assignments) নতুন module-এ migrate + extend হবে, পুরনো route নতুনটায় redirect করবে।
 
 ## Screens
