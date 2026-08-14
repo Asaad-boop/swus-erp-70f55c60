@@ -202,6 +202,7 @@ function IntakePage() {
   const filtered = useMemo(() => {
     const s = view.search.trim().toLowerCase();
     const out = rows.filter((r) => {
+      if (showSkipped ? !skippedIds.has(r.product_id) : skippedIds.has(r.product_id)) return false;
       if (view.phase !== "all" && r.phase !== view.phase) return false;
       if (view.coverage !== "all" && r._bucket !== view.coverage) return false;
       if (!s) return true;
@@ -223,7 +224,7 @@ function IntakePage() {
       default:
         return sortBy(out, (r) => r._risk);
     }
-  }, [rows, view]);
+  }, [rows, view, showSkipped, skippedIds]);
 
   const selectedRows = useMemo(
     () => filtered.filter((r) => selected.has(r.product_id)),
@@ -239,6 +240,7 @@ function IntakePage() {
     });
 
   const pushMut = useMutation({
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     mutationFn: async (input: {
       rows: IntakeRow[];
       count: number;
