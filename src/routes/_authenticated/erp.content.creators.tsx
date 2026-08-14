@@ -129,7 +129,7 @@ function CreatorsPage() {
   const createMut = useMutation({
     mutationFn: async () => {
       if (!draft.name.trim()) throw new Error("Name দাও");
-      const { error } = await supabase.from("content_creators").insert({
+      const { error } = await supabase.from("hub_creators").insert({
         brand_id: activeBrand?.id ?? brandIds[0] ?? null,
         ...draft,
         agency_id: draft.agency_id || null,
@@ -155,7 +155,7 @@ function CreatorsPage() {
     mutationFn: async (patch: Partial<Creator> & { id: string }) => {
       const { id, ...rest } = patch;
       const { error } = await supabase
-        .from("content_creators")
+        .from("hub_creators")
         .update(rest as never)
         .eq("id", id);
       if (error) throw error;
@@ -446,7 +446,7 @@ function CreatorsPage() {
             <CreatorDetail
               creator={open}
               perf={perf.get(open.id)}
-              contacts={contactsQ.data ?? []}
+              contacts={(open ? (contactsQ.data?.get(open.id) ?? []) : [])}
               onStage={(v) => {
                 updateMut.mutate({ id: open.id, negotiation_status: v });
                 setOpen({ ...open, negotiation_status: v });
