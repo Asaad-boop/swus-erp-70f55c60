@@ -3661,59 +3661,95 @@ export type Database = {
         Row: {
           angle: string | null
           asset_type: string
+          attributed_orders: number
           brand_id: string | null
+          brief: string | null
           budget: number
+          caption: string | null
           created_at: string
           created_by: string | null
+          cta: string | null
           deadline: string | null
+          engagements: number
+          hashtags: string | null
           id: string
           idea_id: string | null
           launch_date: string | null
           notes: string | null
           owner_id: string | null
           platform: string
+          priority: string
           product_id: string | null
+          published_at: string | null
+          published_url: string | null
+          reference_urls: string[]
+          script: string | null
           status: string
           title: string
           updated_at: string
+          views: number
         }
         Insert: {
           angle?: string | null
           asset_type?: string
+          attributed_orders?: number
           brand_id?: string | null
+          brief?: string | null
           budget?: number
+          caption?: string | null
           created_at?: string
           created_by?: string | null
+          cta?: string | null
           deadline?: string | null
+          engagements?: number
+          hashtags?: string | null
           id?: string
           idea_id?: string | null
           launch_date?: string | null
           notes?: string | null
           owner_id?: string | null
           platform?: string
+          priority?: string
           product_id?: string | null
+          published_at?: string | null
+          published_url?: string | null
+          reference_urls?: string[]
+          script?: string | null
           status?: string
           title: string
           updated_at?: string
+          views?: number
         }
         Update: {
           angle?: string | null
           asset_type?: string
+          attributed_orders?: number
           brand_id?: string | null
+          brief?: string | null
           budget?: number
+          caption?: string | null
           created_at?: string
           created_by?: string | null
+          cta?: string | null
           deadline?: string | null
+          engagements?: number
+          hashtags?: string | null
           id?: string
           idea_id?: string | null
           launch_date?: string | null
           notes?: string | null
           owner_id?: string | null
           platform?: string
+          priority?: string
           product_id?: string | null
+          published_at?: string | null
+          published_url?: string | null
+          reference_urls?: string[]
+          script?: string | null
           status?: string
           title?: string
           updated_at?: string
+          views?: number
         }
         Relationships: [
           {
@@ -3740,7 +3776,9 @@ export type Database = {
           platform: string
           profile_url: string | null
           rate: number
+          rating: number | null
           status: string
+          tags: string[]
           updated_at: string
         }
         Insert: {
@@ -3757,7 +3795,9 @@ export type Database = {
           platform?: string
           profile_url?: string | null
           rate?: number
+          rating?: number | null
           status?: string
+          tags?: string[]
           updated_at?: string
         }
         Update: {
@@ -3774,7 +3814,9 @@ export type Database = {
           platform?: string
           profile_url?: string | null
           rate?: number
+          rating?: number | null
           status?: string
+          tags?: string[]
           updated_at?: string
         }
         Relationships: []
