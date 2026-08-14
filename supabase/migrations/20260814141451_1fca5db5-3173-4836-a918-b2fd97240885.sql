@@ -1,0 +1,2 @@
+alter table public.hub_product_ideas alter column created_by set default auth.uid();
+update public.hub_product_ideas set created_by = null where created_by is not null and created_by not in (select id from auth.users);
