@@ -1173,6 +1173,33 @@ export type Database = {
           },
         ]
       }
+      content_intake_excluded: {
+        Row: {
+          brand_id: string | null
+          created_at: string
+          excluded_by: string | null
+          id: string
+          product_id: string
+          reason: string | null
+        }
+        Insert: {
+          brand_id?: string | null
+          created_at?: string
+          excluded_by?: string | null
+          id?: string
+          product_id: string
+          reason?: string | null
+        }
+        Update: {
+          brand_id?: string | null
+          created_at?: string
+          excluded_by?: string | null
+          id?: string
+          product_id?: string
+          reason?: string | null
+        }
+        Relationships: []
+      }
       content_items: {
         Row: {
           agency_id: string | null

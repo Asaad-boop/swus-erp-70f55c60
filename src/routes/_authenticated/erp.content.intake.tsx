@@ -17,6 +17,8 @@ import {
   CircleSlash,
   Layers,
   RefreshCw,
+  EyeOff,
+  Undo2,
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useBrand } from "@/contexts/brand-context";
@@ -129,6 +131,7 @@ function IntakePage() {
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [pushRows, setPushRows] = useState<IntakeRow[] | null>(null);
   const [preview, setPreview] = useState<Enriched | null>(null);
+  const [showSkipped, setShowSkipped] = useState(false);
 
   const rowsQ = useQuery({
     queryKey: ["content-intake", brandIds],
@@ -138,6 +141,20 @@ function IntakePage() {
     queryKey: ["content-inspirations", brandIds],
     queryFn: () => fetchInspirations(brandIds),
   });
+  const skippedQ = useQuery({
+    queryKey: ["content-intake-skipped", brandIds],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("content_intake_excluded")
+        .select("product_id, reason, created_at");
+      if (error) throw error;
+      return (data ?? []) as { product_id: string; reason: string | null; created_at: string }[];
+    },
+  });
+  const skippedIds = useMemo(
+    () => new Set((skippedQ.data ?? []).map((s) => s.product_id)),
+    [skippedQ.data],
+  );
 
   const rows = useMemo(
     () =>
@@ -185,6 +202,7 @@ function IntakePage() {
   const filtered = useMemo(() => {
     const s = view.search.trim().toLowerCase();
     const out = rows.filter((r) => {
+      if (showSkipped ? !skippedIds.has(r.product_id) : skippedIds.has(r.product_id)) return false;
       if (view.phase !== "all" && r.phase !== view.phase) return false;
       if (view.coverage !== "all" && r._bucket !== view.coverage) return false;
       if (!s) return true;
@@ -206,7 +224,7 @@ function IntakePage() {
       default:
         return sortBy(out, (r) => r._risk);
     }
-  }, [rows, view]);
+  }, [rows, view, showSkipped, skippedIds]);
 
   const selectedRows = useMemo(
     () => filtered.filter((r) => selected.has(r.product_id)),
@@ -220,6 +238,44 @@ function IntakePage() {
       else n.add(id);
       return n;
     });
+
+  const skipMut = useMutation({
+    mutationFn: async (input: { rows: IntakeRow[]; reason?: string }) => {
+      const payload = input.rows.map((r) => ({
+        product_id: r.product_id,
+        brand_id: r.brand_id ?? activeBrand?.id ?? null,
+        reason: input.reason ?? null,
+      }));
+      const { error } = await supabase
+        .from("content_intake_excluded")
+        .upsert(payload as never, { onConflict: "product_id" });
+      if (error) throw error;
+      return payload.length;
+    },
+    onSuccess: (n) => {
+      toast.success(`${n}টি product content list থেকে বাদ দেওয়া হয়েছে`);
+      setSelected(new Set());
+      qc.invalidateQueries({ queryKey: ["content-intake-skipped"] });
+    },
+    onError: (e: Error) => toast.error(e.message),
+  });
+
+  const unskipMut = useMutation({
+    mutationFn: async (productIds: string[]) => {
+      const { error } = await supabase
+        .from("content_intake_excluded")
+        .delete()
+        .in("product_id", productIds);
+      if (error) throw error;
+      return productIds.length;
+    },
+    onSuccess: (n) => {
+      toast.success(`${n}টি product আবার list-এ ফিরে এসেছে`);
+      setSelected(new Set());
+      qc.invalidateQueries({ queryKey: ["content-intake-skipped"] });
+    },
+    onError: (e: Error) => toast.error(e.message),
+  });
 
   const pushMut = useMutation({
     mutationFn: async (input: {
@@ -392,6 +448,18 @@ function IntakePage() {
           </SelectContent>
         </Select>
         <div className="ml-auto flex items-center gap-2">
+          <Button
+            variant={showSkipped ? "default" : "outline"}
+            size="sm"
+            className="h-9 gap-1.5 text-xs"
+            onClick={() => {
+              setShowSkipped((v) => !v);
+              setSelected(new Set());
+            }}
+          >
+            <EyeOff className="h-3.5 w-3.5" />
+            Skipped ({skippedIds.size})
+          </Button>
           <DensityToggle value={view.density} onChange={(v) => patchView({ density: v })} />
           <ExportButton onClick={exportCsv} />
         </div>
@@ -408,9 +476,31 @@ function IntakePage() {
             <Button variant="ghost" size="sm" className="h-8" onClick={() => setSelected(new Set())}>
               Clear
             </Button>
-            <Button size="sm" className="h-8" onClick={() => setPushRows(selectedRows)}>
-              <Plus className="mr-1 h-3.5 w-3.5" /> Bulk push to plan
-            </Button>
+            {showSkipped ? (
+              <Button
+                size="sm"
+                className="h-8"
+                disabled={unskipMut.isPending}
+                onClick={() => unskipMut.mutate(selectedRows.map((r) => r.product_id))}
+              >
+                <Undo2 className="mr-1 h-3.5 w-3.5" /> Restore
+              </Button>
+            ) : (
+              <>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="h-8"
+                  disabled={skipMut.isPending}
+                  onClick={() => skipMut.mutate({ rows: selectedRows })}
+                >
+                  <EyeOff className="mr-1 h-3.5 w-3.5" /> Content লাগবে না
+                </Button>
+                <Button size="sm" className="h-8" onClick={() => setPushRows(selectedRows)}>
+                  <Plus className="mr-1 h-3.5 w-3.5" /> Bulk push to plan
+                </Button>
+              </>
+            )}
           </div>
         </div>
       )}
@@ -420,8 +510,12 @@ function IntakePage() {
       ) : filtered.length === 0 ? (
         <EmptyState
           icon={PackageOpen}
-          title="কোনো product পাওয়া যায়নি"
-          description="Filter বদলাও, অথবা Supply Chain থেকে নতুন stock এলে এখানে নিজে থেকেই দেখাবে।"
+          title={showSkipped ? "কোনো skipped product নেই" : "কোনো product পাওয়া যায়নি"}
+          description={
+            showSkipped
+              ? "যেসব product-এর content দরকার নেই সেগুলো এখানে জমা হবে — যেকোনো সময় restore করা যাবে।"
+              : "Filter বদলাও, অথবা Supply Chain থেকে নতুন stock এলে এখানে নিজে থেকেই দেখাবে।"
+          }
         />
       ) : (
         <div
@@ -436,6 +530,12 @@ function IntakePage() {
               row={r}
               compact={compact}
               selected={selected.has(r.product_id)}
+              skipped={showSkipped}
+              onSkip={() =>
+                showSkipped
+                  ? unskipMut.mutate([r.product_id])
+                  : skipMut.mutate({ rows: [r] })
+              }
               onToggle={() => toggle(r.product_id)}
               onPreview={() => setPreview(r)}
               onPush={() => setPushRows([r])}
@@ -495,6 +595,8 @@ function IntakeCard({
   row,
   compact,
   selected,
+  skipped,
+  onSkip,
   onToggle,
   onPreview,
   onPush,
@@ -502,6 +604,8 @@ function IntakeCard({
   row: Enriched;
   compact: boolean;
   selected: boolean;
+  skipped: boolean;
+  onSkip: () => void;
   onToggle: () => void;
   onPreview: () => void;
   onPush: () => void;
@@ -604,9 +708,28 @@ function IntakeCard({
         <span className="truncate text-[11px] text-muted-foreground">
           {row.plan_id ? `Plan active · ${bdt(row._value)} value` : `কোনো plan নেই · ${bdt(row._value)} value`}
         </span>
-        <Button size="sm" className="h-7 shrink-0 text-xs" onClick={onPush}>
-          <Plus className="mr-1 h-3 w-3" /> Push
-        </Button>
+        <div className="flex shrink-0 items-center gap-1.5">
+          {skipped ? (
+            <Button size="sm" variant="outline" className="h-7 text-xs" onClick={onSkip}>
+              <Undo2 className="mr-1 h-3 w-3" /> Restore
+            </Button>
+          ) : (
+            <>
+              <Button
+                size="sm"
+                variant="ghost"
+                className="h-7 px-2 text-xs text-muted-foreground hover:text-destructive"
+                title="Content লাগবে না — list থেকে বাদ দাও"
+                onClick={onSkip}
+              >
+                <EyeOff className="h-3.5 w-3.5" />
+              </Button>
+              <Button size="sm" className="h-7 text-xs" onClick={onPush}>
+                <Plus className="mr-1 h-3 w-3" /> Push
+              </Button>
+            </>
+          )}
+        </div>
       </div>
     </div>
   );
