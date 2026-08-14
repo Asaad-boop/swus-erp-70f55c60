@@ -1057,6 +1057,24 @@ function SourcingPage() {
             </div>
 
             <div className="grid gap-3 sm:grid-cols-2">
+              <Field label="Cargo agent (main party) *">
+                <Select value={poAgentId} onValueChange={setPoAgentId}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Agent select করুন" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {(agentsQ.data ?? []).map((a: { id: string; name: string }) => (
+                      <SelectItem key={a.id} value={a.id}>
+                        {a.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </Field>
+              <div className="flex items-end text-[11px] text-muted-foreground">
+                অর্ডার এই agent-এর মাধ্যমে যাবে; shipping ও payment tracking agent ledger-এ হবে।
+                Agent না থাকলে Imports → Settings থেকে যোগ করুন।
+              </div>
               <Field label="Supplier (existing)">
                 <Select
                   value={poSupplierId || "new"}
