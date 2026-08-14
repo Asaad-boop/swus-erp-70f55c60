@@ -10258,6 +10258,15 @@ export type Database = {
           goal_id: string
         }[]
       }
+      hub_idea_people: {
+        Args: { _idea_ids: string[] }
+        Returns: {
+          created_by: string
+          created_by_name: string
+          idea_id: string
+          voters: Json
+        }[]
+      }
       hub_idea_summary: {
         Args: { _brand_ids: string[] }
         Returns: {
