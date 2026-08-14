@@ -485,6 +485,7 @@ function MediaPlansPage() {
             <SheetTitle className="text-base">New media plan</SheetTitle>
           </SheetHeader>
           <div className="space-y-3 py-3">
+            <BrandSelect value={formBrand ?? activeBrand?.id ?? null} onChange={setFormBrand} />
             <div>
               <Label className="text-[11px]">Title</Label>
               <Input

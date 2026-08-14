@@ -518,6 +518,7 @@ function CreatorsPage() {
             <SheetTitle className="text-base">Add creator</SheetTitle>
           </SheetHeader>
           <div className="space-y-3 py-3">
+            <BrandSelect value={formBrand ?? activeBrand?.id ?? null} onChange={setFormBrand} />
             <Field label="Name">
               <Input
                 value={draft.name}

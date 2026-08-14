@@ -246,6 +246,7 @@ function AgenciesPage() {
             <SheetTitle className="text-base">Add agency</SheetTitle>
           </SheetHeader>
           <div className="space-y-3 py-3">
+            <BrandSelect value={formBrand ?? activeBrand?.id ?? null} onChange={setFormBrand} />
             {(
               [
                 ["name", "Name"],
