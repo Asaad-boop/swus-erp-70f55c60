@@ -351,6 +351,8 @@ export type HubCreator = {
   performance_note: string | null;
   status: string;
   created_at: string;
+  rating: number | null;
+  tags: string[] | null;
 };
 
 export type HubContentPlan = {
@@ -369,6 +371,18 @@ export type HubContentPlan = {
   status: string;
   notes: string | null;
   created_at: string;
+  priority: string;
+  brief: string | null;
+  script: string | null;
+  caption: string | null;
+  cta: string | null;
+  hashtags: string | null;
+  reference_urls: string[] | null;
+  published_url: string | null;
+  published_at: string | null;
+  views: number;
+  engagements: number;
+  attributed_orders: number;
 };
 
 export type HubContentAssignment = {
@@ -418,6 +432,13 @@ export const ASSET_TYPES = [
   { key: "review", label: "Influencer review" },
   { key: "unboxing", label: "Unboxing" },
   { key: "static", label: "Static creative" },
+] as const;
+
+export const CONTENT_PRIORITIES = [
+  { key: "low", label: "Low" },
+  { key: "normal", label: "Normal" },
+  { key: "high", label: "High" },
+  { key: "urgent", label: "Urgent" },
 ] as const;
 
 export async function fetchContentPlans(brandIds: string[]) {
