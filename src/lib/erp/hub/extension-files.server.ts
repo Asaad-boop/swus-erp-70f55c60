@@ -439,6 +439,16 @@ textarea { resize:vertical; }
 .adv summary { color:var(--mut); font-size:11px; cursor:pointer; }
 .who { display:flex; align-items:center; gap:8px; font-size:11px; color:var(--mut); margin-bottom:8px; }
 .link { margin-left:auto; background:none; border:none; color:#a5b4fc; font-size:11px; cursor:pointer; text-decoration:underline; }
+.views { display:flex; gap:4px; padding:3px; border-radius:10px; background:var(--card); border:1px solid var(--line); margin-bottom:10px; }
+.vt { flex:1; padding:6px 0; font-size:11.5px; border:none; border-radius:8px; background:transparent; color:var(--mut); cursor:pointer; }
+.vt.on { background:rgba(99,102,241,.2); color:#c7cbff; font-weight:600; }
+.ghostbtn { background:transparent; border:1px dashed var(--line); color:var(--mut); border-radius:9px; padding:8px 0; font-size:12px; cursor:pointer; }
+.ghostbtn:hover { color:#c7cbff; border-color:var(--acc); }
+.feed { display:flex; flex-direction:column; gap:6px; }
+.feed .it { display:flex; gap:8px; align-items:center; padding:6px; border:1px solid var(--line); border-radius:10px; background:var(--card); }
+.feed .it img { width:34px; height:34px; border-radius:7px; object-fit:cover; background:#222; flex:none; }
+.feed .it b { font-size:11.5px; font-weight:500; display:block; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.feed .it small { color:var(--mut); font-size:10px; }
 `;
 
 
