@@ -16,6 +16,16 @@ import {
   XCircle,
   PackageSearch,
 } from "lucide-react";
+import {
+  Search,
+  Copy,
+  LayoutGrid,
+  Columns3,
+  ChevronLeft,
+  ChevronRight,
+  TrendingUp,
+  X,
+} from "lucide-react";
 import { Link } from "@tanstack/react-router";
 import { supabase } from "@/integrations/supabase/client";
 import { useBrand } from "@/contexts/brand-context";
@@ -43,6 +53,17 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import { cn } from "@/lib/utils";
 import {
   IDEA_STATUSES,
   fetchForecasts,
