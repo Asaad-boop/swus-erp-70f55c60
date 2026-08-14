@@ -413,6 +413,90 @@ function SourcingPage() {
     onError: (e: Error) => toast.error(e.message),
   });
 
+  /** Manual stage change — pre-order stages write idea.status, post-order stages write PO status. */
+  const changeStage = useMutation({
+    mutationFn: async ({ idea, stage }: { idea: HubIdea; stage: SourcingStage }) => {
+      const poId = idea.imp_po_id ?? null;
+      if (stage === "ordered" || stage === "in_transit" || stage === "received") {
+        if (!poId) {
+          throw new Error("আগে Place order দিয়ে PO তৈরি করুন");
+        }
+        const poStatus =
+          stage === "ordered" ? "ordered" : stage === "in_transit" ? "in_transit" : "arrived_bd";
+        const { error } = await supabase
+          .from("imp_purchase_orders")
+          .update({ status: poStatus } as never)
+          .eq("id", poId);
+        if (error) throw error;
+        return;
+      }
+      if (poId) throw new Error("PO তৈরি হয়ে গেছে — আগের stage-এ ফেরানো যাবে না");
+      if (stage === "sourced" && !idea.selected_quote_id) {
+        throw new Error("Sourcing done করতে আগে একটা supplier quote select করুন");
+      }
+      const patch: Record<string, unknown> = {
+        status: stage === "to_source" ? "approved" : "sourcing",
+      };
+      if (stage === "to_source") patch.selected_quote_id = null;
+      const { error } = await supabase
+        .from("hub_product_ideas")
+        .update(patch as never)
+        .eq("id", idea.id);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      toast.success("Status updated");
+      invalidate();
+      qc.invalidateQueries({ queryKey: ["hub-sourcing-pos"] });
+    },
+    onError: (e: Error) => toast.error(e.message),
+  });
+
+  const StageMenu = ({ idea, align = "end" }: { idea: HubIdea; align?: "start" | "end" }) => {
+    const cur = stageOf.get(idea.id) ?? "to_source";
+    const hasPo = !!idea.imp_po_id;
+    return (
+      <DropdownMenu>
+        <DropdownMenuTrigger asChild>
+          <Button
+            size="icon"
+            variant="ghost"
+            className="h-7 w-7 shrink-0"
+            onClick={(e) => e.stopPropagation()}
+            aria-label="Change status"
+          >
+            <MoreHorizontal className="h-4 w-4" />
+          </Button>
+        </DropdownMenuTrigger>
+        <DropdownMenuContent align={align} className="w-52">
+          <DropdownMenuLabel className="text-[11px]">Change status</DropdownMenuLabel>
+          <DropdownMenuSeparator />
+          {STAGE_ORDER.map((s) => {
+            const m = STAGE_META[s];
+            const Icon = m.icon;
+            const postOrder = s === "ordered" || s === "in_transit" || s === "received";
+            const disabled = cur === s || (postOrder ? !hasPo : hasPo);
+            return (
+              <DropdownMenuItem
+                key={s}
+                disabled={disabled || changeStage.isPending}
+                onSelect={(e) => {
+                  e.preventDefault();
+                  changeStage.mutate({ idea, stage: s });
+                }}
+                className="gap-2 text-xs"
+              >
+                <Icon className="h-3.5 w-3.5" />
+                {m.label}
+                {cur === s && <CheckCircle2 className="ml-auto h-3.5 w-3.5 text-emerald-500" />}
+              </DropdownMenuItem>
+            );
+          })}
+        </DropdownMenuContent>
+      </DropdownMenu>
+    );
+  };
+
   const placeOrder = useMutation({
     mutationFn: async () => {
       if (!selected) return;
