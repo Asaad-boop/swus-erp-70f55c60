@@ -113,6 +113,7 @@ import { Route as AuthenticatedErpCrmCustomerIdRouteImport } from './routes/_aut
 import { Route as AuthenticatedErpContentPipelineRouteImport } from './routes/_authenticated/erp.content.pipeline'
 import { Route as AuthenticatedErpContentMediaPlansRouteImport } from './routes/_authenticated/erp.content.media-plans'
 import { Route as AuthenticatedErpContentIntakeRouteImport } from './routes/_authenticated/erp.content.intake'
+import { Route as AuthenticatedErpContentCreatorsRouteImport } from './routes/_authenticated/erp.content.creators'
 import { Route as AuthenticatedErpAnalyticsLiveRouteImport } from './routes/_authenticated/erp.analytics.live'
 import { Route as AuthenticatedErpImportsOrdersIndexRouteImport } from './routes/_authenticated/erp.imports.orders.index'
 import { Route as AuthenticatedErpImportsOrdersNewRouteImport } from './routes/_authenticated/erp.imports.orders.new'
@@ -721,6 +722,12 @@ const AuthenticatedErpContentIntakeRoute =
     path: '/intake',
     getParentRoute: () => AuthenticatedErpContentRoute,
   } as any)
+const AuthenticatedErpContentCreatorsRoute =
+  AuthenticatedErpContentCreatorsRouteImport.update({
+    id: '/creators',
+    path: '/creators',
+    getParentRoute: () => AuthenticatedErpContentRoute,
+  } as any)
 const AuthenticatedErpAnalyticsLiveRoute =
   AuthenticatedErpAnalyticsLiveRouteImport.update({
     id: '/analytics/live',
@@ -778,6 +785,7 @@ export interface FileRoutesByFullPath {
   '/api/webhooks/shopify-order': typeof ApiWebhooksShopifyOrderRoute
   '/erp/': typeof AuthenticatedErpIndexRoute
   '/erp/analytics/live': typeof AuthenticatedErpAnalyticsLiveRoute
+  '/erp/content/creators': typeof AuthenticatedErpContentCreatorsRoute
   '/erp/content/intake': typeof AuthenticatedErpContentIntakeRoute
   '/erp/content/media-plans': typeof AuthenticatedErpContentMediaPlansRoute
   '/erp/content/pipeline': typeof AuthenticatedErpContentPipelineRoute
@@ -877,6 +885,7 @@ export interface FileRoutesByTo {
   '/api/webhooks/shopify-order': typeof ApiWebhooksShopifyOrderRoute
   '/erp': typeof AuthenticatedErpIndexRoute
   '/erp/analytics/live': typeof AuthenticatedErpAnalyticsLiveRoute
+  '/erp/content/creators': typeof AuthenticatedErpContentCreatorsRoute
   '/erp/content/intake': typeof AuthenticatedErpContentIntakeRoute
   '/erp/content/media-plans': typeof AuthenticatedErpContentMediaPlansRoute
   '/erp/content/pipeline': typeof AuthenticatedErpContentPipelineRoute
@@ -988,6 +997,7 @@ export interface FileRoutesById {
   '/api/webhooks/shopify-order': typeof ApiWebhooksShopifyOrderRoute
   '/_authenticated/erp/': typeof AuthenticatedErpIndexRoute
   '/_authenticated/erp/analytics/live': typeof AuthenticatedErpAnalyticsLiveRoute
+  '/_authenticated/erp/content/creators': typeof AuthenticatedErpContentCreatorsRoute
   '/_authenticated/erp/content/intake': typeof AuthenticatedErpContentIntakeRoute
   '/_authenticated/erp/content/media-plans': typeof AuthenticatedErpContentMediaPlansRoute
   '/_authenticated/erp/content/pipeline': typeof AuthenticatedErpContentPipelineRoute
@@ -1099,6 +1109,7 @@ export interface FileRouteTypes {
     | '/api/webhooks/shopify-order'
     | '/erp/'
     | '/erp/analytics/live'
+    | '/erp/content/creators'
     | '/erp/content/intake'
     | '/erp/content/media-plans'
     | '/erp/content/pipeline'
@@ -1198,6 +1209,7 @@ export interface FileRouteTypes {
     | '/api/webhooks/shopify-order'
     | '/erp'
     | '/erp/analytics/live'
+    | '/erp/content/creators'
     | '/erp/content/intake'
     | '/erp/content/media-plans'
     | '/erp/content/pipeline'
@@ -1308,6 +1320,7 @@ export interface FileRouteTypes {
     | '/api/webhooks/shopify-order'
     | '/_authenticated/erp/'
     | '/_authenticated/erp/analytics/live'
+    | '/_authenticated/erp/content/creators'
     | '/_authenticated/erp/content/intake'
     | '/_authenticated/erp/content/media-plans'
     | '/_authenticated/erp/content/pipeline'
@@ -2137,6 +2150,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedErpContentIntakeRouteImport
       parentRoute: typeof AuthenticatedErpContentRoute
     }
+    '/_authenticated/erp/content/creators': {
+      id: '/_authenticated/erp/content/creators'
+      path: '/creators'
+      fullPath: '/erp/content/creators'
+      preLoaderRoute: typeof AuthenticatedErpContentCreatorsRouteImport
+      parentRoute: typeof AuthenticatedErpContentRoute
+    }
     '/_authenticated/erp/analytics/live': {
       id: '/_authenticated/erp/analytics/live'
       path: '/analytics/live'
@@ -2169,6 +2189,7 @@ declare module '@tanstack/react-router' {
 }
 
 interface AuthenticatedErpContentRouteChildren {
+  AuthenticatedErpContentCreatorsRoute: typeof AuthenticatedErpContentCreatorsRoute
   AuthenticatedErpContentIntakeRoute: typeof AuthenticatedErpContentIntakeRoute
   AuthenticatedErpContentMediaPlansRoute: typeof AuthenticatedErpContentMediaPlansRoute
   AuthenticatedErpContentPipelineRoute: typeof AuthenticatedErpContentPipelineRoute
@@ -2177,6 +2198,7 @@ interface AuthenticatedErpContentRouteChildren {
 
 const AuthenticatedErpContentRouteChildren: AuthenticatedErpContentRouteChildren =
   {
+    AuthenticatedErpContentCreatorsRoute: AuthenticatedErpContentCreatorsRoute,
     AuthenticatedErpContentIntakeRoute: AuthenticatedErpContentIntakeRoute,
     AuthenticatedErpContentMediaPlansRoute:
       AuthenticatedErpContentMediaPlansRoute,
