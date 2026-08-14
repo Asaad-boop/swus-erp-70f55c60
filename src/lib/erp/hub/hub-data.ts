@@ -383,6 +383,8 @@ export type HubContentPlan = {
   views: number;
   engagements: number;
   attributed_orders: number;
+  video_url: string | null;
+  script_updated_at: string | null;
 };
 
 export type HubContentAssignment = {
@@ -471,14 +473,33 @@ export async function fetchAssignments(planIds: string[]) {
   return (data ?? []) as unknown as HubContentAssignment[];
 }
 
-export async function fetchProductOptions(brandIds: string[]) {
-  let q = supabase.from("products").select("id,title").order("title").limit(500);
+export type HubProductOption = {
+  id: string;
+  name: string;
+  sku: string | null;
+  image: string | null;
+  price: number | null;
+  stock: number | null;
+  video_url: string | null;
+};
+
+export async function fetchProductOptions(brandIds: string[]): Promise<HubProductOption[]> {
+  let q = supabase
+    .from("products")
+    .select("id,title,sku,image,price,stock,video_url")
+    .order("title")
+    .limit(500);
   if (brandIds.length === 1) q = q.eq("brand_id", brandIds[0]);
   const { data, error } = await q;
   if (error) throw error;
-  return ((data ?? []) as { id: string; title: string }[]).map((p) => ({
-    id: p.id,
-    name: p.title,
+  return ((data ?? []) as Record<string, unknown>[]).map((p) => ({
+    id: String(p.id),
+    name: String(p.title ?? ""),
+    sku: (p.sku as string) ?? null,
+    image: (p.image as string) ?? null,
+    price: p.price != null ? Number(p.price) : null,
+    stock: p.stock != null ? Number(p.stock) : null,
+    video_url: (p.video_url as string) ?? null,
   }));
 }
 

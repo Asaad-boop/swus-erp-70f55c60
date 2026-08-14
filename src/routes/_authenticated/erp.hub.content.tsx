@@ -22,6 +22,11 @@ import {
   Heart,
   ShoppingCart,
   Link2,
+  Play,
+  Package,
+  SlidersHorizontal,
+  Save,
+  ImageOff,
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useBrand } from "@/contexts/brand-context";
@@ -33,7 +38,13 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
+import {
+  Sheet,
+  SheetContent,
+  SheetHeader,
+  SheetTitle,
+  SheetTrigger,
+} from "@/components/ui/sheet";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import {
   Dialog,
@@ -63,7 +74,9 @@ import {
   type HubContentAssignment,
   type HubContentPlan,
   type HubCreator,
+  type HubProductOption,
 } from "@/lib/erp/hub/hub-data";
+import { VideoEmbed } from "@/components/erp/hub/video-embed";
 import {
   BudgetBar,
   DueChip,
@@ -123,6 +136,7 @@ type PlanDraft = {
   hashtags: string;
   reference_urls: string;
   notes: string;
+  video_url: string;
 };
 
 const emptyPlan = (): PlanDraft => ({
@@ -143,6 +157,7 @@ const emptyPlan = (): PlanDraft => ({
   hashtags: "",
   reference_urls: "",
   notes: "",
+  video_url: "",
 });
 
 const planToDraft = (p: HubContentPlan): PlanDraft => ({
@@ -164,6 +179,7 @@ const planToDraft = (p: HubContentPlan): PlanDraft => ({
   hashtags: p.hashtags ?? "",
   reference_urls: (p.reference_urls ?? []).join("\n"),
   notes: p.notes ?? "",
+  video_url: p.video_url ?? "",
 });
 
 type CreatorDraft = {
@@ -271,6 +287,11 @@ function CreativeDeskPage() {
     for (const c of creators) m.set(c.id, c);
     return m;
   }, [creators]);
+  const productById = useMemo(() => {
+    const m = new Map<string, HubProductOption>();
+    for (const p of productsQ.data ?? []) m.set(p.id, p);
+    return m;
+  }, [productsQ.data]);
   const productName = useMemo(() => {
     const m = new Map<string, string>();
     for (const p of productsQ.data ?? []) m.set(p.id, p.name);
@@ -320,6 +341,7 @@ function CreativeDeskPage() {
       .map((s) => s.trim())
       .filter(Boolean),
     notes: d.notes.trim() || null,
+    video_url: d.video_url.trim() || null,
   });
 
   const savePlan = useMutation({
@@ -666,15 +688,84 @@ function CreativeDeskPage() {
 
   const loading = brandLoading || plansQ.isLoading;
 
+  const filterSelects = (
+    <>
+      <Select value={platformFilter} onValueChange={setPlatformFilter}>
+        <SelectTrigger className="h-8 w-[120px] text-xs">
+          <SelectValue />
+        </SelectTrigger>
+        <SelectContent>
+          <SelectItem value="all">All platforms</SelectItem>
+          {CONTENT_PLATFORMS.map((p) => (
+            <SelectItem key={p.key} value={p.key}>
+              {p.label}
+            </SelectItem>
+          ))}
+        </SelectContent>
+      </Select>
+      <Select value={assetFilter} onValueChange={setAssetFilter}>
+        <SelectTrigger className="h-8 w-[130px] text-xs">
+          <SelectValue />
+        </SelectTrigger>
+        <SelectContent>
+          <SelectItem value="all">All asset types</SelectItem>
+          {ASSET_TYPES.map((a) => (
+            <SelectItem key={a.key} value={a.key}>
+              {a.label}
+            </SelectItem>
+          ))}
+        </SelectContent>
+      </Select>
+      <Select value={priorityFilter} onValueChange={setPriorityFilter}>
+        <SelectTrigger className="h-8 w-[110px] text-xs">
+          <SelectValue />
+        </SelectTrigger>
+        <SelectContent>
+          <SelectItem value="all">All priority</SelectItem>
+          {CONTENT_PRIORITIES.map((p) => (
+            <SelectItem key={p.key} value={p.key}>
+              {p.label}
+            </SelectItem>
+          ))}
+        </SelectContent>
+      </Select>
+      <Select value={creatorFilter} onValueChange={setCreatorFilter}>
+        <SelectTrigger className="h-8 w-[130px] text-xs">
+          <SelectValue />
+        </SelectTrigger>
+        <SelectContent>
+          <SelectItem value="all">All creators</SelectItem>
+          {creators.map((c) => (
+            <SelectItem key={c.id} value={c.id}>
+              {c.name}
+            </SelectItem>
+          ))}
+        </SelectContent>
+      </Select>
+      <Select value={sortBy} onValueChange={(v) => setSortBy(v as typeof sortBy)}>
+        <SelectTrigger className="h-8 w-[130px] text-xs">
+          <SelectValue />
+        </SelectTrigger>
+        <SelectContent>
+          <SelectItem value="deadline">Sort: Deadline</SelectItem>
+          <SelectItem value="launch">Sort: Launch date</SelectItem>
+          <SelectItem value="created">Sort: Newest</SelectItem>
+          <SelectItem value="budget">Sort: Budget</SelectItem>
+        </SelectContent>
+      </Select>
+    </>
+  );
+
   const PlanCard = ({ p, compact }: { p: HubContentPlan; compact?: boolean }) => {
     const list = asgByPlan.get(p.id) ?? [];
     const spent = spendByPlan.get(p.id) ?? 0;
     const budget = Number(p.budget || 0);
+    const prod = p.product_id ? productById.get(p.product_id) : undefined;
     return (
       <button
         type="button"
         onClick={() => setSelectedId(p.id)}
-        className={`group relative w-full overflow-hidden rounded-xl border bg-card p-3 text-left transition-all hover:-translate-y-0.5 hover:shadow-md ${
+        className={`group relative w-full overflow-hidden rounded-xl border bg-card p-3 text-left transition-all active:scale-[0.99] md:hover:-translate-y-0.5 md:hover:shadow-md ${
           selectedId === p.id ? "ring-2 ring-primary/40" : ""
         }`}
       >
@@ -682,15 +773,41 @@ function CreativeDeskPage() {
           className={`absolute inset-y-0 left-0 w-1 ${PRIORITY_BAR[p.priority ?? "normal"] ?? ""}`}
         />
         <div className="space-y-2 pl-1.5">
-          <div className="flex items-start justify-between gap-2">
-            <p className="line-clamp-2 text-sm font-semibold">{p.title}</p>
-            <DueChip date={p.deadline} done={p.status === "live"} />
+          <div className="flex items-start gap-2.5">
+            {prod?.image ? (
+              <img
+                src={prod.image}
+                alt={prod.name}
+                loading="lazy"
+                className="h-11 w-11 shrink-0 rounded-lg border object-cover"
+              />
+            ) : (
+              <span className="grid h-11 w-11 shrink-0 place-items-center rounded-lg border bg-muted text-muted-foreground">
+                <ImageOff className="h-4 w-4 opacity-60" />
+              </span>
+            )}
+            <div className="min-w-0 flex-1">
+              <div className="flex items-start justify-between gap-2">
+                <p className="line-clamp-2 text-sm font-semibold leading-snug">{p.title}</p>
+                <DueChip date={p.deadline} done={p.status === "live"} />
+              </div>
+              <p className="line-clamp-1 text-[11px] text-muted-foreground">
+                {prod ? prod.name : "No product"}
+                {p.angle ? ` • ${p.angle}` : ""}
+              </p>
+            </div>
           </div>
-          <p className="line-clamp-1 text-[11px] text-muted-foreground">
-            {p.product_id ? (productName.get(p.product_id) ?? "Product") : "No product"}
-            {p.angle ? ` • ${p.angle}` : ""}
-          </p>
           <div className="flex flex-wrap items-center gap-1">
+            {p.video_url && (
+              <Badge variant="secondary" className="gap-1 text-[10px]">
+                <Play className="h-2.5 w-2.5" /> Video
+              </Badge>
+            )}
+            {p.script && (
+              <Badge variant="secondary" className="text-[10px]">
+                Script
+              </Badge>
+            )}
             <Badge variant="outline" className="text-[10px]">
               {ASSET_TYPES.find((a) => a.key === p.asset_type)?.label ?? p.asset_type}
             </Badge>
@@ -823,69 +940,20 @@ function CreativeDeskPage() {
               className="h-8 pl-8 text-xs"
             />
           </div>
-          <Select value={platformFilter} onValueChange={setPlatformFilter}>
-            <SelectTrigger className="h-8 w-[120px] text-xs">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">All platforms</SelectItem>
-              {CONTENT_PLATFORMS.map((p) => (
-                <SelectItem key={p.key} value={p.key}>
-                  {p.label}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-          <Select value={assetFilter} onValueChange={setAssetFilter}>
-            <SelectTrigger className="h-8 w-[130px] text-xs">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">All asset types</SelectItem>
-              {ASSET_TYPES.map((a) => (
-                <SelectItem key={a.key} value={a.key}>
-                  {a.label}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-          <Select value={priorityFilter} onValueChange={setPriorityFilter}>
-            <SelectTrigger className="h-8 w-[110px] text-xs">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">All priority</SelectItem>
-              {CONTENT_PRIORITIES.map((p) => (
-                <SelectItem key={p.key} value={p.key}>
-                  {p.label}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-          <Select value={creatorFilter} onValueChange={setCreatorFilter}>
-            <SelectTrigger className="h-8 w-[130px] text-xs">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">All creators</SelectItem>
-              {creators.map((c) => (
-                <SelectItem key={c.id} value={c.id}>
-                  {c.name}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-          <Select value={sortBy} onValueChange={(v) => setSortBy(v as typeof sortBy)}>
-            <SelectTrigger className="h-8 w-[130px] text-xs">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="deadline">Sort: Deadline</SelectItem>
-              <SelectItem value="launch">Sort: Launch date</SelectItem>
-              <SelectItem value="created">Sort: Newest</SelectItem>
-              <SelectItem value="budget">Sort: Budget</SelectItem>
-            </SelectContent>
-          </Select>
+          <div className="hidden flex-wrap items-center gap-2 md:flex">{filterSelects}</div>
+          <Sheet>
+            <SheetTrigger asChild>
+              <Button variant="outline" size="sm" className="h-8 px-2 md:hidden">
+                <SlidersHorizontal className="h-3.5 w-3.5" />
+              </Button>
+            </SheetTrigger>
+            <SheetContent side="bottom" className="rounded-t-2xl p-4">
+              <SheetHeader className="p-0 pb-3">
+                <SheetTitle className="text-sm">Filters</SheetTitle>
+              </SheetHeader>
+              <div className="grid grid-cols-2 gap-2 [&_button]:w-full">{filterSelects}</div>
+            </SheetContent>
+          </Sheet>
           <div className="inline-flex items-center rounded-md border bg-background p-0.5">
             {(
               [
@@ -915,12 +983,12 @@ function CreativeDeskPage() {
           </div>
         </div>
         {(view === "list" || view === "board") && (
-          <div className="mt-2 flex flex-wrap gap-1.5">
+          <div className="mt-2 flex gap-1.5 overflow-x-auto pb-0.5 md:flex-wrap">
             {[{ key: "all", label: "All stages" }, ...CONTENT_STATUSES].map((s) => (
               <button
                 key={s.key}
                 onClick={() => setStatusFilter(s.key)}
-                className={`inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-[11px] transition-colors ${
+                className={`inline-flex shrink-0 items-center gap-1.5 rounded-full border px-2.5 py-1 text-[11px] transition-colors ${
                   statusFilter === s.key
                     ? "border-primary/30 bg-primary/10 text-primary"
                     : "border-border text-muted-foreground hover:bg-muted"
@@ -948,11 +1016,11 @@ function CreativeDeskPage() {
           ))}
         </div>
       ) : view === "board" ? (
-        <div className="flex gap-3 overflow-x-auto pb-2">
+        <div className="flex snap-x gap-3 overflow-x-auto pb-2">
           {BOARD_STAGES.map((s) => {
             const items = filtered.filter((p) => p.status === s.key);
             return (
-              <div key={s.key} className="w-[280px] shrink-0 space-y-2">
+              <div key={s.key} className="w-[250px] shrink-0 snap-start space-y-2 sm:w-[280px]">
                 <div className="flex items-center justify-between rounded-lg border bg-muted/40 px-2.5 py-1.5">
                   <span className="inline-flex items-center gap-1.5 text-xs font-semibold">
                     <span className={`h-2 w-2 rounded-full ${STATUS_DOT[s.key] ?? ""}`} />
@@ -1101,8 +1169,8 @@ function CreativeDeskPage() {
         <SheetContent side="right" className="w-full overflow-y-auto p-0 sm:max-w-xl">
           {selected && (
             <div>
-              <SheetHeader className="space-y-2 border-b bg-muted/30 p-4">
-                <SheetTitle className="pr-6 text-base leading-snug">{selected.title}</SheetTitle>
+              <SheetHeader className="sticky top-0 z-10 space-y-2 border-b bg-background/95 p-3 backdrop-blur sm:p-4">
+                <SheetTitle className="pr-8 text-base leading-snug">{selected.title}</SheetTitle>
                 <div className="flex flex-wrap items-center gap-1.5">
                   <Badge variant="secondary" className={STATUS_TONE[selected.status] ?? ""}>
                     {statusLabel(selected.status)}
@@ -1191,29 +1259,56 @@ function CreativeDeskPage() {
                 </div>
               </SheetHeader>
 
-              <Tabs defaultValue="brief" className="p-4">
+              <Tabs defaultValue="overview" className="p-3 sm:p-4">
                 <TabsList className="w-full">
-                  <TabsTrigger value="brief" className="flex-1">
-                    Brief
+                  <TabsTrigger value="overview" className="flex-1 text-xs">
+                    Overview
                   </TabsTrigger>
-                  <TabsTrigger value="production" className="flex-1">
-                    Production ({(asgByPlan.get(selected.id) ?? []).length})
+                  <TabsTrigger value="script" className="flex-1 text-xs">
+                    Script
                   </TabsTrigger>
-                  <TabsTrigger value="results" className="flex-1">
+                  <TabsTrigger value="production" className="flex-1 text-xs">
+                    Crew ({(asgByPlan.get(selected.id) ?? []).length})
+                  </TabsTrigger>
+                  <TabsTrigger value="results" className="flex-1 text-xs">
                     Results
                   </TabsTrigger>
                 </TabsList>
 
-                <TabsContent value="brief" className="space-y-3 pt-3">
-                  <div className="grid grid-cols-2 gap-3 rounded-lg border p-3 text-xs">
-                    <div>
-                      <p className="text-muted-foreground">Product</p>
-                      <p className="font-medium">
-                        {selected.product_id
-                          ? (productName.get(selected.product_id) ?? "Product")
-                          : "—"}
-                      </p>
-                    </div>
+                <TabsContent value="overview" className="space-y-3 pt-3">
+                  <ProductBlock
+                    product={selected.product_id ? productById.get(selected.product_id) : undefined}
+                  />
+                  {(selected.video_url ||
+                    (selected.product_id
+                      ? productById.get(selected.product_id)?.video_url
+                      : null)) && (
+                    <Field label="Video">
+                      <div className="space-y-1.5">
+                        <VideoEmbed
+                          url={
+                            selected.video_url ||
+                            productById.get(selected.product_id ?? "")?.video_url ||
+                            ""
+                          }
+                          title={selected.title}
+                        />
+                        <a
+                          href={
+                            selected.video_url ||
+                            productById.get(selected.product_id ?? "")?.video_url ||
+                            "#"
+                          }
+                          target="_blank"
+                          rel="noreferrer"
+                          className="inline-flex items-center gap-1 text-[11px] text-primary hover:underline"
+                        >
+                          Open <ExternalLink className="h-3 w-3" />
+                        </a>
+                      </div>
+                    </Field>
+                  )}
+                  <div className="grid grid-cols-2 gap-x-3 gap-y-2.5 rounded-xl border p-3 text-xs">
                     <div>
                       <p className="text-muted-foreground">Hook / angle</p>
                       <p className="font-medium">{selected.angle || "—"}</p>
@@ -1227,37 +1322,18 @@ function CreativeDeskPage() {
                       <p className="font-medium">{selected.deadline || "—"}</p>
                     </div>
                     <div>
-                      <p className="text-muted-foreground">Budget</p>
-                      <p className="font-medium">{fmtValue(Number(selected.budget || 0), "bdt")}</p>
-                    </div>
-                    <div>
-                      <p className="text-muted-foreground">Spent</p>
+                      <p className="text-muted-foreground">Budget / spent</p>
                       <p className="font-medium">
-                        {fmtValue(spendByPlan.get(selected.id) ?? 0, "bdt")}
+                        {fmtValue(spendByPlan.get(selected.id) ?? 0, "bdt")} /{" "}
+                        {fmtValue(Number(selected.budget || 0), "bdt")}
                       </p>
                     </div>
                   </div>
                   {selected.brief && (
                     <Field label="Brief">
-                      <p className="whitespace-pre-wrap rounded-lg border bg-muted/30 p-3 text-xs">
+                      <p className="whitespace-pre-wrap rounded-xl border bg-muted/30 p-3 text-xs">
                         {selected.brief}
                       </p>
-                    </Field>
-                  )}
-                  {selected.script && (
-                    <Field label="Script">
-                      <p className="whitespace-pre-wrap rounded-lg border bg-muted/30 p-3 text-xs">
-                        {selected.script}
-                      </p>
-                    </Field>
-                  )}
-                  {(selected.caption || selected.cta || selected.hashtags) && (
-                    <Field label="Copy">
-                      <div className="space-y-1 rounded-lg border bg-muted/30 p-3 text-xs">
-                        {selected.caption && <p className="whitespace-pre-wrap">{selected.caption}</p>}
-                        {selected.cta && <p className="text-muted-foreground">CTA: {selected.cta}</p>}
-                        {selected.hashtags && <p className="text-primary">{selected.hashtags}</p>}
-                      </div>
                     </Field>
                   )}
                   {(selected.reference_urls ?? []).length > 0 && (
@@ -1284,6 +1360,16 @@ function CreativeDeskPage() {
                       </p>
                     </Field>
                   )}
+                </TabsContent>
+
+                <TabsContent value="script" className="pt-3">
+                  <ScriptStudio
+                    key={selected.id}
+                    plan={selected}
+                    saving={patchPlan.isPending}
+                    onSave={(patch) => patchPlan.mutate({ id: selected.id, patch })}
+                    onCopy={() => copyBrief(selected)}
+                  />
                 </TabsContent>
 
                 <TabsContent value="production" className="space-y-2 pt-3">
@@ -1399,7 +1485,7 @@ function CreativeDeskPage() {
               <Label>Title</Label>
               <Input value={plan.title} onChange={(e) => setPlan({ ...plan, title: e.target.value })} />
             </div>
-            <div className="grid grid-cols-2 gap-3">
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
               <div>
                 <Label>Product</Label>
                 <Select value={plan.product_id} onValueChange={(v) => setPlan({ ...plan, product_id: v })}>
@@ -1432,7 +1518,7 @@ function CreativeDeskPage() {
                 </Select>
               </div>
             </div>
-            <div className="grid grid-cols-2 gap-3">
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
               <div>
                 <Label>Platform</Label>
                 <Select value={plan.platform} onValueChange={(v) => setPlan({ ...plan, platform: v })}>
@@ -1468,7 +1554,7 @@ function CreativeDeskPage() {
               <Label>Angle / hook</Label>
               <Input value={plan.angle} onChange={(e) => setPlan({ ...plan, angle: e.target.value })} />
             </div>
-            <div className="grid grid-cols-4 gap-3">
+            <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
               <div>
                 <Label>Budget (৳)</Label>
                 <Input
@@ -1521,7 +1607,7 @@ function CreativeDeskPage() {
               <Label>Caption</Label>
               <Textarea rows={2} value={plan.caption} onChange={(e) => setPlan({ ...plan, caption: e.target.value })} />
             </div>
-            <div className="grid grid-cols-2 gap-3">
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
               <div>
                 <Label>CTA</Label>
                 <Input value={plan.cta} onChange={(e) => setPlan({ ...plan, cta: e.target.value })} />
@@ -1537,6 +1623,14 @@ function CreativeDeskPage() {
                 rows={2}
                 value={plan.reference_urls}
                 onChange={(e) => setPlan({ ...plan, reference_urls: e.target.value })}
+              />
+            </div>
+            <div>
+              <Label>Video link</Label>
+              <Input
+                value={plan.video_url}
+                placeholder="https://youtube.com/… / tiktok / facebook / .mp4"
+                onChange={(e) => setPlan({ ...plan, video_url: e.target.value })}
               />
             </div>
             <div>
@@ -1562,7 +1656,7 @@ function CreativeDeskPage() {
             <DialogTitle>{creator.id ? "Edit creator" : "Add creator"}</DialogTitle>
           </DialogHeader>
           <div className="space-y-3">
-            <div className="grid grid-cols-2 gap-3">
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
               <div>
                 <Label>Name</Label>
                 <Input value={creator.name} onChange={(e) => setCreator({ ...creator, name: e.target.value })} />
@@ -1572,7 +1666,7 @@ function CreativeDeskPage() {
                 <Input value={creator.handle} onChange={(e) => setCreator({ ...creator, handle: e.target.value })} />
               </div>
             </div>
-            <div className="grid grid-cols-3 gap-3">
+            <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
               <div>
                 <Label>Platform</Label>
                 <Select value={creator.platform} onValueChange={(v) => setCreator({ ...creator, platform: v })}>
@@ -1605,7 +1699,7 @@ function CreativeDeskPage() {
                 />
               </div>
             </div>
-            <div className="grid grid-cols-3 gap-3">
+            <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
               <div>
                 <Label>Niche</Label>
                 <Input value={creator.niche} onChange={(e) => setCreator({ ...creator, niche: e.target.value })} />
@@ -1632,7 +1726,7 @@ function CreativeDeskPage() {
                 </Select>
               </div>
             </div>
-            <div className="grid grid-cols-2 gap-3">
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
               <div>
                 <Label>Contact</Label>
                 <Input value={creator.contact} onChange={(e) => setCreator({ ...creator, contact: e.target.value })} />
@@ -1702,7 +1796,7 @@ function CreativeDeskPage() {
               <Label>Deliverable</Label>
               <Input value={asg.deliverable} onChange={(e) => setAsg({ ...asg, deliverable: e.target.value })} />
             </div>
-            <div className="grid grid-cols-3 gap-3">
+            <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
               <div>
                 <Label>Agreed (৳)</Label>
                 <Input
@@ -1728,7 +1822,7 @@ function CreativeDeskPage() {
                 />
               </div>
             </div>
-            <div className="grid grid-cols-2 gap-3">
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
               <div>
                 <Label>Status</Label>
                 <Select value={asg.status} onValueChange={(v) => setAsg({ ...asg, status: v })}>
@@ -1770,6 +1864,144 @@ function CreativeDeskPage() {
 
 /* ---------------- Results tab form ---------------- */
 
+function ProductBlock({ product }: { product?: HubProductOption }) {
+  if (!product)
+    return (
+      <div className="flex items-center gap-2 rounded-xl border border-dashed p-3 text-xs text-muted-foreground">
+        <Package className="h-4 w-4" /> কোনো product link করা নেই — Edit করে product select করো।
+      </div>
+    );
+  return (
+    <div className="flex items-center gap-3 rounded-xl border bg-muted/20 p-3">
+      {product.image ? (
+        <img
+          src={product.image}
+          alt={product.name}
+          loading="lazy"
+          className="h-14 w-14 shrink-0 rounded-lg border object-cover"
+        />
+      ) : (
+        <span className="grid h-14 w-14 shrink-0 place-items-center rounded-lg border bg-muted text-muted-foreground">
+          <ImageOff className="h-4 w-4 opacity-60" />
+        </span>
+      )}
+      <div className="min-w-0 flex-1">
+        <p className="truncate text-sm font-semibold">{product.name}</p>
+        <p className="truncate text-[11px] text-muted-foreground">
+          {product.sku ? `SKU ${product.sku}` : "No SKU"}
+          {product.price != null ? ` • ${fmtValue(product.price, "bdt")}` : ""}
+          {product.stock != null ? ` • Stock ${product.stock}` : ""}
+        </p>
+      </div>
+    </div>
+  );
+}
+
+/* ---------------- Script studio ---------------- */
+
+function ScriptStudio({
+  plan,
+  onSave,
+  saving,
+  onCopy,
+}: {
+  plan: HubContentPlan;
+  onSave: (patch: Record<string, unknown>) => void;
+  saving: boolean;
+  onCopy: () => void;
+}) {
+  const [angle, setAngle] = useState(plan.angle ?? "");
+  const [script, setScript] = useState(plan.script ?? "");
+  const [caption, setCaption] = useState(plan.caption ?? "");
+  const [cta, setCta] = useState(plan.cta ?? "");
+  const [tags, setTags] = useState(plan.hashtags ?? "");
+  const [video, setVideo] = useState(plan.video_url ?? "");
+
+  const dirty =
+    angle !== (plan.angle ?? "") ||
+    script !== (plan.script ?? "") ||
+    caption !== (plan.caption ?? "") ||
+    cta !== (plan.cta ?? "") ||
+    tags !== (plan.hashtags ?? "") ||
+    video !== (plan.video_url ?? "");
+
+  const words = script.trim() ? script.trim().split(/\s+/).length : 0;
+
+  return (
+    <div className="space-y-3">
+      <div className="flex flex-wrap items-center gap-2 text-[11px] text-muted-foreground">
+        <span>{words} words</span>
+        <span>• ~{Math.max(1, Math.round((words / 140) * 60))}s read</span>
+        {plan.script_updated_at && (
+          <span>• last edit {plan.script_updated_at.slice(0, 10)}</span>
+        )}
+        <Button variant="ghost" size="sm" className="ml-auto h-7 text-xs" onClick={onCopy}>
+          <Copy className="mr-1 h-3.5 w-3.5" /> Copy brief
+        </Button>
+      </div>
+
+      <Field label="Hook / angle">
+        <Input value={angle} onChange={(e) => setAngle(e.target.value)} className="h-9 text-sm" />
+      </Field>
+      <Field label="Script">
+        <Textarea
+          rows={12}
+          value={script}
+          onChange={(e) => setScript(e.target.value)}
+          placeholder={"Hook…\nProblem…\nProduct demo…\nOffer + CTA…"}
+          className="text-sm leading-relaxed"
+        />
+      </Field>
+      <Field label="Caption">
+        <Textarea
+          rows={3}
+          value={caption}
+          onChange={(e) => setCaption(e.target.value)}
+          className="text-sm"
+        />
+      </Field>
+      <div className="grid gap-3 sm:grid-cols-2">
+        <Field label="CTA">
+          <Input value={cta} onChange={(e) => setCta(e.target.value)} className="h-9 text-sm" />
+        </Field>
+        <Field label="Hashtags">
+          <Input value={tags} onChange={(e) => setTags(e.target.value)} className="h-9 text-sm" />
+        </Field>
+      </div>
+      <Field label="Video link (YouTube / TikTok / Facebook / MP4)">
+        <Input
+          value={video}
+          onChange={(e) => setVideo(e.target.value)}
+          placeholder="https://…"
+          className="h-9 text-sm"
+        />
+      </Field>
+      {video.trim() && <VideoEmbed url={video.trim()} title={plan.title} />}
+
+      <div className="sticky bottom-0 -mx-3 flex items-center gap-2 border-t bg-background/95 px-3 py-2 backdrop-blur sm:-mx-4 sm:px-4">
+        <Button
+          size="sm"
+          disabled={saving || !dirty}
+          onClick={() =>
+            onSave({
+              angle: angle.trim() || null,
+              script: script.trim() || null,
+              caption: caption.trim() || null,
+              cta: cta.trim() || null,
+              hashtags: tags.trim() || null,
+              video_url: video.trim() || null,
+              script_updated_at: new Date().toISOString(),
+            })
+          }
+        >
+          <Save className="mr-1.5 h-3.5 w-3.5" /> Save script
+        </Button>
+        {dirty && <span className="text-[11px] text-amber-600 dark:text-amber-400">Unsaved</span>}
+      </div>
+    </div>
+  );
+}
+
 function ResultsForm({
   plan,
   onSave,
@@ -1809,7 +2041,7 @@ function ResultsForm({
       <p className="inline-flex items-center gap-1.5 rounded-md bg-muted/50 px-2 py-1 text-xs text-muted-foreground">
         <Sparkles className="h-3.5 w-3.5" /> Engagement rate {engRate.toFixed(2)}%
       </p>
-      <div className="grid grid-cols-3 gap-3">
+      <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
         <div>
           <Label className="text-xs">Views</Label>
           <Input inputMode="numeric" value={views} onChange={(e) => setViews(e.target.value)} />
@@ -1823,7 +2055,7 @@ function ResultsForm({
           <Input inputMode="numeric" value={orders} onChange={(e) => setOrders(e.target.value)} />
         </div>
       </div>
-      <div className="grid grid-cols-2 gap-3">
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
         <div>
           <Label className="text-xs">Published URL</Label>
           <Input value={url} onChange={(e) => setUrl(e.target.value)} />

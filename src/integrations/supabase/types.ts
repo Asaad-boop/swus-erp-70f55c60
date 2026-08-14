@@ -3684,9 +3684,11 @@ export type Database = {
           published_url: string | null
           reference_urls: string[]
           script: string | null
+          script_updated_at: string | null
           status: string
           title: string
           updated_at: string
+          video_url: string | null
           views: number
         }
         Insert: {
@@ -3715,9 +3717,11 @@ export type Database = {
           published_url?: string | null
           reference_urls?: string[]
           script?: string | null
+          script_updated_at?: string | null
           status?: string
           title: string
           updated_at?: string
+          video_url?: string | null
           views?: number
         }
         Update: {
@@ -3746,9 +3750,11 @@ export type Database = {
           published_url?: string | null
           reference_urls?: string[]
           script?: string | null
+          script_updated_at?: string | null
           status?: string
           title?: string
           updated_at?: string
+          video_url?: string | null
           views?: number
         }
         Relationships: [
