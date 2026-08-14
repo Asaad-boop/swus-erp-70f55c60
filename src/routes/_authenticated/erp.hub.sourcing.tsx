@@ -434,13 +434,32 @@ function SourcingPage() {
         return;
       }
       if (poId) throw new Error("PO তৈরি হয়ে গেছে — আগের stage-এ ফেরানো যাবে না");
-      if (stage === "sourced" && !idea.selected_quote_id) {
-        throw new Error("Sourcing done করতে আগে একটা supplier quote select করুন");
-      }
       const patch: Record<string, unknown> = {
         status: stage === "to_source" ? "approved" : "sourcing",
       };
       if (stage === "to_source") patch.selected_quote_id = null;
+      if (stage === "sourced" && !idea.selected_quote_id) {
+        // Auto-pick the cheapest landed-cost quote so the user never gets stuck.
+        const qs = (quotesQ.data?.get(idea.id) ?? []).filter((q) => q.status !== "rejected");
+        if (qs.length === 0) {
+          throw new Error("এই product-এ কোনো supplier quote নেই — আগে একটা quote add করুন");
+        }
+        const best = [...qs].sort((a, b) => quoteLandedCost(a) - quoteLandedCost(b))[0]!;
+        await supabase
+          .from("hub_sourcing_quotes")
+          .update({ status: "selected" } as never)
+          .eq("id", best.id);
+        await supabase
+          .from("hub_sourcing_quotes")
+          .update({ status: "quoted" } as never)
+          .eq("idea_id", idea.id)
+          .neq("id", best.id)
+          .eq("status", "selected");
+        patch.selected_quote_id = best.id;
+        patch.supplier_name = best.supplier_name;
+        patch.supplier_url = best.supplier_url;
+        patch.est_unit_cost = quoteLandedCost(best);
+      }
       const { error } = await supabase
         .from("hub_product_ideas")
         .update(patch as never)
