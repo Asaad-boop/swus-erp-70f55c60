@@ -59,6 +59,8 @@ import {
   downloadCsv,
   sortBy,
   usePersistedState,
+  BrandTag,
+  BrandSelect,
 } from "@/components/erp/content/content-ui";
 import { cn } from "@/lib/utils";
 
@@ -102,6 +104,7 @@ type Actual = { revenue: number; units: number; profit: number; spend: number };
 function MediaPlansPage() {
   const { brandIds, activeBrand } = useBrand();
   const qc = useQueryClient();
+  const [formBrand, setFormBrand] = useState<string | null>(null);
   const [creating, setCreating] = useState(false);
   const [draft, setDraft] = useState(emptyDraft);
   const [open, setOpen] = useState<MediaPlan | null>(null);
@@ -238,8 +241,10 @@ function MediaPlansPage() {
   const createMut = useMutation({
     mutationFn: async () => {
       if (!draft.title.trim()) throw new Error("Title দাও");
+      const brand_id = formBrand ?? activeBrand?.id ?? null;
+      if (!brand_id) throw new Error("Brand বাছাই করুন");
       const { error } = await supabase.from("content_media_plans").insert({
-        brand_id: activeBrand?.id ?? brandIds[0] ?? null,
+        brand_id,
         title: draft.title.trim(),
         product_id: draft.product_id || null,
         target_qty: draft.target_qty,
@@ -480,6 +485,7 @@ function MediaPlansPage() {
             <SheetTitle className="text-base">New media plan</SheetTitle>
           </SheetHeader>
           <div className="space-y-3 py-3">
+            <BrandSelect value={formBrand ?? activeBrand?.id ?? null} onChange={setFormBrand} />
             <div>
               <Label className="text-[11px]">Title</Label>
               <Input
@@ -635,6 +641,7 @@ function PlanCard({
       <div className="flex items-start justify-between gap-2">
         <div className="min-w-0">
           <p className="truncate text-sm font-semibold group-hover:text-primary">{p.title}</p>
+          <BrandTag brandId={p.brand_id} className="mt-0.5" />
           <p className="truncate text-[11px] text-muted-foreground">
             {product ?? "Brand-wide"} · {p.start_date ?? "—"} → {p.end_date ?? "—"}
           </p>

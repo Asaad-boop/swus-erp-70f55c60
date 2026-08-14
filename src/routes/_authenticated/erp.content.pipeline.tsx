@@ -67,6 +67,9 @@ import {
   SearchBox,
   Segmented,
   Toolbar,
+  BrandTag,
+  BrandSelect,
+  BrandFilter,
   downloadCsv,
   fmtNum,
   sortBy,
@@ -97,6 +100,7 @@ export const Route = createFileRoute("/_authenticated/erp/content/pipeline")({
 
 const emptyDraft = {
   title: "",
+  brand_id: "",
   product_id: "",
   content_type: "ugc",
   content_style: "",
@@ -111,7 +115,7 @@ const emptyDraft = {
 type ViewMode = "board" | "list" | "calendar";
 
 function PipelinePage() {
-  const { brandIds, activeBrand } = useBrand();
+  const { brandIds, activeBrand, brands } = useBrand();
   const qc = useQueryClient();
 
   const [view, patchView] = usePersistedState("pipeline", {
@@ -119,6 +123,7 @@ function PipelinePage() {
     platform: "all",
     source: "all",
     stage: "all",
+    brand: "all",
     mode: "board" as ViewMode,
     swimlane: "none" as "none" | "creator" | "product",
     onlyOverdue: false,
@@ -166,6 +171,7 @@ function PipelinePage() {
       if (view.platform !== "all" && i.platform !== view.platform) return false;
       if (view.source !== "all" && i.source !== view.source) return false;
       if (view.stage !== "all" && i.stage !== view.stage) return false;
+      if (view.brand !== "all" && i.brand_id !== view.brand) return false;
       if (view.onlyOverdue) {
         const d = daysUntil(i.due_date);
         const done = i.stage === "published" || i.stage === "performance";
@@ -181,6 +187,18 @@ function PipelinePage() {
       );
     });
   }, [items, view]);
+
+  const brandName = useMemo(() => {
+    const m = new Map<string, string>();
+    for (const b of brands) m.set(b.id, b.name);
+    return m;
+  }, [brands]);
+
+  const brandCounts = useMemo(() => {
+    const m = new Map<string | null, number>();
+    for (const i of items) m.set(i.brand_id, (m.get(i.brand_id) ?? 0) + 1);
+    return m;
+  }, [items]);
 
   const kpis = useMemo(() => {
     const live = filtered.filter((i) => i.stage === "published" || i.stage === "performance");
@@ -246,8 +264,9 @@ function PipelinePage() {
   const createMut = useMutation({
     mutationFn: async () => {
       if (!draft.title.trim()) throw new Error("Title দাও");
+      if (!(draft.brand_id || activeBrand?.id)) throw new Error("Brand বাছাই করুন");
       const { error } = await supabase.from("content_items").insert({
-        brand_id: activeBrand?.id ?? brandIds[0] ?? null,
+        brand_id: draft.brand_id || activeBrand?.id || null,
         title: draft.title.trim(),
         product_id: draft.product_id || null,
         content_type: draft.content_type,
@@ -297,9 +316,10 @@ function PipelinePage() {
 
   const exportCsv = () =>
     downloadCsv(`content-pipeline-${new Date().toISOString().slice(0, 10)}.csv`, [
-      ["Code", "Title", "Product", "Stage", "Status", "Type", "Style", "Platform", "Source", "Creator", "Due", "Cost", "Views", "Orders", "Cost/Order"],
+      ["Code", "Brand", "Title", "Product", "Stage", "Status", "Type", "Style", "Platform", "Source", "Creator", "Due", "Cost", "Views", "Orders", "Cost/Order"],
       ...filtered.map((i) => [
         i.code,
+        brandName.get(i.brand_id ?? "") ?? "",
         i.title,
         i.product_id ? (productName.get(i.product_id) ?? "") : "",
         labelOf(PIPELINE_STAGES, i.stage),
@@ -385,6 +405,7 @@ function PipelinePage() {
             { key: "calendar", label: "Calendar", icon: CalendarDays },
           ]}
         />
+        <BrandFilter value={view.brand} onChange={(v) => patchView({ brand: v })} counts={brandCounts} />
         <Select value={view.platform} onValueChange={(v) => patchView({ platform: v })}>
           <SelectTrigger className="h-9 w-[130px] text-xs">
             <SelectValue placeholder="Platform" />
@@ -549,6 +570,10 @@ function PipelinePage() {
                 </SelectContent>
               </Select>
             </div>
+            <BrandSelect
+              value={draft.brand_id || activeBrand?.id || null}
+              onChange={(v) => setDraft({ ...draft, brand_id: v ?? "" })}
+            />
             <div className="grid grid-cols-2 gap-3">
               <div>
                 <Label className="text-[11px]">Type</Label>
@@ -848,6 +873,9 @@ function PipelineCard({
           <p className="mt-0.5 truncate text-[10px] text-muted-foreground">
             {i.code} · {labelOf(CONTENT_TYPES, i.content_type)} · {labelOf(PLATFORMS, i.platform)}
           </p>
+          <div className="mt-1">
+            <BrandTag brandId={i.brand_id} />
+          </div>
           {i.product_id && productName.get(i.product_id) && (
             <p className="mt-1 truncate text-[10px] text-muted-foreground">
               📦 {productName.get(i.product_id)}
@@ -959,6 +987,9 @@ function ListView({
                 <p className="truncate text-[10px] text-muted-foreground">
                   {i.code} · {labelOf(PLATFORMS, i.platform)}
                 </p>
+                <div className="mt-0.5">
+                  <BrandTag brandId={i.brand_id} />
+                </div>
               </button>
               <span className="truncate text-[11px] text-muted-foreground">
                 {(i.product_id ? productName.get(i.product_id) : null) ?? "—"}
@@ -1173,6 +1204,9 @@ function ItemSheet({
           <p className="text-[11px] text-muted-foreground">
             {d.code} · {productLabel ?? "No product"} · {labelOf(PIPELINE_STAGES, d.stage)}
           </p>
+          <div className="pt-1">
+            <BrandTag brandId={d.brand_id} />
+          </div>
         </SheetHeader>
         <Tabs defaultValue="script" className="py-3">
           <TabsList className="grid w-full grid-cols-3">

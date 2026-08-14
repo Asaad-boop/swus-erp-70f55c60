@@ -15,6 +15,8 @@ import {
   SearchBox,
   Toolbar,
   downloadCsv,
+  BrandTag,
+  BrandSelect,
 } from "@/components/erp/content/content-ui";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -60,6 +62,7 @@ const empty = {
 function AgenciesPage() {
   const { brandIds, activeBrand } = useBrand();
   const qc = useQueryClient();
+  const [formBrand, setFormBrand] = useState<string | null>(null);
   const [creating, setCreating] = useState(false);
   const [draft, setDraft] = useState(empty);
   const [search, setSearch] = useState("");
@@ -105,8 +108,10 @@ function AgenciesPage() {
   const createMut = useMutation({
     mutationFn: async () => {
       if (!draft.name.trim()) throw new Error("Name দাও");
+      const brand_id = formBrand ?? activeBrand?.id ?? null;
+      if (!brand_id) throw new Error("Brand বাছাই করুন");
       const { error } = await supabase.from("content_agencies").insert({
-        brand_id: activeBrand?.id ?? brandIds[0] ?? null,
+        brand_id,
         name: draft.name.trim(),
         contact_person: draft.contact_person || null,
         phone: draft.phone || null,
@@ -204,6 +209,7 @@ function AgenciesPage() {
                 <div className="flex items-start justify-between gap-2">
                   <div className="min-w-0">
                     <p className="truncate text-sm font-semibold">{a.name}</p>
+                    <BrandTag brandId={a.brand_id} className="mt-0.5" />
                     <p className="truncate text-[11px] text-muted-foreground">
                       {a.contact_person ?? "—"} · {a.phone ?? a.email ?? "—"}
                     </p>
@@ -240,6 +246,7 @@ function AgenciesPage() {
             <SheetTitle className="text-base">Add agency</SheetTitle>
           </SheetHeader>
           <div className="space-y-3 py-3">
+            <BrandSelect value={formBrand ?? activeBrand?.id ?? null} onChange={setFormBrand} />
             {(
               [
                 ["name", "Name"],

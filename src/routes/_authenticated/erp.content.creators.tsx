@@ -65,6 +65,8 @@ import {
   fmtNum,
   sortBy,
   usePersistedState,
+  BrandTag,
+  BrandSelect,
 } from "@/components/erp/content/content-ui";
 import { cn } from "@/lib/utils";
 
@@ -120,6 +122,7 @@ function CreatorsPage() {
     mode: "grid" as ViewMode,
     sort: "orders" as "orders" | "cpo" | "rate" | "followers" | "name",
   });
+  const [formBrand, setFormBrand] = useState<string | null>(null);
   const [creating, setCreating] = useState(false);
   const [draft, setDraft] = useState(emptyDraft);
   const [open, setOpen] = useState<Creator | null>(null);
@@ -240,8 +243,10 @@ function CreatorsPage() {
   const createMut = useMutation({
     mutationFn: async () => {
       if (!draft.name.trim()) throw new Error("Name দাও");
+      const brand_id = formBrand ?? activeBrand?.id ?? null;
+      if (!brand_id) throw new Error("Brand বাছাই করুন");
       const { error } = await supabase.from("hub_creators").insert({
-        brand_id: activeBrand?.id ?? brandIds[0] ?? null,
+        brand_id,
         ...draft,
         agency_id: draft.agency_id || null,
         handle: draft.handle || null,
@@ -473,6 +478,7 @@ function CreatorsPage() {
                       <Avatar name={c.name} size={26} />
                       <div className="min-w-0 flex-1">
                         <p className="truncate text-xs font-semibold">{c.name}</p>
+                        <BrandTag brandId={c.brand_id} className="mt-0.5" />
                         <p className="truncate text-[10px] text-muted-foreground">
                           {bdt(c.rate)} · {fmtNum(c.followers ?? 0)} followers
                         </p>
@@ -512,6 +518,7 @@ function CreatorsPage() {
             <SheetTitle className="text-base">Add creator</SheetTitle>
           </SheetHeader>
           <div className="space-y-3 py-3">
+            <BrandSelect value={formBrand ?? activeBrand?.id ?? null} onChange={setFormBrand} />
             <Field label="Name">
               <Input
                 value={draft.name}
@@ -706,6 +713,7 @@ function CreatorCard({
           <div className="flex items-start justify-between gap-2">
             <div className="min-w-0">
               <p className="truncate text-sm font-semibold group-hover:text-primary">{c.name}</p>
+              <BrandTag brandId={c.brand_id} className="mt-0.5" />
               <p className="truncate text-[11px] text-muted-foreground">
                 {c.handle ?? "—"} · {labelOf(PLATFORMS, c.platform)} · {fmtNum(c.followers ?? 0)} followers
               </p>
@@ -882,6 +890,7 @@ function CreatorDetail({
           <Avatar name={creator.name} size={44} />
           <div className="min-w-0">
             <SheetTitle className="truncate text-base">{creator.name}</SheetTitle>
+            <BrandTag brandId={creator.brand_id} />
             <p className="truncate text-[11px] text-muted-foreground">
               {creator.handle ?? "—"} · {labelOf(PLATFORMS, creator.platform)}
               {agency ? ` · ${agency}` : ""}
