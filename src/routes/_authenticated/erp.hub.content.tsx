@@ -1619,6 +1619,11 @@ function CreativeDeskPage() {
             </div>
             <div>
               <Label>Reference links (এক লাইনে একটা)</Label>
+              <Textarea
+                rows={2}
+                value={plan.reference_urls}
+                onChange={(e) => setPlan({ ...plan, reference_urls: e.target.value })}
+              />
             </div>
             <div>
               <Label>Video link</Label>
@@ -1626,13 +1631,6 @@ function CreativeDeskPage() {
                 value={plan.video_url}
                 placeholder="https://youtube.com/… / tiktok / facebook / .mp4"
                 onChange={(e) => setPlan({ ...plan, video_url: e.target.value })}
-              />
-            </div>
-            <div>
-              <Textarea
-                rows={2}
-                value={plan.reference_urls}
-                onChange={(e) => setPlan({ ...plan, reference_urls: e.target.value })}
               />
             </div>
             <div>
