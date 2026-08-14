@@ -179,6 +179,32 @@ function SourcingPage() {
 
   const quotes = (selectedId && quotesQ.data?.get(selectedId)) || [];
 
+  const poBrandId = selected?.brand_id ?? activeBrand?.id ?? brandIds[0] ?? null;
+  const suppliersFn = useServerFn(listImportSuppliers);
+  const createPoFn = useServerFn(createImportPo);
+  const suppliersQ = useQuery({
+    queryKey: ["imp-suppliers", poBrandId],
+    enabled: !!poBrandId && orderOpen,
+    queryFn: () => suppliersFn({ data: { brandId: poBrandId! } }),
+  });
+  const { data: wallets = [] } = useAccounts(poBrandId ? [poBrandId] : []);
+
+  const linkedPoQ = useQuery({
+    queryKey: ["hub-idea-po", selected?.imp_po_id],
+    enabled: !!selected?.imp_po_id,
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("imp_purchase_orders")
+        .select(
+          "id,po_number,status,order_date,currency,fx_rate,grand_total_bdt,paid_bdt,due_bdt,total_units,landed_cost_per_unit_bdt",
+        )
+        .eq("id", selected!.imp_po_id!)
+        .maybeSingle();
+      if (error) throw error;
+      return data;
+    },
+  });
+
   const invalidate = () => {
     qc.invalidateQueries({ queryKey: ["hub-ideas"] });
     qc.invalidateQueries({ queryKey: ["hub-idea-summary"] });
@@ -292,21 +318,79 @@ function SourcingPage() {
   const placeOrder = useMutation({
     mutationFn: async () => {
       if (!selected) return;
+      if (!poBrandId) throw new Error("Brand পাওয়া যায়নি");
+      const qty = Number(orderQty || 0);
+      const unitCny = Number(poUnitCny || 0);
+      const fx = Number(poFx || 0);
+      if (qty <= 0) throw new Error("Quantity দিন");
+      if (fx <= 0) throw new Error("FX rate দিন");
+
+      const supplier = poSupplierId
+        ? { id: poSupplierId }
+        : poSupplierName.trim()
+          ? {
+              name: poSupplierName.trim(),
+              source_link: poSupplierUrl.trim() || undefined,
+              supplier_type: "import" as const,
+              currency: "CNY",
+            }
+          : undefined;
+
+      const advance = Number(payAmount || 0);
+      const res = (await createPoFn({
+        data: {
+          brand_id: poBrandId,
+          order_date: new Date().toISOString().slice(0, 10),
+          currency: "CNY",
+          fx_rate: fx,
+          notes:
+            `Growth Hub sourcing — ${selected.title}` +
+            (poNotes.trim() ? ` | ${poNotes.trim()}` : ""),
+          supplier,
+          items: [
+            {
+              name_snapshot: selected.title,
+              quantity: qty,
+              unit_cost_foreign: unitCny,
+              image_snapshot: selected.image_url ?? undefined,
+            },
+          ],
+          cartons: [],
+          receive_mode: "quantity",
+          initial_payment:
+            payEnabled && advance > 0 && payWalletId
+              ? {
+                  amount_bdt: advance,
+                  wallet_id: payWalletId,
+                  payment_date: payDate,
+                  reference: payRef.trim() || undefined,
+                  payment_type: "supplier_advance" as const,
+                  idempotency_key: newIdemKey("hubpay"),
+                }
+              : undefined,
+          idempotency_key: newIdemKey("hubpo"),
+        },
+      })) as { po_id: string; po_number: string };
+
       const { error } = await supabase
         .from("hub_product_ideas")
         .update({
           status: "ordered",
           ordered_at: new Date().toISOString(),
-          order_qty: orderQty ? Number(orderQty) : null,
+          order_qty: qty,
           order_unit_price: orderPrice ? Number(orderPrice) : null,
+          imp_po_id: res.po_id,
         } as never)
         .eq("id", selected.id);
       if (error) throw error;
+      return res;
     },
-    onSuccess: () => {
-      toast.success("Order placed 🎉");
+    onSuccess: (res) => {
+      toast.success(res ? `PO ${res.po_number} তৈরি হয়েছে 🎉` : "Order placed 🎉");
       setOrderOpen(false);
       invalidate();
+      qc.invalidateQueries({ queryKey: ["hub-idea-po"] });
+      qc.invalidateQueries({ queryKey: ["imp-pos"] });
     },
     onError: (e: Error) => toast.error(e.message),
   });
