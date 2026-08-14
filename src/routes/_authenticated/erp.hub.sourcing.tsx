@@ -185,6 +185,70 @@ function SourcingPage() {
     if (!selectedId && pipeline.length > 0) setSelectedId(pipeline[0]!.id);
   }, [pipeline, selectedId]);
 
+  // Live PO status for every ordered idea (for stage tracking).
+  const pipelinePoIds = useMemo(
+    () => pipeline.map((i) => i.imp_po_id).filter(Boolean) as string[],
+    [pipeline],
+  );
+  const posQ = useQuery({
+    queryKey: ["hub-sourcing-pos", pipelinePoIds],
+    enabled: pipelinePoIds.length > 0,
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("imp_purchase_orders")
+        .select("id,po_number,status,paid_bdt,due_bdt,grand_total_bdt")
+        .in("id", pipelinePoIds);
+      if (error) throw error;
+      const m = new Map<string, { id: string; po_number: string; status: string; paid_bdt: number; due_bdt: number; grand_total_bdt: number }>();
+      for (const r of (data ?? []) as never[]) m.set((r as { id: string }).id, r as never);
+      return m;
+    },
+  });
+
+  const stageOf = useMemo(() => {
+    const m = new Map<string, SourcingStage>();
+    for (const i of pipeline) {
+      const po = i.imp_po_id ? posQ.data?.get(i.imp_po_id) : undefined;
+      m.set(
+        i.id,
+        deriveStage({
+          status: i.status,
+          quoteCount: quotesQ.data?.get(i.id)?.length ?? 0,
+          selectedQuoteId: i.selected_quote_id,
+          impPoId: i.imp_po_id,
+          poStatus: po?.status ?? null,
+        }),
+      );
+    }
+    return m;
+  }, [pipeline, posQ.data, quotesQ.data]);
+
+  const stageCounts = useMemo(() => {
+    const c = { all: pipeline.length } as Record<SourcingStage, number> & { all: number };
+    for (const s of STAGE_ORDER) c[s] = 0;
+    for (const i of pipeline) c[stageOf.get(i.id) ?? "to_source"]++;
+    return c;
+  }, [pipeline, stageOf]);
+
+  const visible = useMemo(() => {
+    const term = search.trim().toLowerCase();
+    return pipeline.filter((i) => {
+      if (stageFilter !== "all" && (stageOf.get(i.id) ?? "to_source") !== stageFilter) return false;
+      if (!term) return true;
+      return (
+        i.title.toLowerCase().includes(term) ||
+        (i.category ?? "").toLowerCase().includes(term) ||
+        (i.supplier_name ?? "").toLowerCase().includes(term)
+      );
+    });
+  }, [pipeline, stageFilter, stageOf, search]);
+
+  const dueTotal = useMemo(() => {
+    let t = 0;
+    posQ.data?.forEach((p) => { t += Number(p.due_bdt ?? 0); });
+    return t;
+  }, [posQ.data]);
+
   const selected: HubIdea | null = useMemo(
     () => pipeline.find((i) => i.id === selectedId) ?? null,
     [pipeline, selectedId],
