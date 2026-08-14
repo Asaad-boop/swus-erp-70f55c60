@@ -812,6 +812,10 @@ function SourcingPage() {
                         <p className="text-[10px] text-muted-foreground">
                           {selSummary?.up_votes ?? 0} likes · {selSummary?.rating_count ?? 0} ratings
                         </p>
+                        <div className="mt-1 flex items-center justify-end gap-1">
+                          <StageBadge stage={stageOf.get(selected.id) ?? "to_source"} />
+                          <StageMenu idea={selected} />
+                        </div>
                       </div>
                     </div>
 
