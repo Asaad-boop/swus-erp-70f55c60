@@ -66,13 +66,16 @@ import {
 import { cn } from "@/lib/utils";
 import {
   IDEA_STATUSES,
+  IDEA_FUNNEL_ORDER,
   fetchForecasts,
   fetchIdeaSummaries,
   fetchIdeas,
   fetchMyVotes,
+  fetchIdeaPeople,
   fmtValue,
   type HubIdea,
   type HubIdeaForecast,
+  type HubIdeaVoter,
 } from "@/lib/erp/hub/hub-data";
 
 export const Route = createFileRoute("/_authenticated/erp/hub/products")({
@@ -191,7 +194,7 @@ function ProductPipelinePage() {
   const qc = useQueryClient();
   const [open, setOpen] = useState(false);
   const [draft, setDraft] = useState<Draft>(emptyDraft());
-  const [statusFilter, setStatusFilter] = useState<string>("all");
+  const [statusFilter, setStatusFilter] = useState<string>("voting");
   const [search, setSearch] = useState("");
   const [sortBy, setSortBy] = useState<string>("score");
   const [view, setView] = useState<"grid" | "board">("grid");
@@ -216,11 +219,17 @@ function ProductPipelinePage() {
     queryFn: () => fetchForecasts(ideas.map((i) => i.id)),
     enabled: ideas.length > 0,
   });
+  const peopleQ = useQuery({
+    queryKey: ["hub-idea-people", ideas.map((i) => i.id)],
+    queryFn: () => fetchIdeaPeople(ideas.map((i) => i.id)),
+    enabled: ideas.length > 0,
+  });
 
   const invalidate = () => {
     qc.invalidateQueries({ queryKey: ["hub-ideas"] });
     qc.invalidateQueries({ queryKey: ["hub-idea-summary"] });
     qc.invalidateQueries({ queryKey: ["hub-forecasts"] });
+    qc.invalidateQueries({ queryKey: ["hub-idea-people"] });
   };
 
   const save = useMutation({
@@ -309,6 +318,7 @@ function ProductPipelinePage() {
     },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["hub-my-votes"] });
+      qc.invalidateQueries({ queryKey: ["hub-idea-people"] });
       qc.invalidateQueries({ queryKey: ["hub-idea-summary"] });
     },
     onError: (e: Error) => toast.error(e.message),
@@ -333,6 +343,7 @@ function ProductPipelinePage() {
     },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["hub-my-votes"] });
+      qc.invalidateQueries({ queryKey: ["hub-idea-people"] });
       qc.invalidateQueries({ queryKey: ["hub-idea-summary"] });
     },
     onError: (e: Error) => toast.error(e.message),
@@ -415,6 +426,14 @@ function ProductPipelinePage() {
     for (const i of ideas) m.set(i.status, (m.get(i.status) ?? 0) + 1);
     return m;
   }, [ideas]);
+
+  const funnelStatuses = useMemo(
+    () =>
+      IDEA_FUNNEL_ORDER.map(
+        (k) => IDEA_STATUSES.find((s) => s.key === k) ?? { key: k, label: k },
+      ),
+    [],
+  );
 
   const stats = useMemo(() => {
     const approved = ideas.filter((i) =>
@@ -565,12 +584,12 @@ function ProductPipelinePage() {
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="all">All status</SelectItem>
-                {IDEA_STATUSES.map((s) => (
+                {funnelStatuses.map((s) => (
                   <SelectItem key={s.key} value={s.key}>
                     {s.label}
                   </SelectItem>
                 ))}
+                <SelectItem value="all">All status</SelectItem>
               </SelectContent>
             </Select>
             <div className="flex h-9 items-center rounded-md border border-border p-0.5">
@@ -618,13 +637,7 @@ function ProductPipelinePage() {
           </div>
 
           <div className="flex flex-wrap items-center gap-2">
-            <FunnelChip
-              label="All"
-              count={ideas.length}
-              active={statusFilter === "all"}
-              onClick={() => setStatusFilter("all")}
-            />
-            {IDEA_STATUSES.map((s) => (
+            {funnelStatuses.map((s) => (
               <FunnelChip
                 key={s.key}
                 label={s.label}
@@ -633,6 +646,12 @@ function ProductPipelinePage() {
                 onClick={() => setStatusFilter(s.key)}
               />
             ))}
+            <FunnelChip
+              label="All"
+              count={ideas.length}
+              active={statusFilter === "all"}
+              onClick={() => setStatusFilter("all")}
+            />
           </div>
         </>
       )}
@@ -650,7 +669,7 @@ function ProductPipelinePage() {
 
       {view === "board" && filtered.length > 0 && (
         <div className="flex gap-3 overflow-x-auto pb-2">
-          {IDEA_STATUSES.map((st) => {
+          {funnelStatuses.map((st) => {
             const col = filtered.filter((i) => i.status === st.key);
             return (
               <div key={st.key} className="w-[260px] shrink-0 rounded-xl border bg-muted/30 p-2">
@@ -728,6 +747,7 @@ function ProductPipelinePage() {
           const mine = votesQ.data?.get(i.id);
           const my = mine?.vote ?? 0;
           const f = forecastQ.data?.get(i.id);
+          const people = peopleQ.data?.get(i.id);
           const imgs = i.images?.length ? i.images : i.image_url ? [i.image_url] : [];
           const statusMeta = STATUS_STYLE[i.status] ?? STATUS_STYLE.idea;
           return (
@@ -806,6 +826,12 @@ function ProductPipelinePage() {
                 {i.description && (
                   <p className="line-clamp-2 text-xs text-muted-foreground">{i.description}</p>
                 )}
+
+                <PeopleStrip
+                  addedBy={people?.created_by_name ?? null}
+                  addedAt={i.created_at}
+                  voters={people?.voters ?? []}
+                />
 
                 <div className="flex flex-wrap items-center gap-1.5 text-xs">
                   <Badge variant="outline">Cost {fmtValue(i.est_unit_cost, "bdt")}</Badge>
@@ -1202,6 +1228,70 @@ function StatCard({ label, value, hint }: { label: string; value: string; hint?:
     </Card>
   );
 }
+
+function initials(name: string) {
+  return name
+    .split(/\s+/)
+    .filter(Boolean)
+    .slice(0, 2)
+    .map((w) => w[0]?.toUpperCase())
+    .join("");
+}
+
+function PeopleStrip({
+  addedBy,
+  addedAt,
+  voters,
+}: {
+  addedBy: string | null;
+  addedAt: string;
+  voters: HubIdeaVoter[];
+}) {
+  const likers = voters.filter((v) => v.vote === 1);
+  const dislikers = voters.filter((v) => v.vote === -1);
+  const raters = voters.filter((v) => v.rating != null);
+  return (
+    <div className="space-y-1.5 rounded-lg border border-dashed border-border/70 bg-muted/30 p-2 text-[11px]">
+      <p className="text-muted-foreground">
+        Added by <span className="font-semibold text-foreground">{addedBy ?? "Unknown"}</span> ·{" "}
+        {new Date(addedAt).toLocaleDateString("en-GB", {
+          day: "2-digit",
+          month: "short",
+          year: "numeric",
+        })}
+      </p>
+      {likers.length > 0 ? (
+        <div className="flex flex-wrap items-center gap-1">
+          <Heart className="h-3 w-3 fill-rose-500 text-rose-500" />
+          {likers.map((v) => (
+            <span
+              key={v.user_id}
+              title={v.comment ?? v.name}
+              className="inline-flex items-center gap-1 rounded-full bg-background px-1.5 py-0.5 font-medium shadow-sm"
+            >
+              <span className="inline-flex h-4 w-4 items-center justify-center rounded-full bg-primary/15 text-[8px] font-bold text-primary">
+                {initials(v.name)}
+              </span>
+              {v.name}
+            </span>
+          ))}
+        </div>
+      ) : (
+        <p className="text-muted-foreground">এখনো কেউ like দেয়নি</p>
+      )}
+      {(dislikers.length > 0 || raters.length > 0) && (
+        <p className="text-muted-foreground">
+          {dislikers.length > 0 && <>👎 {dislikers.map((v) => v.name).join(", ")}</>}
+          {dislikers.length > 0 && raters.length > 0 && " · "}
+          {raters.length > 0 && (
+            <>★ {raters.map((v) => `${v.name} (${v.rating})`).join(", ")}</>
+          )}
+        </p>
+      )}
+    </div>
+  );
+}
+
 
 function FunnelChip({
   label,

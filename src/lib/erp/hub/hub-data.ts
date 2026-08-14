@@ -230,6 +230,45 @@ export const IDEA_STATUSES = [
   { key: "rejected", label: "Rejected" },
 ] as const;
 
+/** Funnel display order: voting first, all-status chip goes last in UI. */
+export const IDEA_FUNNEL_ORDER = [
+  "voting",
+  "idea",
+  "approved",
+  "sourcing",
+  "ordered",
+  "launched",
+  "rejected",
+] as const;
+
+export type HubIdeaVoter = {
+  user_id: string;
+  name: string;
+  vote: number;
+  rating: number | null;
+  comment: string | null;
+};
+
+export type HubIdeaPeople = {
+  idea_id: string;
+  created_by: string | null;
+  created_by_name: string | null;
+  voters: HubIdeaVoter[];
+};
+
+export async function fetchIdeaPeople(ideaIds: string[]) {
+  const map = new Map<string, HubIdeaPeople>();
+  if (ideaIds.length === 0) return map;
+  const { data, error } = await supabase.rpc("hub_idea_people" as never, {
+    _idea_ids: ideaIds,
+  } as never);
+  if (error) throw error;
+  for (const row of (data ?? []) as HubIdeaPeople[]) {
+    map.set(row.idea_id, { ...row, voters: (row.voters ?? []) as HubIdeaVoter[] });
+  }
+  return map;
+}
+
 export async function fetchIdeas(brandIds: string[]) {
   let q = supabase
     .from("hub_product_ideas")
