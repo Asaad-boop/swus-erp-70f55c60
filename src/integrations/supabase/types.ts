@@ -4090,6 +4090,7 @@ export type Database = {
           target_price_min: number | null
           title: string
           updated_at: string
+          video_url: string | null
         }
         Insert: {
           approved_at?: string | null
@@ -4121,6 +4122,7 @@ export type Database = {
           target_price_min?: number | null
           title: string
           updated_at?: string
+          video_url?: string | null
         }
         Update: {
           approved_at?: string | null
@@ -4152,6 +4154,7 @@ export type Database = {
           target_price_min?: number | null
           title?: string
           updated_at?: string
+          video_url?: string | null
         }
         Relationships: [
           {

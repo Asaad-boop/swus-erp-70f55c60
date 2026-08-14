@@ -1,0 +1,1 @@
+ALTER TABLE public.hub_product_ideas ADD COLUMN IF NOT EXISTS video_url text;
