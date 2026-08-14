@@ -145,6 +145,20 @@ const groups: Group[] = [
         ],
       },
       {
+        key: "content",
+        label: "Content Studio",
+        icon: ImageIcon,
+        items: [
+          { to: "/erp/content", label: "Content Hub", icon: LayoutDashboard, exact: true },
+          { to: "/erp/content/intake", label: "Content Intake", icon: PackagePlus },
+          { to: "/erp/content/pipeline", label: "Content Pipeline", icon: Clapperboard },
+          { to: "/erp/content/media-plans", label: "Media Buying Hub", icon: Megaphone },
+          { to: "/erp/content/creators", label: "Creator CRM", icon: Users },
+          { to: "/erp/content/agencies", label: "Agency Partners", icon: Building2 },
+          { to: "/erp/content/matching", label: "Product ↔ Creator", icon: GitBranch },
+        ],
+      },
+      {
         key: "marketing",
         label: "Marketing",
         icon: Megaphone,
