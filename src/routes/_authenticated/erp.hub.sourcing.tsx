@@ -1204,12 +1204,34 @@ function SourcingPage() {
                                   ? "মাল পথে আছে — warehouse receive করলে Received auto হয়ে যাবে।"
                                   : "সব ধাপ শেষ — stock ঢুকে গেছে।";
                       return (
-                        <div className="flex items-start gap-2 rounded-lg border border-primary/25 bg-primary/5 p-2.5 text-[11px]">
-                          <Target className="mt-0.5 h-3.5 w-3.5 shrink-0 text-primary" />
-                          <span>{hint}</span>
+                        <div className="flex flex-wrap items-center gap-2 rounded-lg border border-primary/25 bg-primary/5 p-2.5 text-[11px]">
+                          <Target className="h-3.5 w-3.5 shrink-0 text-primary" />
+                          <span className="min-w-[200px] flex-1">{hint}</span>
+                          {(st === "to_source" || st === "sourcing") && (
+                            <Button size="sm" className="h-7 text-[11px]" onClick={openNewQuote}>
+                              <Plus className="mr-1 h-3 w-3" /> Add quote
+                            </Button>
+                          )}
+                          {st === "sourcing" && quotes.length > 0 && (
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              className="h-7 text-[11px]"
+                              disabled={changeStage.isPending}
+                              onClick={() => changeStage.mutate({ idea: selected, stage: "sourced" })}
+                            >
+                              Sourcing done
+                            </Button>
+                          )}
                         </div>
                       );
                     })()}
+
+                    <FollowupCard
+                      idea={selected}
+                      saving={saveFollowup.isPending}
+                      onSave={(patch) => saveFollowup.mutate({ idea: selected, patch })}
+                    />
 
                     <div className="flex flex-wrap gap-1.5 text-xs">
                       <Badge variant="outline">
