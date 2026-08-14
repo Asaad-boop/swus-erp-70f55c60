@@ -764,6 +764,18 @@ function SourcingPage() {
               placeholder="Search product / supplier…"
               className="h-8 w-full max-w-[240px] sm:ml-auto"
             />
+            <Select value={sortBy} onValueChange={(v) => setSortBy(v as typeof sortBy)}>
+              <SelectTrigger className="h-8 w-[150px]">
+                <SelectValue placeholder="Sort" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="stage">Sort: Stage</SelectItem>
+                <SelectItem value="age">Sort: Oldest first</SelectItem>
+                <SelectItem value="due">Sort: Due amount</SelectItem>
+                <SelectItem value="quotes">Sort: Most quotes</SelectItem>
+                <SelectItem value="cost">Sort: Lowest cost</SelectItem>
+              </SelectContent>
+            </Select>
           </div>
         </div>
       )}
