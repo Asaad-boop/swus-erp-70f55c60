@@ -1145,6 +1145,30 @@ function ProductPipelinePage() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      <AlertDialog open={!!confirmDelete} onOpenChange={(o) => !o && setConfirmDelete(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Idea delete করব?</AlertDialogTitle>
+            <AlertDialogDescription>
+              "{confirmDelete?.title}" এবং এর vote/forecast/quote সব মুছে যাবে। এটা undo করা যাবে
+              না।
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              onClick={() => {
+                if (confirmDelete) remove.mutate(confirmDelete.id);
+                setConfirmDelete(null);
+              }}
+            >
+              Delete
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
