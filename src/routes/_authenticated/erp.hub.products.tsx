@@ -193,7 +193,7 @@ function ProductPipelinePage() {
   const qc = useQueryClient();
   const [open, setOpen] = useState(false);
   const [draft, setDraft] = useState<Draft>(emptyDraft());
-  const [statusFilter, setStatusFilter] = useState<string>("all");
+  const [statusFilter, setStatusFilter] = useState<string>("voting");
   const [search, setSearch] = useState("");
   const [sortBy, setSortBy] = useState<string>("score");
   const [view, setView] = useState<"grid" | "board">("grid");
@@ -218,11 +218,17 @@ function ProductPipelinePage() {
     queryFn: () => fetchForecasts(ideas.map((i) => i.id)),
     enabled: ideas.length > 0,
   });
+  const peopleQ = useQuery({
+    queryKey: ["hub-idea-people", ideas.map((i) => i.id)],
+    queryFn: () => fetchIdeaPeople(ideas.map((i) => i.id)),
+    enabled: ideas.length > 0,
+  });
 
   const invalidate = () => {
     qc.invalidateQueries({ queryKey: ["hub-ideas"] });
     qc.invalidateQueries({ queryKey: ["hub-idea-summary"] });
     qc.invalidateQueries({ queryKey: ["hub-forecasts"] });
+    qc.invalidateQueries({ queryKey: ["hub-idea-people"] });
   };
 
   const save = useMutation({
