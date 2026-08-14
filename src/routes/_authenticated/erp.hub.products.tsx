@@ -192,6 +192,10 @@ function ProductPipelinePage() {
   const [open, setOpen] = useState(false);
   const [draft, setDraft] = useState<Draft>(emptyDraft());
   const [statusFilter, setStatusFilter] = useState<string>("all");
+  const [search, setSearch] = useState("");
+  const [sortBy, setSortBy] = useState<string>("score");
+  const [view, setView] = useState<"grid" | "board">("grid");
+  const [confirmDelete, setConfirmDelete] = useState<HubIdea | null>(null);
   const [fcIdea, setFcIdea] = useState<HubIdea | null>(null);
   const [fc, setFc] = useState<FDraft>(emptyForecast());
 
