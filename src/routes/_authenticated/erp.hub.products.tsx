@@ -1118,11 +1118,25 @@ function ProductPipelinePage() {
         </DialogContent>
       </Dialog>
 
-      <Dialog open={!!fcIdea} onOpenChange={(o) => !o && setFcIdea(null)}>
-        <DialogContent className="max-h-[90vh] max-w-lg overflow-y-auto">
+      <Dialog open={!!videoIdea} onOpenChange={(o) => !o && setVideoIdea(null)}>
+        <DialogContent className="max-w-3xl">
           <DialogHeader>
-            <DialogTitle>Forecast — {fcIdea?.title}</DialogTitle>
+            <DialogTitle>{videoIdea?.title} — Video</DialogTitle>
           </DialogHeader>
+          {videoIdea?.video_url ? <VideoPlayer url={videoIdea.video_url} /> : null}
+          {videoIdea?.video_url && (
+            <a
+              href={videoIdea.video_url}
+              target="_blank"
+              rel="noreferrer noopener"
+              className="inline-flex items-center gap-1 text-xs text-primary hover:underline"
+            >
+              নতুন ট্যাবে খুলুন <ExternalLink className="h-3 w-3" />
+            </a>
+          )}
+        </DialogContent>
+      </Dialog>
+      <Dialog open={!!fcIdea} onOpenChange={(o) => !o && setFcIdea(null)}>
         <DialogContent className="max-h-[90vh] max-w-lg overflow-y-auto">
           <DialogHeader>
             <DialogTitle>Forecast — {fcIdea?.title}</DialogTitle>
@@ -1352,5 +1366,56 @@ function FunnelChip({
         {count}
       </span>
     </button>
+  );
+}
+
+
+function toEmbedUrl(url: string) {
+  try {
+    const u = new URL(url);
+    const host = u.hostname.replace(/^www\./, "");
+    if (host === "youtu.be") return `https://www.youtube.com/embed/${u.pathname.slice(1)}`;
+    if (host.endsWith("youtube.com")) {
+      const v = u.searchParams.get("v");
+      if (v) return `https://www.youtube.com/embed/${v}`;
+      if (u.pathname.startsWith("/shorts/"))
+        return `https://www.youtube.com/embed/${u.pathname.split("/")[2]}`;
+      if (u.pathname.startsWith("/embed/")) return url;
+    }
+    if (host.endsWith("vimeo.com")) return `https://player.vimeo.com/video/${u.pathname.slice(1)}`;
+    if (host.endsWith("facebook.com") || host.endsWith("fb.watch"))
+      return `https://www.facebook.com/plugins/video.php?href=${encodeURIComponent(url)}&show_text=false`;
+    if (host.endsWith("tiktok.com")) {
+      const id = u.pathname.split("/video/")[1]?.split(/[/?]/)[0];
+      if (id) return `https://www.tiktok.com/embed/v2/${id}`;
+    }
+  } catch {
+    return null;
+  }
+  return null;
+}
+
+function VideoPlayer({ url }: { url: string }) {
+  const embed = toEmbedUrl(url);
+  if (embed) {
+    return (
+      <div className="aspect-video w-full overflow-hidden rounded-lg bg-black">
+        <iframe
+          src={embed}
+          title="Product video"
+          allow="accelerometer; autoplay; clipboard-write; encrypted-media; picture-in-picture"
+          allowFullScreen
+          className="h-full w-full border-0"
+        />
+      </div>
+    );
+  }
+  if (/\.(mp4|webm|ogg|mov)(\?|$)/i.test(url)) {
+    return <video src={url} controls className="w-full rounded-lg bg-black" />;
+  }
+  return (
+    <p className="text-sm text-muted-foreground">
+      এই লিংকটি এখানে play করা যাচ্ছে না — নিচের বাটনে ক্লিক করে নতুন ট্যাবে দেখুন।
+    </p>
   );
 }
