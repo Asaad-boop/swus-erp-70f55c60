@@ -1212,6 +1212,7 @@ function SourcingPage() {
             <Button
               onClick={() => placeOrder.mutate()}
               disabled={
+                !poAgentId ||
                 !orderQty ||
                 Number(poFx || 0) <= 0 ||
                 (!poSupplierId && !poSupplierName.trim()) ||
