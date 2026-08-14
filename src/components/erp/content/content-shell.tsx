@@ -1,5 +1,5 @@
 import { Link, useLocation } from "@tanstack/react-router";
-import { useEffect, useRef, type ReactNode } from "react";
+import { useEffect, useRef, useState, type ReactNode } from "react";
 import {
   PackageOpen,
   Megaphone,
@@ -7,8 +7,12 @@ import {
   Users,
   Building2,
   Network,
+  Menu,
+  X,
   type LucideIcon,
 } from "lucide-react";
+import { Sheet, SheetContent, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
+import { cn } from "@/lib/utils";
 
 export type ContentNavItem = {
   to: string;
@@ -26,11 +30,12 @@ export const CONTENT_NAV: ContentNavItem[] = [
   { to: "/erp/content/matching", label: "Product ↔ Creator", short: "Matching", icon: Network },
 ];
 
-/** Sticky sub-navigation shared by every Content Studio page. */
+/** Responsive sub-navigation: horizontal on desktop, sheet sidebar on mobile. */
 export function ContentSubnav() {
   const { pathname } = useLocation();
   const scroller = useRef<HTMLDivElement>(null);
   const activeRef = useRef<HTMLAnchorElement>(null);
+  const [open, setOpen] = useState(false);
 
   useEffect(() => {
     const el = activeRef.current;
@@ -40,11 +45,14 @@ export function ContentSubnav() {
     box.scrollTo({ left: Math.max(0, left), behavior: "smooth" });
   }, [pathname]);
 
+  const activeItem = CONTENT_NAV.find((it) => pathname.startsWith(it.to)) ?? CONTENT_NAV[0];
+
   return (
     <div className="sticky top-0 z-30 border-b border-border/70 bg-background/85 backdrop-blur-md">
+      {/* Desktop: horizontal scrollable chips */}
       <div
         ref={scroller}
-        className="mx-auto flex max-w-[1500px] gap-1 overflow-x-auto px-3 py-2 md:px-6 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+        className="mx-auto hidden max-w-[1500px] gap-1 overflow-x-auto px-3 py-2 md:flex md:px-6 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
       >
         {CONTENT_NAV.map((it) => {
           const on = pathname.startsWith(it.to);
@@ -61,11 +69,79 @@ export function ContentSubnav() {
               }`}
             >
               <Icon className="h-3.5 w-3.5 shrink-0" />
-              <span className="hidden sm:inline">{it.label}</span>
-              <span className="sm:hidden">{it.short}</span>
+              <span>{it.label}</span>
             </Link>
           );
         })}
+      </div>
+
+      {/* Mobile: compact trigger bar + slide-out sidebar */}
+      <div className="flex items-center justify-between gap-3 px-3 py-2 md:hidden">
+        <div className="flex min-w-0 items-center gap-2">
+          <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary">
+            <activeItem.icon className="h-4 w-4" />
+          </span>
+          <div className="min-w-0">
+            <p className="text-[10px] font-medium uppercase tracking-wider text-muted-foreground">Content Studio</p>
+            <p className="truncate text-sm font-semibold">{activeItem.label}</p>
+          </div>
+        </div>
+
+        <Sheet open={open} onOpenChange={setOpen}>
+          <SheetTrigger asChild>
+            <button
+              type="button"
+              className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border border-border/70 bg-background text-foreground shadow-sm transition-colors hover:bg-accent"
+              aria-label="Open Content Studio menu"
+            >
+              <Menu className="h-4 w-4" />
+            </button>
+          </SheetTrigger>
+          <SheetContent side="left" className="w-[280px] p-0">
+            <SheetTitle className="sr-only">Content Studio menu</SheetTitle>
+            <div className="flex h-full flex-col">
+              <div className="flex items-center justify-between border-b border-border/70 px-4 py-3">
+                <span className="font-display text-sm font-semibold">Content Studio</span>
+                <button
+                  type="button"
+                  onClick={() => setOpen(false)}
+                  className="inline-flex h-8 w-8 items-center justify-center rounded-md text-muted-foreground hover:bg-accent hover:text-foreground"
+                  aria-label="Close menu"
+                >
+                  <X className="h-4 w-4" />
+                </button>
+              </div>
+              <nav className="flex-1 overflow-y-auto p-3">
+                <ul className="space-y-1">
+                  {CONTENT_NAV.map((it) => {
+                    const on = pathname.startsWith(it.to);
+                    const Icon = it.icon;
+                    return (
+                      <li key={it.to}>
+                        <Link
+                          to={it.to}
+                          onClick={() => setOpen(false)}
+                          className={cn(
+                            "flex items-center gap-3 rounded-lg px-3 py-3 text-sm font-medium transition-colors",
+                            on
+                              ? "bg-primary/10 text-primary"
+                              : "text-muted-foreground hover:bg-accent hover:text-foreground"
+                          )}
+                        >
+                          <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-md bg-muted">
+                            <Icon className="h-4 w-4" />
+                          </span>
+                          <span className="flex-1">{it.label}</span>
+                          {on && <span className="h-2 w-2 shrink-0 rounded-full bg-primary" />}
+                        </Link>
+                      </li>
+                    );
+                  })}
+                </ul>
+              </nav>
+            </div>
+          </SheetContent>
+        </Sheet>
       </div>
     </div>
   );
