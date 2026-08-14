@@ -976,17 +976,26 @@ function SourcingPage() {
       {pipeline.length > 0 && (
         <div className="space-y-3">
           <div className="grid grid-cols-2 gap-2 sm:grid-cols-4 lg:grid-cols-7">
-            <StageKpi label="In pipeline" value={String(stageCounts.all)} sub="approved → ordered" />
+            <StageKpi
+              label="In pipeline"
+              value={String(stageCounts.all)}
+              sub="approved → received"
+              active={stageFilter === "all"}
+              onClick={() => setStageFilter("all")}
+            />
             {STAGE_ORDER.map((s) => (
               <StageKpi
                 key={s}
                 label={STAGE_META[s].label}
                 value={String(stageCounts[s])}
+                dot={STAGE_META[s].dot}
+                active={stageFilter === s}
+                onClick={() => setStageFilter(s)}
                 sub={s === "ordered" && dueTotal > 0 ? `${fmtValue(Math.round(dueTotal), "bdt")} due` : undefined}
               />
             ))}
           </div>
-          <div className="flex flex-wrap items-center gap-2">
+          <div className="sticky top-2 z-20 flex flex-wrap items-center gap-2 rounded-xl border border-border/60 bg-background/85 p-2 shadow-sm backdrop-blur-md supports-[backdrop-filter]:bg-background/70">
             <StageFilterBar counts={stageCounts} value={stageFilter} onChange={setStageFilter} />
             <button
               type="button"
