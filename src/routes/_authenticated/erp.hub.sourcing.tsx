@@ -32,6 +32,16 @@ import {
 import { newIdemKey } from "@/lib/erp/imports/types";
 import { HubPageHeader } from "@/components/erp/hub/hub-shell";
 import { IdeaGallery, StarRating } from "@/components/erp/hub/idea-visuals";
+import {
+  deriveStage,
+  StageBadge,
+  StageFilterBar,
+  SourcingTimeline,
+  StageKpi,
+  STAGE_ORDER,
+  STAGE_META,
+  type SourcingStage,
+} from "@/components/erp/hub/sourcing-track";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -143,6 +153,8 @@ function SourcingPage() {
   const [payRef, setPayRef] = useState("");
   const [tMin, setTMin] = useState("");
   const [tMax, setTMax] = useState("");
+  const [search, setSearch] = useState("");
+  const [stageFilter, setStageFilter] = useState<SourcingStage | "all">("all");
 
   const ideasQ = useQuery({
     queryKey: ["hub-ideas", brandIds],
