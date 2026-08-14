@@ -22,6 +22,11 @@ import {
   Heart,
   ShoppingCart,
   Link2,
+  Play,
+  Package,
+  SlidersHorizontal,
+  Save,
+  ImageOff,
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useBrand } from "@/contexts/brand-context";
@@ -33,7 +38,13 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
+import {
+  Sheet,
+  SheetContent,
+  SheetHeader,
+  SheetTitle,
+  SheetTrigger,
+} from "@/components/ui/sheet";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import {
   Dialog,
@@ -63,7 +74,9 @@ import {
   type HubContentAssignment,
   type HubContentPlan,
   type HubCreator,
+  type HubProductOption,
 } from "@/lib/erp/hub/hub-data";
+import { VideoEmbed } from "@/components/erp/hub/video-embed";
 import {
   BudgetBar,
   DueChip,
@@ -123,6 +136,7 @@ type PlanDraft = {
   hashtags: string;
   reference_urls: string;
   notes: string;
+  video_url: string;
 };
 
 const emptyPlan = (): PlanDraft => ({
@@ -143,6 +157,7 @@ const emptyPlan = (): PlanDraft => ({
   hashtags: "",
   reference_urls: "",
   notes: "",
+  video_url: "",
 });
 
 const planToDraft = (p: HubContentPlan): PlanDraft => ({
@@ -164,6 +179,7 @@ const planToDraft = (p: HubContentPlan): PlanDraft => ({
   hashtags: p.hashtags ?? "",
   reference_urls: (p.reference_urls ?? []).join("\n"),
   notes: p.notes ?? "",
+  video_url: p.video_url ?? "",
 });
 
 type CreatorDraft = {
@@ -271,6 +287,11 @@ function CreativeDeskPage() {
     for (const c of creators) m.set(c.id, c);
     return m;
   }, [creators]);
+  const productById = useMemo(() => {
+    const m = new Map<string, HubProductOption>();
+    for (const p of productsQ.data ?? []) m.set(p.id, p);
+    return m;
+  }, [productsQ.data]);
   const productName = useMemo(() => {
     const m = new Map<string, string>();
     for (const p of productsQ.data ?? []) m.set(p.id, p.name);
@@ -320,6 +341,7 @@ function CreativeDeskPage() {
       .map((s) => s.trim())
       .filter(Boolean),
     notes: d.notes.trim() || null,
+    video_url: d.video_url.trim() || null,
   });
 
   const savePlan = useMutation({
@@ -670,11 +692,12 @@ function CreativeDeskPage() {
     const list = asgByPlan.get(p.id) ?? [];
     const spent = spendByPlan.get(p.id) ?? 0;
     const budget = Number(p.budget || 0);
+    const prod = p.product_id ? productById.get(p.product_id) : undefined;
     return (
       <button
         type="button"
         onClick={() => setSelectedId(p.id)}
-        className={`group relative w-full overflow-hidden rounded-xl border bg-card p-3 text-left transition-all hover:-translate-y-0.5 hover:shadow-md ${
+        className={`group relative w-full overflow-hidden rounded-xl border bg-card p-3 text-left transition-all active:scale-[0.99] md:hover:-translate-y-0.5 md:hover:shadow-md ${
           selectedId === p.id ? "ring-2 ring-primary/40" : ""
         }`}
       >
@@ -682,15 +705,41 @@ function CreativeDeskPage() {
           className={`absolute inset-y-0 left-0 w-1 ${PRIORITY_BAR[p.priority ?? "normal"] ?? ""}`}
         />
         <div className="space-y-2 pl-1.5">
-          <div className="flex items-start justify-between gap-2">
-            <p className="line-clamp-2 text-sm font-semibold">{p.title}</p>
-            <DueChip date={p.deadline} done={p.status === "live"} />
+          <div className="flex items-start gap-2.5">
+            {prod?.image ? (
+              <img
+                src={prod.image}
+                alt={prod.name}
+                loading="lazy"
+                className="h-11 w-11 shrink-0 rounded-lg border object-cover"
+              />
+            ) : (
+              <span className="grid h-11 w-11 shrink-0 place-items-center rounded-lg border bg-muted text-muted-foreground">
+                <ImageOff className="h-4 w-4 opacity-60" />
+              </span>
+            )}
+            <div className="min-w-0 flex-1">
+              <div className="flex items-start justify-between gap-2">
+                <p className="line-clamp-2 text-sm font-semibold leading-snug">{p.title}</p>
+                <DueChip date={p.deadline} done={p.status === "live"} />
+              </div>
+              <p className="line-clamp-1 text-[11px] text-muted-foreground">
+                {prod ? prod.name : "No product"}
+                {p.angle ? ` • ${p.angle}` : ""}
+              </p>
+            </div>
           </div>
-          <p className="line-clamp-1 text-[11px] text-muted-foreground">
-            {p.product_id ? (productName.get(p.product_id) ?? "Product") : "No product"}
-            {p.angle ? ` • ${p.angle}` : ""}
-          </p>
           <div className="flex flex-wrap items-center gap-1">
+            {p.video_url && (
+              <Badge variant="secondary" className="gap-1 text-[10px]">
+                <Play className="h-2.5 w-2.5" /> Video
+              </Badge>
+            )}
+            {p.script && (
+              <Badge variant="secondary" className="text-[10px]">
+                Script
+              </Badge>
+            )}
             <Badge variant="outline" className="text-[10px]">
               {ASSET_TYPES.find((a) => a.key === p.asset_type)?.label ?? p.asset_type}
             </Badge>
