@@ -317,6 +317,7 @@ function ProductPipelinePage() {
     },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["hub-my-votes"] });
+      qc.invalidateQueries({ queryKey: ["hub-idea-people"] });
       qc.invalidateQueries({ queryKey: ["hub-idea-summary"] });
     },
     onError: (e: Error) => toast.error(e.message),
@@ -341,6 +342,7 @@ function ProductPipelinePage() {
     },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["hub-my-votes"] });
+      qc.invalidateQueries({ queryKey: ["hub-idea-people"] });
       qc.invalidateQueries({ queryKey: ["hub-idea-summary"] });
     },
     onError: (e: Error) => toast.error(e.message),
@@ -423,6 +425,14 @@ function ProductPipelinePage() {
     for (const i of ideas) m.set(i.status, (m.get(i.status) ?? 0) + 1);
     return m;
   }, [ideas]);
+
+  const funnelStatuses = useMemo(
+    () =>
+      IDEA_FUNNEL_ORDER.map(
+        (k) => IDEA_STATUSES.find((s) => s.key === k) ?? { key: k, label: k },
+      ),
+    [],
+  );
 
   const stats = useMemo(() => {
     const approved = ideas.filter((i) =>
@@ -573,12 +583,12 @@ function ProductPipelinePage() {
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="all">All status</SelectItem>
-                {IDEA_STATUSES.map((s) => (
+                {funnelStatuses.map((s) => (
                   <SelectItem key={s.key} value={s.key}>
                     {s.label}
                   </SelectItem>
                 ))}
+                <SelectItem value="all">All status</SelectItem>
               </SelectContent>
             </Select>
             <div className="flex h-9 items-center rounded-md border border-border p-0.5">
@@ -626,13 +636,7 @@ function ProductPipelinePage() {
           </div>
 
           <div className="flex flex-wrap items-center gap-2">
-            <FunnelChip
-              label="All"
-              count={ideas.length}
-              active={statusFilter === "all"}
-              onClick={() => setStatusFilter("all")}
-            />
-            {IDEA_STATUSES.map((s) => (
+            {funnelStatuses.map((s) => (
               <FunnelChip
                 key={s.key}
                 label={s.label}
@@ -641,6 +645,12 @@ function ProductPipelinePage() {
                 onClick={() => setStatusFilter(s.key)}
               />
             ))}
+            <FunnelChip
+              label="All"
+              count={ideas.length}
+              active={statusFilter === "all"}
+              onClick={() => setStatusFilter("all")}
+            />
           </div>
         </>
       )}
@@ -658,7 +668,7 @@ function ProductPipelinePage() {
 
       {view === "board" && filtered.length > 0 && (
         <div className="flex gap-3 overflow-x-auto pb-2">
-          {IDEA_STATUSES.map((st) => {
+          {funnelStatuses.map((st) => {
             const col = filtered.filter((i) => i.status === st.key);
             return (
               <div key={st.key} className="w-[260px] shrink-0 rounded-xl border bg-muted/30 p-2">
