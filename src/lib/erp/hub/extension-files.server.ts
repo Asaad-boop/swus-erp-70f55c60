@@ -5,14 +5,14 @@ const MANIFEST = (origin: string) =>
   JSON.stringify(
     {
       manifest_version: 3,
-      name: "Growth Hub Capture",
-      version: "1.2.0",
+      name: "Synq With Us",
+      version: "1.3.0",
       description:
-        "Save any product, competitor ad or content inspiration straight into your Growth Hub.",
+        "Sign in and sync any product, rival page or content inspiration straight into your Growth Hub.",
       permissions: ["activeTab", "scripting", "storage", "contextMenus", "notifications", "tabs"],
       host_permissions: ["<all_urls>"],
       background: { service_worker: "background.js", type: "module" },
-      action: { default_popup: "popup.html", default_title: "Save to Growth Hub" },
+      action: { default_popup: "popup.html", default_title: "Synq With Us" },
       content_scripts: [
         { matches: ["<all_urls>"], js: ["content.js"], run_at: "document_idle", all_frames: false },
       ],
@@ -177,13 +177,13 @@ const BACKGROUND = `
 import { DEFAULTS } from './config.js';
 
 async function cfg() {
-  const s = await chrome.storage.sync.get(['base', 'token', 'brandId']);
-  return { base: s.base || DEFAULTS.base, token: s.token || DEFAULTS.token, brandId: s.brandId || null };
+  const s = await chrome.storage.sync.get(['base', 'token', 'brandId', 'email']);
+  return { base: s.base || DEFAULTS.base, token: s.token || DEFAULTS.token, brandId: s.brandId || null, email: s.email || null };
 }
 
 export async function api(payload) {
   const c = await cfg();
-  if (!c.token) throw new Error('Token missing — open extension options.');
+  if (!c.token) throw new Error('আগে Synq extension-এ login করো।');
   const r = await fetch(c.base + '/api/public/hub/capture', {
     method: 'POST',
     headers: { 'content-type': 'application/json' },
@@ -202,9 +202,9 @@ function notify(title, message) {
 
 chrome.runtime.onInstalled.addListener(() => {
   chrome.contextMenus.removeAll(() => {
-    chrome.contextMenus.create({ id: 'gh-idea', title: 'Growth Hub: product idea হিসেবে সেভ', contexts: ['page', 'image', 'link', 'selection'] });
-    chrome.contextMenus.create({ id: 'gh-swipe', title: 'Growth Hub: swipe / inspiration সেভ', contexts: ['page', 'image', 'link', 'selection'] });
-    chrome.contextMenus.create({ id: 'gh-rival', title: 'Growth Hub: rival page হিসেবে সেভ', contexts: ['page', 'link'] });
+    chrome.contextMenus.create({ id: 'gh-idea', title: 'Synq: product idea হিসেবে সেভ', contexts: ['page', 'image', 'link', 'selection'] });
+    chrome.contextMenus.create({ id: 'gh-swipe', title: 'Synq: swipe / inspiration সেভ', contexts: ['page', 'image', 'link', 'selection'] });
+    chrome.contextMenus.create({ id: 'gh-rival', title: 'Synq: rival page হিসেবে সেভ', contexts: ['page', 'link'] });
   });
 });
 
@@ -216,7 +216,7 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
       if (msg && msg.type === 'gh-scrape') {
         const [res] = await chrome.scripting.executeScript({ target: { tabId: sender.tab.id }, files: ['scrape.js'] });
         const c = await cfg();
-        sendResponse({ ok: true, page: (res && res.result) || {}, brandId: c.brandId, hasToken: !!c.token });
+        sendResponse({ ok: true, page: (res && res.result) || {}, brandId: c.brandId, hasToken: !!c.token, email: c.email });
       } else if (msg && msg.type === 'gh-meta') {
         const j = await api({ action: 'meta' });
         sendResponse({ ok: true, meta: j });
@@ -251,16 +251,16 @@ chrome.contextMenus.onClicked.addListener(async (info, tab) => {
     };
     if (info.menuItemId === 'gh-idea') {
       await api(Object.assign({ kind: 'idea', images: page.images ? page.images.slice(0, 6) : [] }, common));
-      notify('Growth Hub', 'Product idea সেভ হয়েছে ✅');
+      notify('Synq With Us', 'Product idea সেভ হয়েছে ✅');
     } else if (info.menuItemId === 'gh-swipe') {
       await api(Object.assign({ kind: 'swipe', asset_type: 'ad', competitor_name: page.siteName, competitor_url: page.url }, common));
-      notify('Growth Hub', 'Swipe সেভ হয়েছে ✅');
+      notify('Synq With Us', 'Swipe সেভ হয়েছে ✅');
     } else {
       await api({ kind: 'competitor', brand_id: c.brandId, name: page.siteName || page.host, url: info.linkUrl || page.url, platform: page.platform });
-      notify('Growth Hub', 'Rival page সেভ হয়েছে ✅');
+      notify('Synq With Us', 'Rival page সেভ হয়েছে ✅');
     }
   } catch (e) {
-    notify('Growth Hub — ব্যর্থ', String(e.message || e));
+    notify('Synq — ব্যর্থ', String(e.message || e));
   }
 });
 `;
@@ -273,21 +273,38 @@ const POPUP_HTML = `<!doctype html>
 </head>
 <body>
   <header>
-    <div class="brandmark">GH</div>
+    <div class="brandmark">S</div>
     <div>
-      <strong>Growth Hub Capture</strong>
+      <strong>Synq With Us</strong>
       <small id="host">…</small>
     </div>
     <button id="settings" class="ghost" title="Settings">⚙</button>
   </header>
 
-  <div id="setup" class="hidden pad">
-    <p class="muted">প্রথমে Growth Hub → Rivals → Browser capture থেকে token নাও।</p>
-    <input id="setupToken" placeholder="Token পেস্ট করো" />
-    <button id="setupSave" class="primary block">সেভ করো</button>
+  <div id="login" class="hidden pad">
+    <div class="hero">
+      <div class="orb">S</div>
+      <h2>Synq With Us</h2>
+      <p class="muted">তোমার ERP account দিয়ে login করো — যেকোনো website থেকে product, rival page ও content সরাসরি Growth Hub-এ যাবে।</p>
+    </div>
+    <label>Email</label>
+    <input id="email" type="email" placeholder="you@company.com" autocomplete="username" />
+    <label>Password</label>
+    <input id="password" type="password" placeholder="••••••••" autocomplete="current-password" />
+    <button id="loginBtn" class="primary block">Login</button>
+    <details class="adv">
+      <summary>Advanced</summary>
+      <label>Server URL</label>
+      <input id="loginBase" />
+      <label>অথবা capture token</label>
+      <input id="setupToken" placeholder="Token পেস্ট করো" />
+      <button id="setupSave" class="primary block" style="background:#26304a">Token দিয়ে ঢুকো</button>
+    </details>
+    <p id="loginMsg" class="msg"></p>
   </div>
 
   <main id="app" class="hidden">
+    <div class="who"><span id="who"></span><button id="logout" class="link">Logout</button></div>
     <div class="tabs">
       <button class="tab on" data-kind="idea">💡 Idea</button>
       <button class="tab" data-kind="swipe">🎨 Swipe</button>
@@ -333,7 +350,7 @@ const POPUP_HTML = `<!doctype html>
     <label>Tags (কমা দিয়ে)</label>
     <input id="tags" placeholder="winner, hook, ugc" />
 
-    <button id="save" class="primary block">Growth Hub-এ সেভ করো</button>
+    <button id="save" class="primary block">Synq করো</button>
     <p id="msg" class="msg"></p>
   </main>
 </body>
@@ -368,7 +385,15 @@ textarea { resize:vertical; }
 .msg.ok { color:#4ade80; } .msg.err { color:#f87171; }
 .muted { color:var(--mut); font-size:12px; }
 .hidden { display:none; }
+.hero { text-align:center; padding:6px 0 4px; }
+.hero .orb { width:52px; height:52px; margin:0 auto 8px; border-radius:16px; background:linear-gradient(135deg,#6366f1,#a855f7); display:flex; align-items:center; justify-content:center; font-weight:800; font-size:20px; color:#fff; box-shadow:0 10px 26px rgba(99,102,241,.45); }
+.hero h2 { margin:0 0 4px; font-size:15px; }
+.adv { margin-top:12px; }
+.adv summary { color:var(--mut); font-size:11px; cursor:pointer; }
+.who { display:flex; align-items:center; gap:8px; font-size:11px; color:var(--mut); margin-bottom:8px; }
+.link { margin-left:auto; background:none; border:none; color:#a5b4fc; font-size:11px; cursor:pointer; text-decoration:underline; }
 `;
+
 
 const POPUP_JS = `
 import { DEFAULTS } from './config.js';
@@ -380,8 +405,8 @@ let chosen = null;
 let cfg = {};
 
 async function loadCfg() {
-  const s = await chrome.storage.sync.get(['base', 'token', 'brandId']);
-  cfg = { base: s.base || DEFAULTS.base, token: s.token || DEFAULTS.token, brandId: s.brandId || '' };
+  const s = await chrome.storage.sync.get(['base', 'token', 'brandId', 'email']);
+  cfg = { base: s.base || DEFAULTS.base, token: s.token || DEFAULTS.token, brandId: s.brandId || '', email: s.email || '' };
 }
 
 async function api(payload) {
@@ -406,16 +431,50 @@ async function init() {
   await loadCfg();
   $('settings').onclick = () => chrome.runtime.openOptionsPage();
   if (!cfg.token) {
-    $('setup').classList.remove('hidden');
+    $('login').classList.remove('hidden');
+    $('loginBase').value = cfg.base;
+    const say = (t, cls) => { $('loginMsg').textContent = t; $('loginMsg').className = 'msg ' + (cls || ''); };
+    const doLogin = async () => {
+      const email = $('email').value.trim();
+      const password = $('password').value;
+      const base = ($('loginBase').value || cfg.base).trim().replace(/\\/$/, '');
+      if (!email || !password) return say('Email ও password দাও', 'err');
+      $('loginBtn').disabled = true;
+      say('Login হচ্ছে…');
+      try {
+        const r = await fetch(base + '/api/public/hub/capture', {
+          method: 'POST',
+          headers: { 'content-type': 'application/json' },
+          body: JSON.stringify({ action: 'login', email: email, password: password })
+        });
+        const j = await r.json().catch(() => ({}));
+        if (!r.ok || j.error) throw new Error(j.error || ('HTTP ' + r.status));
+        await chrome.storage.sync.set({ base: base, token: j.token, email: j.email || email, brandId: j.default_brand_id || '' });
+        say('স্বাগতম ✅', 'ok');
+        setTimeout(() => location.reload(), 400);
+      } catch (e) {
+        say(String(e.message || e), 'err');
+      } finally {
+        $('loginBtn').disabled = false;
+      }
+    };
+    $('loginBtn').onclick = doLogin;
+    $('password').onkeydown = (e) => { if (e.key === 'Enter') doLogin(); };
     $('setupSave').onclick = async () => {
       const t = $('setupToken').value.trim();
       if (!t) return;
-      await chrome.storage.sync.set({ token: t, base: cfg.base });
+      await chrome.storage.sync.set({ token: t, base: ($('loginBase').value || cfg.base).trim().replace(/\\/$/, '') });
       location.reload();
     };
     return;
   }
   $('app').classList.remove('hidden');
+  $('who').textContent = cfg.email ? ('Logged in — ' + cfg.email) : 'Logged in';
+  $('logout').onclick = async () => {
+    try { await api({ action: 'logout' }); } catch (e) {}
+    await chrome.storage.sync.remove(['token', 'email']);
+    location.reload();
+  };
 
   const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
   try {
@@ -522,7 +581,7 @@ init();
 
 
 const CONTENT_JS = `
-/* Growth Hub — floating clip button + quick capture panel */
+/* Synq With Us — floating clip button + quick capture panel */
 (() => {
   if (window.__ghClipMounted) return;
   window.__ghClipMounted = true;
@@ -569,9 +628,9 @@ const CONTENT_JS = `
 
   const wrap = document.createElement('div');
   wrap.innerHTML = \`
-    <button class="fab" title="Growth Hub-এ clip করো">🔖</button>
+    <button class="fab" title="Synq With Us — clip করো">🔖</button>
     <div class="panel">
-      <div class="hd"><b>Growth Hub Clip</b><span class="chip" id="ghPlat"></span><button class="x">✕</button></div>
+      <div class="hd"><b>Synq Clip</b><span class="chip" id="ghPlat"></span><button class="x">✕</button></div>
       <div class="tabs">
         <button class="tab on" data-kind="idea">💡 Product</button>
         <button class="tab" data-kind="swipe">🎨 Content</button>
@@ -592,7 +651,7 @@ const CONTENT_JS = `
       </div>
       <label>Note</label><textarea id="ghNote" rows="2"></textarea>
       <label>Tags (কমা দিয়ে)</label><input id="ghTags" placeholder="winner, hook, ugc" />
-      <button class="go" id="ghGo">সেভ করো</button>
+      <button class="go" id="ghGo">Synq করো</button>
       <p class="msg" id="ghMsg"></p>
     </div>\`;
   root.appendChild(wrap);
@@ -613,6 +672,10 @@ const CONTENT_JS = `
   async function load() {
     const r = await send({ type: 'gh-scrape' });
     if (!r.ok) { $('ghMsg').textContent = r.error; $('ghMsg').className = 'msg err'; return; }
+    if (!r.hasToken) {
+      $('ghMsg').textContent = 'আগে extension আইকনে ক্লিক করে login করো।';
+      $('ghMsg').className = 'msg err';
+    }
     page = r.page || {};
     $('ghPlat').textContent = page.platform || 'web';
     $('ghTitle').value = page.title || document.title;
@@ -695,14 +758,20 @@ const OPTIONS_HTML = `<!doctype html>
 <html lang="bn"><head><meta charset="utf-8" /><link rel="stylesheet" href="popup.css" />
 <style>body{width:460px}</style></head>
 <body>
-<header><div class="brandmark">GH</div><div><strong>Growth Hub Capture — Settings</strong><small>token ও server</small></div></header>
+<header><div class="brandmark">S</div><div><strong>Synq With Us — Settings</strong><small id="acct">account, server ও token</small></div></header>
 <main class="pad">
-  <label>Growth Hub URL</label>
+  <label>Server URL</label>
   <input id="base" />
+  <label>Email</label>
+  <input id="email" type="email" placeholder="you@company.com" autocomplete="username" />
+  <label>Password</label>
+  <input id="password" type="password" placeholder="••••••••" autocomplete="current-password" />
+  <button id="login" class="primary block">Login করে token নাও</button>
   <label>Capture token</label>
-  <input id="token" placeholder="Rivals → Browser capture থেকে নাও" />
+  <input id="token" placeholder="login করলে অটো বসবে" />
   <button id="save" class="primary block">সেভ করো</button>
   <button id="test" class="primary block" style="background:#26304a">Connection টেস্ট করো</button>
+  <button id="logout" class="primary block" style="background:#26304a">Logout</button>
   <p id="msg" class="msg"></p>
 </main>
 <script type="module" src="options.js"></script>
@@ -712,14 +781,54 @@ const OPTIONS_JS = `
 import { DEFAULTS } from './config.js';
 const $ = (id) => document.getElementById(id);
 
-chrome.storage.sync.get(['base', 'token'], (s) => {
+const baseUrl = () => $('base').value.trim().replace(/\\/$/, '');
+
+chrome.storage.sync.get(['base', 'token', 'email'], (s) => {
   $('base').value = s.base || DEFAULTS.base;
   $('token').value = s.token || DEFAULTS.token;
+  $('email').value = s.email || '';
+  $('acct').textContent = s.email ? ('Logged in — ' + s.email) : 'logged out';
 });
 
 $('save').onclick = async () => {
-  await chrome.storage.sync.set({ base: $('base').value.trim().replace(/\\/$/, ''), token: $('token').value.trim() });
+  await chrome.storage.sync.set({ base: baseUrl(), token: $('token').value.trim() });
   $('msg').textContent = 'সেভ হয়েছে ✅';
+  $('msg').className = 'msg ok';
+};
+
+$('login').onclick = async () => {
+  $('msg').textContent = 'Login হচ্ছে…';
+  $('msg').className = 'msg';
+  try {
+    const r = await fetch(baseUrl() + '/api/public/hub/capture', {
+      method: 'POST', headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ action: 'login', email: $('email').value.trim(), password: $('password').value })
+    });
+    const j = await r.json().catch(() => ({}));
+    if (!r.ok || j.error) throw new Error(j.error || ('HTTP ' + r.status));
+    $('token').value = j.token;
+    await chrome.storage.sync.set({ base: baseUrl(), token: j.token, email: j.email || $('email').value.trim(), brandId: j.default_brand_id || '' });
+    $('password').value = '';
+    $('acct').textContent = 'Logged in — ' + (j.email || '');
+    $('msg').textContent = 'Login হয়েছে ✅ — ' + (j.brands || []).length + ' brand';
+    $('msg').className = 'msg ok';
+  } catch (e) {
+    $('msg').textContent = String(e.message || e);
+    $('msg').className = 'msg err';
+  }
+};
+
+$('logout').onclick = async () => {
+  try {
+    await fetch(baseUrl() + '/api/public/hub/capture', {
+      method: 'POST', headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ action: 'logout', token: $('token').value.trim() })
+    });
+  } catch (e) { /* ignore */ }
+  await chrome.storage.sync.remove(['token', 'email']);
+  $('token').value = '';
+  $('acct').textContent = 'logged out';
+  $('msg').textContent = 'Logout হয়েছে';
   $('msg').className = 'msg ok';
 };
 
@@ -727,7 +836,7 @@ $('test').onclick = async () => {
   $('msg').textContent = 'টেস্ট হচ্ছে…';
   $('msg').className = 'msg';
   try {
-    const r = await fetch($('base').value.trim().replace(/\\/$/, '') + '/api/public/hub/capture', {
+    const r = await fetch(baseUrl() + '/api/public/hub/capture', {
       method: 'POST', headers: { 'content-type': 'application/json' },
       body: JSON.stringify({ token: $('token').value.trim(), action: 'meta' })
     });
@@ -742,16 +851,21 @@ $('test').onclick = async () => {
 };
 `;
 
-const README = (origin: string) => `# Growth Hub Capture — Chrome / Edge extension
+const README = (origin: string) => `# Synq With Us — Chrome / Edge extension
 
 ## Install (1 মিনিট)
 1. এই zip টা যেকোনো ফোল্ডারে **extract** করো।
 2. Chrome-এ যাও: chrome://extensions
 3. উপরে ডানে **Developer mode** ON করো।
 4. **Load unpacked** চাপো → extract করা ফোল্ডারটা select করো।
-5. Toolbar-এ GH আইকনে ক্লিক → token পেস্ট করো (Growth Hub → Rivals → Browser capture থেকে)।
+5. Toolbar-এ **Synq** আইকনে ক্লিক → তোমার ERP **email + password** দিয়ে **Login** করো। (token লাগবে না — auto তৈরি হয়।)
 
 Server: ${origin}
+
+## Login
+- একই email/password যেটা দিয়ে ERP-তে ঢোকো।
+- Login করলে তোমার brand list অটো আসে; শেষ ব্যবহৃত brand মনে থাকে।
+- Logout করলে ঐ device-এর token বাতিল হয়ে যায়।
 
 ## ব্যবহার
 - যেকোনো product page-এ আইকনে ক্লিক → **Idea** → সেভ → Product Pipeline-এ চলে আসবে (vote/rating সহ)।

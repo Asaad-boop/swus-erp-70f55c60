@@ -44,6 +44,73 @@ export const Route = createFileRoute("/api/public/hub/capture")({
           return json({ error: "Invalid JSON" }, 400);
         }
 
+        const action = str(payload.action, 20);
+
+        /* ------------------------------- login ------------------------------ */
+        // Email + password sign-in for the Synq extension. Mints a capture
+        // token for the authenticated user so no manual token copy is needed.
+        if (action === "login") {
+          const email = str(payload.email, 200);
+          const password = str(payload.password, 200);
+          if (!email || !password) return json({ error: "Email ও password দাও" }, 400);
+
+          const { createClient } = await import("@supabase/supabase-js");
+          const url = process.env["SUPABASE_URL"] || process.env["VITE_SUPABASE_URL"];
+          const anon =
+            process.env["SUPABASE_PUBLISHABLE_KEY"] ||
+            process.env["VITE_SUPABASE_PUBLISHABLE_KEY"] ||
+            process.env["SUPABASE_ANON_KEY"];
+          if (!url || !anon) return json({ error: "Server misconfigured" }, 500);
+
+          const authClient = createClient(url, anon, {
+            auth: { persistSession: false, autoRefreshToken: false },
+          });
+          const { data: signIn, error: signErr } = await authClient.auth.signInWithPassword({
+            email,
+            password,
+          });
+          if (signErr || !signIn?.user) {
+            return json({ error: "ভুল email বা password" }, 401);
+          }
+          const userId = signIn.user.id;
+
+          const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+
+          // Brands this user can use.
+          const { data: brandIdsRaw } = await supabaseAdmin.rpc("get_user_brand_ids", {
+            _user_id: userId,
+          } as never);
+          const ids = (brandIdsRaw ?? []) as string[];
+          const { data: brands } = await supabaseAdmin
+            .from("brands")
+            .select("id,name")
+            .in("id", ids.length ? ids : ["00000000-0000-0000-0000-000000000000"])
+            .eq("is_active", true)
+            .order("name");
+
+          // Reuse a single device token per user for the extension.
+          const raw = Array.from(crypto.getRandomValues(new Uint8Array(24)))
+            .map((b) => b.toString(16).padStart(2, "0"))
+            .join("");
+          const hash = createHash("sha256").update(raw).digest("hex");
+          const { error: insErr } = await supabaseAdmin.from("hub_capture_tokens").insert({
+            user_id: userId,
+            label: "Synq extension",
+            token_hash: hash,
+            token_hint: `${raw.slice(0, 4)}…${raw.slice(-4)}`,
+            default_brand_id: (brands ?? [])[0]?.id ?? null,
+          } as never);
+          if (insErr) return json({ error: insErr.message }, 400);
+
+          return json({
+            ok: true,
+            token: raw,
+            email: signIn.user.email,
+            brands: brands ?? [],
+            default_brand_id: (brands ?? [])[0]?.id ?? null,
+          });
+        }
+
         const token = str(payload.token, 200);
         if (!token) return json({ error: "Missing token" }, 401);
         const tokenHash = createHash("sha256").update(token).digest("hex");
@@ -66,6 +133,15 @@ export const Route = createFileRoute("/api/public/hub/capture")({
           use_count: number;
         };
 
+        /* ------------------------------ logout ------------------------------ */
+        if (action === "logout") {
+          await supabaseAdmin
+            .from("hub_capture_tokens")
+            .update({ is_active: false })
+            .eq("id", t.id);
+          return json({ ok: true });
+        }
+
         // Brands this token's owner can use.
         const { data: brandIdsRaw } = await supabaseAdmin.rpc("get_user_brand_ids", {
           _user_id: t.user_id,
@@ -73,7 +149,7 @@ export const Route = createFileRoute("/api/public/hub/capture")({
         const allowedBrandIds = (brandIdsRaw ?? []) as string[];
 
         /* ------------------------------- meta ------------------------------- */
-        if (str(payload.action, 20) === "meta") {
+        if (action === "meta") {
           const [{ data: brands }, { data: comps }] = await Promise.all([
             supabaseAdmin
               .from("brands")
