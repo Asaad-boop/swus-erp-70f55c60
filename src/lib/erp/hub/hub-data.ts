@@ -131,6 +131,10 @@ export type HubIdea = {
   order_qty: number | null;
   order_unit_price: number | null;
   imp_po_id?: string | null;
+  sourcing_owner?: string | null;
+  next_action_at?: string | null;
+  next_action_note?: string | null;
+  priority?: string | null;
   created_by: string | null;
   created_at: string;
 };
@@ -184,6 +188,9 @@ export type HubSourcingQuote = {
   shipping_mode: string;
   shipping_cost_per_unit: number;
   sample_status: string;
+  sample_cost?: number;
+  sample_tracking?: string | null;
+  sample_received_at?: string | null;
   quality_rating: number | null;
   status: string;
   notes: string | null;
@@ -214,6 +221,7 @@ export async function fetchSourcingQuotes(ideaIds: string[]) {
       unit_price_cny: Number(raw.unit_price_cny ?? 0),
       cny_rate: Number(raw.cny_rate ?? 0),
       shipping_cost_per_unit: Number(raw.shipping_cost_per_unit ?? 0),
+      sample_cost: Number(raw.sample_cost ?? 0),
     };
     const arr = map.get(q.idea_id) ?? [];
     arr.push(q);

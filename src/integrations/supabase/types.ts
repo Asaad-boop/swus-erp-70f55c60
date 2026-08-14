@@ -4077,12 +4077,16 @@ export type Database = {
           imp_po_id: string | null
           linked_product_id: string | null
           moq: number | null
+          next_action_at: string | null
+          next_action_note: string | null
           notes: string | null
           order_qty: number | null
           order_unit_price: number | null
           ordered_at: string | null
+          priority: string
           selected_quote_id: string | null
           source_url: string | null
+          sourcing_owner: string | null
           status: string
           supplier_name: string | null
           supplier_url: string | null
@@ -4110,12 +4114,16 @@ export type Database = {
           imp_po_id?: string | null
           linked_product_id?: string | null
           moq?: number | null
+          next_action_at?: string | null
+          next_action_note?: string | null
           notes?: string | null
           order_qty?: number | null
           order_unit_price?: number | null
           ordered_at?: string | null
+          priority?: string
           selected_quote_id?: string | null
           source_url?: string | null
+          sourcing_owner?: string | null
           status?: string
           supplier_name?: string | null
           supplier_url?: string | null
@@ -4143,12 +4151,16 @@ export type Database = {
           imp_po_id?: string | null
           linked_product_id?: string | null
           moq?: number | null
+          next_action_at?: string | null
+          next_action_note?: string | null
           notes?: string | null
           order_qty?: number | null
           order_unit_price?: number | null
           ordered_at?: string | null
+          priority?: string
           selected_quote_id?: string | null
           source_url?: string | null
+          sourcing_owner?: string | null
           status?: string
           supplier_name?: string | null
           supplier_url?: string | null
@@ -4233,6 +4245,56 @@ export type Database = {
         }
         Relationships: []
       }
+      hub_sourcing_events: {
+        Row: {
+          actor_id: string | null
+          actor_name: string | null
+          created_at: string
+          event_type: string
+          from_stage: string | null
+          id: string
+          idea_id: string
+          meta: Json
+          note: string | null
+          quote_id: string | null
+          to_stage: string | null
+        }
+        Insert: {
+          actor_id?: string | null
+          actor_name?: string | null
+          created_at?: string
+          event_type: string
+          from_stage?: string | null
+          id?: string
+          idea_id: string
+          meta?: Json
+          note?: string | null
+          quote_id?: string | null
+          to_stage?: string | null
+        }
+        Update: {
+          actor_id?: string | null
+          actor_name?: string | null
+          created_at?: string
+          event_type?: string
+          from_stage?: string | null
+          id?: string
+          idea_id?: string
+          meta?: Json
+          note?: string | null
+          quote_id?: string | null
+          to_stage?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "hub_sourcing_events_idea_id_fkey"
+            columns: ["idea_id"]
+            isOneToOne: false
+            referencedRelation: "hub_product_ideas"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       hub_sourcing_quotes: {
         Row: {
           cny_rate: number
@@ -4246,7 +4308,10 @@ export type Database = {
           notes: string | null
           platform: string
           quality_rating: number | null
+          sample_cost: number
+          sample_received_at: string | null
           sample_status: string
+          sample_tracking: string | null
           shipping_cost_per_unit: number
           shipping_mode: string
           status: string
@@ -4267,7 +4332,10 @@ export type Database = {
           notes?: string | null
           platform?: string
           quality_rating?: number | null
+          sample_cost?: number
+          sample_received_at?: string | null
           sample_status?: string
+          sample_tracking?: string | null
           shipping_cost_per_unit?: number
           shipping_mode?: string
           status?: string
@@ -4288,7 +4356,10 @@ export type Database = {
           notes?: string | null
           platform?: string
           quality_rating?: number | null
+          sample_cost?: number
+          sample_received_at?: string | null
           sample_status?: string
+          sample_tracking?: string | null
           shipping_cost_per_unit?: number
           shipping_mode?: string
           status?: string
