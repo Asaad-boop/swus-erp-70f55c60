@@ -528,6 +528,38 @@ function ProductPipelinePage() {
         }
         actions={
           <>
+            <div className="relative">
+              <Search className="pointer-events-none absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+              <Input
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                placeholder="Search idea, supplier, category…"
+                className="h-9 w-[220px] pl-8"
+              />
+              {search && (
+                <button
+                  type="button"
+                  aria-label="Clear search"
+                  onClick={() => setSearch("")}
+                  className="absolute right-2 top-2.5 text-muted-foreground hover:text-foreground"
+                >
+                  <X className="h-4 w-4" />
+                </button>
+              )}
+            </div>
+            <Select value={sortBy} onValueChange={setSortBy}>
+              <SelectTrigger className="h-9 w-[150px]">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="score">Top voted</SelectItem>
+                <SelectItem value="rating">Best rated</SelectItem>
+                <SelectItem value="profit">Forecast profit</SelectItem>
+                <SelectItem value="margin">Best margin</SelectItem>
+                <SelectItem value="newest">Newest</SelectItem>
+                <SelectItem value="title">A → Z</SelectItem>
+              </SelectContent>
+            </Select>
             <Select value={statusFilter} onValueChange={setStatusFilter}>
               <SelectTrigger className="h-9 w-[150px]">
                 <SelectValue />
@@ -541,6 +573,30 @@ function ProductPipelinePage() {
                 ))}
               </SelectContent>
             </Select>
+            <div className="flex h-9 items-center rounded-md border border-border p-0.5">
+              <button
+                type="button"
+                aria-label="Grid view"
+                onClick={() => setView("grid")}
+                className={cn(
+                  "flex h-8 w-8 items-center justify-center rounded",
+                  view === "grid" ? "bg-muted text-foreground" : "text-muted-foreground",
+                )}
+              >
+                <LayoutGrid className="h-4 w-4" />
+              </button>
+              <button
+                type="button"
+                aria-label="Pipeline board view"
+                onClick={() => setView("board")}
+                className={cn(
+                  "flex h-8 w-8 items-center justify-center rounded",
+                  view === "board" ? "bg-muted text-foreground" : "text-muted-foreground",
+                )}
+              >
+                <Columns3 className="h-4 w-4" />
+              </button>
+            </div>
             <Button size="sm" onClick={openNew}>
               <Plus className="mr-1.5 h-4 w-4" /> New idea
             </Button>
@@ -549,14 +605,36 @@ function ProductPipelinePage() {
       />
 
       {ideas.length > 0 && (
-        <div className="grid gap-3 sm:grid-cols-3">
-          <StatCard label="Total ideas" value={String(stats.total)} />
-          <StatCard label="Approved+" value={String(stats.approved)} />
-          <StatCard
-            label="Projected monthly profit"
-            value={fmtValue(Math.round(stats.projected), "bdt")}
-          />
-        </div>
+        <>
+          <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+            <StatCard label="Total ideas" value={String(stats.total)} />
+            <StatCard label="Awaiting decision" value={String(stats.awaiting)} />
+            <StatCard label="Approved+" value={String(stats.approved)} />
+            <StatCard
+              label="Projected monthly profit"
+              value={fmtValue(Math.round(stats.projected), "bdt")}
+              hint={`Avg margin ${stats.avgMargin.toFixed(0)}%`}
+            />
+          </div>
+
+          <div className="flex flex-wrap items-center gap-2">
+            <FunnelChip
+              label="All"
+              count={ideas.length}
+              active={statusFilter === "all"}
+              onClick={() => setStatusFilter("all")}
+            />
+            {IDEA_STATUSES.map((s) => (
+              <FunnelChip
+                key={s.key}
+                label={s.label}
+                count={statusCounts.get(s.key) ?? 0}
+                active={statusFilter === s.key}
+                onClick={() => setStatusFilter(s.key)}
+              />
+            ))}
+          </div>
+        </>
       )}
 
       {(ideasQ.isLoading || brandLoading) && <Skeleton className="h-40 w-full rounded-xl" />}
