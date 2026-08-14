@@ -755,6 +755,10 @@ const CONTENT_JS = `
     }
   };
 
+  chrome.runtime.onMessage.addListener((msg) => {
+    if (msg && msg.type === 'gh-toggle') fab.onclick();
+  });
+
   $('ghGo').onclick = async () => {
     const btn = $('ghGo');
     btn.disabled = true;
