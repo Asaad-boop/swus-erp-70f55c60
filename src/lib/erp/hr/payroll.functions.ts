@@ -147,7 +147,7 @@ export const updatePayslip = createServerFn({ method: "POST" })
 
     const { data: slip, error } = await supabase
       .from("hr_payslips")
-      .update(patch)
+      .update(patch as never)
       .eq("id", data.payslipId)
       .neq("status", "paid")
       .select("run_id")
