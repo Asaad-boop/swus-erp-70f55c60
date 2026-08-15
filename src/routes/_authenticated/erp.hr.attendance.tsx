@@ -47,7 +47,7 @@ function AttendancePage() {
         supabase
           .from("hr_employees")
           .select(
-            "id, full_name, employee_code, status, shift_start, shift_end, week_offs, overtime_enabled, overtime_rate, overtime_holiday_multiplier, overtime_min_minutes, late_grace_min, break_allowance_min, unpaid_break",
+            "id, full_name, employee_code, status, shift_start, shift_end, week_offs, overtime_enabled, overtime_rate, overtime_holiday_multiplier, overtime_min_minutes, late_grace_min, break_allowance_min, unpaid_break, break_start, break_end",
           )
           .in("status", ["active", "probation", "on_leave"])
           .order("full_name"),

@@ -3,7 +3,7 @@ import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { toSchedule, type EmployeeSchedule } from "@/lib/erp/hr/schedule";
 
 const SCHEDULE_COLS =
-  "shift_start, shift_end, week_offs, late_grace_min, overtime_enabled, overtime_rate, overtime_holiday_multiplier, overtime_min_minutes, break_allowance_min, unpaid_break";
+  "shift_start, shift_end, week_offs, late_grace_min, overtime_enabled, overtime_rate, overtime_holiday_multiplier, overtime_min_minutes, break_allowance_min, unpaid_break, break_start, break_end";
 
 /** Dhaka-local YYYY-MM-DD for a timestamp (defaults to now). */
 function dhakaDate(d: Date = new Date()) {

@@ -4349,6 +4349,8 @@ export type Database = {
           blood_group: string | null
           brand_id: string | null
           break_allowance_min: number
+          break_end: string | null
+          break_start: string | null
           created_at: string
           date_of_birth: string | null
           department_id: string | null
@@ -4387,6 +4389,8 @@ export type Database = {
           blood_group?: string | null
           brand_id?: string | null
           break_allowance_min?: number
+          break_end?: string | null
+          break_start?: string | null
           created_at?: string
           date_of_birth?: string | null
           department_id?: string | null
@@ -4425,6 +4429,8 @@ export type Database = {
           blood_group?: string | null
           brand_id?: string | null
           break_allowance_min?: number
+          break_end?: string | null
+          break_start?: string | null
           created_at?: string
           date_of_birth?: string | null
           department_id?: string | null
@@ -11936,6 +11942,10 @@ export type Database = {
       heartbeat_order_lock: { Args: { _order_id: string }; Returns: undefined }
       hr_count_working_days: {
         Args: { _from: string; _to: string; _weekly_off?: number[] }
+        Returns: number
+      }
+      hr_effective_break_allowance: {
+        Args: { _emp: Database["public"]["Tables"]["hr_employees"]["Row"] }
         Returns: number
       }
       hr_recalc_attendance: {

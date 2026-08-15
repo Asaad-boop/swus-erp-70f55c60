@@ -14,6 +14,9 @@ export type EmployeeSchedule = {
   /** Paid break minutes per day; extra break time is unpaid when `unpaid_break`. */
   break_allowance_min: number;
   unpaid_break: boolean;
+  /** Optional fixed break window, e.g. 13:00–15:00. Overrides `break_allowance_min`. */
+  break_start: string | null;
+  break_end: string | null;
 };
 
 export const DEFAULT_SCHEDULE: EmployeeSchedule = {
@@ -27,6 +30,8 @@ export const DEFAULT_SCHEDULE: EmployeeSchedule = {
   overtime_min_minutes: 30,
   break_allowance_min: 60,
   unpaid_break: true,
+  break_start: null,
+  break_end: null,
 };
 
 export const BREAK_KINDS = [
@@ -60,13 +65,34 @@ export function toSchedule(row: Partial<EmployeeSchedule> | null | undefined): E
     week_offs: Array.isArray(row?.week_offs) ? row!.week_offs!.map(Number) : DEFAULT_SCHEDULE.week_offs,
     break_allowance_min: Number(row?.break_allowance_min ?? DEFAULT_SCHEDULE.break_allowance_min),
     unpaid_break: row?.unpaid_break ?? DEFAULT_SCHEDULE.unpaid_break,
+    break_start: row?.break_start ? hhmm(row.break_start) : null,
+    break_end: row?.break_end ? hhmm(row.break_end) : null,
   };
+}
+
+/** Length of the fixed break window in minutes (handles windows crossing midnight). */
+export function breakWindowMinutes(s: EmployeeSchedule) {
+  if (!s.break_start || !s.break_end) return null;
+  const start = minutesOfDay(s.break_start);
+  const end = minutesOfDay(s.break_end);
+  return end >= start ? end - start : 24 * 60 - start + end;
+}
+
+/** Effective paid break minutes: window length when set, else the plain allowance. */
+export function paidBreakMinutes(s: EmployeeSchedule) {
+  return breakWindowMinutes(s) ?? (Number(s.break_allowance_min) || 0);
+}
+
+/** "1:00 PM – 3:00 PM" or null when no fixed window is configured. */
+export function breakWindowLabel(s: EmployeeSchedule) {
+  if (!s.break_start || !s.break_end) return null;
+  return `${fmt12(s.break_start)} – ${fmt12(s.break_end)}`;
 }
 
 /** Break minutes that exceed the paid allowance (0 when breaks are fully paid). */
 export function unpaidBreakMinutes(s: EmployeeSchedule, breakMinutes: number) {
   if (!s.unpaid_break) return 0;
-  return Math.max(0, Math.round(breakMinutes) - (Number(s.break_allowance_min) || 0));
+  return Math.max(0, Math.round(breakMinutes) - paidBreakMinutes(s));
 }
 
 /** "09:00:00" → "09:00" */
