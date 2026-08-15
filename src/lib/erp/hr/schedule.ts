@@ -11,6 +11,9 @@ export type EmployeeSchedule = {
   overtime_rate: number; // BDT per overtime hour
   overtime_holiday_multiplier: number;
   overtime_min_minutes: number;
+  /** Paid break minutes per day; extra break time is unpaid when `unpaid_break`. */
+  break_allowance_min: number;
+  unpaid_break: boolean;
 };
 
 export const DEFAULT_SCHEDULE: EmployeeSchedule = {
@@ -22,7 +25,20 @@ export const DEFAULT_SCHEDULE: EmployeeSchedule = {
   overtime_rate: 0,
   overtime_holiday_multiplier: 2,
   overtime_min_minutes: 30,
+  break_allowance_min: 60,
+  unpaid_break: true,
 };
+
+export const BREAK_KINDS = [
+  { value: "lunch", label: "Lunch", emoji: "🍽️" },
+  { value: "prayer", label: "Prayer", emoji: "🕌" },
+  { value: "tea", label: "Tea", emoji: "☕" },
+  { value: "personal", label: "Personal", emoji: "🚶" },
+  { value: "other", label: "Other", emoji: "⏸️" },
+] as const;
+
+export const breakKindLabel = (v?: string | null) =>
+  BREAK_KINDS.find((k) => k.value === v)?.label ?? "Break";
 
 export const WEEK_DAYS = [
   { value: 0, label: "Sunday", short: "Sun" },
@@ -42,7 +58,15 @@ export function toSchedule(row: Partial<EmployeeSchedule> | null | undefined): E
     shift_start: hhmm(row?.shift_start ?? DEFAULT_SCHEDULE.shift_start),
     shift_end: hhmm(row?.shift_end ?? DEFAULT_SCHEDULE.shift_end),
     week_offs: Array.isArray(row?.week_offs) ? row!.week_offs!.map(Number) : DEFAULT_SCHEDULE.week_offs,
+    break_allowance_min: Number(row?.break_allowance_min ?? DEFAULT_SCHEDULE.break_allowance_min),
+    unpaid_break: row?.unpaid_break ?? DEFAULT_SCHEDULE.unpaid_break,
   };
+}
+
+/** Break minutes that exceed the paid allowance (0 when breaks are fully paid). */
+export function unpaidBreakMinutes(s: EmployeeSchedule, breakMinutes: number) {
+  if (!s.unpaid_break) return 0;
+  return Math.max(0, Math.round(breakMinutes) - (Number(s.break_allowance_min) || 0));
 }
 
 /** "09:00:00" → "09:00" */

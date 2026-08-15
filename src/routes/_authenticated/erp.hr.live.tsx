@@ -10,7 +10,7 @@ import { HrPageHeader, clockTime, hoursMins } from "@/components/erp/hr/hr-shell
 import { getLiveBoard, type LiveEmployee } from "@/lib/erp/hr/attendance.functions";
 import { getAppSetting } from "@/lib/erp/settings/app-settings.functions";
 import { DEFAULT_HR_POLICY, type HrPolicy } from "@/lib/erp/hr/policy";
-import { dayMetrics, shiftLabel } from "@/lib/erp/hr/schedule";
+import { dayMetrics, shiftLabel, unpaidBreakMinutes } from "@/lib/erp/hr/schedule";
 import { Radio, RefreshCw, Users, CheckCircle2, Coffee, LogOut, UserX, Table2, GanttChartSquare, Activity } from "lucide-react";
 
 export const Route = createFileRoute("/_authenticated/erp/hr/live")({
@@ -106,7 +106,8 @@ function LiveDashboardPage() {
     dayMetrics({
       schedule: r.schedule,
       workDate,
-      netMs: r.workMs,
+      // Only break time beyond the paid allowance reduces payable hours.
+      netMs: r.workMs + r.breakMs - unpaidBreakMinutes(r.schedule, r.breakMs / 60000) * 60000,
       firstIn: r.firstIn,
       fallbackGraceMin: policy?.late_grace_min ?? DEFAULT_HR_POLICY.late_grace_min,
     });
@@ -239,7 +240,14 @@ function LiveDashboardPage() {
                           </span>
                         </td>
                         <td className="p-2.5">{clockTime(r.lastOut)}</td>
-                        <td className="p-2.5 text-right">{hoursMins(r.breakMs)}</td>
+                        <td className="p-2.5 text-right">
+                          {hoursMins(r.breakMs)}
+                          {unpaidBreakMinutes(r.schedule, r.breakMs / 60000) > 0 && (
+                            <p className="text-[10px] text-amber-600">
+                              +{unpaidBreakMinutes(r.schedule, r.breakMs / 60000)}m unpaid
+                            </p>
+                          )}
+                        </td>
                         <td className="p-2.5 text-right font-medium">{hoursMins(r.workMs)}</td>
                         <td className="p-2.5 text-right text-[12px]">
                           {m.overtimeMinutes > 0 ? (

@@ -3,7 +3,7 @@ import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { toSchedule, type EmployeeSchedule } from "@/lib/erp/hr/schedule";
 
 const SCHEDULE_COLS =
-  "shift_start, shift_end, week_offs, late_grace_min, overtime_enabled, overtime_rate, overtime_holiday_multiplier, overtime_min_minutes";
+  "shift_start, shift_end, week_offs, late_grace_min, overtime_enabled, overtime_rate, overtime_holiday_multiplier, overtime_min_minutes, break_allowance_min, unpaid_break";
 
 /** Dhaka-local YYYY-MM-DD for a timestamp (defaults to now). */
 function dhakaDate(d: Date = new Date()) {
@@ -15,7 +15,7 @@ function dhakaDate(d: Date = new Date()) {
   }).format(d);
 }
 
-export type BreakRow = { id: string; break_start: string; break_end: string | null };
+export type BreakRow = { id: string; break_start: string; break_end: string | null; kind: string };
 export type EntryRow = {
   id: string;
   employee_id: string;
@@ -56,14 +56,16 @@ async function loadDay(supabase: any, employeeId: string, workDate: string) {
   if (ids.length) {
     const { data: b } = await supabase
       .from("hr_breaks")
-      .select("id, time_entry_id, break_start, break_end")
+      .select("id, time_entry_id, break_start, break_end, kind")
       .in("time_entry_id", ids)
       .order("break_start");
     breaks = b ?? [];
   }
   return (entries ?? []).map((e: any) => ({
     ...e,
-    breaks: breaks.filter((b) => b.time_entry_id === e.id).map((b) => ({ id: b.id, break_start: b.break_start, break_end: b.break_end })),
+    breaks: breaks
+      .filter((b) => b.time_entry_id === e.id)
+      .map((b) => ({ id: b.id, break_start: b.break_start, break_end: b.break_end, kind: b.kind ?? "other" })),
   })) as EntryRow[];
 }
 
@@ -122,16 +124,20 @@ export const punchOut = createServerFn({ method: "POST" })
 /** Starts a break on the currently open session. */
 export const startBreak = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .handler(async ({ context }) => {
+  .inputValidator((d: { kind?: string } | undefined) => d ?? {})
+  .handler(async ({ data, context }) => {
     const supabase = context.supabase;
     const employee = await resolveEmployee(supabase, context.userId);
     if (!employee) throw new Error("Employee profile link kora nei.");
     const open = (await loadDay(supabase, employee.id, dhakaDate())).find((e) => !e.check_out);
     if (!open) throw new Error("Age check in koro.");
     if (open.breaks.some((b) => !b.break_end)) return { started: false };
+    const kind = ["lunch", "prayer", "tea", "personal", "other"].includes(String(data.kind))
+      ? String(data.kind)
+      : "other";
     const { error } = await supabase
       .from("hr_breaks")
-      .insert({ time_entry_id: open.id, employee_id: employee.id, break_start: new Date().toISOString() });
+      .insert({ time_entry_id: open.id, employee_id: employee.id, break_start: new Date().toISOString(), kind });
     if (error) throw new Error(error.message);
     return { started: true };
   });
@@ -195,7 +201,7 @@ export const getLiveBoard = createServerFn({ method: "GET" })
     if (entryIds.length) {
       const { data: b } = await supabase
         .from("hr_breaks")
-        .select("id, time_entry_id, employee_id, break_start, break_end")
+        .select("id, time_entry_id, employee_id, break_start, break_end, kind")
         .in("time_entry_id", entryIds)
         .order("break_start");
       breaks = b ?? [];
@@ -209,7 +215,7 @@ export const getLiveBoard = createServerFn({ method: "GET" })
           ...x,
           breaks: breaks
             .filter((b) => b.time_entry_id === x.id)
-            .map((b) => ({ id: b.id, break_start: b.break_start, break_end: b.break_end })),
+            .map((b) => ({ id: b.id, break_start: b.break_start, break_end: b.break_end, kind: b.kind ?? "other" })),
         })) as EntryRow[];
 
       let workMs = 0;

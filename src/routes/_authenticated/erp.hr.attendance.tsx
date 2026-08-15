@@ -8,7 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { ATTENDANCE_STATUSES, HrPageHeader, statusTone } from "@/components/erp/hr/hr-shell";
-import { shiftLabel, toSchedule, weekOffLabel, isWeekOff } from "@/lib/erp/hr/schedule";
+import { shiftLabel, toSchedule, weekOffLabel, isWeekOff, unpaidBreakMinutes } from "@/lib/erp/hr/schedule";
 import { CalendarCheck, CheckCheck, Search, Eraser, Download } from "lucide-react";
 
 /** Dhaka-local YYYY-MM-DD (avoids UTC rolling the date over at night). */
@@ -46,7 +46,9 @@ function AttendancePage() {
       const [emps, att] = await Promise.all([
         supabase
           .from("hr_employees")
-          .select("id, full_name, employee_code, status, shift_start, shift_end, week_offs, overtime_enabled, overtime_rate, overtime_holiday_multiplier, overtime_min_minutes, late_grace_min")
+          .select(
+            "id, full_name, employee_code, status, shift_start, shift_end, week_offs, overtime_enabled, overtime_rate, overtime_holiday_multiplier, overtime_min_minutes, late_grace_min, break_allowance_min, unpaid_break",
+          )
           .in("status", ["active", "probation", "on_leave"])
           .order("full_name"),
         supabase.from("hr_attendance").select("*").eq("work_date", date),
@@ -188,15 +190,16 @@ function AttendancePage() {
                   <th className="p-2.5 text-left">In</th>
                   <th className="p-2.5 text-left">Out</th>
                   <th className="p-2.5 text-right">Late (min)</th>
+                  <th className="p-2.5 text-right">Break (min)</th>
                   <th className="p-2.5 text-right">OT (min)</th>
                   <th className="p-2.5 text-right"></th>
                 </tr>
               </thead>
               <tbody>
                 {isLoading ? (
-                  <tr><td colSpan={8} className="p-6 text-center text-muted-foreground">Loading…</td></tr>
+                  <tr><td colSpan={9} className="p-6 text-center text-muted-foreground">Loading…</td></tr>
                 ) : rows.length === 0 ? (
-                  <tr><td colSpan={8} className="p-6 text-center text-muted-foreground">Active employee nei.</td></tr>
+                  <tr><td colSpan={9} className="p-6 text-center text-muted-foreground">Active employee nei.</td></tr>
                 ) : (
                   rows.map((e) => {
                     const a = byEmp.get(e.id);
@@ -265,6 +268,21 @@ function AttendancePage() {
                             onBlur={(ev) => upsert.mutate({ employee_id: e.id, patch: { late_minutes: Number(ev.target.value) || 0 } })}
                             className="h-8 w-[80px] text-right"
                           />
+                        </td>
+                        <td className="p-2.5 text-right">
+                          <Input
+                            key={`brk-${e.id}-${date}-${a?.updated_at ?? ""}`}
+                            type="number"
+                            min={0}
+                            defaultValue={a?.break_minutes ?? 0}
+                            onBlur={(ev) => upsert.mutate({ employee_id: e.id, patch: { break_minutes: Number(ev.target.value) || 0 } })}
+                            className="h-8 w-[80px] text-right"
+                          />
+                          {unpaidBreakMinutes(sched, Number(a?.break_minutes ?? 0)) > 0 && (
+                            <p className="text-[10px] text-amber-600">
+                              +{unpaidBreakMinutes(sched, Number(a?.break_minutes ?? 0))}m unpaid
+                            </p>
+                          )}
                         </td>
                         <td className="p-2.5 text-right">
                           <Input
