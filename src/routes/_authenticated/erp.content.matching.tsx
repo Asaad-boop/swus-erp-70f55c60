@@ -2,7 +2,17 @@ import { createFileRoute } from "@tanstack/react-router";
 import { useMemo, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
-import { Network, Plus, Truck, PackageCheck, ShoppingCart, Coins, Table2, LayoutGrid } from "lucide-react";
+import {
+  Network,
+  Plus,
+  Truck,
+  PackageCheck,
+  ShoppingCart,
+  Coins,
+  Table2,
+  LayoutGrid,
+  Trash2,
+} from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useBrand } from "@/contexts/brand-context";
 import {
@@ -77,7 +87,7 @@ function MatchingPage() {
   const [creating, setCreating] = useState(false);
   const [draft, setDraft] = useState(empty);
   const [search, setSearch] = useState("");
-  const [mode, setMode] = useState<"table" | "matrix">("table");
+  const [mode, setMode] = useState<"table" | "matrix" | "ships">("table");
 
   const shipQ = useQuery({
     queryKey: ["content-shipments", brandIds],
@@ -116,6 +126,7 @@ function MatchingPage() {
       product_id: string | null;
       shipped: number;
       shipStatus: string;
+      shipCost: number;
       content: number;
       published: number;
       orders: number;
@@ -132,6 +143,7 @@ function MatchingPage() {
           product_id: pid,
           shipped: 0,
           shipStatus: "—",
+          shipCost: 0,
           content: 0,
           published: 0,
           orders: 0,
@@ -141,9 +153,11 @@ function MatchingPage() {
       }
       return cur;
     };
-    for (const s of shipments) {
+    // shipments come newest-first; iterate oldest-first so the newest status wins
+    for (const s of [...shipments].reverse()) {
       const p = get(s.creator_id, s.product_id);
       p.shipped += s.qty;
+      p.shipCost += Number(s.cost) || 0;
       p.shipStatus = s.status;
     }
     for (const i of itemsQ.data ?? []) {
@@ -156,6 +170,17 @@ function MatchingPage() {
     }
     return Array.from(m.values()).sort((a, b) => b.content - a.content);
   }, [shipments, itemsQ.data]);
+
+  const visibleShipments = useMemo(() => {
+    const q = search.trim().toLowerCase();
+    if (!q) return shipments;
+    return shipments.filter(
+      (s) =>
+        (creatorName.get(s.creator_id) ?? "").toLowerCase().includes(q) ||
+        (s.product_id ? (productName.get(s.product_id) ?? "") : "").toLowerCase().includes(q) ||
+        (s.tracking_no ?? "").toLowerCase().includes(q),
+    );
+  }, [shipments, search, creatorName, productName]);
 
   const visiblePairs = useMemo(() => {
     const q = search.trim().toLowerCase();
@@ -187,6 +212,35 @@ function MatchingPage() {
       toast.success("Shipment রেকর্ড হয়েছে");
       setCreating(false);
       setDraft(empty);
+      qc.invalidateQueries({ queryKey: ["content-shipments"] });
+    },
+    onError: (e: Error) => toast.error(e.message),
+  });
+
+  const statusMut = useMutation({
+    mutationFn: async (v: { id: string; status: string }) => {
+      const patch: Record<string, unknown> = { status: v.status };
+      if (v.status === "delivered") patch.delivered_date = new Date().toISOString().slice(0, 10);
+      const { error } = await supabase
+        .from("content_creator_shipments")
+        .update(patch as never)
+        .eq("id", v.id);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      toast.success("Shipment status আপডেট হয়েছে");
+      qc.invalidateQueries({ queryKey: ["content-shipments"] });
+    },
+    onError: (e: Error) => toast.error(e.message),
+  });
+
+  const deleteMut = useMutation({
+    mutationFn: async (id: string) => {
+      const { error } = await supabase.from("content_creator_shipments").delete().eq("id", id);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      toast.success("Shipment মুছে ফেলা হয়েছে");
       qc.invalidateQueries({ queryKey: ["content-shipments"] });
     },
     onError: (e: Error) => toast.error(e.message),
