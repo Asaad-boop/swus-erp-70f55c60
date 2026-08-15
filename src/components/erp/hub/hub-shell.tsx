@@ -21,14 +21,14 @@ export type HubNavItem = {
 };
 
 export const HUB_NAV: HubNavItem[] = [
-  { to: "/erp/hub", label: "Command Center", short: "Center", icon: Compass, exact: true },
-  { to: "/erp/hub/goals", label: "Vision & Goals", short: "Goals", icon: Target },
-  { to: "/erp/hub/tasks", label: "Task Board", short: "Tasks", icon: ListChecks },
-  { to: "/erp/hub/products", label: "Product Pipeline", short: "Products", icon: Lightbulb },
-  { to: "/erp/hub/sourcing", label: "Sourcing Desk", short: "Sourcing", icon: PackageSearch },
-  { to: "/erp/hub/routines", label: "Routines & Calendar", short: "Routines", icon: Repeat },
-  { to: "/erp/hub/rivals", label: "Competitors", short: "Rivals", icon: Swords },
-  { to: "/erp/hub/planning", label: "Monthly Projection", short: "Planning", icon: BarChart3 },
+  { to: "/erp/growth", label: "Command Center", short: "Center", icon: Compass, exact: true },
+  { to: "/erp/growth/goals", label: "Vision & Goals", short: "Goals", icon: Target },
+  { to: "/erp/growth/tasks", label: "Task Board", short: "Tasks", icon: ListChecks },
+  { to: "/erp/growth/products", label: "Product Pipeline", short: "Products", icon: Lightbulb },
+  { to: "/erp/growth/sourcing", label: "Sourcing Desk", short: "Sourcing", icon: PackageSearch },
+  { to: "/erp/growth/routines", label: "Routines & Calendar", short: "Routines", icon: Repeat },
+  { to: "/erp/growth/rivals", label: "Competitors", short: "Rivals", icon: Swords },
+  { to: "/erp/growth/planning", label: "Monthly Projection", short: "Planning", icon: BarChart3 },
 ];
 
 /** Sticky horizontal sub-navigation shared by every Growth Hub page. */

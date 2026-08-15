@@ -23,13 +23,13 @@ export type ContentNavItem = {
 };
 
 export const CONTENT_NAV: ContentNavItem[] = [
-  { to: "/erp/content/intake", label: "Stock → Intake", short: "Intake", icon: PackageOpen },
-  { to: "/erp/content/media-plans", label: "Media Buying Hub", short: "Media", icon: Megaphone },
-  { to: "/erp/content/pipeline", label: "Content Pipeline", short: "Pipeline", icon: KanbanSquare },
-  { to: "/erp/content/creators", label: "Creator CRM", short: "Creators", icon: Users },
-  { to: "/erp/content/agencies", label: "Agency Partners", short: "Agencies", icon: Building2 },
-  { to: "/erp/content/matching", label: "Product ↔ Creator", short: "Matching", icon: Network },
-  { to: "/erp/content/report", label: "Brand Report", short: "Report", icon: BarChart3 },
+  { to: "/erp/growth/intake", label: "Stock → Intake", short: "Intake", icon: PackageOpen },
+  { to: "/erp/growth/media-plans", label: "Media Buying Hub", short: "Media", icon: Megaphone },
+  { to: "/erp/growth/pipeline", label: "Content Pipeline", short: "Pipeline", icon: KanbanSquare },
+  { to: "/erp/growth/creators", label: "Creator CRM", short: "Creators", icon: Users },
+  { to: "/erp/growth/agencies", label: "Agency Partners", short: "Agencies", icon: Building2 },
+  { to: "/erp/growth/matching", label: "Product ↔ Creator", short: "Matching", icon: Network },
+  { to: "/erp/growth/report", label: "Brand Report", short: "Report", icon: BarChart3 },
 ];
 
 /** Responsive sub-navigation: horizontal on desktop, sheet sidebar on mobile. */

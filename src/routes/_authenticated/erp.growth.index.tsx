@@ -190,12 +190,12 @@ function HubHome() {
         actions={
           <>
             <Button asChild size="sm" variant="outline">
-              <Link to="/erp/hub/goals">
+              <Link to="/erp/growth/goals">
                 <Target className="mr-1.5 h-4 w-4" /> Goals
               </Link>
             </Button>
             <Button asChild size="sm">
-              <Link to="/erp/hub/tasks">
+              <Link to="/erp/growth/tasks">
                 <ListChecks className="mr-1.5 h-4 w-4" /> Task board
               </Link>
             </Button>
@@ -256,14 +256,14 @@ function HubHome() {
 
               {ideasToVote.length > 0 && (
                 <ActionLink
-                  to="/erp/hub/products"
+                  to="/erp/growth/products"
                   icon={Lightbulb}
                   label={`${ideasToVote.length}টা product idea তোমার vote-এর অপেক্ষায়`}
                 />
               )}
               {contentLate.length > 0 && (
                 <ActionLink
-                  to="/erp/content/pipeline"
+                  to="/erp/growth/pipeline"
                   icon={Clapperboard}
                   label={`${contentLate.length}টা content deadline পার করেছে`}
                   tone="destructive"
@@ -271,7 +271,7 @@ function HubHome() {
               )}
               {routinesToday.length > 0 && (
                 <ActionLink
-                  to="/erp/hub/routines"
+                  to="/erp/growth/routines"
                   icon={Repeat}
                   label={`আজকের ${routinesToday.length}টা routine এখনো task হয়নি`}
                 />
@@ -286,7 +286,7 @@ function HubHome() {
           <CardContent className="space-y-3 p-4">
             <div className="flex items-center justify-between">
               <h2 className="font-display text-sm font-semibold">Active goals</h2>
-              <Link to="/erp/hub/goals" className="text-xs text-primary hover:underline">
+              <Link to="/erp/growth/goals" className="text-xs text-primary hover:underline">
                 View all
               </Link>
             </div>
@@ -319,7 +319,7 @@ function HubHome() {
           <CardContent className="space-y-3 p-4">
             <div className="flex items-center justify-between">
               <h2 className="font-display text-sm font-semibold">আজকের কাজ</h2>
-              <Link to="/erp/hub/tasks" className="text-xs text-primary hover:underline">
+              <Link to="/erp/growth/tasks" className="text-xs text-primary hover:underline">
                 Open board
               </Link>
             </div>
@@ -360,14 +360,14 @@ function HubHome() {
       {/* Module pulse */}
       <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
         <PulseCard
-          to="/erp/hub/products"
+          to="/erp/growth/products"
           icon={Lightbulb}
           title="Product pipeline"
           value={(ideasQ.data ?? []).filter((i) => i.status !== "rejected").length}
           hint="active ideas"
         />
         <PulseCard
-          to="/erp/content/pipeline"
+          to="/erp/growth/pipeline"
           icon={Clapperboard}
           title="Content Studio"
           value={
@@ -376,14 +376,14 @@ function HubHome() {
           hint="in production"
         />
         <PulseCard
-          to="/erp/hub/routines"
+          to="/erp/growth/routines"
           icon={Repeat}
           title="Routines"
           value={(routinesQ.data ?? []).filter((r) => r.active).length}
           hint="active routines"
         />
         <PulseCard
-          to="/erp/hub/rivals"
+          to="/erp/growth/rivals"
           icon={Swords}
           title="Rival pages"
           value={(assetsQ.data ?? []).length}

@@ -369,7 +369,7 @@ function IntakePage() {
               Refresh
             </Button>
             <Button asChild variant="outline" size="sm" className="h-9">
-              <Link to="/erp/content/pipeline">
+              <Link to="/erp/growth/pipeline">
                 Pipeline <ExternalLink className="ml-1.5 h-3.5 w-3.5" />
               </Link>
             </Button>
