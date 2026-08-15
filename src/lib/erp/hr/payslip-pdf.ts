@@ -179,6 +179,10 @@ function drawPayslipPage(
   const pageW = doc.internal.pageSize.getWidth();
   const M = 40;
   const contentW = pageW - M * 2;
+  const status = payslipStatusStyle(slip.runStatus, slip.paidAt);
+
+  // Watermark first so all content prints on top of it.
+  drawWatermark(doc, status.watermark, status.color);
 
   /* ---------- header band ---------- */
   doc.setFillColor(...ACCENT);
@@ -221,12 +225,7 @@ function drawPayslipPage(
   doc.setFont("helvetica", "normal");
   doc.setFontSize(9);
   doc.text(monthLabel(slip.month), pageW - M, 55, { align: "right" });
-  doc.text(
-    slip.runStatus === "paid" ? `Paid${slip.paidAt ? ` · ${String(slip.paidAt).slice(0, 10)}` : ""}` : "Draft",
-    pageW - M,
-    68,
-    { align: "right" },
-  );
+  doc.text(status.chip, pageW - M, 68, { align: "right" });
 
   /* ---------- employee block ---------- */
   const info: Array<[string, string]> = [
@@ -362,6 +361,19 @@ function drawPayslipPage(
     doc.text(doc.splitTextToSize(`Note: ${slip.note}`, contentW), M, y);
     y += 22;
   }
+
+  /* ---------- status subtext ---------- */
+  doc.setFillColor(...status.color);
+  doc.roundedRect(M, y - 9, 6, 24, 3, 3, "F");
+  doc.setFont("helvetica", "bold");
+  doc.setFontSize(8.5);
+  doc.setTextColor(...status.color);
+  doc.text(status.watermark, M + 14, y);
+  doc.setFont("helvetica", "normal");
+  doc.setTextColor(...MUTED);
+  doc.setFontSize(8);
+  doc.text(doc.splitTextToSize(status.subtext, contentW - 20), M + 14, y + 11);
+  y += 30;
 
   /* ---------- signatures ---------- */
   const pageH = doc.internal.pageSize.getHeight();
