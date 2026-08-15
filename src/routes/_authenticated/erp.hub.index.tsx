@@ -84,9 +84,10 @@ function HubHome() {
     enabled: brandIds.length > 0,
   });
   const myVotesQ = useQuery({ queryKey: ["hub-my-votes"], queryFn: fetchMyVotes });
+  // Creative work now lives in Content Studio (content_items).
   const plansQ = useQuery({
-    queryKey: ["hub-content-plans", brandIds],
-    queryFn: () => fetchContentPlans(brandIds),
+    queryKey: ["content-items", brandIds],
+    queryFn: () => fetchItems(brandIds),
     enabled: brandIds.length > 0,
   });
   const routinesQ = useQuery({
@@ -161,7 +162,7 @@ function HubHome() {
     () =>
       (plansQ.data ?? []).filter(
         (p) =>
-          !["live", "cancelled"].includes(p.status) && p.deadline && p.deadline <= today,
+          !["published", "rejected"].includes(p.status) && p.due_date && p.due_date <= today,
       ),
     [plansQ.data, today],
   );
@@ -262,9 +263,9 @@ function HubHome() {
               )}
               {contentLate.length > 0 && (
                 <ActionLink
-                  to="/erp/hub/content"
+                  to="/erp/content/pipeline"
                   icon={Clapperboard}
-                  label={`${contentLate.length}টা content plan deadline পার করেছে`}
+                  label={`${contentLate.length}টা content deadline পার করেছে`}
                   tone="destructive"
                 />
               )}
@@ -366,10 +367,12 @@ function HubHome() {
           hint="active ideas"
         />
         <PulseCard
-          to="/erp/hub/content"
+          to="/erp/content/pipeline"
           icon={Clapperboard}
-          title="Content journey"
-          value={(plansQ.data ?? []).filter((p) => !["live", "cancelled"].includes(p.status)).length}
+          title="Content Studio"
+          value={
+            (plansQ.data ?? []).filter((p) => !["published", "rejected"].includes(p.status)).length
+          }
           hint="in production"
         />
         <PulseCard
