@@ -85,9 +85,9 @@ function drawWatermark(doc: jsPDF, text: string, color: [number, number, number]
     /* opacity unsupported — fall back to a light colour */
   }
   doc.setFont("helvetica", "bold");
-  doc.setFontSize(text.length > 6 ? 66 : 88);
+  doc.setFontSize(text.length > 6 ? 62 : 80);
   doc.setTextColor(...color);
-  doc.text(text, pageW / 2, pageH / 2 + 40, { align: "center", angle: 32 });
+  doc.text(text, pageW / 2 - 20, pageH * 0.62, { align: "center", angle: 30 });
   try {
     if (anyDoc.GState) doc.setGState(new anyDoc.GState({ opacity: 1 }));
   } catch {
