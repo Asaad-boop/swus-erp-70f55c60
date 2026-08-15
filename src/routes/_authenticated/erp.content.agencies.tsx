@@ -363,6 +363,140 @@ function AgenciesPage() {
   );
 }
 
+function AgencyEditSheet({
+  agency,
+  onClose,
+  onSave,
+  onDelete,
+  saving,
+}: {
+  agency: Agency;
+  onClose: () => void;
+  onSave: (patch: Partial<Agency> & { id: string }) => void;
+  onDelete: (id: string) => void;
+  saving: boolean;
+}) {
+  const [d, setD] = useState({
+    name: agency.name,
+    contact_person: agency.contact_person ?? "",
+    phone: agency.phone ?? "",
+    email: agency.email ?? "",
+    website: agency.website ?? "",
+    retainer_fee: agency.retainer_fee,
+    commission_pct: agency.commission_pct,
+    status: agency.status,
+    notes: agency.notes ?? "",
+  });
+  return (
+    <Sheet open onOpenChange={(o) => !o && onClose()}>
+      <SheetContent side="right" className="w-full overflow-y-auto sm:max-w-md">
+        <SheetHeader>
+          <SheetTitle className="text-base">Edit agency</SheetTitle>
+        </SheetHeader>
+        <div className="space-y-3 py-3">
+          {(
+            [
+              ["name", "Name"],
+              ["contact_person", "Contact person"],
+              ["phone", "Phone"],
+              ["email", "Email"],
+              ["website", "Website"],
+            ] as const
+          ).map(([k, label]) => (
+            <div key={k}>
+              <Label className="text-[11px]">{label}</Label>
+              <Input
+                value={d[k]}
+                onChange={(e) => setD({ ...d, [k]: e.target.value })}
+                className="h-9"
+              />
+            </div>
+          ))}
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <Label className="text-[11px]">Retainer (৳)</Label>
+              <Input
+                type="number"
+                value={d.retainer_fee}
+                onChange={(e) => setD({ ...d, retainer_fee: Number(e.target.value) || 0 })}
+                className="h-9"
+              />
+            </div>
+            <div>
+              <Label className="text-[11px]">Commission %</Label>
+              <Input
+                type="number"
+                value={d.commission_pct}
+                onChange={(e) => setD({ ...d, commission_pct: Number(e.target.value) || 0 })}
+                className="h-9"
+              />
+            </div>
+          </div>
+          <div>
+            <Label className="text-[11px]">Status</Label>
+            <Select value={d.status} onValueChange={(v) => setD({ ...d, status: v })}>
+              <SelectTrigger className="h-9 text-xs">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {["active", "paused", "ended"].map((s) => (
+                  <SelectItem key={s} value={s}>
+                    {s}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+          <div>
+            <Label className="text-[11px]">Notes</Label>
+            <Textarea
+              value={d.notes}
+              onChange={(e) => setD({ ...d, notes: e.target.value })}
+              className="min-h-20 text-sm"
+            />
+          </div>
+          <div className="flex gap-2">
+            <Button
+              className="flex-1"
+              disabled={saving}
+              onClick={() => {
+                if (!d.name.trim()) {
+                  toast.error("Name দাও");
+                  return;
+                }
+                onSave({
+                  id: agency.id,
+                  name: d.name.trim(),
+                  contact_person: d.contact_person || null,
+                  phone: d.phone || null,
+                  email: d.email || null,
+                  website: d.website || null,
+                  retainer_fee: d.retainer_fee,
+                  commission_pct: d.commission_pct,
+                  status: d.status,
+                  notes: d.notes || null,
+                });
+                onClose();
+              }}
+            >
+              Save
+            </Button>
+            <Button
+              variant="outline"
+              className="text-destructive"
+              onClick={() => {
+                if (confirm(`"${agency.name}" মুছে ফেলবে?`)) onDelete(agency.id);
+              }}
+            >
+              <Trash2 className="h-3.5 w-3.5" />
+            </Button>
+          </div>
+        </div>
+      </SheetContent>
+    </Sheet>
+  );
+}
+
 function Cell({ label, value }: { label: string; value: string }) {
   return (
     <div className="rounded-lg bg-muted/50 px-2 py-1.5">
