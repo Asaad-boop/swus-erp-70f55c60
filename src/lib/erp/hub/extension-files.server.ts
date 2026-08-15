@@ -1134,7 +1134,7 @@ const README = (origin: string) => `# Synq With Us — Chrome / Edge extension
 2. Chrome-এ যাও: chrome://extensions
 3. উপরে ডানে **Developer mode** ON করো।
 4. **Load unpacked** চাপো → extract করা ফোল্ডারটা select করো।
-5. Toolbar-এ **Synq** আইকনে ক্লিক → তোমার ERP **email + password** দিয়ে **Login** করো। (token লাগবে না — auto তৈরি হয়।)
+5. Toolbar-এ **Synq** আইকনে ক্লিক → তোমার ERP **email/username + password** দিয়ে **Login** করো। (token লাগবে না — auto তৈরি হয়।)
 
 Server: ${origin}
 
