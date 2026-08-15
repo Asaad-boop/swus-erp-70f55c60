@@ -9,6 +9,11 @@ import {
   Save,
   AlertTriangle,
   RotateCcw,
+  Megaphone,
+  Search,
+  Download,
+  ArrowUpDown,
+  Gauge,
 } from "lucide-react";
 import { toast } from "sonner";
 import { useBrand } from "@/contexts/brand-context";
@@ -32,6 +37,7 @@ import {
   shiftMonth,
   type HubMonthPlan,
 } from "@/lib/erp/hub/hub-data";
+import { fetchMediaPlans } from "@/lib/erp/content/content-data";
 
 export const Route = createFileRoute("/_authenticated/erp/growth/planning")({
   head: () => ({
@@ -56,6 +62,15 @@ export const Route = createFileRoute("/_authenticated/erp/growth/planning")({
 
 const bdt = (n: number) => fmtValue(n, "bdt");
 const num = (n: number) => Math.round(n).toLocaleString("en-BD");
+const pctTxt = (n: number) => `${n.toFixed(1)}%`;
+
+type SortKey =
+  | "title"
+  | "proj_units"
+  | "proj_revenue"
+  | "proj_profit"
+  | "margin"
+  | "days_of_stock";
 
 function PlanningPage() {
   const { brandIds, activeBrand } = useBrand();
@@ -72,9 +87,19 @@ function PlanningPage() {
     queryKey: ["hub-month-plan", brandId, month],
     queryFn: () => fetchMonthPlan(brandId, month),
   });
+  const mediaQ = useQuery({
+    queryKey: ["hub-media-plans", brandIds],
+    queryFn: () => fetchMediaPlans(brandIds),
+    enabled: brandIds.length > 0,
+  });
 
   const proj = projQ.data;
   const rows = proj?.products ?? [];
+
+  const [q, setQ] = useState("");
+  const [sort, setSort] = useState<SortKey>("proj_revenue");
+  const [desc, setDesc] = useState(true);
+  const [onlyLow, setOnlyLow] = useState(false);
 
   const totals = useMemo(() => {
     return rows.reduce(
@@ -123,6 +148,109 @@ function PlanningPage() {
   const plan = planQ.data;
   const lowStock = rows.filter((r) => r.days_of_stock != null && r.days_of_stock < 21);
 
+  const margin = (r: (typeof rows)[number]) =>
+    r.proj_revenue > 0 ? (r.proj_profit / r.proj_revenue) * 100 : 0;
+
+  const visibleRows = useMemo(() => {
+    const term = q.trim().toLowerCase();
+    let list = rows.filter(
+      (r) =>
+        (!term ||
+          r.title.toLowerCase().includes(term) ||
+          (r.sku ?? "").toLowerCase().includes(term)) &&
+        (!onlyLow || (r.days_of_stock != null && r.days_of_stock < 21)),
+    );
+    const val = (r: (typeof rows)[number]) => {
+      switch (sort) {
+        case "title":
+          return r.title.toLowerCase();
+        case "margin":
+          return margin(r);
+        case "days_of_stock":
+          return r.days_of_stock ?? 9999;
+        default:
+          return r[sort];
+      }
+    };
+    list = [...list].sort((a, b) => {
+      const x = val(a);
+      const y = val(b);
+      const c = typeof x === "string" ? x.localeCompare(y as string) : (x as number) - (y as number);
+      return desc ? -c : c;
+    });
+    return list;
+  }, [rows, q, sort, desc, onlyLow]);
+
+  // ---- Pace vs target ----
+  const daysDone = proj?.days_done ?? 0;
+  const daysTotal = proj?.days_total ?? 0;
+  const daysLeft = Math.max(0, daysTotal - daysDone);
+  const targetRevenue = plan?.target_revenue ?? 0;
+  const requiredPerDay =
+    targetRevenue > 0 && daysLeft > 0
+      ? Math.max(0, targetRevenue - totals.mtdRevenue) / daysLeft
+      : 0;
+  const currentPerDay = daysDone > 0 ? totals.mtdRevenue / daysDone : 0;
+  const onPace = targetRevenue > 0 && totals.projRevenue >= targetRevenue;
+
+  // ---- Media budget (from Media Buying Hub plans overlapping this month) ----
+  const media = useMemo(() => {
+    const start = month;
+    const endDate = new Date(new Date(`${month}T00:00:00`).getFullYear(), new Date(`${month}T00:00:00`).getMonth() + 1, 0);
+    const end = `${endDate.getFullYear()}-${String(endDate.getMonth() + 1).padStart(2, "0")}-${String(endDate.getDate()).padStart(2, "0")}`;
+    const plans = (mediaQ.data ?? []).filter((p) => {
+      if (p.status === "cancelled") return false;
+      const s = p.start_date ?? start;
+      const e = p.end_date ?? end;
+      return s <= end && e >= start;
+    });
+    const ad = plans.reduce((a, p) => a + p.ad_budget, 0);
+    const content = plans.reduce((a, p) => a + p.content_budget, 0);
+    const creator = plans.reduce((a, p) => a + p.creator_budget, 0);
+    return { plans, ad, content, creator, total: ad + content + creator };
+  }, [mediaQ.data, month]);
+
+  const netAfterMedia = totals.projProfit - media.total;
+
+  const exportCsv = () => {
+    const head = [
+      "Product","SKU","3mo units","Run-rate","MTD units","Proj units","Price","Unit cost",
+      "Proj revenue","Proj profit","Margin %","Stock","Days of stock",
+    ];
+    const lines = visibleRows.map((r) =>
+      [
+        r.title, r.sku ?? "", r.hist_units, r.run_rate_units.toFixed(2), r.mtd_units,
+        Math.round(r.proj_units), Math.round(r.proj_price), Math.round(r.proj_cost),
+        Math.round(r.proj_revenue), Math.round(r.proj_profit), margin(r).toFixed(1),
+        r.stock, r.days_of_stock ?? "",
+      ]
+        .map((v) => `"${String(v).replace(/"/g, '""')}"`)
+        .join(","),
+    );
+    const blob = new Blob([[head.join(","), ...lines].join("\n")], {
+      type: "text/csv;charset=utf-8;",
+    });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `projection-${month}.csv`;
+    a.click();
+    URL.revokeObjectURL(url);
+  };
+
+  const SortTh = ({ k, label, right }: { k: SortKey; label: string; right?: boolean }) => (
+    <th className={`px-3 py-2 font-medium ${right ? "text-right" : "text-left"}`}>
+      <button
+        type="button"
+        className={`inline-flex items-center gap-1 hover:text-foreground ${sort === k ? "text-foreground" : ""}`}
+        onClick={() => (sort === k ? setDesc((d) => !d) : (setSort(k), setDesc(true)))}
+      >
+        {label}
+        <ArrowUpDown className="h-3 w-3 opacity-60" />
+      </button>
+    </th>
+  );
+
   return (
     <div className="mx-auto max-w-[1500px] space-y-4 p-3 md:p-6">
       <GrowthPageHeader
@@ -143,6 +271,30 @@ function PlanningPage() {
       />
 
       {projQ.isLoading && <Skeleton className="h-40 w-full rounded-xl" />}
+
+      {/* Pace strip */}
+      <Card className={onPace ? "border-emerald-500/40" : targetRevenue > 0 ? "border-amber-500/40" : undefined}>
+        <CardContent className="flex flex-wrap items-center gap-x-6 gap-y-2 p-4">
+          <div className="flex items-center gap-2">
+            <Gauge className={`h-4 w-4 ${onPace ? "text-emerald-500" : "text-amber-500"}`} />
+            <span className="font-display text-sm font-semibold">
+              {targetRevenue > 0 ? (onPace ? "Target-এর pace-এ আছো" : "Target-এর pace-এ নেই") : "Target সেট করা নেই"}
+            </span>
+          </div>
+          <PaceStat label="দিন" value={`${daysDone}/${daysTotal}`} sub={`${daysLeft} দিন বাকি`} />
+          <PaceStat label="বর্তমান daily" value={bdt(currentPerDay)} sub="MTD গড়" />
+          <PaceStat
+            label="দরকার daily"
+            value={targetRevenue > 0 ? bdt(requiredPerDay) : "—"}
+            sub={targetRevenue > 0 ? `Target ${bdt(targetRevenue)}` : "target দাও"}
+          />
+          <PaceStat
+            label="Gap"
+            value={targetRevenue > 0 ? bdt(Math.abs(targetRevenue - totals.projRevenue)) : "—"}
+            sub={targetRevenue > 0 ? (onPace ? "উপরে" : "নিচে") : ""}
+          />
+        </CardContent>
+      </Card>
 
       {/* Projection vs goal */}
       <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
@@ -223,6 +375,66 @@ function PlanningPage() {
       </Card>
 
       {/* Stock-out warnings */}
+      {/* Media budget (from Media Buying Hub) */}
+      <Card>
+        <CardContent className="space-y-3 p-4">
+          <div className="flex items-center gap-2">
+            <Megaphone className="h-4 w-4 text-primary" />
+            <h2 className="font-display text-sm font-semibold">Media budget (Media Buying Hub থেকে)</h2>
+            <Badge variant="outline" className="text-[10px]">{media.plans.length} plan</Badge>
+          </div>
+          {media.plans.length === 0 ? (
+            <p className="text-xs text-muted-foreground">
+              এই মাসে overlap করা কোনো media plan নেই — Media Buying Hub-এ plan যোগ করলে এখানে budget দেখাবে।
+            </p>
+          ) : (
+            <>
+              <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+                <MiniStat label="Ad budget" value={bdt(media.ad)} />
+                <MiniStat label="Content budget" value={bdt(media.content)} />
+                <MiniStat label="Creator budget" value={bdt(media.creator)} />
+                <MiniStat
+                  label="Net profit after media"
+                  value={bdt(netAfterMedia)}
+                  tone={netAfterMedia >= 0 ? "emerald" : "destructive"}
+                  sub={`Total media ${bdt(media.total)}`}
+                />
+              </div>
+              <div className="overflow-x-auto">
+                <table className="w-full text-xs">
+                  <thead className="border-y bg-muted/40 text-muted-foreground">
+                    <tr>
+                      <th className="px-3 py-1.5 text-left font-medium">Plan</th>
+                      <th className="px-3 py-1.5 text-right font-medium">Target qty</th>
+                      <th className="px-3 py-1.5 text-right font-medium">Price</th>
+                      <th className="px-3 py-1.5 text-right font-medium">Budget</th>
+                      <th className="px-3 py-1.5 text-right font-medium">Break-even ROAS</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {media.plans.map((p) => {
+                      const budget = p.ad_budget + p.content_budget + p.creator_budget;
+                      const planRevenue = p.target_qty * p.selling_price;
+                      return (
+                        <tr key={p.id} className="border-b last:border-0">
+                          <td className="px-3 py-1.5">{p.title}</td>
+                          <td className="px-3 py-1.5 text-right tabular-nums">{num(p.target_qty)}</td>
+                          <td className="px-3 py-1.5 text-right tabular-nums">{bdt(p.selling_price)}</td>
+                          <td className="px-3 py-1.5 text-right tabular-nums">{bdt(budget)}</td>
+                          <td className="px-3 py-1.5 text-right tabular-nums">
+                            {budget > 0 ? `${(planRevenue / budget).toFixed(2)}x` : "—"}
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+            </>
+          )}
+        </CardContent>
+      </Card>
+
       {lowStock.length > 0 && (
         <Card className="border-amber-500/40">
           <CardContent className="space-y-2 p-4">
@@ -247,9 +459,35 @@ function PlanningPage() {
       {/* Product table */}
       <Card>
         <CardContent className="p-0">
-          <div className="flex items-center justify-between p-4 pb-2">
-            <h2 className="font-display text-sm font-semibold">Product-wise projection</h2>
-            <span className="text-xs text-muted-foreground">Best-seller অনুযায়ী sorted</span>
+          <div className="flex flex-wrap items-center justify-between gap-2 p-4 pb-2">
+            <h2 className="font-display text-sm font-semibold">
+              Product-wise projection
+              <span className="ml-2 text-xs font-normal text-muted-foreground">
+                {visibleRows.length}/{rows.length}
+              </span>
+            </h2>
+            <div className="flex flex-wrap items-center gap-2">
+              <div className="relative">
+                <Search className="pointer-events-none absolute left-2 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-muted-foreground" />
+                <Input
+                  value={q}
+                  onChange={(e) => setQ(e.target.value)}
+                  placeholder="Product/SKU খোঁজো"
+                  className="h-8 w-48 pl-7 text-xs"
+                />
+              </div>
+              <Button
+                size="sm"
+                variant={onlyLow ? "default" : "outline"}
+                className="h-8 text-xs"
+                onClick={() => setOnlyLow((v) => !v)}
+              >
+                <AlertTriangle className="mr-1 h-3.5 w-3.5" /> Low stock
+              </Button>
+              <Button size="sm" variant="outline" className="h-8 text-xs" onClick={exportCsv}>
+                <Download className="mr-1 h-3.5 w-3.5" /> CSV
+              </Button>
+            </div>
           </div>
           {rows.length === 0 && !projQ.isLoading ? (
             <p className="p-8 text-center text-sm text-muted-foreground">
@@ -260,24 +498,26 @@ function PlanningPage() {
               <table className="w-full text-sm">
                 <thead className="border-y bg-muted/40 text-xs text-muted-foreground">
                   <tr>
-                    <th className="px-3 py-2 text-left font-medium">Product</th>
+                    <SortTh k="title" label="Product" />
                     <th className="px-3 py-2 text-right font-medium">3-mo units</th>
                     <th className="px-3 py-2 text-right font-medium">Run-rate</th>
                     <th className="px-3 py-2 text-right font-medium">MTD</th>
-                    <th className="px-3 py-2 text-right font-medium">Proj. units</th>
+                    <SortTh k="proj_units" label="Proj. units" right />
                     <th className="px-3 py-2 text-right font-medium">Price</th>
                     <th className="px-3 py-2 text-right font-medium">Unit cost</th>
-                    <th className="px-3 py-2 text-right font-medium">Proj. revenue</th>
-                    <th className="px-3 py-2 text-right font-medium">Proj. profit</th>
-                    <th className="px-3 py-2 text-right font-medium">Stock</th>
+                    <SortTh k="proj_revenue" label="Proj. revenue" right />
+                    <SortTh k="proj_profit" label="Proj. profit" right />
+                    <SortTh k="margin" label="Margin" right />
+                    <SortTh k="days_of_stock" label="Stock" right />
                     <th className="px-3 py-2" />
                   </tr>
                 </thead>
                 <tbody>
-                  {rows.map((r) => (
+                  {visibleRows.map((r) => (
                     <ProductRow
                       key={r.product_id}
                       row={r}
+                      share={totals.projRevenue > 0 ? (r.proj_revenue / totals.projRevenue) * 100 : 0}
                       onSave={(patch) => saveOverride.mutate({ productId: r.product_id, patch })}
                       onReset={() => resetOverride.mutate(r.product_id)}
                     />
@@ -292,6 +532,11 @@ function PlanningPage() {
                     <td className="px-3 py-2 text-right">{bdt(totals.projRevenue)}</td>
                     <td className="px-3 py-2 text-right text-emerald-600 dark:text-emerald-400">
                       {bdt(totals.projProfit)}
+                    </td>
+                    <td className="px-3 py-2 text-right">
+                      {totals.projRevenue > 0
+                        ? pctTxt((totals.projProfit / totals.projRevenue) * 100)
+                        : "—"}
                     </td>
                     <td colSpan={2} />
                   </tr>
@@ -335,6 +580,42 @@ function GapCard({
         <p className="text-[11px] text-muted-foreground">{sub}</p>
       </CardContent>
     </Card>
+  );
+}
+
+function PaceStat({ label, value, sub }: { label: string; value: string; sub?: string }) {
+  return (
+    <div className="min-w-[120px]">
+      <p className="text-[11px] text-muted-foreground">{label}</p>
+      <p className="font-display text-base font-bold leading-tight">{value}</p>
+      {sub && <p className="text-[10px] text-muted-foreground">{sub}</p>}
+    </div>
+  );
+}
+
+function MiniStat({
+  label,
+  value,
+  sub,
+  tone,
+}: {
+  label: string;
+  value: string;
+  sub?: string;
+  tone?: "emerald" | "destructive";
+}) {
+  const cls =
+    tone === "emerald"
+      ? "text-emerald-600 dark:text-emerald-400"
+      : tone === "destructive"
+        ? "text-destructive"
+        : "";
+  return (
+    <div className="rounded-lg border p-3">
+      <p className="text-[11px] text-muted-foreground">{label}</p>
+      <p className={`font-display text-lg font-bold leading-tight ${cls}`}>{value}</p>
+      {sub && <p className="text-[10px] text-muted-foreground">{sub}</p>}
+    </div>
   );
 }
 
@@ -435,10 +716,12 @@ function Field({
 
 function ProductRow({
   row,
+  share,
   onSave,
   onReset,
 }: {
   row: import("@/lib/erp/hub/hub-data").HubPlanProductRow;
+  share: number;
   onSave: (p: { planned_units?: number | null; planned_price?: number | null; planned_unit_cost?: number | null }) => void;
   onReset: () => void;
 }) {
@@ -499,6 +782,10 @@ function ProductRow({
         className={`px-3 py-2 text-right tabular-nums ${row.proj_profit >= 0 ? "text-emerald-600 dark:text-emerald-400" : "text-destructive"}`}
       >
         {bdt(row.proj_profit)}
+      </td>
+      <td className="px-3 py-2 text-right tabular-nums">
+        {row.proj_revenue > 0 ? pctTxt((row.proj_profit / row.proj_revenue) * 100) : "—"}
+        <span className="ml-1 text-[10px] text-muted-foreground">{share.toFixed(1)}% mix</span>
       </td>
       <td className="px-3 py-2 text-right tabular-nums">
         {num(row.stock)}
