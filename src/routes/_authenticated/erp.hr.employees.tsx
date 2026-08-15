@@ -356,9 +356,13 @@ function EmployeesPage() {
               </thead>
               <tbody>
                 {isLoading ? (
-                  <tr><td colSpan={8} className="p-6 text-center text-muted-foreground">Loading…</td></tr>
+                  <TableSkeleton cols={8} rows={6} />
                 ) : rows.length === 0 ? (
-                  <tr><td colSpan={8} className="p-6 text-center text-muted-foreground">Kono employee nei.</td></tr>
+                  <tr>
+                    <td colSpan={8}>
+                      <HrEmpty icon={Users} title="Kono employee nei" hint="Notun staff add korun ba search filter clear korun." />
+                    </td>
+                  </tr>
                 ) : (
                   rows.map((e: Employee) => {
                     const sched = toSchedule(e);
@@ -366,7 +370,7 @@ function EmployeesPage() {
                     <tr
                       key={e.id}
                       onClick={() => openEdit(e)}
-                      className="cursor-pointer border-b border-border/50 last:border-0 hover:bg-muted/40"
+                      className="cursor-pointer border-b border-border/50 last:border-0 transition-colors duration-150 hover:bg-muted/40"
                     >
                       <td className="p-2.5">
                         <p className="font-medium">{e.full_name}</p>

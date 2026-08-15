@@ -11,7 +11,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { HrPageHeader, statusTone } from "@/components/erp/hr/hr-shell";
+import { HrEmpty, HrPageHeader, TableSkeleton, hrRow, statusTone } from "@/components/erp/hr/hr-shell";
 import { PalmtreeIcon, Plus, Check, X, Trash2 } from "lucide-react";
 
 export const Route = createFileRoute("/_authenticated/erp/hr/leaves")({
@@ -142,7 +142,7 @@ function LeavesPage() {
           <button
             key={t}
             onClick={() => setTab(t)}
-            className={`rounded-full border px-3 py-1.5 text-xs font-medium transition-colors ${
+            className={`rounded-full border px-3 py-1.5 text-xs font-medium capitalize transition-all duration-200 active:scale-[0.97] ${
               tab === t ? "border-primary/30 bg-primary/10 text-primary" : "border-transparent text-muted-foreground hover:bg-muted"
             }`}
           >
@@ -168,12 +168,16 @@ function LeavesPage() {
               </thead>
               <tbody>
                 {isLoading ? (
-                  <tr><td colSpan={7} className="p-6 text-center text-muted-foreground">Loading…</td></tr>
+                  <TableSkeleton cols={7} rows={5} />
                 ) : rows.length === 0 ? (
-                  <tr><td colSpan={7} className="p-6 text-center text-muted-foreground">Kono request nei.</td></tr>
+                  <tr>
+                    <td colSpan={7}>
+                      <HrEmpty icon={PalmtreeIcon} title="Kono request nei" hint="Ei filter e kono chhuti request paoa jayni." />
+                    </td>
+                  </tr>
                 ) : (
                   rows.map((l) => (
-                    <tr key={l.id} className="border-b border-border/50 last:border-0">
+                    <tr key={l.id} className={`border-b border-border/50 last:border-0 ${hrRow}`}>
                       <td className="p-2.5 font-medium">{empName(l.employee_id)}</td>
                       <td className="p-2.5">{typeName(l.leave_type_id)}</td>
                       <td className="p-2.5 text-[12px]">{l.start_date} → {l.end_date}</td>
