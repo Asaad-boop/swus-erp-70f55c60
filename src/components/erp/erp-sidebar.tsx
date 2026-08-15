@@ -19,6 +19,7 @@ import {
   CalendarCheck,
   Palmtree,
   Trophy,
+  Settings2,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useGlobalSearch } from "@/components/erp/global-search";
