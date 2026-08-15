@@ -795,6 +795,27 @@ function SourcingPage() {
               </DropdownMenuItem>
             );
           })}
+          <DropdownMenuSeparator />
+          <DropdownMenuItem
+            disabled={hasPo || cancelIdea.isPending}
+            onSelect={(e) => {
+              e.preventDefault();
+              askRemove(idea, "cancel");
+            }}
+            className="gap-2 text-xs text-amber-600 focus:text-amber-600"
+          >
+            <XCircle className="h-3.5 w-3.5" /> Cancel sourcing
+          </DropdownMenuItem>
+          <DropdownMenuItem
+            disabled={hasPo || deleteIdea.isPending}
+            onSelect={(e) => {
+              e.preventDefault();
+              askRemove(idea, "delete");
+            }}
+            className="gap-2 text-xs text-destructive focus:text-destructive"
+          >
+            <Trash2 className="h-3.5 w-3.5" /> Delete permanently
+          </DropdownMenuItem>
         </DropdownMenuContent>
       </DropdownMenu>
     );
