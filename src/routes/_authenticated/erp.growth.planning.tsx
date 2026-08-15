@@ -547,8 +547,79 @@ function PlanningPage() {
         </Card>
       )}
 
-      {/* Product table */}
-      <Card>
+        {/* What-if scenario */}
+        <Card>
+          <CardContent className="space-y-4 p-4">
+            <div className="flex items-center gap-2">
+              <SlidersHorizontal className="h-4 w-4 text-primary" />
+              <h2 className="font-display text-sm font-semibold">What-if scenario</h2>
+              <Badge variant="outline" className="text-[10px]">live</Badge>
+            </div>
+            <div className="grid gap-4 md:grid-cols-3">
+              <div className="space-y-2">
+                <Label className="text-[11px] text-muted-foreground">
+                  Units {unitAdj >= 0 ? "+" : ""}{unitAdj}%
+                </Label>
+                <Slider value={[unitAdj]} min={-50} max={100} step={5} onValueChange={(v) => setUnitAdj(v[0] ?? 0)} />
+              </div>
+              <div className="space-y-2">
+                <Label className="text-[11px] text-muted-foreground">
+                  Price {priceAdj >= 0 ? "+" : ""}{priceAdj}%
+                </Label>
+                <Slider value={[priceAdj]} min={-30} max={50} step={1} onValueChange={(v) => setPriceAdj(v[0] ?? 0)} />
+              </div>
+              <div className="space-y-1">
+                <Label className="text-[11px] text-muted-foreground">অতিরিক্ত খরচ (BDT)</Label>
+                <Input
+                  inputMode="decimal"
+                  className="h-9"
+                  placeholder="0"
+                  value={extraCost}
+                  onChange={(e) => setExtraCost(e.target.value)}
+                />
+              </div>
+            </div>
+            <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-5">
+              <MiniStat label="Units" value={num(whatIf.units)} />
+              <MiniStat
+                label="Revenue"
+                value={bdt(whatIf.revenue)}
+                sub={`${whatIf.deltaRevenue >= 0 ? "+" : "−"}${bdt(Math.abs(whatIf.deltaRevenue))}`}
+              />
+              <MiniStat
+                label="Profit (media বাদে)"
+                value={bdt(whatIf.profit)}
+                tone={whatIf.profit >= 0 ? "emerald" : "destructive"}
+                sub={`${whatIf.deltaProfit >= 0 ? "+" : "−"}${bdt(Math.abs(whatIf.deltaProfit))}`}
+              />
+              <MiniStat label="Margin" value={pctTxt(whatIf.margin)} />
+              <MiniStat
+                label="ROAS দরকার"
+                value={whatIf.roas > 0 ? `${whatIf.roas.toFixed(2)}x` : "—"}
+                sub={media.total > 0 ? `Media ${bdt(media.total)}` : "media budget নেই"}
+              />
+            </div>
+            {(unitAdj !== 0 || priceAdj !== 0 || extraCost) && (
+              <Button
+                size="sm"
+                variant="ghost"
+                className="h-7 text-xs"
+                onClick={() => {
+                  setUnitAdj(0);
+                  setPriceAdj(0);
+                  setExtraCost("");
+                }}
+              >
+                <RotateCcw className="mr-1 h-3.5 w-3.5" /> Reset
+              </Button>
+            )}
+          </CardContent>
+        </Card>
+        </TabsContent>
+
+        <TabsContent value="products">
+        {/* Product table */}
+        <Card>
         <CardContent className="p-0">
           <div className="flex flex-wrap items-center justify-between gap-2 p-4 pb-2">
             <h2 className="font-display text-sm font-semibold">
