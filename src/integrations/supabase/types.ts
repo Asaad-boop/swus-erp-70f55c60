@@ -5672,10 +5672,13 @@ export type Database = {
           marketing_cost: number
           month: string
           note: string | null
+          packaging_cost: number
           position: number
           product_id: string | null
           product_name: string
           qty: number
+          return_cost: number
+          return_pct: number
           sell_price: number
           updated_at: string
         }
@@ -5688,10 +5691,13 @@ export type Database = {
           marketing_cost?: number
           month: string
           note?: string | null
+          packaging_cost?: number
           position?: number
           product_id?: string | null
           product_name?: string
           qty?: number
+          return_cost?: number
+          return_pct?: number
           sell_price?: number
           updated_at?: string
         }
@@ -5704,10 +5710,13 @@ export type Database = {
           marketing_cost?: number
           month?: string
           note?: string | null
+          packaging_cost?: number
           position?: number
           product_id?: string | null
           product_name?: string
           qty?: number
+          return_cost?: number
+          return_pct?: number
           sell_price?: number
           updated_at?: string
         }
