@@ -53,6 +53,26 @@ const money = (n: number) => `৳${Math.round(n).toLocaleString("en-BD")}`;
 const compact = (n: number) =>
   n >= 10000000 ? `৳${(n / 10000000).toFixed(2)}Cr` : n >= 100000 ? `৳${(n / 100000).toFixed(2)}L` : money(n);
 
+/** Average cost = weighted average cost (WAC) if available, else manual cost price. */
+function avgCost(p: CatalogProduct) {
+  const wac = Number(p.weighted_avg_cost ?? 0);
+  const cp = Number(p.cost_price ?? 0);
+  const value = wac > 0 ? wac : cp;
+  return { value, source: wac > 0 ? ("wac" as const) : cp > 0 ? ("manual" as const) : ("none" as const) };
+}
+
+function marginPct(price: number, cost: number) {
+  if (!price || !cost) return null;
+  return ((price - cost) / price) * 100;
+}
+
+function marginTone(m: number | null) {
+  if (m == null) return "text-muted-foreground";
+  if (m < 10) return "text-red-600 dark:text-red-400";
+  if (m < 25) return "text-amber-600 dark:text-amber-400";
+  return "text-emerald-600 dark:text-emerald-400";
+}
+
 type KpiProps = {
   icon: any; label: string; value: string; sub?: string;
   ring: string; glow: string; active?: boolean; onClick?: () => void;
