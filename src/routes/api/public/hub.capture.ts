@@ -1,5 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { createHash } from "crypto";
+import { bdtRates, normalizeCurrency, toBdt } from "@/lib/erp/hub/fx.server";
 
 const CORS = {
   "Access-Control-Allow-Origin": "*",
@@ -150,7 +151,7 @@ export const Route = createFileRoute("/api/public/hub/capture")({
 
         /* ------------------------------- meta ------------------------------- */
         if (action === "meta") {
-          const [{ data: brands }, { data: comps }] = await Promise.all([
+          const [{ data: brands }, { data: comps }, rates] = await Promise.all([
             supabaseAdmin
               .from("brands")
               .select("id,name")
@@ -159,15 +160,17 @@ export const Route = createFileRoute("/api/public/hub/capture")({
               .order("name"),
             supabaseAdmin
               .from("hub_competitors")
-              .select("id,name")
+              .select("id,name,niche")
               .order("name")
               .limit(200),
+            bdtRates(),
           ]);
           return json({
             ok: true,
             brands: brands ?? [],
             competitors: comps ?? [],
             default_brand_id: t.default_brand_id,
+            fx: rates,
           });
         }
 
@@ -273,6 +276,9 @@ export const Route = createFileRoute("/api/public/hub/capture")({
         const platform = str(payload.platform, 40);
         const priceRaw = Number(payload.price);
         const price = Number.isFinite(priceRaw) && priceRaw > 0 ? priceRaw : null;
+        const sourceCurrency = normalizeCurrency(str(payload.currency, 12));
+        const converted = await toBdt(price, sourceCurrency);
+        const priceBdt = converted.bdt;
 
         const requestedBrand = str(payload.brand_id, 60);
         const brandId =
@@ -337,7 +343,9 @@ export const Route = createFileRoute("/api/public/hub/capture")({
                 ? { instagram_url: url }
                 : platform === "tiktok"
                   ? { tiktok_url: url }
-                  : { website_url: url };
+                  : platform === "youtube"
+                    ? { youtube_url: url }
+                    : { website_url: url };
           const { data, error } = await supabaseAdmin
             .from("hub_competitors")
             .insert({
@@ -345,6 +353,11 @@ export const Route = createFileRoute("/api/public/hub/capture")({
               name,
               note,
               tags,
+              niche: str(payload.niche, 120),
+              handle: str(payload.handle, 120),
+              followers: str(payload.followers, 40),
+              page_type: platform === "web" ? "website" : "social",
+              threat_level: str(payload.threat_level, 12) ?? "medium",
               favicon_url: faviconFor(url),
               logo_url: image,
               created_by: t.user_id,
@@ -356,7 +369,10 @@ export const Route = createFileRoute("/api/public/hub/capture")({
           inserted = data as { id: string };
         } else if (kind === "swipe" || kind === "content" || kind === "competitor_asset") {
           savedKind = "swipe";
-          const competitorId = await resolveCompetitor();
+          // Content saves only link a rival page when the user asked for it.
+          const linkRival =
+            payload.link_competitor === true || !!str(payload.competitor_id, 60);
+          const competitorId = linkRival ? await resolveCompetitor() : null;
           const { data, error } = await supabaseAdmin
             .from("hub_competitor_assets")
             .insert({
@@ -368,7 +384,7 @@ export const Route = createFileRoute("/api/public/hub/capture")({
               url,
               image_url: image,
               thumbnail_url: image,
-              price,
+              price: priceBdt ?? price,
               offer: str(payload.offer, 300),
               hook: str(payload.hook, 300),
               note,
@@ -382,6 +398,7 @@ export const Route = createFileRoute("/api/public/hub/capture")({
         } else {
           savedKind = "idea";
           const gallery = images.length ? images : image ? [image] : [];
+          const stage = str(payload.status, 20);
           const { data, error } = await supabaseAdmin
             .from("hub_product_ideas")
             .insert({
@@ -393,8 +410,11 @@ export const Route = createFileRoute("/api/public/hub/capture")({
               images: gallery,
               notes: note,
               tags,
-              est_sell_price: price ?? 0,
-              status: "idea",
+              est_sell_price: priceBdt ?? price ?? 0,
+              source_price: price,
+              source_currency: converted.currency,
+              fx_rate: converted.rate,
+              status: stage === "idea" ? "idea" : "voting",
               created_by: t.user_id,
             } as never)
             .select("id")
@@ -408,7 +428,14 @@ export const Route = createFileRoute("/api/public/hub/capture")({
           .update({ last_used_at: new Date().toISOString(), use_count: (t.use_count ?? 0) + 1 })
           .eq("id", t.id);
 
-        return json({ ok: true, kind: savedKind, id: inserted?.id });
+        return json({
+          ok: true,
+          kind: savedKind,
+          id: inserted?.id,
+          price_bdt: priceBdt,
+          fx_rate: converted.rate,
+          currency: converted.currency,
+        });
       },
     },
   },
