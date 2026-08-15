@@ -69,6 +69,7 @@ const groups: Group[] = [
         label: "Inventory",
         icon: Boxes,
         items: [
+          { to: "/erp/products", label: "Products", icon: Package },
           { to: "/erp/inventory", label: "Stock", icon: Boxes },
           { to: "/erp/reorder-queue", label: "Reorder Queue", icon: PackageSearch },
           { to: "/erp/purchase-orders", label: "Purchase Orders", icon: ClipboardList },
