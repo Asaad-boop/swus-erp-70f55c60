@@ -141,10 +141,13 @@ export const payPayrollRun = createServerFn({ method: "POST" })
       .single();
     if (aErr) throw new Error(aErr.message);
 
+    const brandId = run.brand_id ?? account.brand_id;
+    if (!brandId) throw new Error("Payroll run e brand set nei — account/run e brand select korun.");
+
     const { data: txn, error: tErr } = await supabase
       .from("erp_transactions")
       .insert({
-        brand_id: run.brand_id ?? account.brand_id ?? null,
+        brand_id: brandId,
         txn_type: "expense",
         account_id: account.id,
         amount: totals.net,
