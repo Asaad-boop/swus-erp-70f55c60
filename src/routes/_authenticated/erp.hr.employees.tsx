@@ -22,6 +22,7 @@ import { Users, Plus, Search, Trash2, Download, UserMinus } from "lucide-react";
 import { Switch } from "@/components/ui/switch";
 import {
   DEFAULT_SCHEDULE,
+  breakWindowMinutes,
   WEEK_DAYS,
   hhmm,
   shiftLabel,
@@ -70,6 +71,8 @@ const empty = {
   shift_end: DEFAULT_SCHEDULE.shift_end,
   late_grace_min: "",
   break_allowance_min: "60",
+  break_start: "",
+  break_end: "",
   overtime_rate: "0",
   overtime_holiday_multiplier: "2",
   overtime_min_minutes: "30",
@@ -149,7 +152,16 @@ function EmployeesPage() {
         shift_end: hhmm(form.shift_end || DEFAULT_SCHEDULE.shift_end),
         week_offs: weekOffs,
         late_grace_min: form.late_grace_min === "" ? null : Number(form.late_grace_min) || 0,
-        break_allowance_min: Number(form.break_allowance_min) || 0,
+        break_start: form.break_start || null,
+        break_end: form.break_end || null,
+        break_allowance_min:
+          form.break_start && form.break_end
+            ? (breakWindowMinutes({
+                ...DEFAULT_SCHEDULE,
+                break_start: form.break_start,
+                break_end: form.break_end,
+              }) ?? 0)
+            : Number(form.break_allowance_min) || 0,
         unpaid_break: unpaidBreak,
         overtime_enabled: otEnabled,
         overtime_rate: Number(form.overtime_rate) || 0,
@@ -235,6 +247,8 @@ function EmployeesPage() {
       shift_end: hhmm(e.shift_end ?? DEFAULT_SCHEDULE.shift_end),
       late_grace_min: e.late_grace_min == null ? "" : String(e.late_grace_min),
       break_allowance_min: String(e.break_allowance_min ?? 60),
+      break_start: e.break_start ? hhmm(e.break_start) : "",
+      break_end: e.break_end ? hhmm(e.break_end) : "",
       overtime_rate: String(e.overtime_rate ?? 0),
       overtime_holiday_multiplier: String(e.overtime_holiday_multiplier ?? 2),
       overtime_min_minutes: String(e.overtime_min_minutes ?? 30),
