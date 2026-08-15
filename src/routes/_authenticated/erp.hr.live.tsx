@@ -53,19 +53,39 @@ function hourOf(hhmm: string) {
   return (h || 0) + (m || 0) / 60;
 }
 
-function Kpi({ icon: Icon, label, value, accent }: { icon: any; label: string; value: number; accent: string }) {
+function Kpi({
+  icon: Icon,
+  label,
+  value,
+  accent,
+  active,
+  onClick,
+}: {
+  icon: any;
+  label: string;
+  value: number;
+  accent: string;
+  active?: boolean;
+  onClick?: () => void;
+}) {
   return (
-    <Card className="border-border/70">
-      <CardContent className="flex items-center gap-3 p-3.5">
-        <span className={`flex h-9 w-9 items-center justify-center rounded-xl ${accent}`}>
-          <Icon className="h-4 w-4" />
-        </span>
-        <div>
-          <p className="text-[11px] uppercase tracking-wide text-muted-foreground">{label}</p>
-          <p className="font-display text-xl font-bold leading-tight">{value}</p>
-        </div>
-      </CardContent>
-    </Card>
+    <button type="button" onClick={onClick} className="text-left focus:outline-none">
+      <Card
+        className={`h-full border-border/70 transition-all duration-200 ease-out hover:-translate-y-0.5 hover:shadow-md ${
+          active ? "border-primary/50 ring-1 ring-primary/30" : ""
+        }`}
+      >
+        <CardContent className="flex items-center gap-3 p-3.5">
+          <span className={`flex h-9 w-9 items-center justify-center rounded-xl ${accent}`}>
+            <Icon className="h-4 w-4" />
+          </span>
+          <div>
+            <p className="text-[11px] uppercase tracking-wide text-muted-foreground">{label}</p>
+            <p className="font-display text-xl font-bold leading-tight tabular-nums">{value}</p>
+          </div>
+        </CardContent>
+      </Card>
+    </button>
   );
 }
 
