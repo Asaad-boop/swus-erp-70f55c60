@@ -856,7 +856,7 @@ const CONTENT_JS = `
 
   const css = document.createElement('style');
   css.textContent = \`
-    .fab{position:fixed;top:96px;right:14px;width:var(--clip-size,38px);height:var(--clip-size,38px);border-radius:12px;border:none;cursor:grab;
+    .fab{position:fixed;top:96px;right:14px;width:var(--clip-size,38px);height:var(--clip-size,38px);border-radius:12px;border:none;cursor:grab;touch-action:none;user-select:none;-webkit-user-select:none;
       background:linear-gradient(135deg,#6366f1,#a855f7);color:#fff;font-size:17px;line-height:1;
       box-shadow:0 8px 22px rgba(79,70,229,.42);display:flex;align-items:center;justify-content:center;
       opacity:.55;transition:opacity .18s, transform .18s;}
@@ -922,7 +922,7 @@ const CONTENT_JS = `
   const $ = (id) => root.getElementById(id);
   const panel = root.querySelector('.panel');
   const fab = root.querySelector('.fab');
-  let page = {}, chosen = null, kind = 'idea', loaded = false, fx = { BDT: 1 }, dragging = false, moved = false;
+  let page = {}, chosen = null, kind = 'idea', loaded = false, fx = { BDT: 1 }, dragging = false, moved = false, dragPointer = null, dragStartX = 0, dragStartY = 0, dragOffsetX = 0, dragOffsetY = 0;
   const CCY = ['BDT','USD','PKR','INR','CNY','EUR','GBP','AED','SAR','MYR','THB','SGD','AUD','CAD','TRY','IDR','VND','JPY','KRW','NPR','LKR'];
 
   function conv() {
@@ -967,20 +967,38 @@ const CONTENT_JS = `
   $('ghSmaller').onclick = () => resize(-4);
   $('ghLarger').onclick = () => resize(4);
   $('ghHide').onclick = async () => { await chrome.storage.sync.set({ [siteKey]: true }); host.remove(); window.__ghClipMounted = false; };
-  fab.addEventListener('pointerdown', (e) => { dragging = true; moved = false; fab.setPointerCapture(e.pointerId); });
-  fab.addEventListener('pointermove', (e) => {
-    if (!dragging) return; moved = true;
+  fab.addEventListener('pointerdown', (e) => {
+    if (e.button !== 0 && e.pointerType === 'mouse') return;
+    const box = fab.getBoundingClientRect();
+    dragging = true; moved = false; dragPointer = e.pointerId;
+    dragStartX = e.clientX; dragStartY = e.clientY;
+    dragOffsetX = e.clientX - box.left; dragOffsetY = e.clientY - box.top;
+    fab.style.transition = 'none';
+    try { fab.setPointerCapture(e.pointerId); } catch (_) {}
+    e.preventDefault();
+  });
+  const moveClip = (e) => {
+    if (!dragging || e.pointerId !== dragPointer) return;
+    if (!moved && Math.hypot(e.clientX - dragStartX, e.clientY - dragStartY) < 4) return;
+    moved = true;
     const size = fab.getBoundingClientRect().width;
-    const x = Math.max(6, Math.min(innerWidth - size - 6, e.clientX - size / 2));
-    const y = Math.max(6, Math.min(innerHeight - size - 6, e.clientY - size / 2));
+    const x = Math.max(6, Math.min(innerWidth - size - 6, e.clientX - dragOffsetX));
+    const y = Math.max(6, Math.min(innerHeight - size - 6, e.clientY - dragOffsetY));
     fab.style.left = x + 'px'; fab.style.top = y + 'px'; fab.style.right = 'auto';
     panel.style.left = Math.max(8, Math.min(innerWidth - 328, x - 328)) + 'px';
     panel.style.top = Math.max(8, Math.min(innerHeight - 120, y)) + 'px'; panel.style.right = 'auto';
-  });
-  fab.addEventListener('pointerup', async () => {
+    e.preventDefault();
+  };
+  const endClipDrag = async (e) => {
+    if (!dragging || e.pointerId !== dragPointer) return;
     dragging = false;
+    dragPointer = null;
+    fab.style.transition = '';
     if (moved) await chrome.storage.sync.set({ clipPosition: { x: parseFloat(fab.style.left), y: parseFloat(fab.style.top) } });
-  });
+  };
+  fab.addEventListener('pointermove', moveClip);
+  fab.addEventListener('pointerup', endClipDrag);
+  fab.addEventListener('pointercancel', endClipDrag);
 
   async function load() {
     const r = await send({ type: 'gh-scrape' });
