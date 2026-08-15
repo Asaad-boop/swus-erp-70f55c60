@@ -1,5 +1,9 @@
 import { createServerFn } from "@tanstack/react-start";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
+import { toSchedule, type EmployeeSchedule } from "@/lib/erp/hr/schedule";
+
+const SCHEDULE_COLS =
+  "shift_start, shift_end, week_offs, late_grace_min, overtime_enabled, overtime_rate, overtime_holiday_multiplier, overtime_min_minutes";
 
 /** Dhaka-local YYYY-MM-DD for a timestamp (defaults to now). */
 function dhakaDate(d: Date = new Date()) {
@@ -24,11 +28,19 @@ export type EntryRow = {
 async function resolveEmployee(supabase: any, userId: string) {
   const { data, error } = await supabase
     .from("hr_employees")
-    .select("id, full_name, employee_code, status, photo_url")
+    .select(`id, full_name, employee_code, status, photo_url, ${SCHEDULE_COLS}`)
     .eq("user_id", userId)
     .maybeSingle();
   if (error) throw new Error(error.message);
-  return data as { id: string; full_name: string; employee_code: string | null; status: string; photo_url: string | null } | null;
+  if (!data) return null;
+  return { ...data, schedule: toSchedule(data) } as {
+    id: string;
+    full_name: string;
+    employee_code: string | null;
+    status: string;
+    photo_url: string | null;
+    schedule: EmployeeSchedule;
+  };
 }
 
 async function loadDay(supabase: any, employeeId: string, workDate: string) {
@@ -145,6 +157,7 @@ export type LiveEmployee = {
   employee_code: string | null;
   photo_url: string | null;
   department: string | null;
+  schedule: EmployeeSchedule;
   entries: EntryRow[];
   state: "present" | "on_break" | "left" | "not_in";
   firstIn: string | null;
@@ -165,7 +178,7 @@ export const getLiveBoard = createServerFn({ method: "GET" })
     const [{ data: emps, error: eErr }, { data: entries }, { data: depts }] = await Promise.all([
       supabase
         .from("hr_employees")
-        .select("id, full_name, employee_code, photo_url, department_id, status")
+        .select(`id, full_name, employee_code, photo_url, department_id, status, ${SCHEDULE_COLS}`)
         .in("status", ["active", "probation", "on_leave"])
         .order("full_name"),
       supabase
@@ -217,6 +230,7 @@ export const getLiveBoard = createServerFn({ method: "GET" })
         employee_code: e.employee_code,
         photo_url: e.photo_url,
         department: e.department_id ? deptName.get(e.department_id) ?? null : null,
+        schedule: toSchedule(e),
         entries: mine,
         state,
         firstIn: mine[0]?.check_in ?? null,
