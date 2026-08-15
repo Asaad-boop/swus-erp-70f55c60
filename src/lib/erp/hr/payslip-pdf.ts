@@ -38,7 +38,11 @@ const MUTED: [number, number, number] = [110, 118, 135];
 
 const n = (v: unknown) => Number(v ?? 0) || 0;
 /** Helvetica has no Taka glyph, so amounts are printed as `BDT 1,234`. */
-const bdt = (v: unknown) => `BDT ${n(v).toLocaleString("en-US", { maximumFractionDigits: 2 })}`;
+const bdt = (v: unknown) => {
+  const x = n(v);
+  const frac = Math.abs(x % 1) > 0.004 ? 2 : 0;
+  return `BDT ${x.toLocaleString("en-US", { minimumFractionDigits: frac, maximumFractionDigits: frac })}`;
+};
 
 const monthLabel = (m: string) => {
   const [y, mo] = m.split("-").map(Number);
@@ -229,8 +233,8 @@ function drawPayslipPage(
     body: [
       ["Deduction", bdt(slip.deduction)],
       ["Advance adjustment", bdt(slip.advance_deduction)],
-      ["Absent days", `${n(slip.absent_days)} day(s)`],
-      ["Present days", `${n(slip.present_days)} day(s)`],
+      ["Absent adjustment", bdt(0)],
+      ["Other", bdt(0)],
     ],
     foot: [["Total deductions", bdt(totalDed)]],
     theme: "grid",
@@ -243,6 +247,31 @@ function drawPayslipPage(
   });
 
   let y = Math.max(leftEnd, lastY(doc, tableTop)) + 20;
+
+  /* ---------- attendance strip ---------- */
+  const stats: Array<[string, string]> = [
+    ["Present days", `${n(slip.present_days)}`],
+    ["Absent days", `${n(slip.absent_days)}`],
+    ["Overtime pay", bdt(slip.overtime_amount)],
+    ["Gross earnings", bdt(gross)],
+  ];
+  const boxW = (contentW - 3 * 10) / 4;
+  stats.forEach(([label, value], i) => {
+    const x = M + i * (boxW + 10);
+    doc.setFillColor(248, 250, 252);
+    doc.setDrawColor(226, 232, 240);
+    doc.setLineWidth(0.5);
+    doc.roundedRect(x, y, boxW, 44, 6, 6, "FD");
+    doc.setFont("helvetica", "normal");
+    doc.setFontSize(7.5);
+    doc.setTextColor(...MUTED);
+    doc.text(label.toUpperCase(), x + 10, y + 16);
+    doc.setFont("helvetica", "bold");
+    doc.setFontSize(11);
+    doc.setTextColor(...INK);
+    doc.text(value, x + 10, y + 33);
+  });
+  y += 62;
 
   /* ---------- net pay ---------- */
   doc.setFillColor(238, 242, 255);
