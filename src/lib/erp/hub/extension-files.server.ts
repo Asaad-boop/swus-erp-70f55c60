@@ -6,7 +6,7 @@ const MANIFEST = (origin: string) =>
     {
       manifest_version: 3,
       name: "Synq With Us",
-      version: "3.0.0",
+      version: "3.0.1",
       description:
         "Scrape any product (auto BDT price), competitor page or content inspiration straight into your ERP.",
       permissions: ["activeTab", "scripting", "storage", "contextMenus", "notifications", "tabs"],
@@ -210,12 +210,21 @@ async function cfg() {
 export async function api(payload) {
   const c = await cfg();
   if (!c.token) throw new Error('আগে Synq extension-এ login করো।');
-  const r = await fetch(c.base + '/api/public/hub/capture', {
-    method: 'POST',
-    headers: { 'content-type': 'application/json' },
-    body: JSON.stringify(Object.assign({ token: c.token }, payload))
-  });
+  let r;
+  try {
+    r = await fetch(c.base + '/api/public/hub/capture', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify(Object.assign({ token: c.token }, payload))
+    });
+  } catch (e) {
+    throw new Error('Server-এ পৌঁছানো গেল না — ' + c.base);
+  }
   const j = await r.json().catch(() => ({}));
+  if (j && j.code === 'invalid_token') {
+    await chrome.storage.sync.remove(['token', 'email']);
+    throw new Error('Session শেষ — extension আইকনে ক্লিক করে আবার login করো।');
+  }
   if (!r.ok || j.error) throw new Error(j.error || ('HTTP ' + r.status));
   return j;
 }
@@ -326,8 +335,8 @@ const POPUP_HTML = `<!doctype html>
       <h2>Synq With Us</h2>
       <p class="muted">তোমার ERP account দিয়ে login করো — যেকোনো website থেকে product, rival page ও content সরাসরি Growth Hub-এ যাবে।</p>
     </div>
-    <label>Email</label>
-    <input id="email" type="email" placeholder="you@company.com" autocomplete="username" />
+    <label>Email or username</label>
+    <input id="email" type="text" placeholder="you@company.com / yourname" autocomplete="username" />
     <label>Password</label>
     <input id="password" type="password" placeholder="••••••••" autocomplete="current-password" />
     <button id="loginBtn" class="primary block">Login</button>
@@ -441,8 +450,8 @@ const POPUP_HTML = `<!doctype html>
     </div>
     <div id="vRecent" class="hidden feed"></div>
   </main>
-</body>
 <script type="module" src="popup.js"></script>
+</body>
 </html>`;
 
 const POPUP_CSS = `
@@ -505,18 +514,37 @@ let cfg = {};
 let fx = { BDT: 1 };
 const CCY = ['BDT','USD','PKR','INR','CNY','EUR','GBP','AED','SAR','MYR','THB','SGD','AUD','CAD','TRY','IDR','VND','JPY','KRW','NPR','LKR'];
 
+function normBase(v) {
+  let b = String(v || '').trim().replace(/\\/+$/, '');
+  if (!b) return DEFAULTS.base;
+  if (!/^https?:\\/\\//i.test(b)) b = 'https://' + b;
+  return b;
+}
+
+async function forceLogout(reason) {
+  await chrome.storage.sync.remove(['token', 'email']);
+  try { sessionStorage.setItem('gh-login-msg', reason || ''); } catch (e) {}
+  location.reload();
+}
+
 async function loadCfg() {
   const s = await chrome.storage.sync.get(['base', 'token', 'brandId', 'email']);
-  cfg = { base: s.base || DEFAULTS.base, token: s.token || DEFAULTS.token, brandId: s.brandId || '', email: s.email || '' };
+  cfg = { base: normBase(s.base || DEFAULTS.base), token: s.token || DEFAULTS.token, brandId: s.brandId || '', email: s.email || '' };
 }
 
 async function api(payload) {
-  const r = await fetch(cfg.base + '/api/public/hub/capture', {
-    method: 'POST',
-    headers: { 'content-type': 'application/json' },
-    body: JSON.stringify(Object.assign({ token: cfg.token }, payload))
-  });
+  let r;
+  try {
+    r = await fetch(cfg.base + '/api/public/hub/capture', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify(Object.assign({ token: cfg.token }, payload))
+    });
+  } catch (e) {
+    throw new Error('Server-এ পৌঁছানো গেল না — ' + cfg.base);
+  }
   const j = await r.json().catch(() => ({}));
+  if (j && j.code === 'invalid_token') { await forceLogout(j.error || 'Session শেষ — আবার login করো'); throw new Error(j.error || 'Session শেষ'); }
   if (!r.ok || j.error) throw new Error(j.error || ('HTTP ' + r.status));
   return j;
 }
@@ -546,11 +574,16 @@ async function init() {
     $('login').classList.remove('hidden');
     $('loginBase').value = cfg.base;
     const say = (t, cls) => { $('loginMsg').textContent = t; $('loginMsg').className = 'msg ' + (cls || ''); };
+    try {
+      const prev = sessionStorage.getItem('gh-login-msg');
+      if (prev) { say(prev, 'err'); sessionStorage.removeItem('gh-login-msg'); }
+    } catch (e) {}
     const doLogin = async () => {
       const email = $('email').value.trim();
       const password = $('password').value;
-      const base = ($('loginBase').value || cfg.base).trim().replace(/\\/$/, '');
-      if (!email || !password) return say('Email ও password দাও', 'err');
+      const base = normBase($('loginBase').value || cfg.base);
+      $('loginBase').value = base;
+      if (!email || !password) return say('Email/username ও password দাও', 'err');
       $('loginBtn').disabled = true;
       say('Login হচ্ছে…');
       try {
@@ -565,17 +598,19 @@ async function init() {
         say('স্বাগতম ✅', 'ok');
         setTimeout(() => location.reload(), 400);
       } catch (e) {
-        say(String(e.message || e), 'err');
+        say(String((e && e.message) || e) === 'Failed to fetch' ? ('Server-এ পৌঁছানো গেল না — ' + base) : String((e && e.message) || e), 'err');
       } finally {
         $('loginBtn').disabled = false;
       }
     };
     $('loginBtn').onclick = doLogin;
     $('password').onkeydown = (e) => { if (e.key === 'Enter') doLogin(); };
+    $('email').onkeydown = (e) => { if (e.key === 'Enter') doLogin(); };
+    setTimeout(() => { try { $('email').focus(); } catch (e) {} }, 50);
     $('setupSave').onclick = async () => {
       const t = $('setupToken').value.trim();
       if (!t) return;
-      await chrome.storage.sync.set({ token: t, base: ($('loginBase').value || cfg.base).trim().replace(/\\/$/, '') });
+      await chrome.storage.sync.set({ token: t, base: normBase($('loginBase').value || cfg.base) });
       location.reload();
     };
     return;
@@ -991,8 +1026,8 @@ const OPTIONS_HTML = `<!doctype html>
 <main class="pad">
   <label>Server URL</label>
   <input id="base" />
-  <label>Email</label>
-  <input id="email" type="email" placeholder="you@company.com" autocomplete="username" />
+  <label>Email or username</label>
+  <input id="email" type="text" placeholder="you@company.com / yourname" autocomplete="username" />
   <label>Password</label>
   <input id="password" type="password" placeholder="••••••••" autocomplete="current-password" />
   <button id="login" class="primary block">Login করে token নাও</button>
@@ -1010,10 +1045,16 @@ const OPTIONS_JS = `
 import { DEFAULTS } from './config.js';
 const $ = (id) => document.getElementById(id);
 
-const baseUrl = () => $('base').value.trim().replace(/\\/$/, '');
+function normBase(v) {
+  let b = String(v || '').trim().replace(/\\/+$/, '');
+  if (!b) return DEFAULTS.base;
+  if (!/^https?:\\/\\//i.test(b)) b = 'https://' + b;
+  return b;
+}
+const baseUrl = () => { const b = normBase($('base').value); $('base').value = b; return b; };
 
 chrome.storage.sync.get(['base', 'token', 'email'], (s) => {
-  $('base').value = s.base || DEFAULTS.base;
+  $('base').value = normBase(s.base || DEFAULTS.base);
   $('token').value = s.token || DEFAULTS.token;
   $('email').value = s.email || '';
   $('acct').textContent = s.email ? ('Logged in — ' + s.email) : 'logged out';
@@ -1070,6 +1111,12 @@ $('test').onclick = async () => {
       body: JSON.stringify({ token: $('token').value.trim(), action: 'meta' })
     });
     const j = await r.json();
+    if (j && j.code === 'invalid_token') {
+      await chrome.storage.sync.remove(['token', 'email']);
+      $('token').value = '';
+      $('acct').textContent = 'logged out';
+      throw new Error('Session শেষ — আবার login করো');
+    }
     if (!r.ok || j.error) throw new Error(j.error || ('HTTP ' + r.status));
     $('msg').textContent = 'ঠিক আছে ✅ — ' + (j.brands || []).length + ' brand পাওয়া গেছে';
     $('msg').className = 'msg ok';
@@ -1087,7 +1134,7 @@ const README = (origin: string) => `# Synq With Us — Chrome / Edge extension
 2. Chrome-এ যাও: chrome://extensions
 3. উপরে ডানে **Developer mode** ON করো।
 4. **Load unpacked** চাপো → extract করা ফোল্ডারটা select করো।
-5. Toolbar-এ **Synq** আইকনে ক্লিক → তোমার ERP **email + password** দিয়ে **Login** করো। (token লাগবে না — auto তৈরি হয়।)
+5. Toolbar-এ **Synq** আইকনে ক্লিক → তোমার ERP **email/username + password** দিয়ে **Login** করো। (token লাগবে না — auto তৈরি হয়।)
 
 Server: ${origin}
 

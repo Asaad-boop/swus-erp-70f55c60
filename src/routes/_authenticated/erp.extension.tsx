@@ -183,7 +183,7 @@ function ExtensionPage() {
               <b>Load unpacked</b> → extract করা ফোল্ডারটা select করো।
             </li>
             <li>
-              Toolbar-এ <b>Synq</b> আইকনে ক্লিক → ERP <b>email + password</b> দিয়ে Login → brand
+              Toolbar-এ <b>Synq</b> আইকনে ক্লিক → ERP <b>email/username + password</b> দিয়ে Login → brand
               সিলেক্ট। (token manually লাগবে না।)
             </li>
             <li>আগের version থাকলে chrome://extensions-এ গিয়ে <b>Reload</b> দাও।</li>
