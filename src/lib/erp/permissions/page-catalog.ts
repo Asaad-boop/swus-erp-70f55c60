@@ -71,6 +71,13 @@ export const PAGE_CATALOG: PageEntry[] = [
   { group: "CRM", path: "/erp/crm", label: "Customers" },
   { group: "CRM", path: "/erp/users", label: "Registered Accounts" },
 
+  { group: "HRM", path: "/erp/hr", label: "HR Overview" },
+  { group: "HRM", path: "/erp/hr/employees", label: "Employees" },
+  { group: "HRM", path: "/erp/hr/attendance", label: "Attendance" },
+  { group: "HRM", path: "/erp/hr/leaves", label: "Leave & Holidays" },
+  { group: "HRM", path: "/erp/hr/payroll", label: "Payroll" },
+  { group: "HRM", path: "/erp/hr/performance", label: "Performance & KPI" },
+
   { group: "Analytics", path: "/erp/analytics", label: "Analytics" },
   { group: "Analytics", path: "/erp/analytics/live", label: "Live Analytics" },
 

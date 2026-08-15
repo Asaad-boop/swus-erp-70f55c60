@@ -20,6 +20,7 @@ export type Module =
   | "analytics"
   | "staff_accounts"
   | "customer_accounts"
+  | "hr"
   | "settings"
   | "diagnostics";
 
@@ -27,7 +28,7 @@ export const ROLE_MODULES: Record<string, Module[]> = {
   admin: [
     "dashboard", "orders", "inventory", "fulfillment", "supply",
     "finance", "marketing", "crm", "analytics",
-    "staff_accounts", "customer_accounts", "settings", "diagnostics",
+    "staff_accounts", "customer_accounts", "hr", "settings", "diagnostics",
   ],
   operations: [
     "dashboard", "orders", "inventory", "fulfillment",
@@ -41,6 +42,9 @@ export const ROLE_MODULES: Record<string, Module[]> = {
   moderator: ["dashboard"],
   customer: [],
 };
+
+ROLE_MODULES["hr_admin"] = ["dashboard", "hr"];
+ROLE_MODULES["hr_manager"] = ["dashboard", "hr"];
 
 export function getAllowedModules(roles: string[]): Set<Module> {
   const s = new Set<Module>();
@@ -76,6 +80,7 @@ const PATH_RULES: { test: (p: string) => boolean; module: Module }[] = [
   { test: (p) => p.startsWith("/erp/marketing"), module: "marketing" },
   { test: (p) => p.startsWith("/erp/hub"), module: "marketing" },
   { test: (p) => p.startsWith("/erp/crm"), module: "crm" },
+  { test: (p) => p.startsWith("/erp/hr"), module: "hr" },
   { test: (p) => p.startsWith("/erp/analytics"), module: "analytics" },
   { test: (p) => p.startsWith("/erp/users"), module: "customer_accounts" },
   { test: (p) => p.startsWith("/erp/settings"), module: "settings" },
