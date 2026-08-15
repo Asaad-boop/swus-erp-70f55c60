@@ -61,7 +61,7 @@ export function payslipStatusStyle(runStatus: string, paidAt?: string | null): S
       key: "approved",
       chip: "Approved",
       watermark: "APPROVED",
-      color: [217, 119, 6),
+      color: [217, 119, 6],
       subtext: "Approved by management — payment is scheduled but not yet disbursed.",
     };
   }
