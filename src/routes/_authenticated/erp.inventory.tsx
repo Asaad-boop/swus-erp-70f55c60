@@ -241,23 +241,12 @@ function InventoryPage() {
     onError: (e: Error) => toast.error(e.message),
   });
 
-  const summary = useMemo(() => {
-    let units = 0, value = 0, low = 0, out = 0, reserved = 0;
-    for (const r of rows) {
-      units += r.stock;
-      const unitCost = Number(r.weighted_avg_cost ?? r.cost_price ?? 0);
-      value += unitCost * r.stock;
-      reserved += Number(r.reserved_stock ?? 0);
-      if (r.stock <= 0) out += 1;
-      else if (r.stock <= (r.low_stock_threshold ?? 5)) low += 1;
-    }
-    return { units, value, low, out, reserved };
-  }, [rows]);
+  const summary = summaryQuery.data ?? { products: 0, units: 0, value: 0, reserved: 0, low: 0, out: 0 };
 
   const lowOrOut = summary.low + summary.out;
   const syncedAt = dataUpdatedAt ? new Date(dataUpdatedAt) : null;
 
-  const stockPills: Array<{ k: InventoryFilter["stockState"] | "reserved"; label: string }> = [
+  const stockPills: Array<{ k: InventoryFilter["stockState"]; label: string }> = [
     { k: "all", label: "All" },
     { k: "in", label: "In Stock" },
     { k: "low", label: "Low Stock" },
