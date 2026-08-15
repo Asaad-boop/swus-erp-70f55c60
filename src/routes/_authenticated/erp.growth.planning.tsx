@@ -14,6 +14,8 @@ import {
   Download,
   ArrowUpDown,
   Gauge,
+  SlidersHorizontal,
+  Layers,
 } from "lucide-react";
 import { toast } from "sonner";
 import { useBrand } from "@/contexts/brand-context";
@@ -25,6 +27,8 @@ import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Label } from "@/components/ui/label";
+import { Slider } from "@/components/ui/slider";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   clearPlanOverride,
   fetchMonthPlan,
@@ -101,6 +105,17 @@ function PlanningPage() {
   const [sort, setSort] = useState<SortKey>("proj_revenue");
   const [desc, setDesc] = useState(true);
   const [onlyLow, setOnlyLow] = useState(false);
+  const [tab, setTab] = useState("overview");
+  const [unitAdj, setUnitAdj] = useState(0);
+  const [priceAdj, setPriceAdj] = useState(0);
+  const [extraCost, setExtraCost] = useState("");
+  const [manualTotals, setManualTotals] = useState({
+    qty: 0,
+    revenue: 0,
+    cogs: 0,
+    marketing: 0,
+    profit: 0,
+  });
 
   const totals = useMemo(() => {
     return rows.reduce(
