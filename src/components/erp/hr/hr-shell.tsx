@@ -10,6 +10,7 @@ import {
   Radio,
   Fingerprint,
   ShieldCheck,
+  Settings2,
   type LucideIcon,
 } from "lucide-react";
 
@@ -25,6 +26,7 @@ export const HR_NAV: HrNavItem[] = [
   { to: "/erp/hr/payroll", label: "Payroll", short: "Payroll", icon: Banknote },
   { to: "/erp/hr/performance", label: "Performance & KPI", short: "KPI", icon: Trophy },
   { to: "/erp/hr/access", label: "Users & Access", short: "Access", icon: ShieldCheck },
+  { to: "/erp/hr/settings", label: "HR Settings", short: "Settings", icon: Settings2 },
 ];
 
 /** Sticky sub-navigation shared by every HRM page. */
