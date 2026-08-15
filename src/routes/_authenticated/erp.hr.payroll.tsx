@@ -1,5 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { toast } from "sonner";
@@ -12,7 +12,13 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { HrEmpty, HrPageHeader, TableSkeleton, hrRow, money, statusTone } from "@/components/erp/hr/hr-shell";
 import { dhakaMonth } from "@/lib/erp/hr/date";
 import { mergeCompany } from "@/lib/erp/hr/company";
-import { exportPayslipPdf, type PayslipData } from "@/lib/erp/hr/payslip-pdf";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import {
+  exportPayslipPdf,
+  payslipPreviewUrl,
+  payslipStatusStyle,
+  type PayslipData,
+} from "@/lib/erp/hr/payslip-pdf";
 import { getAppSetting } from "@/lib/erp/settings/app-settings.functions";
 import {
   deletePayrollRun,
@@ -21,7 +27,7 @@ import {
   refreshPayrollTotals,
   updatePayslip,
 } from "@/lib/erp/hr/payroll.functions";
-import { Banknote, RefreshCw, Wand2, Wallet, Trash2, Download, FileText } from "lucide-react";
+import { Banknote, RefreshCw, Wand2, Wallet, Trash2, Download, FileText, Printer, Eye, X } from "lucide-react";
 
 export const Route = createFileRoute("/_authenticated/erp/hr/payroll")({
   component: PayrollPage,
