@@ -856,18 +856,18 @@ const CONTENT_JS = `
 
   const css = document.createElement('style');
   css.textContent = \`
-    .fab{position:fixed;top:96px;right:14px;width:38px;height:38px;border-radius:12px;border:none;cursor:pointer;
+    .fab{position:fixed;top:96px;right:14px;width:var(--clip-size,38px);height:var(--clip-size,38px);border-radius:12px;border:none;cursor:grab;
       background:linear-gradient(135deg,#6366f1,#a855f7);color:#fff;font-size:17px;line-height:1;
       box-shadow:0 8px 22px rgba(79,70,229,.42);display:flex;align-items:center;justify-content:center;
       opacity:.55;transition:opacity .18s, transform .18s;}
-    .fab:hover{opacity:1;transform:translateY(-1px) scale(1.05);}
-    .panel{position:fixed;top:96px;right:60px;width:320px;max-height:78vh;overflow:auto;border-radius:16px;
+    .fab:hover{opacity:1;transform:scale(1.05)} .fab:active{cursor:grabbing}
+    .panel{position:fixed;top:96px;right:60px;width:320px;max-width:calc(100vw - 24px);max-height:78vh;overflow:auto;border-radius:16px;
       background:#0f1421;color:#e8ecf7;border:1px solid #26304a;box-shadow:0 24px 60px rgba(0,0,0,.5);
       font:13px/1.45 ui-sans-serif,system-ui,"Segoe UI",Roboto,sans-serif;padding:12px;display:none;}
     .panel.on{display:block;}
     .hd{display:flex;align-items:center;gap:8px;margin-bottom:10px;}
     .hd b{font-size:13px;} .hd small{color:#8e9ab8;font-size:11px;}
-    .x{margin-left:auto;background:none;border:none;color:#8e9ab8;cursor:pointer;font-size:15px;}
+    .tools{margin-left:auto;display:flex;align-items:center;gap:3px}.tool,.x{width:25px;height:25px;padding:0;border-radius:7px;border:1px solid #26304a;background:#141a2a;color:#aeb8d2;cursor:pointer;font-size:12px}.x{font-size:14px}
     .tabs{display:flex;gap:5px;margin-bottom:9px;}
     .tab{flex:1;padding:6px 0;font-size:11px;border-radius:8px;border:1px solid #26304a;background:transparent;color:#8e9ab8;cursor:pointer;}
     .tab.on{border-color:#6366f1;background:rgba(99,102,241,.16);color:#c7cbff;}
@@ -890,7 +890,7 @@ const CONTENT_JS = `
   wrap.innerHTML = \`
     <button class="fab" title="Synq With Us — clip করো">🔖</button>
     <div class="panel">
-      <div class="hd"><b>Synq Clip</b><span class="chip" id="ghPlat"></span><button class="x">✕</button></div>
+      <div class="hd"><b>Synq Clip</b><span class="chip" id="ghPlat"></span><div class="tools"><button class="tool" id="ghSmaller" title="ছোট করো">−</button><button class="tool" id="ghLarger" title="বড় করো">＋</button><button class="tool" id="ghHide" title="এই site থেকে remove করো">⌧</button><button class="x" title="Panel বন্ধ করো">✕</button></div></div>
       <div class="tabs">
         <button class="tab on" data-kind="idea">🛍 Product</button>
         <button class="tab" data-kind="competitor">🏴 Competitor</button>
@@ -922,7 +922,7 @@ const CONTENT_JS = `
   const $ = (id) => root.getElementById(id);
   const panel = root.querySelector('.panel');
   const fab = root.querySelector('.fab');
-  let page = {}, chosen = null, kind = 'idea', loaded = false, fx = { BDT: 1 };
+  let page = {}, chosen = null, kind = 'idea', loaded = false, fx = { BDT: 1 }, dragging = false, moved = false;
   const CCY = ['BDT','USD','PKR','INR','CNY','EUR','GBP','AED','SAR','MYR','THB','SGD','AUD','CAD','TRY','IDR','VND','JPY','KRW','NPR','LKR'];
 
   function conv() {
@@ -942,6 +942,45 @@ const CONTENT_JS = `
   }
   root.querySelectorAll('.tab').forEach((t) => (t.onclick = () => setKind(t.dataset.kind)));
   root.querySelector('.x').onclick = () => panel.classList.remove('on');
+
+  const siteKey = 'ghHidden:' + location.hostname;
+  async function restoreClip() {
+    const s = await chrome.storage.sync.get(['clipPosition', 'clipSize', siteKey]);
+    if (s[siteKey]) { host.remove(); window.__ghClipMounted = false; return; }
+    const size = Math.max(30, Math.min(56, Number(s.clipSize) || 38));
+    root.host.style.setProperty('--clip-size', size + 'px');
+    if (s.clipPosition) {
+      const x = Math.max(6, Math.min(innerWidth - size - 6, Number(s.clipPosition.x) || 6));
+      const y = Math.max(6, Math.min(innerHeight - size - 6, Number(s.clipPosition.y) || 96));
+      fab.style.left = x + 'px'; fab.style.top = y + 'px'; fab.style.right = 'auto';
+      panel.style.left = Math.max(8, Math.min(innerWidth - 328, x - 328)) + 'px';
+      panel.style.top = Math.max(8, Math.min(innerHeight - 120, y)) + 'px'; panel.style.right = 'auto';
+    }
+  }
+  restoreClip();
+  async function resize(delta) {
+    const s = await chrome.storage.sync.get('clipSize');
+    const size = Math.max(30, Math.min(56, (Number(s.clipSize) || 38) + delta));
+    root.host.style.setProperty('--clip-size', size + 'px');
+    await chrome.storage.sync.set({ clipSize: size });
+  }
+  $('ghSmaller').onclick = () => resize(-4);
+  $('ghLarger').onclick = () => resize(4);
+  $('ghHide').onclick = async () => { await chrome.storage.sync.set({ [siteKey]: true }); host.remove(); window.__ghClipMounted = false; };
+  fab.addEventListener('pointerdown', (e) => { dragging = true; moved = false; fab.setPointerCapture(e.pointerId); });
+  fab.addEventListener('pointermove', (e) => {
+    if (!dragging) return; moved = true;
+    const size = fab.getBoundingClientRect().width;
+    const x = Math.max(6, Math.min(innerWidth - size - 6, e.clientX - size / 2));
+    const y = Math.max(6, Math.min(innerHeight - size - 6, e.clientY - size / 2));
+    fab.style.left = x + 'px'; fab.style.top = y + 'px'; fab.style.right = 'auto';
+    panel.style.left = Math.max(8, Math.min(innerWidth - 328, x - 328)) + 'px';
+    panel.style.top = Math.max(8, Math.min(innerHeight - 120, y)) + 'px'; panel.style.right = 'auto';
+  });
+  fab.addEventListener('pointerup', async () => {
+    dragging = false;
+    if (moved) await chrome.storage.sync.set({ clipPosition: { x: parseFloat(fab.style.left), y: parseFloat(fab.style.top) } });
+  });
 
   async function load() {
     const r = await send({ type: 'gh-scrape' });
@@ -990,6 +1029,7 @@ const CONTENT_JS = `
   }
 
   fab.onclick = async () => {
+    if (moved) { moved = false; return; }
     panel.classList.toggle('on');
     if (panel.classList.contains('on') && !loaded) await load();
     else if (panel.classList.contains('on')) {
@@ -1187,7 +1227,7 @@ Server: ${origin}
 - যেকোনো product page-এ আইকনে ক্লিক → **Idea** → সেভ → Product Pipeline-এ চলে আসবে (vote/rating সহ)।
 - Facebook / Instagram / TikTok ad বা ভালো লাগা content-এ → **Swipe** → Rivals-এর Swipe file-এ সেভ হবে, rival page auto তৈরি হবে।
 - কোনো rival-এর page-এ → **Rival** → Competitor registry-তে যোগ হবে।
-- যেকোনো পেজের ডানপাশে ছোট **🔖 clip** আইকন — ক্লিক করলেই brand সিলেক্ট করে সরাসরি সেভ (Product / Content / Page)।
+- **🔖 clip** আইকন drag করে position বদলাও; panel থেকে size ছোট/বড় বা current site-এর icon remove করো।
 - Instagram / Facebook / TikTok profile-এ থাকলে **Page** মোড auto সিলেক্ট হয় (handle + follower সহ)।
 - Product page-এ JSON-LD থেকে দাম, currency, SKU ও color/size variant অটো ধরে।
 - Right-click মেনু থেকেও ছবি/লিংক/selected text এক ক্লিকে সেভ করা যায়।
