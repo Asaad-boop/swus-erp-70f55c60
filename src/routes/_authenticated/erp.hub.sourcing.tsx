@@ -987,7 +987,7 @@ function SourcingPage() {
       const t = e.target as HTMLElement | null;
       const typing =
         !!t && (t.tagName === "INPUT" || t.tagName === "TEXTAREA" || t.isContentEditable);
-      if (qOpen || orderOpen) return;
+      if (qOpen || orderOpen || removeTarget) return;
       if (e.key === "/" && !typing) {
         e.preventDefault();
         searchRef.current?.focus();
