@@ -15,6 +15,7 @@ import {
   endBreak,
 } from "@/lib/erp/hr/attendance.functions";
 import { Fingerprint, LogIn, LogOut, Coffee, Play, Timer, Clock, Hourglass } from "lucide-react";
+import { dayMetrics, shiftLabel, weekOffLabel } from "@/lib/erp/hr/schedule";
 
 export const Route = createFileRoute("/_authenticated/erp/hr/my-attendance")({
   component: MyAttendancePage,
@@ -122,6 +123,12 @@ function MyAttendancePage() {
           ? "Completed"
           : "Not started";
 
+  const sched = data?.employee?.schedule ?? null;
+  const metrics =
+    sched && data?.workDate
+      ? dayMetrics({ schedule: sched, workDate: data.workDate, netMs: stats.netMs, firstIn: stats.firstIn })
+      : null;
+
   const tone =
     state === "Working"
       ? "bg-emerald-500/10 text-emerald-600 border-emerald-500/20"
@@ -158,6 +165,22 @@ function MyAttendancePage() {
               <p className="text-xs text-muted-foreground">
                 In {clockTime(stats.firstIn)} · Out {clockTime(stats.lastOut)}
               </p>
+              {sched && (
+                <p className="mt-1 flex flex-wrap items-center gap-1.5 text-[11px] text-muted-foreground">
+                  <span>Duty {shiftLabel(sched)}</span>
+                  <span>· Off: {weekOffLabel(sched)}</span>
+                  {metrics?.isOff && (
+                    <Badge variant="outline" className="border-violet-500/20 bg-violet-500/10 text-[10px] text-violet-600">
+                      Off day{sched.overtime_enabled ? ` · ${metrics.multiplier}x OT` : ""}
+                    </Badge>
+                  )}
+                  {metrics?.isLate && (
+                    <Badge variant="outline" className="border-amber-500/20 bg-amber-500/10 text-[10px] text-amber-600">
+                      Late {metrics.lateMinutes}m
+                    </Badge>
+                  )}
+                </p>
+              )}
             </div>
             <div className="flex flex-wrap gap-2">
               {!stats.open ? (
@@ -192,6 +215,20 @@ function MyAttendancePage() {
         <StatCard icon={Coffee} label="Break time" value={hoursMins(stats.breakMs)} hint={`${stats.breaks.length} break`} />
         <StatCard icon={Hourglass} label="Net work hours" value={hoursMins(stats.netMs)} />
       </div>
+
+      {metrics && metrics.overtimeMinutes > 0 && (
+        <Card className="border-emerald-500/30 bg-emerald-500/5">
+          <CardContent className="flex flex-wrap items-center justify-between gap-2 p-4 text-sm">
+            <span className="font-medium text-emerald-700">
+              Overtime {hoursMins(metrics.overtimeMinutes * 60000)}
+              {metrics.multiplier !== 1 ? ` · ${metrics.multiplier}x` : ""}
+            </span>
+            {metrics.overtimeAmount > 0 && (
+              <span className="font-display text-lg font-bold text-emerald-700">৳{metrics.overtimeAmount.toLocaleString()}</span>
+            )}
+          </CardContent>
+        </Card>
+      )}
 
       {stats.breaks.length > 0 && (
         <Card>
