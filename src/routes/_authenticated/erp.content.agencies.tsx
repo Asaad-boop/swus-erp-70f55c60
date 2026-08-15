@@ -75,7 +75,7 @@ function AgenciesPage() {
   const [draft, setDraft] = useState(empty);
   const [search, setSearch] = useState("");
   const [editing, setEditing] = useState<Agency | null>(null);
-  const [brandFilter, setBrandFilter] = useState<string | null>(null);
+  const [brandFilter, setBrandFilter] = useState("all");
 
   const agenciesQ = useQuery({
     queryKey: ["content-agencies", brandIds],
@@ -104,7 +104,7 @@ function AgenciesPage() {
   const filtered = useMemo(() => {
     const q = search.trim().toLowerCase();
     return agencies.filter((a) => {
-      if (brandFilter && a.brand_id !== brandFilter) return false;
+      if (brandFilter !== "all" && a.brand_id !== brandFilter) return false;
       if (!q) return true;
       return (
         a.name.toLowerCase().includes(q) ||
