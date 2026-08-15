@@ -29,7 +29,7 @@ export const HUB_NAV: HubNavItem[] = [
   { to: "/erp/hub/sourcing", label: "Sourcing Desk", short: "Sourcing", icon: PackageSearch },
   { to: "/erp/hub/content", label: "Creative Desk", short: "Creative", icon: Clapperboard },
   { to: "/erp/hub/routines", label: "Routines & Calendar", short: "Routines", icon: Repeat },
-  { to: "/erp/hub/rivals", label: "Rival Pages", short: "Rivals", icon: Swords },
+  { to: "/erp/hub/rivals", label: "Competitors", short: "Rivals", icon: Swords },
   { to: "/erp/hub/planning", label: "Monthly Projection", short: "Planning", icon: BarChart3 },
 ];
 
