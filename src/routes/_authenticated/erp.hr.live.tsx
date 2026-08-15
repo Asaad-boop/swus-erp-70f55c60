@@ -9,7 +9,7 @@ import { Badge } from "@/components/ui/badge";
 import { HrPageHeader, clockTime, hoursMins } from "@/components/erp/hr/hr-shell";
 import { getLiveBoard, type LiveEmployee } from "@/lib/erp/hr/attendance.functions";
 import { getAppSetting } from "@/lib/erp/settings/app-settings.functions";
-import { DEFAULT_HR_POLICY, type HrPolicy } from "./erp.hr.settings";
+import { DEFAULT_HR_POLICY, type HrPolicy } from "@/lib/erp/hr/policy";
 import { Radio, RefreshCw, Users, CheckCircle2, Coffee, LogOut, UserX, Table2, GanttChartSquare, Activity } from "lucide-react";
 
 export const Route = createFileRoute("/_authenticated/erp/hr/live")({
@@ -214,8 +214,14 @@ function LiveDashboardPage() {
                             {STATE_META[r.state].label}
                           </Badge>
                         </td>
-                        <td className="p-2.5">{clockTime(r.firstIn)}</td>
-                        {null}
+                        <td className="p-2.5">
+                          <span className="inline-flex items-center gap-1.5">
+                            {clockTime(r.firstIn)}
+                            {isLate(r.firstIn) && (
+                              <Badge variant="outline" className="bg-amber-500/10 text-amber-600 border-amber-500/20 text-[10px]">Late</Badge>
+                            )}
+                          </span>
+                        </td>
                         <td className="p-2.5">{clockTime(r.lastOut)}</td>
                         <td className="p-2.5 text-right">{hoursMins(r.breakMs)}</td>
                         <td className="p-2.5 text-right font-medium">{hoursMins(r.workMs)}</td>

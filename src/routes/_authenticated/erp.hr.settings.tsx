@@ -14,6 +14,7 @@ import { Switch } from "@/components/ui/switch";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { HrPageHeader } from "@/components/erp/hr/hr-shell";
+import { DEFAULT_HR_POLICY, type HrPolicy } from "@/lib/erp/hr/policy";
 import { Settings2, Plus, Trash2, Save, Building2, BadgeCheck, PalmtreeIcon, CalendarDays, Clock } from "lucide-react";
 
 export const Route = createFileRoute("/_authenticated/erp/hr/settings")({
@@ -29,26 +30,6 @@ export const Route = createFileRoute("/_authenticated/erp/hr/settings")({
     ],
   }),
 });
-
-export type HrPolicy = {
-  day_start: string;
-  day_end: string;
-  late_grace_min: number;
-  half_day_hours: number;
-  full_day_hours: number;
-  week_offs: number[];
-  monthly_working_days: number;
-};
-
-export const DEFAULT_HR_POLICY: HrPolicy = {
-  day_start: "10:00",
-  day_end: "19:00",
-  late_grace_min: 15,
-  half_day_hours: 4,
-  full_day_hours: 8,
-  week_offs: [5],
-  monthly_working_days: 26,
-};
 
 const WEEKDAYS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
 
