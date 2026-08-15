@@ -75,6 +75,8 @@ function LiveDashboardPage() {
     new Intl.DateTimeFormat("en-CA", { timeZone: "Asia/Dhaka", year: "numeric", month: "2-digit", day: "2-digit" }).format(new Date()),
   );
   const [view, setView] = useState<"table" | "timeline" | "activity">("table");
+  const [q, setQ] = useState("");
+  const [stateFilter, setStateFilter] = useState<"all" | LiveEmployee["state"]>("all");
   const [now, setNow] = useState(() => Date.now());
 
   useEffect(() => {
@@ -98,7 +100,16 @@ function LiveDashboardPage() {
     },
   });
 
-  const rows = data?.rows ?? [];
+  const allRows = data?.rows ?? [];
+  const rows = useMemo(() => {
+    const term = q.trim().toLowerCase();
+    return allRows.filter(
+      (r) =>
+        (stateFilter === "all" || r.state === stateFilter) &&
+        (!term ||
+          [r.full_name, r.employee_code, r.department].some((v) => String(v ?? "").toLowerCase().includes(term))),
+    );
+  }, [allRows, q, stateFilter]);
   const workDate = data?.workDate ?? date;
 
   /** Per-employee verdict against their own duty time (falls back to company grace). */
@@ -112,10 +123,10 @@ function LiveDashboardPage() {
       fallbackGraceMin: policy?.late_grace_min ?? DEFAULT_HR_POLICY.late_grace_min,
     });
   const kpi = useMemo(() => {
-    const c = { total: rows.length, present: 0, on_break: 0, left: 0, not_in: 0 };
-    for (const r of rows) c[r.state] += 1;
+    const c = { total: allRows.length, present: 0, on_break: 0, left: 0, not_in: 0 };
+    for (const r of allRows) c[r.state] += 1;
     return c;
-  }, [rows]);
+  }, [allRows]);
   const attendancePct = kpi.total ? Math.round(((kpi.total - kpi.not_in) / kpi.total) * 100) : 0;
 
   const activity = useMemo(() => {
@@ -133,10 +144,30 @@ function LiveDashboardPage() {
     return events.sort((a, b) => Date.parse(b.at) - Date.parse(a.at));
   }, [rows]);
 
-  const hours = Array.from({ length: DAY_END - DAY_START + 1 }, (_, i) => DAY_START + i);
+  /** Timeline window auto-fits the real shifts + punches for the day. */
+  const [dayStart, dayEnd] = useMemo(() => {
+    const marks: number[] = [];
+    for (const r of allRows) {
+      marks.push(hourOf(r.schedule.shift_start));
+      const end = hourOf(r.schedule.shift_end);
+      marks.push(end <= hourOf(r.schedule.shift_start) ? 24 : end);
+      for (const e of r.entries) {
+        marks.push(dhakaHour(e.check_in));
+        if (e.check_out) marks.push(dhakaHour(e.check_out));
+      }
+    }
+    if (!marks.length) return [8, 22];
+    const lo = Math.max(0, Math.floor(Math.min(...marks)) - 1);
+    const hi = Math.min(24, Math.ceil(Math.max(...marks)) + 1);
+    return hi - lo < 4 ? [Math.max(0, lo - 2), Math.min(24, lo + 6)] : [lo, hi];
+  }, [allRows]);
+
+  const pct = (hour: number) =>
+    ((Math.min(dayEnd, Math.max(dayStart, hour)) - dayStart) / Math.max(1, dayEnd - dayStart)) * 100;
+
+  const hours = Array.from({ length: dayEnd - dayStart + 1 }, (_, i) => dayStart + i);
   const nowPct = pct(dhakaHour(new Date(now).toISOString()));
-  const isToday =
-    date === new Intl.DateTimeFormat("en-CA", { timeZone: "Asia/Dhaka", year: "numeric", month: "2-digit", day: "2-digit" }).format(new Date());
+  const isToday = date === dhakaToday();
 
   return (
     <div className="mx-auto max-w-[1500px] space-y-4 p-4 md:p-6">
