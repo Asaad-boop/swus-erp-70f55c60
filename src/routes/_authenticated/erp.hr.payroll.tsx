@@ -197,6 +197,8 @@ function PayrollPage() {
 
   const slug = (v: string) => v.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "") || "employee";
 
+  const [preview, setPreview] = useState<{ slips: PayslipData[]; title: string; filename: string } | null>(null);
+
   const downloadPayslip = async (s: any) => {
     try {
       await exportPayslipPdf([toPayslip(s)], company, `payslip-${month}-${slug(empName(s.employee_id))}.pdf`);
@@ -213,6 +215,23 @@ function PayrollPage() {
     } catch (err) {
       toast.error((err as Error).message);
     }
+  };
+
+  const openPreview = (s: any) =>
+    setPreview({
+      slips: [toPayslip(s)],
+      title: `${empName(s.employee_id)} — ${month}`,
+      filename: `payslip-${month}-${slug(empName(s.employee_id))}.pdf`,
+    });
+
+  const openPreviewAll = () => {
+    const ordered = [...slips].sort((a, b) => empName(a.employee_id).localeCompare(empName(b.employee_id)));
+    if (!ordered.length) return;
+    setPreview({
+      slips: ordered.map(toPayslip),
+      title: `Shob payslip (${ordered.length}) — ${month}`,
+      filename: `payslips-${month}.pdf`,
+    });
   };
 
   return (
@@ -236,6 +255,9 @@ function PayrollPage() {
               <>
                 <Button size="sm" variant="outline" onClick={exportCsv}>
                   <Download className="mr-1.5 h-3.5 w-3.5" /> CSV
+                </Button>
+                <Button size="sm" variant="outline" onClick={openPreviewAll}>
+                  <Eye className="mr-1.5 h-3.5 w-3.5" /> Preview all
                 </Button>
                 <Button size="sm" onClick={() => void downloadAllPayslips()}>
                   <FileText className="mr-1.5 h-3.5 w-3.5" /> All payslips PDF
