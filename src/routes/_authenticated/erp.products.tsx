@@ -415,6 +415,8 @@ function ProductCatalogPage() {
               const sync = syncState(p);
               const sb = stockBadge(p.stock, p.low_stock_threshold);
               const on = selected.has(p.id);
+              const ac = avgCost(p);
+              const mg = marginPct(Number(p.price), ac.value);
               return (
                 <div key={p.id} className={cn(
                   "group relative rounded-2xl border bg-card p-3 transition-all hover:-translate-y-0.5 hover:shadow-lg",
@@ -438,8 +440,18 @@ function ProductCatalogPage() {
                       : <button className="text-violet-600 hover:underline" onClick={() => setSkuTargets([p])}>SKU generate</button>}
                   </div>
                   <div className="mt-2 flex items-center justify-between">
-                    <div className="text-base font-semibold tabular-nums">{money(p.price)}</div>
+                    <div className="flex items-baseline gap-1.5">
+                      <span className="text-base font-semibold tabular-nums">{money(p.price)}</span>
+                      {p.old_price ? <span className="text-[11px] tabular-nums text-muted-foreground line-through">{money(Number(p.old_price))}</span> : null}
+                    </div>
                     <span className={cn("rounded-full px-2 py-0.5 text-[10px]", sb.className)}>{sb.label} · {p.stock}</span>
+                  </div>
+                  <div className="mt-1.5 flex items-center justify-between rounded-lg bg-muted/50 px-2 py-1 text-[11px]">
+                    <span className="text-muted-foreground">
+                      Avg cost: <span className="font-medium text-foreground tabular-nums">{ac.source === "none" ? "—" : money(ac.value)}</span>
+                      {ac.source !== "none" && <span className="ml-1 text-[9px] uppercase">{ac.source === "wac" ? "WAC" : "manual"}</span>}
+                    </span>
+                    <span className={cn("font-medium tabular-nums", marginTone(mg))}>{mg == null ? "—" : `${mg.toFixed(0)}%`}</span>
                   </div>
                   <div className="mt-2 flex flex-wrap items-center gap-1">
                     <span className={cn("rounded-full px-2 py-0.5 text-[10px]", sync.tone)}>{sync.label}</span>
