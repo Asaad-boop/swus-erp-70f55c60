@@ -266,11 +266,7 @@ export const payPayrollRun = createServerFn({ method: "POST" })
       .single();
     if (tErr) throw new Error(tErr.message);
 
-    await supabase
-      .from("erp_accounts")
-      .update({ current_balance: Number(account.current_balance ?? 0) - totals.net })
-      .eq("id", account.id);
-
+    // Balance is updated by the update_account_balance_on_txn trigger — no manual update here.
     const paidAt = new Date().toISOString();
     await supabase
       .from("hr_payslips")
