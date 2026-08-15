@@ -1026,8 +1026,8 @@ const OPTIONS_HTML = `<!doctype html>
 <main class="pad">
   <label>Server URL</label>
   <input id="base" />
-  <label>Email</label>
-  <input id="email" type="email" placeholder="you@company.com" autocomplete="username" />
+  <label>Email or username</label>
+  <input id="email" type="text" placeholder="you@company.com / yourname" autocomplete="username" />
   <label>Password</label>
   <input id="password" type="password" placeholder="••••••••" autocomplete="current-password" />
   <button id="login" class="primary block">Login করে token নাও</button>
@@ -1045,10 +1045,16 @@ const OPTIONS_JS = `
 import { DEFAULTS } from './config.js';
 const $ = (id) => document.getElementById(id);
 
-const baseUrl = () => $('base').value.trim().replace(/\\/$/, '');
+function normBase(v) {
+  let b = String(v || '').trim().replace(/\\/+$/, '');
+  if (!b) return DEFAULTS.base;
+  if (!/^https?:\\/\\//i.test(b)) b = 'https://' + b;
+  return b;
+}
+const baseUrl = () => { const b = normBase($('base').value); $('base').value = b; return b; };
 
 chrome.storage.sync.get(['base', 'token', 'email'], (s) => {
-  $('base').value = s.base || DEFAULTS.base;
+  $('base').value = normBase(s.base || DEFAULTS.base);
   $('token').value = s.token || DEFAULTS.token;
   $('email').value = s.email || '';
   $('acct').textContent = s.email ? ('Logged in — ' + s.email) : 'logged out';
@@ -1105,6 +1111,12 @@ $('test').onclick = async () => {
       body: JSON.stringify({ token: $('token').value.trim(), action: 'meta' })
     });
     const j = await r.json();
+    if (j && j.code === 'invalid_token') {
+      await chrome.storage.sync.remove(['token', 'email']);
+      $('token').value = '';
+      $('acct').textContent = 'logged out';
+      throw new Error('Session শেষ — আবার login করো');
+    }
     if (!r.ok || j.error) throw new Error(j.error || ('HTTP ' + r.status));
     $('msg').textContent = 'ঠিক আছে ✅ — ' + (j.brands || []).length + ' brand পাওয়া গেছে';
     $('msg').className = 'msg ok';
