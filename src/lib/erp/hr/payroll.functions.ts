@@ -12,6 +12,16 @@ function monthEnd(month: string) {
   return d.toISOString().slice(0, 10);
 }
 
+/** Dhaka-local YYYY-MM-DD (payout dates must not roll over at UTC midnight). */
+function dhakaToday() {
+  return new Intl.DateTimeFormat("en-CA", {
+    timeZone: "Asia/Dhaka",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  }).format(new Date());
+}
+
 /**
  * Creates (or refreshes) the payroll run for a month and drafts one payslip
  * per active employee, pre-filling attendance-derived present/absent days.
@@ -23,11 +33,13 @@ export const generatePayrollRun = createServerFn({ method: "POST" })
     const supabase = context.supabase;
     const period = monthStart(data.month);
 
-    let { data: run } = await supabase
+    const { data: runRows } = await supabase
       .from("hr_payroll_runs")
       .select("*")
       .eq("period_month", period)
-      .maybeSingle();
+      .order("created_at", { ascending: false })
+      .limit(1);
+    let run = (runRows ?? [])[0] ?? null;
 
     if (!run) {
       const { data: created, error } = await supabase
@@ -245,7 +257,7 @@ export const payPayrollRun = createServerFn({ method: "POST" })
         reference_type: "hr_payroll",
         reference_id: run.id,
         description: `Payroll ${String(run.period_month).slice(0, 7)} — salary payout`,
-        transaction_date: new Date().toISOString().slice(0, 10),
+        transaction_date: dhakaToday(),
       })
       .select("id")
       .single();

@@ -29,7 +29,9 @@ export const Route = createFileRoute("/_authenticated/erp/hr/performance")({
   }),
 });
 
-const monthNow = () => new Date().toISOString().slice(0, 7);
+import { dhakaMonth } from "@/lib/erp/hr/date";
+
+const monthNow = () => dhakaMonth();
 
 function PerformancePage() {
   const qc = useQueryClient();
