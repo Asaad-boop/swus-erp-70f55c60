@@ -110,6 +110,7 @@ import { Route as AuthenticatedErpFinanceChartAccountsRouteImport } from './rout
 import { Route as AuthenticatedErpFinanceBudgetsRouteImport } from './routes/_authenticated/erp.finance.budgets'
 import { Route as AuthenticatedErpFinanceAccountsRouteImport } from './routes/_authenticated/erp.finance.accounts'
 import { Route as AuthenticatedErpCrmCustomerIdRouteImport } from './routes/_authenticated/erp.crm.$customerId'
+import { Route as AuthenticatedErpContentReportRouteImport } from './routes/_authenticated/erp.content.report'
 import { Route as AuthenticatedErpContentPipelineRouteImport } from './routes/_authenticated/erp.content.pipeline'
 import { Route as AuthenticatedErpContentMediaPlansRouteImport } from './routes/_authenticated/erp.content.media-plans'
 import { Route as AuthenticatedErpContentMatchingRouteImport } from './routes/_authenticated/erp.content.matching'
@@ -706,6 +707,12 @@ const AuthenticatedErpCrmCustomerIdRoute =
     path: '/$customerId',
     getParentRoute: () => AuthenticatedErpCrmRoute,
   } as any)
+const AuthenticatedErpContentReportRoute =
+  AuthenticatedErpContentReportRouteImport.update({
+    id: '/report',
+    path: '/report',
+    getParentRoute: () => AuthenticatedErpContentRoute,
+  } as any)
 const AuthenticatedErpContentPipelineRoute =
   AuthenticatedErpContentPipelineRouteImport.update({
     id: '/pipeline',
@@ -805,6 +812,7 @@ export interface FileRoutesByFullPath {
   '/erp/content/matching': typeof AuthenticatedErpContentMatchingRoute
   '/erp/content/media-plans': typeof AuthenticatedErpContentMediaPlansRoute
   '/erp/content/pipeline': typeof AuthenticatedErpContentPipelineRoute
+  '/erp/content/report': typeof AuthenticatedErpContentReportRoute
   '/erp/crm/$customerId': typeof AuthenticatedErpCrmCustomerIdRoute
   '/erp/finance/accounts': typeof AuthenticatedErpFinanceAccountsRoute
   '/erp/finance/budgets': typeof AuthenticatedErpFinanceBudgetsRoute
@@ -907,6 +915,7 @@ export interface FileRoutesByTo {
   '/erp/content/matching': typeof AuthenticatedErpContentMatchingRoute
   '/erp/content/media-plans': typeof AuthenticatedErpContentMediaPlansRoute
   '/erp/content/pipeline': typeof AuthenticatedErpContentPipelineRoute
+  '/erp/content/report': typeof AuthenticatedErpContentReportRoute
   '/erp/crm/$customerId': typeof AuthenticatedErpCrmCustomerIdRoute
   '/erp/finance/accounts': typeof AuthenticatedErpFinanceAccountsRoute
   '/erp/finance/budgets': typeof AuthenticatedErpFinanceBudgetsRoute
@@ -1021,6 +1030,7 @@ export interface FileRoutesById {
   '/_authenticated/erp/content/matching': typeof AuthenticatedErpContentMatchingRoute
   '/_authenticated/erp/content/media-plans': typeof AuthenticatedErpContentMediaPlansRoute
   '/_authenticated/erp/content/pipeline': typeof AuthenticatedErpContentPipelineRoute
+  '/_authenticated/erp/content/report': typeof AuthenticatedErpContentReportRoute
   '/_authenticated/erp/crm/$customerId': typeof AuthenticatedErpCrmCustomerIdRoute
   '/_authenticated/erp/finance/accounts': typeof AuthenticatedErpFinanceAccountsRoute
   '/_authenticated/erp/finance/budgets': typeof AuthenticatedErpFinanceBudgetsRoute
@@ -1135,6 +1145,7 @@ export interface FileRouteTypes {
     | '/erp/content/matching'
     | '/erp/content/media-plans'
     | '/erp/content/pipeline'
+    | '/erp/content/report'
     | '/erp/crm/$customerId'
     | '/erp/finance/accounts'
     | '/erp/finance/budgets'
@@ -1237,6 +1248,7 @@ export interface FileRouteTypes {
     | '/erp/content/matching'
     | '/erp/content/media-plans'
     | '/erp/content/pipeline'
+    | '/erp/content/report'
     | '/erp/crm/$customerId'
     | '/erp/finance/accounts'
     | '/erp/finance/budgets'
@@ -1350,6 +1362,7 @@ export interface FileRouteTypes {
     | '/_authenticated/erp/content/matching'
     | '/_authenticated/erp/content/media-plans'
     | '/_authenticated/erp/content/pipeline'
+    | '/_authenticated/erp/content/report'
     | '/_authenticated/erp/crm/$customerId'
     | '/_authenticated/erp/finance/accounts'
     | '/_authenticated/erp/finance/budgets'
@@ -2155,6 +2168,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedErpCrmCustomerIdRouteImport
       parentRoute: typeof AuthenticatedErpCrmRoute
     }
+    '/_authenticated/erp/content/report': {
+      id: '/_authenticated/erp/content/report'
+      path: '/report'
+      fullPath: '/erp/content/report'
+      preLoaderRoute: typeof AuthenticatedErpContentReportRouteImport
+      parentRoute: typeof AuthenticatedErpContentRoute
+    }
     '/_authenticated/erp/content/pipeline': {
       id: '/_authenticated/erp/content/pipeline'
       path: '/pipeline'
@@ -2235,6 +2255,7 @@ interface AuthenticatedErpContentRouteChildren {
   AuthenticatedErpContentMatchingRoute: typeof AuthenticatedErpContentMatchingRoute
   AuthenticatedErpContentMediaPlansRoute: typeof AuthenticatedErpContentMediaPlansRoute
   AuthenticatedErpContentPipelineRoute: typeof AuthenticatedErpContentPipelineRoute
+  AuthenticatedErpContentReportRoute: typeof AuthenticatedErpContentReportRoute
   AuthenticatedErpContentIndexRoute: typeof AuthenticatedErpContentIndexRoute
 }
 
@@ -2247,6 +2268,7 @@ const AuthenticatedErpContentRouteChildren: AuthenticatedErpContentRouteChildren
     AuthenticatedErpContentMediaPlansRoute:
       AuthenticatedErpContentMediaPlansRoute,
     AuthenticatedErpContentPipelineRoute: AuthenticatedErpContentPipelineRoute,
+    AuthenticatedErpContentReportRoute: AuthenticatedErpContentReportRoute,
     AuthenticatedErpContentIndexRoute: AuthenticatedErpContentIndexRoute,
   }
 
