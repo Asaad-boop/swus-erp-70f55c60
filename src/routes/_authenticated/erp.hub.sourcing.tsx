@@ -16,7 +16,7 @@ import {
   AlertTriangle,
   Keyboard,
 } from "lucide-react";
-import { MoreHorizontal, Truck } from "lucide-react";
+import { MoreHorizontal, Truck, XCircle, Trash2, RotateCcw, Archive } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useBrand } from "@/contexts/brand-context";
 import { useAccounts } from "@/hooks/erp/use-finance-query";
