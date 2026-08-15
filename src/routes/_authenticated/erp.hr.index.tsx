@@ -131,7 +131,6 @@ function HrOverview() {
   const notMarked = expected.filter((e) => !markedIds.has(e.id) && !leaveIds.has(e.id));
   const coverage = expected.length ? Math.round((present / expected.length) * 100) : 0;
 
-  const empById = new Map(emps.map((e) => [e.id, e]));
 
   // 14-day present trend
   const trendMap = new Map<string, number>();
