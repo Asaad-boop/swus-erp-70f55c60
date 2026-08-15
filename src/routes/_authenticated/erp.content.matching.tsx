@@ -301,7 +301,7 @@ function MatchingPage() {
                   p.content,
                   p.published,
                   p.orders,
-                  p.cost,
+                  p.cost + p.shipCost,
                 ]),
               ])
             }
