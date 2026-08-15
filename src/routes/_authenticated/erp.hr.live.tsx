@@ -6,12 +6,13 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
-import { HrPageHeader, clockTime, hoursMins } from "@/components/erp/hr/hr-shell";
+import { CardSkeleton, HrEmpty, HrPageHeader, TableSkeleton, clockTime, hoursMins, hrRow } from "@/components/erp/hr/hr-shell";
+import { dhakaToday } from "@/lib/erp/hr/date";
 import { getLiveBoard, type LiveEmployee } from "@/lib/erp/hr/attendance.functions";
 import { getAppSetting } from "@/lib/erp/settings/app-settings.functions";
 import { DEFAULT_HR_POLICY, type HrPolicy } from "@/lib/erp/hr/policy";
 import { breakWindowLabel, dayMetrics, shiftLabel, unpaidBreakMinutes } from "@/lib/erp/hr/schedule";
-import { Radio, RefreshCw, Users, CheckCircle2, Coffee, LogOut, UserX, Table2, GanttChartSquare, Activity } from "lucide-react";
+import { Radio, RefreshCw, Users, CheckCircle2, Coffee, LogOut, UserX, Table2, GanttChartSquare, Activity, Search } from "lucide-react";
 
 export const Route = createFileRoute("/_authenticated/erp/hr/live")({
   component: LiveDashboardPage,
@@ -34,9 +35,6 @@ const STATE_META: Record<LiveEmployee["state"], { label: string; dot: string; to
   not_in: { label: "Not in", dot: "bg-muted-foreground/40", tone: "bg-muted text-muted-foreground border-border" },
 };
 
-const DAY_START = 8; // 8 AM
-const DAY_END = 22; // 10 PM
-
 /** Dhaka-local fractional hour for an ISO timestamp. */
 function dhakaHour(iso: string) {
   const parts = new Intl.DateTimeFormat("en-GB", {
@@ -49,8 +47,10 @@ function dhakaHour(iso: string) {
   return h + m / 60;
 }
 
-function pct(hour: number) {
-  return ((Math.min(DAY_END, Math.max(DAY_START, hour)) - DAY_START) / (DAY_END - DAY_START)) * 100;
+/** "HH:MM" → fractional hour. */
+function hourOf(hhmm: string) {
+  const [h, m] = String(hhmm).split(":").map(Number);
+  return (h || 0) + (m || 0) / 60;
 }
 
 function Kpi({ icon: Icon, label, value, accent }: { icon: any; label: string; value: number; accent: string }) {
