@@ -3,8 +3,9 @@ import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { HrPageHeader, money, statusTone } from "@/components/erp/hr/hr-shell";
-import { Users, CalendarCheck, Banknote, PalmtreeIcon, LayoutDashboard } from "lucide-react";
+import { CardSkeleton, HrEmpty, HrPageHeader, hrCardHover, hrFadeIn, money, statusTone } from "@/components/erp/hr/hr-shell";
+import { dhakaMonth, dhakaToday } from "@/lib/erp/hr/date";
+import { Users, CalendarCheck, Banknote, PalmtreeIcon, LayoutDashboard, UserPlus } from "lucide-react";
 
 export const Route = createFileRoute("/_authenticated/erp/hr/")({
   component: HrOverview,
@@ -20,8 +21,8 @@ export const Route = createFileRoute("/_authenticated/erp/hr/")({
   }),
 });
 
-const today = () => new Date().toISOString().slice(0, 10);
-const thisMonth = () => new Date().toISOString().slice(0, 7);
+const today = () => dhakaToday();
+const thisMonth = () => dhakaMonth();
 
 function HrOverview() {
   const { data, isLoading } = useQuery({
@@ -35,13 +36,18 @@ function HrOverview() {
           .select("id, employee_id, start_date, end_date, days, status, hr_employees(full_name)")
           .eq("status", "pending")
           .order("start_date"),
-        supabase.from("hr_payroll_runs").select("*").eq("period_month", `${thisMonth()}-01`).maybeSingle(),
+        supabase
+          .from("hr_payroll_runs")
+          .select("*")
+          .eq("period_month", `${thisMonth()}-01`)
+          .order("created_at", { ascending: false })
+          .limit(1),
       ]);
       return {
         employees: emps.data ?? [],
         attendance: att.data ?? [],
         pendingLeaves: leaves.data ?? [],
-        run: run.data,
+        run: (run.data ?? [])[0] ?? null,
       };
     },
   });
@@ -69,15 +75,16 @@ function HrOverview() {
       />
 
       <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
-        {kpis.map((k) => (
-          <Link key={k.label} to={k.to} className="group">
-            <Card className="h-full transition-colors group-hover:border-primary/40">
+        {isLoading && <CardSkeleton count={4} />}
+        {!isLoading && kpis.map((k, i) => (
+          <Link key={k.label} to={k.to} className={`group ${hrFadeIn}`} style={{ animationDelay: `${i * 50}ms` }}>
+            <Card className={`h-full ${hrCardHover}`}>
               <CardContent className="space-y-1 p-4">
                 <div className="flex items-center justify-between">
                   <p className="text-xs font-medium text-muted-foreground">{k.label}</p>
-                  <k.icon className="h-4 w-4 text-primary" />
+                  <k.icon className="h-4 w-4 text-primary transition-transform duration-200 group-hover:scale-110" />
                 </div>
-                <p className="font-display text-2xl font-bold tracking-tight">{isLoading ? "—" : k.value}</p>
+                <p className="font-display text-2xl font-bold tracking-tight">{k.value}</p>
                 <p className="text-[11px] text-muted-foreground">{k.sub}</p>
               </CardContent>
             </Card>
@@ -92,10 +99,10 @@ function HrOverview() {
           </CardHeader>
           <CardContent className="space-y-2">
             {(data?.pendingLeaves ?? []).length === 0 ? (
-              <p className="text-sm text-muted-foreground">Kono pending request nei.</p>
+              <HrEmpty icon={PalmtreeIcon} title="Kono pending request nei" hint="Notun chhuti request ele ekhane dekhabe." />
             ) : (
               (data?.pendingLeaves ?? []).slice(0, 6).map((l: any) => (
-                <div key={l.id} className="flex items-center justify-between gap-3 rounded-lg border border-border/70 px-3 py-2">
+                <div key={l.id} className="flex items-center justify-between gap-3 rounded-lg border border-border/70 px-3 py-2 transition-colors hover:border-primary/30 hover:bg-muted/40">
                   <div className="min-w-0">
                     <p className="truncate text-sm font-medium">{l.hr_employees?.full_name ?? "—"}</p>
                     <p className="text-[11px] text-muted-foreground">
@@ -115,14 +122,14 @@ function HrOverview() {
           </CardHeader>
           <CardContent className="space-y-2">
             {emps.length === 0 ? (
-              <p className="text-sm text-muted-foreground">Ekhono kono employee add kora hoyni.</p>
+              <HrEmpty icon={UserPlus} title="Ekhono kono employee add kora hoyni" hint="Employees page theke prothom staff add korun." />
             ) : (
               [...emps]
                 .filter((e) => e.join_date)
                 .sort((a, b) => String(b.join_date).localeCompare(String(a.join_date)))
                 .slice(0, 6)
                 .map((e) => (
-                  <div key={e.id} className="flex items-center justify-between gap-3 rounded-lg border border-border/70 px-3 py-2">
+                  <div key={e.id} className="flex items-center justify-between gap-3 rounded-lg border border-border/70 px-3 py-2 transition-colors hover:border-primary/30 hover:bg-muted/40">
                     <div className="min-w-0">
                       <p className="truncate text-sm font-medium">{e.full_name}</p>
                       <p className="text-[11px] text-muted-foreground">Joined {e.join_date}</p>

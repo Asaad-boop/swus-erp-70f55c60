@@ -12,6 +12,16 @@ function monthEnd(month: string) {
   return d.toISOString().slice(0, 10);
 }
 
+/** Dhaka-local YYYY-MM-DD (payout dates must not roll over at UTC midnight). */
+function dhakaToday() {
+  return new Intl.DateTimeFormat("en-CA", {
+    timeZone: "Asia/Dhaka",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  }).format(new Date());
+}
+
 /**
  * Creates (or refreshes) the payroll run for a month and drafts one payslip
  * per active employee, pre-filling attendance-derived present/absent days.
@@ -23,11 +33,13 @@ export const generatePayrollRun = createServerFn({ method: "POST" })
     const supabase = context.supabase;
     const period = monthStart(data.month);
 
-    let { data: run } = await supabase
+    const { data: runRows } = await supabase
       .from("hr_payroll_runs")
       .select("*")
       .eq("period_month", period)
-      .maybeSingle();
+      .order("created_at", { ascending: false })
+      .limit(1);
+    let run = (runRows ?? [])[0] ?? null;
 
     if (!run) {
       const { data: created, error } = await supabase
@@ -59,10 +71,13 @@ export const generatePayrollRun = createServerFn({ method: "POST" })
       (employees ?? []).map((e: any) => [e.id as string, toSchedule(e)]),
     );
     for (const a of att ?? []) {
-      const bucket = a.status === "absent" ? absent : present;
       const key = a.employee_id as string;
-      if (a.status === "absent" || a.status === "present" || a.status === "late" || a.status === "half_day") {
-        bucket.set(key, (bucket.get(key) ?? 0) + (a.status === "half_day" ? 0.5 : 1));
+      // Approved leave is paid time, so it counts toward present days — not absent.
+      const paid = a.status === "present" || a.status === "late" || a.status === "half_day" || a.status === "leave";
+      if (a.status === "absent") {
+        absent.set(key, (absent.get(key) ?? 0) + 1);
+      } else if (paid) {
+        present.set(key, (present.get(key) ?? 0) + (a.status === "half_day" ? 0.5 : 1));
       }
       const sched = schedules.get(key);
       const mins = Number(a.overtime_minutes ?? 0);
@@ -245,7 +260,7 @@ export const payPayrollRun = createServerFn({ method: "POST" })
         reference_type: "hr_payroll",
         reference_id: run.id,
         description: `Payroll ${String(run.period_month).slice(0, 7)} — salary payout`,
-        transaction_date: new Date().toISOString().slice(0, 10),
+        transaction_date: dhakaToday(),
       })
       .select("id")
       .single();

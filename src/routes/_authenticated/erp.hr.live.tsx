@@ -6,12 +6,13 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
-import { HrPageHeader, clockTime, hoursMins } from "@/components/erp/hr/hr-shell";
+import { CardSkeleton, HrEmpty, HrPageHeader, TableSkeleton, clockTime, hoursMins, hrRow } from "@/components/erp/hr/hr-shell";
+import { dhakaToday } from "@/lib/erp/hr/date";
 import { getLiveBoard, type LiveEmployee } from "@/lib/erp/hr/attendance.functions";
 import { getAppSetting } from "@/lib/erp/settings/app-settings.functions";
 import { DEFAULT_HR_POLICY, type HrPolicy } from "@/lib/erp/hr/policy";
 import { breakWindowLabel, dayMetrics, shiftLabel, unpaidBreakMinutes } from "@/lib/erp/hr/schedule";
-import { Radio, RefreshCw, Users, CheckCircle2, Coffee, LogOut, UserX, Table2, GanttChartSquare, Activity } from "lucide-react";
+import { Radio, RefreshCw, Users, CheckCircle2, Coffee, LogOut, UserX, Table2, GanttChartSquare, Activity, Search } from "lucide-react";
 
 export const Route = createFileRoute("/_authenticated/erp/hr/live")({
   component: LiveDashboardPage,
@@ -34,9 +35,6 @@ const STATE_META: Record<LiveEmployee["state"], { label: string; dot: string; to
   not_in: { label: "Not in", dot: "bg-muted-foreground/40", tone: "bg-muted text-muted-foreground border-border" },
 };
 
-const DAY_START = 8; // 8 AM
-const DAY_END = 22; // 10 PM
-
 /** Dhaka-local fractional hour for an ISO timestamp. */
 function dhakaHour(iso: string) {
   const parts = new Intl.DateTimeFormat("en-GB", {
@@ -49,23 +47,45 @@ function dhakaHour(iso: string) {
   return h + m / 60;
 }
 
-function pct(hour: number) {
-  return ((Math.min(DAY_END, Math.max(DAY_START, hour)) - DAY_START) / (DAY_END - DAY_START)) * 100;
+/** "HH:MM" → fractional hour. */
+function hourOf(hhmm: string) {
+  const [h, m] = String(hhmm).split(":").map(Number);
+  return (h || 0) + (m || 0) / 60;
 }
 
-function Kpi({ icon: Icon, label, value, accent }: { icon: any; label: string; value: number; accent: string }) {
+function Kpi({
+  icon: Icon,
+  label,
+  value,
+  accent,
+  active,
+  onClick,
+}: {
+  icon: any;
+  label: string;
+  value: number;
+  accent: string;
+  active?: boolean;
+  onClick?: () => void;
+}) {
   return (
-    <Card className="border-border/70">
-      <CardContent className="flex items-center gap-3 p-3.5">
-        <span className={`flex h-9 w-9 items-center justify-center rounded-xl ${accent}`}>
-          <Icon className="h-4 w-4" />
-        </span>
-        <div>
-          <p className="text-[11px] uppercase tracking-wide text-muted-foreground">{label}</p>
-          <p className="font-display text-xl font-bold leading-tight">{value}</p>
-        </div>
-      </CardContent>
-    </Card>
+    <button type="button" onClick={onClick} className="text-left focus:outline-none">
+      <Card
+        className={`h-full border-border/70 transition-all duration-200 ease-out hover:-translate-y-0.5 hover:shadow-md ${
+          active ? "border-primary/50 ring-1 ring-primary/30" : ""
+        }`}
+      >
+        <CardContent className="flex items-center gap-3 p-3.5">
+          <span className={`flex h-9 w-9 items-center justify-center rounded-xl ${accent}`}>
+            <Icon className="h-4 w-4" />
+          </span>
+          <div>
+            <p className="text-[11px] uppercase tracking-wide text-muted-foreground">{label}</p>
+            <p className="font-display text-xl font-bold leading-tight tabular-nums">{value}</p>
+          </div>
+        </CardContent>
+      </Card>
+    </button>
   );
 }
 
@@ -75,6 +95,8 @@ function LiveDashboardPage() {
     new Intl.DateTimeFormat("en-CA", { timeZone: "Asia/Dhaka", year: "numeric", month: "2-digit", day: "2-digit" }).format(new Date()),
   );
   const [view, setView] = useState<"table" | "timeline" | "activity">("table");
+  const [q, setQ] = useState("");
+  const [stateFilter, setStateFilter] = useState<"all" | LiveEmployee["state"]>("all");
   const [now, setNow] = useState(() => Date.now());
 
   useEffect(() => {
@@ -98,7 +120,16 @@ function LiveDashboardPage() {
     },
   });
 
-  const rows = data?.rows ?? [];
+  const allRows = data?.rows ?? [];
+  const rows = useMemo(() => {
+    const term = q.trim().toLowerCase();
+    return allRows.filter(
+      (r) =>
+        (stateFilter === "all" || r.state === stateFilter) &&
+        (!term ||
+          [r.full_name, r.employee_code, r.department].some((v) => String(v ?? "").toLowerCase().includes(term))),
+    );
+  }, [allRows, q, stateFilter]);
   const workDate = data?.workDate ?? date;
 
   /** Per-employee verdict against their own duty time (falls back to company grace). */
@@ -112,10 +143,10 @@ function LiveDashboardPage() {
       fallbackGraceMin: policy?.late_grace_min ?? DEFAULT_HR_POLICY.late_grace_min,
     });
   const kpi = useMemo(() => {
-    const c = { total: rows.length, present: 0, on_break: 0, left: 0, not_in: 0 };
-    for (const r of rows) c[r.state] += 1;
+    const c = { total: allRows.length, present: 0, on_break: 0, left: 0, not_in: 0 };
+    for (const r of allRows) c[r.state] += 1;
     return c;
-  }, [rows]);
+  }, [allRows]);
   const attendancePct = kpi.total ? Math.round(((kpi.total - kpi.not_in) / kpi.total) * 100) : 0;
 
   const activity = useMemo(() => {
@@ -133,10 +164,30 @@ function LiveDashboardPage() {
     return events.sort((a, b) => Date.parse(b.at) - Date.parse(a.at));
   }, [rows]);
 
-  const hours = Array.from({ length: DAY_END - DAY_START + 1 }, (_, i) => DAY_START + i);
+  /** Timeline window auto-fits the real shifts + punches for the day. */
+  const [dayStart, dayEnd] = useMemo(() => {
+    const marks: number[] = [];
+    for (const r of allRows) {
+      marks.push(hourOf(r.schedule.shift_start));
+      const end = hourOf(r.schedule.shift_end);
+      marks.push(end <= hourOf(r.schedule.shift_start) ? 24 : end);
+      for (const e of r.entries) {
+        marks.push(dhakaHour(e.check_in));
+        if (e.check_out) marks.push(dhakaHour(e.check_out));
+      }
+    }
+    if (!marks.length) return [8, 22];
+    const lo = Math.max(0, Math.floor(Math.min(...marks)) - 1);
+    const hi = Math.min(24, Math.ceil(Math.max(...marks)) + 1);
+    return hi - lo < 4 ? [Math.max(0, lo - 2), Math.min(24, lo + 6)] : [lo, hi];
+  }, [allRows]);
+
+  const pct = (hour: number) =>
+    ((Math.min(dayEnd, Math.max(dayStart, hour)) - dayStart) / Math.max(1, dayEnd - dayStart)) * 100;
+
+  const hours = Array.from({ length: dayEnd - dayStart + 1 }, (_, i) => dayStart + i);
   const nowPct = pct(dhakaHour(new Date(now).toISOString()));
-  const isToday =
-    date === new Intl.DateTimeFormat("en-CA", { timeZone: "Asia/Dhaka", year: "numeric", month: "2-digit", day: "2-digit" }).format(new Date());
+  const isToday = date === dhakaToday();
 
   return (
     <div className="mx-auto max-w-[1500px] space-y-4 p-4 md:p-6">
@@ -163,13 +214,20 @@ function LiveDashboardPage() {
       </div>
 
       <div className="grid grid-cols-2 gap-3 md:grid-cols-5">
-        <Kpi icon={Users} label="Total" value={kpi.total} accent="bg-primary/10 text-primary" />
-        <Kpi icon={CheckCircle2} label="Present" value={kpi.present} accent="bg-emerald-500/10 text-emerald-600" />
-        <Kpi icon={Coffee} label="On break" value={kpi.on_break} accent="bg-amber-500/10 text-amber-600" />
-        <Kpi icon={UserX} label="Not in" value={kpi.not_in} accent="bg-muted text-muted-foreground" />
-        <Kpi icon={LogOut} label="Left" value={kpi.left} accent="bg-sky-500/10 text-sky-600" />
+        {isFetching && !data ? (
+          <CardSkeleton count={5} />
+        ) : (
+          <>
+            <Kpi icon={Users} label="Total" value={kpi.total} accent="bg-primary/10 text-primary" active={stateFilter === "all"} onClick={() => setStateFilter("all")} />
+            <Kpi icon={CheckCircle2} label="Present" value={kpi.present} accent="bg-emerald-500/10 text-emerald-600" active={stateFilter === "present"} onClick={() => setStateFilter(stateFilter === "present" ? "all" : "present")} />
+            <Kpi icon={Coffee} label="On break" value={kpi.on_break} accent="bg-amber-500/10 text-amber-600" active={stateFilter === "on_break"} onClick={() => setStateFilter(stateFilter === "on_break" ? "all" : "on_break")} />
+            <Kpi icon={UserX} label="Not in" value={kpi.not_in} accent="bg-muted text-muted-foreground" active={stateFilter === "not_in"} onClick={() => setStateFilter(stateFilter === "not_in" ? "all" : "not_in")} />
+            <Kpi icon={LogOut} label="Left" value={kpi.left} accent="bg-sky-500/10 text-sky-600" active={stateFilter === "left"} onClick={() => setStateFilter(stateFilter === "left" ? "all" : "left")} />
+          </>
+        )}
       </div>
 
+      <div className="flex flex-wrap items-center gap-3">
       <div className="flex flex-wrap gap-1 rounded-full border border-border/70 bg-muted/40 p-1 w-fit">
         {([
           { k: "table", label: "Table", icon: Table2 },
@@ -179,13 +237,23 @@ function LiveDashboardPage() {
           <button
             key={t.k}
             onClick={() => setView(t.k)}
-            className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-medium transition-colors ${
+            className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-medium transition-all duration-200 active:scale-[0.97] ${
               view === t.k ? "bg-background text-foreground shadow-sm" : "text-muted-foreground hover:text-foreground"
             }`}
           >
             <t.icon className="h-3.5 w-3.5" /> {t.label}
           </button>
         ))}
+      </div>
+        <div className="relative w-full max-w-[260px]">
+          <Search className="pointer-events-none absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-muted-foreground" />
+          <Input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Naam ba department khujun…" className="h-9 pl-8" />
+        </div>
+        {(stateFilter !== "all" || q) && (
+          <Button size="sm" variant="ghost" onClick={() => { setStateFilter("all"); setQ(""); }}>
+            Clear filter
+          </Button>
+        )}
       </div>
 
       {view === "table" && (
@@ -206,13 +274,19 @@ function LiveDashboardPage() {
                   </tr>
                 </thead>
                 <tbody>
-                  {rows.length === 0 ? (
-                    <tr><td colSpan={8} className="p-6 text-center text-muted-foreground">Kono employee nei.</td></tr>
+                  {isFetching && !data ? (
+                    <TableSkeleton cols={8} rows={6} />
+                  ) : rows.length === 0 ? (
+                    <tr>
+                      <td colSpan={8}>
+                        <HrEmpty icon={Users} title="Kono employee nei" hint="Filter clear korun othoba onno date select korun." />
+                      </td>
+                    </tr>
                   ) : (
                     rows.map((r) => {
                       const m = metricsOf(r);
                       return (
-                      <tr key={r.id} className="border-b border-border/50 last:border-0">
+                      <tr key={r.id} className={`border-b border-border/50 last:border-0 ${hrRow}`}>
                         <td className="p-2.5">
                           <p className="font-medium">{r.full_name}</p>
                           <p className="text-[11px] text-muted-foreground">{r.department ?? (r.employee_code ? `#${r.employee_code}` : "—")}</p>
@@ -314,7 +388,7 @@ function LiveDashboardPage() {
                 <div className="w-[70px] shrink-0 text-right text-[11px] text-muted-foreground">{hoursMins(r.workMs)}</div>
               </div>
             ))}
-            {rows.length === 0 && <p className="p-6 text-center text-sm text-muted-foreground">Kono data nei.</p>}
+            {rows.length === 0 && <HrEmpty icon={GanttChartSquare} title="Kono data nei" hint="Ei date e kono punch record hoyni." />}
           </CardContent>
         </Card>
       )}
@@ -323,11 +397,11 @@ function LiveDashboardPage() {
         <Card>
           <CardContent className="p-0">
             {activity.length === 0 ? (
-              <p className="p-6 text-center text-sm text-muted-foreground">Aaj kono punch hoyni.</p>
+              <HrEmpty icon={Activity} title="Aaj kono punch hoyni" hint="Check in korle ekhane live feed dekhabe." />
             ) : (
               <ul className="divide-y divide-border/50">
                 {activity.map((a, i) => (
-                  <li key={i} className="flex items-center justify-between px-4 py-2.5 text-sm">
+                  <li key={i} className="flex items-center justify-between px-4 py-2.5 text-sm transition-colors hover:bg-muted/40">
                     <span>
                       <span className="font-medium">{a.who}</span>{" "}
                       <span className="text-muted-foreground">{a.kind.toLowerCase()}</span>

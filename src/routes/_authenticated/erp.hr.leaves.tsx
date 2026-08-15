@@ -11,7 +11,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { HrPageHeader, statusTone } from "@/components/erp/hr/hr-shell";
+import { HrEmpty, HrPageHeader, TableSkeleton, hrRow, statusTone } from "@/components/erp/hr/hr-shell";
 import { PalmtreeIcon, Plus, Check, X, Trash2 } from "lucide-react";
 
 export const Route = createFileRoute("/_authenticated/erp/hr/leaves")({
@@ -32,6 +32,17 @@ const daysBetween = (a: string, b: string) => {
   if (!a || !b) return 0;
   const d = (new Date(b).getTime() - new Date(a).getTime()) / 86400000 + 1;
   return d > 0 ? d : 0;
+};
+
+/** Every YYYY-MM-DD between two dates, inclusive (max 366 to stay safe). */
+const dateRange = (a: string, b: string) => {
+  const out: string[] = [];
+  const start = new Date(`${a}T00:00:00Z`);
+  const end = new Date(`${b}T00:00:00Z`);
+  for (let d = start; d <= end && out.length < 366; d = new Date(d.getTime() + 86400000)) {
+    out.push(d.toISOString().slice(0, 10));
+  }
+  return out;
 };
 
 function LeavesPage() {
@@ -82,13 +93,58 @@ function LeavesPage() {
 
   const decide = useMutation({
     mutationFn: async ({ id, status }: { id: string; status: string }) => {
+      const leave = (data?.leaves ?? []).find((l) => l.id === id);
       const { error } = await supabase
         .from("hr_leaves")
         .update({ status, decided_at: new Date().toISOString() })
         .eq("id", id);
       if (error) throw new Error(error.message);
+      if (!leave) return;
+
+      const dates = dateRange(String(leave.start_date), String(leave.end_date));
+      if (!dates.length) return;
+
+      if (status === "approved") {
+        // Attendance register must show these days as leave, otherwise payroll counts them absent.
+        const { data: emp } = await supabase
+          .from("hr_employees")
+          .select("week_offs")
+          .eq("id", leave.employee_id)
+          .maybeSingle();
+        const offs = new Set<number>((emp?.week_offs ?? []).map(Number));
+        const workDays = dates.filter((d) => !offs.has(new Date(`${d}T00:00:00Z`).getUTCDay()));
+        if (!workDays.length) return;
+        const { data: existing } = await supabase
+          .from("hr_attendance")
+          .select("id, work_date")
+          .eq("employee_id", leave.employee_id)
+          .in("work_date", workDays);
+        const have = new Set((existing ?? []).map((r) => String(r.work_date)));
+        const insertRows = workDays
+          .filter((d) => !have.has(d))
+          .map((d) => ({ employee_id: leave.employee_id, work_date: d, status: "leave" }));
+        if (insertRows.length) await supabase.from("hr_attendance").insert(insertRows as never);
+        if (existing?.length) {
+          await supabase
+            .from("hr_attendance")
+            .update({ status: "leave" } as never)
+            .in("id", existing.map((r) => r.id));
+        }
+      } else {
+        // Withdrawn approval → clear the auto-marked leave days.
+        await supabase
+          .from("hr_attendance")
+          .delete()
+          .eq("employee_id", leave.employee_id)
+          .eq("status", "leave")
+          .in("work_date", dates);
+      }
     },
-    onSuccess: () => void qc.invalidateQueries({ queryKey: ["hr-leaves"] }),
+    onSuccess: (_r, v) => {
+      toast.success(v.status === "approved" ? "Approve kora hoyeche — attendance e leave mark hoyeche" : "Update kora hoyeche");
+      void qc.invalidateQueries({ queryKey: ["hr-leaves"] });
+      void qc.invalidateQueries({ queryKey: ["hr-attendance"] });
+    },
     onError: (e: Error) => toast.error(e.message),
   });
 
@@ -142,7 +198,7 @@ function LeavesPage() {
           <button
             key={t}
             onClick={() => setTab(t)}
-            className={`rounded-full border px-3 py-1.5 text-xs font-medium transition-colors ${
+            className={`rounded-full border px-3 py-1.5 text-xs font-medium capitalize transition-all duration-200 active:scale-[0.97] ${
               tab === t ? "border-primary/30 bg-primary/10 text-primary" : "border-transparent text-muted-foreground hover:bg-muted"
             }`}
           >
@@ -168,12 +224,16 @@ function LeavesPage() {
               </thead>
               <tbody>
                 {isLoading ? (
-                  <tr><td colSpan={7} className="p-6 text-center text-muted-foreground">Loading…</td></tr>
+                  <TableSkeleton cols={7} rows={5} />
                 ) : rows.length === 0 ? (
-                  <tr><td colSpan={7} className="p-6 text-center text-muted-foreground">Kono request nei.</td></tr>
+                  <tr>
+                    <td colSpan={7}>
+                      <HrEmpty icon={PalmtreeIcon} title="Kono request nei" hint="Ei filter e kono chhuti request paoa jayni." />
+                    </td>
+                  </tr>
                 ) : (
                   rows.map((l) => (
-                    <tr key={l.id} className="border-b border-border/50 last:border-0">
+                    <tr key={l.id} className={`border-b border-border/50 last:border-0 ${hrRow}`}>
                       <td className="p-2.5 font-medium">{empName(l.employee_id)}</td>
                       <td className="p-2.5">{typeName(l.leave_type_id)}</td>
                       <td className="p-2.5 text-[12px]">{l.start_date} → {l.end_date}</td>

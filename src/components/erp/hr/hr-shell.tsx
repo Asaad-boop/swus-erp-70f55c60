@@ -46,10 +46,10 @@ export function HrSubnav() {
   }, [pathname]);
 
   return (
-    <div className="sticky top-0 z-30 border-b border-border/70 bg-background/85 backdrop-blur-md">
+    <div className="sticky top-0 z-30 border-b border-border/70 bg-background/80 backdrop-blur-xl supports-[backdrop-filter]:bg-background/60">
       <div
         ref={scroller}
-        className="mx-auto flex max-w-[1500px] gap-1 overflow-x-auto px-3 py-2 md:px-6 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+        className="mx-auto flex max-w-[1500px] gap-1 overflow-x-auto scroll-smooth px-3 py-2 md:px-6 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
       >
         {HR_NAV.map((it) => {
           const on = isActive(it);
@@ -59,13 +59,13 @@ export function HrSubnav() {
               key={it.to}
               to={it.to}
               ref={on ? activeRef : undefined}
-              className={`inline-flex shrink-0 items-center gap-1.5 rounded-full border px-3 py-1.5 text-xs font-medium transition-colors ${
+              className={`inline-flex shrink-0 items-center gap-1.5 rounded-full border px-3 py-1.5 text-xs font-medium transition-all duration-200 ease-out active:scale-[0.97] ${
                 on
-                  ? "border-primary/30 bg-primary/10 text-primary"
+                  ? "border-primary/30 bg-primary/10 text-primary shadow-[0_1px_10px_-4px_hsl(var(--primary)/0.6)]"
                   : "border-transparent text-muted-foreground hover:bg-muted hover:text-foreground"
               }`}
             >
-              <Icon className="h-3.5 w-3.5 shrink-0" />
+              <Icon className={`h-3.5 w-3.5 shrink-0 transition-transform duration-200 ${on ? "scale-110" : ""}`} />
               <span className="hidden sm:inline">{it.label}</span>
               <span className="sm:hidden">{it.short}</span>
             </Link>
@@ -106,6 +106,73 @@ export function HrPageHeader({
 
 export const money = (n: number) =>
   `৳${Math.round(Number(n) || 0).toLocaleString("en-BD")}`;
+
+/** Shimmering placeholder rows for a loading table body. */
+export function TableSkeleton({ cols, rows = 6 }: { cols: number; rows?: number }) {
+  return (
+    <>
+      {Array.from({ length: rows }).map((_, r) => (
+        <tr key={r} className="border-b border-border/40 last:border-0">
+          {Array.from({ length: cols }).map((_, c) => (
+            <td key={c} className="p-2.5">
+              <div
+                className="h-3.5 animate-pulse rounded bg-muted"
+                style={{ width: `${c === 0 ? 70 : 40 + ((r + c) % 3) * 12}%`, animationDelay: `${(r * cols + c) * 25}ms` }}
+              />
+            </td>
+          ))}
+        </tr>
+      ))}
+    </>
+  );
+}
+
+/** Card-shaped shimmer used above tables (KPI strips etc.). */
+export function CardSkeleton({ count = 4, className = "" }: { count?: number; className?: string }) {
+  return (
+    <>
+      {Array.from({ length: count }).map((_, i) => (
+        <div
+          key={i}
+          className={`h-[86px] animate-pulse rounded-xl border border-border/60 bg-muted/50 ${className}`}
+          style={{ animationDelay: `${i * 60}ms` }}
+        />
+      ))}
+    </>
+  );
+}
+
+/** Friendly empty state for tables and panels. */
+export function HrEmpty({
+  icon: Icon,
+  title,
+  hint,
+  action,
+}: {
+  icon?: LucideIcon;
+  title: string;
+  hint?: string;
+  action?: ReactNode;
+}) {
+  return (
+    <div className="flex flex-col items-center gap-2 px-6 py-10 text-center">
+      {Icon && (
+        <span className="flex h-11 w-11 items-center justify-center rounded-2xl bg-muted text-muted-foreground">
+          <Icon className="h-5 w-5" />
+        </span>
+      )}
+      <p className="text-sm font-medium">{title}</p>
+      {hint && <p className="max-w-[42ch] text-xs text-muted-foreground">{hint}</p>}
+      {action}
+    </div>
+  );
+}
+
+/** Shared row/card motion classes so every HR surface feels the same. */
+export const hrRow = "transition-colors duration-150 hover:bg-muted/40";
+export const hrCardHover =
+  "transition-all duration-200 ease-out hover:-translate-y-0.5 hover:border-primary/40 hover:shadow-lg hover:shadow-primary/5";
+export const hrFadeIn = "animate-in fade-in slide-in-from-bottom-1 duration-300";
 
 /** 12-hour clock label for an ISO timestamp, Dhaka time. */
 export const clockTime = (iso?: string | null) =>

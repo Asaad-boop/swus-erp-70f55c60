@@ -12,7 +12,7 @@ import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { HrPageHeader, money, statusTone } from "@/components/erp/hr/hr-shell";
+import { CardSkeleton, HrEmpty, HrPageHeader, hrCardHover, money, statusTone } from "@/components/erp/hr/hr-shell";
 import { Trophy, Plus, Trash2, Star } from "lucide-react";
 
 export const Route = createFileRoute("/_authenticated/erp/hr/performance")({
@@ -29,7 +29,9 @@ export const Route = createFileRoute("/_authenticated/erp/hr/performance")({
   }),
 });
 
-const monthNow = () => new Date().toISOString().slice(0, 7);
+import { dhakaMonth } from "@/lib/erp/hr/date";
+
+const monthNow = () => dhakaMonth();
 
 function PerformancePage() {
   const qc = useQueryClient();
@@ -168,13 +170,17 @@ function PerformancePage() {
       />
 
       {isLoading ? (
-        <p className="text-sm text-muted-foreground">Loading…</p>
+        <div className="grid gap-3 lg:grid-cols-2"><CardSkeleton count={4} className="h-[140px]" /></div>
       ) : grouped.length === 0 ? (
-        <Card><CardContent className="p-6 text-center text-sm text-muted-foreground">Ei mash e kono KPI set kora nei.</CardContent></Card>
+        <Card>
+          <CardContent className="p-0">
+            <HrEmpty icon={Trophy} title="Ei mash e kono KPI set kora nei" hint="Add KPI button diye target ar actual set korun." />
+          </CardContent>
+        </Card>
       ) : (
         <div className="grid gap-3 lg:grid-cols-2">
           {grouped.map((g) => (
-            <Card key={g.empId}>
+            <Card key={g.empId} className={hrCardHover}>
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                 <CardTitle className="text-sm">{empName(g.empId)}</CardTitle>
                 <Badge variant="outline" className={g.score >= 90 ? statusTone.approved : g.score >= 60 ? statusTone.pending : statusTone.rejected}>
