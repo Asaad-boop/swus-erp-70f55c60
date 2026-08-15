@@ -10,6 +10,7 @@ import { HrPageHeader, clockTime, hoursMins } from "@/components/erp/hr/hr-shell
 import { getLiveBoard, type LiveEmployee } from "@/lib/erp/hr/attendance.functions";
 import { getAppSetting } from "@/lib/erp/settings/app-settings.functions";
 import { DEFAULT_HR_POLICY, type HrPolicy } from "@/lib/erp/hr/policy";
+import { dayMetrics, shiftLabel } from "@/lib/erp/hr/schedule";
 import { Radio, RefreshCw, Users, CheckCircle2, Coffee, LogOut, UserX, Table2, GanttChartSquare, Activity } from "lucide-react";
 
 export const Route = createFileRoute("/_authenticated/erp/hr/live")({
@@ -97,15 +98,18 @@ function LiveDashboardPage() {
     },
   });
 
-  /** Late = first check-in after office start + grace. */
-  const isLate = (firstIn: string | null) => {
-    if (!firstIn || !policy) return false;
-    const [h, m] = policy.day_start.split(":").map(Number);
-    const cutoff = (h || 0) + ((m || 0) + (policy.late_grace_min || 0)) / 60;
-    return dhakaHour(firstIn) > cutoff;
-  };
-
   const rows = data?.rows ?? [];
+  const workDate = data?.workDate ?? date;
+
+  /** Per-employee verdict against their own duty time (falls back to company grace). */
+  const metricsOf = (r: LiveEmployee) =>
+    dayMetrics({
+      schedule: r.schedule,
+      workDate,
+      netMs: r.workMs,
+      firstIn: r.firstIn,
+      fallbackGraceMin: policy?.late_grace_min ?? DEFAULT_HR_POLICY.late_grace_min,
+    });
   const kpi = useMemo(() => {
     const c = { total: rows.length, present: 0, on_break: 0, left: 0, not_in: 0 };
     for (const r of rows) c[r.state] += 1;
@@ -191,22 +195,32 @@ function LiveDashboardPage() {
                 <thead className="border-b border-border/70 bg-muted/40 text-[11px] uppercase tracking-wide text-muted-foreground">
                   <tr>
                     <th className="p-2.5 text-left">Employee</th>
+                    <th className="p-2.5 text-left">Duty</th>
                     <th className="p-2.5 text-left">Status</th>
                     <th className="p-2.5 text-left">In</th>
                     <th className="p-2.5 text-left">Out</th>
                     <th className="p-2.5 text-right">Break</th>
                     <th className="p-2.5 text-right">Net hours</th>
+                    <th className="p-2.5 text-right">Overtime</th>
                   </tr>
                 </thead>
                 <tbody>
                   {rows.length === 0 ? (
-                    <tr><td colSpan={6} className="p-6 text-center text-muted-foreground">Kono employee nei.</td></tr>
+                    <tr><td colSpan={8} className="p-6 text-center text-muted-foreground">Kono employee nei.</td></tr>
                   ) : (
-                    rows.map((r) => (
+                    rows.map((r) => {
+                      const m = metricsOf(r);
+                      return (
                       <tr key={r.id} className="border-b border-border/50 last:border-0">
                         <td className="p-2.5">
                           <p className="font-medium">{r.full_name}</p>
                           <p className="text-[11px] text-muted-foreground">{r.department ?? (r.employee_code ? `#${r.employee_code}` : "—")}</p>
+                        </td>
+                        <td className="p-2.5 whitespace-nowrap text-[12px]">
+                          {shiftLabel(r.schedule)}
+                          {m.isOff && (
+                            <Badge variant="outline" className="ml-1.5 border-violet-500/20 bg-violet-500/10 text-[10px] text-violet-600">Off day</Badge>
+                          )}
                         </td>
                         <td className="p-2.5">
                           <Badge variant="outline" className={STATE_META[r.state].tone}>
@@ -217,16 +231,30 @@ function LiveDashboardPage() {
                         <td className="p-2.5">
                           <span className="inline-flex items-center gap-1.5">
                             {clockTime(r.firstIn)}
-                            {isLate(r.firstIn) && (
-                              <Badge variant="outline" className="bg-amber-500/10 text-amber-600 border-amber-500/20 text-[10px]">Late</Badge>
+                            {m.isLate && (
+                              <Badge variant="outline" className="bg-amber-500/10 text-amber-600 border-amber-500/20 text-[10px]">
+                                Late {m.lateMinutes}m
+                              </Badge>
                             )}
                           </span>
                         </td>
                         <td className="p-2.5">{clockTime(r.lastOut)}</td>
                         <td className="p-2.5 text-right">{hoursMins(r.breakMs)}</td>
                         <td className="p-2.5 text-right font-medium">{hoursMins(r.workMs)}</td>
+                        <td className="p-2.5 text-right text-[12px]">
+                          {m.overtimeMinutes > 0 ? (
+                            <span className="font-medium text-emerald-600">
+                              {hoursMins(m.overtimeMinutes * 60000)}
+                              {m.overtimeAmount > 0 && ` · ৳${m.overtimeAmount.toLocaleString()}`}
+                              {m.multiplier !== 1 && ` (${m.multiplier}x)`}
+                            </span>
+                          ) : (
+                            <span className="text-muted-foreground">—</span>
+                          )}
+                        </td>
                       </tr>
-                    ))
+                      );
+                    })
                   )}
                 </tbody>
               </table>
