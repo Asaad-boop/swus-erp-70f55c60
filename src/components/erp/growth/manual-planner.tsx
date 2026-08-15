@@ -63,6 +63,7 @@ export function ManualPlanner({
   const key = ["hub-plan-scenarios", brandId, month];
   const rowsQ = useQuery({ queryKey: key, queryFn: () => fetchScenarioRows(brandId, month) });
   const [draft, setDraft] = useState<Record<string, Partial<PlanScenarioRow>>>({});
+  const [raw, setRaw] = useState<Record<string, string>>({});
 
   useEffect(() => setDraft({}), [brandId, month]);
 
@@ -200,14 +201,27 @@ export function ManualPlanner({
   const patch = (id: string, p: Partial<PlanScenarioRow>) =>
     setDraft((d) => ({ ...d, [id]: { ...d[id], ...p } }));
 
-  const NumCell = ({ r, field }: { r: PlanScenarioRow; field: keyof PlanScenarioRow }) => (
+  const numCell = (r: PlanScenarioRow, field: "qty" | "sell_price" | "cost_price" | "marketing_cost") => (
     <Input
-      type="number"
+      type="text"
       inputMode="decimal"
       className="h-8 w-24 text-right"
-      value={String(r[field] ?? 0)}
-      onChange={(e) => patch(r.id, { [field]: Number(e.target.value) } as Partial<PlanScenarioRow>)}
-      onBlur={() => draft[r.id] && saveRow.mutate(r)}
+      value={raw[`${r.id}:${field}`] ?? String(r[field] ?? 0)}
+      onFocus={(e) => e.currentTarget.select()}
+      onChange={(e) => {
+        const v = e.target.value;
+        if (v !== "" && !/^\d*\.?\d*$/.test(v)) return;
+        setRaw((s) => ({ ...s, [`${r.id}:${field}`]: v }));
+        patch(r.id, { [field]: v === "" ? 0 : Number(v) } as Partial<PlanScenarioRow>);
+      }}
+      onBlur={() => {
+        setRaw((s) => {
+          const n = { ...s };
+          delete n[`${r.id}:${field}`];
+          return n;
+        });
+        if (draft[r.id]) saveRow.mutate(r);
+      }}
     />
   );
 
@@ -269,10 +283,10 @@ export function ManualPlanner({
                           onBlur={() => draft[r.id] && saveRow.mutate(r)}
                         />
                       </td>
-                      <td className="px-3 py-1.5 text-right"><NumCell r={r} field="qty" /></td>
-                      <td className="px-3 py-1.5 text-right"><NumCell r={r} field="sell_price" /></td>
-                      <td className="px-3 py-1.5 text-right"><NumCell r={r} field="cost_price" /></td>
-                      <td className="px-3 py-1.5 text-right"><NumCell r={r} field="marketing_cost" /></td>
+                      <td className="px-3 py-1.5 text-right">{numCell(r, "qty")}</td>
+                      <td className="px-3 py-1.5 text-right">{numCell(r, "sell_price")}</td>
+                      <td className="px-3 py-1.5 text-right">{numCell(r, "cost_price")}</td>
+                      <td className="px-3 py-1.5 text-right">{numCell(r, "marketing_cost")}</td>
                       <td className="px-3 py-1.5 text-right tabular-nums">{bdt(m.revenue)}</td>
                       <td className={`px-3 py-1.5 text-right tabular-nums ${m.profit < 0 ? "text-destructive" : "text-emerald-600"}`}>
                         {bdt(m.profit)}
