@@ -18,7 +18,7 @@ import {
   money,
   statusTone,
 } from "@/components/erp/hr/hr-shell";
-import { Users, Plus, Search, Trash2 } from "lucide-react";
+import { Users, Plus, Search, Trash2, Download, UserMinus } from "lucide-react";
 import { Switch } from "@/components/ui/switch";
 import {
   DEFAULT_SCHEDULE,
@@ -172,10 +172,30 @@ function EmployeesPage() {
   const remove = useMutation({
     mutationFn: async (id: string) => {
       const { error } = await supabase.from("hr_employees").delete().eq("id", id);
-      if (error) throw new Error(error.message);
+      if (error) {
+        if ((error as any).code === "23503")
+          throw new Error(
+            "Ei employee er attendance/payroll record ache, tai delete kora jabe na. Bodole 'Mark terminated' din.",
+          );
+        throw new Error(error.message);
+      }
     },
     onSuccess: () => {
       toast.success("Employee deleted");
+      setOpen(false);
+      setEditing(null);
+      void qc.invalidateQueries({ queryKey: ["hr-employees"] });
+    },
+    onError: (e: Error) => toast.error(e.message),
+  });
+
+  const terminate = useMutation({
+    mutationFn: async (id: string) => {
+      const { error } = await supabase.from("hr_employees").update({ status: "terminated" }).eq("id", id);
+      if (error) throw new Error(error.message);
+    },
+    onSuccess: () => {
+      toast.success("Employee terminated kora hoyeche");
       setOpen(false);
       setEditing(null);
       void qc.invalidateQueries({ queryKey: ["hr-employees"] });
@@ -221,6 +241,33 @@ function EmployeesPage() {
   const nameOf = (list: any[], id: string | null, key: string) =>
     list.find((x) => x.id === id)?.[key] ?? "—";
 
+  const exportCsv = () => {
+    const head = ["Name", "Code", "Phone", "Email", "Department", "Designation", "Status", "Join date", "Salary", "Shift", "Week offs"];
+    const lines = rows.map((e: Employee) =>
+      [
+        e.full_name,
+        e.employee_code ?? "",
+        e.phone ?? "",
+        e.email ?? "",
+        nameOf(departments, e.department_id, "name"),
+        nameOf(designations, e.designation_id, "title"),
+        e.status,
+        e.join_date ?? "",
+        e.monthly_salary ?? 0,
+        `${hhmm(e.shift_start ?? DEFAULT_SCHEDULE.shift_start)}–${hhmm(e.shift_end ?? DEFAULT_SCHEDULE.shift_end)}`,
+        (Array.isArray(e.week_offs) ? e.week_offs : []).join(" "),
+      ]
+        .map((v) => `"${String(v ?? "").replace(/"/g, '""')}"`)
+        .join(","),
+    );
+    const blob = new Blob([[head.join(","), ...lines].join("\n")], { type: "text/csv;charset=utf-8" });
+    const a = document.createElement("a");
+    a.href = URL.createObjectURL(blob);
+    a.download = `employees-${new Date().toISOString().slice(0, 10)}.csv`;
+    a.click();
+    URL.revokeObjectURL(a.href);
+  };
+
   return (
     <div className="mx-auto max-w-[1500px] space-y-4 p-4 md:p-6">
       <HrPageHeader
@@ -228,9 +275,14 @@ function EmployeesPage() {
         title="Employees"
         subtitle={`${rows.length} record dekhano hocche`}
         actions={
-          <Button size="sm" onClick={openNew}>
-            <Plus className="mr-1.5 h-3.5 w-3.5" /> Add employee
-          </Button>
+          <>
+            <Button size="sm" variant="outline" onClick={exportCsv} disabled={rows.length === 0}>
+              <Download className="mr-1.5 h-3.5 w-3.5" /> CSV
+            </Button>
+            <Button size="sm" onClick={openNew}>
+              <Plus className="mr-1.5 h-3.5 w-3.5" /> Add employee
+            </Button>
+          </>
         }
       />
 
