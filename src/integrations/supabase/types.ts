@@ -5662,6 +5662,65 @@ export type Database = {
           },
         ]
       }
+      hub_plan_scenarios: {
+        Row: {
+          brand_id: string | null
+          cost_price: number
+          created_at: string
+          created_by: string | null
+          id: string
+          marketing_cost: number
+          month: string
+          note: string | null
+          position: number
+          product_id: string | null
+          product_name: string
+          qty: number
+          sell_price: number
+          updated_at: string
+        }
+        Insert: {
+          brand_id?: string | null
+          cost_price?: number
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          marketing_cost?: number
+          month: string
+          note?: string | null
+          position?: number
+          product_id?: string | null
+          product_name?: string
+          qty?: number
+          sell_price?: number
+          updated_at?: string
+        }
+        Update: {
+          brand_id?: string | null
+          cost_price?: number
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          marketing_cost?: number
+          month?: string
+          note?: string | null
+          position?: number
+          product_id?: string | null
+          product_name?: string
+          qty?: number
+          sell_price?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "hub_plan_scenarios_brand_id_fkey"
+            columns: ["brand_id"]
+            isOneToOne: false
+            referencedRelation: "brands"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       hub_product_ideas: {
         Row: {
           approved_at: string | null
