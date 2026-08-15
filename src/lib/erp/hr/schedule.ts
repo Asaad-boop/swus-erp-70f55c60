@@ -86,7 +86,7 @@ export function paidBreakMinutes(s: EmployeeSchedule) {
 /** "1:00 PM – 3:00 PM" or null when no fixed window is configured. */
 export function breakWindowLabel(s: EmployeeSchedule) {
   if (!s.break_start || !s.break_end) return null;
-  return `${timeLabel(s.break_start)} – ${timeLabel(s.break_end)}`;
+  return `${fmt12(s.break_start)} – ${fmt12(s.break_end)}`;
 }
 
 /** Break minutes that exceed the paid allowance (0 when breaks are fully paid). */
