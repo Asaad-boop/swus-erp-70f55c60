@@ -662,11 +662,11 @@ function InventoryPage() {
                         <TableCell className="text-right tabular-nums text-sm font-medium">
                           <span className="text-muted-foreground/60 mr-0.5">৳</span>{Number(r.price).toLocaleString()}
                         </TableCell>
-                        <TableCell className="text-right tabular-nums text-xs text-muted-foreground">
+                        {cols.wac && <TableCell className="text-right tabular-nums text-xs text-muted-foreground">
                           <span className="text-muted-foreground/50 mr-0.5">৳</span>{wac.toLocaleString(undefined, { maximumFractionDigits: 2 })}
-                        </TableCell>
+                        </TableCell>}
                         <TableCell className="text-right tabular-nums text-sm text-foreground/80">{r.stock}</TableCell>
-                        <TableCell className="text-right">
+                        {cols.reserved && <TableCell className="text-right">
                           {reserved > 0 ? (
                             <span className="inline-flex items-center gap-1 tabular-nums text-sm text-amber-600 dark:text-amber-400 font-medium">
                               <Lock className="h-3 w-3" />{reserved}
@@ -674,7 +674,7 @@ function InventoryPage() {
                           ) : (
                             <span className="tabular-nums text-sm text-muted-foreground/50">—</span>
                           )}
-                        </TableCell>
+                        </TableCell>}
                         <TableCell className="text-right">
                           <span className={cn(
                             "inline-flex items-center gap-1.5 tabular-nums text-base font-semibold tracking-tight",
@@ -689,7 +689,7 @@ function InventoryPage() {
                             {available}
                           </span>
                         </TableCell>
-                        <TableCell className="text-right">
+                        {cols.incoming && <TableCell className="text-right">
                           {Number(r.incoming) > 0 ? (
                             <span className="inline-flex items-center gap-1 tabular-nums text-xs font-medium text-blue-600 dark:text-blue-400">
                               <ArrowUp className="h-3 w-3" />{r.incoming}
@@ -697,15 +697,15 @@ function InventoryPage() {
                           ) : (
                             <span className="text-muted-foreground/50">—</span>
                           )}
-                        </TableCell>
-                        <TableCell className="text-right">
+                        </TableCell>}
+                        {cols.reorder && <TableCell className="text-right">
                           <div className="inline-flex items-center gap-1.5 group/rp justify-end">
                             {needsReorder && (
                               <span title="Below reorder point" className="h-1.5 w-1.5 rounded-full bg-red-500 animate-pulse" />
                             )}
                             <InlineNumberEdit value={reorderPoint} onSave={(v) => updateInventoryField(r.id, { reorder_point: v })} />
                           </div>
-                        </TableCell>
+                        </TableCell>}
                         <TableCell>
                           <StatusPill out={isOut} low={isLow} />
                         </TableCell>
@@ -778,12 +778,12 @@ function InventoryPage() {
                             </TableCell>
                             <TableCell className="text-xs font-mono text-muted-foreground">{v.sku}</TableCell>
                             <TableCell></TableCell>
-                            <TableCell className="text-right font-mono text-xs text-muted-foreground">৳{Number(v.weighted_avg_cost).toLocaleString(undefined, { maximumFractionDigits: 2 })}</TableCell>
+                            {cols.wac && <TableCell className="text-right font-mono text-xs text-muted-foreground">৳{Number(v.weighted_avg_cost).toLocaleString(undefined, { maximumFractionDigits: 2 })}</TableCell>}
                             <TableCell className="text-right font-mono text-xs">{v.stock}</TableCell>
-                            <TableCell className={cn("text-right font-mono text-xs", v.reserved_stock > 0 ? "text-amber-600 font-semibold" : "text-muted-foreground")}>{v.reserved_stock}</TableCell>
+                            {cols.reserved && <TableCell className={cn("text-right font-mono text-xs", v.reserved_stock > 0 ? "text-amber-600 font-semibold" : "text-muted-foreground")}>{v.reserved_stock}</TableCell>}
                             <TableCell className={cn("text-right font-mono text-xs font-bold", vOut ? "text-red-600" : "text-emerald-600")}>{vAvail}</TableCell>
-                            <TableCell></TableCell>
-                            <TableCell className="text-right text-xs text-muted-foreground">RP: {v.reorder_point}</TableCell>
+                            {cols.incoming && <TableCell></TableCell>}
+                            {cols.reorder && <TableCell className="text-right text-xs text-muted-foreground">RP: {v.reorder_point}</TableCell>}
                             <TableCell><StatusPill out={vOut} low={!vOut && v.stock <= 5} /></TableCell>
                             <TableCell className="text-right">
                               <div className="inline-flex gap-1">
