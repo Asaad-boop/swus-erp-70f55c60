@@ -51,9 +51,12 @@ export const Route = createFileRoute("/api/public/hub/capture")({
         // Email + password sign-in for the Synq extension. Mints a capture
         // token for the authenticated user so no manual token copy is needed.
         if (action === "login") {
-          const email = str(payload.email, 200);
-          const password = str(payload.password, 200);
-          if (!email || !password) return json({ error: "Email ও password দাও" }, 400);
+          const identifier = str(payload.email, 200);
+          const password =
+            typeof payload.password === "string" && payload.password
+              ? payload.password.slice(0, 200)
+              : null;
+          if (!identifier || !password) return json({ error: "Email ও password দাও" }, 400);
 
           const { createClient } = await import("@supabase/supabase-js");
           const url = process.env["SUPABASE_URL"] || process.env["VITE_SUPABASE_URL"];
@@ -66,16 +69,29 @@ export const Route = createFileRoute("/api/public/hub/capture")({
           const authClient = createClient(url, anon, {
             auth: { persistSession: false, autoRefreshToken: false },
           });
+
+          const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+
+          // Allow username login just like the ERP login page.
+          let email = identifier;
+          if (!email.includes("@")) {
+            const { data: resolved } = await supabaseAdmin.rpc("resolve_login_email", {
+              p_identifier: email,
+            } as never);
+            if (!resolved) {
+              return json({ error: "Username khuje pawa jay nai. Email diye try koro." }, 401);
+            }
+            email = resolved as unknown as string;
+          }
+
           const { data: signIn, error: signErr } = await authClient.auth.signInWithPassword({
             email,
             password,
           });
           if (signErr || !signIn?.user) {
-            return json({ error: "ভুল email বা password" }, 401);
+            return json({ error: "ভুল email/username বা password" }, 401);
           }
           const userId = signIn.user.id;
-
-          const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
 
           // Brands this user can use.
           const { data: brandIdsRaw } = await supabaseAdmin.rpc("get_user_brand_ids", {
@@ -88,6 +104,20 @@ export const Route = createFileRoute("/api/public/hub/capture")({
             .in("id", ids.length ? ids : ["00000000-0000-0000-0000-000000000000"])
             .eq("is_active", true)
             .order("name");
+
+          if (!(brands ?? []).length) {
+            return json(
+              { error: "Ei account-e kono active brand access nei. Admin ke bolo." },
+              403,
+            );
+          }
+
+          // One live device token per user — revoke older extension tokens.
+          await supabaseAdmin
+            .from("hub_capture_tokens")
+            .update({ is_active: false } as never)
+            .eq("user_id", userId)
+            .eq("label", "Synq extension");
 
           // Reuse a single device token per user for the extension.
           const raw = Array.from(crypto.getRandomValues(new Uint8Array(24)))
@@ -125,7 +155,7 @@ export const Route = createFileRoute("/api/public/hub/capture")({
           .maybeSingle();
 
         if (!tok || !(tok as { is_active: boolean }).is_active) {
-          return json({ error: "Invalid token" }, 401);
+          return json({ error: "Session শেষ — আবার login করো", code: "invalid_token" }, 401);
         }
         const t = tok as {
           id: string;
