@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { Link, useLocation } from "@tanstack/react-router";
 import {
-  LayoutDashboard, Globe, PlusCircle, Boxes, Wallet, Truck, Settings, Users, UserCog, Radio, Fingerprint,
+  LayoutDashboard, Globe, PlusCircle, Boxes, Wallet, Truck, Settings, Users, UserCog, Radio, Fingerprint, Package,
   TrendingDown, TrendingUp, PackagePlus, Megaphone, Container, Heart, Image as ImageIcon, GitBranch, Plug,
   ChevronsLeft, ChevronRight, Sparkles, ClipboardList, ClipboardCheck, PackageSearch,
   Activity, BarChart3, RotateCcw, FileSpreadsheet, Zap, Briefcase, Stethoscope, ChevronDown,
@@ -69,6 +69,7 @@ const groups: Group[] = [
         label: "Inventory",
         icon: Boxes,
         items: [
+          { to: "/erp/products", label: "Products", icon: Package },
           { to: "/erp/inventory", label: "Stock", icon: Boxes },
           { to: "/erp/reorder-queue", label: "Reorder Queue", icon: PackageSearch },
           { to: "/erp/purchase-orders", label: "Purchase Orders", icon: ClipboardList },
