@@ -202,6 +202,16 @@ const SCRAPE = `
 const BACKGROUND = `
 import { DEFAULTS } from './config.js';
 
+async function readJson(r) {
+  const text = await r.text().catch(() => '');
+  const head = text.slice(0, 40).trim().toLowerCase();
+  if (head.startsWith('<')) {
+    throw new Error('Server URL ঠিক নেই — এই ঠিকানা HTML ফেরত দিচ্ছে (login/preview page)। Published app URL দাও।');
+  }
+  try { return text ? JSON.parse(text) : {}; } catch (e) { return {}; }
+}
+
+
 async function cfg() {
   const s = await chrome.storage.sync.get(['base', 'token', 'brandId', 'email']);
   return { base: s.base || DEFAULTS.base, token: s.token || DEFAULTS.token, brandId: s.brandId || null, email: s.email || null };
@@ -220,7 +230,7 @@ export async function api(payload) {
   } catch (e) {
     throw new Error('Server-এ পৌঁছানো গেল না — ' + c.base);
   }
-  const j = await r.json().catch(() => ({}));
+  const j = await readJson(r);
   if (j && j.code === 'invalid_token') {
     await chrome.storage.sync.remove(['token', 'email']);
     throw new Error('Session শেষ — extension আইকনে ক্লিক করে আবার login করো।');
@@ -506,6 +516,16 @@ textarea { resize:vertical; }
 const POPUP_JS = `
 import { DEFAULTS } from './config.js';
 
+async function readJson(r) {
+  const text = await r.text().catch(() => '');
+  const head = text.slice(0, 40).trim().toLowerCase();
+  if (head.startsWith('<')) {
+    throw new Error('Server URL ঠিক নেই — এই ঠিকানা HTML ফেরত দিচ্ছে (login/preview page)। Published app URL দাও।');
+  }
+  try { return text ? JSON.parse(text) : {}; } catch (e) { return {}; }
+}
+
+
 const $ = (id) => document.getElementById(id);
 let kind = 'idea';
 let page = {};
@@ -518,6 +538,9 @@ function normBase(v) {
   let b = String(v || '').trim().replace(/\\/+$/, '');
   if (!b) return DEFAULTS.base;
   if (!/^https?:\\/\\//i.test(b)) b = 'https://' + b;
+  // Editor preview hosts are auth-gated (they return an HTML login page), so
+  // fall back to the real app URL baked in at download time.
+  if (/lovableproject\\.com|id-preview/i.test(b)) return DEFAULTS.base;
   return b;
 }
 
@@ -543,7 +566,7 @@ async function api(payload) {
   } catch (e) {
     throw new Error('Server-এ পৌঁছানো গেল না — ' + cfg.base);
   }
-  const j = await r.json().catch(() => ({}));
+  const j = await readJson(r);
   if (j && j.code === 'invalid_token') { await forceLogout(j.error || 'Session শেষ — আবার login করো'); throw new Error(j.error || 'Session শেষ'); }
   if (!r.ok || j.error) throw new Error(j.error || ('HTTP ' + r.status));
   return j;
@@ -592,7 +615,7 @@ async function init() {
           headers: { 'content-type': 'application/json' },
           body: JSON.stringify({ action: 'login', email: email, password: password })
         });
-        const j = await r.json().catch(() => ({}));
+        const j = await readJson(r);
         if (!r.ok || j.error) throw new Error(j.error || ('HTTP ' + r.status));
         await chrome.storage.sync.set({ base: base, token: j.token, email: j.email || email, brandId: j.default_brand_id || '' });
         say('স্বাগতম ✅', 'ok');
@@ -1043,12 +1066,25 @@ const OPTIONS_HTML = `<!doctype html>
 
 const OPTIONS_JS = `
 import { DEFAULTS } from './config.js';
+
+async function readJson(r) {
+  const text = await r.text().catch(() => '');
+  const head = text.slice(0, 40).trim().toLowerCase();
+  if (head.startsWith('<')) {
+    throw new Error('Server URL ঠিক নেই — এই ঠিকানা HTML ফেরত দিচ্ছে (login/preview page)। Published app URL দাও।');
+  }
+  try { return text ? JSON.parse(text) : {}; } catch (e) { return {}; }
+}
+
 const $ = (id) => document.getElementById(id);
 
 function normBase(v) {
   let b = String(v || '').trim().replace(/\\/+$/, '');
   if (!b) return DEFAULTS.base;
   if (!/^https?:\\/\\//i.test(b)) b = 'https://' + b;
+  // Editor preview hosts are auth-gated (they return an HTML login page), so
+  // fall back to the real app URL baked in at download time.
+  if (/lovableproject\\.com|id-preview/i.test(b)) return DEFAULTS.base;
   return b;
 }
 const baseUrl = () => { const b = normBase($('base').value); $('base').value = b; return b; };
@@ -1074,7 +1110,7 @@ $('login').onclick = async () => {
       method: 'POST', headers: { 'content-type': 'application/json' },
       body: JSON.stringify({ action: 'login', email: $('email').value.trim(), password: $('password').value })
     });
-    const j = await r.json().catch(() => ({}));
+    const j = await readJson(r);
     if (!r.ok || j.error) throw new Error(j.error || ('HTTP ' + r.status));
     $('token').value = j.token;
     await chrome.storage.sync.set({ base: baseUrl(), token: j.token, email: j.email || $('email').value.trim(), brandId: j.default_brand_id || '' });
@@ -1110,7 +1146,7 @@ $('test').onclick = async () => {
       method: 'POST', headers: { 'content-type': 'application/json' },
       body: JSON.stringify({ token: $('token').value.trim(), action: 'meta' })
     });
-    const j = await r.json();
+    const j = await readJson(r);
     if (j && j.code === 'invalid_token') {
       await chrome.storage.sync.remove(['token', 'email']);
       $('token').value = '';
