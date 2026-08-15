@@ -54,7 +54,7 @@ function AttendancePage() {
     mutationFn: async (row: { employee_id: string; patch: Record<string, unknown> }) => {
       const existing = byEmp.get(row.employee_id);
       if (existing) {
-        const { error } = await supabase.from("hr_attendance").update(row.patch).eq("id", existing.id);
+        const { error } = await supabase.from("hr_attendance").update(row.patch as any).eq("id", existing.id);
         if (error) throw new Error(error.message);
       } else {
         const { error } = await supabase
