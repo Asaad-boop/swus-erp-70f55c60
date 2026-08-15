@@ -76,6 +76,7 @@ import {
   sortBy,
   usePersistedState,
 } from "@/components/erp/content/content-ui";
+import { BriefPanel } from "@/components/erp/content/brief-drawer";
 import { cn } from "@/lib/utils";
 
 export const Route = createFileRoute("/_authenticated/erp/content/pipeline")({
@@ -565,6 +566,9 @@ function PipelinePage() {
         creators={(creatorsQ.data ?? []).map((c) => ({ id: c.id, name: c.name }))}
         agencies={(agenciesQ.data ?? []).map((a) => ({ id: a.id, name: a.name }))}
         productLabel={open?.product_id ? (productName.get(open.product_id) ?? null) : null}
+        brandLabel={
+          brands.find((b) => b.id === open?.brand_id)?.name ?? activeBrand?.name ?? null
+        }
       />
 
       <Sheet open={creating} onOpenChange={(o) => !o && setCreating(false)}>
@@ -1198,6 +1202,7 @@ function ItemSheet({
   creators,
   agencies,
   productLabel,
+  brandLabel,
 }: {
   item: ContentItem | null;
   onClose: () => void;
@@ -1206,6 +1211,7 @@ function ItemSheet({
   creators: { id: string; name: string }[];
   agencies: { id: string; name: string }[];
   productLabel: string | null;
+  brandLabel?: string | null;
 }) {
   const [d, setD] = useState<ContentItem | null>(item);
   const key = item?.id ?? "none";
@@ -1241,9 +1247,12 @@ function ItemSheet({
           </div>
         </SheetHeader>
         <Tabs defaultValue="script" className="py-3">
-          <TabsList className="grid w-full grid-cols-3">
+          <TabsList className="grid w-full grid-cols-4">
             <TabsTrigger value="script" className="text-xs">
               Script Studio
+            </TabsTrigger>
+            <TabsTrigger value="brief" className="text-xs">
+              Brief
             </TabsTrigger>
             <TabsTrigger value="prod" className="text-xs">
               Production
@@ -1252,6 +1261,16 @@ function ItemSheet({
               Results
             </TabsTrigger>
           </TabsList>
+
+          <TabsContent value="brief">
+            <BriefPanel
+              item={item}
+              productLabel={productLabel}
+              brandLabel={brandLabel ?? null}
+              creators={creators}
+              agencies={agencies}
+            />
+          </TabsContent>
 
           <TabsContent value="script" className="space-y-3 pt-3">
             <div className="rounded-xl border border-border/70 bg-muted/30 p-2.5">
