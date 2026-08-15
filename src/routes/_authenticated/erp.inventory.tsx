@@ -1221,7 +1221,7 @@ function OpeningStockTab({ brandId }: { brandId: string | null }) {
   const [search, setSearch] = useState("");
   const brandIds = brandId ? [brandId] : [];
   const { data, isLoading } = useInventoryQuery({
-    brandIds, search, stockState: "all", page: 0, pageSize: 200,
+    ...DEFAULT_INVENTORY_FILTER, brandIds, search, page: 0, pageSize: 200,
   });
   const rows = data?.rows ?? [];
   const [counts, setCounts] = useState<Record<string, string>>({});
@@ -1364,7 +1364,7 @@ function CostPriceTab({ brandIds }: { brandIds: string[] }) {
   const [search, setSearch] = useState("");
   const [showAll, setShowAll] = useState(false);
   const { data, isLoading } = useInventoryQuery({
-    brandIds, search, stockState: "all", page: 0, pageSize: 500,
+    ...DEFAULT_INVENTORY_FILTER, brandIds, search, page: 0, pageSize: 500,
   });
   const allRows = data?.rows ?? [];
   const rows = useMemo(
