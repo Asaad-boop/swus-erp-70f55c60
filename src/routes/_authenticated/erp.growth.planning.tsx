@@ -389,10 +389,38 @@ function PlanningPage() {
         />
       </div>
 
-      <ManualPlanner brandId={brandId} month={month} />
+      <Tabs value={tab} onValueChange={setTab} className="space-y-4">
+        <TabsList>
+          <TabsTrigger value="overview">Overview</TabsTrigger>
+          <TabsTrigger value="products">Products ({rows.length})</TabsTrigger>
+          <TabsTrigger value="manual">Manual plan</TabsTrigger>
+        </TabsList>
 
-      {/* Targets editor */}
-      <Card>
+        <TabsContent value="overview" className="space-y-4">
+        {/* Combined outlook */}
+        <Card className="border-primary/30 bg-primary/5">
+          <CardContent className="flex flex-wrap items-center gap-x-8 gap-y-2 p-4">
+            <div className="flex items-center gap-2">
+              <Layers className="h-4 w-4 text-primary" />
+              <span className="font-display text-sm font-semibold">Combined outlook</span>
+            </div>
+            <PaceStat label="Run-rate revenue" value={bdt(totals.projRevenue)} sub={`Profit ${bdt(totals.projProfit)}`} />
+            <PaceStat label="Manual plan" value={bdt(manualTotals.revenue)} sub={`Profit ${bdt(manualTotals.profit)}`} />
+            <PaceStat
+              label="মোট revenue"
+              value={bdt(combined.revenue)}
+              sub={`Media বাদে profit ${bdt(combined.profit)}`}
+            />
+            <PaceStat
+              label="Top drivers"
+              value={`${pareto.count} product`}
+              sub={`Revenue-এর ${pctTxt(pareto.share)} আনে`}
+            />
+          </CardContent>
+        </Card>
+
+        {/* Targets editor */}
+        <Card>
         <CardContent className="space-y-3 p-4">
           <h2 className="font-display text-sm font-semibold">এই মাসের target</h2>
           <TargetForm
