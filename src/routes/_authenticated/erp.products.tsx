@@ -6,6 +6,7 @@ import {
   Search, Plus, Download, Wand2, Trash2, Edit3, Package, PackageX, Tag,
   Wallet, Globe, ChevronLeft, ChevronRight, MoreVertical, Copy, Power, X, Boxes,
   LayoutGrid, Rows3, SlidersHorizontal, RotateCcw, Sparkles, ImageOff,
+  ArrowDownCircle, ArrowUpCircle,
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
@@ -428,7 +429,7 @@ function ProductCatalogPage() {
                     <Checkbox checked={on} onCheckedChange={(c) => toggleRow(p.id, c as boolean)} className="bg-background" />
                   </div>
                   <div className="absolute right-3 top-3 z-10">
-                    <RowMenu p={p} setEditing={setEditing} setSkuTargets={setSkuTargets} setDeleteTargets={setDeleteTargets} toggleActive={toggleActive} />
+                    <RowMenu p={p} setEditing={setEditing} setSkuTargets={setSkuTargets} setDeleteTargets={setDeleteTargets} toggleActive={toggleActive} setStockTargets={setStockTargets} />
                   </div>
                   <div className="mb-3 aspect-square w-full overflow-hidden rounded-xl border bg-muted/40">
                     {p.image
