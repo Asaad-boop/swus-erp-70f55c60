@@ -79,7 +79,7 @@ import {
   type HubIdeaVoter,
 } from "@/lib/erp/hub/hub-data";
 
-export const Route = createFileRoute("/_authenticated/erp/hub/products")({
+export const Route = createFileRoute("/_authenticated/erp/growth/products")({
   head: () => ({
     meta: [
       { title: "Product Pipeline — Growth Hub" },

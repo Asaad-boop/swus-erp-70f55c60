@@ -1,7 +1,7 @@
 import { createFileRoute, Outlet } from "@tanstack/react-router";
 import { HubSubnav } from "@/components/erp/hub/hub-shell";
 
-export const Route = createFileRoute("/_authenticated/erp/hub")({
+export const Route = createFileRoute("/_authenticated/erp/growth")({
   component: HubLayout,
 });
 

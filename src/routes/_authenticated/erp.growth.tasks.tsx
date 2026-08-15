@@ -35,7 +35,7 @@ import {
   type HubTask,
 } from "@/lib/erp/hub/hub-data";
 
-export const Route = createFileRoute("/_authenticated/erp/hub/tasks")({
+export const Route = createFileRoute("/_authenticated/erp/growth/tasks")({
   head: () => ({
     meta: [
       { title: "Task Board — Growth Hub" },

@@ -29,7 +29,7 @@ import {
 } from "@/lib/erp/content/content-data";
 import { exportReportPdf } from "@/lib/erp/reports/export";
 
-export const Route = createFileRoute("/_authenticated/erp/content/report")({
+export const Route = createFileRoute("/_authenticated/erp/growth/report")({
   component: BrandReport,
   head: () => ({
     meta: [

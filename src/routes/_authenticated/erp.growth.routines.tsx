@@ -48,7 +48,7 @@ import {
   type HubRoutine,
 } from "@/lib/erp/hub/hub-research";
 
-export const Route = createFileRoute("/_authenticated/erp/hub/routines")({
+export const Route = createFileRoute("/_authenticated/erp/growth/routines")({
   head: () => ({
     meta: [
       { title: "Routines & Calendar — Growth Hub" },

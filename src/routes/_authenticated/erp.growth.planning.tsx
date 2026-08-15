@@ -33,7 +33,7 @@ import {
   type HubMonthPlan,
 } from "@/lib/erp/hub/hub-data";
 
-export const Route = createFileRoute("/_authenticated/erp/hub/planning")({
+export const Route = createFileRoute("/_authenticated/erp/growth/planning")({
   head: () => ({
     meta: [
       { title: "Monthly Projection — Growth Hub" },

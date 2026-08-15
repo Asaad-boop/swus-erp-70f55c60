@@ -65,7 +65,7 @@ import {
 } from "@/components/erp/content/content-ui";
 import { cn } from "@/lib/utils";
 
-export const Route = createFileRoute("/_authenticated/erp/content/media-plans")({
+export const Route = createFileRoute("/_authenticated/erp/growth/media-plans")({
   head: () => ({
     meta: [
       { title: "Media Buying Hub — Content Studio" },

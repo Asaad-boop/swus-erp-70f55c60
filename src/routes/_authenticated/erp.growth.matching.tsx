@@ -49,7 +49,7 @@ import {
   SHIPMENT_STATUSES,
 } from "@/lib/erp/content/content-data";
 
-export const Route = createFileRoute("/_authenticated/erp/content/matching")({
+export const Route = createFileRoute("/_authenticated/erp/growth/matching")({
   head: () => ({
     meta: [
       { title: "Product ↔ Creator — Content Studio" },

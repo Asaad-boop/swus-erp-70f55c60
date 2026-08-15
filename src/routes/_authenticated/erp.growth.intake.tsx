@@ -82,7 +82,7 @@ import {
 } from "@/components/erp/content/content-ui";
 import { cn } from "@/lib/utils";
 
-export const Route = createFileRoute("/_authenticated/erp/content/intake")({
+export const Route = createFileRoute("/_authenticated/erp/growth/intake")({
   head: () => ({
     meta: [
       { title: "Stock → Content Intake — Content Studio" },

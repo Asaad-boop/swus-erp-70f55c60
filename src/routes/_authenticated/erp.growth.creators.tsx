@@ -71,7 +71,7 @@ import {
 } from "@/components/erp/content/content-ui";
 import { cn } from "@/lib/utils";
 
-export const Route = createFileRoute("/_authenticated/erp/content/creators")({
+export const Route = createFileRoute("/_authenticated/erp/growth/creators")({
   head: () => ({
     meta: [
       { title: "Creator CRM — Content Studio" },

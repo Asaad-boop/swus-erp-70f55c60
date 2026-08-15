@@ -79,7 +79,7 @@ import {
 import { BriefPanel } from "@/components/erp/content/brief-drawer";
 import { cn } from "@/lib/utils";
 
-export const Route = createFileRoute("/_authenticated/erp/content/pipeline")({
+export const Route = createFileRoute("/_authenticated/erp/growth/pipeline")({
   head: () => ({
     meta: [
       { title: "Content Pipeline — Content Studio" },

@@ -36,7 +36,7 @@ import {
 } from "@/lib/erp/hub/hub-data";
 import { fetchCompetitorAssets, fetchRoutines, routineHitsDate } from "@/lib/erp/hub/hub-research";
 
-export const Route = createFileRoute("/_authenticated/erp/hub/")({
+export const Route = createFileRoute("/_authenticated/erp/growth/")({
   head: () => ({
     meta: [
       { title: "Growth Hub — Command Center" },

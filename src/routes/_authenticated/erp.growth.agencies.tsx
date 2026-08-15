@@ -35,7 +35,7 @@ import {
 } from "@/components/ui/select";
 import { bdt, fetchAgencies, fetchItems, type Agency } from "@/lib/erp/content/content-data";
 
-export const Route = createFileRoute("/_authenticated/erp/content/agencies")({
+export const Route = createFileRoute("/_authenticated/erp/growth/agencies")({
   head: () => ({
     meta: [
       { title: "Agency Partners — Content Studio" },

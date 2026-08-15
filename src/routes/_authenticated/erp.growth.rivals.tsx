@@ -52,7 +52,7 @@ import {
   type HubCompetitorAsset,
 } from "@/lib/erp/hub/hub-research";
 
-export const Route = createFileRoute("/_authenticated/erp/hub/rivals")({
+export const Route = createFileRoute("/_authenticated/erp/growth/rivals")({
   head: () => ({
     meta: [
       { title: "Competitors & Swipe File — Growth Hub" },
