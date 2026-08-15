@@ -710,7 +710,7 @@ function PlanningPage() {
       </Card>
         </TabsContent>
 
-        <TabsContent value="manual">
+        <TabsContent value="manual" forceMount className="data-[state=inactive]:hidden">
           <ManualPlanner brandId={brandId} month={month} onTotals={setManualTotals} />
         </TabsContent>
       </Tabs>
