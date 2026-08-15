@@ -36,6 +36,66 @@ const ACCENT: [number, number, number] = [79, 70, 229];
 const INK: [number, number, number] = [30, 41, 59];
 const MUTED: [number, number, number] = [110, 118, 135];
 
+type StatusStyle = {
+  key: "draft" | "approved" | "paid";
+  chip: string;
+  watermark: string;
+  color: [number, number, number];
+  subtext: string;
+};
+
+/** Draft / Approved / Paid each get their own watermark + legal subtext. */
+export function payslipStatusStyle(runStatus: string, paidAt?: string | null): StatusStyle {
+  const s = String(runStatus || "draft").toLowerCase();
+  if (s === "paid" || s === "completed") {
+    return {
+      key: "paid",
+      chip: `Paid${paidAt ? ` · ${String(paidAt).slice(0, 10)}` : ""}`,
+      watermark: "PAID",
+      color: [22, 163, 74],
+      subtext: `Payment released${paidAt ? ` on ${String(paidAt).slice(0, 10)}` : ""}. This payslip is final and valid as a record of payment.`,
+    };
+  }
+  if (s === "approved" || s === "locked") {
+    return {
+      key: "approved",
+      chip: "Approved",
+      watermark: "APPROVED",
+      color: [217, 119, 6],
+      subtext: "Approved by management — payment is scheduled but not yet disbursed.",
+    };
+  }
+  return {
+    key: "draft",
+    chip: "Draft",
+    watermark: "DRAFT",
+    color: [220, 38, 38],
+    subtext: "Draft only — figures may change and this is not proof of payment.",
+  };
+}
+
+/** Big translucent diagonal stamp across the page. */
+function drawWatermark(doc: jsPDF, text: string, color: [number, number, number]) {
+  const pageW = doc.internal.pageSize.getWidth();
+  const pageH = doc.internal.pageSize.getHeight();
+  const anyDoc = doc as any;
+  try {
+    if (anyDoc.GState) doc.setGState(new anyDoc.GState({ opacity: 0.08 }));
+  } catch {
+    /* opacity unsupported — fall back to a light colour */
+  }
+  doc.setFont("helvetica", "bold");
+  doc.setFontSize(text.length > 6 ? 62 : 80);
+  doc.setTextColor(...color);
+  doc.text(text, pageW / 2, pageH * 0.78, { align: "center", angle: 24 });
+  try {
+    if (anyDoc.GState) doc.setGState(new anyDoc.GState({ opacity: 1 }));
+  } catch {
+    /* noop */
+  }
+  doc.setTextColor(...INK);
+}
+
 const n = (v: unknown) => Number(v ?? 0) || 0;
 /** Helvetica has no Taka glyph, so amounts are printed as `BDT 1,234`. */
 const bdt = (v: unknown) => {
@@ -119,6 +179,7 @@ function drawPayslipPage(
   const pageW = doc.internal.pageSize.getWidth();
   const M = 40;
   const contentW = pageW - M * 2;
+  const status = payslipStatusStyle(slip.runStatus, slip.paidAt);
 
   /* ---------- header band ---------- */
   doc.setFillColor(...ACCENT);
@@ -161,12 +222,7 @@ function drawPayslipPage(
   doc.setFont("helvetica", "normal");
   doc.setFontSize(9);
   doc.text(monthLabel(slip.month), pageW - M, 55, { align: "right" });
-  doc.text(
-    slip.runStatus === "paid" ? `Paid${slip.paidAt ? ` · ${String(slip.paidAt).slice(0, 10)}` : ""}` : "Draft",
-    pageW - M,
-    68,
-    { align: "right" },
-  );
+  doc.text(status.chip, pageW - M, 68, { align: "right" });
 
   /* ---------- employee block ---------- */
   const info: Array<[string, string]> = [
@@ -303,6 +359,19 @@ function drawPayslipPage(
     y += 22;
   }
 
+  /* ---------- status subtext ---------- */
+  doc.setFillColor(...status.color);
+  doc.roundedRect(M, y - 9, 6, 24, 3, 3, "F");
+  doc.setFont("helvetica", "bold");
+  doc.setFontSize(8.5);
+  doc.setTextColor(...status.color);
+  doc.text(status.watermark, M + 14, y);
+  doc.setFont("helvetica", "normal");
+  doc.setTextColor(...MUTED);
+  doc.setFontSize(8);
+  doc.text(doc.splitTextToSize(status.subtext, contentW - 20), M + 14, y + 11);
+  y += 30;
+
   /* ---------- signatures ---------- */
   const pageH = doc.internal.pageSize.getHeight();
 
@@ -345,10 +414,13 @@ function drawPayslipPage(
     pageH - 28,
     { align: "right" },
   );
+
+  // Stamp last so it reads over the tables instead of being hidden behind them.
+  drawWatermark(doc, status.watermark, status.color);
 }
 
-/** Builds a payslip PDF — one A4 page per employee — and triggers a download. */
-export async function exportPayslipPdf(slips: PayslipData[], company: HrCompany, filename: string) {
+/** Builds the payslip document — one A4 page per employee. */
+export async function buildPayslipDoc(slips: PayslipData[], company: HrCompany): Promise<jsPDF> {
   if (!slips.length) throw new Error("Kono payslip nei");
   const doc = new jsPDF({ orientation: "portrait", unit: "pt", format: "a4" });
   const logo = await loadLogo(company.logo_url);
@@ -367,5 +439,17 @@ export async function exportPayslipPdf(slips: PayslipData[], company: HrCompany,
       doc.text(`Page ${i} of ${pages}`, 40, doc.internal.pageSize.getHeight() - 30);
     }
   }
+  return doc;
+}
+
+/** Builds a payslip PDF and triggers a download. */
+export async function exportPayslipPdf(slips: PayslipData[], company: HrCompany, filename: string) {
+  const doc = await buildPayslipDoc(slips, company);
   doc.save(filename);
+}
+
+/** Object URL for in-app preview / print. Caller must revoke it. */
+export async function payslipPreviewUrl(slips: PayslipData[], company: HrCompany): Promise<string> {
+  const doc = await buildPayslipDoc(slips, company);
+  return URL.createObjectURL(doc.output("blob"));
 }

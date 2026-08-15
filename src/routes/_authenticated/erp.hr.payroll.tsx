@@ -1,5 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { toast } from "sonner";
@@ -12,7 +12,13 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { HrEmpty, HrPageHeader, TableSkeleton, hrRow, money, statusTone } from "@/components/erp/hr/hr-shell";
 import { dhakaMonth } from "@/lib/erp/hr/date";
 import { mergeCompany } from "@/lib/erp/hr/company";
-import { exportPayslipPdf, type PayslipData } from "@/lib/erp/hr/payslip-pdf";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import {
+  exportPayslipPdf,
+  payslipPreviewUrl,
+  payslipStatusStyle,
+  type PayslipData,
+} from "@/lib/erp/hr/payslip-pdf";
 import { getAppSetting } from "@/lib/erp/settings/app-settings.functions";
 import {
   deletePayrollRun,
@@ -21,7 +27,7 @@ import {
   refreshPayrollTotals,
   updatePayslip,
 } from "@/lib/erp/hr/payroll.functions";
-import { Banknote, RefreshCw, Wand2, Wallet, Trash2, Download, FileText } from "lucide-react";
+import { Banknote, RefreshCw, Wand2, Wallet, Trash2, Download, FileText, Printer, Eye, X } from "lucide-react";
 
 export const Route = createFileRoute("/_authenticated/erp/hr/payroll")({
   component: PayrollPage,
@@ -191,6 +197,8 @@ function PayrollPage() {
 
   const slug = (v: string) => v.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "") || "employee";
 
+  const [preview, setPreview] = useState<{ slips: PayslipData[]; title: string; filename: string } | null>(null);
+
   const downloadPayslip = async (s: any) => {
     try {
       await exportPayslipPdf([toPayslip(s)], company, `payslip-${month}-${slug(empName(s.employee_id))}.pdf`);
@@ -207,6 +215,23 @@ function PayrollPage() {
     } catch (err) {
       toast.error((err as Error).message);
     }
+  };
+
+  const openPreview = (s: any) =>
+    setPreview({
+      slips: [toPayslip(s)],
+      title: `${empName(s.employee_id)} — ${month}`,
+      filename: `payslip-${month}-${slug(empName(s.employee_id))}.pdf`,
+    });
+
+  const openPreviewAll = () => {
+    const ordered = [...slips].sort((a, b) => empName(a.employee_id).localeCompare(empName(b.employee_id)));
+    if (!ordered.length) return;
+    setPreview({
+      slips: ordered.map(toPayslip),
+      title: `Shob payslip (${ordered.length}) — ${month}`,
+      filename: `payslips-${month}.pdf`,
+    });
   };
 
   return (
@@ -230,6 +255,9 @@ function PayrollPage() {
               <>
                 <Button size="sm" variant="outline" onClick={exportCsv}>
                   <Download className="mr-1.5 h-3.5 w-3.5" /> CSV
+                </Button>
+                <Button size="sm" variant="outline" onClick={openPreviewAll}>
+                  <Eye className="mr-1.5 h-3.5 w-3.5" /> Preview all
                 </Button>
                 <Button size="sm" onClick={() => void downloadAllPayslips()}>
                   <FileText className="mr-1.5 h-3.5 w-3.5" /> All payslips PDF
@@ -342,15 +370,26 @@ function PayrollPage() {
                       </td>
                       <td className="p-2.5 text-right font-semibold tabular-nums">{money(s.net_pay)}</td>
                       <td className="p-2.5 text-right">
-                        <Button
-                          size="sm"
-                          variant="ghost"
-                          className="h-8 px-2 text-muted-foreground hover:text-foreground"
-                          title={`${empName(s.employee_id)} — payslip PDF`}
-                          onClick={() => void downloadPayslip(s)}
-                        >
-                          <FileText className="h-3.5 w-3.5" />
-                        </Button>
+                        <div className="flex items-center justify-end gap-0.5">
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            className="h-8 px-2 text-muted-foreground hover:text-foreground"
+                            title={`${empName(s.employee_id)} — payslip preview / print`}
+                            onClick={() => openPreview(s)}
+                          >
+                            <Eye className="h-3.5 w-3.5" />
+                          </Button>
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            className="h-8 px-2 text-muted-foreground hover:text-foreground"
+                            title={`${empName(s.employee_id)} — payslip PDF download`}
+                            onClick={() => void downloadPayslip(s)}
+                          >
+                            <FileText className="h-3.5 w-3.5" />
+                          </Button>
+                        </div>
                       </td>
                     </tr>
                   ))
@@ -360,7 +399,118 @@ function PayrollPage() {
           </div>
         </CardContent>
       </Card>
+
+      <PayslipPreviewDialog
+        open={!!preview}
+        onOpenChange={(v) => { if (!v) setPreview(null); }}
+        title={preview?.title ?? ""}
+        filename={preview?.filename ?? "payslip.pdf"}
+        slips={preview?.slips ?? []}
+        company={company}
+        status={payslipStatusStyle(run?.status ?? "draft", run?.paid_at ?? null)}
+      />
     </div>
+  );
+}
+
+function PayslipPreviewDialog({
+  open,
+  onOpenChange,
+  title,
+  filename,
+  slips,
+  company,
+  status,
+}: {
+  open: boolean;
+  onOpenChange: (v: boolean) => void;
+  title: string;
+  filename: string;
+  slips: PayslipData[];
+  company: Parameters<typeof exportPayslipPdf>[1];
+  status: ReturnType<typeof payslipStatusStyle>;
+}) {
+  const [url, setUrl] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(null);
+  const frameRef = useRef<HTMLIFrameElement | null>(null);
+
+  useEffect(() => {
+    if (!open || !slips.length) return;
+    let dead = false;
+    let made: string | null = null;
+    setUrl(null);
+    setError(null);
+    payslipPreviewUrl(slips, company)
+      .then((u) => {
+        made = u;
+        if (dead) URL.revokeObjectURL(u);
+        else setUrl(u);
+      })
+      .catch((e: Error) => { if (!dead) setError(e.message); });
+    return () => {
+      dead = true;
+      if (made) URL.revokeObjectURL(made);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open, slips, company]);
+
+  const print = () => {
+    const win = frameRef.current?.contentWindow;
+    if (!win) return;
+    win.focus();
+    win.print();
+  };
+
+  const download = () => {
+    if (!url) return;
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = filename;
+    a.click();
+  };
+
+  const tone =
+    status.key === "paid"
+      ? "border-emerald-500/40 bg-emerald-500/10 text-emerald-600"
+      : status.key === "approved"
+        ? "border-amber-500/40 bg-amber-500/10 text-amber-600"
+        : "border-destructive/40 bg-destructive/10 text-destructive";
+
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="flex h-[90vh] max-w-5xl flex-col gap-3 p-0">
+        <DialogHeader className="space-y-2 border-b p-4 pb-3">
+          <DialogTitle className="flex flex-wrap items-center gap-2 text-base">
+            <Printer className="h-4 w-4 text-muted-foreground" />
+            {title || "Payslip preview"}
+            <Badge variant="outline" className={tone}>{status.watermark}</Badge>
+          </DialogTitle>
+          <p className="text-xs text-muted-foreground">{status.subtext}</p>
+          <div className="flex flex-wrap gap-2 pt-1">
+            <Button size="sm" onClick={print} disabled={!url}>
+              <Printer className="mr-1.5 h-3.5 w-3.5" /> Print
+            </Button>
+            <Button size="sm" variant="outline" onClick={download} disabled={!url}>
+              <Download className="mr-1.5 h-3.5 w-3.5" /> Download PDF
+            </Button>
+            <Button size="sm" variant="ghost" onClick={() => onOpenChange(false)}>
+              <X className="mr-1.5 h-3.5 w-3.5" /> Close
+            </Button>
+          </div>
+        </DialogHeader>
+        <div className="min-h-0 flex-1 bg-muted/40 p-3">
+          {error ? (
+            <p className="p-6 text-sm text-destructive">{error}</p>
+          ) : url ? (
+            <iframe ref={frameRef} src={url} title="Payslip preview" className="h-full w-full rounded-lg border bg-background" />
+          ) : (
+            <div className="flex h-full items-center justify-center text-sm text-muted-foreground">
+              PDF toiri hocche…
+            </div>
+          )}
+        </div>
+      </DialogContent>
+    </Dialog>
   );
 }
 
