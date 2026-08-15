@@ -527,16 +527,32 @@ function EmployeesPage() {
           </div>
           <div className="sticky bottom-0 flex items-center justify-between gap-2 border-t border-border/70 bg-background py-3">
             {editing ? (
-              <Button
-                variant="ghost"
-                size="sm"
-                className="text-destructive"
-                onClick={() => {
-                  if (window.confirm("Ei employee delete korbo?")) remove.mutate(editing.id);
-                }}
-              >
-                <Trash2 className="mr-1.5 h-3.5 w-3.5" /> Delete
-              </Button>
+              <div className="flex items-center gap-1">
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="text-destructive"
+                  disabled={remove.isPending}
+                  onClick={() => {
+                    if (window.confirm("Ei employee delete korbo?")) remove.mutate(editing.id);
+                  }}
+                >
+                  <Trash2 className="mr-1.5 h-3.5 w-3.5" /> Delete
+                </Button>
+                {editing.status !== "terminated" && (
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="text-muted-foreground"
+                    disabled={terminate.isPending}
+                    onClick={() => {
+                      if (window.confirm("Employee ke terminated mark korbo?")) terminate.mutate(editing.id);
+                    }}
+                  >
+                    <UserMinus className="mr-1.5 h-3.5 w-3.5" /> Mark terminated
+                  </Button>
+                )}
+              </div>
             ) : <span />}
             <Button size="sm" onClick={() => save.mutate()} disabled={save.isPending}>
               {save.isPending ? "Saving…" : "Save"}
