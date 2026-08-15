@@ -311,6 +311,19 @@ function MediaPlansPage() {
     onError: (e: Error) => toast.error(e.message),
   });
 
+  const deleteMut = useMutation({
+    mutationFn: async (id: string) => {
+      const { error } = await supabase.from("content_media_plans").delete().eq("id", id);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      toast.success("Media plan মুছে ফেলা হয়েছে");
+      setOpen(null);
+      qc.invalidateQueries({ queryKey: ["content-media-plans"] });
+    },
+    onError: (e: Error) => toast.error(e.message),
+  });
+
   const exportCsv = () =>
     downloadCsv(`media-plans-${new Date().toISOString().slice(0, 10)}.csv`, [
       ["Plan", "Product", "Status", "Start", "End", "Target qty", "Price", "Budget", "Ad spend", "Revenue", "Units", "Profit", "ROAS", "Break-even ROAS"],
@@ -595,6 +608,9 @@ function MediaPlansPage() {
                 setOpen({ ...open, status: s });
               }}
               briefing={briefMut.isPending}
+              onDelete={() => {
+                if (confirm(`"${open.title}" plan মুছে ফেলবে?`)) deleteMut.mutate(open.id);
+              }}
             />
           )}
         </SheetContent>
@@ -829,6 +845,7 @@ function PlanDetail({
   onBrief,
   onStatus,
   briefing,
+  onDelete,
 }: {
   plan: MediaPlan;
   actual?: Actual;
@@ -844,6 +861,7 @@ function PlanDetail({
   }) => void;
   onStatus: (s: string) => void;
   briefing: boolean;
+  onDelete: () => void;
 }) {
   const [creator, setCreator] = useState("");
   const [type, setType] = useState("ugc");
@@ -860,7 +878,17 @@ function PlanDetail({
   return (
     <>
       <SheetHeader>
-        <SheetTitle className="text-base">{plan.title}</SheetTitle>
+        <div className="flex items-start justify-between gap-2 pr-6">
+          <SheetTitle className="text-base">{plan.title}</SheetTitle>
+          <Button
+            size="icon"
+            variant="ghost"
+            className="h-7 w-7 shrink-0 text-muted-foreground hover:text-destructive"
+            onClick={onDelete}
+          >
+            <Trash2 className="h-3.5 w-3.5" />
+          </Button>
+        </div>
         <p className="text-[11px] text-muted-foreground">
           {product ?? "Brand-wide"} · {plan.start_date ?? "—"} → {plan.end_date ?? "—"}
         </p>
