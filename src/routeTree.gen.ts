@@ -47,10 +47,12 @@ import { Route as AuthenticatedErpPurchaseOrdersIndexRouteImport } from './route
 import { Route as AuthenticatedErpOrdersIndexRouteImport } from './routes/_authenticated/erp.orders.index'
 import { Route as AuthenticatedErpMarketingIndexRouteImport } from './routes/_authenticated/erp.marketing.index'
 import { Route as AuthenticatedErpImportsIndexRouteImport } from './routes/_authenticated/erp.imports.index'
+import { Route as AuthenticatedErpHubIndexRouteImport } from './routes/_authenticated/erp.hub.index'
 import { Route as AuthenticatedErpHrIndexRouteImport } from './routes/_authenticated/erp.hr.index'
 import { Route as AuthenticatedErpGrowthIndexRouteImport } from './routes/_authenticated/erp.growth.index'
 import { Route as AuthenticatedErpFinanceIndexRouteImport } from './routes/_authenticated/erp.finance.index'
 import { Route as AuthenticatedErpCrmIndexRouteImport } from './routes/_authenticated/erp.crm.index'
+import { Route as AuthenticatedErpContentIndexRouteImport } from './routes/_authenticated/erp.content.index'
 import { Route as AuthenticatedErpAnalyticsIndexRouteImport } from './routes/_authenticated/erp.analytics.index'
 import { Route as ApiPublicWebhooksShopifyOrderRouteImport } from './routes/api/public/webhooks.shopify-order'
 import { Route as ApiPublicWebhookPathaoRouteImport } from './routes/api/public/webhook.pathao'
@@ -90,6 +92,7 @@ import { Route as AuthenticatedErpMarketingAlertsRouteImport } from './routes/_a
 import { Route as AuthenticatedErpImportsSettingsRouteImport } from './routes/_authenticated/erp.imports.settings'
 import { Route as AuthenticatedErpImportsReportsRouteImport } from './routes/_authenticated/erp.imports.reports'
 import { Route as AuthenticatedErpImportsAgentsRouteImport } from './routes/_authenticated/erp.imports.agents'
+import { Route as AuthenticatedErpHubSplatRouteImport } from './routes/_authenticated/erp.hub.$'
 import { Route as AuthenticatedErpHrSettingsRouteImport } from './routes/_authenticated/erp.hr.settings'
 import { Route as AuthenticatedErpHrPerformanceRouteImport } from './routes/_authenticated/erp.hr.performance'
 import { Route as AuthenticatedErpHrPayrollRouteImport } from './routes/_authenticated/erp.hr.payroll'
@@ -125,6 +128,7 @@ import { Route as AuthenticatedErpFinanceChartAccountsRouteImport } from './rout
 import { Route as AuthenticatedErpFinanceBudgetsRouteImport } from './routes/_authenticated/erp.finance.budgets'
 import { Route as AuthenticatedErpFinanceAccountsRouteImport } from './routes/_authenticated/erp.finance.accounts'
 import { Route as AuthenticatedErpCrmCustomerIdRouteImport } from './routes/_authenticated/erp.crm.$customerId'
+import { Route as AuthenticatedErpContentSplatRouteImport } from './routes/_authenticated/erp.content.$'
 import { Route as AuthenticatedErpAnalyticsLiveRouteImport } from './routes/_authenticated/erp.analytics.live'
 import { Route as AuthenticatedErpImportsOrdersIndexRouteImport } from './routes/_authenticated/erp.imports.orders.index'
 import { Route as AuthenticatedErpImportsOrdersNewRouteImport } from './routes/_authenticated/erp.imports.orders.new'
@@ -340,6 +344,12 @@ const AuthenticatedErpImportsIndexRoute =
     path: '/',
     getParentRoute: () => AuthenticatedErpImportsRoute,
   } as any)
+const AuthenticatedErpHubIndexRoute =
+  AuthenticatedErpHubIndexRouteImport.update({
+    id: '/hub/',
+    path: '/hub/',
+    getParentRoute: () => AuthenticatedErpRoute,
+  } as any)
 const AuthenticatedErpHrIndexRoute = AuthenticatedErpHrIndexRouteImport.update({
   id: '/',
   path: '/',
@@ -362,6 +372,12 @@ const AuthenticatedErpCrmIndexRoute =
     id: '/',
     path: '/',
     getParentRoute: () => AuthenticatedErpCrmRoute,
+  } as any)
+const AuthenticatedErpContentIndexRoute =
+  AuthenticatedErpContentIndexRouteImport.update({
+    id: '/content/',
+    path: '/content/',
+    getParentRoute: () => AuthenticatedErpRoute,
   } as any)
 const AuthenticatedErpAnalyticsIndexRoute =
   AuthenticatedErpAnalyticsIndexRouteImport.update({
@@ -594,6 +610,12 @@ const AuthenticatedErpImportsAgentsRoute =
     path: '/agents',
     getParentRoute: () => AuthenticatedErpImportsRoute,
   } as any)
+const AuthenticatedErpHubSplatRoute =
+  AuthenticatedErpHubSplatRouteImport.update({
+    id: '/hub/$',
+    path: '/hub/$',
+    getParentRoute: () => AuthenticatedErpRoute,
+  } as any)
 const AuthenticatedErpHrSettingsRoute =
   AuthenticatedErpHrSettingsRouteImport.update({
     id: '/settings',
@@ -803,6 +825,12 @@ const AuthenticatedErpCrmCustomerIdRoute =
     path: '/$customerId',
     getParentRoute: () => AuthenticatedErpCrmRoute,
   } as any)
+const AuthenticatedErpContentSplatRoute =
+  AuthenticatedErpContentSplatRouteImport.update({
+    id: '/content/$',
+    path: '/content/$',
+    getParentRoute: () => AuthenticatedErpRoute,
+  } as any)
 const AuthenticatedErpAnalyticsLiveRoute =
   AuthenticatedErpAnalyticsLiveRouteImport.update({
     id: '/analytics/live',
@@ -860,6 +888,7 @@ export interface FileRoutesByFullPath {
   '/api/webhooks/shopify-order': typeof ApiWebhooksShopifyOrderRoute
   '/erp/': typeof AuthenticatedErpIndexRoute
   '/erp/analytics/live': typeof AuthenticatedErpAnalyticsLiveRoute
+  '/erp/content/$': typeof AuthenticatedErpContentSplatRoute
   '/erp/crm/$customerId': typeof AuthenticatedErpCrmCustomerIdRoute
   '/erp/finance/accounts': typeof AuthenticatedErpFinanceAccountsRoute
   '/erp/finance/budgets': typeof AuthenticatedErpFinanceBudgetsRoute
@@ -895,6 +924,7 @@ export interface FileRoutesByFullPath {
   '/erp/hr/payroll': typeof AuthenticatedErpHrPayrollRoute
   '/erp/hr/performance': typeof AuthenticatedErpHrPerformanceRoute
   '/erp/hr/settings': typeof AuthenticatedErpHrSettingsRoute
+  '/erp/hub/$': typeof AuthenticatedErpHubSplatRoute
   '/erp/imports/agents': typeof AuthenticatedErpImportsAgentsRoute
   '/erp/imports/reports': typeof AuthenticatedErpImportsReportsRoute
   '/erp/imports/settings': typeof AuthenticatedErpImportsSettingsRoute
@@ -934,10 +964,12 @@ export interface FileRoutesByFullPath {
   '/api/public/webhook/pathao': typeof ApiPublicWebhookPathaoRoute
   '/api/public/webhooks/shopify-order': typeof ApiPublicWebhooksShopifyOrderRoute
   '/erp/analytics/': typeof AuthenticatedErpAnalyticsIndexRoute
+  '/erp/content/': typeof AuthenticatedErpContentIndexRoute
   '/erp/crm/': typeof AuthenticatedErpCrmIndexRoute
   '/erp/finance/': typeof AuthenticatedErpFinanceIndexRoute
   '/erp/growth/': typeof AuthenticatedErpGrowthIndexRoute
   '/erp/hr/': typeof AuthenticatedErpHrIndexRoute
+  '/erp/hub/': typeof AuthenticatedErpHubIndexRoute
   '/erp/imports/': typeof AuthenticatedErpImportsIndexRoute
   '/erp/marketing/': typeof AuthenticatedErpMarketingIndexRoute
   '/erp/orders/': typeof AuthenticatedErpOrdersIndexRoute
@@ -971,6 +1003,7 @@ export interface FileRoutesByTo {
   '/api/webhooks/shopify-order': typeof ApiWebhooksShopifyOrderRoute
   '/erp': typeof AuthenticatedErpIndexRoute
   '/erp/analytics/live': typeof AuthenticatedErpAnalyticsLiveRoute
+  '/erp/content/$': typeof AuthenticatedErpContentSplatRoute
   '/erp/crm/$customerId': typeof AuthenticatedErpCrmCustomerIdRoute
   '/erp/finance/accounts': typeof AuthenticatedErpFinanceAccountsRoute
   '/erp/finance/budgets': typeof AuthenticatedErpFinanceBudgetsRoute
@@ -1006,6 +1039,7 @@ export interface FileRoutesByTo {
   '/erp/hr/payroll': typeof AuthenticatedErpHrPayrollRoute
   '/erp/hr/performance': typeof AuthenticatedErpHrPerformanceRoute
   '/erp/hr/settings': typeof AuthenticatedErpHrSettingsRoute
+  '/erp/hub/$': typeof AuthenticatedErpHubSplatRoute
   '/erp/imports/agents': typeof AuthenticatedErpImportsAgentsRoute
   '/erp/imports/reports': typeof AuthenticatedErpImportsReportsRoute
   '/erp/imports/settings': typeof AuthenticatedErpImportsSettingsRoute
@@ -1045,10 +1079,12 @@ export interface FileRoutesByTo {
   '/api/public/webhook/pathao': typeof ApiPublicWebhookPathaoRoute
   '/api/public/webhooks/shopify-order': typeof ApiPublicWebhooksShopifyOrderRoute
   '/erp/analytics': typeof AuthenticatedErpAnalyticsIndexRoute
+  '/erp/content': typeof AuthenticatedErpContentIndexRoute
   '/erp/crm': typeof AuthenticatedErpCrmIndexRoute
   '/erp/finance': typeof AuthenticatedErpFinanceIndexRoute
   '/erp/growth': typeof AuthenticatedErpGrowthIndexRoute
   '/erp/hr': typeof AuthenticatedErpHrIndexRoute
+  '/erp/hub': typeof AuthenticatedErpHubIndexRoute
   '/erp/imports': typeof AuthenticatedErpImportsIndexRoute
   '/erp/marketing': typeof AuthenticatedErpMarketingIndexRoute
   '/erp/orders': typeof AuthenticatedErpOrdersIndexRoute
@@ -1094,6 +1130,7 @@ export interface FileRoutesById {
   '/api/webhooks/shopify-order': typeof ApiWebhooksShopifyOrderRoute
   '/_authenticated/erp/': typeof AuthenticatedErpIndexRoute
   '/_authenticated/erp/analytics/live': typeof AuthenticatedErpAnalyticsLiveRoute
+  '/_authenticated/erp/content/$': typeof AuthenticatedErpContentSplatRoute
   '/_authenticated/erp/crm/$customerId': typeof AuthenticatedErpCrmCustomerIdRoute
   '/_authenticated/erp/finance/accounts': typeof AuthenticatedErpFinanceAccountsRoute
   '/_authenticated/erp/finance/budgets': typeof AuthenticatedErpFinanceBudgetsRoute
@@ -1129,6 +1166,7 @@ export interface FileRoutesById {
   '/_authenticated/erp/hr/payroll': typeof AuthenticatedErpHrPayrollRoute
   '/_authenticated/erp/hr/performance': typeof AuthenticatedErpHrPerformanceRoute
   '/_authenticated/erp/hr/settings': typeof AuthenticatedErpHrSettingsRoute
+  '/_authenticated/erp/hub/$': typeof AuthenticatedErpHubSplatRoute
   '/_authenticated/erp/imports/agents': typeof AuthenticatedErpImportsAgentsRoute
   '/_authenticated/erp/imports/reports': typeof AuthenticatedErpImportsReportsRoute
   '/_authenticated/erp/imports/settings': typeof AuthenticatedErpImportsSettingsRoute
@@ -1168,10 +1206,12 @@ export interface FileRoutesById {
   '/api/public/webhook/pathao': typeof ApiPublicWebhookPathaoRoute
   '/api/public/webhooks/shopify-order': typeof ApiPublicWebhooksShopifyOrderRoute
   '/_authenticated/erp/analytics/': typeof AuthenticatedErpAnalyticsIndexRoute
+  '/_authenticated/erp/content/': typeof AuthenticatedErpContentIndexRoute
   '/_authenticated/erp/crm/': typeof AuthenticatedErpCrmIndexRoute
   '/_authenticated/erp/finance/': typeof AuthenticatedErpFinanceIndexRoute
   '/_authenticated/erp/growth/': typeof AuthenticatedErpGrowthIndexRoute
   '/_authenticated/erp/hr/': typeof AuthenticatedErpHrIndexRoute
+  '/_authenticated/erp/hub/': typeof AuthenticatedErpHubIndexRoute
   '/_authenticated/erp/imports/': typeof AuthenticatedErpImportsIndexRoute
   '/_authenticated/erp/marketing/': typeof AuthenticatedErpMarketingIndexRoute
   '/_authenticated/erp/orders/': typeof AuthenticatedErpOrdersIndexRoute
@@ -1217,6 +1257,7 @@ export interface FileRouteTypes {
     | '/api/webhooks/shopify-order'
     | '/erp/'
     | '/erp/analytics/live'
+    | '/erp/content/$'
     | '/erp/crm/$customerId'
     | '/erp/finance/accounts'
     | '/erp/finance/budgets'
@@ -1252,6 +1293,7 @@ export interface FileRouteTypes {
     | '/erp/hr/payroll'
     | '/erp/hr/performance'
     | '/erp/hr/settings'
+    | '/erp/hub/$'
     | '/erp/imports/agents'
     | '/erp/imports/reports'
     | '/erp/imports/settings'
@@ -1291,10 +1333,12 @@ export interface FileRouteTypes {
     | '/api/public/webhook/pathao'
     | '/api/public/webhooks/shopify-order'
     | '/erp/analytics/'
+    | '/erp/content/'
     | '/erp/crm/'
     | '/erp/finance/'
     | '/erp/growth/'
     | '/erp/hr/'
+    | '/erp/hub/'
     | '/erp/imports/'
     | '/erp/marketing/'
     | '/erp/orders/'
@@ -1328,6 +1372,7 @@ export interface FileRouteTypes {
     | '/api/webhooks/shopify-order'
     | '/erp'
     | '/erp/analytics/live'
+    | '/erp/content/$'
     | '/erp/crm/$customerId'
     | '/erp/finance/accounts'
     | '/erp/finance/budgets'
@@ -1363,6 +1408,7 @@ export interface FileRouteTypes {
     | '/erp/hr/payroll'
     | '/erp/hr/performance'
     | '/erp/hr/settings'
+    | '/erp/hub/$'
     | '/erp/imports/agents'
     | '/erp/imports/reports'
     | '/erp/imports/settings'
@@ -1402,10 +1448,12 @@ export interface FileRouteTypes {
     | '/api/public/webhook/pathao'
     | '/api/public/webhooks/shopify-order'
     | '/erp/analytics'
+    | '/erp/content'
     | '/erp/crm'
     | '/erp/finance'
     | '/erp/growth'
     | '/erp/hr'
+    | '/erp/hub'
     | '/erp/imports'
     | '/erp/marketing'
     | '/erp/orders'
@@ -1450,6 +1498,7 @@ export interface FileRouteTypes {
     | '/api/webhooks/shopify-order'
     | '/_authenticated/erp/'
     | '/_authenticated/erp/analytics/live'
+    | '/_authenticated/erp/content/$'
     | '/_authenticated/erp/crm/$customerId'
     | '/_authenticated/erp/finance/accounts'
     | '/_authenticated/erp/finance/budgets'
@@ -1485,6 +1534,7 @@ export interface FileRouteTypes {
     | '/_authenticated/erp/hr/payroll'
     | '/_authenticated/erp/hr/performance'
     | '/_authenticated/erp/hr/settings'
+    | '/_authenticated/erp/hub/$'
     | '/_authenticated/erp/imports/agents'
     | '/_authenticated/erp/imports/reports'
     | '/_authenticated/erp/imports/settings'
@@ -1524,10 +1574,12 @@ export interface FileRouteTypes {
     | '/api/public/webhook/pathao'
     | '/api/public/webhooks/shopify-order'
     | '/_authenticated/erp/analytics/'
+    | '/_authenticated/erp/content/'
     | '/_authenticated/erp/crm/'
     | '/_authenticated/erp/finance/'
     | '/_authenticated/erp/growth/'
     | '/_authenticated/erp/hr/'
+    | '/_authenticated/erp/hub/'
     | '/_authenticated/erp/imports/'
     | '/_authenticated/erp/marketing/'
     | '/_authenticated/erp/orders/'
@@ -1829,6 +1881,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedErpImportsIndexRouteImport
       parentRoute: typeof AuthenticatedErpImportsRoute
     }
+    '/_authenticated/erp/hub/': {
+      id: '/_authenticated/erp/hub/'
+      path: '/hub'
+      fullPath: '/erp/hub/'
+      preLoaderRoute: typeof AuthenticatedErpHubIndexRouteImport
+      parentRoute: typeof AuthenticatedErpRoute
+    }
     '/_authenticated/erp/hr/': {
       id: '/_authenticated/erp/hr/'
       path: '/'
@@ -1856,6 +1915,13 @@ declare module '@tanstack/react-router' {
       fullPath: '/erp/crm/'
       preLoaderRoute: typeof AuthenticatedErpCrmIndexRouteImport
       parentRoute: typeof AuthenticatedErpCrmRoute
+    }
+    '/_authenticated/erp/content/': {
+      id: '/_authenticated/erp/content/'
+      path: '/content'
+      fullPath: '/erp/content/'
+      preLoaderRoute: typeof AuthenticatedErpContentIndexRouteImport
+      parentRoute: typeof AuthenticatedErpRoute
     }
     '/_authenticated/erp/analytics/': {
       id: '/_authenticated/erp/analytics/'
@@ -2130,6 +2196,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedErpImportsAgentsRouteImport
       parentRoute: typeof AuthenticatedErpImportsRoute
     }
+    '/_authenticated/erp/hub/$': {
+      id: '/_authenticated/erp/hub/$'
+      path: '/hub/$'
+      fullPath: '/erp/hub/$'
+      preLoaderRoute: typeof AuthenticatedErpHubSplatRouteImport
+      parentRoute: typeof AuthenticatedErpRoute
+    }
     '/_authenticated/erp/hr/settings': {
       id: '/_authenticated/erp/hr/settings'
       path: '/settings'
@@ -2374,6 +2447,13 @@ declare module '@tanstack/react-router' {
       fullPath: '/erp/crm/$customerId'
       preLoaderRoute: typeof AuthenticatedErpCrmCustomerIdRouteImport
       parentRoute: typeof AuthenticatedErpCrmRoute
+    }
+    '/_authenticated/erp/content/$': {
+      id: '/_authenticated/erp/content/$'
+      path: '/content/$'
+      fullPath: '/erp/content/$'
+      preLoaderRoute: typeof AuthenticatedErpContentSplatRouteImport
+      parentRoute: typeof AuthenticatedErpRoute
     }
     '/_authenticated/erp/analytics/live': {
       id: '/_authenticated/erp/analytics/live'
@@ -2695,11 +2775,15 @@ interface AuthenticatedErpRouteChildren {
   AuthenticatedErpUsersRoute: typeof AuthenticatedErpUsersRoute
   AuthenticatedErpIndexRoute: typeof AuthenticatedErpIndexRoute
   AuthenticatedErpAnalyticsLiveRoute: typeof AuthenticatedErpAnalyticsLiveRoute
+  AuthenticatedErpContentSplatRoute: typeof AuthenticatedErpContentSplatRoute
+  AuthenticatedErpHubSplatRoute: typeof AuthenticatedErpHubSplatRoute
   AuthenticatedErpPurchaseOrdersPoIdRoute: typeof AuthenticatedErpPurchaseOrdersPoIdRoute
   AuthenticatedErpPurchaseOrdersNewRoute: typeof AuthenticatedErpPurchaseOrdersNewRoute
   AuthenticatedErpStocktakeSessionIdRoute: typeof AuthenticatedErpStocktakeSessionIdRoute
   AuthenticatedErpStocktakeNewRoute: typeof AuthenticatedErpStocktakeNewRoute
   AuthenticatedErpAnalyticsIndexRoute: typeof AuthenticatedErpAnalyticsIndexRoute
+  AuthenticatedErpContentIndexRoute: typeof AuthenticatedErpContentIndexRoute
+  AuthenticatedErpHubIndexRoute: typeof AuthenticatedErpHubIndexRoute
   AuthenticatedErpPurchaseOrdersIndexRoute: typeof AuthenticatedErpPurchaseOrdersIndexRoute
   AuthenticatedErpStocktakeIndexRoute: typeof AuthenticatedErpStocktakeIndexRoute
 }
@@ -2729,6 +2813,8 @@ const AuthenticatedErpRouteChildren: AuthenticatedErpRouteChildren = {
   AuthenticatedErpUsersRoute: AuthenticatedErpUsersRoute,
   AuthenticatedErpIndexRoute: AuthenticatedErpIndexRoute,
   AuthenticatedErpAnalyticsLiveRoute: AuthenticatedErpAnalyticsLiveRoute,
+  AuthenticatedErpContentSplatRoute: AuthenticatedErpContentSplatRoute,
+  AuthenticatedErpHubSplatRoute: AuthenticatedErpHubSplatRoute,
   AuthenticatedErpPurchaseOrdersPoIdRoute:
     AuthenticatedErpPurchaseOrdersPoIdRoute,
   AuthenticatedErpPurchaseOrdersNewRoute:
@@ -2737,6 +2823,8 @@ const AuthenticatedErpRouteChildren: AuthenticatedErpRouteChildren = {
     AuthenticatedErpStocktakeSessionIdRoute,
   AuthenticatedErpStocktakeNewRoute: AuthenticatedErpStocktakeNewRoute,
   AuthenticatedErpAnalyticsIndexRoute: AuthenticatedErpAnalyticsIndexRoute,
+  AuthenticatedErpContentIndexRoute: AuthenticatedErpContentIndexRoute,
+  AuthenticatedErpHubIndexRoute: AuthenticatedErpHubIndexRoute,
   AuthenticatedErpPurchaseOrdersIndexRoute:
     AuthenticatedErpPurchaseOrdersIndexRoute,
   AuthenticatedErpStocktakeIndexRoute: AuthenticatedErpStocktakeIndexRoute,

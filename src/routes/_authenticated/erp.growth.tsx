@@ -1,14 +1,14 @@
 import { createFileRoute, Outlet } from "@tanstack/react-router";
-import { HubSubnav } from "@/components/erp/hub/hub-shell";
+import { GrowthSubnav } from "@/components/erp/growth/growth-shell";
 
 export const Route = createFileRoute("/_authenticated/erp/growth")({
-  component: HubLayout,
+  component: GrowthLayout,
 });
 
-function HubLayout() {
+function GrowthLayout() {
   return (
     <div className="min-h-full">
-      <HubSubnav />
+      <GrowthSubnav />
       <Outlet />
     </div>
   );
