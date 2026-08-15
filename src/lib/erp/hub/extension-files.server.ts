@@ -502,6 +502,8 @@ let kind = 'idea';
 let page = {};
 let chosen = null;
 let cfg = {};
+let fx = { BDT: 1 };
+const CCY = ['BDT','USD','PKR','INR','CNY','EUR','GBP','AED','SAR','MYR','THB','SGD','AUD','CAD','TRY','IDR','VND','JPY','KRW','NPR','LKR'];
 
 async function loadCfg() {
   const s = await chrome.storage.sync.get(['base', 'token', 'brandId', 'email']);
@@ -522,8 +524,19 @@ async function api(payload) {
 function setKind(k) {
   kind = k;
   document.querySelectorAll('.tab').forEach((t) => t.classList.toggle('on', t.dataset.kind === k));
-  $('typeWrap').style.visibility = k === 'swipe' ? 'visible' : 'hidden';
-  $('rivalWrap').style.visibility = k === 'swipe' ? 'visible' : 'hidden';
+  $('wProduct').classList.toggle('hidden', k !== 'idea');
+  $('wRivalPage').classList.toggle('hidden', k !== 'competitor');
+  $('wContent').classList.toggle('hidden', k !== 'swipe');
+  $('save').textContent = k === 'idea' ? '🛍 Product Synq করো' : k === 'competitor' ? '🏴 Competitor সেভ করো' : '🎬 Content সেভ করো';
+}
+
+function renderConv() {
+  const p = Number($('price').value);
+  const c = $('currency').value || 'BDT';
+  const rate = fx[c] || 1;
+  if (!Number.isFinite(p) || p <= 0) { $('conv').textContent = ''; return; }
+  if (c === 'BDT') { $('conv').textContent = '৳ ' + p.toLocaleString(); return; }
+  $('conv').textContent = p + ' ' + c + ' ≈ ৳ ' + Math.round(p * rate).toLocaleString() + '  (1 ' + c + ' = ৳' + (Math.round(rate * 100) / 100) + ')';
 }
 
 async function init() {
@@ -588,6 +601,23 @@ async function init() {
   $('note').value = page.selection || page.description || '';
   if (page.price) $('price').value = page.price;
 
+  const cs = $('currency');
+  cs.innerHTML = '';
+  CCY.forEach((c) => { const o = document.createElement('option'); o.value = c; o.textContent = c; cs.appendChild(o); });
+  cs.value = (page.currency && CCY.indexOf(String(page.currency).toUpperCase()) >= 0) ? String(page.currency).toUpperCase() : 'BDT';
+  cs.onchange = renderConv;
+  $('price').oninput = renderConv;
+  renderConv();
+
+  if (page.handle || page.followers || page.siteName) {
+    const bits = [];
+    if (page.handle) bits.push(page.handle);
+    if (page.followers) bits.push(page.followers + ' followers');
+    if (page.platform && page.platform !== 'web') bits.push(page.platform);
+    $('pageInfo').textContent = bits.join(' · ');
+  }
+  $('pageType').value = (page.is_page || (page.platform && page.platform !== 'web')) ? 'social' : 'website';
+
   const shots = $('shots');
   (page.images || []).forEach((src, i) => {
     const im = document.createElement('img');
@@ -625,7 +655,7 @@ async function init() {
       $('msg').textContent = list.length + ' টা সেভ হচ্ছে…';
       $('msg').className = 'msg';
       try {
-        const r = await api({ action: 'bulk', brand_id: $('brand').value || null, items: list, tags: ['bulk'] });
+        const r = await api({ action: 'bulk', brand_id: $('brand').value || null, items: list, tags: ['bulk'], currency: $('currency').value });
         $('msg').textContent = (r.count || 0) + ' টা idea সেভ হয়েছে ✅';
         $('msg').className = 'msg ok';
       } catch (e) {
@@ -638,6 +668,7 @@ async function init() {
 
   try {
     const meta = await api({ action: 'meta' });
+    if (meta.fx) { fx = Object.assign(fx, meta.fx); renderConv(); }
     const b = $('brand');
     b.innerHTML = '';
     (meta.brands || []).forEach((x) => {
@@ -649,10 +680,10 @@ async function init() {
     b.onchange = () => chrome.storage.sync.set({ brandId: b.value });
 
     const c = $('competitor');
-    c.innerHTML = '<option value="">এই সাইট থেকে auto</option>';
+    c.innerHTML = '<option value="">লিংক করব না</option>';
     (meta.competitors || []).forEach((x) => {
       const o = document.createElement('option');
-      o.value = x.id; o.textContent = x.name;
+      o.value = x.id; o.textContent = x.name + (x.niche ? ' · ' + x.niche : '');
       c.appendChild(o);
     });
   } catch (e) {
@@ -700,7 +731,7 @@ async function save() {
   const tags = $('tags').value.split(',').map((s) => s.trim()).filter(Boolean);
   const extra = [];
   if (page.sku) extra.push('SKU: ' + page.sku);
-  if (page.currency && page.price) extra.push('Listed: ' + page.price + ' ' + page.currency);
+  if ($('price').value) extra.push('Listed: ' + $('price').value + ' ' + $('currency').value);
   (page.variants || []).forEach((v) => extra.push(v.name + ': ' + v.values.join(', ')));
   if (page.followers) extra.push('Followers: ' + page.followers);
   if (page.handle) extra.push('Handle: ' + page.handle);
@@ -715,6 +746,14 @@ async function save() {
     images: (page.images || []).slice(0, 8),
     note: noteFull || null,
     price: $('price').value ? Number($('price').value) : null,
+    currency: $('currency').value || 'BDT',
+    status: $('stage').value,
+    niche: $('niche').value.trim() || null,
+    handle: page.handle || null,
+    followers: page.followers || null,
+    threat_level: $('threat').value,
+    hook: $('hook').value.trim() || null,
+    link_competitor: !!$('competitor').value,
     tags: tags,
     platform: page.platform,
     asset_type: $('assetType').value,
