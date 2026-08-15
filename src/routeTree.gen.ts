@@ -100,6 +100,7 @@ import { Route as AuthenticatedErpHubProductsRouteImport } from './routes/_authe
 import { Route as AuthenticatedErpHubPlanningRouteImport } from './routes/_authenticated/erp.hub.planning'
 import { Route as AuthenticatedErpHubGoalsRouteImport } from './routes/_authenticated/erp.hub.goals'
 import { Route as AuthenticatedErpHubContentRouteImport } from './routes/_authenticated/erp.hub.content'
+import { Route as AuthenticatedErpHrPayrollRouteImport } from './routes/_authenticated/erp.hr.payroll'
 import { Route as AuthenticatedErpHrLeavesRouteImport } from './routes/_authenticated/erp.hr.leaves'
 import { Route as AuthenticatedErpHrEmployeesRouteImport } from './routes/_authenticated/erp.hr.employees'
 import { Route as AuthenticatedErpHrAttendanceRouteImport } from './routes/_authenticated/erp.hr.attendance'
@@ -650,6 +651,12 @@ const AuthenticatedErpHubContentRoute =
     path: '/content',
     getParentRoute: () => AuthenticatedErpHubRoute,
   } as any)
+const AuthenticatedErpHrPayrollRoute =
+  AuthenticatedErpHrPayrollRouteImport.update({
+    id: '/payroll',
+    path: '/payroll',
+    getParentRoute: () => AuthenticatedErpHrRoute,
+  } as any)
 const AuthenticatedErpHrLeavesRoute =
   AuthenticatedErpHrLeavesRouteImport.update({
     id: '/leaves',
@@ -862,6 +869,7 @@ export interface FileRoutesByFullPath {
   '/erp/hr/attendance': typeof AuthenticatedErpHrAttendanceRoute
   '/erp/hr/employees': typeof AuthenticatedErpHrEmployeesRoute
   '/erp/hr/leaves': typeof AuthenticatedErpHrLeavesRoute
+  '/erp/hr/payroll': typeof AuthenticatedErpHrPayrollRoute
   '/erp/hub/content': typeof AuthenticatedErpHubContentRoute
   '/erp/hub/goals': typeof AuthenticatedErpHubGoalsRoute
   '/erp/hub/planning': typeof AuthenticatedErpHubPlanningRoute
@@ -969,6 +977,7 @@ export interface FileRoutesByTo {
   '/erp/hr/attendance': typeof AuthenticatedErpHrAttendanceRoute
   '/erp/hr/employees': typeof AuthenticatedErpHrEmployeesRoute
   '/erp/hr/leaves': typeof AuthenticatedErpHrLeavesRoute
+  '/erp/hr/payroll': typeof AuthenticatedErpHrPayrollRoute
   '/erp/hub/content': typeof AuthenticatedErpHubContentRoute
   '/erp/hub/goals': typeof AuthenticatedErpHubGoalsRoute
   '/erp/hub/planning': typeof AuthenticatedErpHubPlanningRoute
@@ -1089,6 +1098,7 @@ export interface FileRoutesById {
   '/_authenticated/erp/hr/attendance': typeof AuthenticatedErpHrAttendanceRoute
   '/_authenticated/erp/hr/employees': typeof AuthenticatedErpHrEmployeesRoute
   '/_authenticated/erp/hr/leaves': typeof AuthenticatedErpHrLeavesRoute
+  '/_authenticated/erp/hr/payroll': typeof AuthenticatedErpHrPayrollRoute
   '/_authenticated/erp/hub/content': typeof AuthenticatedErpHubContentRoute
   '/_authenticated/erp/hub/goals': typeof AuthenticatedErpHubGoalsRoute
   '/_authenticated/erp/hub/planning': typeof AuthenticatedErpHubPlanningRoute
@@ -1209,6 +1219,7 @@ export interface FileRouteTypes {
     | '/erp/hr/attendance'
     | '/erp/hr/employees'
     | '/erp/hr/leaves'
+    | '/erp/hr/payroll'
     | '/erp/hub/content'
     | '/erp/hub/goals'
     | '/erp/hub/planning'
@@ -1316,6 +1327,7 @@ export interface FileRouteTypes {
     | '/erp/hr/attendance'
     | '/erp/hr/employees'
     | '/erp/hr/leaves'
+    | '/erp/hr/payroll'
     | '/erp/hub/content'
     | '/erp/hub/goals'
     | '/erp/hub/planning'
@@ -1435,6 +1447,7 @@ export interface FileRouteTypes {
     | '/_authenticated/erp/hr/attendance'
     | '/_authenticated/erp/hr/employees'
     | '/_authenticated/erp/hr/leaves'
+    | '/_authenticated/erp/hr/payroll'
     | '/_authenticated/erp/hub/content'
     | '/_authenticated/erp/hub/goals'
     | '/_authenticated/erp/hub/planning'
@@ -2159,6 +2172,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedErpHubContentRouteImport
       parentRoute: typeof AuthenticatedErpHubRoute
     }
+    '/_authenticated/erp/hr/payroll': {
+      id: '/_authenticated/erp/hr/payroll'
+      path: '/payroll'
+      fullPath: '/erp/hr/payroll'
+      preLoaderRoute: typeof AuthenticatedErpHrPayrollRouteImport
+      parentRoute: typeof AuthenticatedErpHrRoute
+    }
     '/_authenticated/erp/hr/leaves': {
       id: '/_authenticated/erp/hr/leaves'
       path: '/leaves'
@@ -2430,6 +2450,7 @@ interface AuthenticatedErpHrRouteChildren {
   AuthenticatedErpHrAttendanceRoute: typeof AuthenticatedErpHrAttendanceRoute
   AuthenticatedErpHrEmployeesRoute: typeof AuthenticatedErpHrEmployeesRoute
   AuthenticatedErpHrLeavesRoute: typeof AuthenticatedErpHrLeavesRoute
+  AuthenticatedErpHrPayrollRoute: typeof AuthenticatedErpHrPayrollRoute
   AuthenticatedErpHrIndexRoute: typeof AuthenticatedErpHrIndexRoute
 }
 
@@ -2437,6 +2458,7 @@ const AuthenticatedErpHrRouteChildren: AuthenticatedErpHrRouteChildren = {
   AuthenticatedErpHrAttendanceRoute: AuthenticatedErpHrAttendanceRoute,
   AuthenticatedErpHrEmployeesRoute: AuthenticatedErpHrEmployeesRoute,
   AuthenticatedErpHrLeavesRoute: AuthenticatedErpHrLeavesRoute,
+  AuthenticatedErpHrPayrollRoute: AuthenticatedErpHrPayrollRoute,
   AuthenticatedErpHrIndexRoute: AuthenticatedErpHrIndexRoute,
 }
 
