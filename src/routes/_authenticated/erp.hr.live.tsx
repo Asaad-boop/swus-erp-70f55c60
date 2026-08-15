@@ -194,13 +194,20 @@ function LiveDashboardPage() {
       </div>
 
       <div className="grid grid-cols-2 gap-3 md:grid-cols-5">
-        <Kpi icon={Users} label="Total" value={kpi.total} accent="bg-primary/10 text-primary" />
-        <Kpi icon={CheckCircle2} label="Present" value={kpi.present} accent="bg-emerald-500/10 text-emerald-600" />
-        <Kpi icon={Coffee} label="On break" value={kpi.on_break} accent="bg-amber-500/10 text-amber-600" />
-        <Kpi icon={UserX} label="Not in" value={kpi.not_in} accent="bg-muted text-muted-foreground" />
-        <Kpi icon={LogOut} label="Left" value={kpi.left} accent="bg-sky-500/10 text-sky-600" />
+        {isFetching && !data ? (
+          <CardSkeleton count={5} />
+        ) : (
+          <>
+            <Kpi icon={Users} label="Total" value={kpi.total} accent="bg-primary/10 text-primary" active={stateFilter === "all"} onClick={() => setStateFilter("all")} />
+            <Kpi icon={CheckCircle2} label="Present" value={kpi.present} accent="bg-emerald-500/10 text-emerald-600" active={stateFilter === "present"} onClick={() => setStateFilter(stateFilter === "present" ? "all" : "present")} />
+            <Kpi icon={Coffee} label="On break" value={kpi.on_break} accent="bg-amber-500/10 text-amber-600" active={stateFilter === "on_break"} onClick={() => setStateFilter(stateFilter === "on_break" ? "all" : "on_break")} />
+            <Kpi icon={UserX} label="Not in" value={kpi.not_in} accent="bg-muted text-muted-foreground" active={stateFilter === "not_in"} onClick={() => setStateFilter(stateFilter === "not_in" ? "all" : "not_in")} />
+            <Kpi icon={LogOut} label="Left" value={kpi.left} accent="bg-sky-500/10 text-sky-600" active={stateFilter === "left"} onClick={() => setStateFilter(stateFilter === "left" ? "all" : "left")} />
+          </>
+        )}
       </div>
 
+      <div className="flex flex-wrap items-center gap-3">
       <div className="flex flex-wrap gap-1 rounded-full border border-border/70 bg-muted/40 p-1 w-fit">
         {([
           { k: "table", label: "Table", icon: Table2 },
@@ -210,13 +217,23 @@ function LiveDashboardPage() {
           <button
             key={t.k}
             onClick={() => setView(t.k)}
-            className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-medium transition-colors ${
+            className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-medium transition-all duration-200 active:scale-[0.97] ${
               view === t.k ? "bg-background text-foreground shadow-sm" : "text-muted-foreground hover:text-foreground"
             }`}
           >
             <t.icon className="h-3.5 w-3.5" /> {t.label}
           </button>
         ))}
+      </div>
+        <div className="relative w-full max-w-[260px]">
+          <Search className="pointer-events-none absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-muted-foreground" />
+          <Input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Naam ba department khujun…" className="h-9 pl-8" />
+        </div>
+        {(stateFilter !== "all" || q) && (
+          <Button size="sm" variant="ghost" onClick={() => { setStateFilter("all"); setQ(""); }}>
+            Clear filter
+          </Button>
+        )}
       </div>
 
       {view === "table" && (
@@ -237,13 +254,19 @@ function LiveDashboardPage() {
                   </tr>
                 </thead>
                 <tbody>
-                  {rows.length === 0 ? (
-                    <tr><td colSpan={8} className="p-6 text-center text-muted-foreground">Kono employee nei.</td></tr>
+                  {isFetching && !data ? (
+                    <TableSkeleton cols={8} rows={6} />
+                  ) : rows.length === 0 ? (
+                    <tr>
+                      <td colSpan={8}>
+                        <HrEmpty icon={Users} title="Kono employee nei" hint="Filter clear korun othoba onno date select korun." />
+                      </td>
+                    </tr>
                   ) : (
                     rows.map((r) => {
                       const m = metricsOf(r);
                       return (
-                      <tr key={r.id} className="border-b border-border/50 last:border-0">
+                      <tr key={r.id} className={`border-b border-border/50 last:border-0 ${hrRow}`}>
                         <td className="p-2.5">
                           <p className="font-medium">{r.full_name}</p>
                           <p className="text-[11px] text-muted-foreground">{r.department ?? (r.employee_code ? `#${r.employee_code}` : "—")}</p>
@@ -345,7 +368,7 @@ function LiveDashboardPage() {
                 <div className="w-[70px] shrink-0 text-right text-[11px] text-muted-foreground">{hoursMins(r.workMs)}</div>
               </div>
             ))}
-            {rows.length === 0 && <p className="p-6 text-center text-sm text-muted-foreground">Kono data nei.</p>}
+            {rows.length === 0 && <HrEmpty icon={GanttChartSquare} title="Kono data nei" hint="Ei date e kono punch record hoyni." />}
           </CardContent>
         </Card>
       )}
@@ -354,11 +377,11 @@ function LiveDashboardPage() {
         <Card>
           <CardContent className="p-0">
             {activity.length === 0 ? (
-              <p className="p-6 text-center text-sm text-muted-foreground">Aaj kono punch hoyni.</p>
+              <HrEmpty icon={Activity} title="Aaj kono punch hoyni" hint="Check in korle ekhane live feed dekhabe." />
             ) : (
               <ul className="divide-y divide-border/50">
                 {activity.map((a, i) => (
-                  <li key={i} className="flex items-center justify-between px-4 py-2.5 text-sm">
+                  <li key={i} className="flex items-center justify-between px-4 py-2.5 text-sm transition-colors hover:bg-muted/40">
                     <span>
                       <span className="font-medium">{a.who}</span>{" "}
                       <span className="text-muted-foreground">{a.kind.toLowerCase()}</span>
