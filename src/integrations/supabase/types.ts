@@ -4354,17 +4354,25 @@ export type Database = {
           full_name: string
           id: string
           join_date: string | null
+          late_grace_min: number | null
           monthly_salary: number
           nid: string | null
           notes: string | null
+          overtime_enabled: boolean
+          overtime_holiday_multiplier: number
+          overtime_min_minutes: number
+          overtime_rate: number
           payment_method: string | null
           payment_number: string | null
           phone: string | null
           photo_url: string | null
           resign_date: string | null
+          shift_end: string
+          shift_start: string
           status: string
           updated_at: string
           user_id: string | null
+          week_offs: number[]
         }
         Insert: {
           address?: string | null
@@ -4382,17 +4390,25 @@ export type Database = {
           full_name: string
           id?: string
           join_date?: string | null
+          late_grace_min?: number | null
           monthly_salary?: number
           nid?: string | null
           notes?: string | null
+          overtime_enabled?: boolean
+          overtime_holiday_multiplier?: number
+          overtime_min_minutes?: number
+          overtime_rate?: number
           payment_method?: string | null
           payment_number?: string | null
           phone?: string | null
           photo_url?: string | null
           resign_date?: string | null
+          shift_end?: string
+          shift_start?: string
           status?: string
           updated_at?: string
           user_id?: string | null
+          week_offs?: number[]
         }
         Update: {
           address?: string | null
@@ -4410,17 +4426,25 @@ export type Database = {
           full_name?: string
           id?: string
           join_date?: string | null
+          late_grace_min?: number | null
           monthly_salary?: number
           nid?: string | null
           notes?: string | null
+          overtime_enabled?: boolean
+          overtime_holiday_multiplier?: number
+          overtime_min_minutes?: number
+          overtime_rate?: number
           payment_method?: string | null
           payment_number?: string | null
           phone?: string | null
           photo_url?: string | null
           resign_date?: string | null
+          shift_end?: string
+          shift_start?: string
           status?: string
           updated_at?: string
           user_id?: string | null
+          week_offs?: number[]
         }
         Relationships: [
           {
