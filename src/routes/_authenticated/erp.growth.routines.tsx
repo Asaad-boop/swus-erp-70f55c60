@@ -14,7 +14,7 @@ import {
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useBrand } from "@/contexts/brand-context";
-import { HubPageHeader } from "@/components/erp/hub/hub-shell";
+import { GrowthPageHeader } from "@/components/erp/growth/growth-shell";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -48,16 +48,16 @@ import {
   type HubRoutine,
 } from "@/lib/erp/hub/hub-research";
 
-export const Route = createFileRoute("/_authenticated/erp/hub/routines")({
+export const Route = createFileRoute("/_authenticated/erp/growth/routines")({
   head: () => ({
     meta: [
-      { title: "Routines & Calendar — Growth Hub" },
+      { title: "Routines & Calendar — Growth Studio" },
       {
         name: "description",
         content:
           "Recurring team routines that auto-create tasks, plus a month calendar of every due task and routine.",
       },
-      { property: "og:title", content: "Routines & Calendar — Growth Hub" },
+      { property: "og:title", content: "Routines & Calendar — Growth Studio" },
       {
         property: "og:description",
         content: "Daily, weekly and monthly operating rhythm for the team in one calendar.",
@@ -203,7 +203,7 @@ function RoutinesPage() {
 
   return (
     <div className="space-y-5">
-      <HubPageHeader
+      <GrowthPageHeader
         icon={Repeat}
         title="Routines & Calendar"
         subtitle={

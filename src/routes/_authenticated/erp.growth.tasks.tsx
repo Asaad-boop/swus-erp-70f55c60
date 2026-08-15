@@ -5,7 +5,7 @@ import { toast } from "sonner";
 import { ListChecks, Plus, Trash2, CalendarDays, Repeat } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useBrand } from "@/contexts/brand-context";
-import { HubPageHeader } from "@/components/erp/hub/hub-shell";
+import { GrowthPageHeader } from "@/components/erp/growth/growth-shell";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -35,16 +35,16 @@ import {
   type HubTask,
 } from "@/lib/erp/hub/hub-data";
 
-export const Route = createFileRoute("/_authenticated/erp/hub/tasks")({
+export const Route = createFileRoute("/_authenticated/erp/growth/tasks")({
   head: () => ({
     meta: [
-      { title: "Task Board — Growth Hub" },
+      { title: "Task Board — Growth Studio" },
       {
         name: "description",
         content:
           "Kanban board for daily marketing, product research and sourcing tasks with owners, due dates, priorities and goal links.",
       },
-      { property: "og:title", content: "Task Board — Growth Hub" },
+      { property: "og:title", content: "Task Board — Growth Studio" },
       {
         property: "og:description",
         content: "Plan and track the team's daily execution against monthly goals.",
@@ -191,7 +191,7 @@ function TasksPage() {
 
   return (
     <div className="mx-auto max-w-[1500px] space-y-4 p-3 md:p-6">
-      <HubPageHeader
+      <GrowthPageHeader
         icon={ListChecks}
         title="Task Board"
         subtitle={

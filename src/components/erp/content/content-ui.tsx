@@ -13,7 +13,7 @@ import { useBrand } from "@/contexts/brand-context";
 
 export function ContentHero({
   icon: Icon,
-  eyebrow = "Content Studio",
+  eyebrow = "Growth Studio",
   title,
   subtitle,
   actions,

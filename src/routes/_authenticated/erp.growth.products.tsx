@@ -31,7 +31,7 @@ import { Link } from "@tanstack/react-router";
 import { supabase } from "@/integrations/supabase/client";
 import { useBrand } from "@/contexts/brand-context";
 import { useCurrentRole } from "@/hooks/use-current-role";
-import { HubPageHeader } from "@/components/erp/hub/hub-shell";
+import { GrowthPageHeader } from "@/components/erp/growth/growth-shell";
 import { IdeaGallery, StarRating } from "@/components/erp/hub/idea-visuals";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -79,16 +79,16 @@ import {
   type HubIdeaVoter,
 } from "@/lib/erp/hub/hub-data";
 
-export const Route = createFileRoute("/_authenticated/erp/hub/products")({
+export const Route = createFileRoute("/_authenticated/erp/growth/products")({
   head: () => ({
     meta: [
-      { title: "Product Pipeline — Growth Hub" },
+      { title: "Product Pipeline — Growth Studio" },
       {
         name: "description",
         content:
           "Team product idea board with up/down voting, supplier links and profit forecasting from idea to launch.",
       },
-      { property: "og:title", content: "Product Pipeline — Growth Hub" },
+      { property: "og:title", content: "Product Pipeline — Growth Studio" },
       {
         property: "og:description",
         content: "Add product ideas, vote as a team and forecast monthly profit before ordering.",
@@ -544,7 +544,7 @@ function ProductPipelinePage() {
 
   return (
     <div className="mx-auto max-w-[1500px] space-y-4 p-3 md:p-6">
-      <HubPageHeader
+      <GrowthPageHeader
         icon={Lightbulb}
         title="Product Pipeline"
         subtitle={
@@ -965,7 +965,7 @@ function ProductPipelinePage() {
 
                 {["approved", "sourcing", "ordered"].includes(i.status) && (
                   <Link
-                    to="/erp/hub/sourcing"
+                    to="/erp/growth/sourcing"
                     className="inline-flex items-center gap-1.5 text-xs font-medium text-primary hover:underline"
                   >
                     <PackageSearch className="h-3.5 w-3.5" /> Sourcing desk-এ দেখুন

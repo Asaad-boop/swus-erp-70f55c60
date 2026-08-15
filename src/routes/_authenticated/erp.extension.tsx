@@ -193,11 +193,11 @@ function ExtensionPage() {
           </ol>
           <p className="text-xs text-muted-foreground">
             Capture গুলো দেখতে যাও{" "}
-            <Link to="/erp/hub/products" className="text-primary underline">
+            <Link to="/erp/growth/products" className="text-primary underline">
               Product Pipeline
             </Link>{" "}
             বা{" "}
-            <Link to="/erp/hub/rivals" className="text-primary underline">
+            <Link to="/erp/growth/rivals" className="text-primary underline">
               Competitors
             </Link>
             ।

@@ -16,7 +16,7 @@ import {
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useBrand } from "@/contexts/brand-context";
-import { HubPageHeader } from "@/components/erp/hub/hub-shell";
+import { GrowthPageHeader } from "@/components/erp/growth/growth-shell";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -52,16 +52,16 @@ import {
   type HubCompetitorAsset,
 } from "@/lib/erp/hub/hub-research";
 
-export const Route = createFileRoute("/_authenticated/erp/hub/rivals")({
+export const Route = createFileRoute("/_authenticated/erp/growth/rivals")({
   head: () => ({
     meta: [
-      { title: "Competitors & Swipe File — Growth Hub" },
+      { title: "Competitors & Swipe File — Growth Studio" },
       {
         name: "description",
         content:
           "Track competitor websites and pages, and save their ads, landing pages and offers into a visual swipe file for analysis.",
       },
-      { property: "og:title", content: "Competitors & Swipe File — Growth Hub" },
+      { property: "og:title", content: "Competitors & Swipe File — Growth Studio" },
       {
         property: "og:description",
         content: "Competitor tracker plus a one-click browser capture swipe file.",
@@ -283,7 +283,7 @@ function RivalsPage() {
 
   return (
     <div className="space-y-5">
-      <HubPageHeader
+      <GrowthPageHeader
         icon={Swords}
         title="Competitors & Swipe File"
         subtitle={

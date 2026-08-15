@@ -65,16 +65,16 @@ import {
 } from "@/components/erp/content/content-ui";
 import { cn } from "@/lib/utils";
 
-export const Route = createFileRoute("/_authenticated/erp/content/media-plans")({
+export const Route = createFileRoute("/_authenticated/erp/growth/media-plans")({
   head: () => ({
     meta: [
-      { title: "Media Buying Hub — Content Studio" },
+      { title: "Media Buying Hub — Growth Studio" },
       {
         name: "description",
         content:
           "Per-product campaign economics: budget vs actual ad spend, break-even ROAS, delivered revenue and profit variance.",
       },
-      { property: "og:title", content: "Media Buying Hub — Content Studio" },
+      { property: "og:title", content: "Media Buying Hub — Growth Studio" },
       {
         property: "og:description",
         content: "Plan budget vs actual ad spend, delivered revenue and profit per product.",

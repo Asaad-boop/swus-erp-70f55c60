@@ -28,7 +28,7 @@ import {
   setPoCargoAgent,
 } from "@/lib/erp/imports/imports.functions";
 import { newIdemKey } from "@/lib/erp/imports/types";
-import { HubPageHeader } from "@/components/erp/hub/hub-shell";
+import { GrowthPageHeader } from "@/components/erp/growth/growth-shell";
 import { IdeaGallery, StarRating } from "@/components/erp/hub/idea-visuals";
 import {
   deriveStage,
@@ -91,16 +91,16 @@ import {
   stageDates,
 } from "@/lib/erp/hub/sourcing-events";
 
-export const Route = createFileRoute("/_authenticated/erp/hub/sourcing")({
+export const Route = createFileRoute("/_authenticated/erp/growth/sourcing")({
   head: () => ({
     meta: [
-      { title: "Sourcing Desk — Growth Hub" },
+      { title: "Sourcing Desk — Growth Studio" },
       {
         name: "description",
         content:
           "Approved product ideas এর supplier quote collect করো, target price এর সাথে compare করো আর order place করো।",
       },
-      { property: "og:title", content: "Sourcing Desk — Growth Hub" },
+      { property: "og:title", content: "Sourcing Desk — Growth Studio" },
       {
         property: "og:description",
         content: "Supplier quotes, landed cost comparison and order placement for approved ideas.",
@@ -1024,7 +1024,7 @@ function SourcingPage() {
 
   return (
     <div className="mx-auto max-w-[1500px] space-y-4 p-3 md:p-6">
-      <HubPageHeader
+      <GrowthPageHeader
         icon={PackageSearch}
         title="Sourcing Desk"
         subtitle={

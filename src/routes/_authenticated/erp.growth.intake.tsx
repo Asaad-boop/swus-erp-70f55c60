@@ -82,16 +82,16 @@ import {
 } from "@/components/erp/content/content-ui";
 import { cn } from "@/lib/utils";
 
-export const Route = createFileRoute("/_authenticated/erp/content/intake")({
+export const Route = createFileRoute("/_authenticated/erp/growth/intake")({
   head: () => ({
     meta: [
-      { title: "Stock → Content Intake — Content Studio" },
+      { title: "Stock → Content Intake — Growth Studio" },
       {
         name: "description",
         content:
           "Sourced and in-transit products ranked by content risk score, so no inventory sits without creative coverage.",
       },
-      { property: "og:title", content: "Stock → Content Intake — Content Studio" },
+      { property: "og:title", content: "Stock → Content Intake — Growth Studio" },
       {
         property: "og:description",
         content:
@@ -369,7 +369,7 @@ function IntakePage() {
               Refresh
             </Button>
             <Button asChild variant="outline" size="sm" className="h-9">
-              <Link to="/erp/content/pipeline">
+              <Link to="/erp/growth/pipeline">
                 Pipeline <ExternalLink className="ml-1.5 h-3.5 w-3.5" />
               </Link>
             </Button>

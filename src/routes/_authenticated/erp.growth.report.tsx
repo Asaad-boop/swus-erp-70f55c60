@@ -29,17 +29,17 @@ import {
 } from "@/lib/erp/content/content-data";
 import { exportReportPdf } from "@/lib/erp/reports/export";
 
-export const Route = createFileRoute("/_authenticated/erp/content/report")({
+export const Route = createFileRoute("/_authenticated/erp/growth/report")({
   component: BrandReport,
   head: () => ({
     meta: [
-      { title: "Brand Content Report — Content Studio" },
+      { title: "Brand Content Report — Growth Studio" },
       {
         name: "description",
         content:
           "Brand-wise video counts, production status, timeline progress and exportable content summary.",
       },
-      { property: "og:title", content: "Brand Content Report — Content Studio" },
+      { property: "og:title", content: "Brand Content Report — Growth Studio" },
       {
         property: "og:description",
         content: "Videos, statuses, timeline progress and exportable brand summary.",

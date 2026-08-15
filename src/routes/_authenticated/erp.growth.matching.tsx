@@ -49,16 +49,16 @@ import {
   SHIPMENT_STATUSES,
 } from "@/lib/erp/content/content-data";
 
-export const Route = createFileRoute("/_authenticated/erp/content/matching")({
+export const Route = createFileRoute("/_authenticated/erp/growth/matching")({
   head: () => ({
     meta: [
-      { title: "Product ↔ Creator — Content Studio" },
+      { title: "Product ↔ Creator — Growth Studio" },
       {
         name: "description",
         content:
           "Which creator is working on which product, what has been shipped to them, and the content that came back.",
       },
-      { property: "og:title", content: "Product ↔ Creator — Content Studio" },
+      { property: "og:title", content: "Product ↔ Creator — Growth Studio" },
       {
         property: "og:description",
         content: "Track product samples sent to creators and the content delivered.",
