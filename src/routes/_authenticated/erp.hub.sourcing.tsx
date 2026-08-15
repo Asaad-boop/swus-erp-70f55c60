@@ -203,6 +203,11 @@ function SourcingPage() {
   const [search, setSearch] = useState("");
   const [stageFilter, setStageFilter] = useState<SourcingStage | "all">("all");
   const [attentionOnly, setAttentionOnly] = useState(false);
+  const [showCancelled, setShowCancelled] = useState(false);
+  const [removeTarget, setRemoveTarget] = useState<
+    { idea: HubIdea; mode: "cancel" | "delete" } | null
+  >(null);
+  const [removeReason, setRemoveReason] = useState("");
   const [sortBy, setSortBy] = useState<"stage" | "age" | "due" | "quotes" | "cost">("stage");
   const searchRef = useRef<HTMLInputElement>(null);
 
