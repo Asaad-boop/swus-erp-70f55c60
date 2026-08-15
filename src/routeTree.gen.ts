@@ -100,6 +100,7 @@ import { Route as AuthenticatedErpHubProductsRouteImport } from './routes/_authe
 import { Route as AuthenticatedErpHubPlanningRouteImport } from './routes/_authenticated/erp.hub.planning'
 import { Route as AuthenticatedErpHubGoalsRouteImport } from './routes/_authenticated/erp.hub.goals'
 import { Route as AuthenticatedErpHubContentRouteImport } from './routes/_authenticated/erp.hub.content'
+import { Route as AuthenticatedErpHrSettingsRouteImport } from './routes/_authenticated/erp.hr.settings'
 import { Route as AuthenticatedErpHrPerformanceRouteImport } from './routes/_authenticated/erp.hr.performance'
 import { Route as AuthenticatedErpHrPayrollRouteImport } from './routes/_authenticated/erp.hr.payroll'
 import { Route as AuthenticatedErpHrMyAttendanceRouteImport } from './routes/_authenticated/erp.hr.my-attendance'
@@ -655,6 +656,12 @@ const AuthenticatedErpHubContentRoute =
     path: '/content',
     getParentRoute: () => AuthenticatedErpHubRoute,
   } as any)
+const AuthenticatedErpHrSettingsRoute =
+  AuthenticatedErpHrSettingsRouteImport.update({
+    id: '/settings',
+    path: '/settings',
+    getParentRoute: () => AuthenticatedErpHrRoute,
+  } as any)
 const AuthenticatedErpHrPerformanceRoute =
   AuthenticatedErpHrPerformanceRouteImport.update({
     id: '/performance',
@@ -901,6 +908,7 @@ export interface FileRoutesByFullPath {
   '/erp/hr/my-attendance': typeof AuthenticatedErpHrMyAttendanceRoute
   '/erp/hr/payroll': typeof AuthenticatedErpHrPayrollRoute
   '/erp/hr/performance': typeof AuthenticatedErpHrPerformanceRoute
+  '/erp/hr/settings': typeof AuthenticatedErpHrSettingsRoute
   '/erp/hub/content': typeof AuthenticatedErpHubContentRoute
   '/erp/hub/goals': typeof AuthenticatedErpHubGoalsRoute
   '/erp/hub/planning': typeof AuthenticatedErpHubPlanningRoute
@@ -1013,6 +1021,7 @@ export interface FileRoutesByTo {
   '/erp/hr/my-attendance': typeof AuthenticatedErpHrMyAttendanceRoute
   '/erp/hr/payroll': typeof AuthenticatedErpHrPayrollRoute
   '/erp/hr/performance': typeof AuthenticatedErpHrPerformanceRoute
+  '/erp/hr/settings': typeof AuthenticatedErpHrSettingsRoute
   '/erp/hub/content': typeof AuthenticatedErpHubContentRoute
   '/erp/hub/goals': typeof AuthenticatedErpHubGoalsRoute
   '/erp/hub/planning': typeof AuthenticatedErpHubPlanningRoute
@@ -1138,6 +1147,7 @@ export interface FileRoutesById {
   '/_authenticated/erp/hr/my-attendance': typeof AuthenticatedErpHrMyAttendanceRoute
   '/_authenticated/erp/hr/payroll': typeof AuthenticatedErpHrPayrollRoute
   '/_authenticated/erp/hr/performance': typeof AuthenticatedErpHrPerformanceRoute
+  '/_authenticated/erp/hr/settings': typeof AuthenticatedErpHrSettingsRoute
   '/_authenticated/erp/hub/content': typeof AuthenticatedErpHubContentRoute
   '/_authenticated/erp/hub/goals': typeof AuthenticatedErpHubGoalsRoute
   '/_authenticated/erp/hub/planning': typeof AuthenticatedErpHubPlanningRoute
@@ -1263,6 +1273,7 @@ export interface FileRouteTypes {
     | '/erp/hr/my-attendance'
     | '/erp/hr/payroll'
     | '/erp/hr/performance'
+    | '/erp/hr/settings'
     | '/erp/hub/content'
     | '/erp/hub/goals'
     | '/erp/hub/planning'
@@ -1375,6 +1386,7 @@ export interface FileRouteTypes {
     | '/erp/hr/my-attendance'
     | '/erp/hr/payroll'
     | '/erp/hr/performance'
+    | '/erp/hr/settings'
     | '/erp/hub/content'
     | '/erp/hub/goals'
     | '/erp/hub/planning'
@@ -1499,6 +1511,7 @@ export interface FileRouteTypes {
     | '/_authenticated/erp/hr/my-attendance'
     | '/_authenticated/erp/hr/payroll'
     | '/_authenticated/erp/hr/performance'
+    | '/_authenticated/erp/hr/settings'
     | '/_authenticated/erp/hub/content'
     | '/_authenticated/erp/hub/goals'
     | '/_authenticated/erp/hub/planning'
@@ -2223,6 +2236,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedErpHubContentRouteImport
       parentRoute: typeof AuthenticatedErpHubRoute
     }
+    '/_authenticated/erp/hr/settings': {
+      id: '/_authenticated/erp/hr/settings'
+      path: '/settings'
+      fullPath: '/erp/hr/settings'
+      preLoaderRoute: typeof AuthenticatedErpHrSettingsRouteImport
+      parentRoute: typeof AuthenticatedErpHrRoute
+    }
     '/_authenticated/erp/hr/performance': {
       id: '/_authenticated/erp/hr/performance'
       path: '/performance'
@@ -2534,6 +2554,7 @@ interface AuthenticatedErpHrRouteChildren {
   AuthenticatedErpHrMyAttendanceRoute: typeof AuthenticatedErpHrMyAttendanceRoute
   AuthenticatedErpHrPayrollRoute: typeof AuthenticatedErpHrPayrollRoute
   AuthenticatedErpHrPerformanceRoute: typeof AuthenticatedErpHrPerformanceRoute
+  AuthenticatedErpHrSettingsRoute: typeof AuthenticatedErpHrSettingsRoute
   AuthenticatedErpHrIndexRoute: typeof AuthenticatedErpHrIndexRoute
 }
 
@@ -2546,6 +2567,7 @@ const AuthenticatedErpHrRouteChildren: AuthenticatedErpHrRouteChildren = {
   AuthenticatedErpHrMyAttendanceRoute: AuthenticatedErpHrMyAttendanceRoute,
   AuthenticatedErpHrPayrollRoute: AuthenticatedErpHrPayrollRoute,
   AuthenticatedErpHrPerformanceRoute: AuthenticatedErpHrPerformanceRoute,
+  AuthenticatedErpHrSettingsRoute: AuthenticatedErpHrSettingsRoute,
   AuthenticatedErpHrIndexRoute: AuthenticatedErpHrIndexRoute,
 }
 
