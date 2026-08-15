@@ -323,14 +323,44 @@ export const createPathaoReconciliationRun = createServerFn({ method: "POST" })
       });
     }
 
+    // Dedupe within the file itself — the DB has a unique index on
+    // (brand_id, consignment/merchant id, invoice_date, payout).
+    const dedupKey = (r: (typeof rowInserts)[number]) =>
+      [
+        r.brand_id ?? "",
+        (r.consignment_id || r.merchant_order_id || "__missing__").trim(),
+        r.invoice_date ?? "",
+        r.payout,
+      ].join("|");
+    const seenKeys = new Set<string>();
+    const uniqueInserts = rowInserts.filter((r) => {
+      const k = dedupKey(r);
+      if (seenKeys.has(k)) return false;
+      seenKeys.add(k);
+      return true;
+    });
+
     // Chunked insert — a single 1700-row insert can exceed request limits and
-    // leave the run with zero rows.
+    // leave the run with zero rows. Rows already ingested (e.g. via the
+    // InstaPay webhook) hit the unique index; skip those instead of failing
+    // the whole upload.
     const INSERT_CHUNK = 250;
-    for (let i = 0; i < rowInserts.length; i += INSERT_CHUNK) {
+    const isDup = (msg: string) =>
+      msg.includes("duplicate key value") || msg.includes("23505");
+    for (let i = 0; i < uniqueInserts.length; i += INSERT_CHUNK) {
+      const chunk = uniqueInserts.slice(i, i + INSERT_CHUNK);
       const { error: rowErr } = await supabase
         .from("erp_reconciliation_rows")
-        .insert(rowInserts.slice(i, i + INSERT_CHUNK) as never);
-      if (rowErr) throw new Error(rowErr.message);
+        .insert(chunk as never);
+      if (!rowErr) continue;
+      if (!isDup(rowErr.message)) throw new Error(rowErr.message);
+      // Retry row-by-row, skipping only the already-ingested ones.
+      for (const row of chunk) {
+        const { error: oneErr } = await supabase
+          .from("erp_reconciliation_rows")
+          .insert(row as never);
+        if (oneErr && !isDup(oneErr.message)) throw new Error(oneErr.message);
+      }
     }
 
     // Update counts on run
