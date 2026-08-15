@@ -285,6 +285,7 @@ function MatchingPage() {
           options={[
             { key: "table", label: "Table", icon: Table2 },
             { key: "matrix", label: "Matrix", icon: LayoutGrid },
+            { key: "ships", label: "Shipments", count: shipments.length, icon: Truck },
           ]}
         />
         <div className="ml-auto">
@@ -310,6 +311,80 @@ function MatchingPage() {
 
       {shipQ.isLoading ? (
         <Skeleton className="h-64 rounded-xl" />
+      ) : mode === "ships" ? (
+        visibleShipments.length === 0 ? (
+          <EmptyState
+            icon={Truck}
+            title="কোনো shipment নেই"
+            description="Creator-কে sample পাঠালে এখানে tracking আর status দেখা যাবে।"
+          />
+        ) : (
+          <div className="overflow-x-auto rounded-xl border">
+            <table className="w-full text-sm">
+              <thead className="bg-muted/50 text-[11px] uppercase tracking-wide text-muted-foreground">
+                <tr>
+                  <th className="px-3 py-2 text-left">Creator</th>
+                  <th className="px-3 py-2 text-left">Product</th>
+                  <th className="px-3 py-2 text-right">Qty</th>
+                  <th className="px-3 py-2 text-left">Courier / tracking</th>
+                  <th className="px-3 py-2 text-left">Sent</th>
+                  <th className="px-3 py-2 text-right">Cost</th>
+                  <th className="px-3 py-2 text-left">Status</th>
+                  <th className="px-3 py-2" />
+                </tr>
+              </thead>
+              <tbody>
+                {visibleShipments.map((s) => (
+                  <tr key={s.id} className="border-t">
+                    <td className="px-3 py-2 font-medium">{creatorName.get(s.creator_id) ?? "—"}</td>
+                    <td className="px-3 py-2 text-muted-foreground">
+                      {s.product_id ? (productName.get(s.product_id) ?? "—") : "—"}
+                    </td>
+                    <td className="px-3 py-2 text-right tabular-nums">{s.qty}</td>
+                    <td className="px-3 py-2 text-[11px] text-muted-foreground">
+                      {s.courier ?? "—"}
+                      {s.tracking_no ? ` · ${s.tracking_no}` : ""}
+                    </td>
+                    <td className="px-3 py-2 text-[11px] text-muted-foreground">
+                      {s.sent_date ?? "—"}
+                      {s.delivered_date ? ` → ${s.delivered_date}` : ""}
+                    </td>
+                    <td className="px-3 py-2 text-right tabular-nums">{bdt(s.cost)}</td>
+                    <td className="px-3 py-2">
+                      <Select
+                        value={s.status}
+                        onValueChange={(v) => statusMut.mutate({ id: s.id, status: v })}
+                      >
+                        <SelectTrigger className="h-8 w-[130px] text-xs">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {SHIPMENT_STATUSES.map((x) => (
+                            <SelectItem key={x.key} value={x.key}>
+                              {x.label}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </td>
+                    <td className="px-3 py-2 text-right">
+                      <Button
+                        size="icon"
+                        variant="ghost"
+                        className="h-8 w-8 text-muted-foreground hover:text-destructive"
+                        onClick={() => {
+                          if (confirm("এই shipment মুছে ফেলবে?")) deleteMut.mutate(s.id);
+                        }}
+                      >
+                        <Trash2 className="h-3.5 w-3.5" />
+                      </Button>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )
       ) : visiblePairs.length === 0 ? (
         <EmptyState
           icon={Network}
@@ -344,7 +419,7 @@ function MatchingPage() {
                 <Badge variant="outline" className="text-[10px]">
                   {p.shipStatus === "—" ? "—" : labelOf(SHIPMENT_STATUSES, p.shipStatus)}
                 </Badge>
-                <span>{bdt(p.cost)}</span>
+                <span>{bdt(p.cost + p.shipCost)}</span>
               </div>
             </div>
           ))}
@@ -384,7 +459,7 @@ function MatchingPage() {
                   <td className="px-3 py-2 text-right tabular-nums">{p.content}</td>
                   <td className="px-3 py-2 text-right tabular-nums">{p.published}</td>
                   <td className="px-3 py-2 text-right tabular-nums">{p.orders}</td>
-                  <td className="px-3 py-2 text-right tabular-nums">{bdt(p.cost)}</td>
+                  <td className="px-3 py-2 text-right tabular-nums">{bdt(p.cost + p.shipCost)}</td>
                 </tr>
               ))}
             </tbody>
