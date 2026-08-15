@@ -34,7 +34,7 @@ export function BulkReorderDialog({
         reorder_qty: p.reorder_qty ?? 0,
         low_stock_threshold: p.low_stock_threshold ?? 5,
       }));
-      const { error } = await supabase.from("products").update(patch).in("id", ids);
+      const { error } = await supabase.from("products").update(patch as never).in("id", ids);
       if (error) throw error;
       return { count: ids.length, prev, patch };
     },
@@ -48,7 +48,7 @@ export function BulkReorderDialog({
             for (const p of prev) {
               const revert: Record<string, number> = {};
               for (const k of Object.keys(patch)) revert[k] = (p as never as Record<string, number>)[k];
-              await supabase.from("products").update(revert).eq("id", p.id);
+              await supabase.from("products").update(revert as never).eq("id", p.id);
             }
             qc.invalidateQueries({ queryKey: ["inventory"] });
             toast.success("Restored");
