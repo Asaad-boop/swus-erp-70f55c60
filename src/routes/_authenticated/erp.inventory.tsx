@@ -537,22 +537,22 @@ function InventoryPage() {
                   <TableHead className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Product</TableHead>
                   <TableHead className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">SKU</TableHead>
                   <TableHead className="text-right text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Price</TableHead>
-                  <TableHead className="text-right text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">WAC</TableHead>
+                  {cols.wac && <TableHead className="text-right text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">WAC</TableHead>}
                   <TableHead className="text-right text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">In Stock</TableHead>
-                  <TableHead className="text-right text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Reserved</TableHead>
+                  {cols.reserved && <TableHead className="text-right text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Reserved</TableHead>}
                   <TableHead className="text-right text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Available</TableHead>
-                  <TableHead className="text-right text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Incoming</TableHead>
-                  <TableHead className="text-right text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Reorder</TableHead>
+                  {cols.incoming && <TableHead className="text-right text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Incoming</TableHead>}
+                  {cols.reorder && <TableHead className="text-right text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Reorder</TableHead>}
                   <TableHead className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Status</TableHead>
                   <TableHead className="text-right text-[10px] font-semibold uppercase tracking-wider text-muted-foreground w-12"></TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {isLoading && (
-                  <TableRow><TableCell colSpan={13} className="text-center py-12 text-muted-foreground">Loading inventory…</TableCell></TableRow>
+                  <TableRow><TableCell colSpan={visibleColCount} className="text-center py-12 text-muted-foreground">Loading inventory…</TableCell></TableRow>
                 )}
                 {!isLoading && rows.length === 0 && (
-                  <TableRow><TableCell colSpan={13} className="text-center py-12 text-muted-foreground">No products found</TableCell></TableRow>
+                  <TableRow><TableCell colSpan={visibleColCount} className="text-center py-12 text-muted-foreground">No products found</TableCell></TableRow>
                 )}
                 {rows.map((r) => {
                   const variants = r.variants ?? [];
