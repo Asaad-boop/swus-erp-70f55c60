@@ -806,7 +806,17 @@ function InventoryPage() {
           </div>
 
           <div className="flex items-center justify-between text-sm">
-            <div className="text-muted-foreground">Page {filter.page + 1} of {totalPages}</div>
+            <div className="flex items-center gap-3 text-muted-foreground">
+              <span>Page {filter.page + 1} of {totalPages}</span>
+              <Select value={String(filter.pageSize)} onValueChange={(v) => setFilter({ ...filter, pageSize: Number(v), page: 0 })}>
+                <SelectTrigger className="h-8 w-[110px] text-xs"><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  {[25, 50, 100, 200].map((n) => (
+                    <SelectItem key={n} value={String(n)}>{n} / page</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
             <div className="flex gap-2">
               <Button variant="outline" size="sm" disabled={filter.page === 0} onClick={() => setFilter({ ...filter, page: filter.page - 1 })}>Prev</Button>
               <Button variant="outline" size="sm" disabled={filter.page + 1 >= totalPages} onClick={() => setFilter({ ...filter, page: filter.page + 1 })}>Next</Button>
@@ -945,6 +955,19 @@ function InventoryPage() {
         mode={adjust?.mode ?? "in"}
         initialVariantId={adjustVariant}
         onClose={() => { setAdjust(null); setAdjustVariant(null); qc.invalidateQueries({ queryKey: ["inventory"] }); }}
+      />
+
+      <BulkStockDialog
+        open={!!bulkStock}
+        mode={bulkStock ?? "in"}
+        products={selectedRows}
+        onClose={() => setBulkStock(null)}
+      />
+
+      <BulkReorderDialog
+        open={bulkReorder}
+        products={selectedRows}
+        onClose={() => setBulkReorder(false)}
       />
 
       <ProductHistorySheet product={historyProduct} onClose={() => setHistoryProduct(null)} brandId={activeBrand?.id ?? null} />
