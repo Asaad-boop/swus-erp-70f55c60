@@ -457,13 +457,13 @@ function InventoryPage() {
                 </Button>
                 <Button
                   size="sm" variant="secondary" className="h-8 gap-1.5"
-                  onClick={() => { if (selectedRows[0]) setAdjust({ product: selectedRows[0], mode: "in" }); }}
+                  onClick={() => selectedRows.length && setBulkStock("in")}
                 >
                   <ArrowUp className="h-3.5 w-3.5 text-emerald-600" />Stock In
                 </Button>
                 <Button
                   size="sm" variant="secondary" className="h-8 gap-1.5"
-                  onClick={() => { if (selectedRows[0]) setAdjust({ product: selectedRows[0], mode: "out" }); }}
+                  onClick={() => selectedRows.length && setBulkStock("out")}
                 >
                   <ArrowDown className="h-3.5 w-3.5 text-red-600" />Stock Out
                 </Button>
@@ -506,7 +506,7 @@ function InventoryPage() {
                         </DropdownMenuSubContent>
                       </DropdownMenuPortal>
                     </DropdownMenuSub>
-                    <DropdownMenuItem className="text-xs" onClick={() => toast.info("Bulk reorder point — coming soon")}>
+                    <DropdownMenuItem className="text-xs" onClick={() => setBulkReorder(true)}>
                       <AlertCircle className="h-3.5 w-3.5 mr-2" />Set reorder point
                     </DropdownMenuItem>
                     <DropdownMenuItem className="text-xs text-red-600 focus:text-red-600" onClick={() => setConfirmDelete(true)}>
