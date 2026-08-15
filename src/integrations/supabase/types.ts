@@ -5050,19 +5050,24 @@ export type Database = {
           created_by: string | null
           facebook_url: string | null
           favicon_url: string | null
+          followers: string | null
+          handle: string | null
           id: string
           instagram_url: string | null
           is_active: boolean
           last_checked_at: string | null
           logo_url: string | null
           name: string
+          niche: string | null
           note: string | null
+          page_type: string | null
           price_range: string | null
           tags: string[]
           threat_level: string
           tiktok_url: string | null
           updated_at: string
           website_url: string | null
+          youtube_url: string | null
         }
         Insert: {
           brand_id?: string | null
@@ -5071,19 +5076,24 @@ export type Database = {
           created_by?: string | null
           facebook_url?: string | null
           favicon_url?: string | null
+          followers?: string | null
+          handle?: string | null
           id?: string
           instagram_url?: string | null
           is_active?: boolean
           last_checked_at?: string | null
           logo_url?: string | null
           name: string
+          niche?: string | null
           note?: string | null
+          page_type?: string | null
           price_range?: string | null
           tags?: string[]
           threat_level?: string
           tiktok_url?: string | null
           updated_at?: string
           website_url?: string | null
+          youtube_url?: string | null
         }
         Update: {
           brand_id?: string | null
@@ -5092,19 +5102,24 @@ export type Database = {
           created_by?: string | null
           facebook_url?: string | null
           favicon_url?: string | null
+          followers?: string | null
+          handle?: string | null
           id?: string
           instagram_url?: string | null
           is_active?: boolean
           last_checked_at?: string | null
           logo_url?: string | null
           name?: string
+          niche?: string | null
           note?: string | null
+          page_type?: string | null
           price_range?: string | null
           tags?: string[]
           threat_level?: string
           tiktok_url?: string | null
           updated_at?: string
           website_url?: string | null
+          youtube_url?: string | null
         }
         Relationships: []
       }
@@ -5659,6 +5674,7 @@ export type Database = {
           description: string | null
           est_sell_price: number
           est_unit_cost: number
+          fx_rate: number | null
           id: string
           image_url: string | null
           images: string[]
@@ -5673,6 +5689,8 @@ export type Database = {
           ordered_at: string | null
           priority: string
           selected_quote_id: string | null
+          source_currency: string | null
+          source_price: number | null
           source_url: string | null
           sourcing_owner: string | null
           status: string
@@ -5696,6 +5714,7 @@ export type Database = {
           description?: string | null
           est_sell_price?: number
           est_unit_cost?: number
+          fx_rate?: number | null
           id?: string
           image_url?: string | null
           images?: string[]
@@ -5710,6 +5729,8 @@ export type Database = {
           ordered_at?: string | null
           priority?: string
           selected_quote_id?: string | null
+          source_currency?: string | null
+          source_price?: number | null
           source_url?: string | null
           sourcing_owner?: string | null
           status?: string
@@ -5733,6 +5754,7 @@ export type Database = {
           description?: string | null
           est_sell_price?: number
           est_unit_cost?: number
+          fx_rate?: number | null
           id?: string
           image_url?: string | null
           images?: string[]
@@ -5747,6 +5769,8 @@ export type Database = {
           ordered_at?: string | null
           priority?: string
           selected_quote_id?: string | null
+          source_currency?: string | null
+          source_price?: number | null
           source_url?: string | null
           sourcing_owner?: string | null
           status?: string
