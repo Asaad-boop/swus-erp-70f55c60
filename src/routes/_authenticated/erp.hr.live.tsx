@@ -8,6 +8,8 @@ import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { HrPageHeader, clockTime, hoursMins } from "@/components/erp/hr/hr-shell";
 import { getLiveBoard, type LiveEmployee } from "@/lib/erp/hr/attendance.functions";
+import { getAppSetting } from "@/lib/erp/settings/app-settings.functions";
+import { DEFAULT_HR_POLICY, type HrPolicy } from "./erp.hr.settings";
 import { Radio, RefreshCw, Users, CheckCircle2, Coffee, LogOut, UserX, Table2, GanttChartSquare, Activity } from "lucide-react";
 
 export const Route = createFileRoute("/_authenticated/erp/hr/live")({
@@ -84,6 +86,24 @@ function LiveDashboardPage() {
     queryFn: () => fetchBoard({ data: { date } }),
     refetchInterval: 60_000,
   });
+
+  const loadSetting = useServerFn(getAppSetting);
+  const { data: policy } = useQuery({
+    queryKey: ["hr-policy"],
+    staleTime: 5 * 60_000,
+    queryFn: async () => {
+      const res = await loadSetting({ data: { key: "hr_policy" } });
+      return { ...DEFAULT_HR_POLICY, ...((res.value as Partial<HrPolicy>) ?? {}) } as HrPolicy;
+    },
+  });
+
+  /** Late = first check-in after office start + grace. */
+  const isLate = (firstIn: string | null) => {
+    if (!firstIn || !policy) return false;
+    const [h, m] = policy.day_start.split(":").map(Number);
+    const cutoff = (h || 0) + ((m || 0) + (policy.late_grace_min || 0)) / 60;
+    return dhakaHour(firstIn) > cutoff;
+  };
 
   const rows = data?.rows ?? [];
   const kpi = useMemo(() => {
@@ -195,6 +215,7 @@ function LiveDashboardPage() {
                           </Badge>
                         </td>
                         <td className="p-2.5">{clockTime(r.firstIn)}</td>
+                        {null}
                         <td className="p-2.5">{clockTime(r.lastOut)}</td>
                         <td className="p-2.5 text-right">{hoursMins(r.breakMs)}</td>
                         <td className="p-2.5 text-right font-medium">{hoursMins(r.workMs)}</td>
