@@ -31,9 +31,12 @@ import { cn } from "@/lib/utils";
 import { useBrand } from "@/contexts/brand-context";
 import {
   useInventoryQuery,
+  useInventorySummary,
+  useProductCategories,
   useLowStockAlerts,
   useStockMovements,
   useProductTitles,
+  DEFAULT_INVENTORY_FILTER,
   type InventoryFilter,
 } from "@/hooks/erp/use-inventory-query";
 import {
@@ -45,6 +48,8 @@ import {
 } from "@/lib/erp/inventory";
 import { downloadCsv } from "@/lib/erp/orders";
 import { StockAdjustDialog } from "@/components/erp/inventory/stock-adjust-dialog";
+import { BulkStockDialog } from "@/components/erp/inventory/bulk-stock-dialog";
+import { BulkReorderDialog } from "@/components/erp/inventory/bulk-reorder-dialog";
 import { ProductEditDialog } from "@/components/erp/inventory/product-edit-dialog";
 import { ProductAddDialog } from "@/components/erp/inventory/product-add-dialog";
 
@@ -53,12 +58,59 @@ export const Route = createFileRoute("/_authenticated/erp/inventory")({
   component: InventoryPage,
 });
 
+type ColumnKey = "wac" | "reserved" | "incoming" | "reorder";
+const COLUMN_LABELS: Array<{ key: ColumnKey; label: string }> = [
+  { key: "wac", label: "WAC" },
+  { key: "reserved", label: "Reserved" },
+  { key: "incoming", label: "Incoming" },
+  { key: "reorder", label: "Reorder" },
+];
+const COLUMNS_STORAGE_KEY = "erp.inventory.columns";
+
 function InventoryPage() {
   const { activeBrand, brandIds, isAllBrands, brands } = useBrand();
   const qc = useQueryClient();
-  const [filter, setFilter] = useState<InventoryFilter>({
-    brandIds: [], search: "", stockState: "all", page: 0, pageSize: 50,
+  const [filter, setFilter] = useState<InventoryFilter>(DEFAULT_INVENTORY_FILTER);
+  const [searchInput, setSearchInput] = useState("");
+
+  // debounce search -> filter
+  useEffect(() => {
+    const t = setTimeout(() => {
+      setFilter((f) => (f.search === searchInput ? f : { ...f, search: searchInput, page: 0 }));
+    }, 300);
+    return () => clearTimeout(t);
+  }, [searchInput]);
+
+  // "/" focuses search
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      const el = e.target as HTMLElement | null;
+      const typing = el && (el.tagName === "INPUT" || el.tagName === "TEXTAREA" || el.isContentEditable);
+      if (e.key === "/" && !typing) {
+        e.preventDefault();
+        document.getElementById("inventory-search")?.focus();
+      }
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, []);
+
+  const [cols, setCols] = useState<Record<ColumnKey, boolean>>({
+    wac: true, reserved: true, incoming: true, reorder: true,
   });
+  useEffect(() => {
+    try {
+      const raw = localStorage.getItem(COLUMNS_STORAGE_KEY);
+      if (raw) setCols((c) => ({ ...c, ...(JSON.parse(raw) as Record<ColumnKey, boolean>) }));
+    } catch { /* ignore */ }
+  }, []);
+  const toggleCol = (k: ColumnKey) => setCols((c) => {
+    const n = { ...c, [k]: !c[k] };
+    try { localStorage.setItem(COLUMNS_STORAGE_KEY, JSON.stringify(n)); } catch { /* ignore */ }
+    return n;
+  });
+  const visibleColCount = 9 + Object.values(cols).filter(Boolean).length;
+
   const effective = useMemo<InventoryFilter>(
     () => ({ ...filter, brandIds }),
     [filter, brandIds],
@@ -67,6 +119,8 @@ function InventoryPage() {
   const { data, isLoading, dataUpdatedAt } = useInventoryQuery(effective);
   const rows = data?.rows ?? [];
   const total = data?.total ?? 0;
+  const summaryQuery = useInventorySummary(effective);
+  const categories = useProductCategories(brandIds);
   const lowQuery = useLowStockAlerts(brandIds);
   const movements = useStockMovements(brandIds);
 
@@ -85,6 +139,8 @@ function InventoryPage() {
     const n = new Set(s); n.has(id) ? n.delete(id) : n.add(id); return n;
   });
   const [adjustVariant, setAdjustVariant] = useState<string | null>(null);
+  const [bulkStock, setBulkStock] = useState<"in" | "out" | null>(null);
+  const [bulkReorder, setBulkReorder] = useState(false);
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const toggleSelect = (id: string) => setSelected((s) => {
     const n = new Set(s); n.has(id) ? n.delete(id) : n.add(id); return n;
