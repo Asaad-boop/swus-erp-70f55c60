@@ -149,7 +149,7 @@ function HrSettingsPage() {
     onError: fail,
   });
   const updateLt = useMutation({
-    mutationFn: async ({ id, patch }: { id: string; patch: Record<string, unknown> }) => {
+    mutationFn: async ({ id, patch }: { id: string; patch: { days_per_year?: number; is_paid?: boolean } }) => {
       const { error } = await supabase.from("hr_leave_types").update(patch).eq("id", id);
       if (error) throw new Error(error.message);
     },
