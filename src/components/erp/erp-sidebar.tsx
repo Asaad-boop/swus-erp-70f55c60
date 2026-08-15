@@ -16,6 +16,9 @@ import {
   Repeat,
   Swords,
   Chrome,
+  CalendarCheck,
+  Palmtree,
+  Trophy,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useGlobalSearch } from "@/components/erp/global-search";
@@ -192,6 +195,26 @@ const groups: Group[] = [
         items: [
           { to: "/erp/analytics", label: "Analytics", icon: BarChart3, exact: true },
           { to: "/erp/analytics/live", label: "Live Analytics", icon: Activity },
+        ],
+      },
+    ],
+  },
+  {
+    kind: "accordion",
+    label: "People",
+    defaultClosed: true,
+    sections: [
+      {
+        key: "hr",
+        label: "HRM",
+        icon: UserCog,
+        items: [
+          { to: "/erp/hr", label: "HR Overview", icon: LayoutDashboard, exact: true },
+          { to: "/erp/hr/employees", label: "Employees", icon: Users },
+          { to: "/erp/hr/attendance", label: "Attendance", icon: CalendarCheck },
+          { to: "/erp/hr/leaves", label: "Leave & Holidays", icon: Palmtree },
+          { to: "/erp/hr/payroll", label: "Payroll", icon: Banknote },
+          { to: "/erp/hr/performance", label: "Performance & KPI", icon: Trophy },
         ],
       },
     ],
