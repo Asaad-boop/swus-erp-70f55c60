@@ -326,8 +326,8 @@ const POPUP_HTML = `<!doctype html>
       <h2>Synq With Us</h2>
       <p class="muted">তোমার ERP account দিয়ে login করো — যেকোনো website থেকে product, rival page ও content সরাসরি Growth Hub-এ যাবে।</p>
     </div>
-    <label>Email</label>
-    <input id="email" type="email" placeholder="you@company.com" autocomplete="username" />
+    <label>Email or username</label>
+    <input id="email" type="text" placeholder="you@company.com / yourname" autocomplete="username" />
     <label>Password</label>
     <input id="password" type="password" placeholder="••••••••" autocomplete="current-password" />
     <button id="loginBtn" class="primary block">Login</button>
@@ -441,8 +441,8 @@ const POPUP_HTML = `<!doctype html>
     </div>
     <div id="vRecent" class="hidden feed"></div>
   </main>
-</body>
 <script type="module" src="popup.js"></script>
+</body>
 </html>`;
 
 const POPUP_CSS = `
