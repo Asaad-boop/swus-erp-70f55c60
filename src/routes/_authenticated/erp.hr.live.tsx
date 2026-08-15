@@ -10,7 +10,7 @@ import { HrPageHeader, clockTime, hoursMins } from "@/components/erp/hr/hr-shell
 import { getLiveBoard, type LiveEmployee } from "@/lib/erp/hr/attendance.functions";
 import { getAppSetting } from "@/lib/erp/settings/app-settings.functions";
 import { DEFAULT_HR_POLICY, type HrPolicy } from "@/lib/erp/hr/policy";
-import { dayMetrics, shiftLabel, unpaidBreakMinutes } from "@/lib/erp/hr/schedule";
+import { breakWindowLabel, dayMetrics, shiftLabel, unpaidBreakMinutes } from "@/lib/erp/hr/schedule";
 import { Radio, RefreshCw, Users, CheckCircle2, Coffee, LogOut, UserX, Table2, GanttChartSquare, Activity } from "lucide-react";
 
 export const Route = createFileRoute("/_authenticated/erp/hr/live")({
@@ -221,6 +221,9 @@ function LiveDashboardPage() {
                           {shiftLabel(r.schedule)}
                           {m.isOff && (
                             <Badge variant="outline" className="ml-1.5 border-violet-500/20 bg-violet-500/10 text-[10px] text-violet-600">Off day</Badge>
+                          )}
+                          {breakWindowLabel(r.schedule) && (
+                            <p className="text-[10px] text-muted-foreground">Break {breakWindowLabel(r.schedule)}</p>
                           )}
                         </td>
                         <td className="p-2.5">
