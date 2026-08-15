@@ -19,6 +19,15 @@ import {
   statusTone,
 } from "@/components/erp/hr/hr-shell";
 import { Users, Plus, Search, Trash2 } from "lucide-react";
+import { Switch } from "@/components/ui/switch";
+import {
+  DEFAULT_SCHEDULE,
+  WEEK_DAYS,
+  hhmm,
+  shiftLabel,
+  toSchedule,
+  weekOffLabel,
+} from "@/lib/erp/hr/schedule";
 
 export const Route = createFileRoute("/_authenticated/erp/hr/employees")({
   component: EmployeesPage,
@@ -57,6 +66,12 @@ const empty = {
   emergency_contact_phone: "",
   user_id: "",
   notes: "",
+  shift_start: DEFAULT_SCHEDULE.shift_start,
+  shift_end: DEFAULT_SCHEDULE.shift_end,
+  late_grace_min: "",
+  overtime_rate: "0",
+  overtime_holiday_multiplier: "2",
+  overtime_min_minutes: "30",
 };
 
 function EmployeesPage() {
@@ -67,6 +82,8 @@ function EmployeesPage() {
   const [open, setOpen] = useState(false);
   const [editing, setEditing] = useState<Employee | null>(null);
   const [form, setForm] = useState({ ...empty });
+  const [weekOffs, setWeekOffs] = useState<number[]>([...DEFAULT_SCHEDULE.week_offs]);
+  const [otEnabled, setOtEnabled] = useState(false);
 
   const { data, isLoading } = useQuery({
     queryKey: ["hr-employees"],
@@ -126,6 +143,14 @@ function EmployeesPage() {
         emergency_contact_phone: form.emergency_contact_phone.trim() || null,
         user_id: form.user_id || null,
         notes: form.notes.trim() || null,
+        shift_start: hhmm(form.shift_start || DEFAULT_SCHEDULE.shift_start),
+        shift_end: hhmm(form.shift_end || DEFAULT_SCHEDULE.shift_end),
+        week_offs: weekOffs,
+        late_grace_min: form.late_grace_min === "" ? null : Number(form.late_grace_min) || 0,
+        overtime_enabled: otEnabled,
+        overtime_rate: Number(form.overtime_rate) || 0,
+        overtime_holiday_multiplier: Number(form.overtime_holiday_multiplier) || 1,
+        overtime_min_minutes: Number(form.overtime_min_minutes) || 0,
       };
       if (editing) {
         const { error } = await supabase.from("hr_employees").update(payload).eq("id", editing.id);
@@ -170,6 +195,8 @@ function EmployeesPage() {
   const openNew = () => {
     setEditing(null);
     setForm({ ...empty });
+    setWeekOffs([...DEFAULT_SCHEDULE.week_offs]);
+    setOtEnabled(false);
     setOpen(true);
   };
   const openEdit = (e: Employee) => {
@@ -179,7 +206,15 @@ function EmployeesPage() {
       ...Object.fromEntries(
         Object.keys(empty).map((k) => [k, e[k] == null ? (k === "monthly_salary" ? "0" : "") : String(e[k])]),
       ),
+      shift_start: hhmm(e.shift_start ?? DEFAULT_SCHEDULE.shift_start),
+      shift_end: hhmm(e.shift_end ?? DEFAULT_SCHEDULE.shift_end),
+      late_grace_min: e.late_grace_min == null ? "" : String(e.late_grace_min),
+      overtime_rate: String(e.overtime_rate ?? 0),
+      overtime_holiday_multiplier: String(e.overtime_holiday_multiplier ?? 2),
+      overtime_min_minutes: String(e.overtime_min_minutes ?? 30),
     } as typeof empty);
+    setWeekOffs(Array.isArray(e.week_offs) ? e.week_offs.map(Number) : [...DEFAULT_SCHEDULE.week_offs]);
+    setOtEnabled(!!e.overtime_enabled);
     setOpen(true);
   };
 
@@ -239,18 +274,22 @@ function EmployeesPage() {
                   <th className="p-2.5 text-left">Employee</th>
                   <th className="p-2.5 text-left">Department</th>
                   <th className="p-2.5 text-left">Designation</th>
-                  <th className="p-2.5 text-left">Joined</th>
+                  <th className="p-2.5 text-left">Duty time</th>
+                  <th className="p-2.5 text-left">Weekly off</th>
+                  <th className="p-2.5 text-left">OT / hr</th>
                   <th className="p-2.5 text-right">Salary</th>
                   <th className="p-2.5 text-left">Status</th>
                 </tr>
               </thead>
               <tbody>
                 {isLoading ? (
-                  <tr><td colSpan={6} className="p-6 text-center text-muted-foreground">Loading…</td></tr>
+                  <tr><td colSpan={8} className="p-6 text-center text-muted-foreground">Loading…</td></tr>
                 ) : rows.length === 0 ? (
-                  <tr><td colSpan={6} className="p-6 text-center text-muted-foreground">Kono employee nei.</td></tr>
+                  <tr><td colSpan={8} className="p-6 text-center text-muted-foreground">Kono employee nei.</td></tr>
                 ) : (
-                  rows.map((e: Employee) => (
+                  rows.map((e: Employee) => {
+                    const sched = toSchedule(e);
+                    return (
                     <tr
                       key={e.id}
                       onClick={() => openEdit(e)}
@@ -264,13 +303,18 @@ function EmployeesPage() {
                       </td>
                       <td className="p-2.5">{nameOf(departments, e.department_id, "name")}</td>
                       <td className="p-2.5">{nameOf(designations, e.designation_id, "title")}</td>
-                      <td className="p-2.5">{e.join_date ?? "—"}</td>
+                      <td className="p-2.5 whitespace-nowrap text-[12px]">{shiftLabel(sched)}</td>
+                      <td className="p-2.5 text-[12px]">{weekOffLabel(sched)}</td>
+                      <td className="p-2.5 text-[12px]">
+                        {e.overtime_enabled ? money(e.overtime_rate) : <span className="text-muted-foreground">Off</span>}
+                      </td>
                       <td className="p-2.5 text-right tabular-nums">{money(e.monthly_salary)}</td>
                       <td className="p-2.5">
                         <Badge variant="outline" className={statusTone[e.status] ?? ""}>{e.status}</Badge>
                       </td>
                     </tr>
-                  ))
+                    );
+                  })
                 )}
               </tbody>
             </table>
@@ -354,6 +398,80 @@ function EmployeesPage() {
             </div>
             <Field label="Address"><Textarea rows={2} value={form.address} onChange={(e) => setForm({ ...form, address: e.target.value })} /></Field>
             <Field label="Notes"><Textarea rows={2} value={form.notes} onChange={(e) => setForm({ ...form, notes: e.target.value })} /></Field>
+
+            <div className="rounded-xl border border-border/70 bg-muted/25 p-3 space-y-3">
+              <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Duty time & overtime</p>
+              <div className="grid grid-cols-2 gap-3">
+                <Field label="Duty start">
+                  <Input type="time" value={form.shift_start} onChange={(e) => setForm({ ...form, shift_start: e.target.value })} />
+                </Field>
+                <Field label="Duty end">
+                  <Input type="time" value={form.shift_end} onChange={(e) => setForm({ ...form, shift_end: e.target.value })} />
+                </Field>
+              </div>
+              <div className="space-y-1.5">
+                <Label className="text-xs text-muted-foreground">Weekly off days</Label>
+                <div className="flex flex-wrap gap-1.5">
+                  {WEEK_DAYS.map((d) => {
+                    const on = weekOffs.includes(d.value);
+                    return (
+                      <button
+                        key={d.value}
+                        type="button"
+                        onClick={() =>
+                          setWeekOffs(on ? weekOffs.filter((x) => x !== d.value) : [...weekOffs, d.value].sort((a, b) => a - b))
+                        }
+                        className={`rounded-full border px-2.5 py-1 text-[11px] font-medium transition-colors ${
+                          on ? "border-primary/30 bg-primary/10 text-primary" : "border-border bg-background text-muted-foreground hover:text-foreground"
+                        }`}
+                      >
+                        {d.short}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+              <Field label="Late grace minutes (khali rakhle company policy)">
+                <Input
+                  type="number"
+                  min={0}
+                  placeholder="Company policy"
+                  value={form.late_grace_min}
+                  onChange={(e) => setForm({ ...form, late_grace_min: e.target.value })}
+                />
+              </Field>
+              <div className="flex items-center justify-between rounded-lg border border-border/70 bg-background px-3 py-2">
+                <div>
+                  <p className="text-sm font-medium">Overtime</p>
+                  <p className="text-[11px] text-muted-foreground">Duty shesh houar por extra hour count hobe</p>
+                </div>
+                <Switch checked={otEnabled} onCheckedChange={setOtEnabled} />
+              </div>
+              {otEnabled && (
+                <div className="grid grid-cols-2 gap-3">
+                  <Field label="OT rate (৳ / hour)">
+                    <Input type="number" min={0} value={form.overtime_rate} onChange={(e) => setForm({ ...form, overtime_rate: e.target.value })} />
+                  </Field>
+                  <Field label="Off-day multiplier (x)">
+                    <Input
+                      type="number"
+                      min={1}
+                      step="0.25"
+                      value={form.overtime_holiday_multiplier}
+                      onChange={(e) => setForm({ ...form, overtime_holiday_multiplier: e.target.value })}
+                    />
+                  </Field>
+                  <Field label="Minimum extra minutes">
+                    <Input
+                      type="number"
+                      min={0}
+                      value={form.overtime_min_minutes}
+                      onChange={(e) => setForm({ ...form, overtime_min_minutes: e.target.value })}
+                    />
+                  </Field>
+                </div>
+              )}
+            </div>
           </div>
           <div className="sticky bottom-0 flex items-center justify-between gap-2 border-t border-border/70 bg-background py-3">
             {editing ? (
