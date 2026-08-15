@@ -14,6 +14,8 @@ import {
   Download,
   ArrowUpDown,
   Gauge,
+  SlidersHorizontal,
+  Layers,
 } from "lucide-react";
 import { toast } from "sonner";
 import { useBrand } from "@/contexts/brand-context";
@@ -25,6 +27,8 @@ import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Label } from "@/components/ui/label";
+import { Slider } from "@/components/ui/slider";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   clearPlanOverride,
   fetchMonthPlan,
@@ -101,6 +105,17 @@ function PlanningPage() {
   const [sort, setSort] = useState<SortKey>("proj_revenue");
   const [desc, setDesc] = useState(true);
   const [onlyLow, setOnlyLow] = useState(false);
+  const [tab, setTab] = useState("overview");
+  const [unitAdj, setUnitAdj] = useState(0);
+  const [priceAdj, setPriceAdj] = useState(0);
+  const [extraCost, setExtraCost] = useState("");
+  const [manualTotals, setManualTotals] = useState({
+    qty: 0,
+    revenue: 0,
+    cogs: 0,
+    marketing: 0,
+    profit: 0,
+  });
 
   const totals = useMemo(() => {
     return rows.reduce(
@@ -212,6 +227,51 @@ function PlanningPage() {
   }, [mediaQ.data, month]);
 
   const netAfterMedia = totals.projProfit - media.total;
+
+  // ---- What-if scenario ----
+  const whatIf = useMemo(() => {
+    const u = 1 + unitAdj / 100;
+    const p = 1 + priceAdj / 100;
+    let revenue = 0;
+    let cogs = 0;
+    let units = 0;
+    for (const r of rows) {
+      const qty = r.proj_units * u;
+      units += qty;
+      revenue += qty * r.proj_price * p;
+      cogs += qty * r.proj_cost;
+    }
+    const extra = Number(extraCost) || 0;
+    const profit = revenue - cogs - media.total - extra;
+    return {
+      units,
+      revenue,
+      cogs,
+      profit,
+      margin: revenue > 0 ? (profit / revenue) * 100 : 0,
+      roas: media.total > 0 ? revenue / media.total : 0,
+      deltaRevenue: revenue - totals.projRevenue,
+      deltaProfit: profit - netAfterMedia,
+    };
+  }, [rows, unitAdj, priceAdj, extraCost, media.total, totals.projRevenue, netAfterMedia]);
+
+  // ---- Pareto: products covering 80% of projected revenue ----
+  const pareto = useMemo(() => {
+    const sorted = [...rows].sort((a, b) => b.proj_revenue - a.proj_revenue);
+    let acc = 0;
+    let n = 0;
+    for (const r of sorted) {
+      if (acc >= totals.projRevenue * 0.8) break;
+      acc += r.proj_revenue;
+      n += 1;
+    }
+    return { count: n, share: totals.projRevenue > 0 ? (acc / totals.projRevenue) * 100 : 0 };
+  }, [rows, totals.projRevenue]);
+
+  const combined = {
+    revenue: totals.projRevenue + manualTotals.revenue,
+    profit: netAfterMedia + manualTotals.profit,
+  };
 
   const exportCsv = () => {
     const head = [
@@ -329,10 +389,38 @@ function PlanningPage() {
         />
       </div>
 
-      <ManualPlanner brandId={brandId} month={month} />
+      <Tabs value={tab} onValueChange={setTab} className="space-y-4">
+        <TabsList>
+          <TabsTrigger value="overview">Overview</TabsTrigger>
+          <TabsTrigger value="products">Products ({rows.length})</TabsTrigger>
+          <TabsTrigger value="manual">Manual plan</TabsTrigger>
+        </TabsList>
 
-      {/* Targets editor */}
-      <Card>
+        <TabsContent value="overview" className="space-y-4">
+        {/* Combined outlook */}
+        <Card className="border-primary/30 bg-primary/5">
+          <CardContent className="flex flex-wrap items-center gap-x-8 gap-y-2 p-4">
+            <div className="flex items-center gap-2">
+              <Layers className="h-4 w-4 text-primary" />
+              <span className="font-display text-sm font-semibold">Combined outlook</span>
+            </div>
+            <PaceStat label="Run-rate revenue" value={bdt(totals.projRevenue)} sub={`Profit ${bdt(totals.projProfit)}`} />
+            <PaceStat label="Manual plan" value={bdt(manualTotals.revenue)} sub={`Profit ${bdt(manualTotals.profit)}`} />
+            <PaceStat
+              label="মোট revenue"
+              value={bdt(combined.revenue)}
+              sub={`Media বাদে profit ${bdt(combined.profit)}`}
+            />
+            <PaceStat
+              label="Top drivers"
+              value={`${pareto.count} product`}
+              sub={`Revenue-এর ${pctTxt(pareto.share)} আনে`}
+            />
+          </CardContent>
+        </Card>
+
+        {/* Targets editor */}
+        <Card>
         <CardContent className="space-y-3 p-4">
           <h2 className="font-display text-sm font-semibold">এই মাসের target</h2>
           <TargetForm
@@ -459,8 +547,79 @@ function PlanningPage() {
         </Card>
       )}
 
-      {/* Product table */}
-      <Card>
+        {/* What-if scenario */}
+        <Card>
+          <CardContent className="space-y-4 p-4">
+            <div className="flex items-center gap-2">
+              <SlidersHorizontal className="h-4 w-4 text-primary" />
+              <h2 className="font-display text-sm font-semibold">What-if scenario</h2>
+              <Badge variant="outline" className="text-[10px]">live</Badge>
+            </div>
+            <div className="grid gap-4 md:grid-cols-3">
+              <div className="space-y-2">
+                <Label className="text-[11px] text-muted-foreground">
+                  Units {unitAdj >= 0 ? "+" : ""}{unitAdj}%
+                </Label>
+                <Slider value={[unitAdj]} min={-50} max={100} step={5} onValueChange={(v) => setUnitAdj(v[0] ?? 0)} />
+              </div>
+              <div className="space-y-2">
+                <Label className="text-[11px] text-muted-foreground">
+                  Price {priceAdj >= 0 ? "+" : ""}{priceAdj}%
+                </Label>
+                <Slider value={[priceAdj]} min={-30} max={50} step={1} onValueChange={(v) => setPriceAdj(v[0] ?? 0)} />
+              </div>
+              <div className="space-y-1">
+                <Label className="text-[11px] text-muted-foreground">অতিরিক্ত খরচ (BDT)</Label>
+                <Input
+                  inputMode="decimal"
+                  className="h-9"
+                  placeholder="0"
+                  value={extraCost}
+                  onChange={(e) => setExtraCost(e.target.value)}
+                />
+              </div>
+            </div>
+            <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-5">
+              <MiniStat label="Units" value={num(whatIf.units)} />
+              <MiniStat
+                label="Revenue"
+                value={bdt(whatIf.revenue)}
+                sub={`${whatIf.deltaRevenue >= 0 ? "+" : "−"}${bdt(Math.abs(whatIf.deltaRevenue))}`}
+              />
+              <MiniStat
+                label="Profit (media বাদে)"
+                value={bdt(whatIf.profit)}
+                tone={whatIf.profit >= 0 ? "emerald" : "destructive"}
+                sub={`${whatIf.deltaProfit >= 0 ? "+" : "−"}${bdt(Math.abs(whatIf.deltaProfit))}`}
+              />
+              <MiniStat label="Margin" value={pctTxt(whatIf.margin)} />
+              <MiniStat
+                label="ROAS দরকার"
+                value={whatIf.roas > 0 ? `${whatIf.roas.toFixed(2)}x` : "—"}
+                sub={media.total > 0 ? `Media ${bdt(media.total)}` : "media budget নেই"}
+              />
+            </div>
+            {(unitAdj !== 0 || priceAdj !== 0 || extraCost) && (
+              <Button
+                size="sm"
+                variant="ghost"
+                className="h-7 text-xs"
+                onClick={() => {
+                  setUnitAdj(0);
+                  setPriceAdj(0);
+                  setExtraCost("");
+                }}
+              >
+                <RotateCcw className="mr-1 h-3.5 w-3.5" /> Reset
+              </Button>
+            )}
+          </CardContent>
+        </Card>
+        </TabsContent>
+
+        <TabsContent value="products">
+        {/* Product table */}
+        <Card>
         <CardContent className="p-0">
           <div className="flex flex-wrap items-center justify-between gap-2 p-4 pb-2">
             <h2 className="font-display text-sm font-semibold">
@@ -499,7 +658,7 @@ function PlanningPage() {
           ) : (
             <div className="overflow-x-auto">
               <table className="w-full text-sm">
-                <thead className="border-y bg-muted/40 text-xs text-muted-foreground">
+                <thead className="sticky top-0 z-10 border-y bg-muted text-xs text-muted-foreground">
                   <tr>
                     <SortTh k="title" label="Product" />
                     <th className="px-3 py-2 text-right font-medium">3-mo units</th>
@@ -549,6 +708,12 @@ function PlanningPage() {
           )}
         </CardContent>
       </Card>
+        </TabsContent>
+
+        <TabsContent value="manual" forceMount className="data-[state=inactive]:hidden">
+          <ManualPlanner brandId={brandId} month={month} onTotals={setManualTotals} />
+        </TabsContent>
+      </Tabs>
     </div>
   );
 }

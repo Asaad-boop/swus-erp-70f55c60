@@ -50,7 +50,15 @@ function rowMath(r: PlanScenarioRow) {
 }
 
 /** Manual multi-product plan with 10/20/30% profit scenarios, archived per month. */
-export function ManualPlanner({ brandId, month }: { brandId: string | null; month: string }) {
+export function ManualPlanner({
+  brandId,
+  month,
+  onTotals,
+}: {
+  brandId: string | null;
+  month: string;
+  onTotals?: (t: { qty: number; revenue: number; cogs: number; marketing: number; profit: number }) => void;
+}) {
   const qc = useQueryClient();
   const key = ["hub-plan-scenarios", brandId, month];
   const rowsQ = useQuery({ queryKey: key, queryFn: () => fetchScenarioRows(brandId, month) });
@@ -159,6 +167,11 @@ export function ManualPlanner({ brandId, month }: { brandId: string | null; mont
     [rows],
   );
   const totalMargin = totals.revenue > 0 ? (totals.profit / totals.revenue) * 100 : 0;
+
+  useEffect(() => {
+    onTotals?.(totals);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [totals]);
 
   const scenarios = [10, 20, 30].map((pct) => {
     const targetProfit = (totals.revenue * pct) / 100;
