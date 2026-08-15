@@ -26,7 +26,6 @@ import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
-  fetchContentPlans,
   fetchGoalActuals,
   fetchGoals,
   fetchIdeas,
