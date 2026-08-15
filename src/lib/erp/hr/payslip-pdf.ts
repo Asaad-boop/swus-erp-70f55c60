@@ -304,7 +304,25 @@ function drawPayslipPage(
   }
 
   /* ---------- signatures ---------- */
-  const sigY = Math.max(y + 40, doc.internal.pageSize.getHeight() - 120);
+  const pageH = doc.internal.pageSize.getHeight();
+
+  // "End of payslip" rule keeps the blank tail of the page looking intentional.
+  doc.setDrawColor(226, 232, 240);
+  doc.setLineWidth(0.5);
+  const ruleY = y + 6;
+  doc.line(M, ruleY, M + contentW / 2 - 52, ruleY);
+  doc.line(M + contentW / 2 + 52, ruleY, M + contentW, ruleY);
+  doc.setFont("helvetica", "normal");
+  doc.setFontSize(7.5);
+  doc.setTextColor(...MUTED);
+  doc.text("END OF PAYSLIP", M + contentW / 2, ruleY + 3, { align: "center" });
+
+  const sigY = Math.max(y + 60, pageH - 120);
+
+  // Document frame — makes the page read as one printed form.
+  doc.setDrawColor(226, 232, 240);
+  doc.setLineWidth(0.7);
+  doc.roundedRect(M - 12, 116, contentW + 24, pageH - 116 - 58, 10, 10, "S");
   doc.setDrawColor(180, 188, 200);
   doc.setLineWidth(0.6);
   doc.line(M, sigY, M + 160, sigY);
@@ -318,13 +336,13 @@ function drawPayslipPage(
 
   if (company.footer_note) {
     doc.setFontSize(7.5);
-    doc.text(doc.splitTextToSize(company.footer_note, contentW), M, doc.internal.pageSize.getHeight() - 46);
+    doc.text(doc.splitTextToSize(company.footer_note, contentW), M, pageH - 40);
   }
   doc.setFontSize(7.5);
   doc.text(
     `Generated ${new Date().toLocaleString("en-GB", { timeZone: "Asia/Dhaka" })} (Asia/Dhaka)`,
     pageW - M,
-    doc.internal.pageSize.getHeight() - 30,
+    pageH - 28,
     { align: "right" },
   );
 }
