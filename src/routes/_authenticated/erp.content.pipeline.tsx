@@ -566,6 +566,9 @@ function PipelinePage() {
         creators={(creatorsQ.data ?? []).map((c) => ({ id: c.id, name: c.name }))}
         agencies={(agenciesQ.data ?? []).map((a) => ({ id: a.id, name: a.name }))}
         productLabel={open?.product_id ? (productName.get(open.product_id) ?? null) : null}
+        brandLabel={
+          brands.find((b) => b.id === open?.brand_id)?.name ?? activeBrand?.name ?? null
+        }
       />
 
       <Sheet open={creating} onOpenChange={(o) => !o && setCreating(false)}>
