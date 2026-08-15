@@ -32,6 +32,7 @@ import { Route as AuthenticatedErpInventoryReportsRouteImport } from './routes/_
 import { Route as AuthenticatedErpInventoryRouteImport } from './routes/_authenticated/erp.inventory'
 import { Route as AuthenticatedErpImportsRouteImport } from './routes/_authenticated/erp.imports'
 import { Route as AuthenticatedErpHubRouteImport } from './routes/_authenticated/erp.hub'
+import { Route as AuthenticatedErpHrRouteImport } from './routes/_authenticated/erp.hr'
 import { Route as AuthenticatedErpFinanceRouteImport } from './routes/_authenticated/erp.finance'
 import { Route as AuthenticatedErpExtensionRouteImport } from './routes/_authenticated/erp.extension'
 import { Route as AuthenticatedErpDispatchRouteImport } from './routes/_authenticated/erp.dispatch'
@@ -244,6 +245,11 @@ const AuthenticatedErpImportsRoute = AuthenticatedErpImportsRouteImport.update({
 const AuthenticatedErpHubRoute = AuthenticatedErpHubRouteImport.update({
   id: '/hub',
   path: '/hub',
+  getParentRoute: () => AuthenticatedErpRoute,
+} as any)
+const AuthenticatedErpHrRoute = AuthenticatedErpHrRouteImport.update({
+  id: '/hr',
+  path: '/hr',
   getParentRoute: () => AuthenticatedErpRoute,
 } as any)
 const AuthenticatedErpFinanceRoute = AuthenticatedErpFinanceRouteImport.update({
@@ -789,6 +795,7 @@ export interface FileRoutesByFullPath {
   '/erp/dispatch': typeof AuthenticatedErpDispatchRoute
   '/erp/extension': typeof AuthenticatedErpExtensionRoute
   '/erp/finance': typeof AuthenticatedErpFinanceRouteWithChildren
+  '/erp/hr': typeof AuthenticatedErpHrRoute
   '/erp/hub': typeof AuthenticatedErpHubRouteWithChildren
   '/erp/imports': typeof AuthenticatedErpImportsRouteWithChildren
   '/erp/inventory': typeof AuthenticatedErpInventoryRoute
@@ -898,6 +905,7 @@ export interface FileRoutesByTo {
   '/erp/diagnostics': typeof AuthenticatedErpDiagnosticsRoute
   '/erp/dispatch': typeof AuthenticatedErpDispatchRoute
   '/erp/extension': typeof AuthenticatedErpExtensionRoute
+  '/erp/hr': typeof AuthenticatedErpHrRoute
   '/erp/inventory': typeof AuthenticatedErpInventoryRoute
   '/erp/inventory-reports': typeof AuthenticatedErpInventoryReportsRoute
   '/erp/pathao-debug': typeof AuthenticatedErpPathaoDebugRoute
@@ -1007,6 +1015,7 @@ export interface FileRoutesById {
   '/_authenticated/erp/dispatch': typeof AuthenticatedErpDispatchRoute
   '/_authenticated/erp/extension': typeof AuthenticatedErpExtensionRoute
   '/_authenticated/erp/finance': typeof AuthenticatedErpFinanceRouteWithChildren
+  '/_authenticated/erp/hr': typeof AuthenticatedErpHrRoute
   '/_authenticated/erp/hub': typeof AuthenticatedErpHubRouteWithChildren
   '/_authenticated/erp/imports': typeof AuthenticatedErpImportsRouteWithChildren
   '/_authenticated/erp/inventory': typeof AuthenticatedErpInventoryRoute
@@ -1122,6 +1131,7 @@ export interface FileRouteTypes {
     | '/erp/dispatch'
     | '/erp/extension'
     | '/erp/finance'
+    | '/erp/hr'
     | '/erp/hub'
     | '/erp/imports'
     | '/erp/inventory'
@@ -1231,6 +1241,7 @@ export interface FileRouteTypes {
     | '/erp/diagnostics'
     | '/erp/dispatch'
     | '/erp/extension'
+    | '/erp/hr'
     | '/erp/inventory'
     | '/erp/inventory-reports'
     | '/erp/pathao-debug'
@@ -1339,6 +1350,7 @@ export interface FileRouteTypes {
     | '/_authenticated/erp/dispatch'
     | '/_authenticated/erp/extension'
     | '/_authenticated/erp/finance'
+    | '/_authenticated/erp/hr'
     | '/_authenticated/erp/hub'
     | '/_authenticated/erp/imports'
     | '/_authenticated/erp/inventory'
@@ -1620,6 +1632,13 @@ declare module '@tanstack/react-router' {
       path: '/hub'
       fullPath: '/erp/hub'
       preLoaderRoute: typeof AuthenticatedErpHubRouteImport
+      parentRoute: typeof AuthenticatedErpRoute
+    }
+    '/_authenticated/erp/hr': {
+      id: '/_authenticated/erp/hr'
+      path: '/hr'
+      fullPath: '/erp/hr'
+      preLoaderRoute: typeof AuthenticatedErpHrRouteImport
       parentRoute: typeof AuthenticatedErpRoute
     }
     '/_authenticated/erp/finance': {
@@ -2505,6 +2524,7 @@ interface AuthenticatedErpRouteChildren {
   AuthenticatedErpDispatchRoute: typeof AuthenticatedErpDispatchRoute
   AuthenticatedErpExtensionRoute: typeof AuthenticatedErpExtensionRoute
   AuthenticatedErpFinanceRoute: typeof AuthenticatedErpFinanceRouteWithChildren
+  AuthenticatedErpHrRoute: typeof AuthenticatedErpHrRoute
   AuthenticatedErpHubRoute: typeof AuthenticatedErpHubRouteWithChildren
   AuthenticatedErpImportsRoute: typeof AuthenticatedErpImportsRouteWithChildren
   AuthenticatedErpInventoryRoute: typeof AuthenticatedErpInventoryRoute
@@ -2538,6 +2558,7 @@ const AuthenticatedErpRouteChildren: AuthenticatedErpRouteChildren = {
   AuthenticatedErpDispatchRoute: AuthenticatedErpDispatchRoute,
   AuthenticatedErpExtensionRoute: AuthenticatedErpExtensionRoute,
   AuthenticatedErpFinanceRoute: AuthenticatedErpFinanceRouteWithChildren,
+  AuthenticatedErpHrRoute: AuthenticatedErpHrRoute,
   AuthenticatedErpHubRoute: AuthenticatedErpHubRouteWithChildren,
   AuthenticatedErpImportsRoute: AuthenticatedErpImportsRouteWithChildren,
   AuthenticatedErpInventoryRoute: AuthenticatedErpInventoryRoute,
