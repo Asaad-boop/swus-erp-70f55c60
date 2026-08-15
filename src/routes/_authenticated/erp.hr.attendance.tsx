@@ -8,7 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { ATTENDANCE_STATUSES, HrPageHeader, statusTone } from "@/components/erp/hr/hr-shell";
-import { shiftLabel, toSchedule, weekOffLabel, isWeekOff } from "@/lib/erp/hr/schedule";
+import { shiftLabel, toSchedule, weekOffLabel, isWeekOff, unpaidBreakMinutes } from "@/lib/erp/hr/schedule";
 import { CalendarCheck, CheckCheck, Search, Eraser, Download } from "lucide-react";
 
 /** Dhaka-local YYYY-MM-DD (avoids UTC rolling the date over at night). */
@@ -47,6 +47,7 @@ function AttendancePage() {
         supabase
           .from("hr_employees")
           .select("id, full_name, employee_code, status, shift_start, shift_end, week_offs, overtime_enabled, overtime_rate, overtime_holiday_multiplier, overtime_min_minutes, late_grace_min")
+          ,
           .in("status", ["active", "probation", "on_leave"])
           .order("full_name"),
         supabase.from("hr_attendance").select("*").eq("work_date", date),
