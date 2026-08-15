@@ -2,14 +2,16 @@ import { createFileRoute } from "@tanstack/react-router";
 import { makeZip } from "@/lib/erp/hub/zip.server";
 import { extensionFiles } from "@/lib/erp/hub/extension-files.server";
 
-/** Preview/editor hosts are auth-gated and return HTML, so the extension can never
- *  talk to them. Always bake in the stable public app URL. */
-const PUBLIC_BASE = "https://project--ed6f058b-a815-45d2-bb71-e1fc12a02390.lovable.app";
+/** The dev app URL always serves the current API routes. Published hosts can lag
+ * until the next publish, while editor hosts are auth-gated. */
+const PUBLIC_BASE = "https://project--ed6f058b-a815-45d2-bb71-e1fc12a02390-dev.lovable.app";
 
 function publicOrigin(candidate: string) {
   try {
     const host = new URL(candidate).hostname;
-    if (host === "localhost" || host.endsWith(".lovable.app")) return candidate.replace(/\/$/, "");
+    if (host === "localhost" || host === new URL(PUBLIC_BASE).hostname) {
+      return candidate.replace(/\/$/, "");
+    }
   } catch {
     /* fall through */
   }
