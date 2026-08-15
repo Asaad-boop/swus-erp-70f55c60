@@ -461,10 +461,10 @@ function ProductCatalogPage() {
                   </TableHead>
                   <TableHead className="text-[11px] uppercase tracking-wide">Product</TableHead>
                   <TableHead className="text-[11px] uppercase tracking-wide">SKU</TableHead>
-                  <TableHead className="text-[11px] uppercase tracking-wide">Brand</TableHead>
-                  <TableHead className="text-[11px] uppercase tracking-wide">Category</TableHead>
+                  <TableHead className="text-[11px] uppercase tracking-wide">Brand / Category</TableHead>
                   <TableHead className="text-right text-[11px] uppercase tracking-wide">Price</TableHead>
-                  <TableHead className="text-right text-[11px] uppercase tracking-wide">Cost</TableHead>
+                  <TableHead className="text-right text-[11px] uppercase tracking-wide">Avg cost</TableHead>
+                  <TableHead className="text-right text-[11px] uppercase tracking-wide">Margin</TableHead>
                   <TableHead className="text-right text-[11px] uppercase tracking-wide">Stock</TableHead>
                   <TableHead className="text-[11px] uppercase tracking-wide">Sync</TableHead>
                   <TableHead className="text-[11px] uppercase tracking-wide">Status</TableHead>
@@ -476,11 +476,14 @@ function ProductCatalogPage() {
                   const sync = syncState(p);
                   const sb = stockBadge(p.stock, p.low_stock_threshold);
                   const on = selected.has(p.id);
+                  const ac = avgCost(p);
+                  const mg = marginPct(Number(p.price), ac.value);
+                  const colors = p.variants.filter((v) => v.color_hex).slice(0, 5);
                   return (
                     <TableRow key={p.id} data-on={on}
                       onDoubleClick={() => setEditing(p)}
                       className={cn(
-                        "group cursor-default transition-colors data-[on=true]:bg-primary/5",
+                        "group cursor-default transition-colors hover:bg-muted/40 data-[on=true]:bg-primary/5",
                         !p.is_active && "opacity-60",
                       )}>
                       <TableCell>
@@ -490,12 +493,20 @@ function ProductCatalogPage() {
                         <div className="flex items-center gap-3">
                           {thumb(p)}
                           <div className="min-w-0">
-                            <div className="max-w-[280px] truncate font-medium">{p.title}</div>
-                            <div className="flex items-center gap-1.5 text-[11px] text-muted-foreground">
-                              <span className="max-w-[150px] truncate">{p.slug}</span>
+                            <div className="max-w-[300px] truncate font-medium leading-tight">{p.title}</div>
+                            <div className="mt-0.5 flex items-center gap-1.5 text-[11px] text-muted-foreground">
+                              <span className="max-w-[140px] truncate">{p.slug}</span>
+                              {colors.length > 0 && (
+                                <span className="flex items-center -space-x-1">
+                                  {colors.map((v) => (
+                                    <span key={v.id} title={v.color_name ?? ""} className="h-3 w-3 rounded-full border border-background ring-1 ring-border" style={{ background: v.color_hex ?? undefined }} />
+                                  ))}
+                                </span>
+                              )}
                               {p.variants.length > 0 && <Badge variant="secondary" className="h-4 rounded-full px-1 text-[10px]"><Boxes className="mr-0.5 h-2.5 w-2.5" />{p.variants.length}</Badge>}
                               {p.is_combo && <Badge variant="secondary" className="h-4 rounded-full px-1 text-[10px]">Combo</Badge>}
                               {p.is_preorder && <Badge variant="secondary" className="h-4 rounded-full px-1 text-[10px]">Pre-order</Badge>}
+                              {p.is_featured && <Badge variant="secondary" className="h-4 rounded-full px-1 text-[10px]">★</Badge>}
                             </div>
                           </div>
                         </div>
@@ -505,13 +516,47 @@ function ProductCatalogPage() {
                           ? <code className="rounded-md bg-muted px-1.5 py-0.5 font-mono text-xs">{p.sku}</code>
                           : <Button variant="ghost" size="sm" className="h-6 rounded-lg px-2 text-xs text-violet-600" onClick={() => setSkuTargets([p])}><Wand2 className="mr-1 h-3 w-3" />Generate</Button>}
                       </TableCell>
-                      <TableCell className="text-sm">{brandName(p.brand_id)}</TableCell>
-                      <TableCell className="text-sm text-muted-foreground">{catName(p.category_id)}</TableCell>
-                      <TableCell className="text-right font-medium tabular-nums">{money(p.price)}</TableCell>
-                      <TableCell className="text-right tabular-nums text-muted-foreground">{money(Number(p.weighted_avg_cost ?? p.cost_price ?? 0))}</TableCell>
+                      <TableCell className="text-sm">
+                        <div className="truncate">{brandName(p.brand_id)}</div>
+                        <div className="truncate text-[11px] text-muted-foreground">{catName(p.category_id)}</div>
+                      </TableCell>
+                      <TableCell className="text-right">
+                        <div className="font-medium tabular-nums">{money(p.price)}</div>
+                        {p.old_price ? <div className="text-[11px] tabular-nums text-muted-foreground line-through">{money(Number(p.old_price))}</div> : null}
+                      </TableCell>
+                      <TableCell className="text-right">
+                        {ac.source === "none" ? (
+                          <span className="text-xs text-muted-foreground">—</span>
+                        ) : (
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <div className="inline-flex flex-col items-end">
+                                <span className="tabular-nums">{money(ac.value)}</span>
+                                <span className={cn("text-[10px] uppercase tracking-wide", ac.source === "wac" ? "text-emerald-600 dark:text-emerald-400" : "text-muted-foreground")}>
+                                  {ac.source === "wac" ? "WAC" : "manual"}
+                                </span>
+                              </div>
+                            </TooltipTrigger>
+                            <TooltipContent>
+                              <div className="text-xs">
+                                <div>Avg cost (WAC): {p.weighted_avg_cost ? money(Number(p.weighted_avg_cost)) : "—"}</div>
+                                <div>Manual cost: {p.cost_price ? money(Number(p.cost_price)) : "—"}</div>
+                                <div>Stock value: {money(ac.value * Number(p.stock ?? 0))}</div>
+                              </div>
+                            </TooltipContent>
+                          </Tooltip>
+                        )}
+                      </TableCell>
+                      <TableCell className={cn("text-right text-sm font-medium tabular-nums", marginTone(mg))}>
+                        {mg == null ? "—" : `${mg.toFixed(0)}%`}
+                        {mg != null && <div className="text-[10px] font-normal text-muted-foreground">{money(Number(p.price) - ac.value)}/pc</div>}
+                      </TableCell>
                       <TableCell className="text-right">
                         <div className="font-medium tabular-nums">{p.stock}</div>
                         <span className={cn("rounded-full px-1.5 py-0.5 text-[10px]", sb.className)}>{sb.label}</span>
+                        {Number(p.reserved_stock ?? 0) > 0 && (
+                          <div className="mt-0.5 text-[10px] text-muted-foreground">{p.reserved_stock} reserved</div>
+                        )}
                       </TableCell>
                       <TableCell><span className={cn("whitespace-nowrap rounded-full px-2 py-0.5 text-[11px]", sync.tone)}>{sync.label}</span></TableCell>
                       <TableCell>
