@@ -10,6 +10,6 @@ export const Route = createFileRoute("/_authenticated/erp/hub/$")({
   beforeLoad: ({ params }) => {
     const rest = (params as { _splat?: string })._splat ?? "";
     const target = MAP[rest] ?? (rest ? `/erp/growth/${rest}` : "/erp/growth");
-    throw redirect({ to: target, replace: true });
+    throw redirect({ href: target, replace: true });
   },
 });
