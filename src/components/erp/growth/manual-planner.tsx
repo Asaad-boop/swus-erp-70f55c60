@@ -19,6 +19,9 @@ export type PlanScenarioRow = {
   sell_price: number;
   cost_price: number;
   marketing_cost: number;
+  packaging_cost: number;
+  return_pct: number;
+  return_cost: number;
   note: string | null;
   position: number;
 };
@@ -37,16 +40,23 @@ async function fetchScenarioRows(brandId: string | null, month: string) {
     sell_price: Number(r.sell_price ?? 0),
     cost_price: Number(r.cost_price ?? 0),
     marketing_cost: Number(r.marketing_cost ?? 0),
+    packaging_cost: Number(r.packaging_cost ?? 0),
+    return_pct: Number(r.return_pct ?? 0),
+    return_cost: Number(r.return_cost ?? 0),
   }));
 }
 
 function rowMath(r: PlanScenarioRow) {
   const revenue = r.qty * r.sell_price;
   const cogs = r.qty * r.cost_price;
-  const marketing = r.marketing_cost;
-  const profit = revenue - cogs - marketing;
+  const marketing = r.qty * r.marketing_cost;
+  const packaging = r.qty * r.packaging_cost;
+  const returnUnits = (r.qty * r.return_pct) / 100;
+  const returns = returnUnits * r.return_cost;
+  const profit = revenue - cogs - marketing - packaging - returns;
   const margin = revenue > 0 ? (profit / revenue) * 100 : 0;
-  return { revenue, cogs, marketing, profit, margin };
+  const perUnit = r.qty > 0 ? profit / r.qty : 0;
+  return { revenue, cogs, marketing, packaging, returns, returnUnits, profit, margin, perUnit };
 }
 
 /** Manual multi-product plan with 10/20/30% profit scenarios, archived per month. */
