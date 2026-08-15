@@ -109,7 +109,11 @@ function ExtensionPage() {
     onError: (e: Error) => toast.error(e.message),
   });
 
-  const origin = typeof window === "undefined" ? "" : window.location.origin;
+  const rawOrigin = typeof window === "undefined" ? "" : window.location.origin;
+  // Editor preview hosts are auth-gated and return HTML to the extension.
+  const origin = /lovableproject\.com|id-preview/i.test(rawOrigin)
+    ? "https://project--ed6f058b-a815-45d2-bb71-e1fc12a02390.lovable.app"
+    : rawOrigin;
   const downloadUrl = `/api/public/hub/extension.zip?origin=${encodeURIComponent(origin)}${
     newToken ? `&token=${encodeURIComponent(newToken)}` : ""
   }`;
