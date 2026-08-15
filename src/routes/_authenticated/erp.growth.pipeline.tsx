@@ -82,13 +82,13 @@ import { cn } from "@/lib/utils";
 export const Route = createFileRoute("/_authenticated/erp/growth/pipeline")({
   head: () => ({
     meta: [
-      { title: "Content Pipeline — Content Studio" },
+      { title: "Content Pipeline — Growth Studio" },
       {
         name: "description",
         content:
           "Drag-and-drop kanban, list and calendar views for every content piece from ideation to published performance.",
       },
-      { property: "og:title", content: "Content Pipeline — Content Studio" },
+      { property: "og:title", content: "Content Pipeline — Growth Studio" },
       {
         property: "og:description",
         content: "Track every content piece from idea to published performance with due dates and ROI.",

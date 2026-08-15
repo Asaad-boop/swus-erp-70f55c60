@@ -55,13 +55,13 @@ import {
 export const Route = createFileRoute("/_authenticated/erp/growth/rivals")({
   head: () => ({
     meta: [
-      { title: "Competitors & Swipe File — Growth Hub" },
+      { title: "Competitors & Swipe File — Growth Studio" },
       {
         name: "description",
         content:
           "Track competitor websites and pages, and save their ads, landing pages and offers into a visual swipe file for analysis.",
       },
-      { property: "og:title", content: "Competitors & Swipe File — Growth Hub" },
+      { property: "og:title", content: "Competitors & Swipe File — Growth Studio" },
       {
         property: "og:description",
         content: "Competitor tracker plus a one-click browser capture swipe file.",

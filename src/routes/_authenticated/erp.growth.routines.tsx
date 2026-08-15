@@ -51,13 +51,13 @@ import {
 export const Route = createFileRoute("/_authenticated/erp/growth/routines")({
   head: () => ({
     meta: [
-      { title: "Routines & Calendar — Growth Hub" },
+      { title: "Routines & Calendar — Growth Studio" },
       {
         name: "description",
         content:
           "Recurring team routines that auto-create tasks, plus a month calendar of every due task and routine.",
       },
-      { property: "og:title", content: "Routines & Calendar — Growth Hub" },
+      { property: "og:title", content: "Routines & Calendar — Growth Studio" },
       {
         property: "og:description",
         content: "Daily, weekly and monthly operating rhythm for the team in one calendar.",

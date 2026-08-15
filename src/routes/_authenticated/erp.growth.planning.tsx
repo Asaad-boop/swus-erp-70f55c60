@@ -36,13 +36,13 @@ import {
 export const Route = createFileRoute("/_authenticated/erp/growth/planning")({
   head: () => ({
     meta: [
-      { title: "Monthly Projection — Growth Hub" },
+      { title: "Monthly Projection — Growth Studio" },
       {
         name: "description",
         content:
           "Product-wise run-rate projection for revenue, profit and sourcing targets, compared against this month's actuals.",
       },
-      { property: "og:title", content: "Monthly Projection — Growth Hub" },
+      { property: "og:title", content: "Monthly Projection — Growth Studio" },
       {
         property: "og:description",
         content: "Plan monthly revenue, profit and purchase targets from live sales run-rate.",

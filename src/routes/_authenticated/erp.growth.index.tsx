@@ -39,13 +39,13 @@ import { fetchCompetitorAssets, fetchRoutines, routineHitsDate } from "@/lib/erp
 export const Route = createFileRoute("/_authenticated/erp/growth/")({
   head: () => ({
     meta: [
-      { title: "Growth Hub — Command Center" },
+      { title: "Growth Studio — Command Center" },
       {
         name: "description",
         content:
           "One place for monthly goals, today's tasks and overdue work across every brand — the team's growth command center.",
       },
-      { property: "og:title", content: "Growth Hub — Command Center" },
+      { property: "og:title", content: "Growth Studio — Command Center" },
       {
         property: "og:description",
         content: "Track vision, goals and daily execution against live ERP data.",
@@ -181,7 +181,7 @@ function HubHome() {
     <div className="mx-auto max-w-[1500px] space-y-4 p-3 md:p-6">
       <GrowthPageHeader
         icon={Compass}
-        title="Growth Hub"
+        title="Growth Studio"
         subtitle={
           activeBrand
             ? `${activeBrand.name} — goals, tasks এবং আজকের কাজ`

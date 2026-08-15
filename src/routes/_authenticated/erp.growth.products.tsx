@@ -82,13 +82,13 @@ import {
 export const Route = createFileRoute("/_authenticated/erp/growth/products")({
   head: () => ({
     meta: [
-      { title: "Product Pipeline — Growth Hub" },
+      { title: "Product Pipeline — Growth Studio" },
       {
         name: "description",
         content:
           "Team product idea board with up/down voting, supplier links and profit forecasting from idea to launch.",
       },
-      { property: "og:title", content: "Product Pipeline — Growth Hub" },
+      { property: "og:title", content: "Product Pipeline — Growth Studio" },
       {
         property: "og:description",
         content: "Add product ideas, vote as a team and forecast monthly profit before ordering.",

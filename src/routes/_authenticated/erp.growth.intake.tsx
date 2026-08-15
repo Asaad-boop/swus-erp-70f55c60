@@ -85,13 +85,13 @@ import { cn } from "@/lib/utils";
 export const Route = createFileRoute("/_authenticated/erp/growth/intake")({
   head: () => ({
     meta: [
-      { title: "Stock → Content Intake — Content Studio" },
+      { title: "Stock → Content Intake — Growth Studio" },
       {
         name: "description",
         content:
           "Sourced and in-transit products ranked by content risk score, so no inventory sits without creative coverage.",
       },
-      { property: "og:title", content: "Stock → Content Intake — Content Studio" },
+      { property: "og:title", content: "Stock → Content Intake — Growth Studio" },
       {
         property: "og:description",
         content:

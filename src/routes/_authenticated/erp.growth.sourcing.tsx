@@ -94,13 +94,13 @@ import {
 export const Route = createFileRoute("/_authenticated/erp/growth/sourcing")({
   head: () => ({
     meta: [
-      { title: "Sourcing Desk — Growth Hub" },
+      { title: "Sourcing Desk — Growth Studio" },
       {
         name: "description",
         content:
           "Approved product ideas এর supplier quote collect করো, target price এর সাথে compare করো আর order place করো।",
       },
-      { property: "og:title", content: "Sourcing Desk — Growth Hub" },
+      { property: "og:title", content: "Sourcing Desk — Growth Studio" },
       {
         property: "og:description",
         content: "Supplier quotes, landed cost comparison and order placement for approved ideas.",

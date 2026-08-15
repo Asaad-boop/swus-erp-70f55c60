@@ -38,13 +38,13 @@ import {
 export const Route = createFileRoute("/_authenticated/erp/growth/tasks")({
   head: () => ({
     meta: [
-      { title: "Task Board — Growth Hub" },
+      { title: "Task Board — Growth Studio" },
       {
         name: "description",
         content:
           "Kanban board for daily marketing, product research and sourcing tasks with owners, due dates, priorities and goal links.",
       },
-      { property: "og:title", content: "Task Board — Growth Hub" },
+      { property: "og:title", content: "Task Board — Growth Studio" },
       {
         property: "og:description",
         content: "Plan and track the team's daily execution against monthly goals.",

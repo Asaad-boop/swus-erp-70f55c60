@@ -74,13 +74,13 @@ import { cn } from "@/lib/utils";
 export const Route = createFileRoute("/_authenticated/erp/growth/creators")({
   head: () => ({
     meta: [
-      { title: "Creator CRM — Content Studio" },
+      { title: "Creator CRM — Growth Studio" },
       {
         name: "description",
         content:
           "Influencer database with rates, negotiation pipeline, follow-up reminders and cost-per-order leaderboard.",
       },
-      { property: "og:title", content: "Creator CRM — Content Studio" },
+      { property: "og:title", content: "Creator CRM — Growth Studio" },
       {
         property: "og:description",
         content: "Track creator rates, negotiations, shipments and delivered performance in one place.",
