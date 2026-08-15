@@ -80,6 +80,11 @@ export type HubCompetitor = {
   facebook_url: string | null;
   instagram_url: string | null;
   tiktok_url: string | null;
+  youtube_url: string | null;
+  niche: string | null;
+  handle: string | null;
+  followers: string | null;
+  page_type: string | null;
   favicon_url: string | null;
   logo_url: string | null;
   country: string | null;
