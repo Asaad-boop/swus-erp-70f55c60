@@ -658,7 +658,7 @@ function PlanningPage() {
           ) : (
             <div className="overflow-x-auto">
               <table className="w-full text-sm">
-                <thead className="border-y bg-muted/40 text-xs text-muted-foreground">
+                <thead className="sticky top-0 z-10 border-y bg-muted text-xs text-muted-foreground">
                   <tr>
                     <SortTh k="title" label="Product" />
                     <th className="px-3 py-2 text-right font-medium">3-mo units</th>
