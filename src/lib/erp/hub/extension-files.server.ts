@@ -6,9 +6,9 @@ const MANIFEST = (origin: string) =>
     {
       manifest_version: 3,
       name: "Synq With Us",
-      version: "2.0.0",
+      version: "3.0.0",
       description:
-        "Synq any product, rival page or content inspiration from any website straight into your ERP.",
+        "Scrape any product (auto BDT price), competitor page or content inspiration straight into your ERP.",
       permissions: ["activeTab", "scripting", "storage", "contextMenus", "notifications", "tabs"],
       host_permissions: ["<all_urls>"],
       background: { service_worker: "background.js", type: "module" },
@@ -350,46 +350,87 @@ const POPUP_HTML = `<!doctype html>
     </div>
     <div id="vCapture">
     <div class="tabs">
-      <button class="tab on" data-kind="idea">💡 Idea</button>
-      <button class="tab" data-kind="swipe">🎨 Swipe</button>
-      <button class="tab" data-kind="competitor">🏴 Rival</button>
+      <button class="tab on" data-kind="idea">🛍 Product</button>
+      <button class="tab" data-kind="competitor">🏴 Competitor</button>
+      <button class="tab" data-kind="swipe">🎬 Content</button>
     </div>
 
     <div class="shots" id="shots"></div>
 
-    <label>Title</label>
+    <label>Title / Page name</label>
     <input id="title" />
 
-    <div class="row">
-      <div>
-        <label>Brand</label>
-        <select id="brand"></select>
+    <label>Brand</label>
+    <select id="brand"></select>
+
+    <!-- PRODUCT -->
+    <div id="wProduct">
+      <div class="row">
+        <div>
+          <label>Price</label>
+          <input id="price" type="number" step="0.01" />
+        </div>
+        <div>
+          <label>Currency</label>
+          <select id="currency"></select>
+        </div>
       </div>
-      <div id="typeWrap">
-        <label>Type</label>
-        <select id="assetType">
-          <option value="ad">Ad</option>
-          <option value="landing">Landing page</option>
-          <option value="product">Product page</option>
-          <option value="organic">Organic post</option>
-          <option value="creative">Creative</option>
-        </select>
-      </div>
+      <p class="conv" id="conv"></p>
+      <label>Stage</label>
+      <select id="stage">
+        <option value="voting">🗳 Voting-এ পাঠাও</option>
+        <option value="idea">💡 Idea</option>
+      </select>
     </div>
 
-    <div class="row">
-      <div>
-        <label>Price</label>
-        <input id="price" type="number" step="0.01" />
+    <!-- COMPETITOR -->
+    <div id="wRivalPage" class="hidden">
+      <label>Niche / কি নিয়ে কাজ করে</label>
+      <input id="niche" placeholder="kids toys, gadgets, hobby…" />
+      <div class="row">
+        <div>
+          <label>Type</label>
+          <select id="pageType">
+            <option value="website">Website</option>
+            <option value="social">Social page</option>
+          </select>
+        </div>
+        <div>
+          <label>Threat</label>
+          <select id="threat">
+            <option value="low">Low</option>
+            <option value="medium" selected>Medium</option>
+            <option value="high">High</option>
+          </select>
+        </div>
       </div>
-      <div id="rivalWrap">
-        <label>Rival page</label>
-        <select id="competitor"></select>
-      </div>
+      <p class="conv" id="pageInfo"></p>
     </div>
 
-    <label>Note / কেন ভালো লাগলো</label>
-    <textarea id="note" rows="3"></textarea>
+    <!-- CONTENT -->
+    <div id="wContent" class="hidden">
+      <div class="row">
+        <div>
+          <label>Type</label>
+          <select id="assetType">
+            <option value="ad">Ad</option>
+            <option value="organic">Organic post</option>
+            <option value="creative">Creative / reel</option>
+            <option value="landing">Landing page</option>
+            <option value="product">Product page</option>
+          </select>
+        </div>
+        <div>
+          <label>Competitor (optional)</label>
+          <select id="competitor"></select>
+        </div>
+      </div>
+      <label>Hook / কেন ভালো</label>
+      <input id="hook" placeholder="প্রথম ৩ সেকেন্ডের hook…" />
+    </div>
+
+    <label>Note</label>
+    <textarea id="note" rows="2"></textarea>
 
     <label>Tags (কমা দিয়ে)</label>
     <input id="tags" placeholder="winner, hook, ugc" />
@@ -449,6 +490,7 @@ textarea { resize:vertical; }
 .feed .it img { width:34px; height:34px; border-radius:7px; object-fit:cover; background:#222; flex:none; }
 .feed .it b { font-size:11.5px; font-weight:500; display:block; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
 .feed .it small { color:var(--mut); font-size:10px; }
+.conv { font-size:11px; color:#a5b4fc; margin:6px 0 0; min-height:14px; }
 `;
 
 
@@ -460,6 +502,8 @@ let kind = 'idea';
 let page = {};
 let chosen = null;
 let cfg = {};
+let fx = { BDT: 1 };
+const CCY = ['BDT','USD','PKR','INR','CNY','EUR','GBP','AED','SAR','MYR','THB','SGD','AUD','CAD','TRY','IDR','VND','JPY','KRW','NPR','LKR'];
 
 async function loadCfg() {
   const s = await chrome.storage.sync.get(['base', 'token', 'brandId', 'email']);
@@ -480,8 +524,19 @@ async function api(payload) {
 function setKind(k) {
   kind = k;
   document.querySelectorAll('.tab').forEach((t) => t.classList.toggle('on', t.dataset.kind === k));
-  $('typeWrap').style.visibility = k === 'swipe' ? 'visible' : 'hidden';
-  $('rivalWrap').style.visibility = k === 'swipe' ? 'visible' : 'hidden';
+  $('wProduct').classList.toggle('hidden', k !== 'idea');
+  $('wRivalPage').classList.toggle('hidden', k !== 'competitor');
+  $('wContent').classList.toggle('hidden', k !== 'swipe');
+  $('save').textContent = k === 'idea' ? '🛍 Product Synq করো' : k === 'competitor' ? '🏴 Competitor সেভ করো' : '🎬 Content সেভ করো';
+}
+
+function renderConv() {
+  const p = Number($('price').value);
+  const c = $('currency').value || 'BDT';
+  const rate = fx[c] || 1;
+  if (!Number.isFinite(p) || p <= 0) { $('conv').textContent = ''; return; }
+  if (c === 'BDT') { $('conv').textContent = '৳ ' + p.toLocaleString(); return; }
+  $('conv').textContent = p + ' ' + c + ' ≈ ৳ ' + Math.round(p * rate).toLocaleString() + '  (1 ' + c + ' = ৳' + (Math.round(rate * 100) / 100) + ')';
 }
 
 async function init() {
@@ -546,6 +601,23 @@ async function init() {
   $('note').value = page.selection || page.description || '';
   if (page.price) $('price').value = page.price;
 
+  const cs = $('currency');
+  cs.innerHTML = '';
+  CCY.forEach((c) => { const o = document.createElement('option'); o.value = c; o.textContent = c; cs.appendChild(o); });
+  cs.value = (page.currency && CCY.indexOf(String(page.currency).toUpperCase()) >= 0) ? String(page.currency).toUpperCase() : 'BDT';
+  cs.onchange = renderConv;
+  $('price').oninput = renderConv;
+  renderConv();
+
+  if (page.handle || page.followers || page.siteName) {
+    const bits = [];
+    if (page.handle) bits.push(page.handle);
+    if (page.followers) bits.push(page.followers + ' followers');
+    if (page.platform && page.platform !== 'web') bits.push(page.platform);
+    $('pageInfo').textContent = bits.join(' · ');
+  }
+  $('pageType').value = (page.is_page || (page.platform && page.platform !== 'web')) ? 'social' : 'website';
+
   const shots = $('shots');
   (page.images || []).forEach((src, i) => {
     const im = document.createElement('img');
@@ -583,7 +655,7 @@ async function init() {
       $('msg').textContent = list.length + ' টা সেভ হচ্ছে…';
       $('msg').className = 'msg';
       try {
-        const r = await api({ action: 'bulk', brand_id: $('brand').value || null, items: list, tags: ['bulk'] });
+        const r = await api({ action: 'bulk', brand_id: $('brand').value || null, items: list, tags: ['bulk'], currency: $('currency').value });
         $('msg').textContent = (r.count || 0) + ' টা idea সেভ হয়েছে ✅';
         $('msg').className = 'msg ok';
       } catch (e) {
@@ -596,6 +668,7 @@ async function init() {
 
   try {
     const meta = await api({ action: 'meta' });
+    if (meta.fx) { fx = Object.assign(fx, meta.fx); renderConv(); }
     const b = $('brand');
     b.innerHTML = '';
     (meta.brands || []).forEach((x) => {
@@ -607,10 +680,10 @@ async function init() {
     b.onchange = () => chrome.storage.sync.set({ brandId: b.value });
 
     const c = $('competitor');
-    c.innerHTML = '<option value="">এই সাইট থেকে auto</option>';
+    c.innerHTML = '<option value="">লিংক করব না</option>';
     (meta.competitors || []).forEach((x) => {
       const o = document.createElement('option');
-      o.value = x.id; o.textContent = x.name;
+      o.value = x.id; o.textContent = x.name + (x.niche ? ' · ' + x.niche : '');
       c.appendChild(o);
     });
   } catch (e) {
@@ -658,7 +731,7 @@ async function save() {
   const tags = $('tags').value.split(',').map((s) => s.trim()).filter(Boolean);
   const extra = [];
   if (page.sku) extra.push('SKU: ' + page.sku);
-  if (page.currency && page.price) extra.push('Listed: ' + page.price + ' ' + page.currency);
+  if ($('price').value) extra.push('Listed: ' + $('price').value + ' ' + $('currency').value);
   (page.variants || []).forEach((v) => extra.push(v.name + ': ' + v.values.join(', ')));
   if (page.followers) extra.push('Followers: ' + page.followers);
   if (page.handle) extra.push('Handle: ' + page.handle);
@@ -673,6 +746,14 @@ async function save() {
     images: (page.images || []).slice(0, 8),
     note: noteFull || null,
     price: $('price').value ? Number($('price').value) : null,
+    currency: $('currency').value || 'BDT',
+    status: $('stage').value,
+    niche: $('niche').value.trim() || null,
+    handle: page.handle || null,
+    followers: page.followers || null,
+    threat_level: $('threat').value,
+    hook: $('hook').value.trim() || null,
+    link_competitor: !!$('competitor').value,
     tags: tags,
     platform: page.platform,
     asset_type: $('assetType').value,
@@ -749,15 +830,16 @@ const CONTENT_JS = `
     <div class="panel">
       <div class="hd"><b>Synq Clip</b><span class="chip" id="ghPlat"></span><button class="x">✕</button></div>
       <div class="tabs">
-        <button class="tab on" data-kind="idea">💡 Product</button>
-        <button class="tab" data-kind="swipe">🎨 Content</button>
-        <button class="tab" data-kind="competitor">🏴 Page</button>
+        <button class="tab on" data-kind="idea">🛍 Product</button>
+        <button class="tab" data-kind="competitor">🏴 Competitor</button>
+        <button class="tab" data-kind="swipe">🎬 Content</button>
       </div>
       <div class="shots" id="ghShots"></div>
       <label>Title</label><input id="ghTitle" />
       <label>Brand</label><select id="ghBrand"></select>
       <div class="row">
-        <div><label>Price</label><input id="ghPrice" type="number" step="0.01" /></div>
+        <div id="ghPriceWrap"><label>Price</label><input id="ghPrice" type="number" step="0.01" /></div>
+        <div id="ghCcyWrap"><label>Currency</label><select id="ghCcy"></select></div>
         <div id="ghTypeWrap"><label>Type</label>
           <select id="ghType">
             <option value="ad">Ad</option><option value="organic">Organic post</option>
@@ -766,6 +848,8 @@ const CONTENT_JS = `
           </select>
         </div>
       </div>
+      <p class="msg" id="ghConv"></p>
+      <div id="ghNicheWrap"><label>Niche</label><input id="ghNiche" placeholder="kids toys, gadgets…" /></div>
       <label>Note</label><textarea id="ghNote" rows="2"></textarea>
       <label>Tags (কমা দিয়ে)</label><input id="ghTags" placeholder="winner, hook, ugc" />
       <button class="go" id="ghGo">Synq করো</button>
@@ -776,12 +860,23 @@ const CONTENT_JS = `
   const $ = (id) => root.getElementById(id);
   const panel = root.querySelector('.panel');
   const fab = root.querySelector('.fab');
-  let page = {}, chosen = null, kind = 'idea', loaded = false;
+  let page = {}, chosen = null, kind = 'idea', loaded = false, fx = { BDT: 1 };
+  const CCY = ['BDT','USD','PKR','INR','CNY','EUR','GBP','AED','SAR','MYR','THB','SGD','AUD','CAD','TRY','IDR','VND','JPY','KRW','NPR','LKR'];
+
+  function conv() {
+    const p = Number($('ghPrice').value), c = $('ghCcy').value || 'BDT', rate = fx[c] || 1;
+    if (!Number.isFinite(p) || p <= 0) { $('ghConv').textContent = ''; return; }
+    $('ghConv').textContent = c === 'BDT' ? ('৳ ' + p) : (p + ' ' + c + ' ≈ ৳ ' + Math.round(p * rate));
+  }
 
   function setKind(k) {
     kind = k;
     root.querySelectorAll('.tab').forEach((t) => t.classList.toggle('on', t.dataset.kind === k));
-    $('ghTypeWrap').style.visibility = k === 'swipe' ? 'visible' : 'hidden';
+    $('ghTypeWrap').style.display = k === 'swipe' ? 'block' : 'none';
+    $('ghPriceWrap').style.display = k === 'idea' ? 'block' : 'none';
+    $('ghCcyWrap').style.display = k === 'idea' ? 'block' : 'none';
+    $('ghNicheWrap').style.display = k === 'competitor' ? 'block' : 'none';
+    conv();
   }
   root.querySelectorAll('.tab').forEach((t) => (t.onclick = () => setKind(t.dataset.kind)));
   root.querySelector('.x').onclick = () => panel.classList.remove('on');
@@ -798,6 +893,12 @@ const CONTENT_JS = `
     $('ghTitle').value = page.title || document.title;
     $('ghNote').value = (page.selection || page.description || '').slice(0, 500);
     if (page.price) $('ghPrice').value = page.price;
+    const cs = $('ghCcy');
+    cs.innerHTML = '';
+    CCY.forEach((c) => { const o = document.createElement('option'); o.value = c; o.textContent = c; cs.appendChild(o); });
+    cs.value = (page.currency && CCY.indexOf(String(page.currency).toUpperCase()) >= 0) ? String(page.currency).toUpperCase() : 'BDT';
+    cs.onchange = conv;
+    $('ghPrice').oninput = conv;
     if (page.is_page) setKind('competitor'); else if (!page.is_product && page.platform !== 'web') setKind('swipe');
 
     const shots = $('ghShots');
@@ -814,6 +915,8 @@ const CONTENT_JS = `
     const b = $('ghBrand');
     b.innerHTML = '';
     if (m.ok) {
+      if (m.meta.fx) fx = Object.assign(fx, m.meta.fx);
+      conv();
       (m.meta.brands || []).forEach((x) => {
         const o = document.createElement('option'); o.value = x.id; o.textContent = x.name; b.appendChild(o);
       });
@@ -843,7 +946,7 @@ const CONTENT_JS = `
     $('ghMsg').textContent = 'সেভ হচ্ছে…'; $('ghMsg').className = 'msg';
     const extra = [];
     if (page.sku) extra.push('SKU: ' + page.sku);
-    if (page.currency && page.price) extra.push('Listed: ' + page.price + ' ' + page.currency);
+    if ($('ghPrice').value) extra.push('Listed: ' + $('ghPrice').value + ' ' + $('ghCcy').value);
     (page.variants || []).forEach((v) => extra.push(v.name + ': ' + v.values.join(', ')));
     if (page.followers) extra.push('Followers: ' + page.followers);
     const note = [$('ghNote').value.trim(), extra.join(' | ')].filter(Boolean).join('\\n');
@@ -857,6 +960,11 @@ const CONTENT_JS = `
       images: (page.images || []).slice(0, 8),
       note: note || null,
       price: $('ghPrice').value ? Number($('ghPrice').value) : null,
+      currency: $('ghCcy').value || 'BDT',
+      status: 'voting',
+      niche: $('ghNiche').value.trim() || null,
+      handle: page.handle || null,
+      followers: page.followers || null,
       tags: $('ghTags').value.split(',').map((s) => s.trim()).filter(Boolean),
       platform: page.platform,
       asset_type: $('ghType').value,

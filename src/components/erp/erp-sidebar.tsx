@@ -143,7 +143,7 @@ const groups: Group[] = [
           { to: "/erp/hub/sourcing", label: "Sourcing Desk", icon: PackageSearch },
           { to: "/erp/hub/content", label: "Creative Desk", icon: Clapperboard },
           { to: "/erp/hub/routines", label: "Routines & Calendar", icon: Repeat },
-          { to: "/erp/hub/rivals", label: "Rival Pages", icon: Swords },
+          { to: "/erp/hub/rivals", label: "Competitors", icon: Swords },
           { to: "/erp/hub/planning", label: "Monthly Projection", icon: BarChart3 },
           { to: "/erp/extension", label: "Synq Extension", icon: Chrome },
         ],

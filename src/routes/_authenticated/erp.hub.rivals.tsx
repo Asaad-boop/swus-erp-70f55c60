@@ -55,13 +55,13 @@ import {
 export const Route = createFileRoute("/_authenticated/erp/hub/rivals")({
   head: () => ({
     meta: [
-      { title: "Rival Pages & Swipe File — Growth Hub" },
+      { title: "Competitors & Swipe File — Growth Hub" },
       {
         name: "description",
         content:
           "Track competitor websites and pages, and save their ads, landing pages and offers into a visual swipe file for analysis.",
       },
-      { property: "og:title", content: "Rival Pages & Swipe File — Growth Hub" },
+      { property: "og:title", content: "Competitors & Swipe File — Growth Hub" },
       {
         property: "og:description",
         content: "Competitor tracker plus a one-click browser capture swipe file.",
@@ -78,6 +78,12 @@ type CompDraft = {
   name: string;
   website_url: string;
   facebook_url: string;
+  instagram_url: string;
+  tiktok_url: string;
+  youtube_url: string;
+  niche: string;
+  handle: string;
+  followers: string;
   price_range: string;
   threat_level: string;
   note: string;
@@ -86,6 +92,12 @@ const emptyComp = (): CompDraft => ({
   name: "",
   website_url: "",
   facebook_url: "",
+  instagram_url: "",
+  tiktok_url: "",
+  youtube_url: "",
+  niche: "",
+  handle: "",
+  followers: "",
   price_range: "",
   threat_level: "medium",
   note: "",
@@ -165,6 +177,13 @@ function RivalsPage() {
         name: d.name.trim(),
         website_url: d.website_url.trim() || null,
         facebook_url: d.facebook_url.trim() || null,
+        instagram_url: d.instagram_url.trim() || null,
+        tiktok_url: d.tiktok_url.trim() || null,
+        youtube_url: d.youtube_url.trim() || null,
+        niche: d.niche.trim() || null,
+        handle: d.handle.trim() || null,
+        followers: d.followers.trim() || null,
+        page_type: d.website_url.trim() ? "website" : "social",
         favicon_url: faviconFor(d.website_url || d.facebook_url),
         price_range: d.price_range.trim() || null,
         threat_level: d.threat_level,
@@ -266,7 +285,7 @@ function RivalsPage() {
     <div className="space-y-5">
       <HubPageHeader
         icon={Swords}
-        title="Rival Pages & Swipe File"
+        title="Competitors & Swipe File"
         subtitle={
           activeBrand
             ? `${activeBrand.name} — competitor tracking ও analysis`
@@ -452,6 +471,12 @@ function RivalsPage() {
                             name: c.name,
                             website_url: c.website_url ?? "",
                             facebook_url: c.facebook_url ?? "",
+                            instagram_url: c.instagram_url ?? "",
+                            tiktok_url: c.tiktok_url ?? "",
+                            youtube_url: c.youtube_url ?? "",
+                            niche: c.niche ?? "",
+                            handle: c.handle ?? "",
+                            followers: c.followers ?? "",
                             price_range: c.price_range ?? "",
                             threat_level: c.threat_level,
                             note: c.note ?? "",
@@ -461,7 +486,7 @@ function RivalsPage() {
                       >
                         <p className="truncate text-sm font-semibold">{c.name}</p>
                         <p className="truncate text-[11px] text-muted-foreground">
-                          {hostOf(c.website_url ?? c.facebook_url)}
+                          {c.handle ?? hostOf(c.website_url ?? c.facebook_url ?? c.instagram_url)}
                         </p>
                       </button>
                       <Badge className={`text-[10px] ${THREAT_STYLE[c.threat_level] ?? ""}`}>
@@ -472,10 +497,21 @@ function RivalsPage() {
                       <p className="line-clamp-2 text-xs text-muted-foreground">{c.note}</p>
                     )}
                     <div className="flex items-center gap-2 text-[11px] text-muted-foreground">
+                      {c.niche && (
+                        <Badge variant="outline" className="text-[10px]">
+                          {c.niche}
+                        </Badge>
+                      )}
+                      {c.followers && <span>{c.followers} followers</span>}
                       {c.price_range && <span>৳ {c.price_range}</span>}
                       <span className="ml-auto flex items-center gap-1">
-                        {c.website_url && (
-                          <a href={c.website_url} target="_blank" rel="noreferrer" className="p-1">
+                        {(c.website_url ?? c.facebook_url ?? c.instagram_url ?? c.tiktok_url ?? c.youtube_url) && (
+                          <a
+                            href={(c.website_url ?? c.facebook_url ?? c.instagram_url ?? c.tiktok_url ?? c.youtube_url)!}
+                            target="_blank"
+                            rel="noreferrer"
+                            className="p-1"
+                          >
                             <ExternalLink className="h-3.5 w-3.5" />
                           </a>
                         )}
@@ -539,11 +575,59 @@ function RivalsPage() {
               />
             </div>
             <div className="space-y-1.5">
+              <Label>Niche (কি নিয়ে কাজ করে)</Label>
+              <Input
+                value={comp.niche}
+                onChange={(e) => setComp({ ...comp, niche: e.target.value })}
+                placeholder="kids toys, gadgets, hobby…"
+              />
+            </div>
+            <div className="space-y-1.5">
               <Label>Facebook page</Label>
               <Input
                 value={comp.facebook_url}
                 onChange={(e) => setComp({ ...comp, facebook_url: e.target.value })}
               />
+            </div>
+            <div className="grid grid-cols-2 gap-3">
+              <div className="space-y-1.5">
+                <Label>Instagram</Label>
+                <Input
+                  value={comp.instagram_url}
+                  onChange={(e) => setComp({ ...comp, instagram_url: e.target.value })}
+                />
+              </div>
+              <div className="space-y-1.5">
+                <Label>TikTok</Label>
+                <Input
+                  value={comp.tiktok_url}
+                  onChange={(e) => setComp({ ...comp, tiktok_url: e.target.value })}
+                />
+              </div>
+            </div>
+            <div className="grid grid-cols-2 gap-3">
+              <div className="space-y-1.5">
+                <Label>YouTube</Label>
+                <Input
+                  value={comp.youtube_url}
+                  onChange={(e) => setComp({ ...comp, youtube_url: e.target.value })}
+                />
+              </div>
+              <div className="space-y-1.5">
+                <Label>Handle / Followers</Label>
+                <div className="grid grid-cols-2 gap-2">
+                  <Input
+                    value={comp.handle}
+                    onChange={(e) => setComp({ ...comp, handle: e.target.value })}
+                    placeholder="@page"
+                  />
+                  <Input
+                    value={comp.followers}
+                    onChange={(e) => setComp({ ...comp, followers: e.target.value })}
+                    placeholder="120K"
+                  />
+                </div>
+              </div>
             </div>
             <div className="grid grid-cols-2 gap-3">
               <div className="space-y-1.5">
