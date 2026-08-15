@@ -1,5 +1,6 @@
 import { createServerFn } from "@tanstack/react-start";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
+import { toSchedule, isWeekOff } from "@/lib/erp/hr/schedule";
 
 /** First day (YYYY-MM-01) of a `YYYY-MM` string. */
 function monthStart(month: string) {
@@ -41,23 +42,33 @@ export const generatePayrollRun = createServerFn({ method: "POST" })
 
     const { data: employees, error: eErr } = await supabase
       .from("hr_employees")
-      .select("id, monthly_salary")
+      .select("id, monthly_salary, shift_start, shift_end, week_offs, late_grace_min, overtime_enabled, overtime_rate, overtime_holiday_multiplier, overtime_min_minutes")
       .in("status", ["active", "probation", "on_leave"]);
     if (eErr) throw new Error(eErr.message);
 
     const { data: att } = await supabase
       .from("hr_attendance")
-      .select("employee_id, status")
+      .select("employee_id, status, work_date, overtime_minutes")
       .gte("work_date", period)
       .lte("work_date", monthEnd(data.month));
 
     const present = new Map<string, number>();
     const absent = new Map<string, number>();
+    const otPay = new Map<string, number>();
+    const schedules = new Map(
+      (employees ?? []).map((e: any) => [e.id as string, toSchedule(e)]),
+    );
     for (const a of att ?? []) {
       const bucket = a.status === "absent" ? absent : present;
       const key = a.employee_id as string;
       if (a.status === "absent" || a.status === "present" || a.status === "late" || a.status === "half_day") {
         bucket.set(key, (bucket.get(key) ?? 0) + (a.status === "half_day" ? 0.5 : 1));
+      }
+      const sched = schedules.get(key);
+      const mins = Number(a.overtime_minutes ?? 0);
+      if (sched?.overtime_enabled && mins > 0) {
+        const mult = isWeekOff(sched, String(a.work_date).slice(0, 10)) ? Number(sched.overtime_holiday_multiplier) || 1 : 1;
+        otPay.set(key, (otPay.get(key) ?? 0) + (mins / 60) * (Number(sched.overtime_rate) || 0) * mult);
       }
     }
 
@@ -69,22 +80,102 @@ export const generatePayrollRun = createServerFn({ method: "POST" })
 
     const rows = (employees ?? [])
       .filter((e) => !have.has(e.id))
-      .map((e) => ({
-        run_id: run!.id,
-        employee_id: e.id,
-        base_salary: Number(e.monthly_salary ?? 0),
-        present_days: present.get(e.id) ?? 0,
-        absent_days: absent.get(e.id) ?? 0,
-        net_pay: Number(e.monthly_salary ?? 0),
-      }));
+      .map((e) => {
+        const ot = Math.round((otPay.get(e.id) ?? 0) * 100) / 100;
+        return {
+          run_id: run!.id,
+          employee_id: e.id,
+          base_salary: Number(e.monthly_salary ?? 0),
+          present_days: present.get(e.id) ?? 0,
+          absent_days: absent.get(e.id) ?? 0,
+          overtime_amount: ot,
+          net_pay: Number(e.monthly_salary ?? 0) + ot,
+        };
+      });
 
     if (rows.length) {
       const { error } = await supabase.from("hr_payslips").insert(rows);
       if (error) throw new Error(error.message);
     }
 
+    // Refresh attendance + overtime on payslips that already exist (re-generate).
+    for (const e of employees ?? []) {
+      if (!have.has(e.id)) continue;
+      const ot = Math.round((otPay.get(e.id) ?? 0) * 100) / 100;
+      await supabase
+        .from("hr_payslips")
+        .update({
+          present_days: present.get(e.id) ?? 0,
+          absent_days: absent.get(e.id) ?? 0,
+          overtime_amount: ot,
+        })
+        .eq("run_id", run!.id)
+        .eq("employee_id", e.id)
+        .neq("status", "paid");
+    }
+    await recalcNetPay(supabase, run!.id);
+
     await recalcTotals(supabase, run.id);
     return { runId: run.id, created: rows.length, skipped: false };
+  });
+
+/** net = base + bonus + overtime + allowance − deduction − advance. */
+async function recalcNetPay(supabase: any, runId: string) {
+  const { data: slips } = await supabase
+    .from("hr_payslips")
+    .select("id, base_salary, bonus, overtime_amount, allowance, deduction, advance_deduction, status")
+    .eq("run_id", runId);
+  for (const s of slips ?? []) {
+    if (s.status === "paid") continue;
+    const net =
+      Number(s.base_salary) + Number(s.bonus) + Number(s.overtime_amount) + Number(s.allowance) -
+      Number(s.deduction) - Number(s.advance_deduction);
+    await supabase.from("hr_payslips").update({ net_pay: Math.round(net * 100) / 100 }).eq("id", s.id);
+  }
+}
+
+/** Edits one payslip amount and re-derives its net pay + run totals. */
+export const updatePayslip = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d: { payslipId: string; patch: Record<string, number> }) => d)
+  .handler(async ({ data, context }) => {
+    const supabase = context.supabase;
+    const allowed = ["bonus", "overtime_amount", "allowance", "deduction", "advance_deduction"];
+    const patch: Record<string, number> = {};
+    for (const [k, v] of Object.entries(data.patch)) if (allowed.includes(k)) patch[k] = Number(v) || 0;
+    if (!Object.keys(patch).length) throw new Error("Kichu change nei");
+
+    const { data: slip, error } = await supabase
+      .from("hr_payslips")
+      .update(patch as never)
+      .eq("id", data.payslipId)
+      .neq("status", "paid")
+      .select("run_id")
+      .maybeSingle();
+    if (error) throw new Error(error.message);
+    if (!slip) throw new Error("Paid payslip edit kora jabe na");
+
+    await recalcNetPay(supabase, slip.run_id);
+    return recalcTotals(supabase, slip.run_id);
+  });
+
+/** Removes an unpaid payroll run with its draft payslips. */
+export const deletePayrollRun = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d: { runId: string }) => d)
+  .handler(async ({ data, context }) => {
+    const supabase = context.supabase;
+    const { data: run, error } = await supabase
+      .from("hr_payroll_runs")
+      .select("id, status")
+      .eq("id", data.runId)
+      .single();
+    if (error) throw new Error(error.message);
+    if (run.status === "paid") throw new Error("Paid payroll delete kora jabe na");
+    await supabase.from("hr_payslips").delete().eq("run_id", run.id);
+    const { error: dErr } = await supabase.from("hr_payroll_runs").delete().eq("id", run.id);
+    if (dErr) throw new Error(dErr.message);
+    return { deleted: true };
   });
 
 async function recalcTotals(supabase: any, runId: string) {
