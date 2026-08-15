@@ -708,6 +708,12 @@ function PlanningPage() {
           )}
         </CardContent>
       </Card>
+        </TabsContent>
+
+        <TabsContent value="manual">
+          <ManualPlanner brandId={brandId} month={month} onTotals={setManualTotals} />
+        </TabsContent>
+      </Tabs>
     </div>
   );
 }
