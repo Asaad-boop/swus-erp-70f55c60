@@ -210,12 +210,21 @@ async function cfg() {
 export async function api(payload) {
   const c = await cfg();
   if (!c.token) throw new Error('আগে Synq extension-এ login করো।');
-  const r = await fetch(c.base + '/api/public/hub/capture', {
-    method: 'POST',
-    headers: { 'content-type': 'application/json' },
-    body: JSON.stringify(Object.assign({ token: c.token }, payload))
-  });
+  let r;
+  try {
+    r = await fetch(c.base + '/api/public/hub/capture', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify(Object.assign({ token: c.token }, payload))
+    });
+  } catch (e) {
+    throw new Error('Server-এ পৌঁছানো গেল না — ' + c.base);
+  }
   const j = await r.json().catch(() => ({}));
+  if (j && j.code === 'invalid_token') {
+    await chrome.storage.sync.remove(['token', 'email']);
+    throw new Error('Session শেষ — extension আইকনে ক্লিক করে আবার login করো।');
+  }
   if (!r.ok || j.error) throw new Error(j.error || ('HTTP ' + r.status));
   return j;
 }
