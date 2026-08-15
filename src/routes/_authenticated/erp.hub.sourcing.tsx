@@ -16,7 +16,7 @@ import {
   AlertTriangle,
   Keyboard,
 } from "lucide-react";
-import { MoreHorizontal, Truck } from "lucide-react";
+import { MoreHorizontal, Truck, XCircle, Trash2, RotateCcw, Archive } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useBrand } from "@/contexts/brand-context";
 import { useAccounts } from "@/hooks/erp/use-finance-query";
@@ -203,6 +203,11 @@ function SourcingPage() {
   const [search, setSearch] = useState("");
   const [stageFilter, setStageFilter] = useState<SourcingStage | "all">("all");
   const [attentionOnly, setAttentionOnly] = useState(false);
+  const [showCancelled, setShowCancelled] = useState(false);
+  const [removeTarget, setRemoveTarget] = useState<
+    { idea: HubIdea; mode: "cancel" | "delete" } | null
+  >(null);
+  const [removeReason, setRemoveReason] = useState("");
   const [sortBy, setSortBy] = useState<"stage" | "age" | "due" | "quotes" | "cost">("stage");
   const searchRef = useRef<HTMLInputElement>(null);
 
@@ -236,8 +241,22 @@ function SourcingPage() {
     enabled: pipeline.length > 0,
   });
 
+  /** Cancelled / archived sourcing items (kept out of the live pipeline). */
+  const cancelled = useMemo(
+    () => (ideasQ.data ?? []).filter((i) => i.status === "rejected"),
+    [ideasQ.data],
+  );
+
+  // Keep the selection valid: pick the first row when nothing is selected, and
+  // drop a stale selection after an item is cancelled or deleted.
   useEffect(() => {
-    if (!selectedId && pipeline.length > 0) setSelectedId(pipeline[0]!.id);
+    if (pipeline.length === 0) {
+      if (selectedId) setSelectedId(null);
+      return;
+    }
+    if (!selectedId || !pipeline.some((i) => i.id === selectedId)) {
+      setSelectedId(pipeline[0]!.id);
+    }
   }, [pipeline, selectedId]);
 
   // Live PO status for every ordered idea (for stage tracking).
@@ -661,6 +680,80 @@ function SourcingPage() {
     onError: (e: Error) => toast.error(e.message),
   });
 
+  /** Cancel sourcing — keeps the row + history, just takes it out of the pipeline. */
+  const cancelIdea = useMutation({
+    mutationFn: async ({ idea, reason }: { idea: HubIdea; reason: string }) => {
+      if (idea.imp_po_id) {
+        throw new Error("PO তৈরি হয়ে গেছে — আগে PO cancel করুন");
+      }
+      const from = stageOf.get(idea.id) ?? "to_source";
+      const { error } = await supabase
+        .from("hub_product_ideas")
+        .update({
+          status: "rejected",
+          next_action_at: null,
+          next_action_note: reason.trim() || null,
+        } as never)
+        .eq("id", idea.id);
+      if (error) throw error;
+      await logSourcingEvent({
+        ideaId: idea.id,
+        type: "note",
+        fromStage: from,
+        note: `Sourcing cancelled${reason.trim() ? ` — ${reason.trim()}` : ""}`,
+      });
+    },
+    onSuccess: () => {
+      toast.success("Sourcing cancelled");
+      setRemoveTarget(null);
+      setRemoveReason("");
+      invalidate();
+    },
+    onError: (e: Error) => toast.error(e.message),
+  });
+
+  /** Restore a cancelled item back into the pipeline. */
+  const restoreIdea = useMutation({
+    mutationFn: async (idea: HubIdea) => {
+      const hasQuotes = (quotesQ.data?.get(idea.id)?.length ?? 0) > 0;
+      const { error } = await supabase
+        .from("hub_product_ideas")
+        .update({ status: hasQuotes ? "sourcing" : "approved" } as never)
+        .eq("id", idea.id);
+      if (error) throw error;
+      await logSourcingEvent({ ideaId: idea.id, type: "note", note: "Restored to sourcing" });
+    },
+    onSuccess: () => {
+      toast.success("Pipeline-এ ফিরিয়ে আনা হয়েছে");
+      invalidate();
+    },
+    onError: (e: Error) => toast.error(e.message),
+  });
+
+  /** Hard delete — quotes and events cascade with the idea row. */
+  const deleteIdea = useMutation({
+    mutationFn: async (idea: HubIdea) => {
+      if (idea.imp_po_id) {
+        throw new Error("PO linked আছে — delete করা যাবে না, আগে PO cancel করুন");
+      }
+      const { error } = await supabase.from("hub_product_ideas").delete().eq("id", idea.id);
+      if (error) throw error;
+    },
+    onSuccess: (_d, idea) => {
+      toast.success(`"${idea.title}" মুছে ফেলা হয়েছে`);
+      if (selectedId === idea.id) setSelectedId(null);
+      setRemoveTarget(null);
+      setRemoveReason("");
+      invalidate();
+    },
+    onError: (e: Error) => toast.error(e.message),
+  });
+
+  const askRemove = (idea: HubIdea, mode: "cancel" | "delete") => {
+    setRemoveReason("");
+    setRemoveTarget({ idea, mode });
+  };
+
   const StageMenu = ({ idea, align = "end" }: { idea: HubIdea; align?: "start" | "end" }) => {
     const cur = stageOf.get(idea.id) ?? "to_source";
     const hasPo = !!idea.imp_po_id;
@@ -702,6 +795,27 @@ function SourcingPage() {
               </DropdownMenuItem>
             );
           })}
+          <DropdownMenuSeparator />
+          <DropdownMenuItem
+            disabled={hasPo || cancelIdea.isPending}
+            onSelect={(e) => {
+              e.preventDefault();
+              askRemove(idea, "cancel");
+            }}
+            className="gap-2 text-xs text-amber-600 focus:text-amber-600"
+          >
+            <XCircle className="h-3.5 w-3.5" /> Cancel sourcing
+          </DropdownMenuItem>
+          <DropdownMenuItem
+            disabled={hasPo || deleteIdea.isPending}
+            onSelect={(e) => {
+              e.preventDefault();
+              askRemove(idea, "delete");
+            }}
+            className="gap-2 text-xs text-destructive focus:text-destructive"
+          >
+            <Trash2 className="h-3.5 w-3.5" /> Delete permanently
+          </DropdownMenuItem>
         </DropdownMenuContent>
       </DropdownMenu>
     );
@@ -873,7 +987,7 @@ function SourcingPage() {
       const t = e.target as HTMLElement | null;
       const typing =
         !!t && (t.tagName === "INPUT" || t.tagName === "TEXTAREA" || t.isContentEditable);
-      if (qOpen || orderOpen) return;
+      if (qOpen || orderOpen || removeTarget) return;
       if (e.key === "/" && !typing) {
         e.preventDefault();
         searchRef.current?.focus();
@@ -1417,6 +1531,130 @@ function SourcingPage() {
           )}
         </div>
       )}
+
+      {/* Cancelled / archived */}
+      {cancelled.length > 0 && (
+        <Card>
+          <CardContent className="p-3">
+            <button
+              type="button"
+              onClick={() => setShowCancelled((v) => !v)}
+              className="flex w-full items-center gap-2 text-left text-xs font-semibold text-muted-foreground"
+            >
+              <Archive className="h-3.5 w-3.5" />
+              Cancelled ({cancelled.length})
+              <span className="ml-auto text-[10px] font-normal">
+                {showCancelled ? "Hide" : "Show"}
+              </span>
+            </button>
+            {showCancelled && (
+              <div className="mt-3 space-y-2">
+                {cancelled.map((i) => (
+                  <div
+                    key={i.id}
+                    className="flex items-center gap-3 rounded-lg border border-border/60 bg-muted/30 p-2"
+                  >
+                    <div className="h-10 w-10 shrink-0 overflow-hidden rounded-md">
+                      <IdeaGallery
+                        images={(i.images?.length ? i.images : i.image_url ? [i.image_url] : []).slice(0, 1)}
+                        title={i.title}
+                        className="h-10"
+                      />
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <p className="truncate text-sm font-medium">{i.title}</p>
+                      <p className="truncate text-[11px] text-muted-foreground">
+                        {i.next_action_note || "no reason noted"}
+                      </p>
+                    </div>
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      className="h-7 text-xs"
+                      disabled={restoreIdea.isPending}
+                      onClick={() => restoreIdea.mutate(i)}
+                    >
+                      <RotateCcw className="mr-1 h-3.5 w-3.5" /> Restore
+                    </Button>
+                    <Button
+                      size="icon"
+                      variant="ghost"
+                      className="h-7 w-7 text-destructive"
+                      aria-label={`Delete ${i.title}`}
+                      onClick={() => askRemove(i, "delete")}
+                    >
+                      <Trash2 className="h-3.5 w-3.5" />
+                    </Button>
+                  </div>
+                ))}
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Cancel / delete confirmation */}
+      <Dialog
+        open={!!removeTarget}
+        onOpenChange={(o) => {
+          if (!o) {
+            setRemoveTarget(null);
+            setRemoveReason("");
+          }
+        }}
+      >
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>
+              {removeTarget?.mode === "delete" ? "Delete permanently?" : "Cancel sourcing?"}
+            </DialogTitle>
+          </DialogHeader>
+          <div className="space-y-3">
+            <p className="text-sm text-muted-foreground">
+              <span className="font-medium text-foreground">{removeTarget?.idea.title}</span>{" "}
+              {removeTarget?.mode === "delete"
+                ? "— product, সব quote আর history একসাথে মুছে যাবে। এটা undo করা যাবে না।"
+                : "— pipeline থেকে সরে যাবে, কিন্তু quote/history থেকে যাবে আর যেকোনো সময় restore করা যাবে।"}
+            </p>
+            {removeTarget?.mode === "cancel" && (
+              <div className="space-y-1.5">
+                <Label className="text-xs">Reason (optional)</Label>
+                <Textarea
+                  value={removeReason}
+                  onChange={(e) => setRemoveReason(e.target.value)}
+                  placeholder="দাম বেশি / supplier পাওয়া যায়নি / product drop…"
+                  rows={2}
+                />
+              </div>
+            )}
+          </div>
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => {
+                setRemoveTarget(null);
+                setRemoveReason("");
+              }}
+            >
+              Back
+            </Button>
+            <Button
+              variant={removeTarget?.mode === "delete" ? "destructive" : "default"}
+              disabled={cancelIdea.isPending || deleteIdea.isPending}
+              onClick={() => {
+                if (!removeTarget) return;
+                if (removeTarget.mode === "delete") deleteIdea.mutate(removeTarget.idea);
+                else cancelIdea.mutate({ idea: removeTarget.idea, reason: removeReason });
+              }}
+            >
+              {(cancelIdea.isPending || deleteIdea.isPending) && (
+                <Loader2 className="mr-1.5 h-4 w-4 animate-spin" />
+              )}
+              {removeTarget?.mode === "delete" ? "Delete" : "Cancel sourcing"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       {/* Quote dialog */}
       <Dialog open={qOpen} onOpenChange={setQOpen}>
