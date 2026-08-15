@@ -7,6 +7,8 @@ import {
   PalmtreeIcon,
   Banknote,
   Trophy,
+  Radio,
+  Fingerprint,
   type LucideIcon,
 } from "lucide-react";
 
@@ -14,6 +16,8 @@ export type HrNavItem = { to: string; label: string; short: string; icon: Lucide
 
 export const HR_NAV: HrNavItem[] = [
   { to: "/erp/hr", label: "HR Overview", short: "Overview", icon: LayoutDashboard, exact: true },
+  { to: "/erp/hr/live", label: "Live Dashboard", short: "Live", icon: Radio },
+  { to: "/erp/hr/my-attendance", label: "My Attendance", short: "Mine", icon: Fingerprint },
   { to: "/erp/hr/employees", label: "Employees", short: "Staff", icon: Users },
   { to: "/erp/hr/attendance", label: "Attendance", short: "Attend", icon: CalendarCheck },
   { to: "/erp/hr/leaves", label: "Leave & Holidays", short: "Leave", icon: PalmtreeIcon },
@@ -98,6 +102,22 @@ export function HrPageHeader({
 
 export const money = (n: number) =>
   `৳${Math.round(Number(n) || 0).toLocaleString("en-BD")}`;
+
+/** 12-hour clock label for an ISO timestamp, Dhaka time. */
+export const clockTime = (iso?: string | null) =>
+  iso
+    ? new Date(iso).toLocaleTimeString("en-US", {
+        timeZone: "Asia/Dhaka",
+        hour: "numeric",
+        minute: "2-digit",
+      })
+    : "—";
+
+/** Milliseconds → "2h 15m". */
+export const hoursMins = (ms: number) => {
+  const total = Math.max(0, Math.round(ms / 60000));
+  return `${Math.floor(total / 60)}h ${total % 60}m`;
+};
 
 export const EMPLOYMENT_TYPES = ["full_time", "part_time", "contract", "intern"] as const;
 export const EMPLOYEE_STATUSES = ["active", "probation", "on_leave", "resigned", "terminated"] as const;

@@ -4136,6 +4136,54 @@ export type Database = {
           },
         ]
       }
+      hr_breaks: {
+        Row: {
+          break_end: string | null
+          break_start: string
+          created_at: string
+          employee_id: string
+          id: string
+          reason: string | null
+          time_entry_id: string
+          updated_at: string
+        }
+        Insert: {
+          break_end?: string | null
+          break_start?: string
+          created_at?: string
+          employee_id: string
+          id?: string
+          reason?: string | null
+          time_entry_id: string
+          updated_at?: string
+        }
+        Update: {
+          break_end?: string | null
+          break_start?: string
+          created_at?: string
+          employee_id?: string
+          id?: string
+          reason?: string | null
+          time_entry_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "hr_breaks_employee_id_fkey"
+            columns: ["employee_id"]
+            isOneToOne: false
+            referencedRelation: "hr_employees"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "hr_breaks_time_entry_id_fkey"
+            columns: ["time_entry_id"]
+            isOneToOne: false
+            referencedRelation: "hr_time_entries"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       hr_departments: {
         Row: {
           created_at: string
@@ -4758,6 +4806,50 @@ export type Database = {
         Relationships: [
           {
             foreignKeyName: "hr_reviews_employee_id_fkey"
+            columns: ["employee_id"]
+            isOneToOne: false
+            referencedRelation: "hr_employees"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      hr_time_entries: {
+        Row: {
+          check_in: string
+          check_out: string | null
+          created_at: string
+          employee_id: string
+          id: string
+          note: string | null
+          source: string
+          updated_at: string
+          work_date: string
+        }
+        Insert: {
+          check_in?: string
+          check_out?: string | null
+          created_at?: string
+          employee_id: string
+          id?: string
+          note?: string | null
+          source?: string
+          updated_at?: string
+          work_date?: string
+        }
+        Update: {
+          check_in?: string
+          check_out?: string | null
+          created_at?: string
+          employee_id?: string
+          id?: string
+          note?: string | null
+          source?: string
+          updated_at?: string
+          work_date?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "hr_time_entries_employee_id_fkey"
             columns: ["employee_id"]
             isOneToOne: false
             referencedRelation: "hr_employees"

@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { Link, useLocation } from "@tanstack/react-router";
 import {
-  LayoutDashboard, Globe, PlusCircle, Boxes, Wallet, Truck, Settings, Users, UserCog,
+  LayoutDashboard, Globe, PlusCircle, Boxes, Wallet, Truck, Settings, Users, UserCog, Radio, Fingerprint,
   TrendingDown, TrendingUp, PackagePlus, Megaphone, Container, Heart, Image as ImageIcon, GitBranch, Plug,
   ChevronsLeft, ChevronRight, Sparkles, ClipboardList, ClipboardCheck, PackageSearch,
   Activity, BarChart3, RotateCcw, FileSpreadsheet, Zap, Briefcase, Stethoscope, ChevronDown,
@@ -210,6 +210,8 @@ const groups: Group[] = [
         icon: UserCog,
         items: [
           { to: "/erp/hr", label: "HR Overview", icon: LayoutDashboard, exact: true },
+          { to: "/erp/hr/live", label: "Live Dashboard", icon: Radio },
+          { to: "/erp/hr/my-attendance", label: "My Attendance", icon: Fingerprint },
           { to: "/erp/hr/employees", label: "Employees", icon: Users },
           { to: "/erp/hr/attendance", label: "Attendance", icon: CalendarCheck },
           { to: "/erp/hr/leaves", label: "Leave & Holidays", icon: Palmtree },
