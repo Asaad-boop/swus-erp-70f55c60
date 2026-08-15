@@ -195,7 +195,7 @@ function ExtensionPage() {
             </Link>{" "}
             বা{" "}
             <Link to="/erp/hub/rivals" className="text-primary underline">
-              Rival Pages
+              Competitors
             </Link>
             ।
           </p>
