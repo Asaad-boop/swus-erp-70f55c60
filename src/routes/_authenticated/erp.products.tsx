@@ -34,6 +34,7 @@ import { ProductAddDialog } from "@/components/erp/inventory/product-add-dialog"
 import { ProductEditDialog } from "@/components/erp/inventory/product-edit-dialog";
 import { SkuGeneratorDialog } from "@/components/erp/inventory/sku-generator-dialog";
 import { ProductDeleteDialog } from "@/components/erp/inventory/product-delete-dialog";
+import { CatalogStockDialog } from "@/components/erp/inventory/catalog-stock-dialog";
 
 export const Route = createFileRoute("/_authenticated/erp/products")({
   head: () => ({
@@ -114,6 +115,7 @@ function ProductCatalogPage() {
   const [editing, setEditing] = useState<CatalogProduct | null>(null);
   const [skuTargets, setSkuTargets] = useState<CatalogProduct[] | null>(null);
   const [deleteTargets, setDeleteTargets] = useState<CatalogProduct[] | null>(null);
+  const [stockTargets, setStockTargets] = useState<{ mode: "in" | "out"; products: CatalogProduct[] } | null>(null);
   const [view, setView] = useState<"table" | "grid">("table");
   const [showFilters, setShowFilters] = useState(true);
 
@@ -584,7 +586,23 @@ function ProductCatalogPage() {
                             </TooltipTrigger>
                             <TooltipContent>Edit</TooltipContent>
                           </Tooltip>
-                          <RowMenu p={p} setEditing={setEditing} setSkuTargets={setSkuTargets} setDeleteTargets={setDeleteTargets} toggleActive={toggleActive} />
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <Button variant="ghost" size="icon" className="h-8 w-8 text-emerald-600 opacity-0 transition-opacity group-hover:opacity-100" onClick={() => setStockTargets({ mode: "in", products: [p] })}>
+                                <ArrowDownCircle className="h-4 w-4" />
+                              </Button>
+                            </TooltipTrigger>
+                            <TooltipContent>Stock In (cost price সহ)</TooltipContent>
+                          </Tooltip>
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <Button variant="ghost" size="icon" className="h-8 w-8 text-red-600 opacity-0 transition-opacity group-hover:opacity-100" onClick={() => setStockTargets({ mode: "out", products: [p] })}>
+                                <ArrowUpCircle className="h-4 w-4" />
+                              </Button>
+                            </TooltipTrigger>
+                            <TooltipContent>Stock Out</TooltipContent>
+                          </Tooltip>
+                          <RowMenu p={p} setEditing={setEditing} setSkuTargets={setSkuTargets} setDeleteTargets={setDeleteTargets} toggleActive={toggleActive} setStockTargets={setStockTargets} />
                         </div>
                       </TableCell>
                     </TableRow>
@@ -615,6 +633,8 @@ function ProductCatalogPage() {
         <div className="pointer-events-none fixed inset-x-0 bottom-4 z-40 flex justify-center px-4">
           <div className="pointer-events-auto flex flex-wrap items-center gap-2 rounded-2xl border bg-background/90 px-3 py-2 shadow-2xl backdrop-blur-xl">
             <span className="rounded-full bg-primary/10 px-2.5 py-1 text-xs font-medium text-primary">{selected.size} selected</span>
+            <Button size="sm" variant="outline" className="rounded-xl text-emerald-700 dark:text-emerald-400" onClick={() => setStockTargets({ mode: "in", products: selectedRows })}><ArrowDownCircle className="mr-2 h-4 w-4" />Stock In</Button>
+            <Button size="sm" variant="outline" className="rounded-xl text-red-700 dark:text-red-400" onClick={() => setStockTargets({ mode: "out", products: selectedRows })}><ArrowUpCircle className="mr-2 h-4 w-4" />Stock Out</Button>
             <Button size="sm" variant="outline" className="rounded-xl" onClick={() => toggleActive.mutate({ ids: [...selected], active: true })}><Power className="mr-2 h-4 w-4" />Activate</Button>
             <Button size="sm" variant="outline" className="rounded-xl" onClick={() => toggleActive.mutate({ ids: [...selected], active: false })}><Power className="mr-2 h-4 w-4" />Deactivate</Button>
             <Button size="sm" variant="outline" className="rounded-xl" onClick={() => setSkuTargets(selectedRows)}><Wand2 className="mr-2 h-4 w-4" />SKU</Button>
@@ -630,16 +650,23 @@ function ProductCatalogPage() {
       {deleteTargets && (
         <ProductDeleteDialog products={deleteTargets} onClose={() => setDeleteTargets(null)} onDeleted={() => setSelected(new Set())} />
       )}
+      <CatalogStockDialog
+        open={!!stockTargets}
+        mode={stockTargets?.mode ?? "in"}
+        products={stockTargets?.products ?? []}
+        onClose={() => setStockTargets(null)}
+      />
     </div>
   );
 }
 
-function RowMenu({ p, setEditing, setSkuTargets, setDeleteTargets, toggleActive }: {
+function RowMenu({ p, setEditing, setSkuTargets, setDeleteTargets, toggleActive, setStockTargets }: {
   p: CatalogProduct;
   setEditing: (p: CatalogProduct) => void;
   setSkuTargets: (p: CatalogProduct[]) => void;
   setDeleteTargets: (p: CatalogProduct[]) => void;
   toggleActive: { mutate: (v: { ids: string[]; active: boolean }) => void };
+  setStockTargets: (v: { mode: "in" | "out"; products: CatalogProduct[] }) => void;
 }) {
   return (
     <DropdownMenu>
@@ -648,6 +675,8 @@ function RowMenu({ p, setEditing, setSkuTargets, setDeleteTargets, toggleActive 
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end" className="w-52">
         <DropdownMenuItem onClick={() => setEditing(p)}><Edit3 className="mr-2 h-4 w-4" />Edit</DropdownMenuItem>
+        <DropdownMenuItem onClick={() => setStockTargets({ mode: "in", products: [p] })}><ArrowDownCircle className="mr-2 h-4 w-4" />Stock In (cost price)</DropdownMenuItem>
+        <DropdownMenuItem onClick={() => setStockTargets({ mode: "out", products: [p] })}><ArrowUpCircle className="mr-2 h-4 w-4" />Stock Out</DropdownMenuItem>
         <DropdownMenuItem onClick={() => setSkuTargets([p])}><Wand2 className="mr-2 h-4 w-4" />Generate SKU</DropdownMenuItem>
         <DropdownMenuItem onClick={() => { navigator.clipboard.writeText(p.id); toast.success("Product ID copied"); }}><Copy className="mr-2 h-4 w-4" />Copy ID</DropdownMenuItem>
         <DropdownMenuItem onClick={() => { navigator.clipboard.writeText(p.sku ?? ""); toast.success(p.sku ? "SKU copied" : "SKU নেই"); }}><Tag className="mr-2 h-4 w-4" />Copy SKU</DropdownMenuItem>
