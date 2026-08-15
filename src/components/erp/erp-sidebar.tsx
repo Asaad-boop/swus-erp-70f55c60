@@ -19,6 +19,7 @@ import {
   CalendarCheck,
   Palmtree,
   Trophy,
+  Settings2,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useGlobalSearch } from "@/components/erp/global-search";
@@ -218,6 +219,7 @@ const groups: Group[] = [
           { to: "/erp/hr/payroll", label: "Payroll", icon: Banknote },
           { to: "/erp/hr/performance", label: "Performance & KPI", icon: Trophy },
           { to: "/erp/hr/access", label: "Users & Access", icon: ShieldCheck },
+          { to: "/erp/hr/settings", label: "HR Settings", icon: Settings2 },
         ],
       },
     ],
