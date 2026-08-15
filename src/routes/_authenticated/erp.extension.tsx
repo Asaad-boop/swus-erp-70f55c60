@@ -63,7 +63,7 @@ const FEATURES = [
   {
     icon: Keyboard,
     title: "Clip + shortcut",
-    body: "প্রতিটি পেজে ছোট 🔖 clip বাটন, আর Alt+Shift+S চাপলেই panel খোলে। Right-click মেনুও আছে।",
+    body: "🔖 clip বাটন drag করে যেকোনো জায়গায় রাখা, size বদলানো বা current site থেকে hide করা যায়। Alt+Shift+S shortcut-ও আছে।",
   },
   {
     icon: History,
@@ -110,10 +110,9 @@ function ExtensionPage() {
   });
 
   const rawOrigin = typeof window === "undefined" ? "" : window.location.origin;
-  // Editor preview hosts are auth-gated and return HTML to the extension.
-  const origin = /lovableproject\.com|id-preview/i.test(rawOrigin)
-    ? "https://project--ed6f058b-a815-45d2-bb71-e1fc12a02390.lovable.app"
-    : rawOrigin;
+  const liveExtensionOrigin =
+    "https://project--ed6f058b-a815-45d2-bb71-e1fc12a02390-dev.lovable.app";
+  const origin = rawOrigin.includes("localhost") ? rawOrigin : liveExtensionOrigin;
   const downloadUrl = `/api/public/hub/extension.zip?origin=${encodeURIComponent(origin)}${
     newToken ? `&token=${encodeURIComponent(newToken)}` : ""
   }`;
@@ -135,7 +134,7 @@ function ExtensionPage() {
             <div className="min-w-[240px] flex-1 space-y-1.5">
               <div className="flex items-center gap-2">
                 <h1 className="text-xl font-bold tracking-tight">Synq With Us</h1>
-                <Badge variant="secondary">v3.0</Badge>
+                <Badge variant="secondary">v3.1</Badge>
               </div>
               <p className="max-w-2xl text-sm text-muted-foreground">
                 ERP-এর নিজস্ব browser extension — তিনটা কাজ: <b>Product</b> (ছবি, নাম, দাম — PKR/USD
