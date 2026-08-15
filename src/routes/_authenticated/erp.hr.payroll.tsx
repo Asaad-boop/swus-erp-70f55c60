@@ -33,7 +33,7 @@ export const Route = createFileRoute("/_authenticated/erp/hr/payroll")({
   }),
 });
 
-const monthNow = () => new Date().toISOString().slice(0, 7);
+const monthNow = () => dhakaMonth();
 
 function PayrollPage() {
   const qc = useQueryClient();
@@ -50,11 +50,16 @@ function PayrollPage() {
     queryKey: ["hr-payroll", month],
     queryFn: async () => {
       const [runRes, empsRes, accRes] = await Promise.all([
-        supabase.from("hr_payroll_runs").select("*").eq("period_month", `${month}-01`).maybeSingle(),
+        supabase
+          .from("hr_payroll_runs")
+          .select("*")
+          .eq("period_month", `${month}-01`)
+          .order("created_at", { ascending: false })
+          .limit(1),
         supabase.from("hr_employees").select("id, full_name, employee_code"),
         supabase.from("erp_accounts").select("id, name, current_balance").order("name"),
       ]);
-      const run = runRes.data;
+      const run = (runRes.data ?? [])[0] ?? null;
       let payslips: any[] = [];
       if (run) {
         const { data: ps } = await supabase.from("hr_payslips").select("*").eq("run_id", run.id);
@@ -226,17 +231,22 @@ function PayrollPage() {
                   <th className="p-2.5 text-right">Bonus</th>
                   <th className="p-2.5 text-right">Allowance</th>
                   <th className="p-2.5 text-right">Deduction</th>
+                  <th className="p-2.5 text-right">Advance</th>
                   <th className="p-2.5 text-right">Net</th>
                 </tr>
               </thead>
               <tbody>
                 {isLoading ? (
-                  <tr><td colSpan={9} className="p-6 text-center text-muted-foreground">Loading…</td></tr>
+                  <TableSkeleton cols={10} rows={5} />
                 ) : slips.length === 0 ? (
-                  <tr><td colSpan={9} className="p-6 text-center text-muted-foreground">Ei mash er payroll generate kora hoyni.</td></tr>
+                  <tr>
+                    <td colSpan={10}>
+                      <HrEmpty icon={Banknote} title="Ei mash er payroll generate kora hoyni" hint="Uporer Generate button e click korle attendance theke draft payslip toiri hobe." />
+                    </td>
+                  </tr>
                 ) : (
                   slips.map((s) => (
-                    <tr key={s.id} className="border-b border-border/50 last:border-0">
+                    <tr key={s.id} className={`border-b border-border/50 last:border-0 ${hrRow}`}>
                       <td className="p-2.5 font-medium">{empName(s.employee_id)}</td>
                       <td className="p-2.5 text-right tabular-nums">{money(s.base_salary)}</td>
                       <td className="p-2.5 text-right tabular-nums">{Number(s.present_days)}</td>
@@ -252,6 +262,9 @@ function PayrollPage() {
                       </td>
                       <td className="p-2.5 text-right">
                         <NumCell value={s.deduction} disabled={locked} onSave={(v) => savePayslip.mutate({ id: s.id, patch: { deduction: v } })} />
+                      </td>
+                      <td className="p-2.5 text-right">
+                        <NumCell value={s.advance_deduction} disabled={locked} onSave={(v) => savePayslip.mutate({ id: s.id, patch: { advance_deduction: v } })} />
                       </td>
                       <td className="p-2.5 text-right font-semibold tabular-nums">{money(s.net_pay)}</td>
                     </tr>
@@ -280,6 +293,7 @@ function Kpi({ label, value }: { label: string; value: string }) {
 function NumCell({ value, disabled, onSave }: { value: number; disabled?: boolean; onSave: (v: number) => void }) {
   return (
     <Input
+      key={Number(value)}
       type="number"
       disabled={disabled}
       defaultValue={Number(value)}
@@ -287,7 +301,8 @@ function NumCell({ value, disabled, onSave }: { value: number; disabled?: boolea
         const v = Number(e.target.value) || 0;
         if (v !== Number(value)) onSave(v);
       }}
-      className="h-8 w-[90px] text-right"
+      onKeyDown={(e) => { if (e.key === "Enter") (e.target as HTMLInputElement).blur(); }}
+      className="h-8 w-[90px] text-right transition-colors focus-visible:border-primary/50"
     />
   );
 }
