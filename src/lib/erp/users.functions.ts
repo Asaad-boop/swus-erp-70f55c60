@@ -10,6 +10,9 @@ export const APP_ROLES = [
   "packer",
   "customer_service",
   "marketing_manager",
+  "hr_admin",
+  "hr_manager",
+  "employee",
   "moderator",
   "customer",
 ] as const;
