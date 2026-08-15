@@ -71,12 +71,6 @@ export const refundOrderAdvanceFn = createServerFn({ method: "POST" })
       .single();
     if (tErr) throw new Error(tErr.message);
 
-    if (account) {
-      await supabase
-        .from("erp_accounts")
-        .update({ current_balance: Number(account.current_balance ?? 0) - amount })
-        .eq("id", account.id);
-    }
-
+    // Balance is updated by the update_account_balance_on_txn trigger — no manual update here.
     return { alreadyRefunded: false, txnId: txn.id as string, accountFound: !!account };
   });

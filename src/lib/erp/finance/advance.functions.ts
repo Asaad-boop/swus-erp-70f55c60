@@ -86,10 +86,6 @@ export const confirmOrderAdvanceReceivedFn = createServerFn({ method: "POST" })
       .single();
     if (tErr) throw new Error(tErr.message);
 
-    await supabase
-      .from("erp_accounts")
-      .update({ current_balance: Number(account.current_balance ?? 0) + amt })
-      .eq("id", account.id);
-
+    // Balance is updated by the update_account_balance_on_txn trigger — no manual update here.
     return { alreadyRecorded: false, txnId: txn.id };
   });
