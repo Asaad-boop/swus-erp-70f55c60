@@ -2,7 +2,7 @@ import { createFileRoute } from "@tanstack/react-router";
 import { useMemo, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
-import { Building2, Plus, Coins, FileVideo, ShoppingCart, Percent } from "lucide-react";
+import { Building2, Plus, Coins, FileVideo, ShoppingCart, Percent, Pencil, Trash2 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useBrand } from "@/contexts/brand-context";
 import {
@@ -17,6 +17,7 @@ import {
   downloadCsv,
   BrandTag,
   BrandSelect,
+  BrandFilter,
 } from "@/components/erp/content/content-ui";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -25,7 +26,14 @@ import { Badge } from "@/components/ui/badge";
 import { Textarea } from "@/components/ui/textarea";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
-import { bdt, fetchAgencies, fetchItems } from "@/lib/erp/content/content-data";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { bdt, fetchAgencies, fetchItems, type Agency } from "@/lib/erp/content/content-data";
 
 export const Route = createFileRoute("/_authenticated/erp/content/agencies")({
   head: () => ({
@@ -66,6 +74,8 @@ function AgenciesPage() {
   const [creating, setCreating] = useState(false);
   const [draft, setDraft] = useState(empty);
   const [search, setSearch] = useState("");
+  const [editing, setEditing] = useState<Agency | null>(null);
+  const [brandFilter, setBrandFilter] = useState("all");
 
   const agenciesQ = useQuery({
     queryKey: ["content-agencies", brandIds],
@@ -93,14 +103,16 @@ function AgenciesPage() {
   const retainer = agencies.reduce((s, a) => s + a.retainer_fee, 0);
   const filtered = useMemo(() => {
     const q = search.trim().toLowerCase();
-    if (!q) return agencies;
-    return agencies.filter(
-      (a) =>
+    return agencies.filter((a) => {
+      if (brandFilter !== "all" && a.brand_id !== brandFilter) return false;
+      if (!q) return true;
+      return (
         a.name.toLowerCase().includes(q) ||
         (a.contact_person ?? "").toLowerCase().includes(q) ||
-        (a.email ?? "").toLowerCase().includes(q),
-    );
-  }, [agencies, search]);
+        (a.email ?? "").toLowerCase().includes(q)
+      );
+    });
+  }, [agencies, search, brandFilter]);
   const totalPieces = Array.from(perf.values()).reduce((s, p) => s + p.pieces, 0);
   const totalOrders = Array.from(perf.values()).reduce((s, p) => s + p.orders, 0);
   const totalSpend = Array.from(perf.values()).reduce((s, p) => s + p.spend, 0);
@@ -127,6 +139,35 @@ function AgenciesPage() {
       toast.success("Agency যোগ হয়েছে");
       setCreating(false);
       setDraft(empty);
+      qc.invalidateQueries({ queryKey: ["content-agencies"] });
+    },
+    onError: (e: Error) => toast.error(e.message),
+  });
+
+  const updateMut = useMutation({
+    mutationFn: async (patch: Partial<Agency> & { id: string }) => {
+      const { id, ...rest } = patch;
+      const { error } = await supabase
+        .from("content_agencies")
+        .update(rest as never)
+        .eq("id", id);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      toast.success("Agency আপডেট হয়েছে");
+      qc.invalidateQueries({ queryKey: ["content-agencies"] });
+    },
+    onError: (e: Error) => toast.error(e.message),
+  });
+
+  const deleteMut = useMutation({
+    mutationFn: async (id: string) => {
+      const { error } = await supabase.from("content_agencies").delete().eq("id", id);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      toast.success("Agency মুছে ফেলা হয়েছে");
+      setEditing(null);
       qc.invalidateQueries({ queryKey: ["content-agencies"] });
     },
     onError: (e: Error) => toast.error(e.message),
@@ -159,6 +200,7 @@ function AgenciesPage() {
 
       <Toolbar>
         <SearchBox value={search} onChange={setSearch} placeholder="Agency, contact…" />
+        <BrandFilter value={brandFilter} onChange={setBrandFilter} />
         <div className="ml-auto">
           <ExportButton
             onClick={() =>
@@ -214,9 +256,19 @@ function AgenciesPage() {
                       {a.contact_person ?? "—"} · {a.phone ?? a.email ?? "—"}
                     </p>
                   </div>
-                  <Badge variant="outline" className="shrink-0 text-[10px]">
-                    {a.status}
-                  </Badge>
+                  <div className="flex shrink-0 items-center gap-1">
+                    <Badge variant="outline" className="text-[10px]">
+                      {a.status}
+                    </Badge>
+                    <Button
+                      size="icon"
+                      variant="ghost"
+                      className="h-7 w-7 text-muted-foreground"
+                      onClick={() => setEditing(a)}
+                    >
+                      <Pencil className="h-3.5 w-3.5" />
+                    </Button>
+                  </div>
                 </div>
                 <div className="mt-2 flex flex-wrap gap-1.5 text-[10px]">
                   <Badge variant="secondary">Retainer {bdt(a.retainer_fee)}</Badge>
@@ -307,7 +359,152 @@ function AgenciesPage() {
           </div>
         </SheetContent>
       </Sheet>
+
+      {editing && (
+        <AgencyEditSheet
+          key={editing.id}
+          agency={editing}
+          onClose={() => setEditing(null)}
+          onSave={(p) => updateMut.mutate(p)}
+          onDelete={(id) => deleteMut.mutate(id)}
+          saving={updateMut.isPending || deleteMut.isPending}
+        />
+      )}
     </div>
+  );
+}
+
+function AgencyEditSheet({
+  agency,
+  onClose,
+  onSave,
+  onDelete,
+  saving,
+}: {
+  agency: Agency;
+  onClose: () => void;
+  onSave: (patch: Partial<Agency> & { id: string }) => void;
+  onDelete: (id: string) => void;
+  saving: boolean;
+}) {
+  const [d, setD] = useState({
+    name: agency.name,
+    contact_person: agency.contact_person ?? "",
+    phone: agency.phone ?? "",
+    email: agency.email ?? "",
+    website: agency.website ?? "",
+    retainer_fee: agency.retainer_fee,
+    commission_pct: agency.commission_pct,
+    status: agency.status,
+    notes: agency.notes ?? "",
+  });
+  return (
+    <Sheet open onOpenChange={(o) => !o && onClose()}>
+      <SheetContent side="right" className="w-full overflow-y-auto sm:max-w-md">
+        <SheetHeader>
+          <SheetTitle className="text-base">Edit agency</SheetTitle>
+        </SheetHeader>
+        <div className="space-y-3 py-3">
+          {(
+            [
+              ["name", "Name"],
+              ["contact_person", "Contact person"],
+              ["phone", "Phone"],
+              ["email", "Email"],
+              ["website", "Website"],
+            ] as const
+          ).map(([k, label]) => (
+            <div key={k}>
+              <Label className="text-[11px]">{label}</Label>
+              <Input
+                value={d[k]}
+                onChange={(e) => setD({ ...d, [k]: e.target.value })}
+                className="h-9"
+              />
+            </div>
+          ))}
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <Label className="text-[11px]">Retainer (৳)</Label>
+              <Input
+                type="number"
+                value={d.retainer_fee}
+                onChange={(e) => setD({ ...d, retainer_fee: Number(e.target.value) || 0 })}
+                className="h-9"
+              />
+            </div>
+            <div>
+              <Label className="text-[11px]">Commission %</Label>
+              <Input
+                type="number"
+                value={d.commission_pct}
+                onChange={(e) => setD({ ...d, commission_pct: Number(e.target.value) || 0 })}
+                className="h-9"
+              />
+            </div>
+          </div>
+          <div>
+            <Label className="text-[11px]">Status</Label>
+            <Select value={d.status} onValueChange={(v) => setD({ ...d, status: v })}>
+              <SelectTrigger className="h-9 text-xs">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {["active", "paused", "ended"].map((s) => (
+                  <SelectItem key={s} value={s}>
+                    {s}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+          <div>
+            <Label className="text-[11px]">Notes</Label>
+            <Textarea
+              value={d.notes}
+              onChange={(e) => setD({ ...d, notes: e.target.value })}
+              className="min-h-20 text-sm"
+            />
+          </div>
+          <div className="flex gap-2">
+            <Button
+              className="flex-1"
+              disabled={saving}
+              onClick={() => {
+                if (!d.name.trim()) {
+                  toast.error("Name দাও");
+                  return;
+                }
+                onSave({
+                  id: agency.id,
+                  name: d.name.trim(),
+                  contact_person: d.contact_person || null,
+                  phone: d.phone || null,
+                  email: d.email || null,
+                  website: d.website || null,
+                  retainer_fee: d.retainer_fee,
+                  commission_pct: d.commission_pct,
+                  status: d.status,
+                  notes: d.notes || null,
+                });
+                onClose();
+              }}
+            >
+              Save
+            </Button>
+            <Button
+              variant="outline"
+              className="text-destructive"
+              onClick={() => {
+                if (confirm(`"${agency.name}" মুছে ফেলবে?`)) onDelete(agency.id);
+              }}
+            >
+              <Trash2 className="h-3.5 w-3.5" />
+            </Button>
+          </div>
+        </div>
+      </SheetContent>
+    </Sheet>
   );
 }
 

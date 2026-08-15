@@ -2,7 +2,17 @@ import { createFileRoute } from "@tanstack/react-router";
 import { useMemo, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
-import { Network, Plus, Truck, PackageCheck, ShoppingCart, Coins, Table2, LayoutGrid } from "lucide-react";
+import {
+  Network,
+  Plus,
+  Truck,
+  PackageCheck,
+  ShoppingCart,
+  Coins,
+  Table2,
+  LayoutGrid,
+  Trash2,
+} from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useBrand } from "@/contexts/brand-context";
 import {
@@ -77,7 +87,7 @@ function MatchingPage() {
   const [creating, setCreating] = useState(false);
   const [draft, setDraft] = useState(empty);
   const [search, setSearch] = useState("");
-  const [mode, setMode] = useState<"table" | "matrix">("table");
+  const [mode, setMode] = useState<"table" | "matrix" | "ships">("table");
 
   const shipQ = useQuery({
     queryKey: ["content-shipments", brandIds],
@@ -116,6 +126,7 @@ function MatchingPage() {
       product_id: string | null;
       shipped: number;
       shipStatus: string;
+      shipCost: number;
       content: number;
       published: number;
       orders: number;
@@ -132,6 +143,7 @@ function MatchingPage() {
           product_id: pid,
           shipped: 0,
           shipStatus: "—",
+          shipCost: 0,
           content: 0,
           published: 0,
           orders: 0,
@@ -141,9 +153,11 @@ function MatchingPage() {
       }
       return cur;
     };
-    for (const s of shipments) {
+    // shipments come newest-first; iterate oldest-first so the newest status wins
+    for (const s of [...shipments].reverse()) {
       const p = get(s.creator_id, s.product_id);
       p.shipped += s.qty;
+      p.shipCost += Number(s.cost) || 0;
       p.shipStatus = s.status;
     }
     for (const i of itemsQ.data ?? []) {
@@ -156,6 +170,17 @@ function MatchingPage() {
     }
     return Array.from(m.values()).sort((a, b) => b.content - a.content);
   }, [shipments, itemsQ.data]);
+
+  const visibleShipments = useMemo(() => {
+    const q = search.trim().toLowerCase();
+    if (!q) return shipments;
+    return shipments.filter(
+      (s) =>
+        (creatorName.get(s.creator_id) ?? "").toLowerCase().includes(q) ||
+        (s.product_id ? (productName.get(s.product_id) ?? "") : "").toLowerCase().includes(q) ||
+        (s.tracking_no ?? "").toLowerCase().includes(q),
+    );
+  }, [shipments, search, creatorName, productName]);
 
   const visiblePairs = useMemo(() => {
     const q = search.trim().toLowerCase();
@@ -187,6 +212,35 @@ function MatchingPage() {
       toast.success("Shipment রেকর্ড হয়েছে");
       setCreating(false);
       setDraft(empty);
+      qc.invalidateQueries({ queryKey: ["content-shipments"] });
+    },
+    onError: (e: Error) => toast.error(e.message),
+  });
+
+  const statusMut = useMutation({
+    mutationFn: async (v: { id: string; status: string }) => {
+      const patch: Record<string, unknown> = { status: v.status };
+      if (v.status === "delivered") patch.delivered_date = new Date().toISOString().slice(0, 10);
+      const { error } = await supabase
+        .from("content_creator_shipments")
+        .update(patch as never)
+        .eq("id", v.id);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      toast.success("Shipment status আপডেট হয়েছে");
+      qc.invalidateQueries({ queryKey: ["content-shipments"] });
+    },
+    onError: (e: Error) => toast.error(e.message),
+  });
+
+  const deleteMut = useMutation({
+    mutationFn: async (id: string) => {
+      const { error } = await supabase.from("content_creator_shipments").delete().eq("id", id);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      toast.success("Shipment মুছে ফেলা হয়েছে");
       qc.invalidateQueries({ queryKey: ["content-shipments"] });
     },
     onError: (e: Error) => toast.error(e.message),
@@ -231,6 +285,7 @@ function MatchingPage() {
           options={[
             { key: "table", label: "Table", icon: Table2 },
             { key: "matrix", label: "Matrix", icon: LayoutGrid },
+            { key: "ships", label: "Shipments", count: shipments.length, icon: Truck },
           ]}
         />
         <div className="ml-auto">
@@ -246,7 +301,7 @@ function MatchingPage() {
                   p.content,
                   p.published,
                   p.orders,
-                  p.cost,
+                  p.cost + p.shipCost,
                 ]),
               ])
             }
@@ -256,6 +311,80 @@ function MatchingPage() {
 
       {shipQ.isLoading ? (
         <Skeleton className="h-64 rounded-xl" />
+      ) : mode === "ships" ? (
+        visibleShipments.length === 0 ? (
+          <EmptyState
+            icon={Truck}
+            title="কোনো shipment নেই"
+            description="Creator-কে sample পাঠালে এখানে tracking আর status দেখা যাবে।"
+          />
+        ) : (
+          <div className="overflow-x-auto rounded-xl border">
+            <table className="w-full text-sm">
+              <thead className="bg-muted/50 text-[11px] uppercase tracking-wide text-muted-foreground">
+                <tr>
+                  <th className="px-3 py-2 text-left">Creator</th>
+                  <th className="px-3 py-2 text-left">Product</th>
+                  <th className="px-3 py-2 text-right">Qty</th>
+                  <th className="px-3 py-2 text-left">Courier / tracking</th>
+                  <th className="px-3 py-2 text-left">Sent</th>
+                  <th className="px-3 py-2 text-right">Cost</th>
+                  <th className="px-3 py-2 text-left">Status</th>
+                  <th className="px-3 py-2" />
+                </tr>
+              </thead>
+              <tbody>
+                {visibleShipments.map((s) => (
+                  <tr key={s.id} className="border-t">
+                    <td className="px-3 py-2 font-medium">{creatorName.get(s.creator_id) ?? "—"}</td>
+                    <td className="px-3 py-2 text-muted-foreground">
+                      {s.product_id ? (productName.get(s.product_id) ?? "—") : "—"}
+                    </td>
+                    <td className="px-3 py-2 text-right tabular-nums">{s.qty}</td>
+                    <td className="px-3 py-2 text-[11px] text-muted-foreground">
+                      {s.courier ?? "—"}
+                      {s.tracking_no ? ` · ${s.tracking_no}` : ""}
+                    </td>
+                    <td className="px-3 py-2 text-[11px] text-muted-foreground">
+                      {s.sent_date ?? "—"}
+                      {s.delivered_date ? ` → ${s.delivered_date}` : ""}
+                    </td>
+                    <td className="px-3 py-2 text-right tabular-nums">{bdt(s.cost)}</td>
+                    <td className="px-3 py-2">
+                      <Select
+                        value={s.status}
+                        onValueChange={(v) => statusMut.mutate({ id: s.id, status: v })}
+                      >
+                        <SelectTrigger className="h-8 w-[130px] text-xs">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {SHIPMENT_STATUSES.map((x) => (
+                            <SelectItem key={x.key} value={x.key}>
+                              {x.label}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </td>
+                    <td className="px-3 py-2 text-right">
+                      <Button
+                        size="icon"
+                        variant="ghost"
+                        className="h-8 w-8 text-muted-foreground hover:text-destructive"
+                        onClick={() => {
+                          if (confirm("এই shipment মুছে ফেলবে?")) deleteMut.mutate(s.id);
+                        }}
+                      >
+                        <Trash2 className="h-3.5 w-3.5" />
+                      </Button>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )
       ) : visiblePairs.length === 0 ? (
         <EmptyState
           icon={Network}
@@ -290,7 +419,7 @@ function MatchingPage() {
                 <Badge variant="outline" className="text-[10px]">
                   {p.shipStatus === "—" ? "—" : labelOf(SHIPMENT_STATUSES, p.shipStatus)}
                 </Badge>
-                <span>{bdt(p.cost)}</span>
+                <span>{bdt(p.cost + p.shipCost)}</span>
               </div>
             </div>
           ))}
@@ -330,7 +459,7 @@ function MatchingPage() {
                   <td className="px-3 py-2 text-right tabular-nums">{p.content}</td>
                   <td className="px-3 py-2 text-right tabular-nums">{p.published}</td>
                   <td className="px-3 py-2 text-right tabular-nums">{p.orders}</td>
-                  <td className="px-3 py-2 text-right tabular-nums">{bdt(p.cost)}</td>
+                  <td className="px-3 py-2 text-right tabular-nums">{bdt(p.cost + p.shipCost)}</td>
                 </tr>
               ))}
             </tbody>
