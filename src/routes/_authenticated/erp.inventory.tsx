@@ -306,14 +306,14 @@ function InventoryPage() {
           icon={<Package className="h-5 w-5" />}
           label="Total Products"
           value={total.toLocaleString()}
-          hint={`${rows.length} on this page`}
+          hint={`${rows.length} on this page · ${summary.products.toLocaleString()} in brand`}
         />
         <KpiCard
           accent="purple"
           icon={<Boxes className="h-5 w-5" />}
           label="Total Units"
           value={summary.units.toLocaleString()}
-          hint={summary.reserved > 0 ? `${summary.reserved.toLocaleString()} reserved` : "No reservations"}
+          hint={summary.reserved > 0 ? `${summary.reserved.toLocaleString()} reserved (brand-wide)` : "No reservations"}
         />
         <KpiCard
           accent="green"
@@ -326,7 +326,7 @@ function InventoryPage() {
           accent="red"
           icon={<AlertTriangle className="h-5 w-5" />}
           label="Low / Out of Stock"
-          value={`${lowOrOut} / ${rows.length || 0}`}
+          value={`${summary.low} / ${summary.out}`}
           hint={lowQuery.data?.length ? `${lowQuery.data.length} active alerts` : "All healthy"}
           emphasize={lowOrOut > 0}
         />
@@ -351,10 +351,11 @@ function InventoryPage() {
             <div className="relative">
               <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
               <Input
+                id="inventory-search"
                 className="pl-10 pr-12 h-11 text-sm rounded-xl border-border/70 bg-background shadow-none focus-visible:ring-2 focus-visible:ring-ring/40"
-                placeholder="Search by title, SKU, barcode or slug — scanner ready…"
-                value={filter.search}
-                onChange={(e) => setFilter({ ...filter, search: e.target.value, page: 0 })}
+                placeholder="Search by title, SKU, barcode or slug — press / to focus…"
+                value={searchInput}
+                onChange={(e) => setSearchInput(e.target.value)}
                 autoFocus
               />
               <div className="absolute right-2 top-1/2 -translate-y-1/2 inline-flex items-center gap-1 rounded-md border border-border/70 bg-muted/60 px-1.5 py-0.5 text-[10px] font-medium text-muted-foreground">
@@ -365,11 +366,11 @@ function InventoryPage() {
             <div className="flex flex-wrap items-center justify-between gap-2">
               <div className="flex flex-wrap gap-1">
                 {stockPills.map((p) => {
-                  const active = (p.k === "reserved" ? false : filter.stockState === p.k);
+                  const active = filter.stockState === p.k;
                   return (
                     <button
                       key={p.k}
-                      onClick={() => p.k !== "reserved" && setFilter({ ...filter, stockState: p.k as InventoryFilter["stockState"], page: 0 })}
+                      onClick={() => setFilter({ ...filter, stockState: p.k, page: 0 })}
                       className={cn(
                         "px-3 py-1.5 rounded-lg text-xs font-medium transition-all",
                         active
@@ -383,26 +384,54 @@ function InventoryPage() {
                 })}
               </div>
               <div className="flex items-center gap-1.5">
-                <Select defaultValue="all">
-                  <SelectTrigger className="h-8 w-[130px] text-xs"><SelectValue placeholder="Category" /></SelectTrigger>
-                  <SelectContent><SelectItem value="all">All categories</SelectItem></SelectContent>
+                <Select
+                  value={filter.categoryId}
+                  onValueChange={(v) => setFilter({ ...filter, categoryId: v, page: 0 })}
+                >
+                  <SelectTrigger className="h-8 w-[150px] text-xs"><SelectValue placeholder="Category" /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All categories</SelectItem>
+                    {(categories.data ?? []).map((c) => (
+                      <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>
+                    ))}
+                  </SelectContent>
                 </Select>
-                <Select defaultValue="updated">
-                  <SelectTrigger className="h-8 w-[130px] text-xs"><SelectValue /></SelectTrigger>
+                <Select
+                  value={filter.sortBy}
+                  onValueChange={(v) => setFilter({ ...filter, sortBy: v as InventoryFilter["sortBy"], page: 0 })}
+                >
+                  <SelectTrigger className="h-8 w-[140px] text-xs"><SelectValue /></SelectTrigger>
                   <SelectContent>
                     <SelectItem value="updated">Sort: Updated</SelectItem>
                     <SelectItem value="title">Sort: Title</SelectItem>
                     <SelectItem value="stock">Sort: Stock</SelectItem>
+                    <SelectItem value="price">Sort: Price</SelectItem>
                   </SelectContent>
                 </Select>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="h-8 px-2 text-xs"
+                  title={filter.sortDir === "asc" ? "Ascending" : "Descending"}
+                  onClick={() => setFilter({ ...filter, sortDir: filter.sortDir === "asc" ? "desc" : "asc", page: 0 })}
+                >
+                  {filter.sortDir === "asc" ? <ArrowUp className="h-3.5 w-3.5" /> : <ArrowDown className="h-3.5 w-3.5" />}
+                </Button>
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
                     <Button variant="outline" size="sm" className="h-8 text-xs">Columns</Button>
                   </DropdownMenuTrigger>
                   <DropdownMenuContent align="end">
                     <DropdownMenuLabel className="text-xs">Toggle columns</DropdownMenuLabel>
-                    {["WAC", "Reserved", "Incoming", "Reorder"].map((c) => (
-                      <DropdownMenuItem key={c} className="text-xs">{c}</DropdownMenuItem>
+                    {COLUMN_LABELS.map((c) => (
+                      <DropdownMenuItem
+                        key={c.key}
+                        className="text-xs"
+                        onSelect={(e) => { e.preventDefault(); toggleCol(c.key); }}
+                      >
+                        <Check className={cn("h-3.5 w-3.5 mr-2", cols[c.key] ? "opacity-100" : "opacity-0")} />
+                        {c.label}
+                      </DropdownMenuItem>
                     ))}
                   </DropdownMenuContent>
                 </DropdownMenu>
