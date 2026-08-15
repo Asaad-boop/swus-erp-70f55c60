@@ -350,46 +350,87 @@ const POPUP_HTML = `<!doctype html>
     </div>
     <div id="vCapture">
     <div class="tabs">
-      <button class="tab on" data-kind="idea">💡 Idea</button>
-      <button class="tab" data-kind="swipe">🎨 Swipe</button>
-      <button class="tab" data-kind="competitor">🏴 Rival</button>
+      <button class="tab on" data-kind="idea">🛍 Product</button>
+      <button class="tab" data-kind="competitor">🏴 Competitor</button>
+      <button class="tab" data-kind="swipe">🎬 Content</button>
     </div>
 
     <div class="shots" id="shots"></div>
 
-    <label>Title</label>
+    <label>Title / Page name</label>
     <input id="title" />
 
-    <div class="row">
-      <div>
-        <label>Brand</label>
-        <select id="brand"></select>
+    <label>Brand</label>
+    <select id="brand"></select>
+
+    <!-- PRODUCT -->
+    <div id="wProduct">
+      <div class="row">
+        <div>
+          <label>Price</label>
+          <input id="price" type="number" step="0.01" />
+        </div>
+        <div>
+          <label>Currency</label>
+          <select id="currency"></select>
+        </div>
       </div>
-      <div id="typeWrap">
-        <label>Type</label>
-        <select id="assetType">
-          <option value="ad">Ad</option>
-          <option value="landing">Landing page</option>
-          <option value="product">Product page</option>
-          <option value="organic">Organic post</option>
-          <option value="creative">Creative</option>
-        </select>
-      </div>
+      <p class="conv" id="conv"></p>
+      <label>Stage</label>
+      <select id="stage">
+        <option value="voting">🗳 Voting-এ পাঠাও</option>
+        <option value="idea">💡 Idea</option>
+      </select>
     </div>
 
-    <div class="row">
-      <div>
-        <label>Price</label>
-        <input id="price" type="number" step="0.01" />
+    <!-- COMPETITOR -->
+    <div id="wRivalPage" class="hidden">
+      <label>Niche / কি নিয়ে কাজ করে</label>
+      <input id="niche" placeholder="kids toys, gadgets, hobby…" />
+      <div class="row">
+        <div>
+          <label>Type</label>
+          <select id="pageType">
+            <option value="website">Website</option>
+            <option value="social">Social page</option>
+          </select>
+        </div>
+        <div>
+          <label>Threat</label>
+          <select id="threat">
+            <option value="low">Low</option>
+            <option value="medium" selected>Medium</option>
+            <option value="high">High</option>
+          </select>
+        </div>
       </div>
-      <div id="rivalWrap">
-        <label>Rival page</label>
-        <select id="competitor"></select>
-      </div>
+      <p class="conv" id="pageInfo"></p>
     </div>
 
-    <label>Note / কেন ভালো লাগলো</label>
-    <textarea id="note" rows="3"></textarea>
+    <!-- CONTENT -->
+    <div id="wContent" class="hidden">
+      <div class="row">
+        <div>
+          <label>Type</label>
+          <select id="assetType">
+            <option value="ad">Ad</option>
+            <option value="organic">Organic post</option>
+            <option value="creative">Creative / reel</option>
+            <option value="landing">Landing page</option>
+            <option value="product">Product page</option>
+          </select>
+        </div>
+        <div>
+          <label>Competitor (optional)</label>
+          <select id="competitor"></select>
+        </div>
+      </div>
+      <label>Hook / কেন ভালো</label>
+      <input id="hook" placeholder="প্রথম ৩ সেকেন্ডের hook…" />
+    </div>
+
+    <label>Note</label>
+    <textarea id="note" rows="2"></textarea>
 
     <label>Tags (কমা দিয়ে)</label>
     <input id="tags" placeholder="winner, hook, ugc" />
