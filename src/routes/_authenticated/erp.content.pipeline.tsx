@@ -290,6 +290,21 @@ function PipelinePage() {
     onError: (e: Error) => toast.error(e.message),
   });
 
+  const deleteMut = useMutation({
+    mutationFn: async (ids: string[]) => {
+      const { error } = await supabase.from("content_items").delete().in("id", ids);
+      if (error) throw error;
+      return ids.length;
+    },
+    onSuccess: (n) => {
+      toast.success(`${n}টি content মুছে ফেলা হয়েছে`);
+      setSelected(new Set());
+      qc.invalidateQueries({ queryKey: ["content-items"] });
+      qc.invalidateQueries({ queryKey: ["content-intake"] });
+    },
+    onError: (e: Error) => toast.error(e.message),
+  });
+
   function stagePatch(item: ContentItem, stageKey: string) {
     const patch: Partial<ContentItem> & { id: string } = { id: item.id, stage: stageKey };
     if (stageKey === "published" && !item.published_at) {
@@ -481,6 +496,16 @@ function PipelinePage() {
           <Button variant="ghost" size="sm" className="ml-auto h-8" onClick={() => setSelected(new Set())}>
             Clear
           </Button>
+          <Button
+            variant="ghost"
+            size="sm"
+            className="h-8 text-destructive hover:text-destructive"
+            onClick={() => {
+              if (confirm(`${selected.size}টি content মুছে ফেলবে?`)) deleteMut.mutate([...selected]);
+            }}
+          >
+            <Trash2 className="mr-1.5 h-3.5 w-3.5" /> Delete
+          </Button>
         </div>
       )}
 
@@ -531,6 +556,10 @@ function PipelinePage() {
         onClose={() => setOpen(null)}
         onSave={(patch) => {
           saveMut.mutate(patch);
+          setOpen(null);
+        }}
+        onDelete={(id) => {
+          deleteMut.mutate([id]);
           setOpen(null);
         }}
         creators={(creatorsQ.data ?? []).map((c) => ({ id: c.id, name: c.name }))}
@@ -1165,6 +1194,7 @@ function ItemSheet({
   item,
   onClose,
   onSave,
+  onDelete,
   creators,
   agencies,
   productLabel,
@@ -1172,6 +1202,7 @@ function ItemSheet({
   item: ContentItem | null;
   onClose: () => void;
   onSave: (patch: Partial<ContentItem> & { id: string }) => void;
+  onDelete: (id: string) => void;
   creators: { id: string; name: string }[];
   agencies: { id: string; name: string }[];
   productLabel: string | null;
@@ -1462,6 +1493,16 @@ function ItemSheet({
           </TabsContent>
         </Tabs>
         <div className="sticky bottom-0 flex gap-2 border-t bg-background py-3">
+          <Button
+            variant="ghost"
+            size="icon"
+            className="text-muted-foreground hover:text-destructive"
+            onClick={() => {
+              if (confirm(`"${d.title}" মুছে ফেলবে?`)) onDelete(d.id);
+            }}
+          >
+            <Trash2 className="h-4 w-4" />
+          </Button>
           <Button variant="ghost" className="flex-1" onClick={onClose}>
             Cancel
           </Button>
