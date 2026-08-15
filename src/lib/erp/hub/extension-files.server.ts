@@ -1128,7 +1128,7 @@ function normBase(v) {
   if (!/^https?:\\/\\//i.test(b)) b = 'https://' + b;
   // Editor preview hosts are auth-gated (they return an HTML login page), so
   // fall back to the real app URL baked in at download time.
-  if (/lovableproject\\.com|id-preview/i.test(b)) return DEFAULTS.base;
+  if (/lovableproject\\.com|id-preview|project--ed6f058b-a815-45d2-bb71-e1fc12a02390\\.lovable\\.app|swus-erp\\.lovable\\.app/i.test(b)) return DEFAULTS.base;
   return b;
 }
 const baseUrl = () => { const b = normBase($('base').value); $('base').value = b; return b; };
