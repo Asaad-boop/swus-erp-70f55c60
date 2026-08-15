@@ -101,6 +101,7 @@ import { Route as AuthenticatedErpHubPlanningRouteImport } from './routes/_authe
 import { Route as AuthenticatedErpHubGoalsRouteImport } from './routes/_authenticated/erp.hub.goals'
 import { Route as AuthenticatedErpHubContentRouteImport } from './routes/_authenticated/erp.hub.content'
 import { Route as AuthenticatedErpHrEmployeesRouteImport } from './routes/_authenticated/erp.hr.employees'
+import { Route as AuthenticatedErpHrAttendanceRouteImport } from './routes/_authenticated/erp.hr.attendance'
 import { Route as AuthenticatedErpFinanceWalletsRouteImport } from './routes/_authenticated/erp.finance.wallets'
 import { Route as AuthenticatedErpFinanceTaxesRouteImport } from './routes/_authenticated/erp.finance.taxes'
 import { Route as AuthenticatedErpFinanceSettingsRouteImport } from './routes/_authenticated/erp.finance.settings'
@@ -654,6 +655,12 @@ const AuthenticatedErpHrEmployeesRoute =
     path: '/employees',
     getParentRoute: () => AuthenticatedErpHrRoute,
   } as any)
+const AuthenticatedErpHrAttendanceRoute =
+  AuthenticatedErpHrAttendanceRouteImport.update({
+    id: '/attendance',
+    path: '/attendance',
+    getParentRoute: () => AuthenticatedErpHrRoute,
+  } as any)
 const AuthenticatedErpFinanceWalletsRoute =
   AuthenticatedErpFinanceWalletsRouteImport.update({
     id: '/wallets',
@@ -845,6 +852,7 @@ export interface FileRoutesByFullPath {
   '/erp/finance/settings': typeof AuthenticatedErpFinanceSettingsRoute
   '/erp/finance/taxes': typeof AuthenticatedErpFinanceTaxesRoute
   '/erp/finance/wallets': typeof AuthenticatedErpFinanceWalletsRoute
+  '/erp/hr/attendance': typeof AuthenticatedErpHrAttendanceRoute
   '/erp/hr/employees': typeof AuthenticatedErpHrEmployeesRoute
   '/erp/hub/content': typeof AuthenticatedErpHubContentRoute
   '/erp/hub/goals': typeof AuthenticatedErpHubGoalsRoute
@@ -950,6 +958,7 @@ export interface FileRoutesByTo {
   '/erp/finance/settings': typeof AuthenticatedErpFinanceSettingsRoute
   '/erp/finance/taxes': typeof AuthenticatedErpFinanceTaxesRoute
   '/erp/finance/wallets': typeof AuthenticatedErpFinanceWalletsRoute
+  '/erp/hr/attendance': typeof AuthenticatedErpHrAttendanceRoute
   '/erp/hr/employees': typeof AuthenticatedErpHrEmployeesRoute
   '/erp/hub/content': typeof AuthenticatedErpHubContentRoute
   '/erp/hub/goals': typeof AuthenticatedErpHubGoalsRoute
@@ -1068,6 +1077,7 @@ export interface FileRoutesById {
   '/_authenticated/erp/finance/settings': typeof AuthenticatedErpFinanceSettingsRoute
   '/_authenticated/erp/finance/taxes': typeof AuthenticatedErpFinanceTaxesRoute
   '/_authenticated/erp/finance/wallets': typeof AuthenticatedErpFinanceWalletsRoute
+  '/_authenticated/erp/hr/attendance': typeof AuthenticatedErpHrAttendanceRoute
   '/_authenticated/erp/hr/employees': typeof AuthenticatedErpHrEmployeesRoute
   '/_authenticated/erp/hub/content': typeof AuthenticatedErpHubContentRoute
   '/_authenticated/erp/hub/goals': typeof AuthenticatedErpHubGoalsRoute
@@ -1186,6 +1196,7 @@ export interface FileRouteTypes {
     | '/erp/finance/settings'
     | '/erp/finance/taxes'
     | '/erp/finance/wallets'
+    | '/erp/hr/attendance'
     | '/erp/hr/employees'
     | '/erp/hub/content'
     | '/erp/hub/goals'
@@ -1291,6 +1302,7 @@ export interface FileRouteTypes {
     | '/erp/finance/settings'
     | '/erp/finance/taxes'
     | '/erp/finance/wallets'
+    | '/erp/hr/attendance'
     | '/erp/hr/employees'
     | '/erp/hub/content'
     | '/erp/hub/goals'
@@ -1408,6 +1420,7 @@ export interface FileRouteTypes {
     | '/_authenticated/erp/finance/settings'
     | '/_authenticated/erp/finance/taxes'
     | '/_authenticated/erp/finance/wallets'
+    | '/_authenticated/erp/hr/attendance'
     | '/_authenticated/erp/hr/employees'
     | '/_authenticated/erp/hub/content'
     | '/_authenticated/erp/hub/goals'
@@ -2140,6 +2153,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedErpHrEmployeesRouteImport
       parentRoute: typeof AuthenticatedErpHrRoute
     }
+    '/_authenticated/erp/hr/attendance': {
+      id: '/_authenticated/erp/hr/attendance'
+      path: '/attendance'
+      fullPath: '/erp/hr/attendance'
+      preLoaderRoute: typeof AuthenticatedErpHrAttendanceRouteImport
+      parentRoute: typeof AuthenticatedErpHrRoute
+    }
     '/_authenticated/erp/finance/wallets': {
       id: '/_authenticated/erp/finance/wallets'
       path: '/wallets'
@@ -2387,11 +2407,13 @@ const AuthenticatedErpFinanceRouteWithChildren =
   )
 
 interface AuthenticatedErpHrRouteChildren {
+  AuthenticatedErpHrAttendanceRoute: typeof AuthenticatedErpHrAttendanceRoute
   AuthenticatedErpHrEmployeesRoute: typeof AuthenticatedErpHrEmployeesRoute
   AuthenticatedErpHrIndexRoute: typeof AuthenticatedErpHrIndexRoute
 }
 
 const AuthenticatedErpHrRouteChildren: AuthenticatedErpHrRouteChildren = {
+  AuthenticatedErpHrAttendanceRoute: AuthenticatedErpHrAttendanceRoute,
   AuthenticatedErpHrEmployeesRoute: AuthenticatedErpHrEmployeesRoute,
   AuthenticatedErpHrIndexRoute: AuthenticatedErpHrIndexRoute,
 }
