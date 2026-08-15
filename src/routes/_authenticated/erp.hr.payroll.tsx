@@ -10,8 +10,14 @@ import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { HrPageHeader, money, statusTone } from "@/components/erp/hr/hr-shell";
-import { generatePayrollRun, payPayrollRun, refreshPayrollTotals } from "@/lib/erp/hr/payroll.functions";
-import { Banknote, RefreshCw, Wand2, Wallet } from "lucide-react";
+import {
+  deletePayrollRun,
+  generatePayrollRun,
+  payPayrollRun,
+  refreshPayrollTotals,
+  updatePayslip,
+} from "@/lib/erp/hr/payroll.functions";
+import { Banknote, RefreshCw, Wand2, Wallet, Trash2, Download } from "lucide-react";
 
 export const Route = createFileRoute("/_authenticated/erp/hr/payroll")({
   component: PayrollPage,
@@ -37,6 +43,8 @@ function PayrollPage() {
   const genFn = useServerFn(generatePayrollRun);
   const payFn = useServerFn(payPayrollRun);
   const refreshFn = useServerFn(refreshPayrollTotals);
+  const updateSlipFn = useServerFn(updatePayslip);
+  const deleteRunFn = useServerFn(deletePayrollRun);
 
   const { data, isLoading } = useQuery({
     queryKey: ["hr-payroll", month],
@@ -70,12 +78,21 @@ function PayrollPage() {
   });
 
   const savePayslip = useMutation({
-    mutationFn: async ({ id, patch }: { id: string; patch: Record<string, number> }) => {
-      const { error } = await supabase.from("hr_payslips").update(patch as any).eq("id", id);
-      if (error) throw new Error(error.message);
-      if (run) await refreshFn({ data: { runId: run.id } });
-    },
+    mutationFn: ({ id, patch }: { id: string; patch: Record<string, number> }) =>
+      updateSlipFn({ data: { payslipId: id, patch } }),
     onSuccess: () => void qc.invalidateQueries({ queryKey: ["hr-payroll", month] }),
+    onError: (e: Error) => toast.error(e.message),
+  });
+
+  const removeRun = useMutation({
+    mutationFn: async () => {
+      if (!run) throw new Error("Kono run nei");
+      return deleteRunFn({ data: { runId: run.id } });
+    },
+    onSuccess: () => {
+      toast.success("Draft payroll delete hoyeche");
+      void qc.invalidateQueries({ queryKey: ["hr-payroll", month] });
+    },
     onError: (e: Error) => toast.error(e.message),
   });
 
@@ -94,6 +111,31 @@ function PayrollPage() {
 
   const slips = data?.payslips ?? [];
 
+  const exportCsv = () => {
+    const head = ["Employee", "Base", "Present", "Absent", "Overtime", "Bonus", "Allowance", "Deduction", "Net"];
+    const lines = slips.map((s) =>
+      [
+        empName(s.employee_id),
+        s.base_salary,
+        s.present_days,
+        s.absent_days,
+        s.overtime_amount,
+        s.bonus,
+        s.allowance,
+        s.deduction,
+        s.net_pay,
+      ]
+        .map((v) => `"${String(v ?? "").replace(/"/g, '""')}"`)
+        .join(","),
+    );
+    const blob = new Blob([[head.join(","), ...lines].join("\n")], { type: "text/csv;charset=utf-8" });
+    const a = document.createElement("a");
+    a.href = URL.createObjectURL(blob);
+    a.download = `payroll-${month}.csv`;
+    a.click();
+    URL.revokeObjectURL(a.href);
+  };
+
   return (
     <div className="mx-auto max-w-[1500px] space-y-4 p-4 md:p-6">
       <HrPageHeader
@@ -109,6 +151,22 @@ function PayrollPage() {
             {run && !locked && (
               <Button size="sm" variant="ghost" onClick={() => refreshFn({ data: { runId: run.id } }).then(() => qc.invalidateQueries({ queryKey: ["hr-payroll", month] }))}>
                 <RefreshCw className="h-3.5 w-3.5" />
+              </Button>
+            )}
+            {slips.length > 0 && (
+              <Button size="sm" variant="outline" onClick={exportCsv}>
+                <Download className="mr-1.5 h-3.5 w-3.5" /> CSV
+              </Button>
+            )}
+            {run && !locked && (
+              <Button
+                size="sm"
+                variant="ghost"
+                className="text-destructive"
+                disabled={removeRun.isPending}
+                onClick={() => { if (window.confirm("Ei draft payroll run delete korbo?")) removeRun.mutate(); }}
+              >
+                <Trash2 className="h-3.5 w-3.5" />
               </Button>
             )}
           </>
@@ -164,6 +222,7 @@ function PayrollPage() {
                   <th className="p-2.5 text-right">Base</th>
                   <th className="p-2.5 text-right">Present</th>
                   <th className="p-2.5 text-right">Absent</th>
+                  <th className="p-2.5 text-right">Overtime</th>
                   <th className="p-2.5 text-right">Bonus</th>
                   <th className="p-2.5 text-right">Allowance</th>
                   <th className="p-2.5 text-right">Deduction</th>
@@ -172,9 +231,9 @@ function PayrollPage() {
               </thead>
               <tbody>
                 {isLoading ? (
-                  <tr><td colSpan={8} className="p-6 text-center text-muted-foreground">Loading…</td></tr>
+                  <tr><td colSpan={9} className="p-6 text-center text-muted-foreground">Loading…</td></tr>
                 ) : slips.length === 0 ? (
-                  <tr><td colSpan={8} className="p-6 text-center text-muted-foreground">Ei mash er payroll generate kora hoyni.</td></tr>
+                  <tr><td colSpan={9} className="p-6 text-center text-muted-foreground">Ei mash er payroll generate kora hoyni.</td></tr>
                 ) : (
                   slips.map((s) => (
                     <tr key={s.id} className="border-b border-border/50 last:border-0">
@@ -182,6 +241,9 @@ function PayrollPage() {
                       <td className="p-2.5 text-right tabular-nums">{money(s.base_salary)}</td>
                       <td className="p-2.5 text-right tabular-nums">{Number(s.present_days)}</td>
                       <td className="p-2.5 text-right tabular-nums">{Number(s.absent_days)}</td>
+                      <td className="p-2.5 text-right">
+                        <NumCell value={s.overtime_amount} disabled={locked} onSave={(v) => savePayslip.mutate({ id: s.id, patch: { overtime_amount: v } })} />
+                      </td>
                       <td className="p-2.5 text-right">
                         <NumCell value={s.bonus} disabled={locked} onSave={(v) => savePayslip.mutate({ id: s.id, patch: { bonus: v } })} />
                       </td>
