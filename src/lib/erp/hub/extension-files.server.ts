@@ -565,11 +565,16 @@ async function init() {
     $('login').classList.remove('hidden');
     $('loginBase').value = cfg.base;
     const say = (t, cls) => { $('loginMsg').textContent = t; $('loginMsg').className = 'msg ' + (cls || ''); };
+    try {
+      const prev = sessionStorage.getItem('gh-login-msg');
+      if (prev) { say(prev, 'err'); sessionStorage.removeItem('gh-login-msg'); }
+    } catch (e) {}
     const doLogin = async () => {
       const email = $('email').value.trim();
       const password = $('password').value;
-      const base = ($('loginBase').value || cfg.base).trim().replace(/\\/$/, '');
-      if (!email || !password) return say('Email ও password দাও', 'err');
+      const base = normBase($('loginBase').value || cfg.base);
+      $('loginBase').value = base;
+      if (!email || !password) return say('Email/username ও password দাও', 'err');
       $('loginBtn').disabled = true;
       say('Login হচ্ছে…');
       try {
@@ -584,17 +589,19 @@ async function init() {
         say('স্বাগতম ✅', 'ok');
         setTimeout(() => location.reload(), 400);
       } catch (e) {
-        say(String(e.message || e), 'err');
+        say(String((e && e.message) || e) === 'Failed to fetch' ? ('Server-এ পৌঁছানো গেল না — ' + base) : String((e && e.message) || e), 'err');
       } finally {
         $('loginBtn').disabled = false;
       }
     };
     $('loginBtn').onclick = doLogin;
     $('password').onkeydown = (e) => { if (e.key === 'Enter') doLogin(); };
+    $('email').onkeydown = (e) => { if (e.key === 'Enter') doLogin(); };
+    setTimeout(() => { try { $('email').focus(); } catch (e) {} }, 50);
     $('setupSave').onclick = async () => {
       const t = $('setupToken').value.trim();
       if (!t) return;
-      await chrome.storage.sync.set({ token: t, base: ($('loginBase').value || cfg.base).trim().replace(/\\/$/, '') });
+      await chrome.storage.sync.set({ token: t, base: normBase($('loginBase').value || cfg.base) });
       location.reload();
     };
     return;
