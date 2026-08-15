@@ -228,6 +228,51 @@ function PlanningPage() {
 
   const netAfterMedia = totals.projProfit - media.total;
 
+  // ---- What-if scenario ----
+  const whatIf = useMemo(() => {
+    const u = 1 + unitAdj / 100;
+    const p = 1 + priceAdj / 100;
+    let revenue = 0;
+    let cogs = 0;
+    let units = 0;
+    for (const r of rows) {
+      const qty = r.proj_units * u;
+      units += qty;
+      revenue += qty * r.proj_price * p;
+      cogs += qty * r.proj_cost;
+    }
+    const extra = Number(extraCost) || 0;
+    const profit = revenue - cogs - media.total - extra;
+    return {
+      units,
+      revenue,
+      cogs,
+      profit,
+      margin: revenue > 0 ? (profit / revenue) * 100 : 0,
+      roas: media.total > 0 ? revenue / media.total : 0,
+      deltaRevenue: revenue - totals.projRevenue,
+      deltaProfit: profit - netAfterMedia,
+    };
+  }, [rows, unitAdj, priceAdj, extraCost, media.total, totals.projRevenue, netAfterMedia]);
+
+  // ---- Pareto: products covering 80% of projected revenue ----
+  const pareto = useMemo(() => {
+    const sorted = [...rows].sort((a, b) => b.proj_revenue - a.proj_revenue);
+    let acc = 0;
+    let n = 0;
+    for (const r of sorted) {
+      if (acc >= totals.projRevenue * 0.8) break;
+      acc += r.proj_revenue;
+      n += 1;
+    }
+    return { count: n, share: totals.projRevenue > 0 ? (acc / totals.projRevenue) * 100 : 0 };
+  }, [rows, totals.projRevenue]);
+
+  const combined = {
+    revenue: totals.projRevenue + manualTotals.revenue,
+    profit: netAfterMedia + manualTotals.profit,
+  };
+
   const exportCsv = () => {
     const head = [
       "Product","SKU","3mo units","Run-rate","MTD units","Proj units","Price","Unit cost",
