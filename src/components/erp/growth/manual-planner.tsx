@@ -317,9 +317,13 @@ export function ManualPlanner({
                   <th className="px-3 py-2 text-right font-medium">Qty (pcs)</th>
                   <th className="px-3 py-2 text-right font-medium">Sell price</th>
                   <th className="px-3 py-2 text-right font-medium">Cost price</th>
-                  <th className="px-3 py-2 text-right font-medium">Marketing</th>
+                  <th className="px-3 py-2 text-right font-medium">Marketing/pc</th>
+                  <th className="px-3 py-2 text-right font-medium">Packaging/pc</th>
+                  <th className="px-3 py-2 text-right font-medium">Return %</th>
+                  <th className="px-3 py-2 text-right font-medium">Return cost/pc</th>
                   <th className="px-3 py-2 text-right font-medium">Revenue</th>
                   <th className="px-3 py-2 text-right font-medium">Profit</th>
+                  <th className="px-3 py-2 text-right font-medium">Profit/pc</th>
                   <th className="px-3 py-2 text-right font-medium">Margin</th>
                   <th className="px-3 py-2" />
                 </tr>
@@ -342,10 +346,14 @@ export function ManualPlanner({
                       <td className="px-3 py-1.5 text-right">{numCell(r, "sell_price")}</td>
                       <td className="px-3 py-1.5 text-right">{numCell(r, "cost_price")}</td>
                       <td className="px-3 py-1.5 text-right">{numCell(r, "marketing_cost")}</td>
+                      <td className="px-3 py-1.5 text-right">{numCell(r, "packaging_cost")}</td>
+                      <td className="px-3 py-1.5 text-right">{numCell(r, "return_pct")}</td>
+                      <td className="px-3 py-1.5 text-right">{numCell(r, "return_cost")}</td>
                       <td className="px-3 py-1.5 text-right tabular-nums">{bdt(m.revenue)}</td>
                       <td className={`px-3 py-1.5 text-right tabular-nums ${m.profit < 0 ? "text-destructive" : "text-emerald-600"}`}>
                         {bdt(m.profit)}
                       </td>
+                      <td className="px-3 py-1.5 text-right tabular-nums">{bdt(m.perUnit)}</td>
                       <td className="px-3 py-1.5 text-right tabular-nums">{m.margin.toFixed(1)}%</td>
                       <td className="px-2 py-1.5 text-right">
                         <Button size="icon" variant="ghost" className="h-7 w-7" onClick={() => delRow.mutate(r.id)}>
@@ -363,10 +371,14 @@ export function ManualPlanner({
                   <td className="px-3 py-2" />
                   <td className="px-3 py-2 text-right tabular-nums">{bdt(totals.cogs)}</td>
                   <td className="px-3 py-2 text-right tabular-nums">{bdt(totals.marketing)}</td>
+                  <td className="px-3 py-2 text-right tabular-nums">{bdt(totals.packaging)}</td>
+                  <td className="px-3 py-2" />
+                  <td className="px-3 py-2 text-right tabular-nums">{bdt(totals.returns)}</td>
                   <td className="px-3 py-2 text-right tabular-nums">{bdt(totals.revenue)}</td>
                   <td className={`px-3 py-2 text-right tabular-nums ${totals.profit < 0 ? "text-destructive" : "text-emerald-600"}`}>
                     {bdt(totals.profit)}
                   </td>
+                  <td className="px-3 py-2 text-right tabular-nums">{bdt(totals.qty > 0 ? totals.profit / totals.qty : 0)}</td>
                   <td className="px-3 py-2 text-right tabular-nums">{totalMargin.toFixed(1)}%</td>
                   <td />
                 </tr>
