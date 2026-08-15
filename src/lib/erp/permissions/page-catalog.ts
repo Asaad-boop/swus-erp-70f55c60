@@ -80,6 +80,7 @@ export const PAGE_CATALOG: PageEntry[] = [
   { group: "HRM", path: "/erp/hr/payroll", label: "Payroll" },
   { group: "HRM", path: "/erp/hr/performance", label: "Performance & KPI" },
   { group: "HRM", path: "/erp/hr/access", label: "Users & Access" },
+  { group: "HRM", path: "/erp/hr/settings", label: "HR Settings" },
 
   { group: "Analytics", path: "/erp/analytics", label: "Analytics" },
   { group: "Analytics", path: "/erp/analytics/live", label: "Live Analytics" },

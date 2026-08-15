@@ -218,6 +218,7 @@ const groups: Group[] = [
           { to: "/erp/hr/payroll", label: "Payroll", icon: Banknote },
           { to: "/erp/hr/performance", label: "Performance & KPI", icon: Trophy },
           { to: "/erp/hr/access", label: "Users & Access", icon: ShieldCheck },
+          { to: "/erp/hr/settings", label: "HR Settings", icon: Settings2 },
         ],
       },
     ],
