@@ -499,13 +499,41 @@ function EmployeesPage() {
                   onChange={(e) => setForm({ ...form, late_grace_min: e.target.value })}
                 />
               </Field>
+              <Field label="Break time (theke)">
+                <Input
+                  type="time"
+                  value={form.break_start}
+                  onChange={(e) => setForm({ ...form, break_start: e.target.value })}
+                />
+              </Field>
+              <Field label="Break time (porjonto)">
+                <Input
+                  type="time"
+                  value={form.break_end}
+                  onChange={(e) => setForm({ ...form, break_end: e.target.value })}
+                />
+              </Field>
               <Field label="Paid break allowance (minute / din)">
                 <Input
                   type="number"
                   min={0}
-                  value={form.break_allowance_min}
+                  disabled={!!(form.break_start && form.break_end)}
+                  value={
+                    form.break_start && form.break_end
+                      ? String(
+                          breakWindowMinutes({
+                            ...DEFAULT_SCHEDULE,
+                            break_start: form.break_start,
+                            break_end: form.break_end,
+                          }) ?? 0,
+                        )
+                      : form.break_allowance_min
+                  }
                   onChange={(e) => setForm({ ...form, break_allowance_min: e.target.value })}
                 />
+                <p className="mt-1 text-[11px] text-muted-foreground">
+                  Break window dile allowance automatic hishab hobe (jemon 1:00 PM – 3:00 PM = 120 min)
+                </p>
               </Field>
               <div className="flex items-center justify-between rounded-lg border border-border/70 bg-background px-3 py-2">
                 <div>
