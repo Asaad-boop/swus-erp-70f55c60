@@ -490,6 +490,7 @@ textarea { resize:vertical; }
 .feed .it img { width:34px; height:34px; border-radius:7px; object-fit:cover; background:#222; flex:none; }
 .feed .it b { font-size:11.5px; font-weight:500; display:block; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
 .feed .it small { color:var(--mut); font-size:10px; }
+.conv { font-size:11px; color:#a5b4fc; margin:6px 0 0; min-height:14px; }
 `;
 
 
