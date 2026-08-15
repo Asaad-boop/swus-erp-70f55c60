@@ -505,18 +505,37 @@ let cfg = {};
 let fx = { BDT: 1 };
 const CCY = ['BDT','USD','PKR','INR','CNY','EUR','GBP','AED','SAR','MYR','THB','SGD','AUD','CAD','TRY','IDR','VND','JPY','KRW','NPR','LKR'];
 
+function normBase(v) {
+  let b = String(v || '').trim().replace(/\\/+$/, '');
+  if (!b) return DEFAULTS.base;
+  if (!/^https?:\\/\\//i.test(b)) b = 'https://' + b;
+  return b;
+}
+
+async function forceLogout(reason) {
+  await chrome.storage.sync.remove(['token', 'email']);
+  try { sessionStorage.setItem('gh-login-msg', reason || ''); } catch (e) {}
+  location.reload();
+}
+
 async function loadCfg() {
   const s = await chrome.storage.sync.get(['base', 'token', 'brandId', 'email']);
-  cfg = { base: s.base || DEFAULTS.base, token: s.token || DEFAULTS.token, brandId: s.brandId || '', email: s.email || '' };
+  cfg = { base: normBase(s.base || DEFAULTS.base), token: s.token || DEFAULTS.token, brandId: s.brandId || '', email: s.email || '' };
 }
 
 async function api(payload) {
-  const r = await fetch(cfg.base + '/api/public/hub/capture', {
-    method: 'POST',
-    headers: { 'content-type': 'application/json' },
-    body: JSON.stringify(Object.assign({ token: cfg.token }, payload))
-  });
+  let r;
+  try {
+    r = await fetch(cfg.base + '/api/public/hub/capture', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify(Object.assign({ token: cfg.token }, payload))
+    });
+  } catch (e) {
+    throw new Error('Server-এ পৌঁছানো গেল না — ' + cfg.base);
+  }
   const j = await r.json().catch(() => ({}));
+  if (j && j.code === 'invalid_token') { await forceLogout(j.error || 'Session শেষ — আবার login করো'); throw new Error(j.error || 'Session শেষ'); }
   if (!r.ok || j.error) throw new Error(j.error || ('HTTP ' + r.status));
   return j;
 }
