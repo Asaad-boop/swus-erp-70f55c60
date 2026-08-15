@@ -149,12 +149,14 @@ function MyAttendancePage() {
   const sched = data?.employee?.schedule ?? null;
   const breakMins = Math.round(stats.breakMs / 60000);
   const overBreak = sched ? unpaidBreakMinutes(sched, breakMins) : 0;
+  /** Payable hours = gross work − only the unpaid part of breaks. */
+  const payableMs = Math.max(0, stats.workMs - overBreak * 60000);
   const metrics =
     sched && data?.workDate
       ? dayMetrics({
           schedule: sched,
           workDate: data.workDate,
-          netMs: Math.max(0, stats.workMs - overBreak * 60000),
+          netMs: payableMs,
           firstIn: stats.firstIn,
         })
       : null;
@@ -191,7 +193,10 @@ function MyAttendancePage() {
               <Badge variant="outline" className={tone}>
                 {state === "unlinked" ? "Not linked" : state}
               </Badge>
-              <p className="mt-2 font-display text-4xl font-bold tracking-tight">{hoursMins(stats.netMs)}</p>
+              <p className="mt-2 font-display text-4xl font-bold tracking-tight tabular-nums transition-all duration-300">
+                {hoursMins(sched ? payableMs : stats.netMs)}
+              </p>
+              <p className="text-[11px] text-muted-foreground">Payable hours</p>
               <p className="text-xs text-muted-foreground">
                 In {clockTime(stats.firstIn)} · Out {clockTime(stats.lastOut)}
               </p>
@@ -268,7 +273,7 @@ function MyAttendancePage() {
         <StatCard
           icon={Hourglass}
           label="Net work hours"
-          value={hoursMins(stats.netMs)}
+          value={hoursMins(sched ? payableMs : stats.netMs)}
           hint={overBreak ? `${overBreak}m extra break baad geche` : undefined}
         />
       </div>
@@ -304,7 +309,7 @@ function MyAttendancePage() {
             </div>
             <ul className="divide-y divide-border/50">
               {stats.breaks.map((b, i) => (
-                <li key={i} className="flex items-center justify-between px-4 py-2.5 text-sm">
+                <li key={i} className="flex items-center justify-between px-4 py-2.5 text-sm transition-colors hover:bg-muted/40">
                   <span className="flex items-center gap-2">
                     <Coffee className="h-3.5 w-3.5 text-amber-600" />
                     <span>
