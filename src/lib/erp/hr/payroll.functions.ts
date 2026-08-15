@@ -71,10 +71,13 @@ export const generatePayrollRun = createServerFn({ method: "POST" })
       (employees ?? []).map((e: any) => [e.id as string, toSchedule(e)]),
     );
     for (const a of att ?? []) {
-      const bucket = a.status === "absent" ? absent : present;
       const key = a.employee_id as string;
-      if (a.status === "absent" || a.status === "present" || a.status === "late" || a.status === "half_day") {
-        bucket.set(key, (bucket.get(key) ?? 0) + (a.status === "half_day" ? 0.5 : 1));
+      // Approved leave is paid time, so it counts toward present days — not absent.
+      const paid = a.status === "present" || a.status === "late" || a.status === "half_day" || a.status === "leave";
+      if (a.status === "absent") {
+        absent.set(key, (absent.get(key) ?? 0) + 1);
+      } else if (paid) {
+        present.set(key, (present.get(key) ?? 0) + (a.status === "half_day" ? 0.5 : 1));
       }
       const sched = schedules.get(key);
       const mins = Number(a.overtime_minutes ?? 0);
