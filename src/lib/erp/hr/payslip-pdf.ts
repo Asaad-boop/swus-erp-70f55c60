@@ -181,9 +181,6 @@ function drawPayslipPage(
   const contentW = pageW - M * 2;
   const status = payslipStatusStyle(slip.runStatus, slip.paidAt);
 
-  // Watermark first so all content prints on top of it.
-  drawWatermark(doc, status.watermark, status.color);
-
   /* ---------- header band ---------- */
   doc.setFillColor(...ACCENT);
   doc.rect(0, 0, pageW, 104, "F");
@@ -417,6 +414,9 @@ function drawPayslipPage(
     pageH - 28,
     { align: "right" },
   );
+
+  // Stamp last so it reads over the tables instead of being hidden behind them.
+  drawWatermark(doc, status.watermark, status.color);
 }
 
 /** Builds the payslip document — one A4 page per employee. */
