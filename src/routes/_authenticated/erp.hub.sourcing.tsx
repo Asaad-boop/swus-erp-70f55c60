@@ -680,6 +680,80 @@ function SourcingPage() {
     onError: (e: Error) => toast.error(e.message),
   });
 
+  /** Cancel sourcing — keeps the row + history, just takes it out of the pipeline. */
+  const cancelIdea = useMutation({
+    mutationFn: async ({ idea, reason }: { idea: HubIdea; reason: string }) => {
+      if (idea.imp_po_id) {
+        throw new Error("PO তৈরি হয়ে গেছে — আগে PO cancel করুন");
+      }
+      const from = stageOf.get(idea.id) ?? "to_source";
+      const { error } = await supabase
+        .from("hub_product_ideas")
+        .update({
+          status: "rejected",
+          next_action_at: null,
+          next_action_note: reason.trim() || null,
+        } as never)
+        .eq("id", idea.id);
+      if (error) throw error;
+      await logSourcingEvent({
+        ideaId: idea.id,
+        type: "note",
+        fromStage: from,
+        note: `Sourcing cancelled${reason.trim() ? ` — ${reason.trim()}` : ""}`,
+      });
+    },
+    onSuccess: () => {
+      toast.success("Sourcing cancelled");
+      setRemoveTarget(null);
+      setRemoveReason("");
+      invalidate();
+    },
+    onError: (e: Error) => toast.error(e.message),
+  });
+
+  /** Restore a cancelled item back into the pipeline. */
+  const restoreIdea = useMutation({
+    mutationFn: async (idea: HubIdea) => {
+      const hasQuotes = (quotesQ.data?.get(idea.id)?.length ?? 0) > 0;
+      const { error } = await supabase
+        .from("hub_product_ideas")
+        .update({ status: hasQuotes ? "sourcing" : "approved" } as never)
+        .eq("id", idea.id);
+      if (error) throw error;
+      await logSourcingEvent({ ideaId: idea.id, type: "note", note: "Restored to sourcing" });
+    },
+    onSuccess: () => {
+      toast.success("Pipeline-এ ফিরিয়ে আনা হয়েছে");
+      invalidate();
+    },
+    onError: (e: Error) => toast.error(e.message),
+  });
+
+  /** Hard delete — quotes and events cascade with the idea row. */
+  const deleteIdea = useMutation({
+    mutationFn: async (idea: HubIdea) => {
+      if (idea.imp_po_id) {
+        throw new Error("PO linked আছে — delete করা যাবে না, আগে PO cancel করুন");
+      }
+      const { error } = await supabase.from("hub_product_ideas").delete().eq("id", idea.id);
+      if (error) throw error;
+    },
+    onSuccess: (_d, idea) => {
+      toast.success(`"${idea.title}" মুছে ফেলা হয়েছে`);
+      if (selectedId === idea.id) setSelectedId(null);
+      setRemoveTarget(null);
+      setRemoveReason("");
+      invalidate();
+    },
+    onError: (e: Error) => toast.error(e.message),
+  });
+
+  const askRemove = (idea: HubIdea, mode: "cancel" | "delete") => {
+    setRemoveReason("");
+    setRemoveTarget({ idea, mode });
+  };
+
   const StageMenu = ({ idea, align = "end" }: { idea: HubIdea; align?: "start" | "end" }) => {
     const cur = stageOf.get(idea.id) ?? "to_source";
     const hasPo = !!idea.imp_po_id;
