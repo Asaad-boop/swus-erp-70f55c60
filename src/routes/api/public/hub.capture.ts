@@ -233,6 +233,9 @@ export const Route = createFileRoute("/api/public/hub/capture")({
               ? requestedBrandB
               : t.default_brand_id;
           const raw = Array.isArray(payload.items) ? payload.items.slice(0, 40) : [];
+          const bulkCcy = normalizeCurrency(str(payload.currency, 12));
+          const rates = await bdtRates();
+          const bulkRate = rates[bulkCcy ?? "BDT"] ?? 1;
           const rows = raw
             .map((x: any) => {
               const title = str(x?.title, 300);
@@ -240,6 +243,7 @@ export const Route = createFileRoute("/api/public/hub/capture")({
               if (!title && !link) return null;
               const img = str(x?.image_url, 2000);
               const p = Number(x?.price);
+              const valid = Number.isFinite(p) && p > 0;
               return {
                 brand_id: brandIdB,
                 title: title ?? link ?? "Untitled idea",
@@ -247,8 +251,11 @@ export const Route = createFileRoute("/api/public/hub/capture")({
                 image_url: img,
                 images: img ? [img] : [],
                 tags: strArr(payload.tags, 12).map((s) => s.slice(0, 40)),
-                est_sell_price: Number.isFinite(p) && p > 0 ? p : 0,
-                status: "idea",
+                est_sell_price: valid ? Math.round(p * bulkRate * 100) / 100 : 0,
+                source_price: valid ? p : null,
+                source_currency: bulkCcy ?? "BDT",
+                fx_rate: bulkRate,
+                status: "voting",
                 created_by: t.user_id,
               };
             })
