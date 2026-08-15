@@ -44,8 +44,20 @@ function StatCard({ icon: Icon, label, value, hint }: { icon: any; label: string
   );
 }
 
-function MyAttendancePage() {
+/** Punch action mutation with toast + cache refresh. */
+function usePunch(fn: () => Promise<unknown>, msg: string) {
   const qc = useQueryClient();
+  return useMutation({
+    mutationFn: fn,
+    onSuccess: () => {
+      toast.success(msg);
+      void qc.invalidateQueries({ queryKey: ["hr-my-attendance"] });
+    },
+    onError: (e: Error) => toast.error(e.message),
+  });
+}
+
+function MyAttendancePage() {
   const fetchToday = useServerFn(getMyAttendanceToday);
   const [tick, setTick] = useState(0);
 
@@ -60,27 +72,15 @@ function MyAttendancePage() {
     refetchInterval: 60_000,
   });
 
-  const refresh = () => void qc.invalidateQueries({ queryKey: ["hr-my-attendance"] });
-  const mk = (fn: () => Promise<unknown>, msg: string) =>
-    // eslint-disable-next-line react-hooks/rules-of-hooks
-    useMutation({
-      mutationFn: fn,
-      onSuccess: () => {
-        toast.success(msg);
-        refresh();
-      },
-      onError: (e: Error) => toast.error(e.message),
-    });
-
   const inFn = useServerFn(punchIn);
   const outFn = useServerFn(punchOut);
   const bStart = useServerFn(startBreak);
   const bEnd = useServerFn(endBreak);
 
-  const doIn = mk(() => inFn(), "Check in hoyeche");
-  const doOut = mk(() => outFn(), "Check out hoyeche");
-  const doBreakStart = mk(() => bStart(), "Break shuru");
-  const doBreakEnd = mk(() => bEnd(), "Break shesh");
+  const doIn = usePunch(() => inFn(), "Check in hoyeche");
+  const doOut = usePunch(() => outFn(), "Check out hoyeche");
+  const doBreakStart = usePunch(() => bStart(), "Break shuru");
+  const doBreakEnd = usePunch(() => bEnd(), "Break shesh");
   const busy = doIn.isPending || doOut.isPending || doBreakStart.isPending || doBreakEnd.isPending;
 
   const entries = data?.entries ?? [];
