@@ -108,6 +108,9 @@ export function ManualPlanner({
           sell_price: r.sell_price,
           cost_price: r.cost_price,
           marketing_cost: r.marketing_cost,
+          packaging_cost: r.packaging_cost,
+          return_pct: r.return_pct,
+          return_cost: r.return_cost,
         } as never)
         .eq("id", r.id);
       if (error) throw error;
@@ -146,6 +149,9 @@ export function ManualPlanner({
           sell_price: r.sell_price,
           cost_price: r.cost_price,
           marketing_cost: r.marketing_cost,
+          packaging_cost: r.packaging_cost,
+          return_pct: r.return_pct,
+          return_cost: r.return_cost,
           note: r.note,
           position: rows.length + i,
         })) as never,
@@ -170,10 +176,12 @@ export function ManualPlanner({
             revenue: a.revenue + m.revenue,
             cogs: a.cogs + m.cogs,
             marketing: a.marketing + m.marketing,
+            packaging: a.packaging + m.packaging,
+            returns: a.returns + m.returns,
             profit: a.profit + m.profit,
           };
         },
-        { qty: 0, revenue: 0, cogs: 0, marketing: 0, profit: 0 },
+        { qty: 0, revenue: 0, cogs: 0, marketing: 0, packaging: 0, returns: 0, profit: 0 },
       ),
     [rows],
   );
@@ -187,17 +195,51 @@ export function ManualPlanner({
   const scenarios = [10, 20, 30].map((pct) => {
     const targetProfit = (totals.revenue * pct) / 100;
     // Revenue needed if cost + marketing stays same and margin = pct
-    const baseCost = totals.cogs + totals.marketing;
+    const baseCost = totals.cogs + totals.marketing + totals.packaging + totals.returns;
     const neededRevenue = pct < 100 ? baseCost / (1 - pct / 100) : 0;
     const priceFactor = totals.revenue > 0 ? neededRevenue / totals.revenue : 0;
     return { pct, targetProfit, neededRevenue, gap: targetProfit - totals.profit, priceFactor };
   });
 
   const exportCsv = () => {
-    const head = ["Product", "Qty", "Sell price", "Cost price", "Marketing", "Revenue", "COGS", "Profit", "Margin %"];
+    const head = [
+      "Product",
+      "Qty",
+      "Sell price",
+      "Cost price",
+      "Marketing/pc",
+      "Packaging/pc",
+      "Return %",
+      "Return cost/pc",
+      "Revenue",
+      "COGS",
+      "Marketing total",
+      "Packaging total",
+      "Return loss",
+      "Profit",
+      "Profit/pc",
+      "Margin %",
+    ];
     const body = rows.map((r) => {
       const m = rowMath(r);
-      return [r.product_name, r.qty, r.sell_price, r.cost_price, r.marketing_cost, m.revenue, m.cogs, m.profit, m.margin.toFixed(1)];
+      return [
+        r.product_name,
+        r.qty,
+        r.sell_price,
+        r.cost_price,
+        r.marketing_cost,
+        r.packaging_cost,
+        r.return_pct,
+        r.return_cost,
+        m.revenue,
+        m.cogs,
+        m.marketing,
+        m.packaging,
+        m.returns,
+        m.profit,
+        m.perUnit.toFixed(2),
+        m.margin.toFixed(1),
+      ];
     });
     const csv = [head, ...body].map((l) => l.map((c) => `"${String(c).replace(/"/g, '""')}"`).join(",")).join("\n");
     const url = URL.createObjectURL(new Blob([csv], { type: "text/csv;charset=utf-8" }));
@@ -211,11 +253,14 @@ export function ManualPlanner({
   const patch = (id: string, p: Partial<PlanScenarioRow>) =>
     setDraft((d) => ({ ...d, [id]: { ...d[id], ...p } }));
 
-  const numCell = (r: PlanScenarioRow, field: "qty" | "sell_price" | "cost_price" | "marketing_cost") => (
+  const numCell = (
+    r: PlanScenarioRow,
+    field: "qty" | "sell_price" | "cost_price" | "marketing_cost" | "packaging_cost" | "return_pct" | "return_cost",
+  ) => (
     <Input
       type="text"
       inputMode="decimal"
-      className="h-8 w-24 text-right"
+      className="h-8 w-20 text-right"
       value={raw[`${r.id}:${field}`] ?? String(r[field] ?? 0)}
       onFocus={(e) => e.currentTarget.select()}
       onChange={(e) => {
