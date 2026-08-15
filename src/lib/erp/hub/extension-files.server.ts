@@ -6,7 +6,7 @@ const MANIFEST = (origin: string) =>
     {
       manifest_version: 3,
       name: "Synq With Us",
-      version: "3.0.1",
+      version: "3.0.2",
       description:
         "Scrape any product (auto BDT price), competitor page or content inspiration straight into your ERP.",
       permissions: ["activeTab", "scripting", "storage", "contextMenus", "notifications", "tabs"],
