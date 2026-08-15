@@ -1202,6 +1202,7 @@ function ItemSheet({
   creators,
   agencies,
   productLabel,
+  brandLabel,
 }: {
   item: ContentItem | null;
   onClose: () => void;
@@ -1210,6 +1211,7 @@ function ItemSheet({
   creators: { id: string; name: string }[];
   agencies: { id: string; name: string }[];
   productLabel: string | null;
+  brandLabel?: string | null;
 }) {
   const [d, setD] = useState<ContentItem | null>(item);
   const key = item?.id ?? "none";
@@ -1245,9 +1247,12 @@ function ItemSheet({
           </div>
         </SheetHeader>
         <Tabs defaultValue="script" className="py-3">
-          <TabsList className="grid w-full grid-cols-3">
+          <TabsList className="grid w-full grid-cols-4">
             <TabsTrigger value="script" className="text-xs">
               Script Studio
+            </TabsTrigger>
+            <TabsTrigger value="brief" className="text-xs">
+              Brief
             </TabsTrigger>
             <TabsTrigger value="prod" className="text-xs">
               Production
@@ -1256,6 +1261,16 @@ function ItemSheet({
               Results
             </TabsTrigger>
           </TabsList>
+
+          <TabsContent value="brief">
+            <BriefPanel
+              item={item}
+              productLabel={productLabel}
+              brandLabel={brandLabel ?? null}
+              creators={creators}
+              agencies={agencies}
+            />
+          </TabsContent>
 
           <TabsContent value="script" className="space-y-3 pt-3">
             <div className="rounded-xl border border-border/70 bg-muted/30 p-2.5">
