@@ -241,8 +241,22 @@ function SourcingPage() {
     enabled: pipeline.length > 0,
   });
 
+  /** Cancelled / archived sourcing items (kept out of the live pipeline). */
+  const cancelled = useMemo(
+    () => (ideasQ.data ?? []).filter((i) => i.status === "rejected"),
+    [ideasQ.data],
+  );
+
+  // Keep the selection valid: pick the first row when nothing is selected, and
+  // drop a stale selection after an item is cancelled or deleted.
   useEffect(() => {
-    if (!selectedId && pipeline.length > 0) setSelectedId(pipeline[0]!.id);
+    if (pipeline.length === 0) {
+      if (selectedId) setSelectedId(null);
+      return;
+    }
+    if (!selectedId || !pipeline.some((i) => i.id === selectedId)) {
+      setSelectedId(pipeline[0]!.id);
+    }
   }, [pipeline, selectedId]);
 
   // Live PO status for every ordered idea (for stage tracking).
