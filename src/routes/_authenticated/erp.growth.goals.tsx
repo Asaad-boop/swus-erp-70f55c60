@@ -5,7 +5,7 @@ import { toast } from "sonner";
 import { Target, Plus, Trash2, Pencil } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useBrand } from "@/contexts/brand-context";
-import { HubPageHeader } from "@/components/erp/hub/hub-shell";
+import { GrowthPageHeader } from "@/components/erp/growth/growth-shell";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -185,7 +185,7 @@ function GoalsPage() {
 
   return (
     <div className="mx-auto max-w-[1500px] space-y-4 p-3 md:p-6">
-      <HubPageHeader
+      <GrowthPageHeader
         icon={Target}
         title="Vision & Goals"
         subtitle={

@@ -19,7 +19,7 @@ import {
 import { useBrand } from "@/contexts/brand-context";
 import { supabase } from "@/integrations/supabase/client";
 import { useCurrentRole } from "@/hooks/use-current-role";
-import { HubPageHeader } from "@/components/erp/hub/hub-shell";
+import { GrowthPageHeader } from "@/components/erp/growth/growth-shell";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -179,7 +179,7 @@ function HubHome() {
 
   return (
     <div className="mx-auto max-w-[1500px] space-y-4 p-3 md:p-6">
-      <HubPageHeader
+      <GrowthPageHeader
         icon={Compass}
         title="Growth Hub"
         subtitle={

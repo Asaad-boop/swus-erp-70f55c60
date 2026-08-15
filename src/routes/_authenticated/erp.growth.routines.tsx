@@ -14,7 +14,7 @@ import {
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useBrand } from "@/contexts/brand-context";
-import { HubPageHeader } from "@/components/erp/hub/hub-shell";
+import { GrowthPageHeader } from "@/components/erp/growth/growth-shell";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -203,7 +203,7 @@ function RoutinesPage() {
 
   return (
     <div className="space-y-5">
-      <HubPageHeader
+      <GrowthPageHeader
         icon={Repeat}
         title="Routines & Calendar"
         subtitle={

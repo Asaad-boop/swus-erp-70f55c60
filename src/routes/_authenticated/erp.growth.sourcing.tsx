@@ -28,7 +28,7 @@ import {
   setPoCargoAgent,
 } from "@/lib/erp/imports/imports.functions";
 import { newIdemKey } from "@/lib/erp/imports/types";
-import { HubPageHeader } from "@/components/erp/hub/hub-shell";
+import { GrowthPageHeader } from "@/components/erp/growth/growth-shell";
 import { IdeaGallery, StarRating } from "@/components/erp/hub/idea-visuals";
 import {
   deriveStage,
@@ -1024,7 +1024,7 @@ function SourcingPage() {
 
   return (
     <div className="mx-auto max-w-[1500px] space-y-4 p-3 md:p-6">
-      <HubPageHeader
+      <GrowthPageHeader
         icon={PackageSearch}
         title="Sourcing Desk"
         subtitle={

@@ -12,7 +12,7 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 import { useBrand } from "@/contexts/brand-context";
-import { HubPageHeader } from "@/components/erp/hub/hub-shell";
+import { GrowthPageHeader } from "@/components/erp/growth/growth-shell";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -125,7 +125,7 @@ function PlanningPage() {
 
   return (
     <div className="mx-auto max-w-[1500px] space-y-4 p-3 md:p-6">
-      <HubPageHeader
+      <GrowthPageHeader
         icon={BarChart3}
         title="Monthly Projection"
         subtitle={`${activeBrand ? activeBrand.name : "All brands"} — গত ৩ মাসের run-rate থেকে ${monthLabel(month)}-এর projection`}

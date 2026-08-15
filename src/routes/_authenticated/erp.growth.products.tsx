@@ -31,7 +31,7 @@ import { Link } from "@tanstack/react-router";
 import { supabase } from "@/integrations/supabase/client";
 import { useBrand } from "@/contexts/brand-context";
 import { useCurrentRole } from "@/hooks/use-current-role";
-import { HubPageHeader } from "@/components/erp/hub/hub-shell";
+import { GrowthPageHeader } from "@/components/erp/growth/growth-shell";
 import { IdeaGallery, StarRating } from "@/components/erp/hub/idea-visuals";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -544,7 +544,7 @@ function ProductPipelinePage() {
 
   return (
     <div className="mx-auto max-w-[1500px] space-y-4 p-3 md:p-6">
-      <HubPageHeader
+      <GrowthPageHeader
         icon={Lightbulb}
         title="Product Pipeline"
         subtitle={
