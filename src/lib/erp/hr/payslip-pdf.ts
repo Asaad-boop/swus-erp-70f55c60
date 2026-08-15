@@ -419,8 +419,8 @@ function drawPayslipPage(
   );
 }
 
-/** Builds a payslip PDF — one A4 page per employee — and triggers a download. */
-export async function exportPayslipPdf(slips: PayslipData[], company: HrCompany, filename: string) {
+/** Builds the payslip document — one A4 page per employee. */
+export async function buildPayslipDoc(slips: PayslipData[], company: HrCompany): Promise<jsPDF> {
   if (!slips.length) throw new Error("Kono payslip nei");
   const doc = new jsPDF({ orientation: "portrait", unit: "pt", format: "a4" });
   const logo = await loadLogo(company.logo_url);
@@ -439,5 +439,17 @@ export async function exportPayslipPdf(slips: PayslipData[], company: HrCompany,
       doc.text(`Page ${i} of ${pages}`, 40, doc.internal.pageSize.getHeight() - 30);
     }
   }
+  return doc;
+}
+
+/** Builds a payslip PDF and triggers a download. */
+export async function exportPayslipPdf(slips: PayslipData[], company: HrCompany, filename: string) {
+  const doc = await buildPayslipDoc(slips, company);
   doc.save(filename);
+}
+
+/** Object URL for in-app preview / print. Caller must revoke it. */
+export async function payslipPreviewUrl(slips: PayslipData[], company: HrCompany): Promise<string> {
+  const doc = await buildPayslipDoc(slips, company);
+  return URL.createObjectURL(doc.output("blob"));
 }
