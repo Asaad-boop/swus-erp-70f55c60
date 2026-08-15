@@ -76,6 +76,7 @@ import {
   sortBy,
   usePersistedState,
 } from "@/components/erp/content/content-ui";
+import { BriefPanel } from "@/components/erp/content/brief-drawer";
 import { cn } from "@/lib/utils";
 
 export const Route = createFileRoute("/_authenticated/erp/content/pipeline")({
