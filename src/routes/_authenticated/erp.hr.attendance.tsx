@@ -269,6 +269,21 @@ function AttendancePage() {
                         </td>
                         <td className="p-2.5 text-right">
                           <Input
+                            key={`brk-${e.id}-${date}-${a?.updated_at ?? ""}`}
+                            type="number"
+                            min={0}
+                            defaultValue={a?.break_minutes ?? 0}
+                            onBlur={(ev) => upsert.mutate({ employee_id: e.id, patch: { break_minutes: Number(ev.target.value) || 0 } })}
+                            className="h-8 w-[80px] text-right"
+                          />
+                          {unpaidBreakMinutes(sched, Number(a?.break_minutes ?? 0)) > 0 && (
+                            <p className="text-[10px] text-amber-600">
+                              +{unpaidBreakMinutes(sched, Number(a?.break_minutes ?? 0))}m unpaid
+                            </p>
+                          )}
+                        </td>
+                        <td className="p-2.5 text-right">
+                          <Input
                             key={`ot-${e.id}-${date}-${a?.updated_at ?? ""}`}
                             type="number"
                             defaultValue={a?.overtime_minutes ?? 0}
