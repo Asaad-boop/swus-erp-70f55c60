@@ -281,6 +281,19 @@ function CreatorsPage() {
     onError: (e: Error) => toast.error(e.message),
   });
 
+  const deleteMut = useMutation({
+    mutationFn: async (id: string) => {
+      const { error } = await supabase.from("hub_creators").delete().eq("id", id);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      toast.success("Creator মুছে ফেলা হয়েছে");
+      setOpen(null);
+      qc.invalidateQueries({ queryKey: ["content-creators"] });
+    },
+    onError: (e: Error) => toast.error(e.message),
+  });
+
   const logMut = useMutation({
     mutationFn: async (v: {
       creator: Creator;
@@ -669,6 +682,9 @@ function CreatorsPage() {
               }}
               onLog={(v) => logMut.mutate({ creator: open, ...v })}
               logging={logMut.isPending}
+              onDelete={() => {
+                if (confirm(`"${open.name}" creator মুছে ফেলবে?`)) deleteMut.mutate(open.id);
+              }}
             />
           )}
         </SheetContent>
@@ -855,6 +871,7 @@ function CreatorDetail({
   onRating,
   onLog,
   logging,
+  onDelete,
 }: {
   creator: Creator;
   perf?: Perf;
@@ -875,6 +892,7 @@ function CreatorDetail({
   onRating: (v: number) => void;
   onLog: (v: { channel: string; summary: string; outcome: string; quoted: number; next: string }) => void;
   logging: boolean;
+  onDelete: () => void;
 }) {
   const [channel, setChannel] = useState("whatsapp");
   const [summary, setSummary] = useState("");
@@ -887,7 +905,7 @@ function CreatorDetail({
   return (
     <>
       <SheetHeader>
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-3 pr-6">
           <Avatar name={creator.name} size={44} />
           <div className="min-w-0">
             <SheetTitle className="truncate text-base">{creator.name}</SheetTitle>
@@ -907,6 +925,14 @@ function CreatorDetail({
               )}
             </p>
           </div>
+          <Button
+            size="icon"
+            variant="ghost"
+            className="ml-auto h-7 w-7 shrink-0 text-muted-foreground hover:text-destructive"
+            onClick={onDelete}
+          >
+            <Trash2 className="h-3.5 w-3.5" />
+          </Button>
         </div>
       </SheetHeader>
       <div className="space-y-4 py-3">
