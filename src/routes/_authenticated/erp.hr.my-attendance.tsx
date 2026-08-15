@@ -21,7 +21,16 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Fingerprint, LogIn, LogOut, Coffee, Play, Timer, Clock, Hourglass } from "lucide-react";
-import { BREAK_KINDS, breakKindLabel, dayMetrics, shiftLabel, unpaidBreakMinutes, weekOffLabel } from "@/lib/erp/hr/schedule";
+import {
+  BREAK_KINDS,
+  breakKindLabel,
+  breakWindowLabel,
+  dayMetrics,
+  paidBreakMinutes,
+  shiftLabel,
+  unpaidBreakMinutes,
+  weekOffLabel,
+} from "@/lib/erp/hr/schedule";
 
 export const Route = createFileRoute("/_authenticated/erp/hr/my-attendance")({
   component: MyAttendancePage,
@@ -250,7 +259,9 @@ function MyAttendancePage() {
           value={hoursMins(stats.breakMs)}
           hint={
             sched
-              ? `${stats.breaks.length} break · ${breakMins}/${sched.break_allowance_min} min paid${overBreak ? ` · ${overBreak}m unpaid` : ""}`
+              ? `${stats.breaks.length} break · ${breakMins}/${paidBreakMinutes(sched)} min paid${
+                  breakWindowLabel(sched) ? ` · ${breakWindowLabel(sched)}` : ""
+                }${overBreak ? ` · ${overBreak}m unpaid` : ""}`
               : `${stats.breaks.length} break`
           }
         />
@@ -265,7 +276,8 @@ function MyAttendancePage() {
       {overBreak > 0 && (
         <Card className="border-amber-500/30 bg-amber-500/5">
           <CardContent className="p-4 text-sm text-amber-700">
-            Aaj break {breakMins} min hoyeche — allowance {sched?.break_allowance_min} min. Beshi <b>{overBreak} min</b> unpaid dhora hobe.
+            Aaj break {breakMins} min hoyeche — allowance {sched ? paidBreakMinutes(sched) : 0} min
+            {sched && breakWindowLabel(sched) ? ` (${breakWindowLabel(sched)})` : ""}. Beshi <b>{overBreak} min</b> unpaid dhora hobe.
           </CardContent>
         </Card>
       )}
