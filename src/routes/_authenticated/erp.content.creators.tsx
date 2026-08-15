@@ -18,6 +18,7 @@ import {
   ShoppingCart,
   CalendarClock,
   Handshake,
+  Trash2,
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useBrand } from "@/contexts/brand-context";
