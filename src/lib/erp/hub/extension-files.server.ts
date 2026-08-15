@@ -830,15 +830,16 @@ const CONTENT_JS = `
     <div class="panel">
       <div class="hd"><b>Synq Clip</b><span class="chip" id="ghPlat"></span><button class="x">✕</button></div>
       <div class="tabs">
-        <button class="tab on" data-kind="idea">💡 Product</button>
-        <button class="tab" data-kind="swipe">🎨 Content</button>
-        <button class="tab" data-kind="competitor">🏴 Page</button>
+        <button class="tab on" data-kind="idea">🛍 Product</button>
+        <button class="tab" data-kind="competitor">🏴 Competitor</button>
+        <button class="tab" data-kind="swipe">🎬 Content</button>
       </div>
       <div class="shots" id="ghShots"></div>
       <label>Title</label><input id="ghTitle" />
       <label>Brand</label><select id="ghBrand"></select>
       <div class="row">
-        <div><label>Price</label><input id="ghPrice" type="number" step="0.01" /></div>
+        <div id="ghPriceWrap"><label>Price</label><input id="ghPrice" type="number" step="0.01" /></div>
+        <div id="ghCcyWrap"><label>Currency</label><select id="ghCcy"></select></div>
         <div id="ghTypeWrap"><label>Type</label>
           <select id="ghType">
             <option value="ad">Ad</option><option value="organic">Organic post</option>
@@ -847,6 +848,8 @@ const CONTENT_JS = `
           </select>
         </div>
       </div>
+      <p class="msg" id="ghConv"></p>
+      <div id="ghNicheWrap"><label>Niche</label><input id="ghNiche" placeholder="kids toys, gadgets…" /></div>
       <label>Note</label><textarea id="ghNote" rows="2"></textarea>
       <label>Tags (কমা দিয়ে)</label><input id="ghTags" placeholder="winner, hook, ugc" />
       <button class="go" id="ghGo">Synq করো</button>
@@ -857,12 +860,23 @@ const CONTENT_JS = `
   const $ = (id) => root.getElementById(id);
   const panel = root.querySelector('.panel');
   const fab = root.querySelector('.fab');
-  let page = {}, chosen = null, kind = 'idea', loaded = false;
+  let page = {}, chosen = null, kind = 'idea', loaded = false, fx = { BDT: 1 };
+  const CCY = ['BDT','USD','PKR','INR','CNY','EUR','GBP','AED','SAR','MYR','THB','SGD','AUD','CAD','TRY','IDR','VND','JPY','KRW','NPR','LKR'];
+
+  function conv() {
+    const p = Number($('ghPrice').value), c = $('ghCcy').value || 'BDT', rate = fx[c] || 1;
+    if (!Number.isFinite(p) || p <= 0) { $('ghConv').textContent = ''; return; }
+    $('ghConv').textContent = c === 'BDT' ? ('৳ ' + p) : (p + ' ' + c + ' ≈ ৳ ' + Math.round(p * rate));
+  }
 
   function setKind(k) {
     kind = k;
     root.querySelectorAll('.tab').forEach((t) => t.classList.toggle('on', t.dataset.kind === k));
-    $('ghTypeWrap').style.visibility = k === 'swipe' ? 'visible' : 'hidden';
+    $('ghTypeWrap').style.display = k === 'swipe' ? 'block' : 'none';
+    $('ghPriceWrap').style.display = k === 'idea' ? 'block' : 'none';
+    $('ghCcyWrap').style.display = k === 'idea' ? 'block' : 'none';
+    $('ghNicheWrap').style.display = k === 'competitor' ? 'block' : 'none';
+    conv();
   }
   root.querySelectorAll('.tab').forEach((t) => (t.onclick = () => setKind(t.dataset.kind)));
   root.querySelector('.x').onclick = () => panel.classList.remove('on');
@@ -879,6 +893,12 @@ const CONTENT_JS = `
     $('ghTitle').value = page.title || document.title;
     $('ghNote').value = (page.selection || page.description || '').slice(0, 500);
     if (page.price) $('ghPrice').value = page.price;
+    const cs = $('ghCcy');
+    cs.innerHTML = '';
+    CCY.forEach((c) => { const o = document.createElement('option'); o.value = c; o.textContent = c; cs.appendChild(o); });
+    cs.value = (page.currency && CCY.indexOf(String(page.currency).toUpperCase()) >= 0) ? String(page.currency).toUpperCase() : 'BDT';
+    cs.onchange = conv;
+    $('ghPrice').oninput = conv;
     if (page.is_page) setKind('competitor'); else if (!page.is_product && page.platform !== 'web') setKind('swipe');
 
     const shots = $('ghShots');
@@ -895,6 +915,8 @@ const CONTENT_JS = `
     const b = $('ghBrand');
     b.innerHTML = '';
     if (m.ok) {
+      if (m.meta.fx) fx = Object.assign(fx, m.meta.fx);
+      conv();
       (m.meta.brands || []).forEach((x) => {
         const o = document.createElement('option'); o.value = x.id; o.textContent = x.name; b.appendChild(o);
       });
@@ -924,7 +946,7 @@ const CONTENT_JS = `
     $('ghMsg').textContent = 'সেভ হচ্ছে…'; $('ghMsg').className = 'msg';
     const extra = [];
     if (page.sku) extra.push('SKU: ' + page.sku);
-    if (page.currency && page.price) extra.push('Listed: ' + page.price + ' ' + page.currency);
+    if ($('ghPrice').value) extra.push('Listed: ' + $('ghPrice').value + ' ' + $('ghCcy').value);
     (page.variants || []).forEach((v) => extra.push(v.name + ': ' + v.values.join(', ')));
     if (page.followers) extra.push('Followers: ' + page.followers);
     const note = [$('ghNote').value.trim(), extra.join(' | ')].filter(Boolean).join('\\n');
@@ -938,6 +960,11 @@ const CONTENT_JS = `
       images: (page.images || []).slice(0, 8),
       note: note || null,
       price: $('ghPrice').value ? Number($('ghPrice').value) : null,
+      currency: $('ghCcy').value || 'BDT',
+      status: 'voting',
+      niche: $('ghNiche').value.trim() || null,
+      handle: page.handle || null,
+      followers: page.followers || null,
       tags: $('ghTags').value.split(',').map((s) => s.trim()).filter(Boolean),
       platform: page.platform,
       asset_type: $('ghType').value,
