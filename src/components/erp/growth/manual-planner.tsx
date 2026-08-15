@@ -19,6 +19,9 @@ export type PlanScenarioRow = {
   sell_price: number;
   cost_price: number;
   marketing_cost: number;
+  packaging_cost: number;
+  return_pct: number;
+  return_cost: number;
   note: string | null;
   position: number;
 };
@@ -37,16 +40,23 @@ async function fetchScenarioRows(brandId: string | null, month: string) {
     sell_price: Number(r.sell_price ?? 0),
     cost_price: Number(r.cost_price ?? 0),
     marketing_cost: Number(r.marketing_cost ?? 0),
+    packaging_cost: Number(r.packaging_cost ?? 0),
+    return_pct: Number(r.return_pct ?? 0),
+    return_cost: Number(r.return_cost ?? 0),
   }));
 }
 
 function rowMath(r: PlanScenarioRow) {
   const revenue = r.qty * r.sell_price;
   const cogs = r.qty * r.cost_price;
-  const marketing = r.marketing_cost;
-  const profit = revenue - cogs - marketing;
+  const marketing = r.qty * r.marketing_cost;
+  const packaging = r.qty * r.packaging_cost;
+  const returnUnits = (r.qty * r.return_pct) / 100;
+  const returns = returnUnits * r.return_cost;
+  const profit = revenue - cogs - marketing - packaging - returns;
   const margin = revenue > 0 ? (profit / revenue) * 100 : 0;
-  return { revenue, cogs, marketing, profit, margin };
+  const perUnit = r.qty > 0 ? profit / r.qty : 0;
+  return { revenue, cogs, marketing, packaging, returns, returnUnits, profit, margin, perUnit };
 }
 
 /** Manual multi-product plan with 10/20/30% profit scenarios, archived per month. */
@@ -98,6 +108,9 @@ export function ManualPlanner({
           sell_price: r.sell_price,
           cost_price: r.cost_price,
           marketing_cost: r.marketing_cost,
+          packaging_cost: r.packaging_cost,
+          return_pct: r.return_pct,
+          return_cost: r.return_cost,
         } as never)
         .eq("id", r.id);
       if (error) throw error;
@@ -136,6 +149,9 @@ export function ManualPlanner({
           sell_price: r.sell_price,
           cost_price: r.cost_price,
           marketing_cost: r.marketing_cost,
+          packaging_cost: r.packaging_cost,
+          return_pct: r.return_pct,
+          return_cost: r.return_cost,
           note: r.note,
           position: rows.length + i,
         })) as never,
@@ -160,10 +176,12 @@ export function ManualPlanner({
             revenue: a.revenue + m.revenue,
             cogs: a.cogs + m.cogs,
             marketing: a.marketing + m.marketing,
+            packaging: a.packaging + m.packaging,
+            returns: a.returns + m.returns,
             profit: a.profit + m.profit,
           };
         },
-        { qty: 0, revenue: 0, cogs: 0, marketing: 0, profit: 0 },
+        { qty: 0, revenue: 0, cogs: 0, marketing: 0, packaging: 0, returns: 0, profit: 0 },
       ),
     [rows],
   );
@@ -177,17 +195,51 @@ export function ManualPlanner({
   const scenarios = [10, 20, 30].map((pct) => {
     const targetProfit = (totals.revenue * pct) / 100;
     // Revenue needed if cost + marketing stays same and margin = pct
-    const baseCost = totals.cogs + totals.marketing;
+    const baseCost = totals.cogs + totals.marketing + totals.packaging + totals.returns;
     const neededRevenue = pct < 100 ? baseCost / (1 - pct / 100) : 0;
     const priceFactor = totals.revenue > 0 ? neededRevenue / totals.revenue : 0;
     return { pct, targetProfit, neededRevenue, gap: targetProfit - totals.profit, priceFactor };
   });
 
   const exportCsv = () => {
-    const head = ["Product", "Qty", "Sell price", "Cost price", "Marketing", "Revenue", "COGS", "Profit", "Margin %"];
+    const head = [
+      "Product",
+      "Qty",
+      "Sell price",
+      "Cost price",
+      "Marketing/pc",
+      "Packaging/pc",
+      "Return %",
+      "Return cost/pc",
+      "Revenue",
+      "COGS",
+      "Marketing total",
+      "Packaging total",
+      "Return loss",
+      "Profit",
+      "Profit/pc",
+      "Margin %",
+    ];
     const body = rows.map((r) => {
       const m = rowMath(r);
-      return [r.product_name, r.qty, r.sell_price, r.cost_price, r.marketing_cost, m.revenue, m.cogs, m.profit, m.margin.toFixed(1)];
+      return [
+        r.product_name,
+        r.qty,
+        r.sell_price,
+        r.cost_price,
+        r.marketing_cost,
+        r.packaging_cost,
+        r.return_pct,
+        r.return_cost,
+        m.revenue,
+        m.cogs,
+        m.marketing,
+        m.packaging,
+        m.returns,
+        m.profit,
+        m.perUnit.toFixed(2),
+        m.margin.toFixed(1),
+      ];
     });
     const csv = [head, ...body].map((l) => l.map((c) => `"${String(c).replace(/"/g, '""')}"`).join(",")).join("\n");
     const url = URL.createObjectURL(new Blob([csv], { type: "text/csv;charset=utf-8" }));
@@ -201,11 +253,14 @@ export function ManualPlanner({
   const patch = (id: string, p: Partial<PlanScenarioRow>) =>
     setDraft((d) => ({ ...d, [id]: { ...d[id], ...p } }));
 
-  const numCell = (r: PlanScenarioRow, field: "qty" | "sell_price" | "cost_price" | "marketing_cost") => (
+  const numCell = (
+    r: PlanScenarioRow,
+    field: "qty" | "sell_price" | "cost_price" | "marketing_cost" | "packaging_cost" | "return_pct" | "return_cost",
+  ) => (
     <Input
       type="text"
       inputMode="decimal"
-      className="h-8 w-24 text-right"
+      className="h-8 w-20 text-right"
       value={raw[`${r.id}:${field}`] ?? String(r[field] ?? 0)}
       onFocus={(e) => e.currentTarget.select()}
       onChange={(e) => {
@@ -262,9 +317,13 @@ export function ManualPlanner({
                   <th className="px-3 py-2 text-right font-medium">Qty (pcs)</th>
                   <th className="px-3 py-2 text-right font-medium">Sell price</th>
                   <th className="px-3 py-2 text-right font-medium">Cost price</th>
-                  <th className="px-3 py-2 text-right font-medium">Marketing</th>
+                  <th className="px-3 py-2 text-right font-medium">Marketing/pc</th>
+                  <th className="px-3 py-2 text-right font-medium">Packaging/pc</th>
+                  <th className="px-3 py-2 text-right font-medium">Return %</th>
+                  <th className="px-3 py-2 text-right font-medium">Return cost/pc</th>
                   <th className="px-3 py-2 text-right font-medium">Revenue</th>
                   <th className="px-3 py-2 text-right font-medium">Profit</th>
+                  <th className="px-3 py-2 text-right font-medium">Profit/pc</th>
                   <th className="px-3 py-2 text-right font-medium">Margin</th>
                   <th className="px-3 py-2" />
                 </tr>
@@ -287,10 +346,14 @@ export function ManualPlanner({
                       <td className="px-3 py-1.5 text-right">{numCell(r, "sell_price")}</td>
                       <td className="px-3 py-1.5 text-right">{numCell(r, "cost_price")}</td>
                       <td className="px-3 py-1.5 text-right">{numCell(r, "marketing_cost")}</td>
+                      <td className="px-3 py-1.5 text-right">{numCell(r, "packaging_cost")}</td>
+                      <td className="px-3 py-1.5 text-right">{numCell(r, "return_pct")}</td>
+                      <td className="px-3 py-1.5 text-right">{numCell(r, "return_cost")}</td>
                       <td className="px-3 py-1.5 text-right tabular-nums">{bdt(m.revenue)}</td>
                       <td className={`px-3 py-1.5 text-right tabular-nums ${m.profit < 0 ? "text-destructive" : "text-emerald-600"}`}>
                         {bdt(m.profit)}
                       </td>
+                      <td className="px-3 py-1.5 text-right tabular-nums">{bdt(m.perUnit)}</td>
                       <td className="px-3 py-1.5 text-right tabular-nums">{m.margin.toFixed(1)}%</td>
                       <td className="px-2 py-1.5 text-right">
                         <Button size="icon" variant="ghost" className="h-7 w-7" onClick={() => delRow.mutate(r.id)}>
@@ -308,10 +371,14 @@ export function ManualPlanner({
                   <td className="px-3 py-2" />
                   <td className="px-3 py-2 text-right tabular-nums">{bdt(totals.cogs)}</td>
                   <td className="px-3 py-2 text-right tabular-nums">{bdt(totals.marketing)}</td>
+                  <td className="px-3 py-2 text-right tabular-nums">{bdt(totals.packaging)}</td>
+                  <td className="px-3 py-2" />
+                  <td className="px-3 py-2 text-right tabular-nums">{bdt(totals.returns)}</td>
                   <td className="px-3 py-2 text-right tabular-nums">{bdt(totals.revenue)}</td>
                   <td className={`px-3 py-2 text-right tabular-nums ${totals.profit < 0 ? "text-destructive" : "text-emerald-600"}`}>
                     {bdt(totals.profit)}
                   </td>
+                  <td className="px-3 py-2 text-right tabular-nums">{bdt(totals.qty > 0 ? totals.profit / totals.qty : 0)}</td>
                   <td className="px-3 py-2 text-right tabular-nums">{totalMargin.toFixed(1)}%</td>
                   <td />
                 </tr>
