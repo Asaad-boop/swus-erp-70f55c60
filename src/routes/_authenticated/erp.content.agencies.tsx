@@ -359,6 +359,17 @@ function AgenciesPage() {
           </div>
         </SheetContent>
       </Sheet>
+
+      {editing && (
+        <AgencyEditSheet
+          key={editing.id}
+          agency={editing}
+          onClose={() => setEditing(null)}
+          onSave={(p) => updateMut.mutate(p)}
+          onDelete={(id) => deleteMut.mutate(id)}
+          saving={updateMut.isPending || deleteMut.isPending}
+        />
+      )}
     </div>
   );
 }
