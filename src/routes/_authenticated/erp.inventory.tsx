@@ -31,9 +31,12 @@ import { cn } from "@/lib/utils";
 import { useBrand } from "@/contexts/brand-context";
 import {
   useInventoryQuery,
+  useInventorySummary,
+  useProductCategories,
   useLowStockAlerts,
   useStockMovements,
   useProductTitles,
+  DEFAULT_INVENTORY_FILTER,
   type InventoryFilter,
 } from "@/hooks/erp/use-inventory-query";
 import {
@@ -45,6 +48,8 @@ import {
 } from "@/lib/erp/inventory";
 import { downloadCsv } from "@/lib/erp/orders";
 import { StockAdjustDialog } from "@/components/erp/inventory/stock-adjust-dialog";
+import { BulkStockDialog } from "@/components/erp/inventory/bulk-stock-dialog";
+import { BulkReorderDialog } from "@/components/erp/inventory/bulk-reorder-dialog";
 import { ProductEditDialog } from "@/components/erp/inventory/product-edit-dialog";
 import { ProductAddDialog } from "@/components/erp/inventory/product-add-dialog";
 
@@ -53,12 +58,59 @@ export const Route = createFileRoute("/_authenticated/erp/inventory")({
   component: InventoryPage,
 });
 
+type ColumnKey = "wac" | "reserved" | "incoming" | "reorder";
+const COLUMN_LABELS: Array<{ key: ColumnKey; label: string }> = [
+  { key: "wac", label: "WAC" },
+  { key: "reserved", label: "Reserved" },
+  { key: "incoming", label: "Incoming" },
+  { key: "reorder", label: "Reorder" },
+];
+const COLUMNS_STORAGE_KEY = "erp.inventory.columns";
+
 function InventoryPage() {
   const { activeBrand, brandIds, isAllBrands, brands } = useBrand();
   const qc = useQueryClient();
-  const [filter, setFilter] = useState<InventoryFilter>({
-    brandIds: [], search: "", stockState: "all", page: 0, pageSize: 50,
+  const [filter, setFilter] = useState<InventoryFilter>(DEFAULT_INVENTORY_FILTER);
+  const [searchInput, setSearchInput] = useState("");
+
+  // debounce search -> filter
+  useEffect(() => {
+    const t = setTimeout(() => {
+      setFilter((f) => (f.search === searchInput ? f : { ...f, search: searchInput, page: 0 }));
+    }, 300);
+    return () => clearTimeout(t);
+  }, [searchInput]);
+
+  // "/" focuses search
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      const el = e.target as HTMLElement | null;
+      const typing = el && (el.tagName === "INPUT" || el.tagName === "TEXTAREA" || el.isContentEditable);
+      if (e.key === "/" && !typing) {
+        e.preventDefault();
+        document.getElementById("inventory-search")?.focus();
+      }
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, []);
+
+  const [cols, setCols] = useState<Record<ColumnKey, boolean>>({
+    wac: true, reserved: true, incoming: true, reorder: true,
   });
+  useEffect(() => {
+    try {
+      const raw = localStorage.getItem(COLUMNS_STORAGE_KEY);
+      if (raw) setCols((c) => ({ ...c, ...(JSON.parse(raw) as Record<ColumnKey, boolean>) }));
+    } catch { /* ignore */ }
+  }, []);
+  const toggleCol = (k: ColumnKey) => setCols((c) => {
+    const n = { ...c, [k]: !c[k] };
+    try { localStorage.setItem(COLUMNS_STORAGE_KEY, JSON.stringify(n)); } catch { /* ignore */ }
+    return n;
+  });
+  const visibleColCount = 9 + Object.values(cols).filter(Boolean).length;
+
   const effective = useMemo<InventoryFilter>(
     () => ({ ...filter, brandIds }),
     [filter, brandIds],
@@ -67,6 +119,8 @@ function InventoryPage() {
   const { data, isLoading, dataUpdatedAt } = useInventoryQuery(effective);
   const rows = data?.rows ?? [];
   const total = data?.total ?? 0;
+  const summaryQuery = useInventorySummary(effective);
+  const categories = useProductCategories(brandIds);
   const lowQuery = useLowStockAlerts(brandIds);
   const movements = useStockMovements(brandIds);
 
@@ -85,6 +139,8 @@ function InventoryPage() {
     const n = new Set(s); n.has(id) ? n.delete(id) : n.add(id); return n;
   });
   const [adjustVariant, setAdjustVariant] = useState<string | null>(null);
+  const [bulkStock, setBulkStock] = useState<"in" | "out" | null>(null);
+  const [bulkReorder, setBulkReorder] = useState(false);
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const toggleSelect = (id: string) => setSelected((s) => {
     const n = new Set(s); n.has(id) ? n.delete(id) : n.add(id); return n;
@@ -185,23 +241,12 @@ function InventoryPage() {
     onError: (e: Error) => toast.error(e.message),
   });
 
-  const summary = useMemo(() => {
-    let units = 0, value = 0, low = 0, out = 0, reserved = 0;
-    for (const r of rows) {
-      units += r.stock;
-      const unitCost = Number(r.weighted_avg_cost ?? r.cost_price ?? 0);
-      value += unitCost * r.stock;
-      reserved += Number(r.reserved_stock ?? 0);
-      if (r.stock <= 0) out += 1;
-      else if (r.stock <= (r.low_stock_threshold ?? 5)) low += 1;
-    }
-    return { units, value, low, out, reserved };
-  }, [rows]);
+  const summary = summaryQuery.data ?? { products: 0, units: 0, value: 0, reserved: 0, low: 0, out: 0 };
 
   const lowOrOut = summary.low + summary.out;
   const syncedAt = dataUpdatedAt ? new Date(dataUpdatedAt) : null;
 
-  const stockPills: Array<{ k: InventoryFilter["stockState"] | "reserved"; label: string }> = [
+  const stockPills: Array<{ k: InventoryFilter["stockState"]; label: string }> = [
     { k: "all", label: "All" },
     { k: "in", label: "In Stock" },
     { k: "low", label: "Low Stock" },
@@ -261,14 +306,14 @@ function InventoryPage() {
           icon={<Package className="h-5 w-5" />}
           label="Total Products"
           value={total.toLocaleString()}
-          hint={`${rows.length} on this page`}
+          hint={`${rows.length} on this page · ${summary.products.toLocaleString()} in brand`}
         />
         <KpiCard
           accent="purple"
           icon={<Boxes className="h-5 w-5" />}
           label="Total Units"
           value={summary.units.toLocaleString()}
-          hint={summary.reserved > 0 ? `${summary.reserved.toLocaleString()} reserved` : "No reservations"}
+          hint={summary.reserved > 0 ? `${summary.reserved.toLocaleString()} reserved (brand-wide)` : "No reservations"}
         />
         <KpiCard
           accent="green"
@@ -281,7 +326,7 @@ function InventoryPage() {
           accent="red"
           icon={<AlertTriangle className="h-5 w-5" />}
           label="Low / Out of Stock"
-          value={`${lowOrOut} / ${rows.length || 0}`}
+          value={`${summary.low} / ${summary.out}`}
           hint={lowQuery.data?.length ? `${lowQuery.data.length} active alerts` : "All healthy"}
           emphasize={lowOrOut > 0}
         />
@@ -306,10 +351,11 @@ function InventoryPage() {
             <div className="relative">
               <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
               <Input
+                id="inventory-search"
                 className="pl-10 pr-12 h-11 text-sm rounded-xl border-border/70 bg-background shadow-none focus-visible:ring-2 focus-visible:ring-ring/40"
-                placeholder="Search by title, SKU, barcode or slug — scanner ready…"
-                value={filter.search}
-                onChange={(e) => setFilter({ ...filter, search: e.target.value, page: 0 })}
+                placeholder="Search by title, SKU, barcode or slug — press / to focus…"
+                value={searchInput}
+                onChange={(e) => setSearchInput(e.target.value)}
                 autoFocus
               />
               <div className="absolute right-2 top-1/2 -translate-y-1/2 inline-flex items-center gap-1 rounded-md border border-border/70 bg-muted/60 px-1.5 py-0.5 text-[10px] font-medium text-muted-foreground">
@@ -320,11 +366,11 @@ function InventoryPage() {
             <div className="flex flex-wrap items-center justify-between gap-2">
               <div className="flex flex-wrap gap-1">
                 {stockPills.map((p) => {
-                  const active = (p.k === "reserved" ? false : filter.stockState === p.k);
+                  const active = filter.stockState === p.k;
                   return (
                     <button
                       key={p.k}
-                      onClick={() => p.k !== "reserved" && setFilter({ ...filter, stockState: p.k as InventoryFilter["stockState"], page: 0 })}
+                      onClick={() => setFilter({ ...filter, stockState: p.k, page: 0 })}
                       className={cn(
                         "px-3 py-1.5 rounded-lg text-xs font-medium transition-all",
                         active
@@ -338,26 +384,54 @@ function InventoryPage() {
                 })}
               </div>
               <div className="flex items-center gap-1.5">
-                <Select defaultValue="all">
-                  <SelectTrigger className="h-8 w-[130px] text-xs"><SelectValue placeholder="Category" /></SelectTrigger>
-                  <SelectContent><SelectItem value="all">All categories</SelectItem></SelectContent>
+                <Select
+                  value={filter.categoryId}
+                  onValueChange={(v) => setFilter({ ...filter, categoryId: v, page: 0 })}
+                >
+                  <SelectTrigger className="h-8 w-[150px] text-xs"><SelectValue placeholder="Category" /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All categories</SelectItem>
+                    {(categories.data ?? []).map((c) => (
+                      <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>
+                    ))}
+                  </SelectContent>
                 </Select>
-                <Select defaultValue="updated">
-                  <SelectTrigger className="h-8 w-[130px] text-xs"><SelectValue /></SelectTrigger>
+                <Select
+                  value={filter.sortBy}
+                  onValueChange={(v) => setFilter({ ...filter, sortBy: v as InventoryFilter["sortBy"], page: 0 })}
+                >
+                  <SelectTrigger className="h-8 w-[140px] text-xs"><SelectValue /></SelectTrigger>
                   <SelectContent>
                     <SelectItem value="updated">Sort: Updated</SelectItem>
                     <SelectItem value="title">Sort: Title</SelectItem>
                     <SelectItem value="stock">Sort: Stock</SelectItem>
+                    <SelectItem value="price">Sort: Price</SelectItem>
                   </SelectContent>
                 </Select>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="h-8 px-2 text-xs"
+                  title={filter.sortDir === "asc" ? "Ascending" : "Descending"}
+                  onClick={() => setFilter({ ...filter, sortDir: filter.sortDir === "asc" ? "desc" : "asc", page: 0 })}
+                >
+                  {filter.sortDir === "asc" ? <ArrowUp className="h-3.5 w-3.5" /> : <ArrowDown className="h-3.5 w-3.5" />}
+                </Button>
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
                     <Button variant="outline" size="sm" className="h-8 text-xs">Columns</Button>
                   </DropdownMenuTrigger>
                   <DropdownMenuContent align="end">
                     <DropdownMenuLabel className="text-xs">Toggle columns</DropdownMenuLabel>
-                    {["WAC", "Reserved", "Incoming", "Reorder"].map((c) => (
-                      <DropdownMenuItem key={c} className="text-xs">{c}</DropdownMenuItem>
+                    {COLUMN_LABELS.map((c) => (
+                      <DropdownMenuItem
+                        key={c.key}
+                        className="text-xs"
+                        onSelect={(e) => { e.preventDefault(); toggleCol(c.key); }}
+                      >
+                        <Check className={cn("h-3.5 w-3.5 mr-2", cols[c.key] ? "opacity-100" : "opacity-0")} />
+                        {c.label}
+                      </DropdownMenuItem>
                     ))}
                   </DropdownMenuContent>
                 </DropdownMenu>
@@ -383,13 +457,13 @@ function InventoryPage() {
                 </Button>
                 <Button
                   size="sm" variant="secondary" className="h-8 gap-1.5"
-                  onClick={() => { if (selectedRows[0]) setAdjust({ product: selectedRows[0], mode: "in" }); }}
+                  onClick={() => selectedRows.length && setBulkStock("in")}
                 >
                   <ArrowUp className="h-3.5 w-3.5 text-emerald-600" />Stock In
                 </Button>
                 <Button
                   size="sm" variant="secondary" className="h-8 gap-1.5"
-                  onClick={() => { if (selectedRows[0]) setAdjust({ product: selectedRows[0], mode: "out" }); }}
+                  onClick={() => selectedRows.length && setBulkStock("out")}
                 >
                   <ArrowDown className="h-3.5 w-3.5 text-red-600" />Stock Out
                 </Button>
@@ -432,7 +506,7 @@ function InventoryPage() {
                         </DropdownMenuSubContent>
                       </DropdownMenuPortal>
                     </DropdownMenuSub>
-                    <DropdownMenuItem className="text-xs" onClick={() => toast.info("Bulk reorder point — coming soon")}>
+                    <DropdownMenuItem className="text-xs" onClick={() => setBulkReorder(true)}>
                       <AlertCircle className="h-3.5 w-3.5 mr-2" />Set reorder point
                     </DropdownMenuItem>
                     <DropdownMenuItem className="text-xs text-red-600 focus:text-red-600" onClick={() => setConfirmDelete(true)}>
@@ -463,22 +537,22 @@ function InventoryPage() {
                   <TableHead className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Product</TableHead>
                   <TableHead className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">SKU</TableHead>
                   <TableHead className="text-right text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Price</TableHead>
-                  <TableHead className="text-right text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">WAC</TableHead>
+                  {cols.wac && <TableHead className="text-right text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">WAC</TableHead>}
                   <TableHead className="text-right text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">In Stock</TableHead>
-                  <TableHead className="text-right text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Reserved</TableHead>
+                  {cols.reserved && <TableHead className="text-right text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Reserved</TableHead>}
                   <TableHead className="text-right text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Available</TableHead>
-                  <TableHead className="text-right text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Incoming</TableHead>
-                  <TableHead className="text-right text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Reorder</TableHead>
+                  {cols.incoming && <TableHead className="text-right text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Incoming</TableHead>}
+                  {cols.reorder && <TableHead className="text-right text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Reorder</TableHead>}
                   <TableHead className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Status</TableHead>
                   <TableHead className="text-right text-[10px] font-semibold uppercase tracking-wider text-muted-foreground w-12"></TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {isLoading && (
-                  <TableRow><TableCell colSpan={13} className="text-center py-12 text-muted-foreground">Loading inventory…</TableCell></TableRow>
+                  <TableRow><TableCell colSpan={visibleColCount} className="text-center py-12 text-muted-foreground">Loading inventory…</TableCell></TableRow>
                 )}
                 {!isLoading && rows.length === 0 && (
-                  <TableRow><TableCell colSpan={13} className="text-center py-12 text-muted-foreground">No products found</TableCell></TableRow>
+                  <TableRow><TableCell colSpan={visibleColCount} className="text-center py-12 text-muted-foreground">No products found</TableCell></TableRow>
                 )}
                 {rows.map((r) => {
                   const variants = r.variants ?? [];
@@ -588,11 +662,11 @@ function InventoryPage() {
                         <TableCell className="text-right tabular-nums text-sm font-medium">
                           <span className="text-muted-foreground/60 mr-0.5">৳</span>{Number(r.price).toLocaleString()}
                         </TableCell>
-                        <TableCell className="text-right tabular-nums text-xs text-muted-foreground">
+                        {cols.wac && <TableCell className="text-right tabular-nums text-xs text-muted-foreground">
                           <span className="text-muted-foreground/50 mr-0.5">৳</span>{wac.toLocaleString(undefined, { maximumFractionDigits: 2 })}
-                        </TableCell>
+                        </TableCell>}
                         <TableCell className="text-right tabular-nums text-sm text-foreground/80">{r.stock}</TableCell>
-                        <TableCell className="text-right">
+                        {cols.reserved && <TableCell className="text-right">
                           {reserved > 0 ? (
                             <span className="inline-flex items-center gap-1 tabular-nums text-sm text-amber-600 dark:text-amber-400 font-medium">
                               <Lock className="h-3 w-3" />{reserved}
@@ -600,7 +674,7 @@ function InventoryPage() {
                           ) : (
                             <span className="tabular-nums text-sm text-muted-foreground/50">—</span>
                           )}
-                        </TableCell>
+                        </TableCell>}
                         <TableCell className="text-right">
                           <span className={cn(
                             "inline-flex items-center gap-1.5 tabular-nums text-base font-semibold tracking-tight",
@@ -615,7 +689,7 @@ function InventoryPage() {
                             {available}
                           </span>
                         </TableCell>
-                        <TableCell className="text-right">
+                        {cols.incoming && <TableCell className="text-right">
                           {Number(r.incoming) > 0 ? (
                             <span className="inline-flex items-center gap-1 tabular-nums text-xs font-medium text-blue-600 dark:text-blue-400">
                               <ArrowUp className="h-3 w-3" />{r.incoming}
@@ -623,15 +697,15 @@ function InventoryPage() {
                           ) : (
                             <span className="text-muted-foreground/50">—</span>
                           )}
-                        </TableCell>
-                        <TableCell className="text-right">
+                        </TableCell>}
+                        {cols.reorder && <TableCell className="text-right">
                           <div className="inline-flex items-center gap-1.5 group/rp justify-end">
                             {needsReorder && (
                               <span title="Below reorder point" className="h-1.5 w-1.5 rounded-full bg-red-500 animate-pulse" />
                             )}
                             <InlineNumberEdit value={reorderPoint} onSave={(v) => updateInventoryField(r.id, { reorder_point: v })} />
                           </div>
-                        </TableCell>
+                        </TableCell>}
                         <TableCell>
                           <StatusPill out={isOut} low={isLow} />
                         </TableCell>
@@ -704,12 +778,12 @@ function InventoryPage() {
                             </TableCell>
                             <TableCell className="text-xs font-mono text-muted-foreground">{v.sku}</TableCell>
                             <TableCell></TableCell>
-                            <TableCell className="text-right font-mono text-xs text-muted-foreground">৳{Number(v.weighted_avg_cost).toLocaleString(undefined, { maximumFractionDigits: 2 })}</TableCell>
+                            {cols.wac && <TableCell className="text-right font-mono text-xs text-muted-foreground">৳{Number(v.weighted_avg_cost).toLocaleString(undefined, { maximumFractionDigits: 2 })}</TableCell>}
                             <TableCell className="text-right font-mono text-xs">{v.stock}</TableCell>
-                            <TableCell className={cn("text-right font-mono text-xs", v.reserved_stock > 0 ? "text-amber-600 font-semibold" : "text-muted-foreground")}>{v.reserved_stock}</TableCell>
+                            {cols.reserved && <TableCell className={cn("text-right font-mono text-xs", v.reserved_stock > 0 ? "text-amber-600 font-semibold" : "text-muted-foreground")}>{v.reserved_stock}</TableCell>}
                             <TableCell className={cn("text-right font-mono text-xs font-bold", vOut ? "text-red-600" : "text-emerald-600")}>{vAvail}</TableCell>
-                            <TableCell></TableCell>
-                            <TableCell className="text-right text-xs text-muted-foreground">RP: {v.reorder_point}</TableCell>
+                            {cols.incoming && <TableCell></TableCell>}
+                            {cols.reorder && <TableCell className="text-right text-xs text-muted-foreground">RP: {v.reorder_point}</TableCell>}
                             <TableCell><StatusPill out={vOut} low={!vOut && v.stock <= 5} /></TableCell>
                             <TableCell className="text-right">
                               <div className="inline-flex gap-1">
@@ -732,7 +806,17 @@ function InventoryPage() {
           </div>
 
           <div className="flex items-center justify-between text-sm">
-            <div className="text-muted-foreground">Page {filter.page + 1} of {totalPages}</div>
+            <div className="flex items-center gap-3 text-muted-foreground">
+              <span>Page {filter.page + 1} of {totalPages}</span>
+              <Select value={String(filter.pageSize)} onValueChange={(v) => setFilter({ ...filter, pageSize: Number(v), page: 0 })}>
+                <SelectTrigger className="h-8 w-[110px] text-xs"><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  {[25, 50, 100, 200].map((n) => (
+                    <SelectItem key={n} value={String(n)}>{n} / page</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
             <div className="flex gap-2">
               <Button variant="outline" size="sm" disabled={filter.page === 0} onClick={() => setFilter({ ...filter, page: filter.page - 1 })}>Prev</Button>
               <Button variant="outline" size="sm" disabled={filter.page + 1 >= totalPages} onClick={() => setFilter({ ...filter, page: filter.page + 1 })}>Next</Button>
@@ -871,6 +955,19 @@ function InventoryPage() {
         mode={adjust?.mode ?? "in"}
         initialVariantId={adjustVariant}
         onClose={() => { setAdjust(null); setAdjustVariant(null); qc.invalidateQueries({ queryKey: ["inventory"] }); }}
+      />
+
+      <BulkStockDialog
+        open={!!bulkStock}
+        mode={bulkStock ?? "in"}
+        products={selectedRows}
+        onClose={() => setBulkStock(null)}
+      />
+
+      <BulkReorderDialog
+        open={bulkReorder}
+        products={selectedRows}
+        onClose={() => setBulkReorder(false)}
       />
 
       <ProductHistorySheet product={historyProduct} onClose={() => setHistoryProduct(null)} brandId={activeBrand?.id ?? null} />
@@ -1165,7 +1262,7 @@ function OpeningStockTab({ brandId }: { brandId: string | null }) {
   const [search, setSearch] = useState("");
   const brandIds = brandId ? [brandId] : [];
   const { data, isLoading } = useInventoryQuery({
-    brandIds, search, stockState: "all", page: 0, pageSize: 200,
+    ...DEFAULT_INVENTORY_FILTER, brandIds, search, page: 0, pageSize: 200,
   });
   const rows = data?.rows ?? [];
   const [counts, setCounts] = useState<Record<string, string>>({});
@@ -1308,7 +1405,7 @@ function CostPriceTab({ brandIds }: { brandIds: string[] }) {
   const [search, setSearch] = useState("");
   const [showAll, setShowAll] = useState(false);
   const { data, isLoading } = useInventoryQuery({
-    brandIds, search, stockState: "all", page: 0, pageSize: 500,
+    ...DEFAULT_INVENTORY_FILTER, brandIds, search, page: 0, pageSize: 500,
   });
   const allRows = data?.rows ?? [];
   const rows = useMemo(
