@@ -38,6 +38,7 @@ import {
   type HubMonthPlan,
 } from "@/lib/erp/hub/hub-data";
 import { fetchMediaPlans } from "@/lib/erp/content/content-data";
+import { ManualPlanner } from "@/components/erp/growth/manual-planner";
 
 export const Route = createFileRoute("/_authenticated/erp/growth/planning")({
   head: () => ({
@@ -327,6 +328,8 @@ function PlanningPage() {
           sub={`Target ${num(plan?.target_new_products ?? 0)}`}
         />
       </div>
+
+      <ManualPlanner brandId={brandId} month={month} />
 
       {/* Targets editor */}
       <Card>
