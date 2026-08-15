@@ -2,7 +2,7 @@ import { createFileRoute } from "@tanstack/react-router";
 import { useMemo, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
-import { Building2, Plus, Coins, FileVideo, ShoppingCart, Percent } from "lucide-react";
+import { Building2, Plus, Coins, FileVideo, ShoppingCart, Percent, Pencil, Trash2 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useBrand } from "@/contexts/brand-context";
 import {
@@ -17,6 +17,7 @@ import {
   downloadCsv,
   BrandTag,
   BrandSelect,
+  BrandFilter,
 } from "@/components/erp/content/content-ui";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -25,7 +26,14 @@ import { Badge } from "@/components/ui/badge";
 import { Textarea } from "@/components/ui/textarea";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
-import { bdt, fetchAgencies, fetchItems } from "@/lib/erp/content/content-data";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { bdt, fetchAgencies, fetchItems, type Agency } from "@/lib/erp/content/content-data";
 
 export const Route = createFileRoute("/_authenticated/erp/content/agencies")({
   head: () => ({
@@ -66,6 +74,8 @@ function AgenciesPage() {
   const [creating, setCreating] = useState(false);
   const [draft, setDraft] = useState(empty);
   const [search, setSearch] = useState("");
+  const [editing, setEditing] = useState<Agency | null>(null);
+  const [brandFilter, setBrandFilter] = useState<string | null>(null);
 
   const agenciesQ = useQuery({
     queryKey: ["content-agencies", brandIds],
@@ -93,14 +103,16 @@ function AgenciesPage() {
   const retainer = agencies.reduce((s, a) => s + a.retainer_fee, 0);
   const filtered = useMemo(() => {
     const q = search.trim().toLowerCase();
-    if (!q) return agencies;
-    return agencies.filter(
-      (a) =>
+    return agencies.filter((a) => {
+      if (brandFilter && a.brand_id !== brandFilter) return false;
+      if (!q) return true;
+      return (
         a.name.toLowerCase().includes(q) ||
         (a.contact_person ?? "").toLowerCase().includes(q) ||
-        (a.email ?? "").toLowerCase().includes(q),
-    );
-  }, [agencies, search]);
+        (a.email ?? "").toLowerCase().includes(q)
+      );
+    });
+  }, [agencies, search, brandFilter]);
   const totalPieces = Array.from(perf.values()).reduce((s, p) => s + p.pieces, 0);
   const totalOrders = Array.from(perf.values()).reduce((s, p) => s + p.orders, 0);
   const totalSpend = Array.from(perf.values()).reduce((s, p) => s + p.spend, 0);
@@ -127,6 +139,35 @@ function AgenciesPage() {
       toast.success("Agency যোগ হয়েছে");
       setCreating(false);
       setDraft(empty);
+      qc.invalidateQueries({ queryKey: ["content-agencies"] });
+    },
+    onError: (e: Error) => toast.error(e.message),
+  });
+
+  const updateMut = useMutation({
+    mutationFn: async (patch: Partial<Agency> & { id: string }) => {
+      const { id, ...rest } = patch;
+      const { error } = await supabase
+        .from("content_agencies")
+        .update(rest as never)
+        .eq("id", id);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      toast.success("Agency আপডেট হয়েছে");
+      qc.invalidateQueries({ queryKey: ["content-agencies"] });
+    },
+    onError: (e: Error) => toast.error(e.message),
+  });
+
+  const deleteMut = useMutation({
+    mutationFn: async (id: string) => {
+      const { error } = await supabase.from("content_agencies").delete().eq("id", id);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      toast.success("Agency মুছে ফেলা হয়েছে");
+      setEditing(null);
       qc.invalidateQueries({ queryKey: ["content-agencies"] });
     },
     onError: (e: Error) => toast.error(e.message),
@@ -159,6 +200,7 @@ function AgenciesPage() {
 
       <Toolbar>
         <SearchBox value={search} onChange={setSearch} placeholder="Agency, contact…" />
+        <BrandFilter value={brandFilter} onChange={setBrandFilter} />
         <div className="ml-auto">
           <ExportButton
             onClick={() =>
@@ -214,9 +256,19 @@ function AgenciesPage() {
                       {a.contact_person ?? "—"} · {a.phone ?? a.email ?? "—"}
                     </p>
                   </div>
-                  <Badge variant="outline" className="shrink-0 text-[10px]">
-                    {a.status}
-                  </Badge>
+                  <div className="flex shrink-0 items-center gap-1">
+                    <Badge variant="outline" className="text-[10px]">
+                      {a.status}
+                    </Badge>
+                    <Button
+                      size="icon"
+                      variant="ghost"
+                      className="h-7 w-7 text-muted-foreground"
+                      onClick={() => setEditing(a)}
+                    >
+                      <Pencil className="h-3.5 w-3.5" />
+                    </Button>
+                  </div>
                 </div>
                 <div className="mt-2 flex flex-wrap gap-1.5 text-[10px]">
                   <Badge variant="secondary">Retainer {bdt(a.retainer_fee)}</Badge>
