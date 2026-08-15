@@ -4082,6 +4082,7 @@ export type Database = {
       }
       hr_attendance: {
         Row: {
+          break_minutes: number
           check_in: string | null
           check_out: string | null
           created_at: string
@@ -4097,6 +4098,7 @@ export type Database = {
           work_minutes: number | null
         }
         Insert: {
+          break_minutes?: number
           check_in?: string | null
           check_out?: string | null
           created_at?: string
@@ -4112,6 +4114,7 @@ export type Database = {
           work_minutes?: number | null
         }
         Update: {
+          break_minutes?: number
           check_in?: string | null
           check_out?: string | null
           created_at?: string
@@ -4143,6 +4146,7 @@ export type Database = {
           created_at: string
           employee_id: string
           id: string
+          kind: string
           reason: string | null
           time_entry_id: string
           updated_at: string
@@ -4153,6 +4157,7 @@ export type Database = {
           created_at?: string
           employee_id: string
           id?: string
+          kind?: string
           reason?: string | null
           time_entry_id: string
           updated_at?: string
@@ -4163,6 +4168,7 @@ export type Database = {
           created_at?: string
           employee_id?: string
           id?: string
+          kind?: string
           reason?: string | null
           time_entry_id?: string
           updated_at?: string
@@ -4342,6 +4348,7 @@ export type Database = {
           address: string | null
           blood_group: string | null
           brand_id: string | null
+          break_allowance_min: number
           created_at: string
           date_of_birth: string | null
           department_id: string | null
@@ -4370,6 +4377,7 @@ export type Database = {
           shift_end: string
           shift_start: string
           status: string
+          unpaid_break: boolean
           updated_at: string
           user_id: string | null
           week_offs: number[]
@@ -4378,6 +4386,7 @@ export type Database = {
           address?: string | null
           blood_group?: string | null
           brand_id?: string | null
+          break_allowance_min?: number
           created_at?: string
           date_of_birth?: string | null
           department_id?: string | null
@@ -4406,6 +4415,7 @@ export type Database = {
           shift_end?: string
           shift_start?: string
           status?: string
+          unpaid_break?: boolean
           updated_at?: string
           user_id?: string | null
           week_offs?: number[]
@@ -4414,6 +4424,7 @@ export type Database = {
           address?: string | null
           blood_group?: string | null
           brand_id?: string | null
+          break_allowance_min?: number
           created_at?: string
           date_of_birth?: string | null
           department_id?: string | null
@@ -4442,6 +4453,7 @@ export type Database = {
           shift_end?: string
           shift_start?: string
           status?: string
+          unpaid_break?: boolean
           updated_at?: string
           user_id?: string | null
           week_offs?: number[]
@@ -11925,6 +11937,10 @@ export type Database = {
       hr_count_working_days: {
         Args: { _from: string; _to: string; _weekly_off?: number[] }
         Returns: number
+      }
+      hr_recalc_attendance: {
+        Args: { p_date: string; p_employee: string }
+        Returns: undefined
       }
       hub_goal_actuals: {
         Args: { _brand_ids: string[] }

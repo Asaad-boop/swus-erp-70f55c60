@@ -188,15 +188,16 @@ function AttendancePage() {
                   <th className="p-2.5 text-left">In</th>
                   <th className="p-2.5 text-left">Out</th>
                   <th className="p-2.5 text-right">Late (min)</th>
+                  <th className="p-2.5 text-right">Break (min)</th>
                   <th className="p-2.5 text-right">OT (min)</th>
                   <th className="p-2.5 text-right"></th>
                 </tr>
               </thead>
               <tbody>
                 {isLoading ? (
-                  <tr><td colSpan={8} className="p-6 text-center text-muted-foreground">Loading…</td></tr>
+                  <tr><td colSpan={9} className="p-6 text-center text-muted-foreground">Loading…</td></tr>
                 ) : rows.length === 0 ? (
-                  <tr><td colSpan={8} className="p-6 text-center text-muted-foreground">Active employee nei.</td></tr>
+                  <tr><td colSpan={9} className="p-6 text-center text-muted-foreground">Active employee nei.</td></tr>
                 ) : (
                   rows.map((e) => {
                     const a = byEmp.get(e.id);

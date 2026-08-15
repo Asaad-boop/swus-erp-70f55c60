@@ -14,8 +14,14 @@ import {
   startBreak,
   endBreak,
 } from "@/lib/erp/hr/attendance.functions";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { Fingerprint, LogIn, LogOut, Coffee, Play, Timer, Clock, Hourglass } from "lucide-react";
-import { dayMetrics, shiftLabel, weekOffLabel } from "@/lib/erp/hr/schedule";
+import { BREAK_KINDS, breakKindLabel, dayMetrics, shiftLabel, unpaidBreakMinutes, weekOffLabel } from "@/lib/erp/hr/schedule";
 
 export const Route = createFileRoute("/_authenticated/erp/hr/my-attendance")({
   component: MyAttendancePage,
@@ -60,6 +66,7 @@ function usePunch(fn: () => Promise<unknown>, msg: string) {
 
 function MyAttendancePage() {
   const fetchToday = useServerFn(getMyAttendanceToday);
+  const qcRef = useQueryClient();
   const [tick, setTick] = useState(0);
 
   useEffect(() => {
@@ -80,7 +87,14 @@ function MyAttendancePage() {
 
   const doIn = usePunch(() => inFn(), "Check in hoyeche");
   const doOut = usePunch(() => outFn(), "Check out hoyeche");
-  const doBreakStart = usePunch(() => bStart(), "Break shuru");
+  const doBreakStart = useMutation({
+    mutationFn: (kind: string) => bStart({ data: { kind } }),
+    onSuccess: () => {
+      toast.success("Break shuru");
+      void qcRef.invalidateQueries({ queryKey: ["hr-my-attendance"] });
+    },
+    onError: (e: Error) => toast.error(e.message),
+  });
   const doBreakEnd = usePunch(() => bEnd(), "Break shesh");
   const busy = doIn.isPending || doOut.isPending || doBreakStart.isPending || doBreakEnd.isPending;
 
@@ -90,13 +104,13 @@ function MyAttendancePage() {
     const now = Date.now();
     let workMs = 0;
     let breakMs = 0;
-    const breaks: { start: string; end: string | null; mins: number }[] = [];
+    const breaks: { start: string; end: string | null; mins: number; kind: string }[] = [];
     for (const e of entries) {
       workMs += (e.check_out ? Date.parse(e.check_out) : now) - Date.parse(e.check_in);
       for (const b of e.breaks) {
         const ms = (b.break_end ? Date.parse(b.break_end) : now) - Date.parse(b.break_start);
         breakMs += ms;
-        breaks.push({ start: b.break_start, end: b.break_end, mins: Math.round(ms / 60000) });
+        breaks.push({ start: b.break_start, end: b.break_end, mins: Math.round(ms / 60000), kind: b.kind ?? "other" });
       }
     }
     const open = entries.find((e) => !e.check_out);
@@ -124,9 +138,16 @@ function MyAttendancePage() {
           : "Not started";
 
   const sched = data?.employee?.schedule ?? null;
+  const breakMins = Math.round(stats.breakMs / 60000);
+  const overBreak = sched ? unpaidBreakMinutes(sched, breakMins) : 0;
   const metrics =
     sched && data?.workDate
-      ? dayMetrics({ schedule: sched, workDate: data.workDate, netMs: stats.netMs, firstIn: stats.firstIn })
+      ? dayMetrics({
+          schedule: sched,
+          workDate: data.workDate,
+          netMs: Math.max(0, stats.workMs - overBreak * 60000),
+          firstIn: stats.firstIn,
+        })
       : null;
 
   const tone =
@@ -195,9 +216,20 @@ function MyAttendancePage() {
                       <Play className="mr-1.5 h-4 w-4" /> End break
                     </Button>
                   ) : (
-                    <Button variant="outline" onClick={() => doBreakStart.mutate()} disabled={busy}>
-                      <Coffee className="mr-1.5 h-4 w-4" /> Start break
-                    </Button>
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <Button variant="outline" disabled={busy}>
+                          <Coffee className="mr-1.5 h-4 w-4" /> Start break
+                        </Button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="end">
+                        {BREAK_KINDS.map((k) => (
+                          <DropdownMenuItem key={k.value} onSelect={() => doBreakStart.mutate(k.value)}>
+                            <span className="mr-2">{k.emoji}</span> {k.label}
+                          </DropdownMenuItem>
+                        ))}
+                      </DropdownMenuContent>
+                    </DropdownMenu>
                   )}
                   <Button variant="destructive" onClick={() => doOut.mutate()} disabled={busy}>
                     <LogOut className="mr-1.5 h-4 w-4" /> Check Out
@@ -212,9 +244,31 @@ function MyAttendancePage() {
       <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
         <StatCard icon={Clock} label="Check-in time" value={clockTime(stats.firstIn)} hint={`${entries.length} session`} />
         <StatCard icon={Timer} label="Total hours" value={hoursMins(stats.workMs)} />
-        <StatCard icon={Coffee} label="Break time" value={hoursMins(stats.breakMs)} hint={`${stats.breaks.length} break`} />
-        <StatCard icon={Hourglass} label="Net work hours" value={hoursMins(stats.netMs)} />
+        <StatCard
+          icon={Coffee}
+          label="Break time"
+          value={hoursMins(stats.breakMs)}
+          hint={
+            sched
+              ? `${stats.breaks.length} break · ${breakMins}/${sched.break_allowance_min} min paid${overBreak ? ` · ${overBreak}m unpaid` : ""}`
+              : `${stats.breaks.length} break`
+          }
+        />
+        <StatCard
+          icon={Hourglass}
+          label="Net work hours"
+          value={hoursMins(stats.netMs)}
+          hint={overBreak ? `${overBreak}m extra break baad geche` : undefined}
+        />
       </div>
+
+      {overBreak > 0 && (
+        <Card className="border-amber-500/30 bg-amber-500/5">
+          <CardContent className="p-4 text-sm text-amber-700">
+            Aaj break {breakMins} min hoyeche — allowance {sched?.break_allowance_min} min. Beshi <b>{overBreak} min</b> unpaid dhora hobe.
+          </CardContent>
+        </Card>
+      )}
 
       {metrics && metrics.overtimeMinutes > 0 && (
         <Card className="border-emerald-500/30 bg-emerald-500/5">
@@ -241,7 +295,10 @@ function MyAttendancePage() {
                 <li key={i} className="flex items-center justify-between px-4 py-2.5 text-sm">
                   <span className="flex items-center gap-2">
                     <Coffee className="h-3.5 w-3.5 text-amber-600" />
-                    {clockTime(b.start)} → {b.end ? clockTime(b.end) : "running"}
+                    <span>
+                      {clockTime(b.start)} → {b.end ? clockTime(b.end) : "running"}
+                      <span className="ml-2 text-[11px] text-muted-foreground">{breakKindLabel(b.kind)}</span>
+                    </span>
                   </span>
                   <span className="text-muted-foreground">{b.mins} min</span>
                 </li>

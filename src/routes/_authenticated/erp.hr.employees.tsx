@@ -69,6 +69,7 @@ const empty = {
   shift_start: DEFAULT_SCHEDULE.shift_start,
   shift_end: DEFAULT_SCHEDULE.shift_end,
   late_grace_min: "",
+  break_allowance_min: "60",
   overtime_rate: "0",
   overtime_holiday_multiplier: "2",
   overtime_min_minutes: "30",
@@ -84,6 +85,7 @@ function EmployeesPage() {
   const [form, setForm] = useState({ ...empty });
   const [weekOffs, setWeekOffs] = useState<number[]>([...DEFAULT_SCHEDULE.week_offs]);
   const [otEnabled, setOtEnabled] = useState(false);
+  const [unpaidBreak, setUnpaidBreak] = useState(true);
 
   const { data, isLoading } = useQuery({
     queryKey: ["hr-employees"],
@@ -147,6 +149,8 @@ function EmployeesPage() {
         shift_end: hhmm(form.shift_end || DEFAULT_SCHEDULE.shift_end),
         week_offs: weekOffs,
         late_grace_min: form.late_grace_min === "" ? null : Number(form.late_grace_min) || 0,
+        break_allowance_min: Number(form.break_allowance_min) || 0,
+        unpaid_break: unpaidBreak,
         overtime_enabled: otEnabled,
         overtime_rate: Number(form.overtime_rate) || 0,
         overtime_holiday_multiplier: Number(form.overtime_holiday_multiplier) || 1,
@@ -217,6 +221,7 @@ function EmployeesPage() {
     setForm({ ...empty });
     setWeekOffs([...DEFAULT_SCHEDULE.week_offs]);
     setOtEnabled(false);
+    setUnpaidBreak(true);
     setOpen(true);
   };
   const openEdit = (e: Employee) => {
@@ -229,12 +234,14 @@ function EmployeesPage() {
       shift_start: hhmm(e.shift_start ?? DEFAULT_SCHEDULE.shift_start),
       shift_end: hhmm(e.shift_end ?? DEFAULT_SCHEDULE.shift_end),
       late_grace_min: e.late_grace_min == null ? "" : String(e.late_grace_min),
+      break_allowance_min: String(e.break_allowance_min ?? 60),
       overtime_rate: String(e.overtime_rate ?? 0),
       overtime_holiday_multiplier: String(e.overtime_holiday_multiplier ?? 2),
       overtime_min_minutes: String(e.overtime_min_minutes ?? 30),
     } as typeof empty);
     setWeekOffs(Array.isArray(e.week_offs) ? e.week_offs.map(Number) : [...DEFAULT_SCHEDULE.week_offs]);
     setOtEnabled(!!e.overtime_enabled);
+    setUnpaidBreak(e.unpaid_break ?? true);
     setOpen(true);
   };
 
@@ -492,6 +499,23 @@ function EmployeesPage() {
                   onChange={(e) => setForm({ ...form, late_grace_min: e.target.value })}
                 />
               </Field>
+              <Field label="Paid break allowance (minute / din)">
+                <Input
+                  type="number"
+                  min={0}
+                  value={form.break_allowance_min}
+                  onChange={(e) => setForm({ ...form, break_allowance_min: e.target.value })}
+                />
+              </Field>
+              <div className="flex items-center justify-between rounded-lg border border-border/70 bg-background px-3 py-2">
+                <div>
+                  <p className="text-sm font-medium">Extra break unpaid</p>
+                  <p className="text-[11px] text-muted-foreground">
+                    Allowance er beshi break holo kaj er somoy theke baad jabe
+                  </p>
+                </div>
+                <Switch checked={unpaidBreak} onCheckedChange={setUnpaidBreak} />
+              </div>
               <div className="flex items-center justify-between rounded-lg border border-border/70 bg-background px-3 py-2">
                 <div>
                   <p className="text-sm font-medium">Overtime</p>
