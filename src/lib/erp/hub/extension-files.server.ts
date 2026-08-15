@@ -6,7 +6,7 @@ const MANIFEST = (origin: string) =>
     {
       manifest_version: 3,
       name: "Synq With Us",
-      version: "3.0.2",
+      version: "3.1.0",
       description:
         "Scrape any product (auto BDT price), competitor page or content inspiration straight into your ERP.",
       permissions: ["activeTab", "scripting", "storage", "contextMenus", "notifications", "tabs"],
@@ -214,7 +214,11 @@ async function readJson(r) {
 
 async function cfg() {
   const s = await chrome.storage.sync.get(['base', 'token', 'brandId', 'email']);
-  return { base: s.base || DEFAULTS.base, token: s.token || DEFAULTS.token, brandId: s.brandId || null, email: s.email || null };
+  const savedBase = String(s.base || '');
+  const stale = /lovableproject\\.com|id-preview|project--ed6f058b-a815-45d2-bb71-e1fc12a02390\\.lovable\\.app|swus-erp\\.lovable\\.app/i.test(savedBase);
+  const base = stale ? DEFAULTS.base : (savedBase || DEFAULTS.base);
+  if (stale) await chrome.storage.sync.set({ base: base });
+  return { base: base, token: s.token || DEFAULTS.token, brandId: s.brandId || null, email: s.email || null };
 }
 
 export async function api(payload) {
@@ -540,7 +544,7 @@ function normBase(v) {
   if (!/^https?:\\/\\//i.test(b)) b = 'https://' + b;
   // Editor preview hosts are auth-gated (they return an HTML login page), so
   // fall back to the real app URL baked in at download time.
-  if (/lovableproject\\.com|id-preview/i.test(b)) return DEFAULTS.base;
+  if (/lovableproject\\.com|id-preview|project--ed6f058b-a815-45d2-bb71-e1fc12a02390\\.lovable\\.app|swus-erp\\.lovable\\.app/i.test(b)) return DEFAULTS.base;
   return b;
 }
 
