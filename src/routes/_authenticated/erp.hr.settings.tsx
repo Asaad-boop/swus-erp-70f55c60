@@ -15,7 +15,8 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { HrPageHeader } from "@/components/erp/hr/hr-shell";
 import { DEFAULT_HR_POLICY, type HrPolicy } from "@/lib/erp/hr/policy";
-import { Settings2, Plus, Trash2, Save, Building2, BadgeCheck, PalmtreeIcon, CalendarDays, Clock } from "lucide-react";
+import { DEFAULT_HR_COMPANY, mergeCompany, type HrCompany } from "@/lib/erp/hr/company";
+import { Settings2, Plus, Trash2, Save, Building2, BadgeCheck, PalmtreeIcon, CalendarDays, Clock, ReceiptText } from "lucide-react";
 
 export const Route = createFileRoute("/_authenticated/erp/hr/settings")({
   component: HrSettingsPage,
@@ -195,6 +196,20 @@ function HrSettingsPage() {
       week_offs: p.week_offs.includes(idx) ? p.week_offs.filter((x) => x !== idx) : [...p.week_offs, idx].sort(),
     }));
 
+  /* ---------- company profile (payslip header) ---------- */
+  const companyQ = useQuery({
+    queryKey: ["hr-company"],
+    queryFn: async () => mergeCompany((await loadSetting({ data: { key: "hr_company" } })).value),
+  });
+  const [companyForm, setCompanyForm] = useState<HrCompany>(DEFAULT_HR_COMPANY);
+  useEffect(() => { if (companyQ.data) setCompanyForm(companyQ.data); }, [companyQ.data]);
+
+  const saveCompany = useMutation({
+    mutationFn: async () => { await persistSetting({ data: { key: "hr_company", value: companyForm } }); },
+    onSuccess: () => { toast.success("Company details saved"); void qc.invalidateQueries({ queryKey: ["hr-company"] }); },
+    onError: fail,
+  });
+
   const deptName = (id: string | null) => data?.departments.find((d: any) => d.id === id)?.name ?? "—";
 
   return (
@@ -208,11 +223,56 @@ function HrSettingsPage() {
       <Tabs defaultValue="policy">
         <TabsList className="flex w-full flex-wrap justify-start">
           <TabsTrigger value="policy"><Clock className="mr-1.5 h-3.5 w-3.5" />Policy</TabsTrigger>
+          <TabsTrigger value="company"><ReceiptText className="mr-1.5 h-3.5 w-3.5" />Company</TabsTrigger>
           <TabsTrigger value="departments"><Building2 className="mr-1.5 h-3.5 w-3.5" />Departments</TabsTrigger>
           <TabsTrigger value="designations"><BadgeCheck className="mr-1.5 h-3.5 w-3.5" />Designations</TabsTrigger>
           <TabsTrigger value="leave-types"><PalmtreeIcon className="mr-1.5 h-3.5 w-3.5" />Leave types</TabsTrigger>
           <TabsTrigger value="holidays"><CalendarDays className="mr-1.5 h-3.5 w-3.5" />Holidays</TabsTrigger>
         </TabsList>
+
+        {/* ---------- COMPANY (payslip header) ---------- */}
+        <TabsContent value="company" className="mt-4">
+          <Card>
+            <CardContent className="space-y-4 p-4">
+              <p className="text-xs text-muted-foreground">
+                Ei details payslip PDF er header, footer o signature block e boshbe.
+              </p>
+              <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+                {([
+                  ["name", "Company name"],
+                  ["legal_name", "Legal name"],
+                  ["address", "Address"],
+                  ["phone", "Phone"],
+                  ["email", "Email"],
+                  ["website", "Website"],
+                  ["bin", "BIN / Trade licence"],
+                  ["logo_url", "Logo URL"],
+                  ["signatory_name", "Signatory name"],
+                  ["signatory_title", "Signatory title"],
+                ] as Array<[keyof HrCompany, string]>).map(([key, label]) => (
+                  <div key={key} className="space-y-1.5">
+                    <Label>{label}</Label>
+                    <Input
+                      value={companyForm[key] ?? ""}
+                      onChange={(e) => setCompanyForm({ ...companyForm, [key]: e.target.value })}
+                      placeholder={label}
+                    />
+                  </div>
+                ))}
+                <div className="space-y-1.5 sm:col-span-2 lg:col-span-3">
+                  <Label>Payslip footer note</Label>
+                  <Input
+                    value={companyForm.footer_note}
+                    onChange={(e) => setCompanyForm({ ...companyForm, footer_note: e.target.value })}
+                  />
+                </div>
+              </div>
+              <Button onClick={() => saveCompany.mutate()} disabled={saveCompany.isPending}>
+                <Save className="mr-1.5 h-3.5 w-3.5" /> Save company details
+              </Button>
+            </CardContent>
+          </Card>
+        </TabsContent>
 
         {/* ---------- POLICY ---------- */}
         <TabsContent value="policy" className="mt-4">

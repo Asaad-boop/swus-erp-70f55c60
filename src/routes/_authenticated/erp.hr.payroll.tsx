@@ -11,6 +11,9 @@ import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { HrEmpty, HrPageHeader, TableSkeleton, hrRow, money, statusTone } from "@/components/erp/hr/hr-shell";
 import { dhakaMonth } from "@/lib/erp/hr/date";
+import { mergeCompany } from "@/lib/erp/hr/company";
+import { exportPayslipPdf, type PayslipData } from "@/lib/erp/hr/payslip-pdf";
+import { getAppSetting } from "@/lib/erp/settings/app-settings.functions";
 import {
   deletePayrollRun,
   generatePayrollRun,
@@ -18,7 +21,7 @@ import {
   refreshPayrollTotals,
   updatePayslip,
 } from "@/lib/erp/hr/payroll.functions";
-import { Banknote, RefreshCw, Wand2, Wallet, Trash2, Download } from "lucide-react";
+import { Banknote, RefreshCw, Wand2, Wallet, Trash2, Download, FileText } from "lucide-react";
 
 export const Route = createFileRoute("/_authenticated/erp/hr/payroll")({
   component: PayrollPage,
@@ -46,6 +49,14 @@ function PayrollPage() {
   const refreshFn = useServerFn(refreshPayrollTotals);
   const updateSlipFn = useServerFn(updatePayslip);
   const deleteRunFn = useServerFn(deletePayrollRun);
+  const loadSetting = useServerFn(getAppSetting);
+
+  const { data: companyRaw } = useQuery({
+    queryKey: ["hr-company"],
+    queryFn: () => loadSetting({ data: { key: "hr_company" } }),
+    staleTime: 5 * 60_000,
+  });
+  const company = mergeCompany(companyRaw?.value);
 
   const { data, isLoading } = useQuery({
     queryKey: ["hr-payroll", month],
@@ -57,7 +68,11 @@ function PayrollPage() {
           .eq("period_month", `${month}-01`)
           .order("created_at", { ascending: false })
           .limit(1),
-        supabase.from("hr_employees").select("id, full_name, employee_code"),
+        supabase
+          .from("hr_employees")
+          .select(
+            "id, full_name, employee_code, join_date, phone, email, employment_type, payment_method, payment_number, hr_departments(name), hr_designations(title)",
+          ),
         supabase.from("erp_accounts").select("id, name, current_balance").order("name"),
       ]);
       const run = (runRes.data ?? [])[0] ?? null;
@@ -73,6 +88,7 @@ function PayrollPage() {
   const run = data?.run;
   const locked = run?.status === "paid";
   const empName = (id: string) => data?.employees.find((e) => e.id === id)?.full_name ?? "—";
+  const empRow = (id: string) => data?.employees.find((e: any) => e.id === id) as any;
 
   const generate = useMutation({
     mutationFn: () => genFn({ data: { month } }),
@@ -142,6 +158,57 @@ function PayrollPage() {
     URL.revokeObjectURL(a.href);
   };
 
+  const toPayslip = (s: any): PayslipData => {
+    const e = empRow(s.employee_id) ?? {};
+    return {
+      employee: {
+        full_name: e.full_name ?? "—",
+        employee_code: e.employee_code,
+        designation: e.hr_designations?.title ?? null,
+        department: e.hr_departments?.name ?? null,
+        join_date: e.join_date,
+        phone: e.phone,
+        email: e.email,
+        employment_type: e.employment_type,
+        payment_method: e.payment_method,
+        payment_number: e.payment_number,
+      },
+      month,
+      runStatus: run?.status ?? "draft",
+      paidAt: run?.paid_at ?? null,
+      base_salary: Number(s.base_salary),
+      present_days: Number(s.present_days),
+      absent_days: Number(s.absent_days),
+      overtime_amount: Number(s.overtime_amount),
+      bonus: Number(s.bonus),
+      allowance: Number(s.allowance),
+      deduction: Number(s.deduction),
+      advance_deduction: Number(s.advance_deduction),
+      net_pay: Number(s.net_pay),
+      note: s.note ?? null,
+    };
+  };
+
+  const slug = (v: string) => v.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "") || "employee";
+
+  const downloadPayslip = async (s: any) => {
+    try {
+      await exportPayslipPdf([toPayslip(s)], company, `payslip-${month}-${slug(empName(s.employee_id))}.pdf`);
+    } catch (err) {
+      toast.error((err as Error).message);
+    }
+  };
+
+  const downloadAllPayslips = async () => {
+    try {
+      const ordered = [...slips].sort((a, b) => empName(a.employee_id).localeCompare(empName(b.employee_id)));
+      await exportPayslipPdf(ordered.map(toPayslip), company, `payslips-${month}.pdf`);
+      toast.success(`${ordered.length} ta payslip PDF download hocche`);
+    } catch (err) {
+      toast.error((err as Error).message);
+    }
+  };
+
   return (
     <div className="mx-auto max-w-[1500px] space-y-4 p-4 md:p-6">
       <HrPageHeader
@@ -160,9 +227,14 @@ function PayrollPage() {
               </Button>
             )}
             {slips.length > 0 && (
-              <Button size="sm" variant="outline" onClick={exportCsv}>
-                <Download className="mr-1.5 h-3.5 w-3.5" /> CSV
-              </Button>
+              <>
+                <Button size="sm" variant="outline" onClick={exportCsv}>
+                  <Download className="mr-1.5 h-3.5 w-3.5" /> CSV
+                </Button>
+                <Button size="sm" onClick={() => void downloadAllPayslips()}>
+                  <FileText className="mr-1.5 h-3.5 w-3.5" /> All payslips PDF
+                </Button>
+              </>
             )}
             {run && !locked && (
               <Button
@@ -234,14 +306,15 @@ function PayrollPage() {
                   <th className="p-2.5 text-right">Deduction</th>
                   <th className="p-2.5 text-right">Advance</th>
                   <th className="p-2.5 text-right">Net</th>
+                  <th className="p-2.5 text-right">Payslip</th>
                 </tr>
               </thead>
               <tbody>
                 {isLoading ? (
-                  <TableSkeleton cols={10} rows={5} />
+                  <TableSkeleton cols={11} rows={5} />
                 ) : slips.length === 0 ? (
                   <tr>
-                    <td colSpan={10}>
+                    <td colSpan={11}>
                       <HrEmpty icon={Banknote} title="Ei mash er payroll generate kora hoyni" hint="Uporer Generate button e click korle attendance theke draft payslip toiri hobe." />
                     </td>
                   </tr>
@@ -268,6 +341,17 @@ function PayrollPage() {
                         <NumCell value={s.advance_deduction} disabled={locked} onSave={(v) => savePayslip.mutate({ id: s.id, patch: { advance_deduction: v } })} />
                       </td>
                       <td className="p-2.5 text-right font-semibold tabular-nums">{money(s.net_pay)}</td>
+                      <td className="p-2.5 text-right">
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          className="h-8 px-2 text-muted-foreground hover:text-foreground"
+                          title={`${empName(s.employee_id)} — payslip PDF`}
+                          onClick={() => void downloadPayslip(s)}
+                        >
+                          <FileText className="h-3.5 w-3.5" />
+                        </Button>
+                      </td>
                     </tr>
                   ))
                 )}
