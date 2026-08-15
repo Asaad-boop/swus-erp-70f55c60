@@ -7,6 +7,7 @@ import {
   Users,
   Building2,
   Network,
+  BarChart3,
   Menu,
   X,
   type LucideIcon,
@@ -28,6 +29,7 @@ export const CONTENT_NAV: ContentNavItem[] = [
   { to: "/erp/content/creators", label: "Creator CRM", short: "Creators", icon: Users },
   { to: "/erp/content/agencies", label: "Agency Partners", short: "Agencies", icon: Building2 },
   { to: "/erp/content/matching", label: "Product ↔ Creator", short: "Matching", icon: Network },
+  { to: "/erp/content/report", label: "Brand Report", short: "Report", icon: BarChart3 },
 ];
 
 /** Responsive sub-navigation: horizontal on desktop, sheet sidebar on mobile. */

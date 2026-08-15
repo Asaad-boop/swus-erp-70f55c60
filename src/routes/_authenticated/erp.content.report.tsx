@@ -1,7 +1,7 @@
 import { useMemo, useState } from "react";
 import { createFileRoute } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
-import { BarChart3, Clapperboard, CheckCircle2, Eye, ShoppingBag, Wallet, Printer } from "lucide-react";
+import { BarChart3, Clapperboard, CheckCircle2, Eye, Wallet, Printer } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useBrand } from "@/contexts/brand-context";
 import {
@@ -22,7 +22,6 @@ import {
   fetchItems,
   fetchPlans,
   bdt,
-  labelOf,
   ITEM_STATUSES,
   PIPELINE_STAGES,
   type ContentItem,
@@ -328,7 +327,7 @@ function BrandReport() {
         <EmptyState
           icon={BarChart3}
           title="কোনো content data নেই"
-          hint="Pipeline-এ content যোগ করলে এখানে brand-wise report দেখাবে।"
+          description="Pipeline-এ content যোগ করলে এখানে brand-wise report দেখাবে।"
         />
       ) : (
         <>
