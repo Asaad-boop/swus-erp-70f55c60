@@ -7,19 +7,13 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
-import { ATTENDANCE_STATUSES, HrPageHeader, statusTone } from "@/components/erp/hr/hr-shell";
+import { ATTENDANCE_STATUSES, HrEmpty, HrPageHeader, TableSkeleton, hrRow, statusTone } from "@/components/erp/hr/hr-shell";
+import { dhakaToday as dhakaTodayFn, dhakaTimeInput as dhakaTimeInputFn } from "@/lib/erp/hr/date";
 import { shiftLabel, toSchedule, weekOffLabel, isWeekOff, unpaidBreakMinutes } from "@/lib/erp/hr/schedule";
 import { CalendarCheck, CheckCheck, Search, Eraser, Download } from "lucide-react";
 
-/** Dhaka-local YYYY-MM-DD (avoids UTC rolling the date over at night). */
-const dhakaToday = () =>
-  new Intl.DateTimeFormat("en-CA", { timeZone: "Asia/Dhaka", year: "numeric", month: "2-digit", day: "2-digit" }).format(new Date());
-
-/** ISO timestamp → "HH:MM" in Dhaka time. */
-const dhakaTimeInput = (iso: string | null | undefined) =>
-  iso
-    ? new Intl.DateTimeFormat("en-GB", { timeZone: "Asia/Dhaka", hour: "2-digit", minute: "2-digit", hour12: false }).format(new Date(iso))
-    : "";
+const dhakaToday = dhakaTodayFn;
+const dhakaTimeInput = dhakaTimeInputFn;
 
 export const Route = createFileRoute("/_authenticated/erp/hr/attendance")({
   component: AttendancePage,
@@ -197,16 +191,20 @@ function AttendancePage() {
               </thead>
               <tbody>
                 {isLoading ? (
-                  <tr><td colSpan={9} className="p-6 text-center text-muted-foreground">Loading…</td></tr>
+                  <TableSkeleton cols={9} rows={6} />
                 ) : rows.length === 0 ? (
-                  <tr><td colSpan={9} className="p-6 text-center text-muted-foreground">Active employee nei.</td></tr>
+                  <tr>
+                    <td colSpan={9}>
+                      <HrEmpty icon={CalendarCheck} title="Kono active employee nei" hint="Employees page theke staff add korle ekhane haziri mark kora jabe." />
+                    </td>
+                  </tr>
                 ) : (
                   rows.map((e) => {
                     const a = byEmp.get(e.id);
                     const sched = toSchedule(e);
                     const off = isWeekOff(sched, date);
                     return (
-                      <tr key={e.id} className={`border-b border-border/50 last:border-0 ${off ? "bg-violet-500/5" : ""}`}>
+                      <tr key={e.id} className={`border-b border-border/50 last:border-0 ${hrRow} ${off ? "bg-violet-500/5" : ""}`}>
                         <td className="p-2.5">
                           <p className="font-medium">{e.full_name}</p>
                           <p className="text-[11px] text-muted-foreground">{e.employee_code ? `#${e.employee_code}` : "—"}</p>
