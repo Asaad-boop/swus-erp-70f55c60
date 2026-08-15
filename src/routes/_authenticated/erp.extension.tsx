@@ -131,12 +131,12 @@ function ExtensionPage() {
             <div className="min-w-[240px] flex-1 space-y-1.5">
               <div className="flex items-center gap-2">
                 <h1 className="text-xl font-bold tracking-tight">Synq With Us</h1>
-                <Badge variant="secondary">v2.0</Badge>
+                <Badge variant="secondary">v3.0</Badge>
               </div>
               <p className="max-w-2xl text-sm text-muted-foreground">
-                ERP-এর নিজস্ব browser extension। যেকোনো website, supplier listing, rival page বা
-                content — এক ক্লিকে brand অনুযায়ী ERP-তে সেভ হবে (Product Pipeline, Swipe file বা
-                Rival registry-তে)।
+                ERP-এর নিজস্ব browser extension — তিনটা কাজ: <b>Product</b> (ছবি, নাম, দাম — PKR/USD
+                হলে অটো ৳-এ convert হয়ে Voting-এ), <b>Competitor</b> (page/website, niche, handle,
+                follower সহ) আর <b>Content</b> (inspiration সেভ করে রাখা)। সব brand অনুযায়ী সেভ হয়।
               </p>
             </div>
             <div className="flex flex-wrap gap-2">
