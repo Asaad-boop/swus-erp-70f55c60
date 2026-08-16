@@ -19,7 +19,8 @@ export type AppRole =
 export function useCurrentRole() {
   const q = useQuery({
     queryKey: ["current-user-roles"],
-    staleTime: 5 * 60 * 1000,
+    staleTime: 30 * 1000,
+    refetchOnWindowFocus: true,
     queryFn: async () => {
       const { data: u } = await supabase.auth.getUser();
       const userId = u.user?.id;

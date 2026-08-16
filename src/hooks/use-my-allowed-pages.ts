@@ -30,6 +30,7 @@ export function useMyAllowedPages() {
     queryKey: ["my-allowed-pages"],
     enabled: hasSession,
     retry: false,
+    refetchOnWindowFocus: true,
     queryFn: async () => {
       try {
         return await fn();
@@ -37,7 +38,7 @@ export function useMyAllowedPages() {
         return { allowedPages: null as string[] | null };
       }
     },
-    staleTime: 5 * 60 * 1000,
+    staleTime: 30 * 1000,
   });
   return {
     allowedPages: q.data?.allowedPages ?? null,
