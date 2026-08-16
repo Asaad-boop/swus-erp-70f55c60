@@ -908,6 +908,9 @@ function SourcingPage() {
     mutationFn: async () => {
       if (!selected) return;
       if (!poBrandId) throw new Error("Brand পাওয়া যায়নি");
+      if (reviewStatusOf(selected) !== "approved") {
+        throw new Error("Admin approval ছাড়া order place করা যাবে না");
+      }
       const qty = Number(orderQty || 0);
       const unitCny = Number(poUnitCny || 0);
       const fx = Number(poFx || 0);
