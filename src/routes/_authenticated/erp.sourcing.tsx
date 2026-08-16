@@ -1286,14 +1286,17 @@ function SourcingPage() {
                   onKeyDown={(e) => {
                     if (e.key === "Enter" || e.key === " ") setSelectedId(i.id);
                   }}
-                  className={`flex w-full items-center gap-3 rounded-xl border p-2.5 text-left transition-all ${
+                  className={`relative flex w-full items-center gap-3 overflow-hidden rounded-xl border p-2.5 pl-3.5 text-left transition-all ${
                     on
-                      ? "border-primary/50 bg-primary/5 shadow-sm ring-1 ring-primary/20"
+                      ? "border-primary/50 bg-primary/5 shadow-md ring-1 ring-primary/20"
                       : due
                         ? "border-amber-500/40 bg-amber-500/5 hover:-translate-y-0.5 hover:bg-amber-500/10 hover:shadow-sm"
                         : "border-border/70 hover:-translate-y-0.5 hover:bg-muted/50 hover:shadow-sm"
                   }`}
                 >
+                  <span
+                    className={`absolute inset-y-0 left-0 w-1 ${STAGE_META[st].dot} ${on ? "" : "opacity-60"}`}
+                  />
                   <div className="h-14 w-14 shrink-0 overflow-hidden rounded-lg">
                     <IdeaGallery images={imgs.slice(0, 1)} title={i.title} className="h-14" />
                   </div>
