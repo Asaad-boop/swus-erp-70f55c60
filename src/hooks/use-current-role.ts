@@ -12,6 +12,7 @@ export function useCurrentRole() {
     userId: q.data?.userId ?? null,
     roles,
     isAdmin: roles.includes("admin"),
+    isOwner: roles.includes("owner"),
     isLoading: q.isLoading,
     hasRole: (r: AppRole) => roles.includes(r),
     hasAnyRole: (rs: AppRole[]) => rs.some((r) => roles.includes(r)),
