@@ -79,6 +79,8 @@ import {
   type HubSourcingQuote,
 } from "@/lib/erp/hub/hub-data";
 import { QuoteCompareTable } from "@/components/erp/hub/sourcing-quote-table";
+import { ApprovalCard, type ReviewStatus } from "@/components/erp/hub/sourcing-approval";
+import { useCurrentRole } from "@/hooks/use-current-role";
 import { SourcingActivity } from "@/components/erp/hub/sourcing-activity";
 import {
   FollowupCard,
@@ -176,6 +178,7 @@ const STUCK_DAYS = 7;
 
 function SourcingPage() {
   const { brandIds, activeBrand, isLoading: brandLoading } = useBrand();
+  const { isAdmin } = useCurrentRole();
   const qc = useQueryClient();
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [qOpen, setQOpen] = useState(false);
@@ -291,6 +294,7 @@ function SourcingPage() {
           selectedQuoteId: i.selected_quote_id,
           impPoId: i.imp_po_id,
           poStatus: po?.status ?? null,
+          reviewStatus: i.sourcing_review_status ?? "draft",
         }),
       );
     }
