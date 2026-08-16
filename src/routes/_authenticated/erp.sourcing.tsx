@@ -15,6 +15,7 @@ import {
   AlertTriangle,
   Loader2,
 } from "lucide-react";
+import { ClipboardCheck, ArrowLeft, Sparkles } from "lucide-react";
 import { MoreHorizontal, Truck, XCircle, Trash2, RotateCcw, Archive } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useBrand } from "@/contexts/brand-context";
@@ -37,6 +38,7 @@ import {
   type PoCartonDraft,
   type VariantMeta,
 } from "@/components/erp/imports/po-line-builder";
+import { PoReviewPanel } from "@/components/erp/imports/po-review";
 import { GrowthPageHeader } from "@/components/erp/growth/growth-shell";
 import { IdeaGallery, StarRating } from "@/components/erp/hub/idea-visuals";
 import {
@@ -196,6 +198,7 @@ function SourcingPage() {
   const [lastFx, setLastFx] = useState("17");
   const [addAnother, setAddAnother] = useState(false);
   const [orderOpen, setOrderOpen] = useState(false);
+  const [orderStep, setOrderStep] = useState<"form" | "review">("form");
   const [orderQty, setOrderQty] = useState("");
   const [orderPrice, setOrderPrice] = useState("");
   // PO fields
@@ -226,6 +229,22 @@ function SourcingPage() {
   >(null);
   const [removeReason, setRemoveReason] = useState("");
   const [sortBy, setSortBy] = useState<"stage" | "age" | "due" | "quotes" | "cost">("stage");
+  const [manualOpen, setManualOpen] = useState(false);
+  const [manual, setManual] = useState({
+    title: "",
+    category: "",
+    image_url: "",
+    source_url: "",
+    supplier_name: "",
+    supplier_url: "",
+    est_unit_cost: "",
+    est_sell_price: "",
+    target_price_min: "",
+    target_price_max: "",
+    moq: "",
+    priority: "normal",
+    notes: "",
+  });
   const searchRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
@@ -1017,6 +1036,71 @@ function SourcingPage() {
     onError: (e: Error) => toast.error(e.message),
   });
 
+  /** Manually add a product straight into the sourcing pipeline (no voting needed). */
+  const addManual = useMutation({
+    mutationFn: async () => {
+      const brandId = activeBrand?.id ?? brandIds[0] ?? null;
+      if (!brandId) throw new Error("Brand পাওয়া যায়নি");
+      const title = manual.title.trim();
+      if (!title) throw new Error("Product name দিন");
+      const num = (v: string) => (v.trim() === "" ? null : Number(v));
+      const { data, error } = await supabase
+        .from("hub_product_ideas")
+        .insert({
+          brand_id: brandId,
+          title,
+          category: manual.category.trim() || null,
+          image_url: manual.image_url.trim() || null,
+          images: manual.image_url.trim() ? [manual.image_url.trim()] : [],
+          source_url: manual.source_url.trim() || null,
+          supplier_name: manual.supplier_name.trim() || null,
+          supplier_url: manual.supplier_url.trim() || null,
+          est_unit_cost: num(manual.est_unit_cost) ?? 0,
+          est_sell_price: num(manual.est_sell_price) ?? 0,
+          target_price_min: num(manual.target_price_min),
+          target_price_max: num(manual.target_price_max),
+          moq: num(manual.moq),
+          priority: manual.priority,
+          notes: manual.notes.trim() || null,
+          status: "approved",
+          approved_at: new Date().toISOString(),
+          sourcing_review_status: "draft",
+        } as never)
+        .select("id")
+        .single();
+      if (error) throw error;
+      const id = (data as { id: string }).id;
+      await logSourcingEvent({
+        ideaId: id,
+        type: "note",
+        note: "Sourcing Desk থেকে manually product যোগ করা হয়েছে",
+      });
+      return id;
+    },
+    onSuccess: (id) => {
+      toast.success("Product sourcing pipeline-এ যোগ হয়েছে ✅");
+      setManualOpen(false);
+      setManual({
+        title: "",
+        category: "",
+        image_url: "",
+        source_url: "",
+        supplier_name: "",
+        supplier_url: "",
+        est_unit_cost: "",
+        est_sell_price: "",
+        target_price_min: "",
+        target_price_max: "",
+        moq: "",
+        priority: "normal",
+        notes: "",
+      });
+      invalidate();
+      if (id) setSelectedId(id);
+    },
+    onError: (e: Error) => toast.error(e.message),
+  });
+
   const bestQuote = useMemo(() => {
     if (quotes.length === 0) return null;
     return [...quotes]
@@ -1133,8 +1217,12 @@ function SourcingPage() {
             : "Approved products এর pricing, quote আর order placement"
         }
         actions={
-          selected ? (
-            <>
+          <>
+            <Button size="sm" variant="outline" onClick={() => setManualOpen(true)}>
+              <Sparkles className="mr-1.5 h-4 w-4" /> Add product
+            </Button>
+            {selected && (
+              <>
               <Button size="sm" variant="outline" onClick={openNewQuote}>
                 <Plus className="mr-1.5 h-4 w-4" /> Add quote
               </Button>
@@ -1188,14 +1276,16 @@ function SourcingPage() {
                   setPayEnabled(false);
                   setPayAmount("");
                   setPayRef("");
+                  setOrderStep("form");
                   setOrderOpen(true);
                 }}
               >
                 <ShoppingCart className="mr-1.5 h-4 w-4" />
                 {selected.imp_po_id ? "Ordered" : "Place order"}
               </Button>
-            </>
-          ) : null
+              </>
+            )}
+          </>
         }
       />
 
@@ -2113,6 +2203,61 @@ function SourcingPage() {
           <DialogHeader>
             <DialogTitle>Place order → Purchase Order — {selected?.title}</DialogTitle>
           </DialogHeader>
+          <div className="flex items-center gap-2 text-xs">
+            <span
+              className={
+                orderStep === "form"
+                  ? "rounded-full bg-primary px-2.5 py-1 font-semibold text-primary-foreground"
+                  : "rounded-full bg-muted px-2.5 py-1 text-muted-foreground"
+              }
+            >
+              1. Details
+            </span>
+            <span className="h-px flex-1 bg-border" />
+            <span
+              className={
+                orderStep === "review"
+                  ? "rounded-full bg-primary px-2.5 py-1 font-semibold text-primary-foreground"
+                  : "rounded-full bg-muted px-2.5 py-1 text-muted-foreground"
+              }
+            >
+              2. Review & submit
+            </span>
+          </div>
+          {orderStep === "review" ? (
+            <PoReviewPanel
+              items={poItems}
+              cartons={poCartons}
+              variantsByProduct={poVariants}
+              receiveMode={poReceiveMode}
+              fxRate={Number(poFx || 0)}
+              currency="CNY"
+              plannedLandedPerUnit={Number(orderPrice || 0)}
+              targetPriceMax={selected?.target_price_max ?? null}
+              title={selected?.title ?? null}
+              supplierLabel={
+                poSupplierId
+                  ? ((suppliersQ.data ?? []) as { id: string; name: string }[]).find(
+                      (s) => s.id === poSupplierId,
+                    )?.name ?? "Selected supplier"
+                  : poSupplierName.trim() || null
+              }
+              agentLabel={
+                ((agentsQ.data ?? []) as { id: string; name: string }[]).find(
+                  (a) => a.id === poAgentId,
+                )?.name ?? null
+              }
+              advance={
+                payEnabled && Number(payAmount || 0) > 0
+                  ? {
+                      amount: Number(payAmount || 0),
+                      walletLabel: wallets.find((w) => w.id === payWalletId)?.name ?? null,
+                    }
+                  : null
+              }
+              notes={poNotes}
+            />
+          ) : (
           <div className="grid gap-4">
             <div className="grid gap-3 sm:grid-cols-2">
               <Field label="FX rate (৳ / ¥)">
@@ -2296,24 +2441,174 @@ function SourcingPage() {
                 )}
             </div>
           </div>
+          )}
           <DialogFooter>
-            <Button variant="outline" onClick={() => setOrderOpen(false)}>
+            {orderStep === "form" ? (
+              <>
+                <Button variant="outline" onClick={() => setOrderOpen(false)}>
+                  Cancel
+                </Button>
+                <Button
+                  onClick={() => setOrderStep("review")}
+                  disabled={
+                    poItems.reduce((s, i) => s + i.quantity, 0) <= 0 ||
+                    poItems.some((i) => !i.picked.title.trim())
+                  }
+                >
+                  <ClipboardCheck className="mr-1.5 h-4 w-4" /> Review order
+                </Button>
+              </>
+            ) : (
+              <>
+                <Button variant="outline" onClick={() => setOrderStep("form")}>
+                  <ArrowLeft className="mr-1.5 h-4 w-4" /> Back to details
+                </Button>
+                <Button
+                  onClick={() => placeOrder.mutate()}
+                  disabled={
+                    !poAgentId ||
+                    poItems.reduce((s, i) => s + i.quantity, 0) <= 0 ||
+                    poItems.some((i) => !i.picked.title.trim()) ||
+                    Number(poFx || 0) <= 0 ||
+                    (!poSupplierId && !poSupplierName.trim()) ||
+                    (poReceiveMode === "carton" &&
+                      cartonAllocationErrors(poItems, poCartons, poVariants).length > 0) ||
+                    (payEnabled && (!payWalletId || Number(payAmount || 0) <= 0)) ||
+                    placeOrder.isPending
+                  }
+                >
+                  {placeOrder.isPending && <Loader2 className="mr-1.5 h-4 w-4 animate-spin" />}
+                  Confirm & create PO
+                </Button>
+              </>
+            )}
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Manual product add dialog */}
+      <Dialog open={manualOpen} onOpenChange={setManualOpen}>
+        <DialogContent className="max-h-[92vh] max-w-2xl overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Manually add product for sourcing</DialogTitle>
+          </DialogHeader>
+          <div className="grid gap-3">
+            <Field label="Product name *">
+              <Input
+                value={manual.title}
+                onChange={(e) => setManual((m) => ({ ...m, title: e.target.value }))}
+                placeholder="যেমন: Mini Portable Blender"
+              />
+            </Field>
+            <div className="grid gap-3 sm:grid-cols-2">
+              <Field label="Category">
+                <Input
+                  value={manual.category}
+                  onChange={(e) => setManual((m) => ({ ...m, category: e.target.value }))}
+                />
+              </Field>
+              <Field label="Priority">
+                <Select
+                  value={manual.priority}
+                  onValueChange={(v) => setManual((m) => ({ ...m, priority: v }))}
+                >
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {["low", "normal", "high", "urgent"].map((p) => (
+                      <SelectItem key={p} value={p}>
+                        {p}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </Field>
+              <Field label="Image URL">
+                <Input
+                  value={manual.image_url}
+                  onChange={(e) => setManual((m) => ({ ...m, image_url: e.target.value }))}
+                  placeholder="https://..."
+                />
+              </Field>
+              <Field label="Product / reference link">
+                <Input
+                  value={manual.source_url}
+                  onChange={(e) => setManual((m) => ({ ...m, source_url: e.target.value }))}
+                  placeholder="https://detail.1688.com/..."
+                />
+              </Field>
+              <Field label="Supplier name">
+                <Input
+                  value={manual.supplier_name}
+                  onChange={(e) => setManual((m) => ({ ...m, supplier_name: e.target.value }))}
+                />
+              </Field>
+              <Field label="Supplier link">
+                <Input
+                  value={manual.supplier_url}
+                  onChange={(e) => setManual((m) => ({ ...m, supplier_url: e.target.value }))}
+                />
+              </Field>
+              <Field label="Est. unit cost (৳)">
+                <Input
+                  type="number"
+                  value={manual.est_unit_cost}
+                  onChange={(e) => setManual((m) => ({ ...m, est_unit_cost: e.target.value }))}
+                />
+              </Field>
+              <Field label="Est. sell price (৳)">
+                <Input
+                  type="number"
+                  value={manual.est_sell_price}
+                  onChange={(e) => setManual((m) => ({ ...m, est_sell_price: e.target.value }))}
+                />
+              </Field>
+              <Field label="Target price min (৳)">
+                <Input
+                  type="number"
+                  value={manual.target_price_min}
+                  onChange={(e) => setManual((m) => ({ ...m, target_price_min: e.target.value }))}
+                />
+              </Field>
+              <Field label="Target price max (৳)">
+                <Input
+                  type="number"
+                  value={manual.target_price_max}
+                  onChange={(e) => setManual((m) => ({ ...m, target_price_max: e.target.value }))}
+                />
+              </Field>
+              <Field label="MOQ">
+                <Input
+                  type="number"
+                  value={manual.moq}
+                  onChange={(e) => setManual((m) => ({ ...m, moq: e.target.value }))}
+                />
+              </Field>
+            </div>
+            <Field label="Note">
+              <Textarea
+                rows={2}
+                value={manual.notes}
+                onChange={(e) => setManual((m) => ({ ...m, notes: e.target.value }))}
+                placeholder="কেন এই product, কোথায় দেখেছো..."
+              />
+            </Field>
+            <p className="text-[11px] text-muted-foreground">
+              এটি সরাসরি sourcing pipeline-এ (approved) যোগ হবে — quote add করে admin approval নিয়ে
+              order place করা যাবে।
+            </p>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setManualOpen(false)}>
               Cancel
             </Button>
             <Button
-              onClick={() => placeOrder.mutate()}
-              disabled={
-                !poAgentId ||
-                poItems.reduce((s, i) => s + i.quantity, 0) <= 0 ||
-                poItems.some((i) => !i.picked.title.trim()) ||
-                Number(poFx || 0) <= 0 ||
-                (!poSupplierId && !poSupplierName.trim()) ||
-                (payEnabled && (!payWalletId || Number(payAmount || 0) <= 0)) ||
-                placeOrder.isPending
-              }
+              onClick={() => addManual.mutate()}
+              disabled={!manual.title.trim() || addManual.isPending}
             >
-              {placeOrder.isPending && <Loader2 className="mr-1.5 h-4 w-4 animate-spin" />}
-              Create PO & order
+              {addManual.isPending && <Loader2 className="mr-1.5 h-4 w-4 animate-spin" />}
+              Add to sourcing
             </Button>
           </DialogFooter>
         </DialogContent>
