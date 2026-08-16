@@ -2109,27 +2109,12 @@ function SourcingPage() {
 
       {/* Order dialog */}
       <Dialog open={orderOpen} onOpenChange={setOrderOpen}>
-        <DialogContent className="max-h-[92vh] max-w-2xl overflow-y-auto">
+        <DialogContent className="max-h-[92vh] max-w-4xl overflow-y-auto">
           <DialogHeader>
             <DialogTitle>Place order → Purchase Order — {selected?.title}</DialogTitle>
           </DialogHeader>
           <div className="grid gap-4">
-            <div className="grid gap-3 sm:grid-cols-3">
-              <Field label="Quantity (pcs)">
-                <Input
-                  type="number"
-                  value={orderQty}
-                  onChange={(e) => setOrderQty(e.target.value)}
-                />
-              </Field>
-              <Field label="Unit price (¥ CNY)">
-                <Input
-                  type="number"
-                  step="0.01"
-                  value={poUnitCny}
-                  onChange={(e) => setPoUnitCny(e.target.value)}
-                />
-              </Field>
+            <div className="grid gap-3 sm:grid-cols-2">
               <Field label="FX rate (৳ / ¥)">
                 <Input
                   type="number"
@@ -2138,7 +2123,31 @@ function SourcingPage() {
                   onChange={(e) => setPoFx(e.target.value)}
                 />
               </Field>
+              <Field label="Planned landed / unit (৳)">
+                <Input
+                  type="number"
+                  value={orderPrice}
+                  onChange={(e) => setOrderPrice(e.target.value)}
+                />
+              </Field>
             </div>
+
+            {poBrandId && (
+              <PoLineBuilder
+                compact
+                brandId={poBrandId}
+                currency="CNY"
+                fxRate={Number(poFx || 0)}
+                items={poItems}
+                setItems={setPoItems}
+                cartons={poCartons}
+                setCartons={setPoCartons}
+                receiveMode={poReceiveMode}
+                setReceiveMode={setPoReceiveMode}
+                variantsByProduct={poVariants}
+                setVariantsByProduct={setPoVariants}
+              />
+            )}
 
             <div className="grid gap-3 sm:grid-cols-2">
               <Field label="Cargo agent (main party) *">
