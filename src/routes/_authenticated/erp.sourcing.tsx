@@ -2204,13 +2204,6 @@ function SourcingPage() {
                   />
                 </Field>
               )}
-              <Field label="Planned landed / unit (৳)">
-                <Input
-                  type="number"
-                  value={orderPrice}
-                  onChange={(e) => setOrderPrice(e.target.value)}
-                />
-              </Field>
             </div>
 
             <Field label="PO note (optional)">
