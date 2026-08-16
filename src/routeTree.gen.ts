@@ -105,6 +105,7 @@ import { Route as AuthenticatedErpHrEmployeesRouteImport } from './routes/_authe
 import { Route as AuthenticatedErpHrAttendanceRouteImport } from './routes/_authenticated/erp.hr.attendance'
 import { Route as AuthenticatedErpHrAccessRouteImport } from './routes/_authenticated/erp.hr.access'
 import { Route as AuthenticatedErpGrowthTasksRouteImport } from './routes/_authenticated/erp.growth.tasks'
+import { Route as AuthenticatedErpGrowthSourcingRouteImport } from './routes/_authenticated/erp.growth.sourcing'
 import { Route as AuthenticatedErpGrowthRoutinesRouteImport } from './routes/_authenticated/erp.growth.routines'
 import { Route as AuthenticatedErpGrowthRivalsRouteImport } from './routes/_authenticated/erp.growth.rivals'
 import { Route as AuthenticatedErpGrowthReportRouteImport } from './routes/_authenticated/erp.growth.report'
@@ -688,6 +689,12 @@ const AuthenticatedErpGrowthTasksRoute =
     path: '/tasks',
     getParentRoute: () => AuthenticatedErpGrowthRoute,
   } as any)
+const AuthenticatedErpGrowthSourcingRoute =
+  AuthenticatedErpGrowthSourcingRouteImport.update({
+    id: '/sourcing',
+    path: '/sourcing',
+    getParentRoute: () => AuthenticatedErpGrowthRoute,
+  } as any)
 const AuthenticatedErpGrowthRoutinesRoute =
   AuthenticatedErpGrowthRoutinesRouteImport.update({
     id: '/routines',
@@ -922,6 +929,7 @@ export interface FileRoutesByFullPath {
   '/erp/growth/report': typeof AuthenticatedErpGrowthReportRoute
   '/erp/growth/rivals': typeof AuthenticatedErpGrowthRivalsRoute
   '/erp/growth/routines': typeof AuthenticatedErpGrowthRoutinesRoute
+  '/erp/growth/sourcing': typeof AuthenticatedErpGrowthSourcingRoute
   '/erp/growth/tasks': typeof AuthenticatedErpGrowthTasksRoute
   '/erp/hr/access': typeof AuthenticatedErpHrAccessRoute
   '/erp/hr/attendance': typeof AuthenticatedErpHrAttendanceRoute
@@ -1038,6 +1046,7 @@ export interface FileRoutesByTo {
   '/erp/growth/report': typeof AuthenticatedErpGrowthReportRoute
   '/erp/growth/rivals': typeof AuthenticatedErpGrowthRivalsRoute
   '/erp/growth/routines': typeof AuthenticatedErpGrowthRoutinesRoute
+  '/erp/growth/sourcing': typeof AuthenticatedErpGrowthSourcingRoute
   '/erp/growth/tasks': typeof AuthenticatedErpGrowthTasksRoute
   '/erp/hr/access': typeof AuthenticatedErpHrAccessRoute
   '/erp/hr/attendance': typeof AuthenticatedErpHrAttendanceRoute
@@ -1166,6 +1175,7 @@ export interface FileRoutesById {
   '/_authenticated/erp/growth/report': typeof AuthenticatedErpGrowthReportRoute
   '/_authenticated/erp/growth/rivals': typeof AuthenticatedErpGrowthRivalsRoute
   '/_authenticated/erp/growth/routines': typeof AuthenticatedErpGrowthRoutinesRoute
+  '/_authenticated/erp/growth/sourcing': typeof AuthenticatedErpGrowthSourcingRoute
   '/_authenticated/erp/growth/tasks': typeof AuthenticatedErpGrowthTasksRoute
   '/_authenticated/erp/hr/access': typeof AuthenticatedErpHrAccessRoute
   '/_authenticated/erp/hr/attendance': typeof AuthenticatedErpHrAttendanceRoute
@@ -1294,6 +1304,7 @@ export interface FileRouteTypes {
     | '/erp/growth/report'
     | '/erp/growth/rivals'
     | '/erp/growth/routines'
+    | '/erp/growth/sourcing'
     | '/erp/growth/tasks'
     | '/erp/hr/access'
     | '/erp/hr/attendance'
@@ -1410,6 +1421,7 @@ export interface FileRouteTypes {
     | '/erp/growth/report'
     | '/erp/growth/rivals'
     | '/erp/growth/routines'
+    | '/erp/growth/sourcing'
     | '/erp/growth/tasks'
     | '/erp/hr/access'
     | '/erp/hr/attendance'
@@ -1537,6 +1549,7 @@ export interface FileRouteTypes {
     | '/_authenticated/erp/growth/report'
     | '/_authenticated/erp/growth/rivals'
     | '/_authenticated/erp/growth/routines'
+    | '/_authenticated/erp/growth/sourcing'
     | '/_authenticated/erp/growth/tasks'
     | '/_authenticated/erp/hr/access'
     | '/_authenticated/erp/hr/attendance'
@@ -2300,6 +2313,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedErpGrowthTasksRouteImport
       parentRoute: typeof AuthenticatedErpGrowthRoute
     }
+    '/_authenticated/erp/growth/sourcing': {
+      id: '/_authenticated/erp/growth/sourcing'
+      path: '/sourcing'
+      fullPath: '/erp/growth/sourcing'
+      preLoaderRoute: typeof AuthenticatedErpGrowthSourcingRouteImport
+      parentRoute: typeof AuthenticatedErpGrowthRoute
+    }
     '/_authenticated/erp/growth/routines': {
       id: '/_authenticated/erp/growth/routines'
       path: '/routines'
@@ -2572,6 +2592,7 @@ interface AuthenticatedErpGrowthRouteChildren {
   AuthenticatedErpGrowthReportRoute: typeof AuthenticatedErpGrowthReportRoute
   AuthenticatedErpGrowthRivalsRoute: typeof AuthenticatedErpGrowthRivalsRoute
   AuthenticatedErpGrowthRoutinesRoute: typeof AuthenticatedErpGrowthRoutinesRoute
+  AuthenticatedErpGrowthSourcingRoute: typeof AuthenticatedErpGrowthSourcingRoute
   AuthenticatedErpGrowthTasksRoute: typeof AuthenticatedErpGrowthTasksRoute
   AuthenticatedErpGrowthIndexRoute: typeof AuthenticatedErpGrowthIndexRoute
 }
@@ -2591,6 +2612,7 @@ const AuthenticatedErpGrowthRouteChildren: AuthenticatedErpGrowthRouteChildren =
     AuthenticatedErpGrowthReportRoute: AuthenticatedErpGrowthReportRoute,
     AuthenticatedErpGrowthRivalsRoute: AuthenticatedErpGrowthRivalsRoute,
     AuthenticatedErpGrowthRoutinesRoute: AuthenticatedErpGrowthRoutinesRoute,
+    AuthenticatedErpGrowthSourcingRoute: AuthenticatedErpGrowthSourcingRoute,
     AuthenticatedErpGrowthTasksRoute: AuthenticatedErpGrowthTasksRoute,
     AuthenticatedErpGrowthIndexRoute: AuthenticatedErpGrowthIndexRoute,
   }
