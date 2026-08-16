@@ -170,10 +170,14 @@ export function resolveAccess(
   pathname: string,
   pageMode: PageMode = allowedPages && allowedPages.length > 0 ? "custom" : "role_default",
 ): boolean {
-  if (roles.includes("admin")) return true;
   if (SELF_SERVICE_PAGES.includes(pathname)) return true;
-  // Custom grants fully replace the role matrix.
-  if (pageMode === "custom") return pathAllowedBy(allowedPages ?? [], pathname);
+  // Custom grants fully replace the role matrix — even for admins.
+  if (pageMode === "custom") {
+    // Lockout guard: an admin always keeps the access editor reachable.
+    if (roles.includes("admin") && pathname.startsWith("/erp/hr/access")) return true;
+    return pathAllowedBy(allowedPages ?? [], pathname);
+  }
+  if (roles.includes("admin")) return true;
   return canAccessPath(roles, pathname);
 }
 
