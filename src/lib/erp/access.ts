@@ -58,6 +58,13 @@ export const ROLE_MODULES: Record<string, Module[]> = {
 ROLE_MODULES["hr_admin"] = ["dashboard", "hr"];
 ROLE_MODULES["hr_manager"] = ["dashboard", "hr"];
 ROLE_MODULES["employee"] = ["dashboard"];
+// Owner mirrors admin: everything.
+ROLE_MODULES["owner"] = [...ROLE_MODULES["admin"]!];
+
+/** Owner and admin share the "super" bypass. */
+export function isSuperRole(roles: string[]): boolean {
+  return roles.includes("admin") || roles.includes("owner");
+}
 
 /**
  * Pages every authenticated staff member may open regardless of role or
@@ -127,7 +134,7 @@ export function moduleForPath(pathname: string): Module | null {
 
 /** Returns true if the user can open the given pathname. Admin bypass. */
 export function canAccessPath(roles: string[], pathname: string): boolean {
-  if (roles.includes("admin")) return true;
+  if (isSuperRole(roles)) return true;
   if (SELF_SERVICE_PAGES.includes(pathname)) return true;
   const mod = moduleForPath(pathname);
   if (!mod) return !pathname.startsWith("/erp");
@@ -153,7 +160,7 @@ export function canAccessPath(roles: string[], pathname: string): boolean {
 
 /** Convenience: does the user have any backoffice (`/erp/*`) module? */
 export function hasAnyBackoffice(roles: string[]): boolean {
-  if (roles.includes("admin")) return true;
+  if (isSuperRole(roles)) return true;
   const allowed = getAllowedModules(roles);
   return allowed.size > 0;
 }
@@ -174,10 +181,10 @@ export function resolveAccess(
   // Custom grants fully replace the role matrix — even for admins.
   if (pageMode === "custom") {
     // Lockout guard: an admin always keeps the access editor reachable.
-    if (roles.includes("admin") && pathname.startsWith("/erp/hr/access")) return true;
+    if (isSuperRole(roles) && pathname.startsWith("/erp/hr/access")) return true;
     return pathAllowedBy(allowedPages ?? [], pathname);
   }
-  if (roles.includes("admin")) return true;
+  if (isSuperRole(roles)) return true;
   return canAccessPath(roles, pathname);
 }
 
@@ -195,6 +202,6 @@ export function hasBackofficeAccess(
  * Used by the access editor to preload "role default" as a starting point.
  */
 export function pagesForRoles(roles: string[], allPaths: string[]): string[] {
-  if (roles.includes("admin")) return [...allPaths];
+  if (isSuperRole(roles)) return [...allPaths];
   return allPaths.filter((p) => canAccessPath(roles, p));
 }

@@ -40,7 +40,12 @@ export function BrandProvider({ children }: { children: ReactNode }) {
     staleTime: 5 * 60 * 1000,
   });
   const brands = useMemo(() => {
-    if (!access.data || access.data.roles.includes("admin") || access.data.brandMode === "all")
+    if (
+      !access.data ||
+      access.data.roles.includes("admin") ||
+      access.data.roles.includes("owner") ||
+      access.data.brandMode === "all"
+    )
       return allBrands;
     const allowed = new Set(access.data.brandIds);
     return allBrands.filter((brand) => allowed.has(brand.id));

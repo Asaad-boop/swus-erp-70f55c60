@@ -1,6 +1,7 @@
 import { z } from "zod";
 
 export const APP_ROLES = [
+  "owner",
   "admin",
   "operations",
   "accountant",
@@ -21,6 +22,7 @@ export type PageMode = "role_default" | "custom";
 export type BrandMode = "all" | "selected";
 
 export const ROLE_REGISTRY: Record<AppRole, { label: string; description: string }> = {
+  owner: { label: "Owner", description: "Business owner — full access plus the owner dashboard" },
   admin: { label: "Administrator", description: "Full system access and access management" },
   operations: {
     label: "Operations",
