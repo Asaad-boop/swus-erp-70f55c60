@@ -1180,42 +1180,54 @@ function SourcingPage() {
 
       {pipeline.length > 0 && (
         <div className="space-y-3">
-          <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-5 xl:grid-cols-9">
+          <div className="grid grid-cols-2 gap-2 lg:grid-cols-4">
             <StageKpi
               label="In pipeline"
               value={String(stageCounts.all)}
               sub="approved → received"
-              active={stageFilter === "all"}
-              onClick={() => setStageFilter("all")}
+              active={stageFilter === "all" && !attentionOnly}
+              onClick={() => {
+                setStageFilter("all");
+                setAttentionOnly(false);
+              }}
             />
-            {STAGE_ORDER.map((s) => (
-              <StageKpi
-                key={s}
-                label={STAGE_META[s].label}
-                value={String(stageCounts[s])}
-                dot={STAGE_META[s].dot}
-                active={stageFilter === s}
-                onClick={() => setStageFilter(s)}
-                sub={s === "ordered" && dueTotal > 0 ? `${fmtValue(Math.round(dueTotal), "bdt")} due` : undefined}
-              />
-            ))}
+            <StageKpi
+              label="Needs attention"
+              value={String(attentionSet.size)}
+              sub="overdue / urgent / stuck"
+              dot="bg-amber-500"
+              tone={attentionSet.size > 0 ? "text-amber-600 dark:text-amber-400" : ""}
+              active={attentionOnly}
+              onClick={() => setAttentionOnly((v) => !v)}
+            />
+            <StageKpi
+              label="Waiting approval"
+              value={String(stageCounts.submitted)}
+              sub="admin review পেন্ডিং"
+              dot={STAGE_META.submitted.dot}
+              active={stageFilter === "submitted"}
+              onClick={() => setStageFilter(stageFilter === "submitted" ? "all" : "submitted")}
+            />
+            <StageKpi
+              label="Ordered"
+              value={String(stageCounts.ordered + stageCounts.in_transit)}
+              sub={dueTotal > 0 ? `${fmtValue(Math.round(dueTotal), "bdt")} due` : "কোনো due নেই"}
+              dot={STAGE_META.ordered.dot}
+              active={stageFilter === "ordered"}
+              onClick={() => setStageFilter(stageFilter === "ordered" ? "all" : "ordered")}
+            />
           </div>
           <div className="sticky top-2 z-20 flex flex-wrap items-center gap-2 rounded-xl border border-border/60 bg-background/85 p-2 shadow-sm backdrop-blur-md supports-[backdrop-filter]:bg-background/70">
             <StageFilterBar counts={stageCounts} value={stageFilter} onChange={setStageFilter} />
-            <button
-              type="button"
-              onClick={() => setAttentionOnly((v) => !v)}
-              className={`inline-flex items-center gap-1.5 rounded-full border px-3 py-1 text-xs transition-colors ${
-                attentionOnly
-                  ? "border-amber-500 bg-amber-500 text-white"
-                  : "border-amber-500/40 bg-amber-500/10 text-amber-700 hover:bg-amber-500/20 dark:text-amber-400"
-              }`}
-            >
-              <AlertTriangle className="h-3 w-3" /> Needs attention
-              <span className="rounded-full bg-black/10 px-1.5 text-[10px] tabular-nums dark:bg-white/10">
-                {attentionSet.size}
-              </span>
-            </button>
+            {attentionOnly && (
+              <button
+                type="button"
+                onClick={() => setAttentionOnly(false)}
+                className="inline-flex items-center gap-1.5 rounded-full border border-amber-500 bg-amber-500 px-3 py-1 text-xs text-white"
+              >
+                <AlertTriangle className="h-3 w-3" /> Needs attention ✕
+              </button>
+            )}
             <Input
               ref={searchRef}
               value={search}
@@ -1235,9 +1247,6 @@ function SourcingPage() {
                 <SelectItem value="cost">Sort: Lowest cost</SelectItem>
               </SelectContent>
             </Select>
-            <span className="hidden items-center gap-1 text-[10px] text-muted-foreground lg:inline-flex">
-              <Keyboard className="h-3 w-3" /> j/k move · a = add quote
-            </span>
           </div>
         </div>
       )}
