@@ -609,6 +609,80 @@ function SourcingPage() {
     onError: (e: Error) => toast.error(e.message),
   });
 
+  const reviewStatusOf = (i: HubIdea): ReviewStatus =>
+    ((i.sourcing_review_status as ReviewStatus | undefined) ?? "draft");
+
+  /** Staff submits the picked supplier + price for admin approval. */
+  const submitForApproval = useMutation({
+    mutationFn: async ({ idea, note }: { idea: HubIdea; note: string }) => {
+      if (!idea.selected_quote_id) {
+        throw new Error("আগে একটা supplier quote Select করুন");
+      }
+      const { data: auth } = await supabase.auth.getUser();
+      const { error } = await supabase
+        .from("hub_product_ideas")
+        .update({
+          sourcing_review_status: "submitted",
+          sourcing_submitted_at: new Date().toISOString(),
+          sourcing_submitted_by: auth.user?.id ?? null,
+          sourcing_review_note: note.trim() || null,
+          sourcing_reviewed_at: null,
+          sourcing_reviewed_by: null,
+        } as never)
+        .eq("id", idea.id);
+      if (error) throw error;
+      await logSourcingEvent({
+        ideaId: idea.id,
+        type: "stage_change",
+        fromStage: "sourced",
+        toStage: "submitted",
+        note: note.trim() || "Submitted for approval",
+      });
+    },
+    onSuccess: () => {
+      toast.success("Admin approval-এর জন্য পাঠানো হয়েছে");
+      invalidate();
+    },
+    onError: (e: Error) => toast.error(e.message),
+  });
+
+  /** Admin approves or sends the sourcing back to the team. */
+  const reviewDecision = useMutation({
+    mutationFn: async ({
+      idea,
+      decision,
+      note,
+    }: {
+      idea: HubIdea;
+      decision: "approved" | "rejected";
+      note: string;
+    }) => {
+      const { data: auth } = await supabase.auth.getUser();
+      const { error } = await supabase
+        .from("hub_product_ideas")
+        .update({
+          sourcing_review_status: decision,
+          sourcing_reviewed_at: new Date().toISOString(),
+          sourcing_reviewed_by: auth.user?.id ?? null,
+          sourcing_review_note: note.trim() || null,
+        } as never)
+        .eq("id", idea.id);
+      if (error) throw error;
+      await logSourcingEvent({
+        ideaId: idea.id,
+        type: "stage_change",
+        fromStage: "submitted",
+        toStage: decision === "approved" ? "approved" : "sourced",
+        note: `${decision === "approved" ? "Approved" : "Sent back"}${note.trim() ? ` — ${note.trim()}` : ""}`,
+      });
+    },
+    onSuccess: (_d, v) => {
+      toast.success(v.decision === "approved" ? "Approved ✅" : "ফেরত পাঠানো হয়েছে");
+      invalidate();
+    },
+    onError: (e: Error) => toast.error(e.message),
+  });
+
   /** Manual stage change — pre-order stages write idea.status, post-order stages write PO status. */
   const changeStage = useMutation({
     mutationFn: async ({ idea, stage }: { idea: HubIdea; stage: SourcingStage }) => {
