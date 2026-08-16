@@ -228,6 +228,7 @@ export const NAV_GROUPS: Group[] = [
         items: [
           { to: "/erp/settings", label: "Settings", icon: Settings },
           { to: "/erp/diagnostics", label: "Diagnostics", icon: Stethoscope },
+          { to: "/erp/deploy-sync", label: "Deploy Sync", icon: Stethoscope },
         ],
       },
     ],

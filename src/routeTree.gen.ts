@@ -18,6 +18,7 @@ import { Route as Char91DotwellKnownChar93OauthProtectedResourceRouteImport } fr
 import { Route as Char91DotmcpChar93ListToolsRouteImport } from './routes/[.mcp]/list-tools'
 import { Route as AuthenticatedErpIndexRouteImport } from './routes/_authenticated/erp.index'
 import { Route as ApiWebhooksShopifyOrderRouteImport } from './routes/api/webhooks.shopify-order'
+import { Route as ApiPublicBuildInfoRouteImport } from './routes/api/public/build-info'
 import { Route as AuthenticatedErpUsersRouteImport } from './routes/_authenticated/erp.users'
 import { Route as AuthenticatedErpSuppliersRouteImport } from './routes/_authenticated/erp.suppliers'
 import { Route as AuthenticatedErpSourcingRouteImport } from './routes/_authenticated/erp.sourcing'
@@ -39,6 +40,7 @@ import { Route as AuthenticatedErpFinanceRouteImport } from './routes/_authentic
 import { Route as AuthenticatedErpExtensionRouteImport } from './routes/_authenticated/erp.extension'
 import { Route as AuthenticatedErpDispatchRouteImport } from './routes/_authenticated/erp.dispatch'
 import { Route as AuthenticatedErpDiagnosticsRouteImport } from './routes/_authenticated/erp.diagnostics'
+import { Route as AuthenticatedErpDeploySyncRouteImport } from './routes/_authenticated/erp.deploy-sync'
 import { Route as AuthenticatedErpCrmRouteImport } from './routes/_authenticated/erp.crm'
 import { Route as AuthenticatedErpCourierRouteImport } from './routes/_authenticated/erp.courier'
 import { Route as Char91DotmcpChar93InvokeToolToolRouteImport } from './routes/[.mcp]/invoke-tool/$tool'
@@ -182,6 +184,11 @@ const ApiWebhooksShopifyOrderRoute = ApiWebhooksShopifyOrderRouteImport.update({
   path: '/api/webhooks/shopify-order',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiPublicBuildInfoRoute = ApiPublicBuildInfoRouteImport.update({
+  id: '/api/public/build-info',
+  path: '/api/public/build-info',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const AuthenticatedErpUsersRoute = AuthenticatedErpUsersRouteImport.update({
   id: '/users',
   path: '/users',
@@ -298,6 +305,12 @@ const AuthenticatedErpDiagnosticsRoute =
   AuthenticatedErpDiagnosticsRouteImport.update({
     id: '/diagnostics',
     path: '/diagnostics',
+    getParentRoute: () => AuthenticatedErpRoute,
+  } as any)
+const AuthenticatedErpDeploySyncRoute =
+  AuthenticatedErpDeploySyncRouteImport.update({
+    id: '/deploy-sync',
+    path: '/deploy-sync',
     getParentRoute: () => AuthenticatedErpRoute,
   } as any)
 const AuthenticatedErpCrmRoute = AuthenticatedErpCrmRouteImport.update({
@@ -880,6 +893,7 @@ export interface FileRoutesByFullPath {
   '/.mcp/invoke-tool/$tool': typeof Char91DotmcpChar93InvokeToolToolRoute
   '/erp/courier': typeof AuthenticatedErpCourierRoute
   '/erp/crm': typeof AuthenticatedErpCrmRouteWithChildren
+  '/erp/deploy-sync': typeof AuthenticatedErpDeploySyncRoute
   '/erp/diagnostics': typeof AuthenticatedErpDiagnosticsRoute
   '/erp/dispatch': typeof AuthenticatedErpDispatchRoute
   '/erp/extension': typeof AuthenticatedErpExtensionRoute
@@ -901,6 +915,7 @@ export interface FileRoutesByFullPath {
   '/erp/sourcing': typeof AuthenticatedErpSourcingRoute
   '/erp/suppliers': typeof AuthenticatedErpSuppliersRoute
   '/erp/users': typeof AuthenticatedErpUsersRoute
+  '/api/public/build-info': typeof ApiPublicBuildInfoRoute
   '/api/webhooks/shopify-order': typeof ApiWebhooksShopifyOrderRoute
   '/erp/': typeof AuthenticatedErpIndexRoute
   '/erp/analytics/live': typeof AuthenticatedErpAnalyticsLiveRoute
@@ -1005,6 +1020,7 @@ export interface FileRoutesByTo {
   '/.well-known/oauth-protected-resource': typeof Char91DotwellKnownChar93OauthProtectedResourceRoute
   '/.mcp/invoke-tool/$tool': typeof Char91DotmcpChar93InvokeToolToolRoute
   '/erp/courier': typeof AuthenticatedErpCourierRoute
+  '/erp/deploy-sync': typeof AuthenticatedErpDeploySyncRoute
   '/erp/diagnostics': typeof AuthenticatedErpDiagnosticsRoute
   '/erp/dispatch': typeof AuthenticatedErpDispatchRoute
   '/erp/extension': typeof AuthenticatedErpExtensionRoute
@@ -1018,6 +1034,7 @@ export interface FileRoutesByTo {
   '/erp/sourcing': typeof AuthenticatedErpSourcingRoute
   '/erp/suppliers': typeof AuthenticatedErpSuppliersRoute
   '/erp/users': typeof AuthenticatedErpUsersRoute
+  '/api/public/build-info': typeof ApiPublicBuildInfoRoute
   '/api/webhooks/shopify-order': typeof ApiWebhooksShopifyOrderRoute
   '/erp': typeof AuthenticatedErpIndexRoute
   '/erp/analytics/live': typeof AuthenticatedErpAnalyticsLiveRoute
@@ -1126,6 +1143,7 @@ export interface FileRoutesById {
   '/.mcp/invoke-tool/$tool': typeof Char91DotmcpChar93InvokeToolToolRoute
   '/_authenticated/erp/courier': typeof AuthenticatedErpCourierRoute
   '/_authenticated/erp/crm': typeof AuthenticatedErpCrmRouteWithChildren
+  '/_authenticated/erp/deploy-sync': typeof AuthenticatedErpDeploySyncRoute
   '/_authenticated/erp/diagnostics': typeof AuthenticatedErpDiagnosticsRoute
   '/_authenticated/erp/dispatch': typeof AuthenticatedErpDispatchRoute
   '/_authenticated/erp/extension': typeof AuthenticatedErpExtensionRoute
@@ -1147,6 +1165,7 @@ export interface FileRoutesById {
   '/_authenticated/erp/sourcing': typeof AuthenticatedErpSourcingRoute
   '/_authenticated/erp/suppliers': typeof AuthenticatedErpSuppliersRoute
   '/_authenticated/erp/users': typeof AuthenticatedErpUsersRoute
+  '/api/public/build-info': typeof ApiPublicBuildInfoRoute
   '/api/webhooks/shopify-order': typeof ApiWebhooksShopifyOrderRoute
   '/_authenticated/erp/': typeof AuthenticatedErpIndexRoute
   '/_authenticated/erp/analytics/live': typeof AuthenticatedErpAnalyticsLiveRoute
@@ -1255,6 +1274,7 @@ export interface FileRouteTypes {
     | '/.mcp/invoke-tool/$tool'
     | '/erp/courier'
     | '/erp/crm'
+    | '/erp/deploy-sync'
     | '/erp/diagnostics'
     | '/erp/dispatch'
     | '/erp/extension'
@@ -1276,6 +1296,7 @@ export interface FileRouteTypes {
     | '/erp/sourcing'
     | '/erp/suppliers'
     | '/erp/users'
+    | '/api/public/build-info'
     | '/api/webhooks/shopify-order'
     | '/erp/'
     | '/erp/analytics/live'
@@ -1380,6 +1401,7 @@ export interface FileRouteTypes {
     | '/.well-known/oauth-protected-resource'
     | '/.mcp/invoke-tool/$tool'
     | '/erp/courier'
+    | '/erp/deploy-sync'
     | '/erp/diagnostics'
     | '/erp/dispatch'
     | '/erp/extension'
@@ -1393,6 +1415,7 @@ export interface FileRouteTypes {
     | '/erp/sourcing'
     | '/erp/suppliers'
     | '/erp/users'
+    | '/api/public/build-info'
     | '/api/webhooks/shopify-order'
     | '/erp'
     | '/erp/analytics/live'
@@ -1500,6 +1523,7 @@ export interface FileRouteTypes {
     | '/.mcp/invoke-tool/$tool'
     | '/_authenticated/erp/courier'
     | '/_authenticated/erp/crm'
+    | '/_authenticated/erp/deploy-sync'
     | '/_authenticated/erp/diagnostics'
     | '/_authenticated/erp/dispatch'
     | '/_authenticated/erp/extension'
@@ -1521,6 +1545,7 @@ export interface FileRouteTypes {
     | '/_authenticated/erp/sourcing'
     | '/_authenticated/erp/suppliers'
     | '/_authenticated/erp/users'
+    | '/api/public/build-info'
     | '/api/webhooks/shopify-order'
     | '/_authenticated/erp/'
     | '/_authenticated/erp/analytics/live'
@@ -1626,6 +1651,7 @@ export interface RootRouteChildren {
   Char91DotmcpChar93ListToolsRoute: typeof Char91DotmcpChar93ListToolsRoute
   Char91DotwellKnownChar93OauthProtectedResourceRoute: typeof Char91DotwellKnownChar93OauthProtectedResourceRoute
   Char91DotmcpChar93InvokeToolToolRoute: typeof Char91DotmcpChar93InvokeToolToolRoute
+  ApiPublicBuildInfoRoute: typeof ApiPublicBuildInfoRoute
   ApiWebhooksShopifyOrderRoute: typeof ApiWebhooksShopifyOrderRoute
   ApiPublicCatalogBrandSlugRoute: typeof ApiPublicCatalogBrandSlugRoute
   ApiPublicCronRunRecurringRoute: typeof ApiPublicCronRunRecurringRoute
@@ -1702,6 +1728,13 @@ declare module '@tanstack/react-router' {
       path: '/api/webhooks/shopify-order'
       fullPath: '/api/webhooks/shopify-order'
       preLoaderRoute: typeof ApiWebhooksShopifyOrderRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/public/build-info': {
+      id: '/api/public/build-info'
+      path: '/api/public/build-info'
+      fullPath: '/api/public/build-info'
+      preLoaderRoute: typeof ApiPublicBuildInfoRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/_authenticated/erp/users': {
@@ -1849,6 +1882,13 @@ declare module '@tanstack/react-router' {
       path: '/diagnostics'
       fullPath: '/erp/diagnostics'
       preLoaderRoute: typeof AuthenticatedErpDiagnosticsRouteImport
+      parentRoute: typeof AuthenticatedErpRoute
+    }
+    '/_authenticated/erp/deploy-sync': {
+      id: '/_authenticated/erp/deploy-sync'
+      path: '/deploy-sync'
+      fullPath: '/erp/deploy-sync'
+      preLoaderRoute: typeof AuthenticatedErpDeploySyncRouteImport
       parentRoute: typeof AuthenticatedErpRoute
     }
     '/_authenticated/erp/crm': {
@@ -2794,6 +2834,7 @@ const AuthenticatedErpReturnsRouteWithChildren =
 interface AuthenticatedErpRouteChildren {
   AuthenticatedErpCourierRoute: typeof AuthenticatedErpCourierRoute
   AuthenticatedErpCrmRoute: typeof AuthenticatedErpCrmRouteWithChildren
+  AuthenticatedErpDeploySyncRoute: typeof AuthenticatedErpDeploySyncRoute
   AuthenticatedErpDiagnosticsRoute: typeof AuthenticatedErpDiagnosticsRoute
   AuthenticatedErpDispatchRoute: typeof AuthenticatedErpDispatchRoute
   AuthenticatedErpExtensionRoute: typeof AuthenticatedErpExtensionRoute
@@ -2833,6 +2874,7 @@ interface AuthenticatedErpRouteChildren {
 const AuthenticatedErpRouteChildren: AuthenticatedErpRouteChildren = {
   AuthenticatedErpCourierRoute: AuthenticatedErpCourierRoute,
   AuthenticatedErpCrmRoute: AuthenticatedErpCrmRouteWithChildren,
+  AuthenticatedErpDeploySyncRoute: AuthenticatedErpDeploySyncRoute,
   AuthenticatedErpDiagnosticsRoute: AuthenticatedErpDiagnosticsRoute,
   AuthenticatedErpDispatchRoute: AuthenticatedErpDispatchRoute,
   AuthenticatedErpExtensionRoute: AuthenticatedErpExtensionRoute,
@@ -2897,6 +2939,7 @@ const rootRouteChildren: RootRouteChildren = {
   Char91DotwellKnownChar93OauthProtectedResourceRoute:
     Char91DotwellKnownChar93OauthProtectedResourceRoute,
   Char91DotmcpChar93InvokeToolToolRoute: Char91DotmcpChar93InvokeToolToolRoute,
+  ApiPublicBuildInfoRoute: ApiPublicBuildInfoRoute,
   ApiWebhooksShopifyOrderRoute: ApiWebhooksShopifyOrderRoute,
   ApiPublicCatalogBrandSlugRoute: ApiPublicCatalogBrandSlugRoute,
   ApiPublicCronRunRecurringRoute: ApiPublicCronRunRecurringRoute,

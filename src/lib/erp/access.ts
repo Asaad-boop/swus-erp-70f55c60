@@ -103,6 +103,7 @@ const PATH_RULES: { test: (p: string) => boolean; module: Module }[] = [
   { test: (p) => p.startsWith("/erp/users"), module: "customer_accounts" },
   { test: (p) => p.startsWith("/erp/settings"), module: "settings" },
   { test: (p) => p.startsWith("/erp/diagnostics"), module: "diagnostics" },
+  { test: (p) => p.startsWith("/erp/deploy-sync"), module: "diagnostics" },
 ];
 
 export function moduleForPath(pathname: string): Module | null {
