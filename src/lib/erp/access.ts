@@ -29,14 +29,22 @@ export type Module =
 
 export const ROLE_MODULES: Record<string, Module[]> = {
   admin: [
-    "dashboard", "orders", "inventory", "fulfillment", "supply",
-    "finance", "marketing", "crm", "analytics",
-    "staff_accounts", "customer_accounts", "hr", "settings", "diagnostics",
+    "dashboard",
+    "orders",
+    "inventory",
+    "fulfillment",
+    "supply",
+    "finance",
+    "marketing",
+    "crm",
+    "analytics",
+    "staff_accounts",
+    "customer_accounts",
+    "hr",
+    "settings",
+    "diagnostics",
   ],
-  operations: [
-    "dashboard", "orders", "inventory", "fulfillment",
-    "supply", "crm", "analytics",
-  ],
+  operations: ["dashboard", "orders", "inventory", "fulfillment", "supply", "crm", "analytics"],
   accountant: ["dashboard", "finance", "analytics"],
   warehouse_staff: ["dashboard", "inventory", "fulfillment", "supply"],
   packer: ["dashboard", "fulfillment"],
@@ -97,7 +105,11 @@ const PATH_RULES: { test: (p: string) => boolean; module: Module }[] = [
   { test: (p) => p.startsWith("/erp/finance"), module: "finance" },
   { test: (p) => p.startsWith("/erp/marketing"), module: "marketing" },
   { test: (p) => p.startsWith("/erp/growth"), module: "marketing" },
-  { test: (p) => p.startsWith("/erp/content") || p.startsWith("/erp/hub") || p.startsWith("/erp/extension"), module: "marketing" },
+  {
+    test: (p) =>
+      p.startsWith("/erp/content") || p.startsWith("/erp/hub") || p.startsWith("/erp/extension"),
+    module: "marketing",
+  },
   { test: (p) => p.startsWith("/erp/crm"), module: "crm" },
   { test: (p) => p.startsWith("/erp/hr"), module: "hr" },
   { test: (p) => p.startsWith("/erp/analytics"), module: "analytics" },
@@ -166,7 +178,11 @@ export function resolveAccess(
 }
 
 /** Does the user have ANY backoffice access (role modules OR custom pages)? */
-export function hasBackofficeAccess(roles: string[], allowedPages: string[] | null | undefined, pageMode: PageMode = "role_default"): boolean {
+export function hasBackofficeAccess(
+  roles: string[],
+  allowedPages: string[] | null | undefined,
+  pageMode: PageMode = "role_default",
+): boolean {
   if (pageMode === "custom") return Boolean(allowedPages?.length);
   return hasAnyBackoffice(roles);
 }

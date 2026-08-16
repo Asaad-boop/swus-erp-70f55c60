@@ -1,9 +1,19 @@
 import { z } from "zod";
 
 export const APP_ROLES = [
-  "admin", "operations", "accountant", "warehouse_staff", "packer",
-  "customer_service", "marketing_manager", "cargo_agent", "hr_admin",
-  "hr_manager", "employee", "moderator", "customer",
+  "admin",
+  "operations",
+  "accountant",
+  "warehouse_staff",
+  "packer",
+  "customer_service",
+  "marketing_manager",
+  "cargo_agent",
+  "hr_admin",
+  "hr_manager",
+  "employee",
+  "moderator",
+  "customer",
 ] as const;
 
 export type AppRole = (typeof APP_ROLES)[number];
@@ -12,9 +22,15 @@ export type BrandMode = "all" | "selected";
 
 export const ROLE_REGISTRY: Record<AppRole, { label: string; description: string }> = {
   admin: { label: "Administrator", description: "Full system access and access management" },
-  operations: { label: "Operations", description: "Orders, inventory, fulfillment and supply chain" },
+  operations: {
+    label: "Operations",
+    description: "Orders, inventory, fulfillment and supply chain",
+  },
   accountant: { label: "Accountant", description: "Finance, reports and reconciliation" },
-  warehouse_staff: { label: "Warehouse staff", description: "Inventory, stocktake and fulfillment" },
+  warehouse_staff: {
+    label: "Warehouse staff",
+    description: "Inventory, stocktake and fulfillment",
+  },
   packer: { label: "Packer", description: "Packing, dispatch and labels" },
   customer_service: { label: "Customer service", description: "Orders, customers and follow-up" },
   marketing_manager: { label: "Marketing manager", description: "Growth, campaigns and analytics" },
@@ -82,6 +98,12 @@ export const createAccessUserSchema = z.object({
 });
 
 export const userIdSchema = z.object({ userId: z.string().uuid() });
-export const passwordSchema = z.object({ userId: z.string().uuid(), password: z.string().min(8).max(72) });
+export const passwordSchema = z.object({
+  userId: z.string().uuid(),
+  password: z.string().min(8).max(72),
+});
 export const banSchema = z.object({ userId: z.string().uuid(), ban: z.boolean() });
-export const authLinkSchema = z.object({ email: z.string().email(), type: z.enum(["recovery", "magiclink"]) });
+export const authLinkSchema = z.object({
+  email: z.string().email(),
+  type: z.enum(["recovery", "magiclink"]),
+});

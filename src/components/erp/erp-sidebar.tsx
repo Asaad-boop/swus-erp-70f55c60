@@ -1,12 +1,62 @@
 import { useEffect, useMemo, useState } from "react";
 import { Link, useLocation } from "@tanstack/react-router";
 import {
-  LayoutDashboard, Globe, PlusCircle, Boxes, Wallet, Truck, Settings, Users, UserCog, Radio, Fingerprint, Package,
-  TrendingDown, TrendingUp, PackagePlus, Megaphone, Container, Heart, Image as ImageIcon, GitBranch, Plug,
-  ChevronsLeft, ChevronRight, Sparkles, ClipboardList, ClipboardCheck, PackageSearch,
-  Activity, BarChart3, RotateCcw, FileSpreadsheet, Zap, Briefcase, Stethoscope, ChevronDown,
-  Star, Filter, X, Receipt, BookOpen, Landmark, Coins, ArrowDownCircle, ArrowUpCircle, HandCoins, Scale,
-  FileBarChart, Target, Banknote, Building2, Search, PackageCheck, ShieldCheck, CheckCircle2, Clock, LayoutGrid,
+  LayoutDashboard,
+  Globe,
+  PlusCircle,
+  Boxes,
+  Wallet,
+  Truck,
+  Settings,
+  Users,
+  UserCog,
+  Radio,
+  Fingerprint,
+  Package,
+  TrendingDown,
+  TrendingUp,
+  PackagePlus,
+  Megaphone,
+  Container,
+  Heart,
+  Image as ImageIcon,
+  GitBranch,
+  Plug,
+  ChevronsLeft,
+  ChevronRight,
+  Sparkles,
+  ClipboardList,
+  ClipboardCheck,
+  PackageSearch,
+  Activity,
+  BarChart3,
+  RotateCcw,
+  FileSpreadsheet,
+  Zap,
+  Briefcase,
+  Stethoscope,
+  ChevronDown,
+  Star,
+  Filter,
+  X,
+  Receipt,
+  BookOpen,
+  Landmark,
+  Coins,
+  ArrowDownCircle,
+  ArrowUpCircle,
+  HandCoins,
+  Scale,
+  FileBarChart,
+  Target,
+  Banknote,
+  Building2,
+  Search,
+  PackageCheck,
+  ShieldCheck,
+  CheckCircle2,
+  Clock,
+  LayoutGrid,
   CalendarClock,
   BellRing,
   Compass,
@@ -129,20 +179,30 @@ export function ErpSidebar() {
     try {
       const f = JSON.parse(localStorage.getItem(FAV_KEY) || "[]");
       if (Array.isArray(f)) setFavs(f.filter((x) => typeof x === "string"));
-    } catch { /* ignore */ }
+    } catch {
+      /* ignore */
+    }
   }, []);
 
   useEffect(() => {
     if (autoSection) {
       setActiveGroup(autoSection);
-      try { localStorage.setItem(ACTIVE_GROUP_KEY, autoSection); } catch { /* ignore */ }
+      try {
+        localStorage.setItem(ACTIVE_GROUP_KEY, autoSection);
+      } catch {
+        /* ignore */
+      }
     }
   }, [autoSection]);
 
   const toggleCollapsed = () => {
     setCollapsed((c) => {
       const next = !c;
-      try { localStorage.setItem("erp.sidebar.collapsed", next ? "1" : "0"); } catch { /* ignore */ }
+      try {
+        localStorage.setItem("erp.sidebar.collapsed", next ? "1" : "0");
+      } catch {
+        /* ignore */
+      }
       return next;
     });
   };
@@ -166,7 +226,9 @@ export function ErpSidebar() {
       try {
         if (next) localStorage.setItem(ACTIVE_GROUP_KEY, next);
         else localStorage.removeItem(ACTIVE_GROUP_KEY);
-      } catch { /* ignore */ }
+      } catch {
+        /* ignore */
+      }
       return next;
     });
   };
@@ -175,13 +237,24 @@ export function ErpSidebar() {
     const key = favKey(item);
     setFavs((prev) => {
       const next = prev.includes(key) ? prev.filter((k) => k !== key) : [...prev, key].slice(0, 6);
-      try { localStorage.setItem(FAV_KEY, JSON.stringify(next)); } catch { /* ignore */ }
+      try {
+        localStorage.setItem(FAV_KEY, JSON.stringify(next));
+      } catch {
+        /* ignore */
+      }
       return next;
     });
   };
 
   const NavLinkItem = ({
-    to, label, icon: Icon, exact, search, indented, forceExpanded, pinnable = true,
+    to,
+    label,
+    icon: Icon,
+    exact,
+    search,
+    indented,
+    forceExpanded,
+    pinnable = true,
   }: NavItem & { indented?: boolean; forceExpanded?: boolean; pinnable?: boolean }) => {
     const active = isActive(to, exact, search);
     const mini = collapsed && !forceExpanded;
@@ -197,8 +270,8 @@ export function ErpSidebar() {
             mini
               ? "justify-center px-2 py-2.5 mx-auto w-10"
               : indented
-              ? "pl-8 pr-8 py-1.5 text-[13px] font-medium"
-              : "px-3 py-2 pr-8 text-sm font-semibold",
+                ? "pl-8 pr-8 py-1.5 text-[13px] font-medium"
+                : "px-3 py-2 pr-8 text-sm font-semibold",
             active
               ? "bg-primary/10 text-foreground font-semibold shadow-[inset_0_1px_0_0_hsl(var(--background)/0.4)]"
               : "text-muted-foreground hover:bg-accent/70 hover:text-foreground",
@@ -223,7 +296,11 @@ export function ErpSidebar() {
           <button
             type="button"
             aria-label={pinned ? "Unpin" : "Pin"}
-            onClick={(e) => { e.preventDefault(); e.stopPropagation(); toggleFav({ to, label, icon: Icon, search }); }}
+            onClick={(e) => {
+              e.preventDefault();
+              e.stopPropagation();
+              toggleFav({ to, label, icon: Icon, search });
+            }}
             className={cn(
               "absolute right-1.5 top-1/2 -translate-y-1/2 h-6 w-6 inline-flex items-center justify-center rounded-md",
               "text-muted-foreground/60 hover:text-primary hover:bg-accent transition-opacity duration-150",
@@ -239,14 +316,24 @@ export function ErpSidebar() {
     return (
       <Tooltip delayDuration={80}>
         <TooltipTrigger asChild>{content}</TooltipTrigger>
-        <TooltipContent side="right" className="font-medium">{label}</TooltipContent>
+        <TooltipContent side="right" className="font-medium">
+          {label}
+        </TooltipContent>
       </Tooltip>
     );
   };
 
   const AccordionSection = ({
-    sectionKey, label, icon: Icon, items,
-  }: { sectionKey: string; label: string; icon: typeof LayoutDashboard; items: NavItem[] }) => {
+    sectionKey,
+    label,
+    icon: Icon,
+    items,
+  }: {
+    sectionKey: string;
+    label: string;
+    icon: typeof LayoutDashboard;
+    items: NavItem[];
+  }) => {
     const isOpen = q ? true : activeGroup === sectionKey;
     const hasActive = items.some((i) => isActive(i.to, i.exact, i.search));
 
@@ -256,10 +343,20 @@ export function ErpSidebar() {
         <div className="relative group/fly">
           <button
             type="button"
-            onClick={() => { setCollapsed(false); try { localStorage.setItem("erp.sidebar.collapsed", "0"); } catch { /* ignore */ } toggleGroup(sectionKey); }}
+            onClick={() => {
+              setCollapsed(false);
+              try {
+                localStorage.setItem("erp.sidebar.collapsed", "0");
+              } catch {
+                /* ignore */
+              }
+              toggleGroup(sectionKey);
+            }}
             className={cn(
               "relative mx-auto flex h-10 w-10 items-center justify-center rounded-lg transition-colors duration-200",
-              hasActive ? "bg-primary/10 text-primary" : "text-muted-foreground hover:bg-accent/70 hover:text-foreground",
+              hasActive
+                ? "bg-primary/10 text-primary"
+                : "text-muted-foreground hover:bg-accent/70 hover:text-foreground",
             )}
             aria-label={label}
           >
@@ -279,7 +376,9 @@ export function ErpSidebar() {
             )}
           >
             <div className="min-w-[190px] rounded-xl border border-border/70 bg-popover/95 backdrop-blur-xl p-1.5 shadow-xl">
-              <div className="px-2 py-1 text-[10px] uppercase tracking-[0.12em] text-muted-foreground/80 font-semibold">{label}</div>
+              <div className="px-2 py-1 text-[10px] uppercase tracking-[0.12em] text-muted-foreground/80 font-semibold">
+                {label}
+              </div>
               <div className="space-y-0.5">
                 {items.map((it) => (
                   <NavLinkItem key={favKey(it)} {...it} forceExpanded pinnable={false} />
@@ -305,7 +404,12 @@ export function ErpSidebar() {
           <Icon className={cn("h-4 w-4 shrink-0 transition-colors", hasActive && "text-primary")} />
           <span className="truncate flex-1 text-left">{label}</span>
           {!isOpen && hasActive && <span className="h-1.5 w-1.5 rounded-full bg-primary" />}
-          <ChevronDown className={cn("h-4 w-4 shrink-0 transition-transform duration-300 ease-out", isOpen && "rotate-180")} />
+          <ChevronDown
+            className={cn(
+              "h-4 w-4 shrink-0 transition-transform duration-300 ease-out",
+              isOpen && "rotate-180",
+            )}
+          />
         </button>
         <div
           className={cn(
@@ -316,7 +420,9 @@ export function ErpSidebar() {
           <div className="overflow-hidden">
             <div className="relative pt-1 space-y-0.5">
               <span aria-hidden className="absolute left-[19px] top-1 bottom-1 w-px bg-border/70" />
-              {items.map((it) => <NavLinkItem key={favKey(it)} {...it} indented />)}
+              {items.map((it) => (
+                <NavLinkItem key={favKey(it)} {...it} indented />
+              ))}
             </div>
           </div>
         </div>
@@ -335,15 +441,24 @@ export function ErpSidebar() {
         )}
       >
         {/* Brand header */}
-        <div className={cn("flex items-center border-b border-border/60 h-14 px-3", collapsed ? "justify-center" : "justify-between")}>
+        <div
+          className={cn(
+            "flex items-center border-b border-border/60 h-14 px-3",
+            collapsed ? "justify-center" : "justify-between",
+          )}
+        >
           {!collapsed ? (
             <div className="flex items-center gap-2.5 min-w-0">
               <div className="h-8 w-8 rounded-lg bg-gradient-to-br from-primary to-primary/60 flex items-center justify-center shrink-0 shadow-sm">
                 <Sparkles className="h-4 w-4 text-primary-foreground" />
               </div>
               <div className="min-w-0">
-                <div className="font-display text-[15px] font-semibold tracking-tight leading-none truncate">SyncWithUs</div>
-                <div className="text-[10px] text-muted-foreground tracking-[0.14em] uppercase mt-1">ERP Suite</div>
+                <div className="font-display text-[15px] font-semibold tracking-tight leading-none truncate">
+                  SyncWithUs
+                </div>
+                <div className="text-[10px] text-muted-foreground tracking-[0.14em] uppercase mt-1">
+                  ERP Suite
+                </div>
               </div>
             </div>
           ) : (
@@ -361,7 +476,9 @@ export function ErpSidebar() {
                   <ChevronsLeft className="h-4 w-4" />
                 </button>
               </TooltipTrigger>
-              <TooltipContent side="right" className="font-medium">Collapse (⌘B)</TooltipContent>
+              <TooltipContent side="right" className="font-medium">
+                Collapse (⌘B)
+              </TooltipContent>
             </Tooltip>
           )}
         </div>
@@ -376,12 +493,19 @@ export function ErpSidebar() {
                 <ChevronRight className="h-4 w-4" />
               </button>
             </TooltipTrigger>
-            <TooltipContent side="right" className="font-medium">Expand (⌘B)</TooltipContent>
+            <TooltipContent side="right" className="font-medium">
+              Expand (⌘B)
+            </TooltipContent>
           </Tooltip>
         )}
 
         {/* Search / filter */}
-        <div className={cn("border-b border-border/60", collapsed ? "px-2 py-2 flex justify-center" : "px-3 py-2.5 space-y-2")}>
+        <div
+          className={cn(
+            "border-b border-border/60",
+            collapsed ? "px-2 py-2 flex justify-center" : "px-3 py-2.5 space-y-2",
+          )}
+        >
           {collapsed ? (
             <Tooltip delayDuration={100}>
               <TooltipTrigger asChild>
@@ -393,7 +517,9 @@ export function ErpSidebar() {
                   <Search className="h-4 w-4" />
                 </button>
               </TooltipTrigger>
-              <TooltipContent side="right" className="font-medium">Search (⌘K)</TooltipContent>
+              <TooltipContent side="right" className="font-medium">
+                Search (⌘K)
+              </TooltipContent>
             </Tooltip>
           ) : (
             <>
@@ -403,7 +529,9 @@ export function ErpSidebar() {
               >
                 <Search className="h-3.5 w-3.5" />
                 <span className="flex-1 text-left">Search anything...</span>
-                <kbd className="hidden sm:inline-flex items-center gap-0.5 rounded border border-border/70 bg-muted px-1.5 py-0.5 text-[10px] font-mono">⌘K</kbd>
+                <kbd className="hidden sm:inline-flex items-center gap-0.5 rounded border border-border/70 bg-muted px-1.5 py-0.5 text-[10px] font-mono">
+                  ⌘K
+                </kbd>
               </button>
               <div className="relative">
                 <Filter className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground/70" />
@@ -427,7 +555,12 @@ export function ErpSidebar() {
           )}
         </div>
 
-        <nav className={cn("erp-sidebar-scroll flex-1 py-3", collapsed ? "px-2 overflow-visible" : "px-3 overflow-y-auto overflow-x-hidden")}>
+        <nav
+          className={cn(
+            "erp-sidebar-scroll flex-1 py-3",
+            collapsed ? "px-2 overflow-visible" : "px-3 overflow-y-auto overflow-x-hidden",
+          )}
+        >
           {/* Pinned */}
           {!collapsed && !q && favItems.length > 0 && (
             <div className="mb-4">
@@ -435,17 +568,24 @@ export function ErpSidebar() {
                 <Star className="h-3 w-3" /> Pinned
               </div>
               <div className="space-y-0.5">
-                {favItems.map((item) => <NavLinkItem key={"fav-" + favKey(item)} {...item} />)}
+                {favItems.map((item) => (
+                  <NavLinkItem key={"fav-" + favKey(item)} {...item} />
+                ))}
               </div>
             </div>
           )}
 
           {searchedGroups.length === 0 && (
-            <div className="px-3 py-6 text-center text-xs text-muted-foreground">কিছু পাওয়া যায়নি</div>
+            <div className="px-3 py-6 text-center text-xs text-muted-foreground">
+              কিছু পাওয়া যায়নি
+            </div>
           )}
 
           {searchedGroups.map((group, gi) => (
-            <div key={group.label} className={cn(gi > 0 && (collapsed ? "mt-3 pt-3 border-t border-border/60" : "mt-4"))}>
+            <div
+              key={group.label}
+              className={cn(gi > 0 && (collapsed ? "mt-3 pt-3 border-t border-border/60" : "mt-4"))}
+            >
               {!collapsed && (
                 <div className="px-3 mb-1 text-[10px] uppercase tracking-[0.1em] text-muted-foreground/70 font-semibold">
                   {group.label}
@@ -453,12 +593,20 @@ export function ErpSidebar() {
               )}
               {group.kind === "flat" ? (
                 <div className="space-y-0.5">
-                  {group.items.map((item) => <NavLinkItem key={favKey(item)} {...item} />)}
+                  {group.items.map((item) => (
+                    <NavLinkItem key={favKey(item)} {...item} />
+                  ))}
                 </div>
               ) : (
                 <div className="space-y-1">
                   {group.sections.map((s) => (
-                    <AccordionSection key={s.key} sectionKey={s.key} label={s.label} icon={s.icon} items={s.items} />
+                    <AccordionSection
+                      key={s.key}
+                      sectionKey={s.key}
+                      label={s.label}
+                      icon={s.icon}
+                      items={s.items}
+                    />
                   ))}
                 </div>
               )}
@@ -466,8 +614,22 @@ export function ErpSidebar() {
           ))}
         </nav>
 
-        <div className={cn("border-t border-border/60 text-[10px] uppercase tracking-[0.14em] text-muted-foreground/80", collapsed ? "py-2 text-center" : "px-4 py-3 flex items-center justify-between")}>
-          {collapsed ? "v0.1" : (<><span>v0.1 — Phase 0</span><kbd className="rounded border border-border/60 bg-muted px-1.5 py-0.5 font-mono text-[9px] tracking-normal">⌘B</kbd></>)}
+        <div
+          className={cn(
+            "border-t border-border/60 text-[10px] uppercase tracking-[0.14em] text-muted-foreground/80",
+            collapsed ? "py-2 text-center" : "px-4 py-3 flex items-center justify-between",
+          )}
+        >
+          {collapsed ? (
+            "v0.1"
+          ) : (
+            <>
+              <span>v0.1 — Phase 0</span>
+              <kbd className="rounded border border-border/60 bg-muted px-1.5 py-0.5 font-mono text-[9px] tracking-normal">
+                ⌘B
+              </kbd>
+            </>
+          )}
         </div>
       </aside>
     </TooltipProvider>

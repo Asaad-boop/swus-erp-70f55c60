@@ -1,4 +1,10 @@
-import { createFileRoute, Navigate, Outlet, useLocation, useNavigate } from "@tanstack/react-router";
+import {
+  createFileRoute,
+  Navigate,
+  Outlet,
+  useLocation,
+  useNavigate,
+} from "@tanstack/react-router";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { hasBackofficeAccess, moduleForPath, resolveAccess } from "@/lib/erp/access";
@@ -49,7 +55,9 @@ function AuthGate() {
   const allowed = resolveAccess(roles, allowedPages, path, pageMode);
   if (!allowed) {
     const mod = moduleForPath(path);
-    const fallback = isAdmin ? "/erp" : firstAllowedPage(pageMode === "custom" ? allowedPages : null);
+    const fallback = isAdmin
+      ? "/erp"
+      : firstAllowedPage(pageMode === "custom" ? allowedPages : null);
     // Landing page itself blocked → send them to their first allowed page.
     if (path !== fallback && (path === "/erp" || path === "/erp/")) {
       return <Navigate to={fallback as never} replace />;

@@ -40,7 +40,8 @@ export function BrandProvider({ children }: { children: ReactNode }) {
     staleTime: 5 * 60 * 1000,
   });
   const brands = useMemo(() => {
-    if (!access.data || access.data.roles.includes("admin") || access.data.brandMode === "all") return allBrands;
+    if (!access.data || access.data.roles.includes("admin") || access.data.brandMode === "all")
+      return allBrands;
     const allowed = new Set(access.data.brandIds);
     return allBrands.filter((brand) => allowed.has(brand.id));
   }, [access.data, allBrands]);
@@ -67,15 +68,12 @@ export function BrandProvider({ children }: { children: ReactNode }) {
     if (typeof window !== "undefined") localStorage.setItem(STORAGE_KEY, id);
   };
 
-  const value = useMemo<BrandContextValue>(
-    () => {
-      const isAllBrands = activeBrandId === ALL;
-      const activeBrand = isAllBrands ? null : (brands.find((b) => b.id === activeBrandId) ?? null);
-      const brandIds = isAllBrands ? brands.map((b) => b.id) : activeBrand ? [activeBrand.id] : [];
-      return { brands, activeBrand, setActiveBrandId, isAllBrands, brandIds, isLoading };
-    },
-    [brands, activeBrandId, isLoading],
-  );
+  const value = useMemo<BrandContextValue>(() => {
+    const isAllBrands = activeBrandId === ALL;
+    const activeBrand = isAllBrands ? null : (brands.find((b) => b.id === activeBrandId) ?? null);
+    const brandIds = isAllBrands ? brands.map((b) => b.id) : activeBrand ? [activeBrand.id] : [];
+    return { brands, activeBrand, setActiveBrandId, isAllBrands, brandIds, isLoading };
+  }, [brands, activeBrandId, isLoading]);
 
   return <BrandContext.Provider value={value}>{children}</BrandContext.Provider>;
 }

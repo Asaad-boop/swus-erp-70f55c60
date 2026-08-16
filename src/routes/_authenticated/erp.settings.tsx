@@ -1,7 +1,19 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useEffect, useMemo, useState } from "react";
 import {
-  Building, Building2, FileText, Truck, Wallet, Bell, Plug, Database, AlertTriangle, ContactRound, BarChart3, Facebook, MessageSquare,
+  Building,
+  Building2,
+  FileText,
+  Truck,
+  Wallet,
+  Bell,
+  Plug,
+  Database,
+  AlertTriangle,
+  ContactRound,
+  BarChart3,
+  Facebook,
+  MessageSquare,
 } from "lucide-react";
 import { useBrand } from "@/contexts/brand-context";
 import { BusinessSettings } from "@/components/erp/settings/business-settings";
@@ -26,8 +38,19 @@ export const Route = createFileRoute("/_authenticated/erp/settings")({
 });
 
 type SectionId =
-  | "business" | "brands" | "invoice" | "courier" | "finance"
-  | "notifications" | "sms" | "integrations" | "analytics" | "tracking" | "crm" | "data" | "danger";
+  | "business"
+  | "brands"
+  | "invoice"
+  | "courier"
+  | "finance"
+  | "notifications"
+  | "sms"
+  | "integrations"
+  | "analytics"
+  | "tracking"
+  | "crm"
+  | "data"
+  | "danger";
 
 type SectionDef = {
   id: SectionId;
@@ -39,19 +62,99 @@ type SectionDef = {
 };
 
 const SECTIONS: SectionDef[] = [
-  { id: "business",      label: "Business Profile", description: "Identity, contact, legal & defaults", icon: Building,       perBrand: true  },
-  { id: "brands",        label: "Brands",           description: "Add, edit, default brand",            icon: Building2,      perBrand: false },
-  { id: "invoice",       label: "Invoice & Orders", description: "Template, numbering, workflow",       icon: FileText,       perBrand: true  },
-  { id: "courier",       label: "Courier",          description: "Pathao, Steadfast, status mapping",   icon: Truck,          perBrand: true  },
-  { id: "finance",       label: "Finance",          description: "Accounting, FX, tax defaults",        icon: Wallet,         perBrand: true  },
-  { id: "notifications", label: "Notifications",    description: "Alerts, daily summaries",             icon: Bell,           perBrand: true  },
-  { id: "sms",           label: "SMS (BulkSMSBD)",  description: "Order, pre-order & custom SMS",       icon: MessageSquare,  perBrand: true  },
-  { id: "integrations",  label: "Integrations",     description: "Meta, Gemini, webhooks",              icon: Plug,           perBrand: true  },
-  { id: "analytics",     label: "Analytics & Tracking", description: "GA4, Clarity, Pixel, retention", icon: BarChart3,      perBrand: true  },
-  { id: "tracking",      label: "Meta Pixel & CAPI",    description: "Per-brand Pixel, CAPI, UTM, status", icon: Facebook,    perBrand: false },
-  { id: "crm",           label: "CRM Custom Fields", description: "Per-customer custom data fields",    icon: ContactRound,   perBrand: true,  adminOnly: true },
-  { id: "data",          label: "Data & System",    description: "Exports, activity, info",             icon: Database,       perBrand: true  },
-  { id: "danger",        label: "Danger Zone",      description: "Destructive actions",                 icon: AlertTriangle,  perBrand: true,  adminOnly: true },
+  {
+    id: "business",
+    label: "Business Profile",
+    description: "Identity, contact, legal & defaults",
+    icon: Building,
+    perBrand: true,
+  },
+  {
+    id: "brands",
+    label: "Brands",
+    description: "Add, edit, default brand",
+    icon: Building2,
+    perBrand: false,
+  },
+  {
+    id: "invoice",
+    label: "Invoice & Orders",
+    description: "Template, numbering, workflow",
+    icon: FileText,
+    perBrand: true,
+  },
+  {
+    id: "courier",
+    label: "Courier",
+    description: "Pathao, Steadfast, status mapping",
+    icon: Truck,
+    perBrand: true,
+  },
+  {
+    id: "finance",
+    label: "Finance",
+    description: "Accounting, FX, tax defaults",
+    icon: Wallet,
+    perBrand: true,
+  },
+  {
+    id: "notifications",
+    label: "Notifications",
+    description: "Alerts, daily summaries",
+    icon: Bell,
+    perBrand: true,
+  },
+  {
+    id: "sms",
+    label: "SMS (BulkSMSBD)",
+    description: "Order, pre-order & custom SMS",
+    icon: MessageSquare,
+    perBrand: true,
+  },
+  {
+    id: "integrations",
+    label: "Integrations",
+    description: "Meta, Gemini, webhooks",
+    icon: Plug,
+    perBrand: true,
+  },
+  {
+    id: "analytics",
+    label: "Analytics & Tracking",
+    description: "GA4, Clarity, Pixel, retention",
+    icon: BarChart3,
+    perBrand: true,
+  },
+  {
+    id: "tracking",
+    label: "Meta Pixel & CAPI",
+    description: "Per-brand Pixel, CAPI, UTM, status",
+    icon: Facebook,
+    perBrand: false,
+  },
+  {
+    id: "crm",
+    label: "CRM Custom Fields",
+    description: "Per-customer custom data fields",
+    icon: ContactRound,
+    perBrand: true,
+    adminOnly: true,
+  },
+  {
+    id: "data",
+    label: "Data & System",
+    description: "Exports, activity, info",
+    icon: Database,
+    perBrand: true,
+  },
+  {
+    id: "danger",
+    label: "Danger Zone",
+    description: "Destructive actions",
+    icon: AlertTriangle,
+    perBrand: true,
+    adminOnly: true,
+  },
 ];
 
 function SettingsPage() {
@@ -67,10 +170,7 @@ function SettingsPage() {
     }
   }, [brands, activeBrand?.id, brandId]);
 
-  const visibleSections = useMemo(
-    () => SECTIONS.filter((s) => !s.adminOnly || isAdmin),
-    [isAdmin],
-  );
+  const visibleSections = useMemo(() => SECTIONS.filter((s) => !s.adminOnly || isAdmin), [isAdmin]);
   const currentDef = SECTIONS.find((s) => s.id === section)!;
 
   return (
@@ -78,7 +178,9 @@ function SettingsPage() {
       <header className="border-b bg-card">
         <div className="px-4 md:px-6 py-4">
           <h1 className="text-2xl font-bold tracking-tight">Settings</h1>
-          <p className="text-sm text-muted-foreground mt-0.5">Configure brands, finance, integrations and team.</p>
+          <p className="text-sm text-muted-foreground mt-0.5">
+            Configure brands, finance, integrations and team.
+          </p>
         </div>
       </header>
 
@@ -95,15 +197,27 @@ function SettingsPage() {
                   onClick={() => setSection(s.id)}
                   className={cn(
                     "w-full flex items-start gap-3 px-3 py-2.5 rounded-md text-left transition-colors",
-                    active
-                      ? "bg-primary/10 text-primary"
-                      : "hover:bg-accent text-foreground/80",
+                    active ? "bg-primary/10 text-primary" : "hover:bg-accent text-foreground/80",
                   )}
                 >
-                  <Icon className={cn("h-4 w-4 mt-0.5 shrink-0", s.id === "danger" && "text-destructive")} />
+                  <Icon
+                    className={cn(
+                      "h-4 w-4 mt-0.5 shrink-0",
+                      s.id === "danger" && "text-destructive",
+                    )}
+                  />
                   <span className="flex-1 min-w-0">
-                    <span className={cn("block text-sm font-medium", s.id === "danger" && "text-destructive")}>{s.label}</span>
-                    <span className="block text-[11px] text-muted-foreground truncate">{s.description}</span>
+                    <span
+                      className={cn(
+                        "block text-sm font-medium",
+                        s.id === "danger" && "text-destructive",
+                      )}
+                    >
+                      {s.label}
+                    </span>
+                    <span className="block text-[11px] text-muted-foreground truncate">
+                      {s.description}
+                    </span>
                   </span>
                 </button>
               );
@@ -127,7 +241,9 @@ function SettingsPage() {
                       onClick={() => setBrandId(b.id)}
                       className={cn(
                         "px-3 py-1 rounded-md text-xs font-semibold transition-colors",
-                        a ? "bg-primary text-primary-foreground" : "bg-background border hover:bg-accent",
+                        a
+                          ? "bg-primary text-primary-foreground"
+                          : "bg-background border hover:bg-accent",
                       )}
                     >
                       {b.name}
@@ -139,7 +255,9 @@ function SettingsPage() {
           )}
 
           {currentDef.perBrand && !brandId ? (
-            <div className="rounded-xl border bg-card p-6 text-sm text-muted-foreground">No brand available — create one in the Brands section.</div>
+            <div className="rounded-xl border bg-card p-6 text-sm text-muted-foreground">
+              No brand available — create one in the Brands section.
+            </div>
           ) : (
             <SectionRouter section={section} brandId={brandId} />
           )}
@@ -151,19 +269,33 @@ function SettingsPage() {
 
 function SectionRouter({ section, brandId }: { section: SectionId; brandId: string }) {
   switch (section) {
-    case "business":      return <BusinessSettings key={brandId} brandIdOverride={brandId} />;
-    case "brands":        return <BrandsSection />;
-    case "invoice":       return <InvoiceOrdersSection key={brandId} brandId={brandId} />;
-    case "courier":       return <CourierSection key={brandId} brandId={brandId} />;
-    case "finance":       return <FinanceSection key={brandId} brandId={brandId} />;
-    case "notifications": return <NotificationsSection key={brandId} brandId={brandId} />;
-    case "sms":           return <SmsSection key={brandId} brandId={brandId} />;
-    case "integrations":  return <IntegrationsSection key={brandId} brandId={brandId} />;
-    case "analytics":     return <AnalyticsSection key={brandId} brandId={brandId} />;
-    case "tracking":      return <TrackingSection />;
-    case "crm":           return <CrmCustomFieldsSection key={brandId} brandId={brandId} />;
-    case "data":          return <DataSystemSection key={brandId} brandId={brandId} />;
-    case "danger":        return <DangerZoneSection key={brandId} brandId={brandId} />;
-    default:              return null;
+    case "business":
+      return <BusinessSettings key={brandId} brandIdOverride={brandId} />;
+    case "brands":
+      return <BrandsSection />;
+    case "invoice":
+      return <InvoiceOrdersSection key={brandId} brandId={brandId} />;
+    case "courier":
+      return <CourierSection key={brandId} brandId={brandId} />;
+    case "finance":
+      return <FinanceSection key={brandId} brandId={brandId} />;
+    case "notifications":
+      return <NotificationsSection key={brandId} brandId={brandId} />;
+    case "sms":
+      return <SmsSection key={brandId} brandId={brandId} />;
+    case "integrations":
+      return <IntegrationsSection key={brandId} brandId={brandId} />;
+    case "analytics":
+      return <AnalyticsSection key={brandId} brandId={brandId} />;
+    case "tracking":
+      return <TrackingSection />;
+    case "crm":
+      return <CrmCustomFieldsSection key={brandId} brandId={brandId} />;
+    case "data":
+      return <DataSystemSection key={brandId} brandId={brandId} />;
+    case "danger":
+      return <DangerZoneSection key={brandId} brandId={brandId} />;
+    default:
+      return null;
   }
 }
