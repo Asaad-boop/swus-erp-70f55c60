@@ -1133,7 +1133,12 @@ function SourcingPage() {
               )}
               <Button
                 size="sm"
-                disabled={!!selected.imp_po_id}
+                disabled={!!selected.imp_po_id || reviewStatusOf(selected) !== "approved"}
+                title={
+                  reviewStatusOf(selected) !== "approved"
+                    ? "আগে admin approval নিতে হবে"
+                    : undefined
+                }
                 onClick={() => {
                   setOrderQty(selected.order_qty ? String(selected.order_qty) : "");
                   setOrderPrice(
