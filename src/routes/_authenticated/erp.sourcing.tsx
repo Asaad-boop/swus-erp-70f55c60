@@ -925,12 +925,19 @@ function SourcingPage() {
       if (reviewStatusOf(selected) !== "approved") {
         throw new Error("Admin approval ছাড়া order place করা যাবে না");
       }
-      const qty = Number(orderQty || 0);
+      const totalUnits = poItems.reduce((s, i) => s + (Number(i.quantity) || 0), 0);
+      const qty = totalUnits;
       const unitCny = Number(poUnitCny || 0);
       const fx = Number(poFx || 0);
+      if (poItems.some((i) => !i.picked.title.trim())) throw new Error("প্রতিটি item এ product/name দিন");
       if (qty <= 0) throw new Error("Quantity দিন");
       if (fx <= 0) throw new Error("FX rate দিন");
       if (!poAgentId) throw new Error("Cargo agent select করুন");
+      if (poReceiveMode === "carton") {
+        const errs = cartonAllocationErrors(poItems, poCartons, poVariants);
+        if (errs.length > 0) throw new Error(`Carton allocation mismatch: ${errs.join(", ")}`);
+      }
+      const parts = buildPoPayloadParts(poItems, poCartons, poReceiveMode);
 
       const supplier = poSupplierId
         ? { id: poSupplierId }
@@ -954,16 +961,9 @@ function SourcingPage() {
             `Growth Hub sourcing — ${selected.title}` +
             (poNotes.trim() ? ` | ${poNotes.trim()}` : ""),
           supplier,
-          items: [
-            {
-              name_snapshot: selected.title,
-              quantity: qty,
-              unit_cost_foreign: unitCny,
-              image_snapshot: selected.image_url ?? undefined,
-            },
-          ],
-          cartons: [],
-          receive_mode: "quantity",
+          items: parts.items,
+          cartons: parts.cartons,
+          receive_mode: poReceiveMode,
           initial_payment:
             payEnabled && advance > 0 && payWalletId
               ? {
