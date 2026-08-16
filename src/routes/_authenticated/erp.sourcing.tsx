@@ -1453,19 +1453,26 @@ function SourcingPage() {
                                   ? "মাল পথে আছে — warehouse receive করলে Received auto হয়ে যাবে।"
                                   : "সব ধাপ শেষ — stock ঢুকে গেছে।";
                       return (
-                        <div className="flex flex-wrap items-center gap-2 rounded-lg border border-primary/25 bg-primary/5 p-2.5 text-[11px]">
-                          <Target className="h-3.5 w-3.5 shrink-0 text-primary" />
-                          <span className="min-w-[200px] flex-1">{hint}</span>
+                        <div className="flex flex-wrap items-center gap-2 rounded-xl border border-primary/25 bg-gradient-to-r from-primary/10 to-primary/[0.03] p-3 text-xs shadow-sm">
+                          <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-primary/15 text-primary">
+                            <Target className="h-3.5 w-3.5" />
+                          </span>
+                          <span className="min-w-[200px] flex-1 leading-snug">
+                            <span className="block text-[10px] font-semibold uppercase tracking-wide text-primary">
+                              পরবর্তী ধাপ
+                            </span>
+                            {hint}
+                          </span>
                           {(st === "to_source" || st === "sourcing") && (
-                            <Button size="sm" className="h-7 text-[11px]" onClick={openNewQuote}>
-                              <Plus className="mr-1 h-3 w-3" /> Add quote
+                            <Button size="sm" className="h-8 text-xs" onClick={openNewQuote}>
+                              <Plus className="mr-1 h-3.5 w-3.5" /> Add quote
                             </Button>
                           )}
                           {st === "sourcing" && quotes.length > 0 && (
                             <Button
                               size="sm"
                               variant="outline"
-                              className="h-7 text-[11px]"
+                              className="h-8 bg-background/70 text-xs"
                               disabled={changeStage.isPending}
                               onClick={() => changeStage.mutate({ idea: selected, stage: "sourced" })}
                             >
@@ -1516,29 +1523,29 @@ function SourcingPage() {
               </Card>
 
               <Tabs defaultValue="quotes" className="space-y-3">
-                <TabsList className="w-full justify-start overflow-x-auto">
-                  <TabsTrigger value="quotes" className="text-xs">
+                <TabsList className="w-full justify-start overflow-x-auto rounded-xl bg-muted/60 p-1">
+                  <TabsTrigger value="quotes" className="rounded-lg text-xs data-[state=active]:shadow-sm">
                     Quotes
                     <span className="ml-1.5 rounded-full bg-muted px-1.5 text-[10px] tabular-nums">
                       {quotes.length}
                     </span>
                   </TabsTrigger>
-                  <TabsTrigger value="approval" className="text-xs">
+                  <TabsTrigger value="approval" className="rounded-lg text-xs data-[state=active]:shadow-sm">
                     Approval
                     {reviewStatusOf(selected) === "submitted" && (
                       <span className="ml-1.5 h-1.5 w-1.5 rounded-full bg-orange-500" />
                     )}
                   </TabsTrigger>
-                  <TabsTrigger value="order" className="text-xs">
+                  <TabsTrigger value="order" className="rounded-lg text-xs data-[state=active]:shadow-sm">
                     Order
                   </TabsTrigger>
-                  <TabsTrigger value="followup" className="text-xs">
+                  <TabsTrigger value="followup" className="rounded-lg text-xs data-[state=active]:shadow-sm">
                     Follow-up
                     {isFollowupDue(selected.next_action_at) && (
                       <span className="ml-1.5 h-1.5 w-1.5 rounded-full bg-amber-500" />
                     )}
                   </TabsTrigger>
-                  <TabsTrigger value="activity" className="text-xs">
+                  <TabsTrigger value="activity" className="rounded-lg text-xs data-[state=active]:shadow-sm">
                     Activity
                   </TabsTrigger>
                 </TabsList>
