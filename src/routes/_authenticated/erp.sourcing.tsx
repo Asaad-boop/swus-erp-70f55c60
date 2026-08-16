@@ -93,7 +93,7 @@ import {
   stageDates,
 } from "@/lib/erp/hub/sourcing-events";
 
-export const Route = createFileRoute("/_authenticated/erp/growth/sourcing")({
+export const Route = createFileRoute("/_authenticated/erp/sourcing")({
   head: () => ({
     meta: [
       { title: "Sourcing Desk — Growth Studio" },

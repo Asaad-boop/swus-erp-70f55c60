@@ -20,6 +20,7 @@ import { Route as AuthenticatedErpIndexRouteImport } from './routes/_authenticat
 import { Route as ApiWebhooksShopifyOrderRouteImport } from './routes/api/webhooks.shopify-order'
 import { Route as AuthenticatedErpUsersRouteImport } from './routes/_authenticated/erp.users'
 import { Route as AuthenticatedErpSuppliersRouteImport } from './routes/_authenticated/erp.suppliers'
+import { Route as AuthenticatedErpSourcingRouteImport } from './routes/_authenticated/erp.sourcing'
 import { Route as AuthenticatedErpSettingsRouteImport } from './routes/_authenticated/erp.settings'
 import { Route as AuthenticatedErpReturnsRouteImport } from './routes/_authenticated/erp.returns'
 import { Route as AuthenticatedErpReportsRouteImport } from './routes/_authenticated/erp.reports'
@@ -104,7 +105,6 @@ import { Route as AuthenticatedErpHrEmployeesRouteImport } from './routes/_authe
 import { Route as AuthenticatedErpHrAttendanceRouteImport } from './routes/_authenticated/erp.hr.attendance'
 import { Route as AuthenticatedErpHrAccessRouteImport } from './routes/_authenticated/erp.hr.access'
 import { Route as AuthenticatedErpGrowthTasksRouteImport } from './routes/_authenticated/erp.growth.tasks'
-import { Route as AuthenticatedErpGrowthSourcingRouteImport } from './routes/_authenticated/erp.growth.sourcing'
 import { Route as AuthenticatedErpGrowthRoutinesRouteImport } from './routes/_authenticated/erp.growth.routines'
 import { Route as AuthenticatedErpGrowthRivalsRouteImport } from './routes/_authenticated/erp.growth.rivals'
 import { Route as AuthenticatedErpGrowthReportRouteImport } from './routes/_authenticated/erp.growth.report'
@@ -190,6 +190,12 @@ const AuthenticatedErpSuppliersRoute =
   AuthenticatedErpSuppliersRouteImport.update({
     id: '/suppliers',
     path: '/suppliers',
+    getParentRoute: () => AuthenticatedErpRoute,
+  } as any)
+const AuthenticatedErpSourcingRoute =
+  AuthenticatedErpSourcingRouteImport.update({
+    id: '/sourcing',
+    path: '/sourcing',
     getParentRoute: () => AuthenticatedErpRoute,
   } as any)
 const AuthenticatedErpSettingsRoute =
@@ -682,12 +688,6 @@ const AuthenticatedErpGrowthTasksRoute =
     path: '/tasks',
     getParentRoute: () => AuthenticatedErpGrowthRoute,
   } as any)
-const AuthenticatedErpGrowthSourcingRoute =
-  AuthenticatedErpGrowthSourcingRouteImport.update({
-    id: '/sourcing',
-    path: '/sourcing',
-    getParentRoute: () => AuthenticatedErpGrowthRoute,
-  } as any)
 const AuthenticatedErpGrowthRoutinesRoute =
   AuthenticatedErpGrowthRoutinesRouteImport.update({
     id: '/routines',
@@ -891,6 +891,7 @@ export interface FileRoutesByFullPath {
   '/erp/reports': typeof AuthenticatedErpReportsRoute
   '/erp/returns': typeof AuthenticatedErpReturnsRouteWithChildren
   '/erp/settings': typeof AuthenticatedErpSettingsRoute
+  '/erp/sourcing': typeof AuthenticatedErpSourcingRoute
   '/erp/suppliers': typeof AuthenticatedErpSuppliersRoute
   '/erp/users': typeof AuthenticatedErpUsersRoute
   '/api/webhooks/shopify-order': typeof ApiWebhooksShopifyOrderRoute
@@ -921,7 +922,6 @@ export interface FileRoutesByFullPath {
   '/erp/growth/report': typeof AuthenticatedErpGrowthReportRoute
   '/erp/growth/rivals': typeof AuthenticatedErpGrowthRivalsRoute
   '/erp/growth/routines': typeof AuthenticatedErpGrowthRoutinesRoute
-  '/erp/growth/sourcing': typeof AuthenticatedErpGrowthSourcingRoute
   '/erp/growth/tasks': typeof AuthenticatedErpGrowthTasksRoute
   '/erp/hr/access': typeof AuthenticatedErpHrAccessRoute
   '/erp/hr/attendance': typeof AuthenticatedErpHrAttendanceRoute
@@ -1007,6 +1007,7 @@ export interface FileRoutesByTo {
   '/erp/reorder-queue': typeof AuthenticatedErpReorderQueueRoute
   '/erp/reports': typeof AuthenticatedErpReportsRoute
   '/erp/settings': typeof AuthenticatedErpSettingsRoute
+  '/erp/sourcing': typeof AuthenticatedErpSourcingRoute
   '/erp/suppliers': typeof AuthenticatedErpSuppliersRoute
   '/erp/users': typeof AuthenticatedErpUsersRoute
   '/api/webhooks/shopify-order': typeof ApiWebhooksShopifyOrderRoute
@@ -1037,7 +1038,6 @@ export interface FileRoutesByTo {
   '/erp/growth/report': typeof AuthenticatedErpGrowthReportRoute
   '/erp/growth/rivals': typeof AuthenticatedErpGrowthRivalsRoute
   '/erp/growth/routines': typeof AuthenticatedErpGrowthRoutinesRoute
-  '/erp/growth/sourcing': typeof AuthenticatedErpGrowthSourcingRoute
   '/erp/growth/tasks': typeof AuthenticatedErpGrowthTasksRoute
   '/erp/hr/access': typeof AuthenticatedErpHrAccessRoute
   '/erp/hr/attendance': typeof AuthenticatedErpHrAttendanceRoute
@@ -1135,6 +1135,7 @@ export interface FileRoutesById {
   '/_authenticated/erp/reports': typeof AuthenticatedErpReportsRoute
   '/_authenticated/erp/returns': typeof AuthenticatedErpReturnsRouteWithChildren
   '/_authenticated/erp/settings': typeof AuthenticatedErpSettingsRoute
+  '/_authenticated/erp/sourcing': typeof AuthenticatedErpSourcingRoute
   '/_authenticated/erp/suppliers': typeof AuthenticatedErpSuppliersRoute
   '/_authenticated/erp/users': typeof AuthenticatedErpUsersRoute
   '/api/webhooks/shopify-order': typeof ApiWebhooksShopifyOrderRoute
@@ -1165,7 +1166,6 @@ export interface FileRoutesById {
   '/_authenticated/erp/growth/report': typeof AuthenticatedErpGrowthReportRoute
   '/_authenticated/erp/growth/rivals': typeof AuthenticatedErpGrowthRivalsRoute
   '/_authenticated/erp/growth/routines': typeof AuthenticatedErpGrowthRoutinesRoute
-  '/_authenticated/erp/growth/sourcing': typeof AuthenticatedErpGrowthSourcingRoute
   '/_authenticated/erp/growth/tasks': typeof AuthenticatedErpGrowthTasksRoute
   '/_authenticated/erp/hr/access': typeof AuthenticatedErpHrAccessRoute
   '/_authenticated/erp/hr/attendance': typeof AuthenticatedErpHrAttendanceRoute
@@ -1263,6 +1263,7 @@ export interface FileRouteTypes {
     | '/erp/reports'
     | '/erp/returns'
     | '/erp/settings'
+    | '/erp/sourcing'
     | '/erp/suppliers'
     | '/erp/users'
     | '/api/webhooks/shopify-order'
@@ -1293,7 +1294,6 @@ export interface FileRouteTypes {
     | '/erp/growth/report'
     | '/erp/growth/rivals'
     | '/erp/growth/routines'
-    | '/erp/growth/sourcing'
     | '/erp/growth/tasks'
     | '/erp/hr/access'
     | '/erp/hr/attendance'
@@ -1379,6 +1379,7 @@ export interface FileRouteTypes {
     | '/erp/reorder-queue'
     | '/erp/reports'
     | '/erp/settings'
+    | '/erp/sourcing'
     | '/erp/suppliers'
     | '/erp/users'
     | '/api/webhooks/shopify-order'
@@ -1409,7 +1410,6 @@ export interface FileRouteTypes {
     | '/erp/growth/report'
     | '/erp/growth/rivals'
     | '/erp/growth/routines'
-    | '/erp/growth/sourcing'
     | '/erp/growth/tasks'
     | '/erp/hr/access'
     | '/erp/hr/attendance'
@@ -1506,6 +1506,7 @@ export interface FileRouteTypes {
     | '/_authenticated/erp/reports'
     | '/_authenticated/erp/returns'
     | '/_authenticated/erp/settings'
+    | '/_authenticated/erp/sourcing'
     | '/_authenticated/erp/suppliers'
     | '/_authenticated/erp/users'
     | '/api/webhooks/shopify-order'
@@ -1536,7 +1537,6 @@ export interface FileRouteTypes {
     | '/_authenticated/erp/growth/report'
     | '/_authenticated/erp/growth/rivals'
     | '/_authenticated/erp/growth/routines'
-    | '/_authenticated/erp/growth/sourcing'
     | '/_authenticated/erp/growth/tasks'
     | '/_authenticated/erp/hr/access'
     | '/_authenticated/erp/hr/attendance'
@@ -1703,6 +1703,13 @@ declare module '@tanstack/react-router' {
       path: '/suppliers'
       fullPath: '/erp/suppliers'
       preLoaderRoute: typeof AuthenticatedErpSuppliersRouteImport
+      parentRoute: typeof AuthenticatedErpRoute
+    }
+    '/_authenticated/erp/sourcing': {
+      id: '/_authenticated/erp/sourcing'
+      path: '/sourcing'
+      fullPath: '/erp/sourcing'
+      preLoaderRoute: typeof AuthenticatedErpSourcingRouteImport
       parentRoute: typeof AuthenticatedErpRoute
     }
     '/_authenticated/erp/settings': {
@@ -2293,13 +2300,6 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedErpGrowthTasksRouteImport
       parentRoute: typeof AuthenticatedErpGrowthRoute
     }
-    '/_authenticated/erp/growth/sourcing': {
-      id: '/_authenticated/erp/growth/sourcing'
-      path: '/sourcing'
-      fullPath: '/erp/growth/sourcing'
-      preLoaderRoute: typeof AuthenticatedErpGrowthSourcingRouteImport
-      parentRoute: typeof AuthenticatedErpGrowthRoute
-    }
     '/_authenticated/erp/growth/routines': {
       id: '/_authenticated/erp/growth/routines'
       path: '/routines'
@@ -2572,7 +2572,6 @@ interface AuthenticatedErpGrowthRouteChildren {
   AuthenticatedErpGrowthReportRoute: typeof AuthenticatedErpGrowthReportRoute
   AuthenticatedErpGrowthRivalsRoute: typeof AuthenticatedErpGrowthRivalsRoute
   AuthenticatedErpGrowthRoutinesRoute: typeof AuthenticatedErpGrowthRoutinesRoute
-  AuthenticatedErpGrowthSourcingRoute: typeof AuthenticatedErpGrowthSourcingRoute
   AuthenticatedErpGrowthTasksRoute: typeof AuthenticatedErpGrowthTasksRoute
   AuthenticatedErpGrowthIndexRoute: typeof AuthenticatedErpGrowthIndexRoute
 }
@@ -2592,7 +2591,6 @@ const AuthenticatedErpGrowthRouteChildren: AuthenticatedErpGrowthRouteChildren =
     AuthenticatedErpGrowthReportRoute: AuthenticatedErpGrowthReportRoute,
     AuthenticatedErpGrowthRivalsRoute: AuthenticatedErpGrowthRivalsRoute,
     AuthenticatedErpGrowthRoutinesRoute: AuthenticatedErpGrowthRoutinesRoute,
-    AuthenticatedErpGrowthSourcingRoute: AuthenticatedErpGrowthSourcingRoute,
     AuthenticatedErpGrowthTasksRoute: AuthenticatedErpGrowthTasksRoute,
     AuthenticatedErpGrowthIndexRoute: AuthenticatedErpGrowthIndexRoute,
   }
@@ -2792,6 +2790,7 @@ interface AuthenticatedErpRouteChildren {
   AuthenticatedErpReportsRoute: typeof AuthenticatedErpReportsRoute
   AuthenticatedErpReturnsRoute: typeof AuthenticatedErpReturnsRouteWithChildren
   AuthenticatedErpSettingsRoute: typeof AuthenticatedErpSettingsRoute
+  AuthenticatedErpSourcingRoute: typeof AuthenticatedErpSourcingRoute
   AuthenticatedErpSuppliersRoute: typeof AuthenticatedErpSuppliersRoute
   AuthenticatedErpUsersRoute: typeof AuthenticatedErpUsersRoute
   AuthenticatedErpIndexRoute: typeof AuthenticatedErpIndexRoute
@@ -2831,6 +2830,7 @@ const AuthenticatedErpRouteChildren: AuthenticatedErpRouteChildren = {
   AuthenticatedErpReportsRoute: AuthenticatedErpReportsRoute,
   AuthenticatedErpReturnsRoute: AuthenticatedErpReturnsRouteWithChildren,
   AuthenticatedErpSettingsRoute: AuthenticatedErpSettingsRoute,
+  AuthenticatedErpSourcingRoute: AuthenticatedErpSourcingRoute,
   AuthenticatedErpSuppliersRoute: AuthenticatedErpSuppliersRoute,
   AuthenticatedErpUsersRoute: AuthenticatedErpUsersRoute,
   AuthenticatedErpIndexRoute: AuthenticatedErpIndexRoute,
