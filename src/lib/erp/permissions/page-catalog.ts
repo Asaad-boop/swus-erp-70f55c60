@@ -60,7 +60,7 @@ export const PAGE_CATALOG: PageEntry[] = [
   { group: "Growth Studio", path: "/erp/growth/agencies", label: "Agency Partners" },
   { group: "Growth Studio", path: "/erp/growth/matching", label: "Product ↔ Creator" },
   { group: "Growth Studio", path: "/erp/growth/products", label: "Product Pipeline" },
-  { group: "Growth Studio", path: "/erp/growth/sourcing", label: "Sourcing Desk" },
+  { group: "Supply Chain", path: "/erp/sourcing", label: "Sourcing Desk" },
   { group: "Growth Studio", path: "/erp/growth/rivals", label: "Competitors & Swipe File" },
   { group: "Growth Studio", path: "/erp/growth/report", label: "Growth Report" },
   { group: "Marketing", path: "/erp/marketing/campaigns", label: "Campaign Workspace" },

@@ -965,7 +965,7 @@ function ProductPipelinePage() {
 
                 {["approved", "sourcing", "ordered"].includes(i.status) && (
                   <Link
-                    to="/erp/growth/sourcing"
+                    to="/erp/sourcing"
                     className="inline-flex items-center gap-1.5 text-xs font-medium text-primary hover:underline"
                   >
                     <PackageSearch className="h-3.5 w-3.5" /> Sourcing desk-এ দেখুন

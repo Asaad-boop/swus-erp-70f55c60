@@ -102,6 +102,7 @@ const groups: Group[] = [
         items: [
           { to: "/erp/suppliers", label: "Suppliers", icon: Users },
           { to: "/erp/imports", label: "Imports", icon: Container },
+          { to: "/erp/sourcing", label: "Sourcing Desk", icon: PackageSearch },
         ],
       },
     ],
@@ -149,7 +150,7 @@ const groups: Group[] = [
           { to: "/erp/growth/agencies", label: "Agency Partners", icon: Building2 },
           { to: "/erp/growth/matching", label: "Product ↔ Creator", icon: GitBranch },
           { to: "/erp/growth/products", label: "Product Pipeline", icon: Lightbulb },
-          { to: "/erp/growth/sourcing", label: "Sourcing Desk", icon: PackageSearch },
+          
           { to: "/erp/growth/rivals", label: "Competitors", icon: Swords },
           { to: "/erp/growth/report", label: "Growth Report", icon: BarChart3 },
           { to: "/erp/extension", label: "Synq Extension", icon: Chrome },

@@ -58,7 +58,6 @@ export const GROWTH_NAV: GrowthNavItem[] = [
   { to: "/erp/growth/agencies", label: "Agency Partners", short: "Agencies", icon: Building2, group: "People & Market" },
   { to: "/erp/growth/matching", label: "Product ↔ Creator", short: "Matching", icon: Network, group: "People & Market" },
   { to: "/erp/growth/products", label: "Product Pipeline", short: "Products", icon: Lightbulb, group: "People & Market" },
-  { to: "/erp/growth/sourcing", label: "Sourcing Desk", short: "Sourcing", icon: PackageSearch, group: "People & Market" },
   { to: "/erp/growth/rivals", label: "Competitors", short: "Rivals", icon: Swords, group: "People & Market" },
 
   { to: "/erp/growth/report", label: "Growth Report", short: "Report", icon: LineChart, group: "Report" },
