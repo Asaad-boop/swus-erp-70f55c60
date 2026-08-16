@@ -27,6 +27,16 @@ import {
   setPoCargoAgent,
 } from "@/lib/erp/imports/imports.functions";
 import { newIdemKey } from "@/lib/erp/imports/types";
+import {
+  PoLineBuilder,
+  buildPoPayloadParts,
+  cartonAllocationErrors,
+  emptyPoItem,
+  emptyPoCarton,
+  type PoItemDraft,
+  type PoCartonDraft,
+  type VariantMeta,
+} from "@/components/erp/imports/po-line-builder";
 import { GrowthPageHeader } from "@/components/erp/growth/growth-shell";
 import { IdeaGallery, StarRating } from "@/components/erp/hub/idea-visuals";
 import {
@@ -191,6 +201,10 @@ function SourcingPage() {
   // PO fields
   const [poUnitCny, setPoUnitCny] = useState("");
   const [poFx, setPoFx] = useState("17");
+  const [poItems, setPoItems] = useState<PoItemDraft[]>([emptyPoItem()]);
+  const [poCartons, setPoCartons] = useState<PoCartonDraft[]>([emptyPoCarton(1)]);
+  const [poReceiveMode, setPoReceiveMode] = useState<"carton" | "quantity">("quantity");
+  const [poVariants, setPoVariants] = useState<Record<string, VariantMeta[]>>({});
   const [poSupplierId, setPoSupplierId] = useState<string>("");
   const [poSupplierName, setPoSupplierName] = useState("");
   const [poSupplierUrl, setPoSupplierUrl] = useState("");
