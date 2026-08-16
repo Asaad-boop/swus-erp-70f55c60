@@ -1228,13 +1228,19 @@ function SourcingPage() {
                 <AlertTriangle className="h-3 w-3" /> Needs attention ✕
               </button>
             )}
-            <Input
-              ref={searchRef}
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              placeholder="Search product / supplier…  ( / )"
-              className="h-8 w-full max-w-[240px] sm:ml-auto"
-            />
+            <div className="relative w-full max-w-[240px] sm:ml-auto">
+              <PackageSearch className="pointer-events-none absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-muted-foreground" />
+              <Input
+                ref={searchRef}
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                placeholder="Search product / supplier…"
+                className="h-8 w-full pl-8 pr-8"
+              />
+              <kbd className="pointer-events-none absolute right-2 top-1/2 -translate-y-1/2 rounded border bg-muted px-1 text-[10px] text-muted-foreground">
+                /
+              </kbd>
+            </div>
             <Select value={sortBy} onValueChange={(v) => setSortBy(v as typeof sortBy)}>
               <SelectTrigger className="h-8 w-[150px]">
                 <SelectValue placeholder="Sort" />
