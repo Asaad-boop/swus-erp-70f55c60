@@ -13,6 +13,7 @@ import {
   Wallet,
   Factory,
   AlertTriangle,
+  Loader2,
 } from "lucide-react";
 import { MoreHorizontal, Truck, XCircle, Trash2, RotateCcw, Archive } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
