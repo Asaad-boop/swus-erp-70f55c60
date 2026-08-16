@@ -1384,6 +1384,25 @@ function SourcingPage() {
                             : "supplier pending",
                         },
                         {
+                          stage: "submitted",
+                          date: selected.sourcing_submitted_at ?? null,
+                          note:
+                            reviewStatusOf(selected) === "rejected"
+                              ? "sent back"
+                              : reviewStatusOf(selected) === "submitted"
+                                ? "waiting admin"
+                                : "not submitted",
+                        },
+                        {
+                          stage: "approved",
+                          date:
+                            reviewStatusOf(selected) === "approved"
+                              ? (selected.sourcing_reviewed_at ?? null)
+                              : null,
+                          note:
+                            reviewStatusOf(selected) === "approved" ? "ready to order" : "pending",
+                        },
+                        {
                           stage: "ordered",
                           date: selected.ordered_at,
                           note: linkedPoQ.data?.po_number ?? (selected.order_qty ? `${selected.order_qty} pcs` : null),
