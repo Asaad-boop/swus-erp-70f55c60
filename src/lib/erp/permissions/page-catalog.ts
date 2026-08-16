@@ -38,20 +38,98 @@ export const SECTION_ROOTS = new Set<string>([
 
 /** Reachable routes without their own sidebar entry. */
 const HIDDEN_PAGES: Omit<PageEntry, "exact">[] = [
-  { group: "Sales", section: "Orders", path: "/erp/orders/incomplete-reports", label: "Incomplete Order Reports", hidden: true },
-  { group: "Operations", section: "Inventory", path: "/erp/inventory-reports", label: "Inventory Reports", hidden: true },
-  { group: "Money", section: "Finance", path: "/erp/finance/wallets", label: "Wallets", hidden: true },
-  { group: "Money", section: "Finance", path: "/erp/finance/chart-accounts", label: "Chart of Accounts", hidden: true },
-  { group: "Money", section: "Finance", path: "/erp/finance/budgets", label: "Budgets", hidden: true },
+  {
+    group: "Sales",
+    section: "Orders",
+    path: "/erp/orders/incomplete-reports",
+    label: "Incomplete Order Reports",
+    hidden: true,
+  },
+  {
+    group: "Operations",
+    section: "Inventory",
+    path: "/erp/inventory-reports",
+    label: "Inventory Reports",
+    hidden: true,
+  },
+  {
+    group: "Money",
+    section: "Finance",
+    path: "/erp/finance/wallets",
+    label: "Wallets",
+    hidden: true,
+  },
+  {
+    group: "Money",
+    section: "Finance",
+    path: "/erp/finance/chart-accounts",
+    label: "Chart of Accounts",
+    hidden: true,
+  },
+  {
+    group: "Money",
+    section: "Finance",
+    path: "/erp/finance/budgets",
+    label: "Budgets",
+    hidden: true,
+  },
   { group: "Money", section: "Finance", path: "/erp/finance/taxes", label: "Taxes", hidden: true },
-  { group: "Money", section: "Finance", path: "/erp/finance/product-profitability", label: "Product Profitability", hidden: true },
-  { group: "Operations", section: "Supply Chain", path: "/erp/imports/orders", label: "Import Orders", hidden: true },
-  { group: "Operations", section: "Supply Chain", path: "/erp/imports/agents", label: "Import Agents", hidden: true },
-  { group: "Operations", section: "Supply Chain", path: "/erp/imports/reports", label: "Import Reports", hidden: true },
-  { group: "Operations", section: "Supply Chain", path: "/erp/imports/settings", label: "Import Settings", hidden: true },
-  { group: "Growth", section: "Growth Studio", path: "/erp/hub", label: "Growth Hub (legacy)", hidden: true },
-  { group: "Growth", section: "Growth Studio", path: "/erp/content", label: "Content Studio (legacy)", hidden: true },
-  { group: "System", section: "System", path: "/erp/pathao-debug", label: "Pathao Debug", hidden: true },
+  {
+    group: "Money",
+    section: "Finance",
+    path: "/erp/finance/product-profitability",
+    label: "Product Profitability",
+    hidden: true,
+  },
+  {
+    group: "Operations",
+    section: "Supply Chain",
+    path: "/erp/imports/orders",
+    label: "Import Orders",
+    hidden: true,
+  },
+  {
+    group: "Operations",
+    section: "Supply Chain",
+    path: "/erp/imports/agents",
+    label: "Import Agents",
+    hidden: true,
+  },
+  {
+    group: "Operations",
+    section: "Supply Chain",
+    path: "/erp/imports/reports",
+    label: "Import Reports",
+    hidden: true,
+  },
+  {
+    group: "Operations",
+    section: "Supply Chain",
+    path: "/erp/imports/settings",
+    label: "Import Settings",
+    hidden: true,
+  },
+  {
+    group: "Growth",
+    section: "Growth Studio",
+    path: "/erp/hub",
+    label: "Growth Hub (legacy)",
+    hidden: true,
+  },
+  {
+    group: "Growth",
+    section: "Growth Studio",
+    path: "/erp/content",
+    label: "Content Studio (legacy)",
+    hidden: true,
+  },
+  {
+    group: "System",
+    section: "System",
+    path: "/erp/pathao-debug",
+    label: "Pathao Debug",
+    hidden: true,
+  },
 ];
 
 export const PAGE_CATALOG: PageEntry[] = [
@@ -71,12 +149,26 @@ export const ALL_PAGE_PATHS = PAGE_CATALOG.map((p) => p.path);
 const IMPLIED: Record<string, string[]> = {
   "/erp/finance/accounts": ["/erp/finance/wallets", "/erp/finance/chart-accounts"],
   "/erp/finance/wallets": ["/erp/finance/accounts"],
-  "/erp/imports": ["/erp/imports/orders", "/erp/imports/agents", "/erp/imports/reports", "/erp/imports/settings"],
+  "/erp/imports": [
+    "/erp/imports/orders",
+    "/erp/imports/agents",
+    "/erp/imports/reports",
+    "/erp/imports/settings",
+  ],
 };
 
 /** `/erp/x/<id>` detail routes unlocked by any of the listed list-page grants. */
 const DETAIL_PARENTS: Array<{ test: RegExp; anyOf: string[] }> = [
-  { test: /^\/erp\/orders\/[^/]+$/, anyOf: ["/erp/orders/web", "/erp/orders/list", "/erp/orders/new", "/erp/orders/pre-orders", "/erp/orders/dashboard"] },
+  {
+    test: /^\/erp\/orders\/[^/]+$/,
+    anyOf: [
+      "/erp/orders/web",
+      "/erp/orders/list",
+      "/erp/orders/new",
+      "/erp/orders/pre-orders",
+      "/erp/orders/dashboard",
+    ],
+  },
   { test: /^\/erp\/crm\/[^/]+$/, anyOf: ["/erp/crm"] },
   { test: /^\/erp\/purchase-orders\/[^/]+$/, anyOf: ["/erp/purchase-orders"] },
   { test: /^\/erp\/imports\/orders\/[^/]+$/, anyOf: ["/erp/imports", "/erp/imports/orders"] },
@@ -101,7 +193,7 @@ export function expandGrants(allowed: string[]): string[] {
  * `null` / empty means "no override" — caller falls back to role defaults.
  */
 export function pathAllowedBy(allowed: string[] | null | undefined, pathname: string): boolean {
-  if (!allowed || allowed.length === 0) return true;
+  if (!allowed || allowed.length === 0) return false;
   const path = normalize(pathname);
   const grants = expandGrants(allowed);
 
