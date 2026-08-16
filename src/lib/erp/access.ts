@@ -1,4 +1,5 @@
 import { pathAllowedBy } from "@/lib/erp/permissions/page-catalog";
+import type { PageMode } from "@/lib/erp/access-profile.model";
 
 /**
  * Centralized role → module access control for the ERP backoffice.
@@ -41,6 +42,7 @@ export const ROLE_MODULES: Record<string, Module[]> = {
   packer: ["dashboard", "fulfillment"],
   customer_service: ["dashboard", "orders", "crm", "customer_accounts"],
   marketing_manager: ["dashboard", "marketing", "analytics"],
+  cargo_agent: ["dashboard", "supply"],
   moderator: ["dashboard"],
   customer: [],
 };
@@ -116,7 +118,7 @@ export function canAccessPath(roles: string[], pathname: string): boolean {
   if (roles.includes("admin")) return true;
   if (SELF_SERVICE_PAGES.includes(pathname)) return true;
   const mod = moduleForPath(pathname);
-  if (!mod) return true; // routes outside the matrix aren't restricted by us
+  if (!mod) return !pathname.startsWith("/erp");
   const allowed = getAllowedModules(roles);
   if (allowed.has(mod)) return true;
   // Detail pages: order detail (`/erp/orders/<id>`) is often needed by
@@ -154,17 +156,18 @@ export function resolveAccess(
   roles: string[],
   allowedPages: string[] | null | undefined,
   pathname: string,
+  pageMode: PageMode = allowedPages && allowedPages.length > 0 ? "custom" : "role_default",
 ): boolean {
   if (roles.includes("admin")) return true;
   if (SELF_SERVICE_PAGES.includes(pathname)) return true;
   // Custom grants fully replace the role matrix.
-  if (allowedPages && allowedPages.length > 0) return pathAllowedBy(allowedPages, pathname);
+  if (pageMode === "custom") return pathAllowedBy(allowedPages ?? [], pathname);
   return canAccessPath(roles, pathname);
 }
 
 /** Does the user have ANY backoffice access (role modules OR custom pages)? */
-export function hasBackofficeAccess(roles: string[], allowedPages: string[] | null | undefined): boolean {
-  if (allowedPages && allowedPages.length > 0) return true;
+export function hasBackofficeAccess(roles: string[], allowedPages: string[] | null | undefined, pageMode: PageMode = "role_default"): boolean {
+  if (pageMode === "custom") return Boolean(allowedPages?.length);
   return hasAnyBackoffice(roles);
 }
 /**

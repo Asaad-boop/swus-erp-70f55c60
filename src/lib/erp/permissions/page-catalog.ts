@@ -101,7 +101,7 @@ export function expandGrants(allowed: string[]): string[] {
  * `null` / empty means "no override" — caller falls back to role defaults.
  */
 export function pathAllowedBy(allowed: string[] | null | undefined, pathname: string): boolean {
-  if (!allowed || allowed.length === 0) return true;
+  if (!allowed || allowed.length === 0) return false;
   const path = normalize(pathname);
   const grants = expandGrants(allowed);
 
