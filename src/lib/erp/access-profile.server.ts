@@ -144,11 +144,12 @@ export async function listAccessWorkspace(supabase: SupabaseClient, actorId: str
         updatedAt: permissionRow?.updated_at ?? null,
       };
     })
+    // Guard: only admin-provisioned accounts (they always have a staff_permissions
+    // row written by admin_replace_access_profile) may appear in the staff list.
+    // Legacy brand-access or stray role rows alone are NOT enough.
     .filter(
       (user) =>
-        user.roles.some((role) => role !== "customer") ||
-        user.brandIds.length > 0 ||
-        user.pageMode === "custom",
+        permissions.has(user.id) && user.roles.some((role) => role !== "customer"),
     );
 
   return { users, employees: employeesRes.data ?? [] };
