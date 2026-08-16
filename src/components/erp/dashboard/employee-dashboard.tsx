@@ -53,8 +53,8 @@ export function EmployeeDashboard() {
     refetchInterval: 60_000,
   });
 
-  const punch = useMutation({
-    mutationFn: (kind: "in" | "out") => (kind === "in" ? inFn() : outFn()),
+  const punch = useMutation<unknown, Error, "in" | "out">({
+    mutationFn: async (kind) => (kind === "in" ? await inFn() : await outFn()),
     onSuccess: (_d, kind) => {
       toast.success(kind === "in" ? "Check in hoyeche" : "Check out hoyeche");
       void qc.invalidateQueries({ queryKey: ["hr-my-attendance"] });
