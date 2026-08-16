@@ -2203,6 +2203,61 @@ function SourcingPage() {
           <DialogHeader>
             <DialogTitle>Place order → Purchase Order — {selected?.title}</DialogTitle>
           </DialogHeader>
+          <div className="flex items-center gap-2 text-xs">
+            <span
+              className={
+                orderStep === "form"
+                  ? "rounded-full bg-primary px-2.5 py-1 font-semibold text-primary-foreground"
+                  : "rounded-full bg-muted px-2.5 py-1 text-muted-foreground"
+              }
+            >
+              1. Details
+            </span>
+            <span className="h-px flex-1 bg-border" />
+            <span
+              className={
+                orderStep === "review"
+                  ? "rounded-full bg-primary px-2.5 py-1 font-semibold text-primary-foreground"
+                  : "rounded-full bg-muted px-2.5 py-1 text-muted-foreground"
+              }
+            >
+              2. Review & submit
+            </span>
+          </div>
+          {orderStep === "review" ? (
+            <PoReviewPanel
+              items={poItems}
+              cartons={poCartons}
+              variantsByProduct={poVariants}
+              receiveMode={poReceiveMode}
+              fxRate={Number(poFx || 0)}
+              currency="CNY"
+              plannedLandedPerUnit={Number(orderPrice || 0)}
+              targetPriceMax={selected?.target_price_max ?? null}
+              title={selected?.title ?? null}
+              supplierLabel={
+                poSupplierId
+                  ? ((suppliersQ.data ?? []) as { id: string; name: string }[]).find(
+                      (s) => s.id === poSupplierId,
+                    )?.name ?? "Selected supplier"
+                  : poSupplierName.trim() || null
+              }
+              agentLabel={
+                ((agentsQ.data ?? []) as { id: string; name: string }[]).find(
+                  (a) => a.id === poAgentId,
+                )?.name ?? null
+              }
+              advance={
+                payEnabled && Number(payAmount || 0) > 0
+                  ? {
+                      amount: Number(payAmount || 0),
+                      walletLabel: wallets.find((w) => w.id === payWalletId)?.name ?? null,
+                    }
+                  : null
+              }
+              notes={poNotes}
+            />
+          ) : (
           <div className="grid gap-4">
             <div className="grid gap-3 sm:grid-cols-2">
               <Field label="FX rate (৳ / ¥)">
