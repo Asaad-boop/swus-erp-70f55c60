@@ -12,9 +12,8 @@ import {
   ShoppingCart,
   Wallet,
   Factory,
-  Loader2,
   AlertTriangle,
-  Keyboard,
+  Loader2,
 } from "lucide-react";
 import { MoreHorizontal, Truck, XCircle, Trash2, RotateCcw, Archive } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
@@ -47,6 +46,7 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   Dialog,
   DialogContent,
@@ -1180,42 +1180,54 @@ function SourcingPage() {
 
       {pipeline.length > 0 && (
         <div className="space-y-3">
-          <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-5 xl:grid-cols-9">
+          <div className="grid grid-cols-2 gap-2 lg:grid-cols-4">
             <StageKpi
               label="In pipeline"
               value={String(stageCounts.all)}
               sub="approved → received"
-              active={stageFilter === "all"}
-              onClick={() => setStageFilter("all")}
+              active={stageFilter === "all" && !attentionOnly}
+              onClick={() => {
+                setStageFilter("all");
+                setAttentionOnly(false);
+              }}
             />
-            {STAGE_ORDER.map((s) => (
-              <StageKpi
-                key={s}
-                label={STAGE_META[s].label}
-                value={String(stageCounts[s])}
-                dot={STAGE_META[s].dot}
-                active={stageFilter === s}
-                onClick={() => setStageFilter(s)}
-                sub={s === "ordered" && dueTotal > 0 ? `${fmtValue(Math.round(dueTotal), "bdt")} due` : undefined}
-              />
-            ))}
+            <StageKpi
+              label="Needs attention"
+              value={String(attentionSet.size)}
+              sub="overdue / urgent / stuck"
+              dot="bg-amber-500"
+              tone={attentionSet.size > 0 ? "text-amber-600 dark:text-amber-400" : ""}
+              active={attentionOnly}
+              onClick={() => setAttentionOnly((v) => !v)}
+            />
+            <StageKpi
+              label="Waiting approval"
+              value={String(stageCounts.submitted)}
+              sub="admin review পেন্ডিং"
+              dot={STAGE_META.submitted.dot}
+              active={stageFilter === "submitted"}
+              onClick={() => setStageFilter(stageFilter === "submitted" ? "all" : "submitted")}
+            />
+            <StageKpi
+              label="Ordered"
+              value={String(stageCounts.ordered + stageCounts.in_transit)}
+              sub={dueTotal > 0 ? `${fmtValue(Math.round(dueTotal), "bdt")} due` : "কোনো due নেই"}
+              dot={STAGE_META.ordered.dot}
+              active={stageFilter === "ordered"}
+              onClick={() => setStageFilter(stageFilter === "ordered" ? "all" : "ordered")}
+            />
           </div>
           <div className="sticky top-2 z-20 flex flex-wrap items-center gap-2 rounded-xl border border-border/60 bg-background/85 p-2 shadow-sm backdrop-blur-md supports-[backdrop-filter]:bg-background/70">
             <StageFilterBar counts={stageCounts} value={stageFilter} onChange={setStageFilter} />
-            <button
-              type="button"
-              onClick={() => setAttentionOnly((v) => !v)}
-              className={`inline-flex items-center gap-1.5 rounded-full border px-3 py-1 text-xs transition-colors ${
-                attentionOnly
-                  ? "border-amber-500 bg-amber-500 text-white"
-                  : "border-amber-500/40 bg-amber-500/10 text-amber-700 hover:bg-amber-500/20 dark:text-amber-400"
-              }`}
-            >
-              <AlertTriangle className="h-3 w-3" /> Needs attention
-              <span className="rounded-full bg-black/10 px-1.5 text-[10px] tabular-nums dark:bg-white/10">
-                {attentionSet.size}
-              </span>
-            </button>
+            {attentionOnly && (
+              <button
+                type="button"
+                onClick={() => setAttentionOnly(false)}
+                className="inline-flex items-center gap-1.5 rounded-full border border-amber-500 bg-amber-500 px-3 py-1 text-xs text-white"
+              >
+                <AlertTriangle className="h-3 w-3" /> Needs attention ✕
+              </button>
+            )}
             <Input
               ref={searchRef}
               value={search}
@@ -1235,9 +1247,6 @@ function SourcingPage() {
                 <SelectItem value="cost">Sort: Lowest cost</SelectItem>
               </SelectContent>
             </Select>
-            <span className="hidden items-center gap-1 text-[10px] text-muted-foreground lg:inline-flex">
-              <Keyboard className="h-3 w-3" /> j/k move · a = add quote
-            </span>
           </div>
         </div>
       )}
@@ -1464,42 +1473,30 @@ function SourcingPage() {
                       );
                     })()}
 
-                    <ApprovalCard
-                      status={reviewStatusOf(selected)}
-                      submittedAt={selected.sourcing_submitted_at ?? null}
-                      reviewedAt={selected.sourcing_reviewed_at ?? null}
-                      reviewNote={selected.sourcing_review_note ?? null}
-                      isAdmin={isAdmin}
-                      canSubmit={!!selected.selected_quote_id && !selected.imp_po_id}
-                      submitBlockedReason={
-                        selected.imp_po_id
-                          ? "PO তৈরি হয়ে গেছে"
-                          : "আগে একটা supplier quote Select করুন"
-                      }
-                      busy={submitForApproval.isPending || reviewDecision.isPending}
-                      onSubmit={(note) => submitForApproval.mutate({ idea: selected, note })}
-                      onDecision={(decision, note) =>
-                        reviewDecision.mutate({ idea: selected, decision, note })
-                      }
-                    />
-
-                    <FollowupCard
-                      ideaId={selected.id}
-                      nextActionAt={selected.next_action_at ?? null}
-                      nextActionNote={selected.next_action_note ?? null}
-                      owner={selected.sourcing_owner ?? null}
-                      priority={selected.priority ?? "normal"}
-                      saving={saveFollowup.isPending}
-                      onSave={(v) => saveFollowup.mutate(v)}
-                    />
-
-                    <div className="flex flex-wrap gap-1.5 text-xs">
+                    <div className="flex flex-wrap items-center gap-1.5 text-xs">
                       <Badge variant="outline">
                         Planned sell {fmtValue(selected.est_sell_price, "bdt")}
                       </Badge>
                       <Badge variant="outline">
                         Est. cost {fmtValue(selected.est_unit_cost, "bdt")}
                       </Badge>
+                      {bestQuote && (
+                        <Badge
+                          variant="outline"
+                          className={
+                            inTarget(quoteLandedCost(bestQuote)) === false
+                              ? "border-destructive/40 text-destructive"
+                              : "border-emerald-500/40 text-emerald-600 dark:text-emerald-400"
+                          }
+                        >
+                          Best quote {fmtValue(Math.round(quoteLandedCost(bestQuote)), "bdt")}
+                        </Badge>
+                      )}
+                      {(selected.target_price_min || selected.target_price_max) && (
+                        <Badge variant="outline">
+                          Target {selected.target_price_min ?? "—"}–{selected.target_price_max ?? "—"} ৳
+                        </Badge>
+                      )}
                       {selected.source_url && (
                         <a
                           href={selected.source_url}
@@ -1511,155 +1508,204 @@ function SourcingPage() {
                         </a>
                       )}
                     </div>
-
-                    <div className="rounded-lg border bg-muted/40 p-3">
-                      <p className="mb-2 flex items-center gap-1.5 text-xs font-semibold">
-                        <Target className="h-3.5 w-3.5 text-primary" /> Target landed price (৳/unit)
-                      </p>
-                      <div className="flex flex-wrap items-end gap-2">
-                        <div className="grid gap-1">
-                          <Label className="text-[11px]">Min</Label>
-                          <Input
-                            className="h-8 w-24"
-                            type="number"
-                            value={tMin}
-                            onChange={(e) => setTMin(e.target.value)}
-                          />
-                        </div>
-                        <div className="grid gap-1">
-                          <Label className="text-[11px]">Max</Label>
-                          <Input
-                            className="h-8 w-24"
-                            type="number"
-                            value={tMax}
-                            onChange={(e) => setTMax(e.target.value)}
-                          />
-                        </div>
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          onClick={() => saveTarget.mutate()}
-                          disabled={saveTarget.isPending}
-                        >
-                          Save target
-                        </Button>
-                        {bestQuote && (
-                          <span className="ml-auto text-xs">
-                            Best quote:{" "}
-                            <span
-                              className={
-                                inTarget(quoteLandedCost(bestQuote)) === false
-                                  ? "font-semibold text-destructive"
-                                  : "font-semibold text-emerald-600"
-                              }
-                            >
-                              {fmtValue(Math.round(quoteLandedCost(bestQuote)), "bdt")}
-                            </span>
-                          </span>
-                        )}
-                      </div>
-                    </div>
-
-                    {selected.status === "ordered" && (
-                      <div className="rounded-lg border border-emerald-500/30 bg-emerald-500/10 p-3 text-xs">
-                        <span className="font-semibold text-emerald-700 dark:text-emerald-400">
-                          Order placed
-                        </span>{" "}
-                        — {selected.order_qty ?? 0} pcs @{" "}
-                        {fmtValue(selected.order_unit_price ?? 0, "bdt")} ·{" "}
-                        {selected.ordered_at
-                          ? new Date(selected.ordered_at).toLocaleDateString()
-                          : ""}
-                      </div>
-                    )}
-
-                    {selected.imp_po_id && linkedPoQ.data && (
-                      <div className="rounded-lg border border-primary/30 bg-primary/5 p-3">
-                        <div className="flex flex-wrap items-center justify-between gap-2">
-                          <p className="flex items-center gap-1.5 text-xs font-semibold">
-                            <Factory className="h-3.5 w-3.5 text-primary" />
-                            Supply chain PO {linkedPoQ.data.po_number}
-                            <Badge variant="secondary" className="text-[10px] capitalize">
-                              {String(linkedPoQ.data.status).replace(/_/g, " ")}
-                            </Badge>
-                          </p>
-                          <Link
-                            to="/erp/imports/orders/$orderId"
-                            params={{ orderId: selected.imp_po_id }}
-                          >
-                            <Button size="sm" variant="outline" className="h-7 text-xs">
-                              Open PO <ExternalLink className="ml-1 h-3 w-3" />
-                            </Button>
-                          </Link>
-                        </div>
-                        <div className="mt-2 grid grid-cols-2 gap-2 text-xs sm:grid-cols-4">
-                          <Info
-                            label="Units"
-                            value={String(linkedPoQ.data.total_units ?? selected.order_qty ?? 0)}
-                          />
-                          <Info
-                            label="PO total"
-                            value={fmtValue(
-                              Math.round(Number(linkedPoQ.data.grand_total_bdt ?? 0)),
-                              "bdt",
-                            )}
-                          />
-                          <Info
-                            label="Paid"
-                            value={fmtValue(Math.round(Number(linkedPoQ.data.paid_bdt ?? 0)), "bdt")}
-                          />
-                          <Info
-                            label="Due"
-                            value={fmtValue(Math.round(Number(linkedPoQ.data.due_bdt ?? 0)), "bdt")}
-                          />
-                        </div>
-                        {Number(linkedPoQ.data.landed_cost_per_unit_bdt ?? 0) > 0 && (
-                          <p className="mt-1.5 text-[11px] text-muted-foreground">
-                            Actual landed / unit:{" "}
-                            {fmtValue(
-                              Math.round(Number(linkedPoQ.data.landed_cost_per_unit_bdt)),
-                              "bdt",
-                            )}
-                          </p>
-                        )}
-                      </div>
-                    )}
                   </CardContent>
                 </div>
               </Card>
 
-              {/* Quotes */}
-              <div className="space-y-2">
-                <div className="flex items-center justify-between">
-                  <h3 className="text-sm font-semibold">Supplier quotes ({quotes.length})</h3>
-                  <Button size="sm" variant="outline" onClick={openNewQuote}>
-                    <Plus className="mr-1.5 h-4 w-4" /> Add quote
-                  </Button>
-                </div>
+              <Tabs defaultValue="quotes" className="space-y-3">
+                <TabsList className="w-full justify-start overflow-x-auto">
+                  <TabsTrigger value="quotes" className="text-xs">
+                    Quotes
+                    <span className="ml-1.5 rounded-full bg-muted px-1.5 text-[10px] tabular-nums">
+                      {quotes.length}
+                    </span>
+                  </TabsTrigger>
+                  <TabsTrigger value="approval" className="text-xs">
+                    Approval
+                    {reviewStatusOf(selected) === "submitted" && (
+                      <span className="ml-1.5 h-1.5 w-1.5 rounded-full bg-orange-500" />
+                    )}
+                  </TabsTrigger>
+                  <TabsTrigger value="order" className="text-xs">
+                    Order
+                  </TabsTrigger>
+                  <TabsTrigger value="followup" className="text-xs">
+                    Follow-up
+                    {isFollowupDue(selected.next_action_at) && (
+                      <span className="ml-1.5 h-1.5 w-1.5 rounded-full bg-amber-500" />
+                    )}
+                  </TabsTrigger>
+                  <TabsTrigger value="activity" className="text-xs">
+                    Activity
+                  </TabsTrigger>
+                </TabsList>
 
-                {quotes.length === 0 && (
-                  <Card>
-                    <CardContent className="p-8 text-center text-sm text-muted-foreground">
-                      কোনো quote নেই। 1688 / Alibaba supplier থেকে price নিয়ে "Add quote" করো।
-                    </CardContent>
-                  </Card>
-                )}
+                <TabsContent value="quotes" className="space-y-2">
+                  <div className="flex flex-wrap items-end gap-2 rounded-lg border bg-muted/40 p-3">
+                    <p className="flex w-full items-center gap-1.5 text-xs font-semibold">
+                      <Target className="h-3.5 w-3.5 text-primary" /> Target landed price (৳/unit)
+                    </p>
+                    <div className="grid gap-1">
+                      <Label className="text-[11px]">Min</Label>
+                      <Input
+                        className="h-8 w-24"
+                        type="number"
+                        value={tMin}
+                        onChange={(e) => setTMin(e.target.value)}
+                      />
+                    </div>
+                    <div className="grid gap-1">
+                      <Label className="text-[11px]">Max</Label>
+                      <Input
+                        className="h-8 w-24"
+                        type="number"
+                        value={tMax}
+                        onChange={(e) => setTMax(e.target.value)}
+                      />
+                    </div>
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={() => saveTarget.mutate()}
+                      disabled={saveTarget.isPending}
+                    >
+                      Save target
+                    </Button>
+                    <Button size="sm" className="ml-auto" onClick={openNewQuote}>
+                      <Plus className="mr-1.5 h-4 w-4" /> Add quote
+                    </Button>
+                  </div>
 
-                {quotes.length > 0 && (
-                  <QuoteCompareTable
-                    quotes={quotes}
-                    selectedQuoteId={selected.selected_quote_id ?? null}
-                    targetMax={selected.target_price_max ?? null}
-                    onSelect={(q) => chooseQuote.mutate(q)}
-                    onEdit={openEditQuote}
-                    onDuplicate={openDuplicateQuote}
-                    onRemove={(q) => removeQuote.mutate(q)}
-                    busy={chooseQuote.isPending || removeQuote.isPending}
+                  {quotes.length === 0 ? (
+                    <Card>
+                      <CardContent className="p-8 text-center text-sm text-muted-foreground">
+                        কোনো quote নেই। 1688 / Alibaba supplier থেকে price নিয়ে "Add quote" করো।
+                      </CardContent>
+                    </Card>
+                  ) : (
+                    <QuoteCompareTable
+                      quotes={quotes}
+                      selectedQuoteId={selected.selected_quote_id ?? null}
+                      targetMax={selected.target_price_max ?? null}
+                      onSelect={(q) => chooseQuote.mutate(q)}
+                      onEdit={openEditQuote}
+                      onDuplicate={openDuplicateQuote}
+                      onRemove={(q) => removeQuote.mutate(q)}
+                      busy={chooseQuote.isPending || removeQuote.isPending}
+                    />
+                  )}
+                </TabsContent>
+
+                <TabsContent value="approval">
+                  <ApprovalCard
+                    status={reviewStatusOf(selected)}
+                    submittedAt={selected.sourcing_submitted_at ?? null}
+                    reviewedAt={selected.sourcing_reviewed_at ?? null}
+                    reviewNote={selected.sourcing_review_note ?? null}
+                    isAdmin={isAdmin}
+                    canSubmit={!!selected.selected_quote_id && !selected.imp_po_id}
+                    submitBlockedReason={
+                      selected.imp_po_id
+                        ? "PO তৈরি হয়ে গেছে"
+                        : "আগে একটা supplier quote Select করুন"
+                    }
+                    busy={submitForApproval.isPending || reviewDecision.isPending}
+                    onSubmit={(note) => submitForApproval.mutate({ idea: selected, note })}
+                    onDecision={(decision, note) =>
+                      reviewDecision.mutate({ idea: selected, decision, note })
+                    }
                   />
-                )}
+                </TabsContent>
 
-                <SourcingActivity events={eventsQ.data ?? []} loading={eventsQ.isLoading} />
-              </div>
+                <TabsContent value="order" className="space-y-2">
+                  {selected.status === "ordered" && (
+                    <div className="rounded-lg border border-emerald-500/30 bg-emerald-500/10 p-3 text-xs">
+                      <span className="font-semibold text-emerald-700 dark:text-emerald-400">
+                        Order placed
+                      </span>{" "}
+                      — {selected.order_qty ?? 0} pcs @{" "}
+                      {fmtValue(selected.order_unit_price ?? 0, "bdt")} ·{" "}
+                      {selected.ordered_at
+                        ? new Date(selected.ordered_at).toLocaleDateString()
+                        : ""}
+                    </div>
+                  )}
+
+                  {selected.imp_po_id && linkedPoQ.data ? (
+                    <div className="rounded-lg border border-primary/30 bg-primary/5 p-3">
+                      <div className="flex flex-wrap items-center justify-between gap-2">
+                        <p className="flex items-center gap-1.5 text-xs font-semibold">
+                          <Factory className="h-3.5 w-3.5 text-primary" />
+                          Supply chain PO {linkedPoQ.data.po_number}
+                          <Badge variant="secondary" className="text-[10px] capitalize">
+                            {String(linkedPoQ.data.status).replace(/_/g, " ")}
+                          </Badge>
+                        </p>
+                        <Link
+                          to="/erp/imports/orders/$orderId"
+                          params={{ orderId: selected.imp_po_id }}
+                        >
+                          <Button size="sm" variant="outline" className="h-7 text-xs">
+                            Open PO <ExternalLink className="ml-1 h-3 w-3" />
+                          </Button>
+                        </Link>
+                      </div>
+                      <div className="mt-2 grid grid-cols-2 gap-2 text-xs sm:grid-cols-4">
+                        <Info
+                          label="Units"
+                          value={String(linkedPoQ.data.total_units ?? selected.order_qty ?? 0)}
+                        />
+                        <Info
+                          label="PO total"
+                          value={fmtValue(
+                            Math.round(Number(linkedPoQ.data.grand_total_bdt ?? 0)),
+                            "bdt",
+                          )}
+                        />
+                        <Info
+                          label="Paid"
+                          value={fmtValue(Math.round(Number(linkedPoQ.data.paid_bdt ?? 0)), "bdt")}
+                        />
+                        <Info
+                          label="Due"
+                          value={fmtValue(Math.round(Number(linkedPoQ.data.due_bdt ?? 0)), "bdt")}
+                        />
+                      </div>
+                      {Number(linkedPoQ.data.landed_cost_per_unit_bdt ?? 0) > 0 && (
+                        <p className="mt-1.5 text-[11px] text-muted-foreground">
+                          Actual landed / unit:{" "}
+                          {fmtValue(
+                            Math.round(Number(linkedPoQ.data.landed_cost_per_unit_bdt)),
+                            "bdt",
+                          )}
+                        </p>
+                      )}
+                    </div>
+                  ) : (
+                    <Card>
+                      <CardContent className="p-8 text-center text-sm text-muted-foreground">
+                        এখনো order হয়নি। Admin approve করলে উপরের "Place order" বাটন দিয়ে PO তৈরি করো।
+                      </CardContent>
+                    </Card>
+                  )}
+                </TabsContent>
+
+                <TabsContent value="followup">
+                  <FollowupCard
+                    ideaId={selected.id}
+                    nextActionAt={selected.next_action_at ?? null}
+                    nextActionNote={selected.next_action_note ?? null}
+                    owner={selected.sourcing_owner ?? null}
+                    priority={selected.priority ?? "normal"}
+                    saving={saveFollowup.isPending}
+                    onSave={(v) => saveFollowup.mutate(v)}
+                  />
+                </TabsContent>
+
+                <TabsContent value="activity">
+                  <SourcingActivity events={eventsQ.data ?? []} loading={eventsQ.isLoading} />
+                </TabsContent>
+              </Tabs>
             </div>
           )}
         </div>
