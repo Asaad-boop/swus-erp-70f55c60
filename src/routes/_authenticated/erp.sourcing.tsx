@@ -27,6 +27,16 @@ import {
   setPoCargoAgent,
 } from "@/lib/erp/imports/imports.functions";
 import { newIdemKey } from "@/lib/erp/imports/types";
+import {
+  PoLineBuilder,
+  buildPoPayloadParts,
+  cartonAllocationErrors,
+  emptyPoItem,
+  emptyPoCarton,
+  type PoItemDraft,
+  type PoCartonDraft,
+  type VariantMeta,
+} from "@/components/erp/imports/po-line-builder";
 import { GrowthPageHeader } from "@/components/erp/growth/growth-shell";
 import { IdeaGallery, StarRating } from "@/components/erp/hub/idea-visuals";
 import {
@@ -191,6 +201,10 @@ function SourcingPage() {
   // PO fields
   const [poUnitCny, setPoUnitCny] = useState("");
   const [poFx, setPoFx] = useState("17");
+  const [poItems, setPoItems] = useState<PoItemDraft[]>([emptyPoItem()]);
+  const [poCartons, setPoCartons] = useState<PoCartonDraft[]>([emptyPoCarton(1)]);
+  const [poReceiveMode, setPoReceiveMode] = useState<"carton" | "quantity">("quantity");
+  const [poVariants, setPoVariants] = useState<Record<string, VariantMeta[]>>({});
   const [poSupplierId, setPoSupplierId] = useState<string>("");
   const [poSupplierName, setPoSupplierName] = useState("");
   const [poSupplierUrl, setPoSupplierUrl] = useState("");
@@ -911,12 +925,19 @@ function SourcingPage() {
       if (reviewStatusOf(selected) !== "approved") {
         throw new Error("Admin approval ছাড়া order place করা যাবে না");
       }
-      const qty = Number(orderQty || 0);
+      const totalUnits = poItems.reduce((s, i) => s + (Number(i.quantity) || 0), 0);
+      const qty = totalUnits;
       const unitCny = Number(poUnitCny || 0);
       const fx = Number(poFx || 0);
+      if (poItems.some((i) => !i.picked.title.trim())) throw new Error("প্রতিটি item এ product/name দিন");
       if (qty <= 0) throw new Error("Quantity দিন");
       if (fx <= 0) throw new Error("FX rate দিন");
       if (!poAgentId) throw new Error("Cargo agent select করুন");
+      if (poReceiveMode === "carton") {
+        const errs = cartonAllocationErrors(poItems, poCartons, poVariants);
+        if (errs.length > 0) throw new Error(`Carton allocation mismatch: ${errs.join(", ")}`);
+      }
+      const parts = buildPoPayloadParts(poItems, poCartons, poReceiveMode);
 
       const supplier = poSupplierId
         ? { id: poSupplierId }
@@ -940,16 +961,9 @@ function SourcingPage() {
             `Growth Hub sourcing — ${selected.title}` +
             (poNotes.trim() ? ` | ${poNotes.trim()}` : ""),
           supplier,
-          items: [
-            {
-              name_snapshot: selected.title,
-              quantity: qty,
-              unit_cost_foreign: unitCny,
-              image_snapshot: selected.image_url ?? undefined,
-            },
-          ],
-          cartons: [],
-          receive_mode: "quantity",
+          items: parts.items,
+          cartons: parts.cartons,
+          receive_mode: poReceiveMode,
           initial_payment:
             payEnabled && advance > 0 && payWalletId
               ? {
@@ -1141,6 +1155,23 @@ function SourcingPage() {
                 }
                 onClick={() => {
                   setOrderQty(selected.order_qty ? String(selected.order_qty) : "");
+                  setPoItems([
+                    emptyPoItem({
+                      picked: {
+                        id: null,
+                        title: selected.title,
+                        sku: null,
+                        image: selected.image_url ?? null,
+                      },
+                      quantity: selected.order_qty ? Number(selected.order_qty) : 1,
+                      unit_cost_foreign: bestQuote?.unit_price_cny
+                        ? Number(bestQuote.unit_price_cny)
+                        : 0,
+                    }),
+                  ]);
+                  setPoCartons([emptyPoCarton(1)]);
+                  setPoReceiveMode("quantity");
+                  setPoVariants({});
                   setOrderPrice(
                     selected.order_unit_price
                       ? String(selected.order_unit_price)
@@ -2078,27 +2109,12 @@ function SourcingPage() {
 
       {/* Order dialog */}
       <Dialog open={orderOpen} onOpenChange={setOrderOpen}>
-        <DialogContent className="max-h-[92vh] max-w-2xl overflow-y-auto">
+        <DialogContent className="max-h-[92vh] max-w-4xl overflow-y-auto">
           <DialogHeader>
             <DialogTitle>Place order → Purchase Order — {selected?.title}</DialogTitle>
           </DialogHeader>
           <div className="grid gap-4">
-            <div className="grid gap-3 sm:grid-cols-3">
-              <Field label="Quantity (pcs)">
-                <Input
-                  type="number"
-                  value={orderQty}
-                  onChange={(e) => setOrderQty(e.target.value)}
-                />
-              </Field>
-              <Field label="Unit price (¥ CNY)">
-                <Input
-                  type="number"
-                  step="0.01"
-                  value={poUnitCny}
-                  onChange={(e) => setPoUnitCny(e.target.value)}
-                />
-              </Field>
+            <div className="grid gap-3 sm:grid-cols-2">
               <Field label="FX rate (৳ / ¥)">
                 <Input
                   type="number"
@@ -2107,7 +2123,31 @@ function SourcingPage() {
                   onChange={(e) => setPoFx(e.target.value)}
                 />
               </Field>
+              <Field label="Planned landed / unit (৳)">
+                <Input
+                  type="number"
+                  value={orderPrice}
+                  onChange={(e) => setOrderPrice(e.target.value)}
+                />
+              </Field>
             </div>
+
+            {poBrandId && (
+              <PoLineBuilder
+                compact
+                brandId={poBrandId}
+                currency="CNY"
+                fxRate={Number(poFx || 0)}
+                items={poItems}
+                setItems={setPoItems}
+                cartons={poCartons}
+                setCartons={setPoCartons}
+                receiveMode={poReceiveMode}
+                setReceiveMode={setPoReceiveMode}
+                variantsByProduct={poVariants}
+                setVariantsByProduct={setPoVariants}
+              />
+            )}
 
             <div className="grid gap-3 sm:grid-cols-2">
               <Field label="Cargo agent (main party) *">
@@ -2164,13 +2204,6 @@ function SourcingPage() {
                   />
                 </Field>
               )}
-              <Field label="Planned landed / unit (৳)">
-                <Input
-                  type="number"
-                  value={orderPrice}
-                  onChange={(e) => setOrderPrice(e.target.value)}
-                />
-              </Field>
             </div>
 
             <Field label="PO note (optional)">
@@ -2232,7 +2265,8 @@ function SourcingPage() {
                 <span className="font-semibold">
                   {fmtValue(
                     Math.round(
-                      Number(orderQty || 0) * Number(poUnitCny || 0) * Number(poFx || 0),
+                      poItems.reduce((s, i) => s + i.quantity * i.unit_cost_foreign, 0) *
+                        Number(poFx || 0),
                     ),
                     "bdt",
                   )}
@@ -2242,13 +2276,17 @@ function SourcingPage() {
                 <span className="text-muted-foreground">Planned landed total</span>
                 <span className="font-display text-lg font-bold">
                   {fmtValue(
-                    Math.round(Number(orderQty || 0) * Number(orderPrice || 0)),
+                    Math.round(
+                      poItems.reduce((s, i) => s + i.quantity, 0) * Number(orderPrice || 0),
+                    ),
                     "bdt",
                   )}
                 </span>
               </div>
               <p className="mt-1 text-[11px] text-muted-foreground">
-                Quantity mode PO তৈরি হবে — Supply Chain থেকে piece by piece release করা যাবে।
+                {poReceiveMode === "quantity"
+                  ? "Quantity mode PO — Supply Chain থেকে piece by piece release করা যাবে।"
+                  : "Carton mode PO — carton ধরে receive/release হবে।"}
               </p>
               {selected?.target_price_max != null &&
                 Number(orderPrice || 0) > selected.target_price_max && (
@@ -2266,7 +2304,8 @@ function SourcingPage() {
               onClick={() => placeOrder.mutate()}
               disabled={
                 !poAgentId ||
-                !orderQty ||
+                poItems.reduce((s, i) => s + i.quantity, 0) <= 0 ||
+                poItems.some((i) => !i.picked.title.trim()) ||
                 Number(poFx || 0) <= 0 ||
                 (!poSupplierId && !poSupplierName.trim()) ||
                 (payEnabled && (!payWalletId || Number(payAmount || 0) <= 0)) ||
