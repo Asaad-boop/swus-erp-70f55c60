@@ -1217,8 +1217,12 @@ function SourcingPage() {
             : "Approved products এর pricing, quote আর order placement"
         }
         actions={
-          selected ? (
-            <>
+          <>
+            <Button size="sm" variant="outline" onClick={() => setManualOpen(true)}>
+              <Sparkles className="mr-1.5 h-4 w-4" /> Add product
+            </Button>
+            {selected && (
+              <>
               <Button size="sm" variant="outline" onClick={openNewQuote}>
                 <Plus className="mr-1.5 h-4 w-4" /> Add quote
               </Button>
@@ -1272,14 +1276,16 @@ function SourcingPage() {
                   setPayEnabled(false);
                   setPayAmount("");
                   setPayRef("");
+                  setOrderStep("form");
                   setOrderOpen(true);
                 }}
               >
                 <ShoppingCart className="mr-1.5 h-4 w-4" />
                 {selected.imp_po_id ? "Ordered" : "Place order"}
               </Button>
-            </>
-          ) : null
+              </>
+            )}
+          </>
         }
       />
 
