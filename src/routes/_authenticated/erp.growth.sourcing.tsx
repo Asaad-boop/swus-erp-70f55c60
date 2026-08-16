@@ -715,6 +715,11 @@ function SourcingPage() {
         status: stage === "to_source" ? "approved" : "sourcing",
       };
       if (stage === "to_source") patch.selected_quote_id = null;
+      if (stage === "to_source" || stage === "sourcing" || stage === "sourced") {
+        patch.sourcing_review_status = "draft";
+        patch.sourcing_submitted_at = null;
+        patch.sourcing_reviewed_at = null;
+      }
       if (stage === "sourced" && !idea.selected_quote_id) {
         // Auto-pick the cheapest landed-cost quote so the user never gets stuck.
         const qs = (quotesQ.data?.get(idea.id) ?? []).filter((q) => q.status !== "rejected");
