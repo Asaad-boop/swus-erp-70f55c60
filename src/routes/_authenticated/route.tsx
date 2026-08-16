@@ -7,7 +7,7 @@ import {
 } from "@tanstack/react-router";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
-import { hasBackofficeAccess, moduleForPath, resolveAccess } from "@/lib/erp/access";
+import { hasBackofficeAccess, isSuperRole, moduleForPath, resolveAccess } from "@/lib/erp/access";
 import { firstAllowedPage } from "@/lib/erp/permissions/page-catalog";
 import { ShieldAlert, ArrowLeft } from "lucide-react";
 import { useMyAccessProfile } from "@/hooks/use-my-access-profile";
@@ -25,7 +25,7 @@ function AuthGate() {
   if (access.isError || !access.data?.userId) return <Navigate to="/auth" replace />;
 
   const { roles, allowedPages, pageMode } = access.data;
-  const isAdmin = roles.includes("admin");
+  const isAdmin = isSuperRole(roles);
   const path = location.pathname;
   const isErp = path === "/erp" || path.startsWith("/erp/");
 
