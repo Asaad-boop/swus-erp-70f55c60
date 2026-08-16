@@ -34,6 +34,11 @@ import {
   AbandonedCartRecoveryCard, NewVsReturningCard,
 } from "@/components/erp/dashboard/widgets";
 import { WebsiteOrdersOverview } from "@/components/erp/dashboard/website-orders-overview";
+import {
+  TodayCommandPanel, LiveVisitors, ProfitQuality, ProductDangerZone,
+} from "@/components/erp/dashboard-command-center";
+import { EmployeeDashboard } from "@/components/erp/dashboard/employee-dashboard";
+import { TeamCostCard } from "@/components/erp/dashboard/team-cost-card";
 
 export const Route = createFileRoute("/_authenticated/erp/")({
   head: () => ({ meta: [{ title: "Dashboard — SynqWithUs ERP" }] }),
@@ -71,7 +76,7 @@ function greeting() {
 
 // ---------- page ----------
 function DashboardPage() {
-  const { roles, isLoading: roleLoading } = useCurrentRole();
+  const { roles, isOwner, isLoading: roleLoading } = useCurrentRole();
   if (roleLoading) {
     return (
       <div className="min-h-screen grid place-items-center bg-muted/30">
@@ -91,10 +96,13 @@ function DashboardPage() {
       </div>
     );
   }
-  return <AdminDashboard />;
+  if (isOwner) return <FullDashboard variant="owner" />;
+  if (roles.includes("admin")) return <FullDashboard variant="admin" />;
+  return <EmployeeDashboard />;
 }
 
-function AdminDashboard() {
+function FullDashboard({ variant }: { variant: "owner" | "admin" }) {
+  const owner = variant === "owner";
   const { activeBrand, brandIds, isAllBrands, brands } = useBrand();
   const navigate = useNavigate();
   const qc = useQueryClient();
@@ -136,6 +144,14 @@ function AdminDashboard() {
               <h1 className="text-[15px] font-semibold tracking-tight text-slate-900 truncate">
                 {greeting()}, {me?.name ?? "..."}
               </h1>
+              <span
+                className={cn(
+                  "shrink-0 rounded-full px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wider",
+                  owner ? "bg-amber-100 text-amber-700" : "bg-indigo-100 text-indigo-700",
+                )}
+              >
+                {owner ? "Owner" : "Admin"}
+              </span>
               <span className="text-[12px] text-slate-500 truncate">
                 {isAllBrands ? `All Brands · ${brands.length}` : activeBrand?.name ?? ""}
                 <span className="mx-1.5 text-slate-300">·</span>
@@ -158,17 +174,33 @@ function AdminDashboard() {
       </div>
 
       <div className="px-4 md:px-6 py-4 max-w-[1600px] mx-auto space-y-4">
+        {/* Admin: operational command first */}
+        {!owner && (
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
+            <TodayCommandPanel brandIds={brandIds} enabled={enabled} />
+            <LiveVisitors />
+          </div>
+        )}
+
         {/* KPI strip */}
         <KpiStrip brandIds={brandIds} enabled={enabled} range={range} onNav={(to) => navigate({ to: to as any })} />
 
         {/* Website orders + Today's sales split */}
         <WebsiteOrdersOverview brandIds={brandIds} enabled={enabled} range={range} rangeLabel={mktRange.label} />
 
-        {/* MUST-HAVE row 1: Profit + Cash */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
-          <NetProfitCard brandIds={brandIds} enabled={enabled} range={range} />
-          <CashPositionCard brandIds={brandIds} enabled={enabled} />
-        </div>
+        {/* Owner-only: profit & cash position */}
+        {owner && (
+          <>
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
+              <NetProfitCard brandIds={brandIds} enabled={enabled} range={range} />
+              <CashPositionCard brandIds={brandIds} enabled={enabled} />
+            </div>
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
+              <ProfitQuality brandIds={brandIds} enabled={enabled} range={range} />
+              <TeamCostCard brandIds={brandIds} enabled={enabled} />
+            </div>
+          </>
+        )}
 
         {/* MUST-HAVE row 2: COD Remittance + ROAS */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
@@ -176,9 +208,9 @@ function AdminDashboard() {
           <RoasComparisonCard brandIds={brandIds} enabled={enabled} range={range} />
         </div>
 
-        {/* MUST-HAVE row 3: Ad Wallet + Stuck Orders */}
+        {/* MUST-HAVE row 3: Ad Wallet (owner) + Stuck Orders */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
-          <AdWalletBalanceCard brandIds={brandIds} enabled={enabled} />
+          {owner && <AdWalletBalanceCard brandIds={brandIds} enabled={enabled} />}
           <StuckOrdersCard brandIds={brandIds} enabled={enabled} />
         </div>
 
@@ -193,14 +225,14 @@ function AdminDashboard() {
 
         <TodayAnalytics brandIds={brandIds} enabled={enabled} range={range} rangeLabel={mktRange.label} />
 
-        <HourlyOrdersComparison brandIds={brandIds} enabled={enabled} />
+        {!owner && <HourlyOrdersComparison brandIds={brandIds} enabled={enabled} />}
 
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
           <NewVsReturningCard brandIds={brandIds} enabled={enabled} range={range} />
           <AbandonedCartRecoveryCard brandIds={brandIds} enabled={enabled} />
         </div>
 
-        {isAllBrands && brands.length > 1 && (
+        {owner && isAllBrands && brands.length > 1 && (
           <BrandComparison brands={brands} range={range} />
         )}
 
@@ -212,25 +244,29 @@ function AdminDashboard() {
           <ImportsCard brandIds={brandIds} enabled={enabled} range={range} />
         </div>
 
-        <FinanceSection brandIds={brandIds} enabled={enabled} range={range} />
+        {owner && <FinanceSection brandIds={brandIds} enabled={enabled} range={range} />}
 
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-3">
-          <InventoryHealth brandIds={brandIds} enabled={enabled} />
-          <div className="lg:col-span-2">
-            <LowStockList brandIds={brandIds} enabled={enabled} />
+        {owner && <ProductDangerZone brandIds={brandIds} enabled={enabled} range={range} />}
+
+        {!owner && (
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-3">
+            <InventoryHealth brandIds={brandIds} enabled={enabled} />
+            <div className="lg:col-span-2">
+              <LowStockList brandIds={brandIds} enabled={enabled} />
+            </div>
           </div>
-        </div>
+        )}
 
         <MarketingCard brandIds={brandIds} enabled={enabled} range={range} />
 
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
           <TopProducts brandIds={brandIds} enabled={enabled} range={range} />
-          <TopCustomers brandIds={brandIds} enabled={enabled} range={range} />
+          {owner && <TopCustomers brandIds={brandIds} enabled={enabled} range={range} />}
         </div>
 
-        <NeedsAttention brandIds={brandIds} enabled={enabled} />
+        {!owner && <NeedsAttention brandIds={brandIds} enabled={enabled} />}
 
-        <LiveOrdersFeed brandIds={brandIds} enabled={enabled} />
+        {!owner && <LiveOrdersFeed brandIds={brandIds} enabled={enabled} />}
 
         <SystemFooter lastSync={lastSync} />
       </div>
