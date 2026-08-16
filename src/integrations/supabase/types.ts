@@ -11543,6 +11543,18 @@ export type Database = {
         }
         Returns: string
       }
+      admin_replace_access_profile: {
+        Args: {
+          _allowed_pages: string[]
+          _brand_ids: string[]
+          _brand_mode: string
+          _employee_id?: string
+          _page_mode: string
+          _roles: Database["public"]["Enums"]["app_role"][]
+          _target_user_id: string
+        }
+        Returns: Json
+      }
       admin_rls_audit: {
         Args: never
         Returns: {
@@ -11949,6 +11961,7 @@ export type Database = {
           spend_usd: number
         }[]
       }
+      get_my_access_profile: { Args: never; Returns: Json }
       get_order_courier_cost: { Args: { _order_id: string }; Returns: number }
       get_product_campaign_report: {
         Args: { p_brand_id: string; p_from: string; p_to: string }
