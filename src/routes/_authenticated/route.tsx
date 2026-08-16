@@ -30,7 +30,7 @@ function AuthGate() {
   const isErp = path === "/erp" || path.startsWith("/erp/");
 
   // 1. No role modules AND no custom page grants → nothing to show.
-  if (isErp && !isAdmin && !hasBackofficeAccess(roles, allowedPages, pageMode)) {
+  if (isErp && !(isAdmin && pageMode !== "custom") && !hasBackofficeAccess(roles, allowedPages, pageMode)) {
     return (
       <div className="min-h-screen flex items-center justify-center p-6 text-center bg-background">
         <div className="max-w-sm space-y-3">
@@ -55,9 +55,10 @@ function AuthGate() {
   const allowed = resolveAccess(roles, allowedPages, path, pageMode);
   if (!allowed) {
     const mod = moduleForPath(path);
-    const fallback = isAdmin
-      ? "/erp"
-      : firstAllowedPage(pageMode === "custom" ? allowedPages : null);
+    const fallback =
+      isAdmin && pageMode !== "custom"
+        ? "/erp"
+        : firstAllowedPage(pageMode === "custom" ? allowedPages : null);
     // Landing page itself blocked → send them to their first allowed page.
     if (path !== fallback && (path === "/erp" || path === "/erp/")) {
       return <Navigate to={fallback as never} replace />;

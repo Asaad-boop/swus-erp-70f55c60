@@ -93,8 +93,9 @@ export function ErpSidebar() {
   const { allowedPages, pageMode } = useMyAllowedPages();
 
   const visibleGroups = useMemo<Group[]>(() => {
+    const bypass = isAdmin && pageMode !== "custom";
     const filterItems = (items: NavItem[]) =>
-      items.filter((i) => (isAdmin ? true : resolveAccess(roles, allowedPages, i.to, pageMode)));
+      items.filter((i) => (bypass ? true : resolveAccess(roles, allowedPages, i.to, pageMode)));
     const out: Group[] = [];
     for (const g of groups) {
       if (g.kind === "flat") {
