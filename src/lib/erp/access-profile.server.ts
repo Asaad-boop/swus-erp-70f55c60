@@ -103,6 +103,8 @@ export async function listAccessWorkspace(supabase: SupabaseClient, actorId: str
     const allowedPages = Array.isArray(document.allowedPages)
       ? document.allowedPages.map(String).filter((path) => ALL_PAGE_PATHS.includes(path))
       : [];
+    const pageMode: AccessWorkspaceUser["pageMode"] = document.pageMode === "custom" ? "custom" : "role_default";
+    const brandMode: AccessWorkspaceUser["brandMode"] = document.brandMode === "selected" ? "selected" : "all";
     return {
       id: authUser.id,
       email: authUser.email ?? null,
@@ -112,9 +114,9 @@ export async function listAccessWorkspace(supabase: SupabaseClient, actorId: str
       emailConfirmedAt: authUser.email_confirmed_at ?? null,
       bannedUntil: authUser.banned_until ?? null,
       roles: userRoles,
-      pageMode: document.pageMode === "custom" ? "custom" : "role_default",
+      pageMode,
       allowedPages,
-      brandMode: document.brandMode === "selected" ? "selected" : "all",
+      brandMode,
       brandIds,
       employeeId: employee?.id ?? null,
       employeeName: employee?.full_name ?? null,
