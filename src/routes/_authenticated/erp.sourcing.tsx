@@ -1155,6 +1155,23 @@ function SourcingPage() {
                 }
                 onClick={() => {
                   setOrderQty(selected.order_qty ? String(selected.order_qty) : "");
+                  setPoItems([
+                    emptyPoItem({
+                      picked: {
+                        id: null,
+                        title: selected.title,
+                        sku: null,
+                        image: selected.image_url ?? null,
+                      },
+                      quantity: selected.order_qty ? Number(selected.order_qty) : 1,
+                      unit_cost_foreign: bestQuote?.unit_price_cny
+                        ? Number(bestQuote.unit_price_cny)
+                        : 0,
+                    }),
+                  ]);
+                  setPoCartons([emptyPoCarton(1)]);
+                  setPoReceiveMode("quantity");
+                  setPoVariants({});
                   setOrderPrice(
                     selected.order_unit_price
                       ? String(selected.order_unit_price)
