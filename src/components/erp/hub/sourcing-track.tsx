@@ -150,9 +150,26 @@ export function SourcingTimeline({
   steps: TrackStep[];
 }) {
   const curIdx = STAGE_ORDER.indexOf(current);
+  const pct = Math.round(((curIdx + 1) / STAGE_ORDER.length) * 100);
+  const curMeta = STAGE_META[current];
   return (
-    <div className="rounded-xl border bg-gradient-to-b from-muted/50 to-muted/10 p-3">
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-start">
+    <div className="rounded-xl border bg-gradient-to-b from-muted/60 to-muted/10 p-3">
+      <div className="mb-2.5 flex items-center gap-2">
+        <span className={`h-2 w-2 shrink-0 rounded-full ${curMeta.dot}`} />
+        <p className="text-[11px] font-semibold">
+          Step {curIdx + 1} / {STAGE_ORDER.length} · {curMeta.label}
+        </p>
+        <div className="ml-auto flex w-24 items-center gap-1.5 sm:w-40">
+          <div className="h-1.5 flex-1 overflow-hidden rounded-full bg-border">
+            <div
+              className="h-full rounded-full bg-gradient-to-r from-primary/60 to-primary transition-all duration-500"
+              style={{ width: `${pct}%` }}
+            />
+          </div>
+          <span className="text-[10px] tabular-nums text-muted-foreground">{pct}%</span>
+        </div>
+      </div>
+      <div className="flex snap-x gap-3 overflow-x-auto pb-1 sm:grid sm:grid-cols-4 sm:gap-x-2 sm:gap-y-3 sm:overflow-visible lg:grid-cols-8">
         {steps.map((st, i) => {
           const idx = STAGE_ORDER.indexOf(st.stage);
           const done = idx < curIdx;
@@ -160,7 +177,10 @@ export function SourcingTimeline({
           const m = STAGE_META[st.stage];
           const Icon = m.icon;
           return (
-            <div key={st.stage} className="flex flex-1 items-start gap-2 sm:flex-col sm:gap-1.5">
+            <div
+              key={st.stage}
+              className="flex min-w-[120px] shrink-0 snap-start flex-col gap-1.5 sm:min-w-0"
+            >
               <div className="flex w-full items-center gap-2">
                 <span
                   className={`relative flex h-6 w-6 shrink-0 items-center justify-center rounded-full border ${
@@ -184,7 +204,7 @@ export function SourcingTimeline({
                 </span>
                 {i < steps.length - 1 && (
                   <span
-                    className={`hidden h-0.5 flex-1 rounded-full sm:block ${
+                    className={`h-0.5 flex-1 rounded-full ${
                       done
                         ? "bg-gradient-to-r from-emerald-500/60 to-emerald-500/30"
                         : active
