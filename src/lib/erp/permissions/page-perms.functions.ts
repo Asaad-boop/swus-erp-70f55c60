@@ -6,13 +6,9 @@ import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 export const getMyAllowedPages = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .handler(async ({ context }) => {
-    const { data } = await context.supabase
-      .from("staff_permissions")
-      .select("permissions")
-      .eq("user_id", context.userId)
-      .maybeSingle();
-    const perms = (data?.permissions ?? null) as { allowedPages?: string[] } | null;
-    return { allowedPages: perms?.allowedPages ?? null };
+    const { readMyAccessProfile } = await import("@/lib/erp/access-profile.server");
+    const profile = await readMyAccessProfile(context.supabase);
+    return { allowedPages: profile.pageMode === "custom" ? profile.allowedPages : null };
   });
 
 /** Admin: read every user's allowed pages map. */

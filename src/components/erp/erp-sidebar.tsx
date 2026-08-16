@@ -40,11 +40,11 @@ export function ErpSidebar() {
   const [filter, setFilter] = useState("");
   const [favs, setFavs] = useState<string[]>([]);
   const { roles, isAdmin } = useCurrentRole();
-  const { allowedPages } = useMyAllowedPages();
+  const { allowedPages, pageMode } = useMyAllowedPages();
 
   const visibleGroups = useMemo<Group[]>(() => {
     const filterItems = (items: NavItem[]) =>
-      items.filter((i) => (isAdmin ? true : resolveAccess(roles, allowedPages, i.to)));
+      items.filter((i) => (isAdmin ? true : resolveAccess(roles, allowedPages, i.to, pageMode)));
     const out: Group[] = [];
     for (const g of groups) {
       if (g.kind === "flat") {
@@ -58,7 +58,7 @@ export function ErpSidebar() {
       }
     }
     return out;
-  }, [roles, isAdmin, allowedPages]);
+  }, [roles, isAdmin, allowedPages, pageMode]);
 
   const q = filter.trim().toLowerCase();
   const matches = (label: string) => !q || label.toLowerCase().includes(q);
