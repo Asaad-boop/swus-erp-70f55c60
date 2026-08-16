@@ -26,7 +26,8 @@ import {
 } from "@/lib/erp/users.functions";
 import { listUserBrandAccess, setUserBrandAccess } from "@/lib/erp/settings/user-brand-access.functions";
 import { listAllowedPages, setUserAllowedPages } from "@/lib/erp/permissions/page-perms.functions";
-import { PAGE_CATALOG, PAGE_GROUPS } from "@/lib/erp/permissions/page-catalog";
+import { PAGE_CATALOG, PAGE_GROUPS, ALL_PAGE_PATHS, type PageEntry } from "@/lib/erp/permissions/page-catalog";
+import { pagesForRoles } from "@/lib/erp/access";
 
 export const Route = createFileRoute("/_authenticated/erp/hr/access")({
   head: () => ({
@@ -259,10 +260,11 @@ function AccessPage() {
                   <ChevronDown className={`ml-1 h-4 w-4 shrink-0 text-muted-foreground transition-transform ${open ? "rotate-180" : ""}`} />
                 </button>
 
-                <Select value={u.roles[0] ?? "operations"} onValueChange={(v) => roleMut.mutate({ userId: u.id, roles: [v] })}>
-                  <SelectTrigger className="h-8 w-44 text-xs"><SelectValue /></SelectTrigger>
-                  <SelectContent>{APP_ROLES.map((r) => <SelectItem key={r} value={r}>{r}</SelectItem>)}</SelectContent>
-                </Select>
+                <div className="flex max-w-[280px] flex-wrap justify-end gap-1">
+                  {(u.roles.length ? u.roles : ["no role"]).map((r: string) => (
+                    <Badge key={r} variant={r === "admin" ? "default" : "secondary"} className="font-mono text-[10px]">{r}</Badge>
+                  ))}
+                </div>
                 <Button size="icon" variant="ghost" title={banned ? "Enable" : "Disable"} onClick={() => banMut.mutate({ userId: u.id, ban: !banned })}>
                   <Power className={`h-4 w-4 ${banned ? "text-destructive" : ""}`} />
                 </Button>
@@ -273,13 +275,22 @@ function AccessPage() {
 
               {open && (
                 <div className="border-t bg-muted/20 p-4">
-                  <Tabs defaultValue="brands">
+                  <Tabs defaultValue="roles">
                     <TabsList>
+                      <TabsTrigger value="roles"><Shield className="mr-1 h-3.5 w-3.5" />Roles</TabsTrigger>
                       <TabsTrigger value="brands"><Building2 className="mr-1 h-3.5 w-3.5" />Brands</TabsTrigger>
                       <TabsTrigger value="pages"><LayoutGrid className="mr-1 h-3.5 w-3.5" />Pages</TabsTrigger>
                       <TabsTrigger value="employee"><Link2 className="mr-1 h-3.5 w-3.5" />Employee</TabsTrigger>
                       <TabsTrigger value="security"><KeyRound className="mr-1 h-3.5 w-3.5" />Security</TabsTrigger>
                     </TabsList>
+
+                    <TabsContent value="roles" className="pt-3">
+                      <RolesEditor
+                        current={u.roles}
+                        saving={roleMut.isPending}
+                        onSave={(rs) => roleMut.mutate({ userId: u.id, roles: rs })}
+                      />
+                    </TabsContent>
 
                     <TabsContent value="brands" className="pt-3">
                       <div className="flex flex-wrap gap-2">
@@ -307,6 +318,8 @@ function AccessPage() {
 
                     <TabsContent value="pages" className="pt-3">
                       <PagesEditor
+                        key={u.id + ":" + allowedPages.join(",")}
+                        roles={u.roles}
                         current={allowedPages}
                         saving={pageMut.isPending}
                         onSave={(pages) => pageMut.mutate({ userId: u.id, allowedPages: pages })}
@@ -420,36 +433,176 @@ function Kpi({ icon: Icon, label, value, tone }: { icon: any; label: string; val
   );
 }
 
-function PagesEditor({ current, saving, onSave }: { current: string[]; saving: boolean; onSave: (pages: string[]) => void }) {
+function RolesEditor({ current, saving, onSave }: { current: string[]; saving: boolean; onSave: (roles: string[]) => void }) {
   const [sel, setSel] = useState<string[]>(current);
-  const toggle = (p: string) => setSel((s) => (s.includes(p) ? s.filter((x) => x !== p) : [...s, p]));
+  const dirty = sel.slice().sort().join(",") !== current.slice().sort().join(",");
+  const toggle = (r: string) => setSel((s) => (s.includes(r) ? s.filter((x) => x !== r) : [...s, r]));
   return (
     <div className="space-y-3">
       <p className="text-xs text-muted-foreground">
-        কিছুই সিলেক্ট না করলে role-এর default access কাজ করবে। সিলেক্ট করলে শুধু ওই পেজগুলোই খুলবে।
+        একজন user-কে একাধিক role দেওয়া যাবে — access গুলো merge হবে। Role না দিলে user কিছুই দেখবে না
+        (যদি না নিচে custom page দেওয়া থাকে)।
       </p>
-      <div className="grid grid-cols-1 gap-3 md:grid-cols-3">
-        {PAGE_GROUPS.map((g) => (
-          <div key={g} className="rounded-lg border bg-background p-3">
-            <div className="mb-2 text-xs font-semibold">{g}</div>
-            <div className="space-y-1.5">
-              {PAGE_CATALOG.filter((p) => p.group === g).map((p) => (
-                <label key={p.path} className="flex cursor-pointer items-center gap-2 text-xs">
-                  <Checkbox checked={sel.includes(p.path)} onCheckedChange={() => toggle(p.path)} />
-                  {p.label}
-                </label>
-              ))}
-            </div>
-          </div>
-        ))}
+      <div className="grid grid-cols-1 gap-2 md:grid-cols-2">
+        {APP_ROLES.map((r) => {
+          const on = sel.includes(r);
+          return (
+            <label
+              key={r}
+              className={`flex cursor-pointer items-start gap-2 rounded-lg border p-2.5 text-xs transition ${on ? "border-primary/50 bg-primary/5" : "hover:bg-accent"}`}
+            >
+              <Checkbox checked={on} onCheckedChange={() => toggle(r)} className="mt-0.5" />
+              <span className="min-w-0">
+                <span className="block font-mono font-medium">{r}</span>
+                <span className="block text-muted-foreground">{ROLE_DESCRIPTIONS[r] ?? "—"}</span>
+              </span>
+            </label>
+          );
+        })}
       </div>
-      <div className="flex gap-2">
-        <Button size="sm" onClick={() => onSave(sel)} disabled={saving}>
+      <div className="flex items-center gap-2">
+        <Button size="sm" onClick={() => onSave(sel)} disabled={saving || !dirty}>
+          {saving && <Loader2 className="h-4 w-4 animate-spin" />} Save roles
+        </Button>
+        {dirty && <span className="text-xs text-amber-600">Unsaved changes</span>}
+      </div>
+    </div>
+  );
+}
+
+function PagesEditor({
+  roles, current, saving, onSave,
+}: { roles: string[]; current: string[]; saving: boolean; onSave: (pages: string[]) => void }) {
+  const [sel, setSel] = useState<string[]>(current);
+  const [q, setQ] = useState("");
+  const [showHidden, setShowHidden] = useState(false);
+
+  const toggle = (p: string) =>
+    setSel((s) => (s.includes(p) ? s.filter((x) => x !== p) : [...s, p]));
+
+  const dirty = sel.slice().sort().join("|") !== current.slice().sort().join("|");
+  const term = q.trim().toLowerCase();
+
+  const visible = useMemo(
+    () =>
+      PAGE_CATALOG.filter((p) => {
+        if (p.hidden && !showHidden && !sel.includes(p.path)) return false;
+        if (!term) return true;
+        return (p.label + " " + p.path + " " + p.section).toLowerCase().includes(term);
+      }),
+    [term, showHidden, sel],
+  );
+
+  const byGroup = useMemo(() => {
+    const m = new Map<string, Map<string, PageEntry[]>>();
+    for (const p of visible) {
+      if (!m.has(p.group)) m.set(p.group, new Map());
+      const sec = m.get(p.group)!;
+      if (!sec.has(p.section)) sec.set(p.section, []);
+      sec.get(p.section)!.push(p);
+    }
+    return m;
+  }, [visible]);
+
+  const setMany = (paths: string[], on: boolean) =>
+    setSel((s) => (on ? Array.from(new Set([...s, ...paths])) : s.filter((x) => !paths.includes(x))));
+
+  const roleDefault = () => setSel(pagesForRoles(roles, ALL_PAGE_PATHS));
+
+  return (
+    <div className="space-y-3">
+      <div className="rounded-lg border border-amber-500/30 bg-amber-500/5 p-2.5 text-xs text-muted-foreground">
+        কিছুই সিলেক্ট না থাকলে <b>role-এর default access</b> কাজ করবে। এক বা একাধিক page সিলেক্ট করলে
+        সেই লিস্টই চূড়ান্ত — role matrix আর প্রযোজ্য হবে না। Dashboard দিতে চাইলে <b>Overview → Dashboard</b>{" "}
+        অবশ্যই টিক দাও।
+      </div>
+
+      <div className="flex flex-wrap items-center gap-2">
+        <div className="relative min-w-[200px] flex-1">
+          <Search className="absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-muted-foreground" />
+          <Input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Search page…" className="h-8 pl-8 text-xs" />
+        </div>
+        <Badge variant="secondary" className="text-[11px]">{sel.length} selected</Badge>
+        <Button size="sm" variant="outline" className="h-8 text-xs" onClick={roleDefault}>
+          Load role default
+        </Button>
+        <Button size="sm" variant="outline" className="h-8 text-xs" onClick={() => setSel(ALL_PAGE_PATHS.filter((p) => !PAGE_CATALOG.find((x) => x.path === p)?.hidden))}>
+          Select all
+        </Button>
+        <Button size="sm" variant="outline" className="h-8 text-xs" onClick={() => setSel([])}>
+          Clear
+        </Button>
+        <label className="flex cursor-pointer items-center gap-1.5 text-[11px] text-muted-foreground">
+          <Checkbox checked={showHidden} onCheckedChange={(v) => setShowHidden(!!v)} />
+          Show hidden routes
+        </label>
+      </div>
+
+      <div className="grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-3">
+        {[...byGroup.entries()].map(([group, sections]) => {
+          const groupPaths = [...sections.values()].flat().map((p) => p.path);
+          const allOn = groupPaths.every((p) => sel.includes(p));
+          return (
+            <div key={group} className="rounded-xl border bg-background p-3">
+              <div className="mb-2 flex items-center justify-between gap-2">
+                <span className="text-xs font-semibold">{group}</span>
+                <button
+                  className="text-[11px] text-primary hover:underline"
+                  onClick={() => setMany(groupPaths, !allOn)}
+                >
+                  {allOn ? "None" : "All"}
+                </button>
+              </div>
+              <div className="space-y-2.5">
+                {[...sections.entries()].map(([section, pages]) => {
+                  const secPaths = pages.map((p) => p.path);
+                  const secOn = secPaths.every((p) => sel.includes(p));
+                  return (
+                    <div key={section}>
+                      {section !== group && (
+                        <div className="mb-1 flex items-center justify-between">
+                          <span className="text-[10px] uppercase tracking-wide text-muted-foreground">{section}</span>
+                          <button
+                            className="text-[10px] text-muted-foreground hover:text-primary hover:underline"
+                            onClick={() => setMany(secPaths, !secOn)}
+                          >
+                            {secOn ? "clear" : "all"}
+                          </button>
+                        </div>
+                      )}
+                      <div className="space-y-1">
+                        {pages.map((p) => (
+                          <label
+                            key={p.path}
+                            title={p.path}
+                            className="flex cursor-pointer items-center gap-2 rounded px-1 py-0.5 text-xs hover:bg-accent"
+                          >
+                            <Checkbox checked={sel.includes(p.path)} onCheckedChange={() => toggle(p.path)} />
+                            <span className="truncate">{p.label}</span>
+                            {p.hidden && <Badge variant="outline" className="ml-auto text-[9px]">hidden</Badge>}
+                          </label>
+                        ))}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          );
+        })}
+      </div>
+
+      <div className="sticky bottom-0 flex flex-wrap items-center gap-2 border-t bg-background/95 py-2 backdrop-blur">
+        <Button size="sm" onClick={() => onSave(sel)} disabled={saving || !dirty}>
           {saving && <Loader2 className="h-4 w-4 animate-spin" />} Save page access
         </Button>
-        <Button size="sm" variant="outline" onClick={() => { setSel([]); onSave([]); }} disabled={saving}>
+        <Button size="sm" variant="outline" onClick={() => setSel(current)} disabled={saving || !dirty}>
+          Cancel
+        </Button>
+        <Button size="sm" variant="ghost" onClick={() => onSave([])} disabled={saving || current.length === 0}>
           Reset to role default
         </Button>
+        {dirty && <span className="text-xs text-amber-600">Unsaved changes</span>}
       </div>
     </div>
   );

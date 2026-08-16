@@ -2,8 +2,8 @@ import { createFileRoute, Navigate, Outlet, useLocation, useNavigate, Link } fro
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
-import { canAccessPath, hasAnyBackoffice, moduleForPath } from "@/lib/erp/access";
-import { pathAllowedBy } from "@/lib/erp/permissions/page-catalog";
+import { hasBackofficeAccess, moduleForPath, resolveAccess } from "@/lib/erp/access";
+import { firstAllowedPage } from "@/lib/erp/permissions/page-catalog";
 import { ShieldAlert, ArrowLeft } from "lucide-react";
 
 export const Route = createFileRoute("/_authenticated")({
@@ -68,8 +68,8 @@ function AuthGate() {
   const path = location.pathname;
   const isErp = path === "/erp" || path.startsWith("/erp/");
 
-  // 1. No backoffice roles at all & trying to open /erp → access denied
-  if (isErp && !hasAnyBackoffice(roles)) {
+  // 1. No role modules AND no custom page grants → nothing to show.
+  if (isErp && !isAdmin && !hasBackofficeAccess(roles, allowedPages)) {
     return (
       <div className="min-h-screen flex items-center justify-center p-6 text-center bg-background">
         <div className="max-w-sm space-y-3">
@@ -90,21 +90,15 @@ function AuthGate() {
     );
   }
 
-  // 2. Per-path access check.
-  //    - Admin: always allowed.
-  //    - Custom allowedPages set → that list is authoritative (overrides role matrix).
-  //    - Otherwise fall back to role-based module matrix.
-  let allowed: boolean;
-  if (isAdmin) {
-    allowed = true;
-  } else if (allowedPages && allowedPages.length > 0) {
-    allowed = pathAllowedBy(allowedPages, path);
-  } else {
-    allowed = canAccessPath(roles, path);
-  }
+  // 2. Per-path access check — one shared resolver for gate + sidebar.
+  const allowed = resolveAccess(roles, allowedPages, path);
   if (!allowed) {
     const mod = moduleForPath(path);
-    const fallback = "/erp";
+    const fallback = isAdmin ? "/erp" : firstAllowedPage(allowedPages);
+    // Landing page itself blocked → send them to their first allowed page.
+    if (path !== fallback && (path === "/erp" || path === "/erp/")) {
+      return <Navigate to={fallback as never} replace />;
+    }
     return (
       <div className="min-h-screen flex items-center justify-center p-6 bg-background">
         <div className="max-w-md w-full space-y-4 rounded-2xl border border-border bg-card p-8 text-center shadow-sm">

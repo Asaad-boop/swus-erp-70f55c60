@@ -1,3 +1,5 @@
+import { pathAllowedBy } from "@/lib/erp/permissions/page-catalog";
+
 /**
  * Centralized role → module access control for the ERP backoffice.
  *
@@ -45,6 +47,13 @@ export const ROLE_MODULES: Record<string, Module[]> = {
 
 ROLE_MODULES["hr_admin"] = ["dashboard", "hr"];
 ROLE_MODULES["hr_manager"] = ["dashboard", "hr"];
+ROLE_MODULES["employee"] = ["dashboard"];
+
+/**
+ * Pages every authenticated staff member may open regardless of role or
+ * custom page grants (self-service screens).
+ */
+export const SELF_SERVICE_PAGES = ["/erp/hr/my-attendance"];
 
 export function getAllowedModules(roles: string[]): Set<Module> {
   const s = new Set<Module>();
@@ -62,6 +71,7 @@ const PATH_RULES: { test: (p: string) => boolean; module: Module }[] = [
   {
     test: (p) =>
       p.startsWith("/erp/inventory") ||
+      p.startsWith("/erp/products") ||
       p.startsWith("/erp/reorder-queue") ||
       p.startsWith("/erp/purchase-orders") ||
       p.startsWith("/erp/stocktake"),
@@ -75,13 +85,21 @@ const PATH_RULES: { test: (p: string) => boolean; module: Module }[] = [
       p.startsWith("/erp/reconciliation"),
     module: "fulfillment",
   },
-  { test: (p) => p.startsWith("/erp/suppliers") || p.startsWith("/erp/imports"), module: "supply" },
+  {
+    test: (p) =>
+      p.startsWith("/erp/suppliers") ||
+      p.startsWith("/erp/imports") ||
+      p.startsWith("/erp/sourcing"),
+    module: "supply",
+  },
   { test: (p) => p.startsWith("/erp/finance"), module: "finance" },
   { test: (p) => p.startsWith("/erp/marketing"), module: "marketing" },
   { test: (p) => p.startsWith("/erp/growth"), module: "marketing" },
+  { test: (p) => p.startsWith("/erp/content") || p.startsWith("/erp/hub") || p.startsWith("/erp/extension"), module: "marketing" },
   { test: (p) => p.startsWith("/erp/crm"), module: "crm" },
   { test: (p) => p.startsWith("/erp/hr"), module: "hr" },
   { test: (p) => p.startsWith("/erp/analytics"), module: "analytics" },
+  { test: (p) => p.startsWith("/erp/reports"), module: "analytics" },
   { test: (p) => p.startsWith("/erp/users"), module: "customer_accounts" },
   { test: (p) => p.startsWith("/erp/settings"), module: "settings" },
   { test: (p) => p.startsWith("/erp/diagnostics"), module: "diagnostics" },
@@ -95,6 +113,7 @@ export function moduleForPath(pathname: string): Module | null {
 /** Returns true if the user can open the given pathname. Admin bypass. */
 export function canAccessPath(roles: string[], pathname: string): boolean {
   if (roles.includes("admin")) return true;
+  if (SELF_SERVICE_PAGES.includes(pathname)) return true;
   const mod = moduleForPath(pathname);
   if (!mod) return true; // routes outside the matrix aren't restricted by us
   const allowed = getAllowedModules(roles);
@@ -122,4 +141,36 @@ export function hasAnyBackoffice(roles: string[]): boolean {
   if (roles.includes("admin")) return true;
   const allowed = getAllowedModules(roles);
   return allowed.size > 0;
+}
+
+/**
+ * The one place that decides "can this user open this path?".
+ *
+ * Precedence: admin → self-service pages → custom page grants (authoritative)
+ * → role module matrix.
+ */
+export function resolveAccess(
+  roles: string[],
+  allowedPages: string[] | null | undefined,
+  pathname: string,
+): boolean {
+  if (roles.includes("admin")) return true;
+  if (SELF_SERVICE_PAGES.includes(pathname)) return true;
+  // Custom grants fully replace the role matrix.
+  if (allowedPages && allowedPages.length > 0) return pathAllowedBy(allowedPages, pathname);
+  return canAccessPath(roles, pathname);
+}
+
+/** Does the user have ANY backoffice access (role modules OR custom pages)? */
+export function hasBackofficeAccess(roles: string[], allowedPages: string[] | null | undefined): boolean {
+  if (allowedPages && allowedPages.length > 0) return true;
+  return hasAnyBackoffice(roles);
+}
+/**
+ * Expand a role set into the concrete page paths it unlocks.
+ * Used by the access editor to preload "role default" as a starting point.
+ */
+export function pagesForRoles(roles: string[], allPaths: string[]): string[] {
+  if (roles.includes("admin")) return [...allPaths];
+  return allPaths.filter((p) => canAccessPath(roles, p));
 }
