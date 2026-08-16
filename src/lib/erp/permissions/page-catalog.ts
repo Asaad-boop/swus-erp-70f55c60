@@ -114,6 +114,9 @@ export function pathAllowedBy(allowed: string[] | null | undefined, pathname: st
   }
 
   for (const d of DETAIL_PARENTS) {
+    // A named catalog page (e.g. `/erp/orders/dashboard`) is never a detail
+    // route — it must be granted explicitly.
+    if (PAGE_BY_PATH[path]) break;
     if (d.test.test(path) && d.anyOf.some((p) => grants.includes(p))) return true;
   }
   return false;
