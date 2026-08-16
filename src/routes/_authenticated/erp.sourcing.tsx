@@ -2265,7 +2265,8 @@ function SourcingPage() {
                 <span className="font-semibold">
                   {fmtValue(
                     Math.round(
-                      Number(orderQty || 0) * Number(poUnitCny || 0) * Number(poFx || 0),
+                      poItems.reduce((s, i) => s + i.quantity * i.unit_cost_foreign, 0) *
+                        Number(poFx || 0),
                     ),
                     "bdt",
                   )}
@@ -2275,13 +2276,17 @@ function SourcingPage() {
                 <span className="text-muted-foreground">Planned landed total</span>
                 <span className="font-display text-lg font-bold">
                   {fmtValue(
-                    Math.round(Number(orderQty || 0) * Number(orderPrice || 0)),
+                    Math.round(
+                      poItems.reduce((s, i) => s + i.quantity, 0) * Number(orderPrice || 0),
+                    ),
                     "bdt",
                   )}
                 </span>
               </div>
               <p className="mt-1 text-[11px] text-muted-foreground">
-                Quantity mode PO তৈরি হবে — Supply Chain থেকে piece by piece release করা যাবে।
+                {poReceiveMode === "quantity"
+                  ? "Quantity mode PO — Supply Chain থেকে piece by piece release করা যাবে।"
+                  : "Carton mode PO — carton ধরে receive/release হবে।"}
               </p>
               {selected?.target_price_max != null &&
                 Number(orderPrice || 0) > selected.target_price_max && (
@@ -2299,7 +2304,8 @@ function SourcingPage() {
               onClick={() => placeOrder.mutate()}
               disabled={
                 !poAgentId ||
-                !orderQty ||
+                poItems.reduce((s, i) => s + i.quantity, 0) <= 0 ||
+                poItems.some((i) => !i.picked.title.trim()) ||
                 Number(poFx || 0) <= 0 ||
                 (!poSupplierId && !poSupplierName.trim()) ||
                 (payEnabled && (!payWalletId || Number(payAmount || 0) <= 0)) ||
