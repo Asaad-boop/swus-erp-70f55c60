@@ -856,7 +856,7 @@ function SourcingPage() {
         <DropdownMenuContent align={align} className="w-52">
           <DropdownMenuLabel className="text-[11px]">Change status</DropdownMenuLabel>
           <DropdownMenuSeparator />
-          {STAGE_ORDER.map((s) => {
+          {STAGE_ORDER.filter((s) => s !== "submitted" && s !== "approved").map((s) => {
             const m = STAGE_META[s];
             const Icon = m.icon;
             const postOrder = s === "ordered" || s === "in_transit" || s === "received";
