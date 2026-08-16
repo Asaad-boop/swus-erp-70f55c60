@@ -1430,7 +1430,11 @@ function SourcingPage() {
                           : st === "sourcing"
                             ? "পরবর্তী ধাপ: সেরা quote টা Select করো, নাহলে ⋯ মেনু থেকে Sourcing done দিলে সবচেয়ে কম landed cost auto select হবে।"
                             : st === "sourced"
-                              ? "পরবর্তী ধাপ: Place order দিয়ে cargo agent সহ Purchase Order তৈরি করো।"
+                              ? "পরবর্তী ধাপ: supplier + price নিয়ে Submit for approval করো।"
+                              : st === "submitted"
+                                ? "Admin review করছে — approve হলেই Place order খুলবে।"
+                                : st === "approved"
+                                  ? "পরবর্তী ধাপ: Place order দিয়ে supplier link, cargo agent আর payment সহ PO তৈরি করো।"
                               : st === "ordered"
                                 ? "পরবর্তী ধাপ: মাল shipment-এ উঠলে ⋯ মেনু থেকে In transit করো।"
                                 : st === "in_transit"
@@ -1453,12 +1457,31 @@ function SourcingPage() {
                               disabled={changeStage.isPending}
                               onClick={() => changeStage.mutate({ idea: selected, stage: "sourced" })}
                             >
-                              Sourcing done
+                              Pick cheapest supplier
                             </Button>
                           )}
                         </div>
                       );
                     })()}
+
+                    <ApprovalCard
+                      status={reviewStatusOf(selected)}
+                      submittedAt={selected.sourcing_submitted_at ?? null}
+                      reviewedAt={selected.sourcing_reviewed_at ?? null}
+                      reviewNote={selected.sourcing_review_note ?? null}
+                      isAdmin={isAdmin}
+                      canSubmit={!!selected.selected_quote_id && !selected.imp_po_id}
+                      submitBlockedReason={
+                        selected.imp_po_id
+                          ? "PO তৈরি হয়ে গেছে"
+                          : "আগে একটা supplier quote Select করুন"
+                      }
+                      busy={submitForApproval.isPending || reviewDecision.isPending}
+                      onSubmit={(note) => submitForApproval.mutate({ idea: selected, note })}
+                      onDecision={(decision, note) =>
+                        reviewDecision.mutate({ idea: selected, decision, note })
+                      }
+                    />
 
                     <FollowupCard
                       ideaId={selected.id}
