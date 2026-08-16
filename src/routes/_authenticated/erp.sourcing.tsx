@@ -15,6 +15,7 @@ import {
   AlertTriangle,
   Loader2,
 } from "lucide-react";
+import { ClipboardCheck, ArrowLeft, Sparkles } from "lucide-react";
 import { MoreHorizontal, Truck, XCircle, Trash2, RotateCcw, Archive } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useBrand } from "@/contexts/brand-context";
@@ -37,6 +38,7 @@ import {
   type PoCartonDraft,
   type VariantMeta,
 } from "@/components/erp/imports/po-line-builder";
+import { PoReviewPanel } from "@/components/erp/imports/po-review";
 import { GrowthPageHeader } from "@/components/erp/growth/growth-shell";
 import { IdeaGallery, StarRating } from "@/components/erp/hub/idea-visuals";
 import {
@@ -196,6 +198,7 @@ function SourcingPage() {
   const [lastFx, setLastFx] = useState("17");
   const [addAnother, setAddAnother] = useState(false);
   const [orderOpen, setOrderOpen] = useState(false);
+  const [orderStep, setOrderStep] = useState<"form" | "review">("form");
   const [orderQty, setOrderQty] = useState("");
   const [orderPrice, setOrderPrice] = useState("");
   // PO fields
@@ -226,6 +229,22 @@ function SourcingPage() {
   >(null);
   const [removeReason, setRemoveReason] = useState("");
   const [sortBy, setSortBy] = useState<"stage" | "age" | "due" | "quotes" | "cost">("stage");
+  const [manualOpen, setManualOpen] = useState(false);
+  const [manual, setManual] = useState({
+    title: "",
+    category: "",
+    image_url: "",
+    source_url: "",
+    supplier_name: "",
+    supplier_url: "",
+    est_unit_cost: "",
+    est_sell_price: "",
+    target_price_min: "",
+    target_price_max: "",
+    moq: "",
+    priority: "normal",
+    notes: "",
+  });
   const searchRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
