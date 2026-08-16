@@ -135,6 +135,12 @@ export type HubIdea = {
   next_action_at?: string | null;
   next_action_note?: string | null;
   priority?: string | null;
+  sourcing_review_status?: string | null;
+  sourcing_submitted_at?: string | null;
+  sourcing_submitted_by?: string | null;
+  sourcing_reviewed_at?: string | null;
+  sourcing_reviewed_by?: string | null;
+  sourcing_review_note?: string | null;
   created_by: string | null;
   created_at: string;
 };

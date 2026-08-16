@@ -1,4 +1,15 @@
-import { CheckCircle2, Circle, Loader2, PackageSearch, ShoppingCart, Ship, Warehouse, Sparkles } from "lucide-react";
+import {
+  CheckCircle2,
+  Circle,
+  Loader2,
+  PackageSearch,
+  ShoppingCart,
+  Ship,
+  Warehouse,
+  Sparkles,
+  Send,
+  ShieldCheck,
+} from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 
@@ -6,6 +17,8 @@ export type SourcingStage =
   | "to_source"
   | "sourcing"
   | "sourced"
+  | "submitted"
+  | "approved"
   | "ordered"
   | "in_transit"
   | "received";
@@ -14,6 +27,8 @@ export const STAGE_ORDER: SourcingStage[] = [
   "to_source",
   "sourcing",
   "sourced",
+  "submitted",
+  "approved",
   "ordered",
   "in_transit",
   "received",
@@ -23,9 +38,11 @@ export const STAGE_META: Record<
   SourcingStage,
   { label: string; short: string; icon: LucideIcon; tone: string; dot: string }
 > = {
-  to_source:  { label: "To source",       short: "To source",  icon: Sparkles,     tone: "bg-muted text-muted-foreground border-border",                          dot: "bg-muted-foreground/50" },
+  to_source:  { label: "Pending",          short: "Pending",   icon: Sparkles,     tone: "bg-muted text-muted-foreground border-border",                          dot: "bg-muted-foreground/50" },
   sourcing:   { label: "Sourcing started", short: "Sourcing",  icon: PackageSearch, tone: "bg-amber-500/10 text-amber-700 dark:text-amber-400 border-amber-500/30", dot: "bg-amber-500" },
-  sourced:    { label: "Sourcing done",    short: "Sourced",   icon: CheckCircle2,  tone: "bg-sky-500/10 text-sky-700 dark:text-sky-400 border-sky-500/30",         dot: "bg-sky-500" },
+  sourced:    { label: "Supplier picked",  short: "Sourced",   icon: CheckCircle2,  tone: "bg-sky-500/10 text-sky-700 dark:text-sky-400 border-sky-500/30",         dot: "bg-sky-500" },
+  submitted:  { label: "Waiting approval", short: "Review",    icon: Send,          tone: "bg-orange-500/10 text-orange-700 dark:text-orange-400 border-orange-500/30", dot: "bg-orange-500" },
+  approved:   { label: "Approved",         short: "Approved",  icon: ShieldCheck,   tone: "bg-teal-500/10 text-teal-700 dark:text-teal-400 border-teal-500/30",     dot: "bg-teal-500" },
   ordered:    { label: "Ordered",          short: "Ordered",   icon: ShoppingCart,  tone: "bg-violet-500/10 text-violet-700 dark:text-violet-400 border-violet-500/30", dot: "bg-violet-500" },
   in_transit: { label: "In transit",       short: "Transit",   icon: Ship,          tone: "bg-blue-500/10 text-blue-700 dark:text-blue-400 border-blue-500/30",     dot: "bg-blue-500" },
   received:   { label: "Received",         short: "Received",  icon: Warehouse,     tone: "bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 border-emerald-500/30", dot: "bg-emerald-500" },
@@ -38,14 +55,17 @@ export function deriveStage(args: {
   selectedQuoteId: string | null;
   impPoId?: string | null;
   poStatus?: string | null;
+  reviewStatus?: string | null;
 }): SourcingStage {
-  const { status, quoteCount, selectedQuoteId, impPoId, poStatus } = args;
+  const { status, quoteCount, selectedQuoteId, impPoId, poStatus, reviewStatus } = args;
   if (impPoId || status === "ordered") {
     const s = poStatus ?? "";
     if (s === "completed" || s === "partially_received") return "received";
     if (s === "in_transit" || s === "at_china_warehouse" || s === "arrived_bd") return "in_transit";
     return "ordered";
   }
+  if (reviewStatus === "approved") return "approved";
+  if (reviewStatus === "submitted") return "submitted";
   if (selectedQuoteId) return "sourced";
   if (quoteCount > 0 || status === "sourcing") return "sourcing";
   return "to_source";

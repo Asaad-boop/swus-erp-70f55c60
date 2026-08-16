@@ -79,6 +79,8 @@ import {
   type HubSourcingQuote,
 } from "@/lib/erp/hub/hub-data";
 import { QuoteCompareTable } from "@/components/erp/hub/sourcing-quote-table";
+import { ApprovalCard, type ReviewStatus } from "@/components/erp/hub/sourcing-approval";
+import { useCurrentRole } from "@/hooks/use-current-role";
 import { SourcingActivity } from "@/components/erp/hub/sourcing-activity";
 import {
   FollowupCard,
@@ -176,6 +178,7 @@ const STUCK_DAYS = 7;
 
 function SourcingPage() {
   const { brandIds, activeBrand, isLoading: brandLoading } = useBrand();
+  const { isAdmin } = useCurrentRole();
   const qc = useQueryClient();
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [qOpen, setQOpen] = useState(false);
@@ -291,6 +294,7 @@ function SourcingPage() {
           selectedQuoteId: i.selected_quote_id,
           impPoId: i.imp_po_id,
           poStatus: po?.status ?? null,
+          reviewStatus: i.sourcing_review_status ?? "draft",
         }),
       );
     }
@@ -605,6 +609,80 @@ function SourcingPage() {
     onError: (e: Error) => toast.error(e.message),
   });
 
+  const reviewStatusOf = (i: HubIdea): ReviewStatus =>
+    ((i.sourcing_review_status as ReviewStatus | undefined) ?? "draft");
+
+  /** Staff submits the picked supplier + price for admin approval. */
+  const submitForApproval = useMutation({
+    mutationFn: async ({ idea, note }: { idea: HubIdea; note: string }) => {
+      if (!idea.selected_quote_id) {
+        throw new Error("আগে একটা supplier quote Select করুন");
+      }
+      const { data: auth } = await supabase.auth.getUser();
+      const { error } = await supabase
+        .from("hub_product_ideas")
+        .update({
+          sourcing_review_status: "submitted",
+          sourcing_submitted_at: new Date().toISOString(),
+          sourcing_submitted_by: auth.user?.id ?? null,
+          sourcing_review_note: note.trim() || null,
+          sourcing_reviewed_at: null,
+          sourcing_reviewed_by: null,
+        } as never)
+        .eq("id", idea.id);
+      if (error) throw error;
+      await logSourcingEvent({
+        ideaId: idea.id,
+        type: "stage_change",
+        fromStage: "sourced",
+        toStage: "submitted",
+        note: note.trim() || "Submitted for approval",
+      });
+    },
+    onSuccess: () => {
+      toast.success("Admin approval-এর জন্য পাঠানো হয়েছে");
+      invalidate();
+    },
+    onError: (e: Error) => toast.error(e.message),
+  });
+
+  /** Admin approves or sends the sourcing back to the team. */
+  const reviewDecision = useMutation({
+    mutationFn: async ({
+      idea,
+      decision,
+      note,
+    }: {
+      idea: HubIdea;
+      decision: "approved" | "rejected";
+      note: string;
+    }) => {
+      const { data: auth } = await supabase.auth.getUser();
+      const { error } = await supabase
+        .from("hub_product_ideas")
+        .update({
+          sourcing_review_status: decision,
+          sourcing_reviewed_at: new Date().toISOString(),
+          sourcing_reviewed_by: auth.user?.id ?? null,
+          sourcing_review_note: note.trim() || null,
+        } as never)
+        .eq("id", idea.id);
+      if (error) throw error;
+      await logSourcingEvent({
+        ideaId: idea.id,
+        type: "stage_change",
+        fromStage: "submitted",
+        toStage: decision === "approved" ? "approved" : "sourced",
+        note: `${decision === "approved" ? "Approved" : "Sent back"}${note.trim() ? ` — ${note.trim()}` : ""}`,
+      });
+    },
+    onSuccess: (_d, v) => {
+      toast.success(v.decision === "approved" ? "Approved ✅" : "ফেরত পাঠানো হয়েছে");
+      invalidate();
+    },
+    onError: (e: Error) => toast.error(e.message),
+  });
+
   /** Manual stage change — pre-order stages write idea.status, post-order stages write PO status. */
   const changeStage = useMutation({
     mutationFn: async ({ idea, stage }: { idea: HubIdea; stage: SourcingStage }) => {
@@ -637,6 +715,11 @@ function SourcingPage() {
         status: stage === "to_source" ? "approved" : "sourcing",
       };
       if (stage === "to_source") patch.selected_quote_id = null;
+      if (stage === "to_source" || stage === "sourcing" || stage === "sourced") {
+        patch.sourcing_review_status = "draft";
+        patch.sourcing_submitted_at = null;
+        patch.sourcing_reviewed_at = null;
+      }
       if (stage === "sourced" && !idea.selected_quote_id) {
         // Auto-pick the cheapest landed-cost quote so the user never gets stuck.
         const qs = (quotesQ.data?.get(idea.id) ?? []).filter((q) => q.status !== "rejected");
@@ -773,7 +856,7 @@ function SourcingPage() {
         <DropdownMenuContent align={align} className="w-52">
           <DropdownMenuLabel className="text-[11px]">Change status</DropdownMenuLabel>
           <DropdownMenuSeparator />
-          {STAGE_ORDER.map((s) => {
+          {STAGE_ORDER.filter((s) => s !== "submitted" && s !== "approved").map((s) => {
             const m = STAGE_META[s];
             const Icon = m.icon;
             const postOrder = s === "ordered" || s === "in_transit" || s === "received";
@@ -825,6 +908,9 @@ function SourcingPage() {
     mutationFn: async () => {
       if (!selected) return;
       if (!poBrandId) throw new Error("Brand পাওয়া যায়নি");
+      if (reviewStatusOf(selected) !== "approved") {
+        throw new Error("Admin approval ছাড়া order place করা যাবে না");
+      }
       const qty = Number(orderQty || 0);
       const unitCny = Number(poUnitCny || 0);
       const fx = Number(poFx || 0);
@@ -1047,7 +1133,12 @@ function SourcingPage() {
               )}
               <Button
                 size="sm"
-                disabled={!!selected.imp_po_id}
+                disabled={!!selected.imp_po_id || reviewStatusOf(selected) !== "approved"}
+                title={
+                  reviewStatusOf(selected) !== "approved"
+                    ? "আগে admin approval নিতে হবে"
+                    : undefined
+                }
                 onClick={() => {
                   setOrderQty(selected.order_qty ? String(selected.order_qty) : "");
                   setOrderPrice(
@@ -1089,7 +1180,7 @@ function SourcingPage() {
 
       {pipeline.length > 0 && (
         <div className="space-y-3">
-          <div className="grid grid-cols-2 gap-2 sm:grid-cols-4 lg:grid-cols-7">
+          <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-5 xl:grid-cols-9">
             <StageKpi
               label="In pipeline"
               value={String(stageCounts.all)}
@@ -1293,6 +1384,25 @@ function SourcingPage() {
                             : "supplier pending",
                         },
                         {
+                          stage: "submitted",
+                          date: selected.sourcing_submitted_at ?? null,
+                          note:
+                            reviewStatusOf(selected) === "rejected"
+                              ? "sent back"
+                              : reviewStatusOf(selected) === "submitted"
+                                ? "waiting admin"
+                                : "not submitted",
+                        },
+                        {
+                          stage: "approved",
+                          date:
+                            reviewStatusOf(selected) === "approved"
+                              ? (selected.sourcing_reviewed_at ?? null)
+                              : null,
+                          note:
+                            reviewStatusOf(selected) === "approved" ? "ready to order" : "pending",
+                        },
+                        {
                           stage: "ordered",
                           date: selected.ordered_at,
                           note: linkedPoQ.data?.po_number ?? (selected.order_qty ? `${selected.order_qty} pcs` : null),
@@ -1320,7 +1430,11 @@ function SourcingPage() {
                           : st === "sourcing"
                             ? "পরবর্তী ধাপ: সেরা quote টা Select করো, নাহলে ⋯ মেনু থেকে Sourcing done দিলে সবচেয়ে কম landed cost auto select হবে।"
                             : st === "sourced"
-                              ? "পরবর্তী ধাপ: Place order দিয়ে cargo agent সহ Purchase Order তৈরি করো।"
+                              ? "পরবর্তী ধাপ: supplier + price নিয়ে Submit for approval করো।"
+                              : st === "submitted"
+                                ? "Admin review করছে — approve হলেই Place order খুলবে।"
+                                : st === "approved"
+                                  ? "পরবর্তী ধাপ: Place order দিয়ে supplier link, cargo agent আর payment সহ PO তৈরি করো।"
                               : st === "ordered"
                                 ? "পরবর্তী ধাপ: মাল shipment-এ উঠলে ⋯ মেনু থেকে In transit করো।"
                                 : st === "in_transit"
@@ -1343,12 +1457,31 @@ function SourcingPage() {
                               disabled={changeStage.isPending}
                               onClick={() => changeStage.mutate({ idea: selected, stage: "sourced" })}
                             >
-                              Sourcing done
+                              Pick cheapest supplier
                             </Button>
                           )}
                         </div>
                       );
                     })()}
+
+                    <ApprovalCard
+                      status={reviewStatusOf(selected)}
+                      submittedAt={selected.sourcing_submitted_at ?? null}
+                      reviewedAt={selected.sourcing_reviewed_at ?? null}
+                      reviewNote={selected.sourcing_review_note ?? null}
+                      isAdmin={isAdmin}
+                      canSubmit={!!selected.selected_quote_id && !selected.imp_po_id}
+                      submitBlockedReason={
+                        selected.imp_po_id
+                          ? "PO তৈরি হয়ে গেছে"
+                          : "আগে একটা supplier quote Select করুন"
+                      }
+                      busy={submitForApproval.isPending || reviewDecision.isPending}
+                      onSubmit={(note) => submitForApproval.mutate({ idea: selected, note })}
+                      onDecision={(decision, note) =>
+                        reviewDecision.mutate({ idea: selected, decision, note })
+                      }
+                    />
 
                     <FollowupCard
                       ideaId={selected.id}

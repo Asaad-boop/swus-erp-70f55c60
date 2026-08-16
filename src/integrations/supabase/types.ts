@@ -5761,6 +5761,12 @@ export type Database = {
           source_price: number | null
           source_url: string | null
           sourcing_owner: string | null
+          sourcing_review_note: string | null
+          sourcing_review_status: string
+          sourcing_reviewed_at: string | null
+          sourcing_reviewed_by: string | null
+          sourcing_submitted_at: string | null
+          sourcing_submitted_by: string | null
           status: string
           supplier_name: string | null
           supplier_url: string | null
@@ -5801,6 +5807,12 @@ export type Database = {
           source_price?: number | null
           source_url?: string | null
           sourcing_owner?: string | null
+          sourcing_review_note?: string | null
+          sourcing_review_status?: string
+          sourcing_reviewed_at?: string | null
+          sourcing_reviewed_by?: string | null
+          sourcing_submitted_at?: string | null
+          sourcing_submitted_by?: string | null
           status?: string
           supplier_name?: string | null
           supplier_url?: string | null
@@ -5841,6 +5853,12 @@ export type Database = {
           source_price?: number | null
           source_url?: string | null
           sourcing_owner?: string | null
+          sourcing_review_note?: string | null
+          sourcing_review_status?: string
+          sourcing_reviewed_at?: string | null
+          sourcing_reviewed_by?: string | null
+          sourcing_submitted_at?: string | null
+          sourcing_submitted_by?: string | null
           status?: string
           supplier_name?: string | null
           supplier_url?: string | null
