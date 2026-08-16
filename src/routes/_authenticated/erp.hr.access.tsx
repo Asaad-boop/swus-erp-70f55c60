@@ -173,7 +173,7 @@ function AccessPage() {
     staleTime: 0,
     refetchOnWindowFocus: true,
   });
-  const usersList = workspace.data?.users ?? [];
+  const usersList = useMemo(() => workspace.data?.users ?? [], [workspace.data?.users]);
   const employees = (workspace.data?.employees ?? []) as Employee[];
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [draft, setDraft] = useState<Draft | null>(null);

@@ -1,4 +1,4 @@
-import type { SupabaseClient } from "@supabase/supabase-js";
+import type { SupabaseClient, User } from "@supabase/supabase-js";
 import { ALL_PAGE_PATHS } from "@/lib/erp/permissions/page-catalog";
 import type { AccessWorkspaceUser, AppRole, MyAccessProfile } from "@/lib/erp/access-profile.model";
 
@@ -71,11 +71,11 @@ export async function readMyAccessProfile(supabase: SupabaseClient): Promise<MyA
 export async function listAccessWorkspace(supabase: SupabaseClient, actorId: string) {
   await assertAccessAdmin(supabase, actorId);
   const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
-  const allAuthUsers = [] as Array<Record<string, any>>;
+  const allAuthUsers: User[] = [];
   for (let page = 1; page <= 20; page += 1) {
     const { data, error } = await supabaseAdmin.auth.admin.listUsers({ page, perPage: 200 });
     if (error) throw error;
-    allAuthUsers.push(...(data.users as Array<Record<string, any>>));
+    allAuthUsers.push(...data.users);
     if (data.users.length < 200) break;
   }
   const ids = allAuthUsers.map((user) => user.id as string);
