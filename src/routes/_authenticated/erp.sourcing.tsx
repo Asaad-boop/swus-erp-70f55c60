@@ -1036,6 +1036,71 @@ function SourcingPage() {
     onError: (e: Error) => toast.error(e.message),
   });
 
+  /** Manually add a product straight into the sourcing pipeline (no voting needed). */
+  const addManual = useMutation({
+    mutationFn: async () => {
+      const brandId = activeBrand?.id ?? brandIds[0] ?? null;
+      if (!brandId) throw new Error("Brand পাওয়া যায়নি");
+      const title = manual.title.trim();
+      if (!title) throw new Error("Product name দিন");
+      const num = (v: string) => (v.trim() === "" ? null : Number(v));
+      const { data, error } = await supabase
+        .from("hub_product_ideas")
+        .insert({
+          brand_id: brandId,
+          title,
+          category: manual.category.trim() || null,
+          image_url: manual.image_url.trim() || null,
+          images: manual.image_url.trim() ? [manual.image_url.trim()] : [],
+          source_url: manual.source_url.trim() || null,
+          supplier_name: manual.supplier_name.trim() || null,
+          supplier_url: manual.supplier_url.trim() || null,
+          est_unit_cost: num(manual.est_unit_cost) ?? 0,
+          est_sell_price: num(manual.est_sell_price) ?? 0,
+          target_price_min: num(manual.target_price_min),
+          target_price_max: num(manual.target_price_max),
+          moq: num(manual.moq),
+          priority: manual.priority,
+          notes: manual.notes.trim() || null,
+          status: "approved",
+          approved_at: new Date().toISOString(),
+          sourcing_review_status: "draft",
+        } as never)
+        .select("id")
+        .single();
+      if (error) throw error;
+      const id = (data as { id: string }).id;
+      await logSourcingEvent({
+        ideaId: id,
+        type: "note",
+        note: "Sourcing Desk থেকে manually product যোগ করা হয়েছে",
+      });
+      return id;
+    },
+    onSuccess: (id) => {
+      toast.success("Product sourcing pipeline-এ যোগ হয়েছে ✅");
+      setManualOpen(false);
+      setManual({
+        title: "",
+        category: "",
+        image_url: "",
+        source_url: "",
+        supplier_name: "",
+        supplier_url: "",
+        est_unit_cost: "",
+        est_sell_price: "",
+        target_price_min: "",
+        target_price_max: "",
+        moq: "",
+        priority: "normal",
+        notes: "",
+      });
+      invalidate();
+      if (id) setSelectedId(id);
+    },
+    onError: (e: Error) => toast.error(e.message),
+  });
+
   const bestQuote = useMemo(() => {
     if (quotes.length === 0) return null;
     return [...quotes]
