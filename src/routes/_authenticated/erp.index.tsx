@@ -111,6 +111,7 @@ function FullDashboard({ variant }: { variant: "owner" | "admin" }) {
   const [mktRange, setMktRange] = useState<MktRangeValue>(() => buildPreset("today"));
   const range = useMemo(() => rangeFromMkt(mktRange), [mktRange]);
   const [lastSync, setLastSync] = useState(new Date());
+  const [ownerTab, setOwnerTab] = useState<OwnerTab>("overview");
 
   // user greeting
   const { data: me } = useQuery({
@@ -177,60 +178,73 @@ function FullDashboard({ variant }: { variant: "owner" | "admin" }) {
       <div className="px-4 md:px-6 py-4 max-w-[1600px] mx-auto space-y-4">
         {owner ? (
           <>
-            {/* 1 — Money first */}
-            <SectionLabel title="Profit & cash" hint="Delivered-basis P&L, wallet position" />
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
-              <NetProfitCard brandIds={brandIds} enabled={enabled} range={range} />
-              <CashPositionCard brandIds={brandIds} enabled={enabled} />
-            </div>
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
-              <ProfitQuality brandIds={brandIds} enabled={enabled} range={range} />
-              <CodRemittancePipelineCard brandIds={brandIds} enabled={enabled} range={range} />
-            </div>
+            <OwnerTabs value={ownerTab} onChange={setOwnerTab} />
 
-            {/* 2 — Sales volume */}
-            <SectionLabel title="Sales" hint={mktRange.label} />
-            <KpiStrip variant="owner" brandIds={brandIds} enabled={enabled} range={range} onNav={(to) => navigate({ to: to as any })} />
-
-            {/* 3 — Trend & projection */}
-            <SectionLabel title="Trend & projection" />
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-3">
-              <div className="lg:col-span-2">
-                <TrendChart brandIds={brandIds} enabled={enabled} range={range} brands={brands} isAllBrands={isAllBrands} />
-              </div>
-              <MonthPaceCard brandIds={brandIds} enabled={enabled} />
-            </div>
-
-            {/* 4 — Brand comparison */}
-            {isAllBrands && brands.length > 1 && (
+            {ownerTab === "overview" && (
               <>
-                <SectionLabel title="Brand comparison" />
-                <BrandComparison brands={brands} range={range} />
+                <SectionLabel title="Profit & cash" hint="Delivered-basis P&L, wallet position" />
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
+                  <NetProfitCard brandIds={brandIds} enabled={enabled} range={range} />
+                  <CashPositionCard brandIds={brandIds} enabled={enabled} />
+                </div>
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
+                  <ProfitQuality brandIds={brandIds} enabled={enabled} range={range} />
+                  <CodRemittancePipelineCard brandIds={brandIds} enabled={enabled} range={range} />
+                </div>
+
+                <SectionLabel title="Sales" hint={mktRange.label} />
+                <KpiStrip variant="owner" brandIds={brandIds} enabled={enabled} range={range} onNav={(to) => navigate({ to: to as any })} />
+
+                <SectionLabel title="Trend & projection" />
+                <div className="grid grid-cols-1 lg:grid-cols-3 gap-3">
+                  <div className="lg:col-span-2">
+                    <TrendChart brandIds={brandIds} enabled={enabled} range={range} brands={brands} isAllBrands={isAllBrands} />
+                  </div>
+                  <MonthPaceCard brandIds={brandIds} enabled={enabled} />
+                </div>
+
+                {isAllBrands && brands.length > 1 && (
+                  <>
+                    <SectionLabel title="Brand comparison" />
+                    <BrandComparison brands={brands} range={range} />
+                  </>
+                )}
               </>
             )}
 
-            {/* 5 — Marketing efficiency */}
-            <SectionLabel title="Marketing efficiency" />
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
-              <RoasComparisonCard brandIds={brandIds} enabled={enabled} range={range} />
-              <AdWalletBalanceCard brandIds={brandIds} enabled={enabled} />
-            </div>
+            {ownerTab === "marketing" && (
+              <>
+                <SectionLabel title="Marketing efficiency" hint={mktRange.label} />
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
+                  <RoasComparisonCard brandIds={brandIds} enabled={enabled} range={range} />
+                  <AdWalletBalanceCard brandIds={brandIds} enabled={enabled} />
+                </div>
+                <SectionLabel title="Trend" />
+                <TrendChart brandIds={brandIds} enabled={enabled} range={range} brands={brands} isAllBrands={isAllBrands} />
+              </>
+            )}
 
-            {/* 6 — Products */}
-            <SectionLabel title="Products" hint="Best sellers vs loss makers" />
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
-              <TopProducts brandIds={brandIds} enabled={enabled} range={range} />
-              <ReturnRateByProductCard brandIds={brandIds} enabled={enabled} range={range} />
-            </div>
-            <ProductDangerZone brandIds={brandIds} enabled={enabled} range={range} />
+            {ownerTab === "products" && (
+              <>
+                <SectionLabel title="Products" hint="Best sellers vs loss makers" />
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
+                  <TopProducts brandIds={brandIds} enabled={enabled} range={range} />
+                  <ReturnRateByProductCard brandIds={brandIds} enabled={enabled} range={range} />
+                </div>
+                <ProductDangerZone brandIds={brandIds} enabled={enabled} range={range} />
+              </>
+            )}
 
-            {/* 7 — Books */}
-            <SectionLabel title="Finance & team" />
-            <FinanceSection brandIds={brandIds} enabled={enabled} range={range} />
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
-              <TeamCostCard brandIds={brandIds} enabled={enabled} />
-              <TopCustomers brandIds={brandIds} enabled={enabled} range={range} />
-            </div>
+            {ownerTab === "finance" && (
+              <>
+                <SectionLabel title="Finance & team" hint={mktRange.label} />
+                <FinanceSection brandIds={brandIds} enabled={enabled} range={range} />
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
+                  <TeamCostCard brandIds={brandIds} enabled={enabled} />
+                  <TopCustomers brandIds={brandIds} enabled={enabled} range={range} />
+                </div>
+              </>
+            )}
           </>
         ) : (
           <>
@@ -291,6 +305,40 @@ function SectionLabel({ title, hint }: { title: string; hint?: string }) {
       <h2 className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">{title}</h2>
       {hint ? <span className="text-[11px] text-slate-400 truncate">{hint}</span> : null}
       <div className="flex-1 h-px bg-slate-200" />
+    </div>
+  );
+}
+
+type OwnerTab = "overview" | "marketing" | "products" | "finance";
+
+const OWNER_TABS: { key: OwnerTab; label: string; icon: typeof TrendingUp }[] = [
+  { key: "overview", label: "Overview", icon: TrendingUp },
+  { key: "marketing", label: "Marketing", icon: Megaphone },
+  { key: "products", label: "Products", icon: Package },
+  { key: "finance", label: "Finance & team", icon: Banknote },
+];
+
+function OwnerTabs({ value, onChange }: { value: OwnerTab; onChange: (v: OwnerTab) => void }) {
+  return (
+    <div className="flex items-center gap-1 overflow-x-auto rounded-lg border border-slate-200 bg-slate-50 p-1">
+      {OWNER_TABS.map((t) => {
+        const Icon = t.icon;
+        const active = value === t.key;
+        return (
+          <button
+            key={t.key}
+            type="button"
+            onClick={() => onChange(t.key)}
+            className={cn(
+              "inline-flex shrink-0 items-center gap-1.5 rounded-md px-3 py-1.5 text-[12px] font-medium transition-colors",
+              active ? "bg-white text-slate-900 shadow-sm ring-1 ring-slate-200" : "text-slate-500 hover:text-slate-800",
+            )}
+          >
+            <Icon className="size-3.5" />
+            {t.label}
+          </button>
+        );
+      })}
     </div>
   );
 }
