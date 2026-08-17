@@ -39,6 +39,7 @@ import {
 } from "@/components/erp/dashboard-command-center";
 import { EmployeeDashboard } from "@/components/erp/dashboard/employee-dashboard";
 import { TeamCostCard } from "@/components/erp/dashboard/team-cost-card";
+import { MonthPaceCard } from "@/components/erp/dashboard/month-pace-card";
 
 export const Route = createFileRoute("/_authenticated/erp/")({
   head: () => ({ meta: [{ title: "Dashboard — SynqWithUs ERP" }] }),
@@ -174,102 +175,122 @@ function FullDashboard({ variant }: { variant: "owner" | "admin" }) {
       </div>
 
       <div className="px-4 md:px-6 py-4 max-w-[1600px] mx-auto space-y-4">
-        {/* Admin: operational command first */}
-        {!owner && (
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
-            <TodayCommandPanel brandIds={brandIds} enabled={enabled} />
-            <LiveVisitors />
-          </div>
-        )}
-
-        {/* KPI strip */}
-        <KpiStrip brandIds={brandIds} enabled={enabled} range={range} onNav={(to) => navigate({ to: to as any })} />
-
-        {/* Website orders + Today's sales split */}
-        <WebsiteOrdersOverview brandIds={brandIds} enabled={enabled} range={range} rangeLabel={mktRange.label} />
-
-        {/* Owner-only: profit & cash position */}
-        {owner && (
+        {owner ? (
           <>
+            {/* 1 — Money first */}
+            <SectionLabel title="Profit & cash" hint="Delivered-basis P&L, wallet position" />
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
               <NetProfitCard brandIds={brandIds} enabled={enabled} range={range} />
               <CashPositionCard brandIds={brandIds} enabled={enabled} />
             </div>
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
               <ProfitQuality brandIds={brandIds} enabled={enabled} range={range} />
-              <TeamCostCard brandIds={brandIds} enabled={enabled} />
+              <CodRemittancePipelineCard brandIds={brandIds} enabled={enabled} range={range} />
             </div>
+
+            {/* 2 — Sales volume */}
+            <SectionLabel title="Sales" hint={mktRange.label} />
+            <KpiStrip brandIds={brandIds} enabled={enabled} range={range} onNav={(to) => navigate({ to: to as any })} />
+
+            {/* 3 — Trend & projection */}
+            <SectionLabel title="Trend & projection" />
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-3">
+              <div className="lg:col-span-2">
+                <TrendChart brandIds={brandIds} enabled={enabled} range={range} brands={brands} isAllBrands={isAllBrands} />
+              </div>
+              <MonthPaceCard brandIds={brandIds} enabled={enabled} />
+            </div>
+
+            {/* 4 — Brand comparison */}
+            {isAllBrands && brands.length > 1 && (
+              <>
+                <SectionLabel title="Brand comparison" />
+                <BrandComparison brands={brands} range={range} />
+              </>
+            )}
+
+            {/* 5 — Marketing efficiency */}
+            <SectionLabel title="Marketing efficiency" />
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
+              <RoasComparisonCard brandIds={brandIds} enabled={enabled} range={range} />
+              <AdWalletBalanceCard brandIds={brandIds} enabled={enabled} />
+            </div>
+
+            {/* 6 — Products */}
+            <SectionLabel title="Products" hint="Best sellers vs loss makers" />
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
+              <TopProducts brandIds={brandIds} enabled={enabled} range={range} />
+              <ReturnRateByProductCard brandIds={brandIds} enabled={enabled} range={range} />
+            </div>
+            <ProductDangerZone brandIds={brandIds} enabled={enabled} range={range} />
+
+            {/* 7 — Books */}
+            <SectionLabel title="Finance & team" />
+            <FinanceSection brandIds={brandIds} enabled={enabled} range={range} />
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
+              <TeamCostCard brandIds={brandIds} enabled={enabled} />
+              <TopCustomers brandIds={brandIds} enabled={enabled} range={range} />
+            </div>
+          </>
+        ) : (
+          <>
+            {/* Admin — operations first */}
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
+              <TodayCommandPanel brandIds={brandIds} enabled={enabled} />
+              <LiveVisitors />
+            </div>
+
+            <SectionLabel title="Order flow" hint={mktRange.label} />
+            <KpiStrip brandIds={brandIds} enabled={enabled} range={range} onNav={(to) => navigate({ to: to as any })} />
+            <WebsiteOrdersOverview brandIds={brandIds} enabled={enabled} range={range} rangeLabel={mktRange.label} />
+
+            <SectionLabel title="Needs action" />
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
+              <StuckOrdersCard brandIds={brandIds} enabled={enabled} />
+              <CourierPerformanceCard brandIds={brandIds} enabled={enabled} range={range} />
+            </div>
+            <NeedsAttention brandIds={brandIds} enabled={enabled} />
+
+            <SectionLabel title="Inventory" />
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-3">
+              <InventoryHealth brandIds={brandIds} enabled={enabled} />
+              <div className="lg:col-span-2">
+                <LowStockList brandIds={brandIds} enabled={enabled} />
+              </div>
+            </div>
+
+            <SectionLabel title="Activity" />
+            <TrendChart brandIds={brandIds} enabled={enabled} range={range} brands={brands} isAllBrands={isAllBrands} />
+            <TodayAnalytics brandIds={brandIds} enabled={enabled} range={range} rangeLabel={mktRange.label} />
+            <HourlyOrdersComparison brandIds={brandIds} enabled={enabled} />
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
+              <NewVsReturningCard brandIds={brandIds} enabled={enabled} range={range} />
+              <AbandonedCartRecoveryCard brandIds={brandIds} enabled={enabled} />
+            </div>
+            <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-3">
+              <CourierCard brandIds={brandIds} enabled={enabled} range={range} />
+              <CodOutstandingCard brandIds={brandIds} enabled={enabled} range={range} />
+              <ReturnsCard brandIds={brandIds} enabled={enabled} range={range} />
+              <ImportsCard brandIds={brandIds} enabled={enabled} range={range} />
+            </div>
+            <MarketingCard brandIds={brandIds} enabled={enabled} range={range} />
+            <TopProducts brandIds={brandIds} enabled={enabled} range={range} />
+            <LiveOrdersFeed brandIds={brandIds} enabled={enabled} />
           </>
         )}
 
-        {/* MUST-HAVE row 2: COD Remittance + ROAS */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
-          <CodRemittancePipelineCard brandIds={brandIds} enabled={enabled} range={range} />
-          <RoasComparisonCard brandIds={brandIds} enabled={enabled} range={range} />
-        </div>
-
-        {/* MUST-HAVE row 3: Ad Wallet (owner) + Stuck Orders */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
-          {owner && <AdWalletBalanceCard brandIds={brandIds} enabled={enabled} />}
-          <StuckOrdersCard brandIds={brandIds} enabled={enabled} />
-        </div>
-
-        {/* MUST-HAVE row 4: Courier perf + Return-rate SKUs */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
-          <CourierPerformanceCard brandIds={brandIds} enabled={enabled} range={range} />
-          <ReturnRateByProductCard brandIds={brandIds} enabled={enabled} range={range} />
-        </div>
-
-        {/* GOOD-TO-HAVE — trend + segmentation */}
-        <TrendChart brandIds={brandIds} enabled={enabled} range={range} brands={brands} isAllBrands={isAllBrands} />
-
-        <TodayAnalytics brandIds={brandIds} enabled={enabled} range={range} rangeLabel={mktRange.label} />
-
-        {!owner && <HourlyOrdersComparison brandIds={brandIds} enabled={enabled} />}
-
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
-          <NewVsReturningCard brandIds={brandIds} enabled={enabled} range={range} />
-          <AbandonedCartRecoveryCard brandIds={brandIds} enabled={enabled} />
-        </div>
-
-        {owner && isAllBrands && brands.length > 1 && (
-          <BrandComparison brands={brands} range={range} />
-        )}
-
-        {/* Supporting existing cards */}
-        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-3">
-          <CourierCard brandIds={brandIds} enabled={enabled} range={range} />
-          <CodOutstandingCard brandIds={brandIds} enabled={enabled} range={range} />
-          <ReturnsCard brandIds={brandIds} enabled={enabled} range={range} />
-          <ImportsCard brandIds={brandIds} enabled={enabled} range={range} />
-        </div>
-
-        {owner && <FinanceSection brandIds={brandIds} enabled={enabled} range={range} />}
-
-        {owner && <ProductDangerZone brandIds={brandIds} enabled={enabled} range={range} />}
-
-        {!owner && (
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-3">
-            <InventoryHealth brandIds={brandIds} enabled={enabled} />
-            <div className="lg:col-span-2">
-              <LowStockList brandIds={brandIds} enabled={enabled} />
-            </div>
-          </div>
-        )}
-
-        <MarketingCard brandIds={brandIds} enabled={enabled} range={range} />
-
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
-          <TopProducts brandIds={brandIds} enabled={enabled} range={range} />
-          {owner && <TopCustomers brandIds={brandIds} enabled={enabled} range={range} />}
-        </div>
-
-        {!owner && <NeedsAttention brandIds={brandIds} enabled={enabled} />}
-
-        {!owner && <LiveOrdersFeed brandIds={brandIds} enabled={enabled} />}
-
         <SystemFooter lastSync={lastSync} />
       </div>
+    </div>
+  );
+}
+
+function SectionLabel({ title, hint }: { title: string; hint?: string }) {
+  return (
+    <div className="flex items-baseline gap-2 pt-2">
+      <h2 className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">{title}</h2>
+      {hint ? <span className="text-[11px] text-slate-400 truncate">{hint}</span> : null}
+      <div className="flex-1 h-px bg-slate-200" />
     </div>
   );
 }
