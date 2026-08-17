@@ -343,16 +343,6 @@ function OwnerTabs({ value, onChange }: { value: OwnerTab; onChange: (v: OwnerTa
   );
 }
 
-function SectionLabelUnused({ title, hint }: { title: string; hint?: string }) {
-  return (
-    <div className="flex items-baseline gap-2 pt-2">
-      <h2 className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">{title}</h2>
-      {hint ? <span className="text-[11px] text-slate-400 truncate">{hint}</span> : null}
-      <div className="flex-1 h-px bg-slate-200" />
-    </div>
-  );
-}
-
 function timeAgo(d: Date) {
   const s = Math.floor((Date.now() - d.getTime()) / 1000);
   if (s < 60) return `${s}s ago`;
