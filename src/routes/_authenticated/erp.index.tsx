@@ -190,7 +190,7 @@ function FullDashboard({ variant }: { variant: "owner" | "admin" }) {
 
             {/* 2 — Sales volume */}
             <SectionLabel title="Sales" hint={mktRange.label} />
-            <KpiStrip brandIds={brandIds} enabled={enabled} range={range} onNav={(to) => navigate({ to: to as any })} />
+            <KpiStrip variant="owner" brandIds={brandIds} enabled={enabled} range={range} onNav={(to) => navigate({ to: to as any })} />
 
             {/* 3 — Trend & projection */}
             <SectionLabel title="Trend & projection" />
@@ -304,8 +304,8 @@ function timeAgo(d: Date) {
 
 // ---------- KPI STRIP ----------
 function KpiStrip({
-  brandIds, enabled, range, onNav,
-}: { brandIds: string[]; enabled: boolean; range: ReturnType<typeof getRange>; onNav: (to: string) => void }) {
+  brandIds, enabled, range, onNav, variant = "admin",
+}: { brandIds: string[]; enabled: boolean; range: ReturnType<typeof getRange>; onNav: (to: string) => void; variant?: "owner" | "admin" }) {
   const { data, isLoading } = useQuery({
     queryKey: ["dash-kpi", brandIds.join(","), range.from.toISOString(), range.to.toISOString()],
     enabled,
@@ -403,7 +403,7 @@ function KpiStrip({
     },
   });
 
-  const cards = [
+  const allCards = [
     { icon: ShoppingCart, label: "Orders", value: data?.curOrders ?? 0, trend: data?.ordersTrend, sub: "vs previous", tone: "indigo", to: "/erp/orders/web" },
     { icon: CheckCircle2, label: "Confirmed", value: data?.confirmed ?? 0, sub: `${(data?.confirmRate ?? 0).toFixed(0)}% confirm rate`, tone: "emerald", to: "/erp/orders/web" },
     { icon: Truck, label: "In Transit", value: data?.inTransit ?? 0, sub: "Pathao + Steadfast", tone: "blue", to: "/erp/orders/web" },
@@ -417,8 +417,19 @@ function KpiStrip({
     { icon: Repeat, label: "Returning", value: data?.retCust ?? 0, sub: "repeat customers", tone: "violet" },
   ];
 
+  // Owner sees the business-health subset (money + demand quality); the
+  // dispatch-desk tiles stay on the admin view.
+  const OWNER_ORDER = [
+    "Orders", "Sales Revenue", "AOV", "Confirmed",
+    "Cancelled", "COD Pending", "New Customers", "Returning",
+  ];
+  const cards =
+    variant === "owner"
+      ? OWNER_ORDER.map((l) => allCards.find((c) => c.label === l)!).filter(Boolean)
+      : allCards;
+
   return (
-    <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-2">
+    <div className={cn("grid gap-3 grid-cols-2 md:grid-cols-4", variant === "owner" ? "xl:grid-cols-4" : "lg:grid-cols-5")}>
       {cards.map((c, i) => (
         <KpiCard
           key={i}
