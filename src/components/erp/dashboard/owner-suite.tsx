@@ -156,8 +156,8 @@ function useExecutive({ brandIds, enabled, range }: P) {
     staleTime: 60_000,
     queryFn: async () => {
       const [cur, prev] = await Promise.all([
-        fetchPnl(brandIds, range.from, range.to, fx),
-        fetchPnl(brandIds, range.prevFrom, range.prevTo, fx),
+        fetchPnl(brandIds, range.from, range.to, fx ?? undefined),
+        fetchPnl(brandIds, range.prevFrom, range.prevTo, fx ?? undefined),
       ]);
       return { cur, prev };
     },
@@ -271,7 +271,7 @@ export function NeedsYourAttention({ brandIds, enabled, range }: P) {
       if (returnRate > 8) out.push({ id: "return", sev: "warn", title: "High return", detail: `${pct(returnRate)} return rate`, to: "/erp/returns" });
 
       const dueAmt = ((bills.data ?? []) as any[]).reduce((s, b) => s + Math.max(0, Number(b.amount ?? 0) - Number(b.paid_amount ?? 0)), 0);
-      if (dueAmt > 0) out.push({ id: "bills", sev: "warn", title: "Supplier payment due", detail: `${BDT(dueAmt)} — ৭ দিনের মধ্যে`, to: "/erp/finance/payables" });
+      if (dueAmt > 0) out.push({ id: "bills", sev: "warn", title: "Supplier payment due", detail: `${BDT(dueAmt)} — ৭ দিনের মধ্যে`, to: "/erp/suppliers" });
 
       const codAmt = ((cod.data ?? []) as any[]).reduce((s, r) => s + Math.max(0, Number(r.total ?? 0) - Number(r.partial_amount ?? 0)), 0);
       if (codAmt > 0) out.push({ id: "cod", sev: "info", title: "Courier / COD due", detail: `${BDT(codAmt)} collect বাকি`, to: "/erp/reconciliation" });
@@ -407,7 +407,7 @@ export function TargetForecast({ brandIds, enabled }: { brandIds: string[]; enab
     staleTime: 60_000,
     queryFn: async () => {
       const [pnl, goals, budget] = await Promise.all([
-        fetchPnl(brandIds, mStart, now, fx),
+        fetchPnl(brandIds, mStart, now, fx ?? undefined),
         applyBrandScope(supabase.from("hub_goals").select("id, metric_key, target_value, period_start, period_end"), brandIds)
           .lte("period_start", localDate(mEnd)).gte("period_end", localDate(mStart)),
         applyBrandScope(supabase.from("mkt_budgets").select("planned_spend, period_start, period_end"), brandIds)
@@ -1087,7 +1087,7 @@ export function ExpenseOverview({ brandIds, enabled }: { brandIds: string[]; ena
 
   return (
     <SectionCard title="Expenses (this month)" icon={Receipt}
-      action={<Link to="/erp/finance/expenses" className="text-[11px] text-indigo-600 hover:underline">Expenses →</Link>}>
+      action={<Link to="/erp/finance" className="text-[11px] text-indigo-600 hover:underline">Expenses →</Link>}>
       {isLoading ? <Skeleton className="h-32" /> : (
         <>
           <div className="flex items-baseline gap-3">

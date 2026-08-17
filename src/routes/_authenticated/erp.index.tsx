@@ -335,13 +335,15 @@ function SectionLabel({ title, hint }: { title: string; hint?: string }) {
   );
 }
 
-type OwnerTab = "overview" | "marketing" | "products" | "finance";
+type OwnerTab = "overview" | "marketing" | "sales" | "products" | "finance" | "team";
 
 const OWNER_TABS: { key: OwnerTab; label: string; icon: typeof TrendingUp }[] = [
   { key: "overview", label: "Overview", icon: TrendingUp },
   { key: "marketing", label: "Marketing", icon: Megaphone },
-  { key: "products", label: "Products", icon: Package },
-  { key: "finance", label: "Finance & team", icon: Banknote },
+  { key: "sales", label: "Orders & inventory", icon: Boxes },
+  { key: "products", label: "Products & brands", icon: Package },
+  { key: "finance", label: "Cash & expenses", icon: Banknote },
+  { key: "team", label: "Team & health", icon: Users },
 ];
 
 function OwnerTabs({ value, onChange }: { value: OwnerTab; onChange: (v: OwnerTab) => void }) {
