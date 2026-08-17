@@ -459,6 +459,14 @@ function PoDetailPage() {
       </Card>
 
       {/* Dialogs */}
+      <EditPoDialog
+        open={editOpen}
+        onOpenChange={setEditOpen}
+        po={po}
+        items={items}
+        cartons={cartons}
+        releases={releases}
+      />
       {arrivedOpen && brandId && (
         <ArrivedDialog poId={po.id} onClose={() => setArrivedOpen(false)} brandId={brandId} />
       )}
