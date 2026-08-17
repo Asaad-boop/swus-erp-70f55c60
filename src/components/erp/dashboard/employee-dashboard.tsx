@@ -114,6 +114,42 @@ export function EmployeeDashboard() {
   );
 
   const employeeLinked = Boolean(att?.employee);
+  const employeeId = att?.employee?.id as string | undefined;
+
+  // Personal month summary (no money): present days, late, OT, pending leaves.
+  const { data: mine } = useQuery({
+    queryKey: ["emp-month-summary", employeeId],
+    enabled: Boolean(employeeId),
+    staleTime: 5 * 60_000,
+    queryFn: async () => {
+      const now = new Date();
+      const start = new Date(now.getFullYear(), now.getMonth(), 1).toISOString().slice(0, 10);
+      const [{ data: rows }, { data: leaves }] = await Promise.all([
+        supabase
+          .from("hr_attendance")
+          .select("work_minutes, late_minutes, overtime_minutes, status, work_date")
+          .eq("employee_id", employeeId!)
+          .gte("work_date", start),
+        supabase
+          .from("hr_leaves")
+          .select("id, status, start_date, end_date, days")
+          .eq("employee_id", employeeId!)
+          .order("start_date", { ascending: false })
+          .limit(20),
+      ]);
+      const list = rows ?? [];
+      return {
+        present: list.filter((r) => String(r.status) === "present").length,
+        lateDays: list.filter((r) => Number(r.late_minutes ?? 0) > 0).length,
+        otMins: list.reduce((s, r) => s + Number(r.overtime_minutes ?? 0), 0),
+        workedMins: list.reduce((s, r) => s + Number(r.work_minutes ?? 0), 0),
+        pendingLeaves: (leaves ?? []).filter((l) => String(l.status) === "pending").length,
+        approvedDays: (leaves ?? [])
+          .filter((l) => String(l.status) === "approved")
+          .reduce((s, l) => s + Number(l.days ?? 0), 0),
+      };
+    },
+  });
 
   return (
     <div className="min-h-screen bg-muted/20">
@@ -183,6 +219,23 @@ export function EmployeeDashboard() {
         </section>
 
         {/* MY TASKS */}
+        {employeeLinked && (
+          <section className="grid grid-cols-2 md:grid-cols-5 gap-3">
+            {[
+              { label: "Present days", v: String(mine?.present ?? 0) },
+              { label: "Worked (month)", v: hhmm(mine?.workedMins ?? 0) },
+              { label: "Overtime", v: hhmm(mine?.otMins ?? 0) },
+              { label: "Late days", v: String(mine?.lateDays ?? 0) },
+              { label: "Leave pending", v: String(mine?.pendingLeaves ?? 0) },
+            ].map((s) => (
+              <div key={s.label} className="rounded-xl border border-border/60 bg-card p-3">
+                <div className="text-[10px] uppercase tracking-wide text-muted-foreground">{s.label}</div>
+                <div className="mt-1 text-lg font-bold tabular-nums">{s.v}</div>
+              </div>
+            ))}
+          </section>
+        )}
+
         {tasks.length > 0 && (
           <section className="rounded-2xl border border-border/60 bg-card overflow-hidden">
             <div className="px-5 py-3 border-b border-border/60 flex items-center gap-2">
