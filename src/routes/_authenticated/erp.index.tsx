@@ -40,6 +40,11 @@ import {
 import { EmployeeDashboard } from "@/components/erp/dashboard/employee-dashboard";
 import { TeamCostCard } from "@/components/erp/dashboard/team-cost-card";
 import { MonthPaceCard } from "@/components/erp/dashboard/month-pace-card";
+import {
+  ExecutiveKpi, NeedsYourAttention, PerformanceTrend, TargetForecast,
+  MarketingPerformance, OrderHealth, InventoryIntelligence, ProductPerformance,
+  CashAndFinance, ExpenseOverview, TeamOpsSummary, BusinessHealthScore, RecentActivity,
+} from "@/components/erp/dashboard/owner-suite";
 
 export const Route = createFileRoute("/_authenticated/erp/")({
   head: () => ({ meta: [{ title: "Dashboard — SynqWithUs ERP" }] }),
@@ -182,27 +187,54 @@ function FullDashboard({ variant }: { variant: "owner" | "admin" }) {
 
             {ownerTab === "overview" && (
               <>
-                <SectionLabel title="Profit & cash" hint="Delivered-basis P&L, wallet position" />
-                <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
-                  <NetProfitCard brandIds={brandIds} enabled={enabled} range={range} />
-                  <CashPositionCard brandIds={brandIds} enabled={enabled} />
-                </div>
-                <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
-                  <ProfitQuality brandIds={brandIds} enabled={enabled} range={range} />
-                  <CodRemittancePipelineCard brandIds={brandIds} enabled={enabled} range={range} />
-                </div>
+                <SectionLabel title="Executive KPI" hint={`${mktRange.label} · vs previous period`} />
+                <ExecutiveKpi brandIds={brandIds} enabled={enabled} range={range} compareLabel="vs prev" />
 
-                <SectionLabel title="Sales" hint={mktRange.label} />
-                <KpiStrip variant="owner" brandIds={brandIds} enabled={enabled} range={range} onNav={(to) => navigate({ to: to as any })} />
+                <SectionLabel title="Needs your attention" />
+                <NeedsYourAttention brandIds={brandIds} enabled={enabled} range={range} />
 
-                <SectionLabel title="Trend & projection" />
+                <SectionLabel title="Business performance" hint={mktRange.label} />
                 <div className="grid grid-cols-1 lg:grid-cols-3 gap-3">
                   <div className="lg:col-span-2">
-                    <TrendChart brandIds={brandIds} enabled={enabled} range={range} brands={brands} isAllBrands={isAllBrands} />
+                    <PerformanceTrend brandIds={brandIds} enabled={enabled} range={range} />
                   </div>
                   <MonthPaceCard brandIds={brandIds} enabled={enabled} />
                 </div>
 
+                <SectionLabel title="Target & forecast" hint="Current month" />
+                <TargetForecast brandIds={brandIds} enabled={enabled} />
+              </>
+            )}
+
+            {ownerTab === "marketing" && (
+              <>
+                <SectionLabel title="Marketing performance" hint={mktRange.label} />
+                <MarketingPerformance brandIds={brandIds} enabled={enabled} range={range} />
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
+                  <RoasComparisonCard brandIds={brandIds} enabled={enabled} range={range} />
+                  <AdWalletBalanceCard brandIds={brandIds} enabled={enabled} />
+                </div>
+              </>
+            )}
+
+            {ownerTab === "sales" && (
+              <>
+                <SectionLabel title="Order & sales health" hint={mktRange.label} />
+                <OrderHealth brandIds={brandIds} enabled={enabled} range={range} />
+                <KpiStrip variant="owner" brandIds={brandIds} enabled={enabled} range={range} onNav={(to) => navigate({ to: to as any })} />
+                <SectionLabel title="Inventory intelligence" />
+                <InventoryIntelligence brandIds={brandIds} enabled={enabled} range={range} />
+              </>
+            )}
+
+            {ownerTab === "products" && (
+              <>
+                <SectionLabel title="Product performance" hint={mktRange.label} />
+                <ProductPerformance brandIds={brandIds} enabled={enabled} range={range} />
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
+                  <ReturnRateByProductCard brandIds={brandIds} enabled={enabled} range={range} />
+                  <ProductDangerZone brandIds={brandIds} enabled={enabled} range={range} />
+                </div>
                 {isAllBrands && brands.length > 1 && (
                   <>
                     <SectionLabel title="Brand comparison" />
@@ -212,37 +244,31 @@ function FullDashboard({ variant }: { variant: "owner" | "admin" }) {
               </>
             )}
 
-            {ownerTab === "marketing" && (
-              <>
-                <SectionLabel title="Marketing efficiency" hint={mktRange.label} />
-                <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
-                  <RoasComparisonCard brandIds={brandIds} enabled={enabled} range={range} />
-                  <AdWalletBalanceCard brandIds={brandIds} enabled={enabled} />
-                </div>
-                <SectionLabel title="Trend" />
-                <TrendChart brandIds={brandIds} enabled={enabled} range={range} brands={brands} isAllBrands={isAllBrands} />
-              </>
-            )}
-
-            {ownerTab === "products" && (
-              <>
-                <SectionLabel title="Products" hint="Best sellers vs loss makers" />
-                <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
-                  <TopProducts brandIds={brandIds} enabled={enabled} range={range} />
-                  <ReturnRateByProductCard brandIds={brandIds} enabled={enabled} range={range} />
-                </div>
-                <ProductDangerZone brandIds={brandIds} enabled={enabled} range={range} />
-              </>
-            )}
-
             {ownerTab === "finance" && (
               <>
-                <SectionLabel title="Finance & team" hint={mktRange.label} />
-                <FinanceSection brandIds={brandIds} enabled={enabled} range={range} />
+                <SectionLabel title="Cash & finance" hint={mktRange.label} />
+                <CashAndFinance brandIds={brandIds} enabled={enabled} range={range} />
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
+                  <NetProfitCard brandIds={brandIds} enabled={enabled} range={range} />
+                  <CodRemittancePipelineCard brandIds={brandIds} enabled={enabled} range={range} />
+                </div>
+                <SectionLabel title="Expenses" />
+                <ExpenseOverview brandIds={brandIds} enabled={enabled} />
+              </>
+            )}
+
+            {ownerTab === "team" && (
+              <>
+                <SectionLabel title="Team & operations" />
+                <TeamOpsSummary brandIds={brandIds} enabled={enabled} />
                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
                   <TeamCostCard brandIds={brandIds} enabled={enabled} />
                   <TopCustomers brandIds={brandIds} enabled={enabled} range={range} />
                 </div>
+                <SectionLabel title="Business health score" />
+                <BusinessHealthScore brandIds={brandIds} enabled={enabled} range={range} />
+                <SectionLabel title="Recent activity" />
+                <RecentActivity brandIds={brandIds} enabled={enabled} />
               </>
             )}
           </>
