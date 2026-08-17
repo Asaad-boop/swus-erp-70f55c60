@@ -190,7 +190,7 @@ function FullDashboard({ variant }: { variant: "owner" | "admin" }) {
 
             {/* 2 — Sales volume */}
             <SectionLabel title="Sales" hint={mktRange.label} />
-            <KpiStrip brandIds={brandIds} enabled={enabled} range={range} onNav={(to) => navigate({ to: to as any })} />
+            <KpiStrip variant="owner" brandIds={brandIds} enabled={enabled} range={range} onNav={(to) => navigate({ to: to as any })} />
 
             {/* 3 — Trend & projection */}
             <SectionLabel title="Trend & projection" />
