@@ -1400,3 +1400,42 @@ export const releasePoQuantity = createServerFn({ method: "POST" })
       total_ordered: totalOrdered,
     };
   });
+
+/* ============================================================
+   EDIT Import PO (header + product lines)
+   ============================================================ */
+
+const editPoItemSchema = z.object({
+  id: z.string().uuid().optional(),
+  product_id: z.string().uuid().nullable().optional(),
+  variant_id: z.string().uuid().nullable().optional(),
+  sku_snapshot: z.string().nullable().optional(),
+  name_snapshot: z.string().min(1),
+  image_snapshot: z.string().nullable().optional(),
+  quantity: z.number().int().positive(),
+  unit_cost_foreign: z.number().nonnegative(),
+});
+
+export const updateImportPo = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d: any) =>
+    z.object({
+      poId: z.string().uuid(),
+      order_date: z.string().optional(),
+      supplier_id: z.string().uuid().optional(),
+      currency: z.string().optional(),
+      fx_rate: z.number().positive().optional(),
+      notes: z.string().nullable().optional(),
+      items: z.array(editPoItemSchema).min(1).optional(),
+    }).parse(d),
+  )
+  .handler(async ({ data, context }) => {
+    await assertAnyRole(context.supabase, context.userId, ["admin", "operations", "accountant"]);
+    const { poId, ...payload } = data;
+    const { data: out, error } = await context.supabase.rpc("imp_update_po", {
+      _po_id: poId,
+      _payload: payload,
+    });
+    if (error) throw error;
+    return out as { ok: boolean; items_updated: boolean; locked: boolean };
+  });

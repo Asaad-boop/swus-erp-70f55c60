@@ -4,7 +4,7 @@ import { useServerFn } from "@tanstack/react-start";
 import { useState } from "react";
 import {
   ArrowLeft, Truck, CheckCircle2, AlertTriangle, Wallet, Loader2,
-  PackageCheck, Receipt, Trash2,
+  PackageCheck, Receipt, Trash2, Pencil,
 } from "lucide-react";
 import { toast } from "sonner";
 import { Card } from "@/components/ui/card";
@@ -30,6 +30,7 @@ import { CartonRow } from "@/components/erp/imports/po-detail/carton-row";
 import { CartonsHeader } from "@/components/erp/imports/po-detail/cartons-header";
 import { ArrivedDialog, PaymentDialog, BulkReleaseDialog } from "@/components/erp/imports/po-detail/dialogs";
 import { QuantityReleaseCard } from "@/components/erp/imports/po-detail/quantity-release-card";
+import { EditPoDialog } from "@/components/erp/imports/po-detail/edit-po-dialog";
 
 export const Route = createFileRoute("/_authenticated/erp/imports/orders/$orderId")({
   head: () => ({ meta: [{ title: "Purchase Order — Imports" }] }),
@@ -71,6 +72,7 @@ function PoDetailPage() {
 
   const [arrivedOpen, setArrivedOpen] = useState(false);
   const [paymentOpen, setPaymentOpen] = useState(false);
+  const [editOpen, setEditOpen] = useState(false);
 
   const stageMut = useMutation({
     mutationFn: (vars: { carton_id: string; new_stage: ImpCartonStatus }) =>
@@ -161,6 +163,9 @@ function PoDetailPage() {
             </div>
           </div>
           <div className="flex gap-2">
+            <Button variant="outline" onClick={() => setEditOpen(true)}>
+              <Pencil className="h-4 w-4 mr-1" />Edit PO
+            </Button>
             <Button
               variant={Number(po.due_bdt) > 0 ? "default" : "outline"}
               className={Number(po.due_bdt) > 0 ? "bg-orange-600 hover:bg-orange-700 text-white" : ""}
@@ -454,6 +459,14 @@ function PoDetailPage() {
       </Card>
 
       {/* Dialogs */}
+      <EditPoDialog
+        open={editOpen}
+        onOpenChange={setEditOpen}
+        po={po}
+        items={items}
+        cartons={cartons}
+        releases={releases}
+      />
       {arrivedOpen && brandId && (
         <ArrivedDialog poId={po.id} onClose={() => setArrivedOpen(false)} brandId={brandId} />
       )}

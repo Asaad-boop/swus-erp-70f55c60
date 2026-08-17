@@ -12141,6 +12141,7 @@ export type Database = {
         Args: { _carton: string; _new_stage: string; _notes?: string }
         Returns: undefined
       }
+      imp_update_po: { Args: { _payload: Json; _po_id: string }; Returns: Json }
       is_admin: { Args: never; Returns: boolean }
       is_finance_staff: { Args: { _uid: string }; Returns: boolean }
       is_guest_order: { Args: { _order_id: string }; Returns: boolean }
