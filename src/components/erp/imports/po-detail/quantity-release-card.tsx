@@ -164,8 +164,10 @@ export function QuantityReleaseCard({
   const dueForReleased = Math.max(0, Math.min(due || releasedShare, releasedShare));
 
   const mut = useMutation({
-    mutationFn: () =>
-      releaseFn({
+    mutationFn: () => {
+      const amt = payNow ? Math.max(0, Number(payOverride ?? previewTotalDue.toFixed(2)) || 0) : 0;
+      const ratio = previewTotalDue > 0 ? Math.min(1, amt / previewTotalDue) : 0;
+      return releaseFn({
         data: {
           po_id: poId,
           warehouse_id: warehouseId || undefined,
@@ -173,12 +175,26 @@ export function QuantityReleaseCard({
           items: items
             .map((i) => ({ po_item_id: i.id, quantity: getDraft(i.id).qty, damaged_qty: getDraft(i.id).damaged }))
             .filter((l) => l.quantity > 0 || l.damaged_qty > 0),
+          payment: payNow && payWallet && amt > 0
+            ? {
+                wallet_id: payWallet,
+                goods_amount_bdt: +(previewGoodsDue * ratio).toFixed(2),
+                shipping_amount_bdt: +(previewShipDue * ratio).toFixed(2),
+                payment_date: new Date().toISOString().slice(0, 10),
+                idempotency_key: `qtyrel:${poId}:${Date.now()}`,
+              }
+            : undefined,
         },
-      }),
+      });
+    },
     onSuccess: (res: any) => {
-      toast.success(`Release #${res.release_number} posted to inventory`);
+      const paid = (res.payments ?? []).reduce((s: number, p: any) => s + Number(p.amount ?? 0), 0);
+      toast.success(
+        `Release #${res.release_number} stock e gelo${paid > 0 ? ` — ${fmtBdt(paid)} paid` : ""}`,
+      );
       setDraft({});
       setNotes("");
+      setPayOverride(null);
       qc.invalidateQueries({ queryKey: ["imp-po", poId] });
     },
     onError: (e: any) => toast.error(e?.message ?? "Release failed"),
