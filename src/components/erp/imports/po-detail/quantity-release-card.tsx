@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { toast } from "sonner";
-import { AlertTriangle, Boxes, Loader2, PackageCheck, Warehouse, Wallet } from "lucide-react";
+import { AlertTriangle, Boxes, Loader2, PackageCheck, Warehouse, Wallet, Truck } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -22,9 +22,11 @@ type Release = {
   released_at: string;
   notes: string | null;
   items: Array<{
-    id: string; po_item_id: string; quantity: number; damaged_qty: number;
+    id: string; po_item_id: string; quantity: number; damaged_qty: number; missing_qty?: number;
     unit_landed_cost_bdt: number; sku_snapshot: string | null;
   }>;
+  local_delivery_bdt?: number | null;
+  delivery_note?: string | null;
 };
 
 export function QuantityReleaseCard({
@@ -51,7 +53,13 @@ export function QuantityReleaseCard({
     const m = new Map<string, number>();
     for (const r of releases) {
       for (const it of r.items ?? []) {
-        m.set(it.po_item_id, (m.get(it.po_item_id) ?? 0) + Number(it.quantity ?? 0) + Number(it.damaged_qty ?? 0));
+        m.set(
+          it.po_item_id,
+          (m.get(it.po_item_id) ?? 0) +
+            Number(it.quantity ?? 0) +
+            Number(it.damaged_qty ?? 0) +
+            Number(it.missing_qty ?? 0),
+        );
       }
     }
     return m;
@@ -59,7 +67,10 @@ export function QuantityReleaseCard({
 
   const [warehouseId, setWarehouseId] = useState("");
   const [notes, setNotes] = useState("");
-  const [draft, setDraft] = useState<Record<string, { qty: number; damaged: number }>>({});
+  const [draft, setDraft] = useState<Record<string, { qty: number; damaged: number; missing: number }>>({});
+  const [ldAmount, setLdAmount] = useState("");
+  const [ldNote, setLdNote] = useState("");
+  const [ldWallet, setLdWallet] = useState("");
   const [payNow, setPayNow] = useState(true);
   const [payWallet, setPayWallet] = useState("");
   const [payOverride, setPayOverride] = useState<string | null>(null);
@@ -74,16 +85,19 @@ export function QuantityReleaseCard({
     if (def) setWarehouseId(def.id);
   }, [warehouses, warehouseId]);
 
-  const getDraft = (id: string) => draft[id] ?? { qty: 0, damaged: 0 };
-  const setDraftFor = (id: string, patch: Partial<{ qty: number; damaged: number }>) =>
+  const getDraft = (id: string) => draft[id] ?? { qty: 0, damaged: 0, missing: 0 };
+  const setDraftFor = (id: string, patch: Partial<{ qty: number; damaged: number; missing: number }>) =>
     setDraft((d) => ({ ...d, [id]: { ...getDraft(id), ...patch } }));
+
+  const localDelivery = Math.max(0, Number(ldAmount) || 0);
 
   const totalOrdered = items.reduce((s, i) => s + Number(i.quantity ?? 0), 0);
   const totalReleased = Array.from(releasedByItem.values()).reduce((s, n) => s + n, 0);
   const pct = totalOrdered > 0 ? Math.round((totalReleased / totalOrdered) * 100) : 0;
-  const draftTotal = items.reduce((s, i) => s + getDraft(i.id).qty + getDraft(i.id).damaged, 0);
+  const lineTotal = (i: any) => getDraft(i.id).qty + getDraft(i.id).damaged + getDraft(i.id).missing;
+  const draftTotal = items.reduce((s, i) => s + lineTotal(i), 0);
   const remainingFor = (i: any) => Math.max(0, Number(i.quantity ?? 0) - (releasedByItem.get(i.id) ?? 0));
-  const hasOverRelease = items.some((i) => getDraft(i.id).qty + getDraft(i.id).damaged > remainingFor(i));
+  const hasOverRelease = items.some((i) => lineTotal(i) > remainingFor(i));
 
   // Landed cost preview — mirrors the server formula in releasePoQuantity()
   const fx = Number(po?.fx_rate_cny_bdt ?? po?.fx_rate ?? 0);
@@ -91,6 +105,8 @@ export function QuantityReleaseCard({
   const overheadTotal =
     Number(po?.shipping_total_bdt ?? po?.shipping_cost_bdt ?? 0) +
     Number(po?.local_courier_total_bdt ?? 0) +
+    Number(po?.local_delivery_total_bdt ?? 0) +
+    localDelivery +
     Number(po?.freight_cost_bdt ?? 0) +
     Number(po?.customs_duty_bdt ?? 0) +
     Number(po?.other_charges_bdt ?? 0);
