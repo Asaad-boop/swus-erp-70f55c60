@@ -15,6 +15,114 @@ import {
 } from "@/hooks/erp/use-product-listings";
 import { cn } from "@/lib/utils";
 
+/** Compact chip-style multi-brand picker shown right next to the Brand field. */
+export function QuickBrandListings({
+  productId,
+  ownerBrandId,
+  productSlug,
+}: {
+  productId: string | null;
+  ownerBrandId: string;
+  productSlug: string;
+}) {
+  const { brands } = useBrand();
+  const listingsQ = useProductListings(productId);
+  const save = useSaveProductListings(productId);
+  const [selected, setSelected] = useState<string[] | null>(null);
+
+  useEffect(() => {
+    if (!listingsQ.data) return;
+    setSelected(listingsQ.data.map((l) => l.brand_id));
+  }, [listingsQ.data]);
+
+  const current = selected ?? [];
+  const dirty =
+    !!listingsQ.data &&
+    (current.length !== listingsQ.data.length ||
+      current.some((id) => !listingsQ.data!.some((l) => l.brand_id === id)));
+
+  const toggle = (id: string) =>
+    setSelected((prev) => {
+      const list = prev ?? [];
+      return list.includes(id) ? list.filter((x) => x !== id) : [...list, id];
+    });
+
+  const onSave = async () => {
+    const ids = Array.from(new Set([ownerBrandId, ...current].filter(Boolean)));
+    const existing = listingsQ.data ?? [];
+    const drafts: ListingDraft[] = ids.map((brand_id) => {
+      const prev = existing.find((l) => l.brand_id === brand_id);
+      return {
+        brand_id,
+        price: prev?.price ?? null,
+        compare_at_price: prev?.compare_at_price ?? null,
+        slug: prev?.slug || productSlug,
+        title_override: prev?.title_override ?? null,
+        image_override: prev?.image_override ?? null,
+        description_override: prev?.description_override ?? null,
+        is_active: prev?.is_active ?? true,
+      };
+    });
+    try {
+      await save.mutateAsync(drafts);
+      toast.success("Brands updated");
+    } catch (e: any) {
+      toast.error(e?.message ?? "Failed to update brands");
+    }
+  };
+
+  if (!productId) {
+    return (
+      <div className="text-xs text-muted-foreground">Save korar por brand select kora jabe.</div>
+    );
+  }
+
+  return (
+    <div className="space-y-2">
+      <div className="flex flex-wrap gap-1.5">
+        {brands.map((b) => {
+          const on = current.includes(b.id) || b.id === ownerBrandId;
+          return (
+            <button
+              key={b.id}
+              type="button"
+              onClick={() => b.id !== ownerBrandId && toggle(b.id)}
+              className={cn(
+                "rounded-full border px-2.5 py-1 text-xs transition-colors",
+                on ? "bg-primary/10 border-primary/40 text-primary" : "bg-muted/30 text-muted-foreground hover:bg-muted",
+                b.id === ownerBrandId && "cursor-default",
+              )}
+            >
+              {b.name}
+              {b.id === ownerBrandId && <span className="ml-1 opacity-60">(owner)</span>}
+            </button>
+          );
+        })}
+      </div>
+      <div className="flex items-center gap-2">
+        <Button
+          type="button" size="sm" variant="outline" className="h-7 text-xs"
+          onClick={() => setSelected(brands.map((b) => b.id))}
+        >
+          All brands
+        </Button>
+        <Button
+          type="button" size="sm" variant="ghost" className="h-7 text-xs"
+          onClick={() => setSelected([ownerBrandId])}
+        >
+          Owner only
+        </Button>
+        {dirty && (
+          <Button type="button" size="sm" className="h-7 text-xs" onClick={onSave} disabled={save.isPending}>
+            {save.isPending && <Loader2 className="h-3 w-3 animate-spin mr-1" />}
+            Save brands
+          </Button>
+        )}
+      </div>
+    </div>
+  );
+}
+
 type Props = {
   productId: string | null;
   ownerBrandId: string;
