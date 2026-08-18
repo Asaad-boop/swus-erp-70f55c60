@@ -161,6 +161,12 @@ export function EditPoDialog({
           if (!l.name_snapshot.trim()) throw new Error("Product name khali ache");
           if ((Number(l.qty) || 0) <= 0) throw new Error(`"${l.name_snapshot}" — quantity 0 er beshi hote hobe`);
         }
+        const seen = new Set<string>();
+        for (const l of lines) {
+          const k = `${l.product_id ?? l.name_snapshot.trim()}|${l.variant_id ?? ""}`;
+          if (seen.has(k)) throw new Error(`"${l.name_snapshot}" — same product/variation duplicate line ache`);
+          seen.add(k);
+        }
       }
       return saveFn({
         data: {
