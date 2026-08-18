@@ -71,6 +71,7 @@ function PoDetailPage() {
   });
 
   const [arrivedOpen, setArrivedOpen] = useState(false);
+  const [qtyArrivedOpen, setQtyArrivedOpen] = useState(false);
   const [paymentOpen, setPaymentOpen] = useState(false);
   const [editOpen, setEditOpen] = useState(false);
 
@@ -490,6 +491,16 @@ function PoDetailPage() {
       />
       {arrivedOpen && brandId && (
         <ArrivedDialog poId={po.id} onClose={() => setArrivedOpen(false)} brandId={brandId} />
+      )}
+      {qtyArrivedOpen && brandId && (
+        <QtyArrivedDialog
+          poId={po.id}
+          brandId={brandId}
+          onClose={() => setQtyArrivedOpen(false)}
+          initialFreight={Number(po.freight_cost_bdt) || 0}
+          initialCustoms={Number(po.customs_duty_bdt) || 0}
+          initialOther={Number(po.other_charges_bdt) || 0}
+        />
       )}
       {paymentOpen && brandId && (
         <PaymentDialog
