@@ -429,6 +429,16 @@ export function EditPaymentDialog({
 
   const busy = saveMut.isPending || revMut.isPending;
 
+  const origAmt = Number(payment.amount_bdt) || 0;
+  const sameWallet = walletId === payment.wallet_id;
+  const delta = amount - origAmt;
+  const oldWalletName = wallets.find((w) => w.id === payment.wallet_id)?.name ?? "purono wallet";
+  const newWalletName = wallets.find((w) => w.id === walletId)?.name ?? "notun wallet";
+  const newWalletBal = Number(wallets.find((w) => w.id === walletId)?.current_balance ?? 0);
+  // Same wallet hole reversal refund add hoye jabe, tai effective available balance beshi.
+  const availableAfterRefund = newWalletBal + (sameWallet ? origAmt : 0);
+  const shortBy = amount - availableAfterRefund;
+
   return (
     <Dialog open onOpenChange={onClose}>
       <DialogContent>
@@ -465,6 +475,39 @@ export function EditPaymentDialog({
           </div>
           <div><Label>Reference</Label><Input value={ref} onChange={(e) => setRef(e.target.value)} placeholder="Optional" /></div>
           <div><Label>Reason / note</Label><Input value={reason} onChange={(e) => setReason(e.target.value)} placeholder="keno adjust/withdraw" /></div>
+
+          {walletId && amount > 0 && (
+            <div className="rounded-md border bg-muted/30 p-2.5 text-xs space-y-1">
+              <p className="font-medium text-foreground">Wallet impact</p>
+              {sameWallet ? (
+                delta === 0 ? (
+                  <p className="text-muted-foreground">Amount same — {newWalletName} e kono net change hobe na.</p>
+                ) : delta > 0 ? (
+                  <p className="text-rose-600 dark:text-rose-400">
+                    {newWalletName} theke aro <span className="font-semibold tabular-nums">{fmtBdt(delta)}</span> kata jabe.
+                  </p>
+                ) : (
+                  <p className="text-emerald-600 dark:text-emerald-400">
+                    {newWalletName} e <span className="font-semibold tabular-nums">{fmtBdt(-delta)}</span> ferot jabe.
+                  </p>
+                )
+              ) : (
+                <>
+                  <p className="text-emerald-600 dark:text-emerald-400">
+                    {oldWalletName} e <span className="font-semibold tabular-nums">{fmtBdt(origAmt)}</span> ferot jabe.
+                  </p>
+                  <p className="text-rose-600 dark:text-rose-400">
+                    {newWalletName} theke <span className="font-semibold tabular-nums">{fmtBdt(amount)}</span> kata jabe.
+                  </p>
+                </>
+              )}
+              {shortBy > 0 && (
+                <p className="font-medium text-amber-600 dark:text-amber-400">
+                  ⚠ {newWalletName} e joththesto balance nei — short by {fmtBdt(shortBy)}.
+                </p>
+              )}
+            </div>
+          )}
         </div>
         <DialogFooter className="gap-2 sm:justify-between">
           <Button
