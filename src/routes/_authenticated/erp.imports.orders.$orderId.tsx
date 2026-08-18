@@ -28,7 +28,7 @@ import { KpiTile, Mini, SummaryBox } from "@/components/erp/imports/po-detail/at
 import { PIPELINE_STAGES, PipelineStrip } from "@/components/erp/imports/po-detail/pipeline-strip";
 import { CartonRow } from "@/components/erp/imports/po-detail/carton-row";
 import { CartonsHeader } from "@/components/erp/imports/po-detail/cartons-header";
-import { ArrivedDialog, QtyArrivedDialog, PaymentDialog, BulkReleaseDialog } from "@/components/erp/imports/po-detail/dialogs";
+import { ArrivedDialog, PaymentDialog, BulkReleaseDialog } from "@/components/erp/imports/po-detail/dialogs";
 import { QuantityReleaseCard } from "@/components/erp/imports/po-detail/quantity-release-card";
 import { EditPoDialog } from "@/components/erp/imports/po-detail/edit-po-dialog";
 
@@ -71,7 +71,6 @@ function PoDetailPage() {
   });
 
   const [arrivedOpen, setArrivedOpen] = useState(false);
-  const [qtyArrivedOpen, setQtyArrivedOpen] = useState(false);
   const [paymentOpen, setPaymentOpen] = useState(false);
   const [editOpen, setEditOpen] = useState(false);
 
@@ -351,28 +350,7 @@ function PoDetailPage() {
         </Card>
       )}
 
-      {/* Quantity mode releases */}
-      {isQtyMode && brandId && (
-        <Card className="p-4 border-orange-200 bg-orange-50/50 dark:bg-orange-950/20 dark:border-orange-900/40">
-          <div className="flex items-center gap-3 flex-wrap">
-            <div className="h-10 w-10 rounded-full bg-orange-100 dark:bg-orange-900/40 flex items-center justify-center">
-              <Truck className="h-5 w-5 text-orange-600" />
-            </div>
-            <div className="flex-1 min-w-0">
-              <div className="font-semibold text-sm">Receiving BD — shipping &amp; customs</div>
-              <p className="text-xs text-muted-foreground">
-                Shipping (weight × rate ba flat), customs &amp; other charges enter korun — per-piece landed cost e add hobe.
-                {" "}Current: shipping {fmtBdt(po.freight_cost_bdt)} · customs {fmtBdt(po.customs_duty_bdt)} · other {fmtBdt(po.other_charges_bdt)}
-              </p>
-            </div>
-            <Button onClick={() => setQtyArrivedOpen(true)}>
-              <Truck className="h-4 w-4 mr-1" />
-              {Number(po.freight_cost_bdt ?? 0) > 0 ? "Edit receiving cost" : "Receive at BD"}
-            </Button>
-          </div>
-        </Card>
-      )}
-
+      {/* Receive mode */}
       <Card className="p-3 flex items-center gap-3 flex-wrap">
         <div className="flex-1 min-w-0">
           <div className="text-sm font-semibold">Receive mode</div>
@@ -491,16 +469,6 @@ function PoDetailPage() {
       />
       {arrivedOpen && brandId && (
         <ArrivedDialog poId={po.id} onClose={() => setArrivedOpen(false)} brandId={brandId} />
-      )}
-      {qtyArrivedOpen && brandId && (
-        <QtyArrivedDialog
-          poId={po.id}
-          brandId={brandId}
-          onClose={() => setQtyArrivedOpen(false)}
-          initialFreight={Number(po.freight_cost_bdt) || 0}
-          initialCustoms={Number(po.customs_duty_bdt) || 0}
-          initialOther={Number(po.other_charges_bdt) || 0}
-        />
       )}
       {paymentOpen && brandId && (
         <PaymentDialog
