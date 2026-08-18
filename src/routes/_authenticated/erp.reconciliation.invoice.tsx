@@ -1,5 +1,5 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { memo, useDeferredValue, useEffect, useMemo, useRef, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { toast } from "sonner";
@@ -604,7 +604,7 @@ function ReconciliationPage() {
   // Filtered + capped preview rows — keeps big invoices (1000+ rows) snappy.
   const filteredPreview = useMemo(() => {
     if (!preview) return [] as { r: NormalizedRow; idx: number }[];
-    const q = previewSearch.trim().toLowerCase();
+    const q = deferredSearch.trim().toLowerCase();
     const out: { r: NormalizedRow; idx: number }[] = [];
     preview.forEach((r, idx) => {
       if (previewFilter !== "all") {
@@ -618,9 +618,9 @@ function ReconciliationPage() {
       out.push({ r, idx });
     });
     return out;
-  }, [preview, previewFilter, previewSearch, matchByIdx]);
+  }, [preview, previewFilter, deferredSearch, matchByIdx]);
 
-  const ROW_CAP = 1000;
+  const ROW_CAP = 250;
   const visibleRows = showAllRows ? filteredPreview : filteredPreview.slice(0, ROW_CAP);
 
   return (
