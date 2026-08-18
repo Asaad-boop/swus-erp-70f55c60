@@ -141,6 +141,35 @@ export function EditPoDialog({
   const setLine = (key: string, patch: Partial<Line>) =>
     setLines((prev) => prev.map((l) => (l.key === key ? { ...l, ...patch } : l)));
 
+  /** Color chip toggle: khali line e boshabe, na hole notun line banabe, ar off korle line remove/clear. */
+  const toggleVariant = (line: Line, variantId: string) => {
+    setLines((prev) => {
+      if (line.variant_id === variantId) {
+        return prev.map((l) => (l.key === line.key ? { ...l, variant_id: null } : l));
+      }
+      const other = prev.find(
+        (l) => l.key !== line.key && l.product_id === line.product_id && l.variant_id === variantId,
+      );
+      if (other) {
+        // already added on another line — toggle off (locked line remove kora jabe na)
+        if (other.locked || other.id) return prev.map((l) => (l.key === other.key ? { ...l, variant_id: null } : l));
+        return prev.filter((l) => l.key !== other.key);
+      }
+      if (!line.variant_id) {
+        return prev.map((l) => (l.key === line.key ? { ...l, variant_id: variantId } : l));
+      }
+      const idx = prev.findIndex((l) => l.key === line.key);
+      const clone: Line = {
+        ...line,
+        key: `new_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`,
+        id: undefined,
+        variant_id: variantId,
+        locked: false,
+      };
+      return [...prev.slice(0, idx + 1), clone, ...prev.slice(idx + 1)];
+    });
+  };
+
   const addLine = () =>
     setLines((prev) => [
       ...prev,
