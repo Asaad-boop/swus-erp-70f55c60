@@ -28,7 +28,7 @@ import { KpiTile, Mini, SummaryBox } from "@/components/erp/imports/po-detail/at
 import { PIPELINE_STAGES, PipelineStrip } from "@/components/erp/imports/po-detail/pipeline-strip";
 import { CartonRow } from "@/components/erp/imports/po-detail/carton-row";
 import { CartonsHeader } from "@/components/erp/imports/po-detail/cartons-header";
-import { ArrivedDialog, PaymentDialog, BulkReleaseDialog, QtyArrivedDialog } from "@/components/erp/imports/po-detail/dialogs";
+import { ArrivedDialog, PaymentDialog, BulkReleaseDialog, QtyArrivedDialog, EditPaymentDialog } from "@/components/erp/imports/po-detail/dialogs";
 import { QuantityReleaseCard } from "@/components/erp/imports/po-detail/quantity-release-card";
 import { EditPoDialog } from "@/components/erp/imports/po-detail/edit-po-dialog";
 
@@ -73,6 +73,7 @@ function PoDetailPage() {
   const [arrivedOpen, setArrivedOpen] = useState(false);
   const [qtyArrivedOpen, setQtyArrivedOpen] = useState(false);
   const [paymentOpen, setPaymentOpen] = useState(false);
+  const [editPayment, setEditPayment] = useState<any | null>(null);
   const [editOpen, setEditOpen] = useState(false);
 
   const stageMut = useMutation({
@@ -468,6 +469,7 @@ function PoDetailPage() {
                 <TableHead>Wallet</TableHead>
                 <TableHead>Reference</TableHead>
                 <TableHead className="text-right">Amount</TableHead>
+                <TableHead className="w-10" />
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -478,6 +480,13 @@ function PoDetailPage() {
                   <TableCell className="text-sm">{p.wallet?.name ?? "—"}</TableCell>
                   <TableCell className="text-sm text-muted-foreground">{p.reference ?? "—"}</TableCell>
                   <TableCell className="text-right tabular-nums font-semibold text-emerald-600">{fmtBdt(p.amount_bdt)}</TableCell>
+                  <TableCell className="text-right">
+                    {!p.is_reversed && (
+                      <Button size="sm" variant="ghost" className="h-7 px-2 text-xs" onClick={() => setEditPayment(p)}>
+                        Edit
+                      </Button>
+                    )}
+                  </TableCell>
                 </TableRow>
               ))}
             </TableBody>
@@ -515,6 +524,14 @@ function PoDetailPage() {
           grandTotal={Number(po.grand_total_bdt) || 0}
           dueAmount={Number(po.due_bdt) || 0}
           onClose={() => setPaymentOpen(false)}
+        />
+      )}
+      {editPayment && brandId && (
+        <EditPaymentDialog
+          payment={editPayment}
+          brandId={brandId}
+          poId={po.id}
+          onClose={() => setEditPayment(null)}
         />
       )}
       {bulkReleaseOpen && brandId && (

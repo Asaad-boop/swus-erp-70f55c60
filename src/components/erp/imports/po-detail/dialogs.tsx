@@ -12,7 +12,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useAccounts } from "@/hooks/erp/use-finance-query";
-import { markArrivedInBd, receiveQuantityBd, recordImportPayment, releaseCarton } from "@/lib/erp/imports/imports.functions";
+import { editImportPayment, markArrivedInBd, receiveQuantityBd, recordImportPayment, releaseCarton, reverseImportPayment } from "@/lib/erp/imports/imports.functions";
 import { fmtBdt, newIdemKey } from "@/lib/erp/imports/types";
 import { BillTile } from "./atoms";
 
@@ -362,6 +362,124 @@ export function BulkReleaseDialog({
             {mut.isPending && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
             <Send className="h-4 w-4 mr-1" />Release {cartons.length}
           </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+}
+/* ---------------- Edit / withdraw an existing payment ---------------- */
+
+const PAYMENT_TYPES = [
+  { v: "supplier_advance", l: "Supplier Advance" },
+  { v: "supplier_payment", l: "Supplier Payment" },
+  { v: "shipping", l: "Shipping" },
+  { v: "carton_release", l: "Carton Release" },
+  { v: "supplier_balance", l: "Supplier Balance" },
+  { v: "local_courier", l: "Local Courier" },
+  { v: "adjustment", l: "Adjustment" },
+];
+
+export function EditPaymentDialog({
+  payment, brandId, poId, onClose,
+}: { payment: any; brandId: string; poId: string; onClose: () => void }) {
+  const editFn = useServerFn(editImportPayment);
+  const reverseFn = useServerFn(reverseImportPayment);
+  const qc = useQueryClient();
+  const { data: wallets = [] } = useAccounts([brandId]);
+
+  const [amount, setAmount] = useState<number>(Number(payment.amount_bdt) || 0);
+  const [walletId, setWalletId] = useState<string>(payment.wallet_id ?? "");
+  const [type, setType] = useState<string>(payment.payment_type);
+  const [date, setDate] = useState<string>(payment.payment_date);
+  const [ref, setRef] = useState<string>(payment.reference ?? "");
+  const [reason, setReason] = useState("");
+
+  const done = (msg: string) => {
+    toast.success(msg);
+    qc.invalidateQueries({ queryKey: ["imp-po", poId] });
+    qc.invalidateQueries({ queryKey: ["erp-accounts"] });
+    onClose();
+  };
+
+  const saveMut = useMutation({
+    mutationFn: () => editFn({
+      data: {
+        payment_id: payment.id,
+        brand_id: brandId,
+        po_id: poId,
+        carton_id: payment.carton_id ?? undefined,
+        payment_type: type as any,
+        amount_bdt: amount,
+        wallet_id: walletId,
+        payment_date: date,
+        reference: ref || undefined,
+        notes: reason || undefined,
+        idempotency_key: newIdemKey("payedit"),
+      },
+    }),
+    onSuccess: () => done("Payment update hoyeche"),
+    onError: (e: any) => toast.error(e?.message ?? "Update failed"),
+  });
+
+  const revMut = useMutation({
+    mutationFn: () => reverseFn({ data: { payment_id: payment.id, reason: reason || undefined } }),
+    onSuccess: () => done("Payment withdraw kora hoyeche — taka wallet e fireche"),
+    onError: (e: any) => toast.error(e?.message ?? "Withdraw failed"),
+  });
+
+  const busy = saveMut.isPending || revMut.isPending;
+
+  return (
+    <Dialog open onOpenChange={onClose}>
+      <DialogContent>
+        <DialogHeader>
+          <DialogTitle>Edit / Withdraw Payment</DialogTitle>
+          <DialogDescription>
+            Edit korle purono record reverse hoye notun record boshbe. Withdraw korle taka wallet e ferot jabe.
+          </DialogDescription>
+        </DialogHeader>
+        <div className="space-y-3">
+          <div className="rounded-md bg-muted/40 p-2 text-xs text-muted-foreground">
+            Original: <span className="font-semibold text-foreground tabular-nums">{fmtBdt(payment.amount_bdt)}</span>
+            {" · "}{payment.payment_date}{payment.reference ? ` · ${payment.reference}` : ""}
+          </div>
+          <div>
+            <Label>Payment type</Label>
+            <Select value={type} onValueChange={setType}>
+              <SelectTrigger><SelectValue /></SelectTrigger>
+              <SelectContent>
+                {PAYMENT_TYPES.map((t) => <SelectItem key={t.v} value={t.v}>{t.l}</SelectItem>)}
+              </SelectContent>
+            </Select>
+          </div>
+          <div className="grid grid-cols-2 gap-3">
+            <div><Label>Amount (৳)</Label><Input type="number" step="0.01" value={amount} onChange={(e) => setAmount(Number(e.target.value))} /></div>
+            <div><Label>Date</Label><Input type="date" value={date} onChange={(e) => setDate(e.target.value)} /></div>
+          </div>
+          <div>
+            <Label>Wallet</Label>
+            <Select value={walletId} onValueChange={setWalletId}>
+              <SelectTrigger><SelectValue placeholder="Select" /></SelectTrigger>
+              <SelectContent>{wallets.filter((w) => w.is_active).map((w) => <SelectItem key={w.id} value={w.id}>{w.name} ({fmtBdt(w.current_balance)})</SelectItem>)}</SelectContent>
+            </Select>
+          </div>
+          <div><Label>Reference</Label><Input value={ref} onChange={(e) => setRef(e.target.value)} placeholder="Optional" /></div>
+          <div><Label>Reason / note</Label><Input value={reason} onChange={(e) => setReason(e.target.value)} placeholder="keno adjust/withdraw" /></div>
+        </div>
+        <DialogFooter className="gap-2 sm:justify-between">
+          <Button
+            variant="destructive"
+            disabled={busy}
+            onClick={() => { if (confirm("Ei payment withdraw kore wallet e taka ferot dite chan?")) revMut.mutate(); }}
+          >
+            {revMut.isPending && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}Withdraw
+          </Button>
+          <div className="flex gap-2">
+            <Button variant="ghost" onClick={onClose} disabled={busy}>Cancel</Button>
+            <Button disabled={busy || amount <= 0 || !walletId} onClick={() => saveMut.mutate()}>
+              {saveMut.isPending && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}Save changes
+            </Button>
+          </div>
         </DialogFooter>
       </DialogContent>
     </Dialog>
