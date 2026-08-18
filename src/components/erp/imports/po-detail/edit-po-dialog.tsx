@@ -13,7 +13,7 @@ import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter,
 } from "@/components/ui/dialog";
 import { ProductPicker } from "@/components/erp/imports/product-picker";
-import { listImportSuppliers, updateImportPo } from "@/lib/erp/imports/imports.functions";
+import { listCargoAgents, listImportSuppliers, updateImportPo } from "@/lib/erp/imports/imports.functions";
 import { fmtBdt } from "@/lib/erp/imports/types";
 import { supabase } from "@/integrations/supabase/client";
 
@@ -55,6 +55,7 @@ export function EditPoDialog({
   const qc = useQueryClient();
   const saveFn = useServerFn(updateImportPo);
   const suppliersFn = useServerFn(listImportSuppliers);
+  const agentsFn = useServerFn(listCargoAgents);
 
   const itemsLocked = useMemo(
     () =>
@@ -75,6 +76,14 @@ export function EditPoDialog({
   const [currency, setCurrency] = useState("CNY");
   const [fx, setFx] = useState("");
   const [notes, setNotes] = useState("");
+  const [poNumber, setPoNumber] = useState("");
+  const [agentId, setAgentId] = useState<string>("");
+  const [shippedAt, setShippedAt] = useState("");
+  const [freight, setFreight] = useState("");
+  const [customs, setCustoms] = useState("");
+  const [otherCharges, setOtherCharges] = useState("");
+  const [agentComm, setAgentComm] = useState("");
+  const [weightKg, setWeightKg] = useState("");
   const [lines, setLines] = useState<Line[]>([]);
 
   useEffect(() => {
@@ -84,6 +93,14 @@ export function EditPoDialog({
     setCurrency(po.currency ?? "CNY");
     setFx(String(po.fx_rate ?? ""));
     setNotes(po.notes ?? "");
+    setPoNumber(po.po_number ?? "");
+    setAgentId(po.cargo_agent_id ?? "");
+    setShippedAt(po.shipped_at ?? "");
+    setFreight(String(po.freight_cost_bdt ?? 0));
+    setCustoms(String(po.customs_duty_bdt ?? 0));
+    setOtherCharges(String(po.other_charges_bdt ?? 0));
+    setAgentComm(String(po.agent_commission_cny ?? 0));
+    setWeightKg(String(po.total_weight_kg ?? 0));
     setLines(
       items.map((it: any, i: number) => ({
         key: it.id ?? `k${i}`,
@@ -104,6 +121,12 @@ export function EditPoDialog({
     queryKey: ["imp-suppliers", po.brand_id],
     enabled: open && !!po.brand_id,
     queryFn: () => suppliersFn({ data: { brandId: po.brand_id } }) as Promise<any[]>,
+  });
+
+  const { data: agents = [] } = useQuery({
+    queryKey: ["imp-cargo-agents", po.brand_id],
+    enabled: open && !!po.brand_id,
+    queryFn: () => agentsFn({ data: { brandId: po.brand_id } }) as Promise<any[]>,
   });
 
   const productIds = useMemo(
