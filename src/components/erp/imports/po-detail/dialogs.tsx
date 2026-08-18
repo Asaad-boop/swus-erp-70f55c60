@@ -182,10 +182,6 @@ export function QtyArrivedDialog({
   );
 }
 
-function PaymentDialogUnusedShim({ poId, brandId, grandTotal, dueAmount, onClose }: { poId: string; brandId: string; grandTotal: number; dueAmount: number; onClose: () => void }) {
-  return <PaymentDialogInner poId={poId} brandId={brandId} grandTotal={grandTotal} dueAmount={dueAmount} onClose={onClose} />;
-}
-
 function PaymentDialogInner({ poId, brandId, grandTotal, dueAmount, onClose }: { poId: string; brandId: string; grandTotal: number; dueAmount: number; onClose: () => void }) {
   const fn = useServerFn(recordImportPayment);
   const qc = useQueryClient();
