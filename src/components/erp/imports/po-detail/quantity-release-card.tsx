@@ -531,6 +531,7 @@ export function QuantityReleaseCard({
             </div>
             <Badge variant="outline" className="text-[11px]">
               {previewQty} pcs{previewDamaged > 0 ? ` + ${previewDamaged} damaged` : ""}
+              {previewMissing > 0 ? ` + ${previewMissing} missing` : ""}
             </Badge>
           </div>
           <Table>
@@ -539,6 +540,7 @@ export function QuantityReleaseCard({
                 <TableHead>Product</TableHead>
                 <TableHead className="text-right">Pcs to stock</TableHead>
                 <TableHead className="text-right">Damaged</TableHead>
+                <TableHead className="text-right">Missing</TableHead>
                 <TableHead className="text-right">Landed / pc</TableHead>
                 <TableHead className="text-right">Line value</TableHead>
               </TableRow>
@@ -554,13 +556,16 @@ export function QuantityReleaseCard({
                   <TableCell className="text-right tabular-nums">
                     {l.damaged > 0 ? <span className="text-orange-600">{l.damaged}</span> : "—"}
                   </TableCell>
+                  <TableCell className="text-right tabular-nums">
+                    {l.missing > 0 ? <span className="text-red-600">{l.missing}</span> : "—"}
+                  </TableCell>
                   <TableCell className="text-right tabular-nums">{fmtBdt(l.landed)}</TableCell>
                   <TableCell className="text-right tabular-nums font-semibold">{fmtBdt(l.value)}</TableCell>
                 </TableRow>
               ))}
             </TableBody>
           </Table>
-          <div className="p-4 border-t border-border grid sm:grid-cols-3 gap-3 text-sm">
+          <div className="p-4 border-t border-border grid sm:grid-cols-4 gap-3 text-sm">
             <div>
               <div className="text-xs text-muted-foreground">Stock in</div>
               <div className="font-semibold tabular-nums">{previewQty} pcs</div>
@@ -570,6 +575,10 @@ export function QuantityReleaseCard({
               <div className="font-semibold tabular-nums">
                 {previewDamaged} pcs {previewDamaged > 0 && <span className="text-xs text-muted-foreground">({fmtBdt(previewDamagedValue)})</span>}
               </div>
+            </div>
+            <div>
+              <div className="text-xs text-muted-foreground">Missing (kom paoa)</div>
+              <div className="font-semibold tabular-nums text-red-600">{previewMissing} pcs</div>
             </div>
             <div className="sm:text-right">
               <div className="text-xs text-muted-foreground">Inventory value add</div>
@@ -643,6 +652,8 @@ export function QuantityReleaseCard({
             {releases.map((r) => {
               const qty = (r.items ?? []).reduce((s, i) => s + Number(i.quantity ?? 0), 0);
               const dmg = (r.items ?? []).reduce((s, i) => s + Number(i.damaged_qty ?? 0), 0);
+              const miss = (r.items ?? []).reduce((s, i) => s + Number(i.missing_qty ?? 0), 0);
+              const ld = Number(r.local_delivery_bdt ?? 0);
               const value = (r.items ?? []).reduce((s, i) => s + Number(i.quantity ?? 0) * Number(i.unit_landed_cost_bdt ?? 0), 0);
               return (
                 <div key={r.id} className="p-3 flex items-center gap-3 flex-wrap text-sm">
@@ -650,8 +661,18 @@ export function QuantityReleaseCard({
                   <span className="text-muted-foreground text-xs">{new Date(r.released_at).toLocaleString()}</span>
                   <span className="tabular-nums font-medium">{qty} pcs</span>
                   {dmg > 0 && <span className="text-xs text-orange-600 tabular-nums">{dmg} damaged</span>}
+                  {miss > 0 && <span className="text-xs text-red-600 tabular-nums">{miss} missing</span>}
+                  {ld > 0 && (
+                    <span className="text-xs text-sky-600 tabular-nums inline-flex items-center gap-1">
+                      <Truck className="h-3 w-3" />{fmtBdt(ld)}
+                    </span>
+                  )}
                   <span className="ml-auto tabular-nums font-semibold">{fmtBdt(value)}</span>
-                  {r.notes && <div className="w-full text-xs text-muted-foreground">{r.notes}</div>}
+                  {(r.notes || r.delivery_note) && (
+                    <div className="w-full text-xs text-muted-foreground">
+                      {[r.notes, r.delivery_note].filter(Boolean).join(" · ")}
+                    </div>
+                  )}
                 </div>
               );
             })}
