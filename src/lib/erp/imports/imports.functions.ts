@@ -847,6 +847,21 @@ export const editImportPayment = createServerFn({ method: "POST" })
   )
   .handler(async ({ data, context }) => {
     await assertAnyRole(context.supabase, context.userId, ["admin", "accountant"]);
+    // --- Balance guard: reverse korar age nishchit kori notun deduct er jonno taka ache ---
+    const [{ data: oldPay }, { data: wal }] = await Promise.all([
+      context.supabase.from("imp_payments").select("amount_bdt, wallet_id").eq("id", data.payment_id).maybeSingle(),
+      context.supabase.from("erp_accounts").select("id, name, current_balance, is_active").eq("id", data.wallet_id).maybeSingle(),
+    ]);
+    if (!wal) throw new Error("Nirbachito wallet/account paoa jayni.");
+    if (wal.is_active === false) throw new Error(`${wal.name} account ti inactive — onno account beche nin.`);
+    const origAmt = Number(oldPay?.amount_bdt ?? 0);
+    const sameWallet = oldPay?.wallet_id === data.wallet_id;
+    const available = Number(wal.current_balance ?? 0) + (sameWallet ? origAmt : 0);
+    if (data.amount_bdt > available + 0.005) {
+      throw new Error(
+        `${wal.name} e joththesto balance nei. Available ${available.toFixed(2)}৳, dorkar ${data.amount_bdt.toFixed(2)}৳ (short ${(data.amount_bdt - available).toFixed(2)}৳). Amount komiye din ba onno account beche nin.`,
+      );
+    }
     const { error: rErr } = await context.supabase.rpc("imp_reverse_payment", {
       _payment_id: data.payment_id,
       _reason: "edited",

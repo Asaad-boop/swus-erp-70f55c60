@@ -439,6 +439,19 @@ export function EditPaymentDialog({
   // Same wallet hole reversal refund add hoye jabe, tai effective available balance beshi.
   const availableAfterRefund = newWalletBal + (sameWallet ? origAmt : 0);
   const shortBy = amount - availableAfterRefund;
+  const blocked = !!walletId && amount > 0 && shortBy > 0.005;
+  const altWallets = useMemo(
+    () =>
+      wallets
+        .filter((w) => w.is_active && w.id !== walletId)
+        .map((w) => ({ ...w, avail: Number(w.current_balance ?? 0) + (w.id === payment.wallet_id ? origAmt : 0) }))
+        .filter((w) => w.avail >= amount)
+        .sort((a, b) => b.avail - a.avail)
+        .slice(0, 4),
+    [wallets, walletId, amount, payment.wallet_id, origAmt],
+  );
+  const oldWalletRow = wallets.find((w) => w.id === payment.wallet_id);
+  const withdrawBlocked = !!payment.wallet_id && (!oldWalletRow || oldWalletRow.is_active === false);
 
   type ImpactRow = { id: string; name: string; refund: number; deduct: number; net: number; before: number; after: number };
   const impactRows: ImpactRow[] = useMemo(() => {
@@ -541,9 +554,32 @@ export function EditPaymentDialog({
                   </tbody>
                 </table>
               </div>
-              {shortBy > 0 && (
-                <p className="font-medium text-amber-600 dark:text-amber-400">
-                  ⚠ {newWalletName} e joththesto balance nei — short by {fmtBdt(shortBy)}.
+              {blocked && (
+                <div className="rounded-md border border-destructive/40 bg-destructive/10 p-2 space-y-1.5">
+                  <p className="font-semibold text-destructive">
+                    ⛔ Blocked — {newWalletName} e joththesto balance nei. Available {fmtBdt(availableAfterRefund)}, short by {fmtBdt(shortBy)}.
+                  </p>
+                  <div className="space-y-1 text-[11px] text-muted-foreground">
+                    <p className="font-medium text-foreground">Bikolpo:</p>
+                    <div className="flex flex-wrap gap-1.5">
+                      <Button type="button" size="sm" variant="outline" className="h-6 px-2 text-[11px]"
+                        onClick={() => setAmount(Number(Math.max(availableAfterRefund, 0).toFixed(2)))}>
+                        Amount {fmtBdt(Math.max(availableAfterRefund, 0))} kore din
+                      </Button>
+                      {altWallets.map((w) => (
+                        <Button key={w.id} type="button" size="sm" variant="outline" className="h-6 px-2 text-[11px]"
+                          onClick={() => setWalletId(w.id)}>
+                          {w.name} ({fmtBdt(w.avail)}) theke din
+                        </Button>
+                      ))}
+                    </div>
+                    {altWallets.length === 0 && <p>Kono account e {fmtBdt(amount)} nei — age wallet e fund add korun.</p>}
+                  </div>
+                </div>
+              )}
+              {withdrawBlocked && (
+                <p className="font-medium text-destructive">
+                  ⛔ Withdraw bondho — original account ti nei/inactive, taka ferot deoa jabe na. Age account ti active korun.
                 </p>
               )}
             </div>
@@ -552,14 +588,14 @@ export function EditPaymentDialog({
         <DialogFooter className="gap-2 sm:justify-between">
           <Button
             variant="destructive"
-            disabled={busy}
+            disabled={busy || withdrawBlocked}
             onClick={() => { if (confirm("Ei payment withdraw kore wallet e taka ferot dite chan?")) revMut.mutate(); }}
           >
             {revMut.isPending && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}Withdraw
           </Button>
           <div className="flex gap-2">
             <Button variant="ghost" onClick={onClose} disabled={busy}>Cancel</Button>
-            <Button disabled={busy || amount <= 0 || !walletId} onClick={() => saveMut.mutate()}>
+            <Button disabled={busy || amount <= 0 || !walletId || blocked} onClick={() => saveMut.mutate()}>
               {saveMut.isPending && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}Save changes
             </Button>
           </div>
