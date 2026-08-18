@@ -14,6 +14,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { listWarehouses, releasePoQuantity } from "@/lib/erp/imports/imports.functions";
 import { fmtBdt } from "@/lib/erp/imports/types";
+import { useAccounts } from "@/hooks/erp/use-finance-query";
 
 type Release = {
   id: string;
@@ -59,6 +60,10 @@ export function QuantityReleaseCard({
   const [warehouseId, setWarehouseId] = useState("");
   const [notes, setNotes] = useState("");
   const [draft, setDraft] = useState<Record<string, { qty: number; damaged: number }>>({});
+  const [payNow, setPayNow] = useState(true);
+  const [payWallet, setPayWallet] = useState("");
+  const [payOverride, setPayOverride] = useState<string | null>(null);
+  const { data: wallets = [] } = useAccounts(brandId ? [brandId] : []);
 
   // Ekta matro warehouse thakle (ba default thakle) auto select — protibar select korte hobe na
   useEffect(() => {
@@ -159,8 +164,10 @@ export function QuantityReleaseCard({
   const dueForReleased = Math.max(0, Math.min(due || releasedShare, releasedShare));
 
   const mut = useMutation({
-    mutationFn: () =>
-      releaseFn({
+    mutationFn: () => {
+      const amt = payNow ? Math.max(0, Number(payOverride ?? previewTotalDue.toFixed(2)) || 0) : 0;
+      const ratio = previewTotalDue > 0 ? Math.min(1, amt / previewTotalDue) : 0;
+      return releaseFn({
         data: {
           po_id: poId,
           warehouse_id: warehouseId || undefined,
@@ -168,12 +175,26 @@ export function QuantityReleaseCard({
           items: items
             .map((i) => ({ po_item_id: i.id, quantity: getDraft(i.id).qty, damaged_qty: getDraft(i.id).damaged }))
             .filter((l) => l.quantity > 0 || l.damaged_qty > 0),
+          payment: payNow && payWallet && amt > 0
+            ? {
+                wallet_id: payWallet,
+                goods_amount_bdt: +(previewGoodsDue * ratio).toFixed(2),
+                shipping_amount_bdt: +(previewShipDue * ratio).toFixed(2),
+                payment_date: new Date().toISOString().slice(0, 10),
+                idempotency_key: `qtyrel:${poId}:${Date.now()}`,
+              }
+            : undefined,
         },
-      }),
+      });
+    },
     onSuccess: (res: any) => {
-      toast.success(`Release #${res.release_number} posted to inventory`);
+      const paid = (res.payments ?? []).reduce((s: number, p: any) => s + Number(p.amount ?? 0), 0);
+      toast.success(
+        `Release #${res.release_number} stock e gelo${paid > 0 ? ` — ${fmtBdt(paid)} paid` : ""}`,
+      );
       setDraft({});
       setNotes("");
+      setPayOverride(null);
       qc.invalidateQueries({ queryKey: ["imp-po", poId] });
     },
     onError: (e: any) => toast.error(e?.message ?? "Release failed"),
@@ -299,12 +320,62 @@ export function QuantityReleaseCard({
             <Button variant="outline" size="sm" onClick={fillRemaining} disabled={totalReleased >= totalOrdered}>
               Fill remaining
             </Button>
-            <Button size="sm" disabled={draftTotal <= 0 || hasOverRelease || mut.isPending} onClick={() => mut.mutate()}>
+            <Button
+              size="sm"
+              disabled={draftTotal <= 0 || hasOverRelease || mut.isPending || (payNow && previewTotalDue > 0 && !payWallet)}
+              onClick={() => mut.mutate()}
+            >
               {mut.isPending ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <PackageCheck className="h-4 w-4 mr-2" />}
               Release {draftTotal > 0 ? `${draftTotal} pcs` : ""}
             </Button>
           </div>
         </div>
+
+        {draftTotal > 0 && previewTotalDue > 0 && (
+          <div className="p-4 border-t border-border bg-orange-500/5 space-y-3">
+            <div className="flex items-center justify-between gap-3 flex-wrap">
+              <div className="text-sm font-medium inline-flex items-center gap-2">
+                <Wallet className="h-4 w-4 text-orange-600" />
+                Ei {draftTotal} pcs-er due — purchase {fmtBdt(previewGoodsDue)} + shipping {fmtBdt(previewShipDue)} ={" "}
+                <span className="text-orange-600 font-semibold tabular-nums">{fmtBdt(previewTotalDue)}</span>
+              </div>
+              <Button
+                type="button"
+                size="sm"
+                variant={payNow ? "default" : "outline"}
+                onClick={() => setPayNow((v) => !v)}
+              >
+                {payNow ? "Pay with release ✓" : "Pay later"}
+              </Button>
+            </div>
+            {payNow && (
+              <div className="grid md:grid-cols-2 gap-3">
+                <div>
+                  <Label className="text-xs">Wallet / account</Label>
+                  <Select value={payWallet} onValueChange={setPayWallet}>
+                    <SelectTrigger className="h-9"><SelectValue placeholder="Select wallet" /></SelectTrigger>
+                    <SelectContent>
+                      {(wallets as any[]).filter((w) => w.is_active).map((w) => (
+                        <SelectItem key={w.id} value={w.id}>{w.name} ({fmtBdt(w.current_balance)})</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div>
+                  <Label className="text-xs">Pay amount (BDT)</Label>
+                  <Input
+                    type="number" min={0} className="h-9 tabular-nums"
+                    value={payOverride ?? previewTotalDue.toFixed(2)}
+                    onChange={(e) => setPayOverride(e.target.value)}
+                  />
+                  <p className="text-[11px] text-muted-foreground mt-1">
+                    Kom dile purchase + shipping pro-rata bhabe adjust hobe, baki ta due thakbe.
+                  </p>
+                </div>
+              </div>
+            )}
+          </div>
+        )}
       </Card>
 
       {grandTotal > 0 && due > 0 && (
