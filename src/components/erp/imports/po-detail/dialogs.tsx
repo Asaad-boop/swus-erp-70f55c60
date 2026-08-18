@@ -12,7 +12,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useAccounts } from "@/hooks/erp/use-finance-query";
-import { markArrivedInBd, recordImportPayment, releaseCarton } from "@/lib/erp/imports/imports.functions";
+import { markArrivedInBd, receiveQuantityBd, recordImportPayment, releaseCarton } from "@/lib/erp/imports/imports.functions";
 import { fmtBdt, newIdemKey } from "@/lib/erp/imports/types";
 import { BillTile } from "./atoms";
 
@@ -84,6 +84,105 @@ export function ArrivedDialog({ poId, onClose, brandId }: { poId: string; onClos
 }
 
 export function PaymentDialog({ poId, brandId, grandTotal, dueAmount, onClose }: { poId: string; brandId: string; grandTotal: number; dueAmount: number; onClose: () => void }) {
+  return <PaymentDialogInner poId={poId} brandId={brandId} grandTotal={grandTotal} dueAmount={dueAmount} onClose={onClose} />;
+}
+
+export function QtyArrivedDialog({
+  poId, brandId, onClose,
+  initialWeight = 0, initialRate = 0, initialCustoms = 0, initialOther = 0,
+}: {
+  poId: string; brandId: string; onClose: () => void;
+  initialWeight?: number; initialRate?: number; initialCustoms?: number; initialOther?: number;
+}) {
+  const fn = useServerFn(receiveQuantityBd);
+  const qc = useQueryClient();
+  const { data: wallets = [] } = useAccounts([brandId]);
+  const [weight, setWeight] = useState<number>(initialWeight);
+  const [rate, setRate] = useState<number>(initialRate);
+  const [flat, setFlat] = useState<number>(0);
+  const [customs, setCustoms] = useState<number>(initialCustoms);
+  const [other, setOther] = useState<number>(initialOther);
+  const [payNow, setPayNow] = useState(false);
+  const [amount, setAmount] = useState<number>(0);
+  const [walletId, setWalletId] = useState("");
+  const [ref, setRef] = useState("");
+
+  const shipping = flat > 0 ? flat : +(weight * rate).toFixed(2);
+
+  const mut = useMutation({
+    mutationFn: async () => {
+      const payload: any = {
+        po_id: poId,
+        total_weight_kg: weight || 0,
+        rate_per_kg_bdt: rate || 0,
+        customs_duty_bdt: customs || 0,
+        other_charges_bdt: other || 0,
+        mode: "replace",
+        idempotency_key: newIdemKey("qarr"),
+      };
+      if (flat > 0) payload.shipping_total_bdt = flat;
+      if (payNow && walletId && amount > 0) {
+        payload.shipping_payment = {
+          amount, wallet_id: walletId,
+          payment_date: new Date().toISOString().slice(0, 10),
+          reference: ref || undefined,
+          idempotency_key: newIdemKey("pay"),
+        };
+      }
+      return await fn({ data: payload });
+    },
+    onSuccess: () => { toast.success("Received in BD — landed cost update hoyeche"); qc.invalidateQueries({ queryKey: ["imp-po", poId] }); onClose(); },
+    onError: (e: any) => toast.error(e?.message ?? "Failed"),
+  });
+
+  return (
+    <Dialog open onOpenChange={onClose}>
+      <DialogContent>
+        <DialogHeader>
+          <DialogTitle>Receive at BD (Quantity mode)</DialogTitle>
+          <DialogDescription>Shipping bill din — per-piece landed cost e jabe, tarpor piece wise release + pay kora jabe.</DialogDescription>
+        </DialogHeader>
+        <div className="space-y-3">
+          <div className="grid grid-cols-3 gap-3">
+            <div><Label className="text-xs">Weight (kg)</Label><Input type="number" step="0.01" value={weight} onChange={(e) => setWeight(Number(e.target.value))} /></div>
+            <div><Label className="text-xs">Rate ৳/kg</Label><Input type="number" step="0.01" value={rate} onChange={(e) => setRate(Number(e.target.value))} /></div>
+            <div><Label className="text-xs">Or flat ৳</Label><Input type="number" step="0.01" value={flat} onChange={(e) => setFlat(Number(e.target.value))} /></div>
+          </div>
+          <div className="grid grid-cols-2 gap-3">
+            <div><Label className="text-xs">Customs / Duty (৳)</Label><Input type="number" step="0.01" value={customs} onChange={(e) => setCustoms(Number(e.target.value))} /></div>
+            <div><Label className="text-xs">Other charges (৳)</Label><Input type="number" step="0.01" value={other} onChange={(e) => setOther(Number(e.target.value))} /></div>
+          </div>
+          <div className="flex items-center justify-between text-sm p-2 rounded bg-muted/40">
+            <span className="text-muted-foreground">Shipping total:</span>
+            <span className="font-semibold tabular-nums">{fmtBdt(shipping)}</span>
+          </div>
+          <div className="border-t border-border pt-3">
+            <div className="text-[11px] tracking-wider font-semibold text-muted-foreground mb-2">PAY SHIPPING NOW (OPTIONAL)</div>
+            <div className="grid grid-cols-2 gap-3">
+              <div><Label className="text-xs">Amount</Label><Input type="number" step="0.01" value={amount} onChange={(e) => { setAmount(Number(e.target.value)); setPayNow(true); }} /></div>
+              <div>
+                <Label className="text-xs">From wallet</Label>
+                <Select value={walletId} onValueChange={(v) => { setWalletId(v); setPayNow(true); }}>
+                  <SelectTrigger><SelectValue placeholder="Wallet" /></SelectTrigger>
+                  <SelectContent>{wallets.filter((w) => w.is_active).map((w) => <SelectItem key={w.id} value={w.id}>{w.name} ({fmtBdt(w.current_balance)})</SelectItem>)}</SelectContent>
+                </Select>
+              </div>
+            </div>
+            <div className="mt-2"><Label className="text-xs">Reference</Label><Input value={ref} onChange={(e) => setRef(e.target.value)} placeholder="Optional" /></div>
+          </div>
+        </div>
+        <DialogFooter>
+          <Button variant="ghost" onClick={onClose}>Cancel</Button>
+          <Button disabled={shipping < 0 || mut.isPending} onClick={() => mut.mutate()}>
+            {mut.isPending && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}Save
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+function PaymentDialogUnusedShim({ poId, brandId, grandTotal, dueAmount, onClose }: { poId: string; brandId: string; grandTotal: number; dueAmount: number; onClose: () => void }) {
   return <PaymentDialogInner poId={poId} brandId={brandId} grandTotal={grandTotal} dueAmount={dueAmount} onClose={onClose} />;
 }
 
