@@ -298,6 +298,59 @@ export function EditPoDialog({
           </div>
         </div>
 
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+          <div className="space-y-1.5">
+            <Label>PO number</Label>
+            <Input value={poNumber} onChange={(e) => setPoNumber(e.target.value)} className="font-mono" />
+          </div>
+          <div className="space-y-1.5">
+            <Label>Cargo agent</Label>
+            <Select value={agentId || "none"} onValueChange={(v) => setAgentId(v === "none" ? "" : v)}>
+              <SelectTrigger><SelectValue placeholder="No agent" /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="none">No agent</SelectItem>
+                {agents.map((a: any) => (
+                  <SelectItem key={a.id} value={a.id}>{a.name}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+          <div className="space-y-1.5">
+            <Label>Shipped date</Label>
+            <Input type="date" value={shippedAt} onChange={(e) => setShippedAt(e.target.value)} />
+          </div>
+          <div className="space-y-1.5">
+            <Label>Total weight (kg)</Label>
+            <Input type="number" step="0.01" value={weightKg} onChange={(e) => setWeightKg(e.target.value)} />
+          </div>
+        </div>
+
+        <div className="rounded-lg border p-3 space-y-2">
+          <div className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">Charges (landed cost)</div>
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+            <div className="space-y-1.5">
+              <Label className="text-[11px]">Freight (৳)</Label>
+              <Input type="number" step="0.01" value={freight} onChange={(e) => setFreight(e.target.value)} />
+            </div>
+            <div className="space-y-1.5">
+              <Label className="text-[11px]">Customs / Duty (৳)</Label>
+              <Input type="number" step="0.01" value={customs} onChange={(e) => setCustoms(e.target.value)} />
+            </div>
+            <div className="space-y-1.5">
+              <Label className="text-[11px]">Other charges (৳)</Label>
+              <Input type="number" step="0.01" value={otherCharges} onChange={(e) => setOtherCharges(e.target.value)} />
+            </div>
+            <div className="space-y-1.5">
+              <Label className="text-[11px]">Agent commission ({currency})</Label>
+              <Input type="number" step="0.01" value={agentComm} onChange={(e) => setAgentComm(e.target.value)} />
+            </div>
+          </div>
+          <div className="flex items-center justify-between text-xs text-muted-foreground">
+            <span>Extras total (BDT)</span>
+            <span className="font-semibold tabular-nums text-foreground">{fmtBdt(extrasBdt)}</span>
+          </div>
+        </div>
+
         <div className="space-y-1.5">
           <Label>Notes</Label>
           <Textarea rows={2} value={notes} onChange={(e) => setNotes(e.target.value)} placeholder="Internal note…" />
@@ -476,7 +529,12 @@ export function EditPoDialog({
             <span className="text-muted-foreground">
               Subtotal: <span className="font-mono">{subtotalForeign.toFixed(2)} {currency}</span>
             </span>
-            <span className="font-semibold tabular-nums">{fmtBdt(subtotalBdt)}</span>
+            <span className="font-semibold tabular-nums">
+              {fmtBdt(subtotalBdt)}
+              {extrasBdt > 0 && (
+                <span className="ml-2 text-xs font-normal text-muted-foreground">+ extras {fmtBdt(extrasBdt)} = {fmtBdt(subtotalBdt + extrasBdt)}</span>
+              )}
+            </span>
           </div>
         </div>
 
