@@ -1476,6 +1476,28 @@ export const releasePoQuantity = createServerFn({ method: "POST" })
       }
     }
 
+    // Local delivery charge wallet theke pay (optional)
+    let localDeliveryPaymentId: string | null = null;
+    if (localDelivery > 0 && data.local_delivery?.wallet_id) {
+      const { data: ldPay, error: ldPayErr } = await context.supabase.rpc("imp_record_payment_rpc", {
+        _payload: {
+          brand_id: (po as any).brand_id,
+          po_id: data.po_id,
+          payment_type: "local_courier",
+          amount_bdt: +localDelivery.toFixed(2),
+          wallet_id: data.local_delivery.wallet_id,
+          payment_date: data.local_delivery.payment_date ?? new Date().toISOString().slice(0, 10),
+          reference: data.local_delivery.reference ?? undefined,
+          notes: `Release #${nextNumber} — local delivery charge`,
+          idempotency_key:
+            data.local_delivery.idempotency_key ?? `qtyrel_ld:${data.po_id}:${nextNumber}:${Date.now()}`,
+        },
+      });
+      if (ldPayErr) throw ldPayErr;
+      localDeliveryPaymentId = (ldPay as any)?.payment_id ?? (typeof ldPay === "string" ? ldPay : null);
+      paymentsDone.push({ type: "local_courier", amount: +localDelivery.toFixed(2) });
+    }
+
     const { data: release, error: relErr } = await context.supabase
       .from("imp_po_releases")
       .insert({
@@ -1484,8 +1506,11 @@ export const releasePoQuantity = createServerFn({ method: "POST" })
         release_number: nextNumber,
         warehouse_id: data.warehouse_id ?? null,
         notes: data.notes ?? null,
+        local_delivery_bdt: localDelivery,
+        delivery_note: data.local_delivery?.note ?? null,
+        delivery_payment_id: localDeliveryPaymentId,
         created_by: context.userId,
-      })
+      } as any)
       .select("id, release_number")
       .single();
     if (relErr) throw relErr;
@@ -1504,10 +1529,11 @@ export const releasePoQuantity = createServerFn({ method: "POST" })
           product_id: pi?.product_id ?? null,
           variant_id: pi?.variant_id ?? null,
           sku_snapshot: pi?.sku_snapshot ?? null,
-          quantity: Math.max(1, l.quantity || 1),
+          quantity: Math.max(0, l.quantity ?? 0),
           damaged_qty: l.damaged_qty ?? 0,
+          missing_qty: l.missing_qty ?? 0,
           unit_landed_cost_bdt: landed,
-        })
+        } as any)
         .select("id")
         .single();
       if (riErr) throw riErr;
@@ -1532,7 +1558,10 @@ export const releasePoQuantity = createServerFn({ method: "POST" })
           .eq("id", (relItem as any).id);
         movements.push({ po_item_id: l.po_item_id, qty: l.quantity, unit_cost: landed, movement_id: movId });
       }
-      releasedMap.set(l.po_item_id, (releasedMap.get(l.po_item_id) ?? 0) + l.quantity + (l.damaged_qty ?? 0));
+      releasedMap.set(
+        l.po_item_id,
+        (releasedMap.get(l.po_item_id) ?? 0) + l.quantity + (l.damaged_qty ?? 0) + (l.missing_qty ?? 0),
+      );
     }
 
     // Update PO status based on total released
@@ -1549,6 +1578,7 @@ export const releasePoQuantity = createServerFn({ method: "POST" })
       release_number: nextNumber,
       movements,
       payments: paymentsDone,
+      local_delivery_bdt: localDelivery,
       landed_per_unit_overhead: +overheadPerUnit.toFixed(4),
       status: nextStatus,
       total_released: totalReleased,
