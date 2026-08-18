@@ -12135,6 +12135,7 @@ export type Database = {
         Args: { _brand: string; _image?: string; _sku?: string; _title: string }
         Returns: Json
       }
+      imp_receive_quantity_bd: { Args: { _payload: Json }; Returns: Json }
       imp_record_payment_rpc: { Args: { _payload: Json }; Returns: Json }
       imp_release_carton: { Args: { _payload: Json }; Returns: Json }
       imp_update_carton_stage: {
