@@ -12138,6 +12138,10 @@ export type Database = {
       imp_receive_quantity_bd: { Args: { _payload: Json }; Returns: Json }
       imp_record_payment_rpc: { Args: { _payload: Json }; Returns: Json }
       imp_release_carton: { Args: { _payload: Json }; Returns: Json }
+      imp_reverse_payment: {
+        Args: { _payment_id: string; _reason?: string }
+        Returns: Json
+      }
       imp_update_carton_stage: {
         Args: { _carton: string; _new_stage: string; _notes?: string }
         Returns: undefined

@@ -806,6 +806,70 @@ export const recordImportPayment = createServerFn({ method: "POST" })
 
 /* --- pay carton-level due later (after release-without-payment) --- */
 
+export const reverseImportPayment = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d: any) =>
+    z.object({
+      payment_id: z.string().uuid(),
+      reason: z.string().max(300).optional(),
+    }).parse(d),
+  )
+  .handler(async ({ data, context }) => {
+    await assertAnyRole(context.supabase, context.userId, ["admin", "accountant"]);
+    const { data: out, error } = await context.supabase.rpc("imp_reverse_payment", {
+      _payment_id: data.payment_id,
+      _reason: data.reason ?? undefined,
+    });
+    if (error) throw error;
+    return out;
+  });
+
+/** Edit an existing payment = reverse the old one, then record a corrected one. */
+export const editImportPayment = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d: any) =>
+    z.object({
+      payment_id: z.string().uuid(),
+      brand_id: z.string().uuid(),
+      po_id: z.string().uuid(),
+      carton_id: z.string().uuid().nullable().optional(),
+      payment_type: z.enum([
+        "supplier_advance", "supplier_payment", "shipping",
+        "carton_release", "supplier_balance", "local_courier", "adjustment",
+      ]),
+      amount_bdt: z.number().positive(),
+      wallet_id: z.string().uuid(),
+      payment_date: z.string(),
+      reference: z.string().optional(),
+      notes: z.string().optional(),
+      idempotency_key: z.string().min(8),
+    }).parse(d),
+  )
+  .handler(async ({ data, context }) => {
+    await assertAnyRole(context.supabase, context.userId, ["admin", "accountant"]);
+    const { error: rErr } = await context.supabase.rpc("imp_reverse_payment", {
+      _payment_id: data.payment_id,
+      _reason: "edited",
+    });
+    if (rErr) throw rErr;
+    const { data: out, error } = await context.supabase.rpc("imp_record_payment_rpc", {
+      _payload: {
+        brand_id: data.brand_id,
+        po_id: data.po_id,
+        carton_id: data.carton_id ?? undefined,
+        payment_type: data.payment_type,
+        amount_bdt: data.amount_bdt,
+        wallet_id: data.wallet_id,
+        payment_date: data.payment_date,
+        reference: data.reference,
+        notes: data.notes,
+        idempotency_key: data.idempotency_key,
+      },
+    });
+    if (error) throw error;
+    return { reversed: data.payment_id, created: out };
+  });
+
 export const payCartonDue = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((d: any) =>
