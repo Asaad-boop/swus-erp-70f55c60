@@ -71,6 +71,7 @@ function PoDetailPage() {
   });
 
   const [arrivedOpen, setArrivedOpen] = useState(false);
+  const [qtyArrivedOpen, setQtyArrivedOpen] = useState(false);
   const [paymentOpen, setPaymentOpen] = useState(false);
   const [editOpen, setEditOpen] = useState(false);
 
