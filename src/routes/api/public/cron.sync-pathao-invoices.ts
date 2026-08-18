@@ -8,7 +8,10 @@ import { createFileRoute } from "@tanstack/react-router";
 async function run(request: Request): Promise<Response> {
   const url = new URL(request.url);
   const secret = process.env["CRON_SECRET"];
-  if (secret && url.searchParams.get("key") !== secret) {
+  if (!secret) {
+    return Response.json({ ok: false, error: "CRON_SECRET not configured" }, { status: 503 });
+  }
+  if (url.searchParams.get("key") !== secret) {
     return new Response("Unauthorized", { status: 401 });
   }
 
