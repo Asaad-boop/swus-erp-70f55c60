@@ -216,6 +216,27 @@ export async function ingestPathaoPaymentInvoice(supabase: AnyRec, payload: AnyR
     }
   }
 
+  // ---- amount enrichment ----
+  // Pathao's webhook payload has no money fields, so payout/fee would land as
+  // 0. Pull the real numbers from the invoice CSV (cached per invoice_id).
+  if (collected === 0 && totalFee === 0 && payout === 0 && invoiceId) {
+    const amounts = await loadInvoiceAmounts(supabase, String(invoiceId), brandId);
+    const hit =
+      (consignmentId ? amounts.get(`c:${consignmentId.trim().toUpperCase()}`) : undefined) ??
+      (merchantOrderId ? amounts.get(`m:${merchantOrderId.trim().toUpperCase()}`) : undefined);
+    if (hit) {
+      collected = hit.collected;
+      deliveryFee = hit.delivery_fee;
+      codFee = hit.cod_fee;
+      otherFee = hit.other_fee;
+      discount = hit.discount;
+      totalFee = hit.total_fee;
+      payout = hit.payout;
+      csvRowType = hit.row_type;
+      if (hit.invoice_date) invoiceDate = hit.invoice_date.slice(0, 10);
+    }
+  }
+
   // ---- duplicate guard (consignment already booked in a live run) ----
   if (consignmentId) {
     const { data: prior } = await supabase
@@ -227,7 +248,7 @@ export async function ingestPathaoPaymentInvoice(supabase: AnyRec, payload: AnyR
     if (live) return { ok: true, action: "duplicate", invoiceId, reason: "consignment already reconciled" };
   }
 
-  const matchType = rowTypeFor(event, collected, orderTotal);
+  const matchType = csvRowType ?? rowTypeFor(event, collected, orderTotal);
 
   // ---- run (one per invoice + brand) ----
   const sourceName = `instapay:${invoiceId ?? invoiceDate}`;
