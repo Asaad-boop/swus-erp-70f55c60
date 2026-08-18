@@ -107,6 +107,32 @@ export function EditPoDialog({
     queryFn: () => suppliersFn({ data: { brandId: po.brand_id } }) as Promise<any[]>,
   });
 
+  const productIds = useMemo(
+    () => Array.from(new Set(lines.map((l) => l.product_id).filter(Boolean) as string[])).sort(),
+    [lines],
+  );
+
+  const { data: variantRows = [] } = useQuery({
+    queryKey: ["imp-po-variants", productIds],
+    enabled: open && productIds.length > 0,
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("product_variants")
+        .select("id,product_id,color_name,color_hex,image,sku,stock")
+        .in("product_id", productIds)
+        .eq("is_active", true)
+        .order("display_order");
+      if (error) throw error;
+      return (data ?? []) as VariantMeta[];
+    },
+  });
+
+  const variantsByProduct = useMemo(() => {
+    const m: Record<string, VariantMeta[]> = {};
+    for (const v of variantRows) (m[v.product_id] ??= []).push(v);
+    return m;
+  }, [variantRows]);
+
   const fxNum = Number(fx) || 0;
   const subtotalForeign = lines.reduce((s, l) => s + (Number(l.qty) || 0) * (Number(l.unit) || 0), 0);
   const subtotalBdt = subtotalForeign * fxNum;
