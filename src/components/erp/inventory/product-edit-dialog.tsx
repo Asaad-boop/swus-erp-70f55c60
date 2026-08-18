@@ -179,16 +179,21 @@ export function ProductEditDialog({ product, onClose }: Props) {
         is_preorder: f.is_preorder,
         preorder_expected_date: f.is_preorder ? (f.preorder_expected_date || null) : null,
       };
-      const { error } = await supabase
+      const { data: updated, error } = await supabase
         .from("products")
         .update(payload as never)
-        .eq("id", product.id);
+        .eq("id", product.id)
+        .select("id");
       if (error) throw error;
+      if (!updated || updated.length === 0) {
+        throw new Error("Save hoyni — ei product edit korar permission nei (admin/owner er kache access chan).");
+      }
     },
     onSuccess: () => {
       toast.success("Product updated");
       qc.invalidateQueries({ queryKey: ["inventory"] });
       qc.invalidateQueries({ queryKey: ["product-full"] });
+      qc.invalidateQueries({ queryKey: ["products-catalog"] });
       onClose();
     },
     onError: (e: Error) => toast.error(e.message),
