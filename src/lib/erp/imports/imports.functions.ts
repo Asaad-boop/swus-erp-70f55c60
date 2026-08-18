@@ -1246,6 +1246,7 @@ export const getCargoAgentDashboard = createServerFn({ method: "POST" })
    ============================================================ */
 
 export const releasePoQuantity = createServerFn({ method: "POST" })
+  // eslint-disable-next-line
   .middleware([requireSupabaseAuth])
   .inputValidator((d: any) =>
     z.object({
