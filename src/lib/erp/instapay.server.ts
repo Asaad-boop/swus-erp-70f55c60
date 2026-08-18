@@ -169,14 +169,15 @@ export async function ingestPathaoPaymentInvoice(supabase: AnyRec, payload: AnyR
     return { ok: true, action: "ignored", reason: "no identifiers" };
   }
 
-  const collected = num(d.collected_amount ?? d.amount_to_collect ?? d.collected ?? 0);
-  const deliveryFee = num(d.delivery_fee);
-  const codFee = num(d.cod_fee);
-  const discount = num(d.discount);
-  const otherFee = num(d.additional_charge) + num(d.insta_fee) + num(d.instapay_fee);
-  const totalFee = d.total_fee != null ? num(d.total_fee) : deliveryFee + codFee + otherFee - discount;
-  const payout = d.payout != null ? num(d.payout) : collected - totalFee;
-  const invoiceDate: string = String(d.invoice_date ?? d.payment_date ?? d.updated_at ?? new Date().toISOString()).slice(0, 10);
+  let collected = num(d.collected_amount ?? d.amount_to_collect ?? d.collected ?? 0);
+  let deliveryFee = num(d.delivery_fee);
+  let codFee = num(d.cod_fee);
+  let discount = num(d.discount);
+  let otherFee = num(d.additional_charge) + num(d.insta_fee) + num(d.instapay_fee);
+  let totalFee = d.total_fee != null ? num(d.total_fee) : deliveryFee + codFee + otherFee - discount;
+  let payout = d.payout != null ? num(d.payout) : collected - totalFee;
+  let invoiceDate: string = String(d.invoice_date ?? d.payment_date ?? d.updated_at ?? new Date().toISOString()).slice(0, 10);
+  let csvRowType: "paid" | "return" | "partial" | null = null;
 
   // ---- match order ----
   let orderId: string | null = null;
