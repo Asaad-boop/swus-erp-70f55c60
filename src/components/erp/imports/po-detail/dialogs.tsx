@@ -14,6 +14,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { useAccounts } from "@/hooks/erp/use-finance-query";
 import { editImportPayment, markArrivedInBd, receiveQuantityBd, recordImportPayment, releaseCarton, reverseImportPayment } from "@/lib/erp/imports/imports.functions";
 import { fmtBdt, newIdemKey } from "@/lib/erp/imports/types";
+import { cn } from "@/lib/utils";
 import { BillTile } from "./atoms";
 
 export function ArrivedDialog({ poId, onClose, brandId }: { poId: string; onClose: () => void; brandId: string }) {
@@ -439,6 +440,33 @@ export function EditPaymentDialog({
   const availableAfterRefund = newWalletBal + (sameWallet ? origAmt : 0);
   const shortBy = amount - availableAfterRefund;
 
+  type ImpactRow = { id: string; name: string; refund: number; deduct: number; net: number; before: number; after: number };
+  const impactRows: ImpactRow[] = useMemo(() => {
+    const bal = (id: string) => Number(wallets.find((w) => w.id === id)?.current_balance ?? 0);
+    const nameOf = (id: string, fb: string) => wallets.find((w) => w.id === id)?.name ?? fb;
+    const map = new Map<string, ImpactRow>();
+    const touch = (id: string, fb: string) => {
+      if (!map.has(id)) {
+        const before = bal(id);
+        map.set(id, { id, name: nameOf(id, fb), refund: 0, deduct: 0, net: 0, before, after: before });
+      }
+      return map.get(id)!;
+    };
+    if (payment.wallet_id) {
+      const r = touch(payment.wallet_id, oldWalletName);
+      r.refund += origAmt;
+    }
+    if (walletId) {
+      const r = touch(walletId, newWalletName);
+      r.deduct += amount;
+    }
+    for (const r of map.values()) {
+      r.net = r.refund - r.deduct;
+      r.after = r.before + r.net;
+    }
+    return [...map.values()];
+  }, [wallets, walletId, payment.wallet_id, amount, origAmt, oldWalletName, newWalletName]);
+
   return (
     <Dialog open onOpenChange={onClose}>
       <DialogContent>
@@ -477,30 +505,42 @@ export function EditPaymentDialog({
           <div><Label>Reason / note</Label><Input value={reason} onChange={(e) => setReason(e.target.value)} placeholder="keno adjust/withdraw" /></div>
 
           {walletId && amount > 0 && (
-            <div className="rounded-md border bg-muted/30 p-2.5 text-xs space-y-1">
-              <p className="font-medium text-foreground">Wallet impact</p>
-              {sameWallet ? (
-                delta === 0 ? (
-                  <p className="text-muted-foreground">Amount same — {newWalletName} e kono net change hobe na.</p>
-                ) : delta > 0 ? (
-                  <p className="text-rose-600 dark:text-rose-400">
-                    {newWalletName} theke aro <span className="font-semibold tabular-nums">{fmtBdt(delta)}</span> kata jabe.
-                  </p>
-                ) : (
-                  <p className="text-emerald-600 dark:text-emerald-400">
-                    {newWalletName} e <span className="font-semibold tabular-nums">{fmtBdt(-delta)}</span> ferot jabe.
-                  </p>
-                )
-              ) : (
-                <>
-                  <p className="text-emerald-600 dark:text-emerald-400">
-                    {oldWalletName} e <span className="font-semibold tabular-nums">{fmtBdt(origAmt)}</span> ferot jabe.
-                  </p>
-                  <p className="text-rose-600 dark:text-rose-400">
-                    {newWalletName} theke <span className="font-semibold tabular-nums">{fmtBdt(amount)}</span> kata jabe.
-                  </p>
-                </>
-              )}
+            <div className="rounded-md border bg-muted/30 p-2.5 text-xs space-y-2">
+              <div className="flex flex-wrap gap-x-4 gap-y-1">
+                <span className="text-muted-foreground">Original: <span className="font-semibold text-foreground tabular-nums">{fmtBdt(origAmt)}</span></span>
+                <span className="text-muted-foreground">Edited: <span className="font-semibold text-foreground tabular-nums">{fmtBdt(amount)}</span></span>
+                <span className="text-muted-foreground">Refund: <span className="font-semibold text-emerald-600 dark:text-emerald-400 tabular-nums">+{fmtBdt(origAmt)}</span></span>
+                <span className="text-muted-foreground">New deduct: <span className="font-semibold text-rose-600 dark:text-rose-400 tabular-nums">−{fmtBdt(amount)}</span></span>
+                <span className="text-muted-foreground">Net: <span className={cn("font-semibold tabular-nums", delta > 0 ? "text-rose-600 dark:text-rose-400" : delta < 0 ? "text-emerald-600 dark:text-emerald-400" : "text-foreground")}>{delta === 0 ? fmtBdt(0) : (delta > 0 ? "−" : "+") + fmtBdt(Math.abs(delta))}</span></span>
+              </div>
+              <div className="overflow-hidden rounded border">
+                <table className="w-full text-[11px]">
+                  <thead className="bg-muted/60 text-muted-foreground">
+                    <tr>
+                      <th className="px-2 py-1 text-left font-medium">Wallet / Account</th>
+                      <th className="px-2 py-1 text-right font-medium">Refund (+)</th>
+                      <th className="px-2 py-1 text-right font-medium">Deduct (−)</th>
+                      <th className="px-2 py-1 text-right font-medium">Net</th>
+                      <th className="px-2 py-1 text-right font-medium">Balance now → after</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {impactRows.map((r) => (
+                      <tr key={r.id} className="border-t">
+                        <td className="px-2 py-1 font-medium text-foreground">{r.name}</td>
+                        <td className="px-2 py-1 text-right tabular-nums text-emerald-600 dark:text-emerald-400">{r.refund ? "+" + fmtBdt(r.refund) : "—"}</td>
+                        <td className="px-2 py-1 text-right tabular-nums text-rose-600 dark:text-rose-400">{r.deduct ? "−" + fmtBdt(r.deduct) : "—"}</td>
+                        <td className={cn("px-2 py-1 text-right tabular-nums font-semibold", r.net > 0 ? "text-emerald-600 dark:text-emerald-400" : r.net < 0 ? "text-rose-600 dark:text-rose-400" : "text-muted-foreground")}>
+                          {r.net === 0 ? fmtBdt(0) : (r.net > 0 ? "+" : "−") + fmtBdt(Math.abs(r.net))}
+                        </td>
+                        <td className="px-2 py-1 text-right tabular-nums text-muted-foreground">
+                          {fmtBdt(r.before)} <span className="text-foreground">→ {fmtBdt(r.after)}</span>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
               {shortBy > 0 && (
                 <p className="font-medium text-amber-600 dark:text-amber-400">
                   ⚠ {newWalletName} e joththesto balance nei — short by {fmtBdt(shortBy)}.
