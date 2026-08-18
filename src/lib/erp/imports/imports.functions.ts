@@ -866,7 +866,11 @@ export const editImportPayment = createServerFn({ method: "POST" })
         idempotency_key: data.idempotency_key,
       },
     });
-    if (error) throw error;
+    if (error) {
+      throw new Error(
+        `Purono payment reverse hoye taka wallet e ferot geche, kintu notun payment boshate parini: ${error.message}. Notun kore payment record korun.`,
+      );
+    }
     return { reversed: data.payment_id, created: out };
   });
 
