@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { toast } from "sonner";
@@ -60,6 +60,15 @@ export function QuantityReleaseCard({
   const [notes, setNotes] = useState("");
   const [draft, setDraft] = useState<Record<string, { qty: number; damaged: number }>>({});
 
+  // Ekta matro warehouse thakle (ba default thakle) auto select — protibar select korte hobe na
+  useEffect(() => {
+    if (warehouseId) return;
+    const list = warehouses as any[];
+    if (!list.length) return;
+    const def = list.find((w) => w.is_default) ?? (list.length === 1 ? list[0] : null);
+    if (def) setWarehouseId(def.id);
+  }, [warehouses, warehouseId]);
+
   const getDraft = (id: string) => draft[id] ?? { qty: 0, damaged: 0 };
   const setDraftFor = (id: string, patch: Partial<{ qty: number; damaged: number }>) =>
     setDraft((d) => ({ ...d, [id]: { ...getDraft(id), ...patch } }));
@@ -68,6 +77,8 @@ export function QuantityReleaseCard({
   const totalReleased = Array.from(releasedByItem.values()).reduce((s, n) => s + n, 0);
   const pct = totalOrdered > 0 ? Math.round((totalReleased / totalOrdered) * 100) : 0;
   const draftTotal = items.reduce((s, i) => s + getDraft(i.id).qty + getDraft(i.id).damaged, 0);
+  const remainingFor = (i: any) => Math.max(0, Number(i.quantity ?? 0) - (releasedByItem.get(i.id) ?? 0));
+  const hasOverRelease = items.some((i) => getDraft(i.id).qty + getDraft(i.id).damaged > remainingFor(i));
 
   // Landed cost preview — mirrors the server formula in releasePoQuantity()
   const fx = Number(po?.fx_rate_cny_bdt ?? po?.fx_rate ?? 0);
@@ -251,7 +262,7 @@ export function QuantityReleaseCard({
                       value={d.qty || ""}
                       placeholder="0"
                       disabled={remaining === 0}
-                      onChange={(e) => setDraftFor(it.id, { qty: Math.max(0, Number(e.target.value) || 0) })}
+                      onChange={(e) => setDraftFor(it.id, { qty: Math.min(remaining, Math.max(0, Number(e.target.value) || 0)) })}
                     />
                   </TableCell>
                   <TableCell className="text-right">
@@ -261,7 +272,7 @@ export function QuantityReleaseCard({
                       value={d.damaged || ""}
                       placeholder="0"
                       disabled={remaining === 0}
-                      onChange={(e) => setDraftFor(it.id, { damaged: Math.max(0, Number(e.target.value) || 0) })}
+                      onChange={(e) => setDraftFor(it.id, { damaged: Math.min(remaining, Math.max(0, Number(e.target.value) || 0)) })}
                     />
                   </TableCell>
                 </TableRow>
@@ -288,7 +299,7 @@ export function QuantityReleaseCard({
             <Button variant="outline" size="sm" onClick={fillRemaining} disabled={totalReleased >= totalOrdered}>
               Fill remaining
             </Button>
-            <Button size="sm" disabled={draftTotal <= 0 || mut.isPending} onClick={() => mut.mutate()}>
+            <Button size="sm" disabled={draftTotal <= 0 || hasOverRelease || mut.isPending} onClick={() => mut.mutate()}>
               {mut.isPending ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <PackageCheck className="h-4 w-4 mr-2" />}
               Release {draftTotal > 0 ? `${draftTotal} pcs` : ""}
             </Button>
@@ -296,7 +307,7 @@ export function QuantityReleaseCard({
         </div>
       </Card>
 
-      {grandTotal > 0 && (
+      {grandTotal > 0 && due > 0 && (
         <Card className="p-4 space-y-3">
           <div className="flex items-center justify-between gap-3 flex-wrap">
             <h3 className="font-semibold inline-flex items-center gap-2"><Wallet className="h-4 w-4" />Supplier payment</h3>

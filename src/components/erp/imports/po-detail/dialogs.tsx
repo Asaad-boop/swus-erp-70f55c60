@@ -12,7 +12,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useAccounts } from "@/hooks/erp/use-finance-query";
-import { markArrivedInBd, receiveQuantityPoAtBd, recordImportPayment, releaseCarton } from "@/lib/erp/imports/imports.functions";
+import { markArrivedInBd, recordImportPayment, releaseCarton } from "@/lib/erp/imports/imports.functions";
 import { fmtBdt, newIdemKey } from "@/lib/erp/imports/types";
 import { BillTile } from "./atoms";
 
@@ -85,114 +85,6 @@ export function ArrivedDialog({ poId, onClose, brandId }: { poId: string; onClos
 
 export function PaymentDialog({ poId, brandId, grandTotal, dueAmount, onClose }: { poId: string; brandId: string; grandTotal: number; dueAmount: number; onClose: () => void }) {
   return <PaymentDialogInner poId={poId} brandId={brandId} grandTotal={grandTotal} dueAmount={dueAmount} onClose={onClose} />;
-}
-
-/* Quantity mode — Receive at BD (no cartons) */
-export function QtyArrivedDialog({
-  poId, brandId, onClose, initialFreight = 0, initialCustoms = 0, initialOther = 0,
-}: {
-  poId: string; brandId: string; onClose: () => void;
-  initialFreight?: number; initialCustoms?: number; initialOther?: number;
-}) {
-  const fn = useServerFn(receiveQuantityPoAtBd);
-  const qc = useQueryClient();
-  const { data: wallets = [] } = useAccounts([brandId]);
-  const [byWeight, setByWeight] = useState(true);
-  const [weight, setWeight] = useState<number>(0);
-  const [rate, setRate] = useState<number>(0);
-  const [flat, setFlat] = useState<number>(initialFreight);
-  const [customs, setCustoms] = useState<number>(initialCustoms);
-  const [other, setOther] = useState<number>(initialOther);
-  const [amount, setAmount] = useState<number>(0);
-  const [walletId, setWalletId] = useState("");
-  const [ref, setRef] = useState("");
-
-  const shipping = byWeight ? +(weight * rate).toFixed(2) : flat;
-  const totalOverhead = shipping + customs + other;
-
-  const mut = useMutation({
-    mutationFn: async () => {
-      const payload: any = {
-        po_id: poId,
-        shipping_total_bdt: shipping,
-        customs_duty_bdt: customs,
-        other_charges_bdt: other,
-        mode: "replace",
-        idempotency_key: newIdemKey("qarr"),
-      };
-      if (byWeight) { payload.total_weight_kg = weight; payload.rate_per_kg_bdt = rate; }
-      if (walletId && amount > 0) {
-        payload.shipping_payment = {
-          amount, wallet_id: walletId,
-          payment_date: new Date().toISOString().slice(0, 10),
-          reference: ref || undefined,
-          idempotency_key: newIdemKey("pay"),
-        };
-      }
-      return await fn({ data: payload });
-    },
-    onSuccess: () => {
-      toast.success("Received at BD — shipping cost saved");
-      qc.invalidateQueries({ queryKey: ["imp-po", poId] });
-      onClose();
-    },
-    onError: (e: any) => toast.error(e?.message ?? "Failed"),
-  });
-
-  return (
-    <Dialog open onOpenChange={onClose}>
-      <DialogContent>
-        <DialogHeader>
-          <DialogTitle>Receive at BD — Quantity mode</DialogTitle>
-          <DialogDescription>
-            Shipping/customs enter korun. Eta per-piece landed cost e chole jabe — tarpor joto piece chan toto release korte parben.
-          </DialogDescription>
-        </DialogHeader>
-        <div className="space-y-3">
-          <div className="flex gap-1">
-            <Button size="sm" variant={byWeight ? "default" : "outline"} onClick={() => setByWeight(true)}>Weight × rate</Button>
-            <Button size="sm" variant={!byWeight ? "default" : "outline"} onClick={() => setByWeight(false)}>Flat amount</Button>
-          </div>
-          {byWeight ? (
-            <div className="grid grid-cols-2 gap-3">
-              <div><Label>Total weight (kg)</Label><Input type="number" step="0.1" value={weight} onChange={(e) => setWeight(Number(e.target.value) || 0)} /></div>
-              <div><Label>Rate ৳/kg</Label><Input type="number" step="0.01" value={rate} onChange={(e) => setRate(Number(e.target.value) || 0)} /></div>
-            </div>
-          ) : (
-            <div><Label>Shipping total ৳</Label><Input type="number" step="0.01" value={flat} onChange={(e) => setFlat(Number(e.target.value) || 0)} /></div>
-          )}
-          <div className="grid grid-cols-2 gap-3">
-            <div><Label>Customs ৳</Label><Input type="number" step="0.01" value={customs} onChange={(e) => setCustoms(Number(e.target.value) || 0)} /></div>
-            <div><Label>Other charges ৳</Label><Input type="number" step="0.01" value={other} onChange={(e) => setOther(Number(e.target.value) || 0)} /></div>
-          </div>
-          <div className="flex items-center justify-between text-sm p-2 rounded bg-muted/40">
-            <span className="text-muted-foreground">Shipping + customs + other:</span>
-            <span className="font-semibold tabular-nums">{fmtBdt(totalOverhead)}</span>
-          </div>
-          <div className="border-t border-border pt-3">
-            <div className="text-[11px] tracking-wider font-semibold text-muted-foreground mb-2">PAY SHIPPING NOW (OPTIONAL)</div>
-            <div className="grid grid-cols-2 gap-3">
-              <div><Label>Amount</Label><Input type="number" step="0.01" value={amount} onChange={(e) => setAmount(Number(e.target.value) || 0)} /></div>
-              <div>
-                <Label>From Wallet</Label>
-                <Select value={walletId} onValueChange={setWalletId}>
-                  <SelectTrigger><SelectValue placeholder="Wallet" /></SelectTrigger>
-                  <SelectContent>{wallets.filter((w) => w.is_active).map((w) => <SelectItem key={w.id} value={w.id}>{w.name} ({fmtBdt(w.current_balance)})</SelectItem>)}</SelectContent>
-                </Select>
-              </div>
-            </div>
-            <div className="mt-2"><Label>Reference</Label><Input value={ref} onChange={(e) => setRef(e.target.value)} placeholder="Optional" /></div>
-          </div>
-        </div>
-        <DialogFooter>
-          <Button variant="ghost" onClick={onClose}>Cancel</Button>
-          <Button disabled={totalOverhead <= 0 || mut.isPending} onClick={() => mut.mutate()}>
-            {mut.isPending && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}Save &amp; Receive
-          </Button>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
-  );
 }
 
 function PaymentDialogInner({ poId, brandId, grandTotal, dueAmount, onClose }: { poId: string; brandId: string; grandTotal: number; dueAmount: number; onClose: () => void }) {

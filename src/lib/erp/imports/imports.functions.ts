@@ -1439,36 +1439,3 @@ export const updateImportPo = createServerFn({ method: "POST" })
     if (error) throw error;
     return out as { ok: boolean; items_updated: boolean; locked: boolean };
   });
-
-/* ============================================================
-   Quantity mode — Receive at BD (freight/customs + optional payment)
-   ============================================================ */
-
-export const receiveQuantityPoAtBd = createServerFn({ method: "POST" })
-  .middleware([requireSupabaseAuth])
-  .inputValidator((d: any) =>
-    z.object({
-      po_id: z.string().uuid(),
-      total_weight_kg: z.number().nonnegative().optional(),
-      rate_per_kg_bdt: z.number().nonnegative().optional(),
-      shipping_total_bdt: z.number().nonnegative().optional(),
-      customs_duty_bdt: z.number().nonnegative().optional(),
-      other_charges_bdt: z.number().nonnegative().optional(),
-      mode: z.enum(["replace", "add"]).default("replace"),
-      shipping_payment: z.object({
-        amount: z.number().positive(),
-        wallet_id: z.string().uuid(),
-        payment_date: z.string(),
-        reference: z.string().optional(),
-        notes: z.string().optional(),
-        idempotency_key: z.string().min(8),
-      }).optional(),
-      idempotency_key: z.string().min(8),
-    }).parse(d),
-  )
-  .handler(async ({ data, context }) => {
-    await assertAnyRole(context.supabase, context.userId, ["admin", "operations", "accountant"]);
-    const { data: out, error } = await context.supabase.rpc("imp_receive_quantity_bd", { _payload: data as any });
-    if (error) throw error;
-    return out;
-  });
