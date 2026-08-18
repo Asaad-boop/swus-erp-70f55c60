@@ -20,6 +20,70 @@ function num(v: unknown): number {
   return Number.isFinite(n) ? n : 0;
 }
 
+/**
+ * Pathao's `order.paid` / payment-invoice webhook only carries identifiers —
+ * no money fields. We therefore pull the invoice CSV once per invoice_id and
+ * look up the real amounts for the consignment.
+ */
+type InvoiceAmounts = {
+  collected: number;
+  delivery_fee: number;
+  cod_fee: number;
+  other_fee: number;
+  discount: number;
+  total_fee: number;
+  payout: number;
+  invoice_date: string | null;
+  row_type: "paid" | "return" | "partial";
+};
+
+const invoiceCsvCache = new Map<string, { at: number; rows: Map<string, InvoiceAmounts> }>();
+const INVOICE_CACHE_MS = 10 * 60_000;
+
+async function loadInvoiceAmounts(
+  supabase: AnyRec,
+  invoiceId: string,
+  brandId: string | null,
+): Promise<Map<string, InvoiceAmounts>> {
+  const hit = invoiceCsvCache.get(invoiceId);
+  if (hit && Date.now() - hit.at < INVOICE_CACHE_MS) return hit.rows;
+
+  const map = new Map<string, InvoiceAmounts>();
+  try {
+    const [{ loadPathaoCreds }, { fetchOnePathaoInvoiceCsv }, { parsePathaoCsv }] = await Promise.all([
+      import("./pathao.server"),
+      import("./pathao-invoices.server"),
+      import("./pathao-csv"),
+    ]);
+    const creds = await loadPathaoCreds(supabase, brandId);
+    const { csv } = await fetchOnePathaoInvoiceCsv(
+      { username: creds.username, password: creds.password, store_id: creds.store_id },
+      invoiceId,
+    );
+    if (csv) {
+      for (const r of parsePathaoCsv(csv)) {
+        const amounts: InvoiceAmounts = {
+          collected: r.collected,
+          delivery_fee: r.delivery_fee,
+          cod_fee: r.cod_fee,
+          other_fee: r.other_fee,
+          discount: r.discount,
+          total_fee: r.total_fee,
+          payout: r.payout,
+          invoice_date: r.invoice_date,
+          row_type: r.row_type,
+        };
+        if (r.consignment_id) map.set(`c:${String(r.consignment_id).trim().toUpperCase()}`, amounts);
+        if (r.merchant_order_id) map.set(`m:${String(r.merchant_order_id).trim().toUpperCase()}`, amounts);
+      }
+    }
+  } catch {
+    // credentials missing / portal down → keep zeros, row stays visible
+  }
+  invoiceCsvCache.set(invoiceId, { at: Date.now(), rows: map });
+  return map;
+}
+
 export function isPaymentInvoiceEvent(payload: AnyRec): boolean {
   const ev = String(payload?.event ?? payload?.data?.event ?? "").toLowerCase();
   if (!ev) return false;
