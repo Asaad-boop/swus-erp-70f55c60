@@ -1,5 +1,5 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { memo, useDeferredValue, useEffect, useMemo, useRef, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { toast } from "sonner";
@@ -105,6 +105,7 @@ function ReconciliationPage() {
   const [previewFilter, setPreviewFilter] = useState<"all" | "matched" | "amount_mismatch" | "duplicate" | "unmatched">("all");
   const [previewSearch, setPreviewSearch] = useState("");
   const [showAllRows, setShowAllRows] = useState(false);
+  const deferredSearch = useDeferredValue(previewSearch);
   const [deleteRunId, setDeleteRunId] = useState<string | null>(null);
 
   // Summary export date range (defaults to last 30 days)
@@ -604,7 +605,7 @@ function ReconciliationPage() {
   // Filtered + capped preview rows — keeps big invoices (1000+ rows) snappy.
   const filteredPreview = useMemo(() => {
     if (!preview) return [] as { r: NormalizedRow; idx: number }[];
-    const q = previewSearch.trim().toLowerCase();
+    const q = deferredSearch.trim().toLowerCase();
     const out: { r: NormalizedRow; idx: number }[] = [];
     preview.forEach((r, idx) => {
       if (previewFilter !== "all") {
@@ -618,9 +619,9 @@ function ReconciliationPage() {
       out.push({ r, idx });
     });
     return out;
-  }, [preview, previewFilter, previewSearch, matchByIdx]);
+  }, [preview, previewFilter, deferredSearch, matchByIdx]);
 
-  const ROW_CAP = 1000;
+  const ROW_CAP = 250;
   const visibleRows = showAllRows ? filteredPreview : filteredPreview.slice(0, ROW_CAP);
 
   return (
@@ -639,6 +640,18 @@ function ReconciliationPage() {
             </p>
           </div>
           {preview && (
+            <div className="flex items-center gap-3">
+              <div className="hidden md:flex flex-col items-end gap-1">
+                <span className="text-[10px] uppercase tracking-wide text-muted-foreground">
+                  Matched {previewStatusCounts.matched}/{preview.length}
+                </span>
+                <div className="h-1.5 w-40 overflow-hidden rounded-full bg-muted">
+                  <div
+                    className="h-full rounded-full bg-primary transition-[width] duration-500"
+                    style={{ width: `${Math.round((previewStatusCounts.matched / Math.max(1, preview.length)) * 100)}%` }}
+                  />
+                </div>
+              </div>
             <Button
               onClick={() => createMut.mutate()}
               disabled={createMut.isPending}
@@ -651,6 +664,7 @@ function ReconciliationPage() {
               )}
               Process {preview.length} consignments
             </Button>
+            </div>
           )}
         </div>
       </header>
@@ -1118,7 +1132,7 @@ function Kpi({ label, value, tone }: { label: string; value: string; tone?: "goo
   return (
     <div
       className={cn(
-        "rounded-lg border bg-card px-3 py-2 transition-colors",
+        "group rounded-xl border bg-card px-3 py-2.5 shadow-sm transition-all hover:shadow-md hover:-translate-y-px",
         tone === "good" && "border-emerald-500/25 bg-emerald-500/5",
         tone === "warn" && "border-amber-500/25 bg-amber-500/5",
       )}
@@ -1126,7 +1140,7 @@ function Kpi({ label, value, tone }: { label: string; value: string; tone?: "goo
       <div className="text-[10px] uppercase tracking-wide text-muted-foreground">{label}</div>
       <div
         className={cn(
-          "font-semibold tabular-nums truncate",
+          "text-base font-semibold tabular-nums truncate leading-tight",
           tone === "good" && "text-emerald-600 dark:text-emerald-400",
           tone === "warn" && "text-amber-700 dark:text-amber-400",
         )}
