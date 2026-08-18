@@ -320,12 +320,62 @@ export function QuantityReleaseCard({
             <Button variant="outline" size="sm" onClick={fillRemaining} disabled={totalReleased >= totalOrdered}>
               Fill remaining
             </Button>
-            <Button size="sm" disabled={draftTotal <= 0 || hasOverRelease || mut.isPending} onClick={() => mut.mutate()}>
+            <Button
+              size="sm"
+              disabled={draftTotal <= 0 || hasOverRelease || mut.isPending || (payNow && previewTotalDue > 0 && !payWallet)}
+              onClick={() => mut.mutate()}
+            >
               {mut.isPending ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <PackageCheck className="h-4 w-4 mr-2" />}
               Release {draftTotal > 0 ? `${draftTotal} pcs` : ""}
             </Button>
           </div>
         </div>
+
+        {draftTotal > 0 && previewTotalDue > 0 && (
+          <div className="p-4 border-t border-border bg-orange-500/5 space-y-3">
+            <div className="flex items-center justify-between gap-3 flex-wrap">
+              <div className="text-sm font-medium inline-flex items-center gap-2">
+                <Wallet className="h-4 w-4 text-orange-600" />
+                Ei {draftTotal} pcs-er due — purchase {fmtBdt(previewGoodsDue)} + shipping {fmtBdt(previewShipDue)} ={" "}
+                <span className="text-orange-600 font-semibold tabular-nums">{fmtBdt(previewTotalDue)}</span>
+              </div>
+              <Button
+                type="button"
+                size="sm"
+                variant={payNow ? "default" : "outline"}
+                onClick={() => setPayNow((v) => !v)}
+              >
+                {payNow ? "Pay with release ✓" : "Pay later"}
+              </Button>
+            </div>
+            {payNow && (
+              <div className="grid md:grid-cols-2 gap-3">
+                <div>
+                  <Label className="text-xs">Wallet / account</Label>
+                  <Select value={payWallet} onValueChange={setPayWallet}>
+                    <SelectTrigger className="h-9"><SelectValue placeholder="Select wallet" /></SelectTrigger>
+                    <SelectContent>
+                      {(wallets as any[]).filter((w) => w.is_active).map((w) => (
+                        <SelectItem key={w.id} value={w.id}>{w.name} ({fmtBdt(w.current_balance)})</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div>
+                  <Label className="text-xs">Pay amount (BDT)</Label>
+                  <Input
+                    type="number" min={0} className="h-9 tabular-nums"
+                    value={payOverride ?? previewTotalDue.toFixed(2)}
+                    onChange={(e) => setPayOverride(e.target.value)}
+                  />
+                  <p className="text-[11px] text-muted-foreground mt-1">
+                    Kom dile purchase + shipping pro-rata bhabe adjust hobe, baki ta due thakbe.
+                  </p>
+                </div>
+              </div>
+            )}
+          </div>
+        )}
       </Card>
 
       {grandTotal > 0 && due > 0 && (
