@@ -86,6 +86,7 @@ export const Route = createFileRoute("/_authenticated/erp/reconciliation/invoice
 });
 
 import { parsePathaoCsv, type NormalizedRow } from "@/lib/erp/pathao-csv";
+import { AutoSyncCard } from "@/components/erp/reconciliation/auto-sync-card";
 
 
 // ----- Page -----
@@ -653,6 +654,8 @@ function ReconciliationPage() {
           )}
         </div>
       </header>
+
+      <AutoSyncCard onSynced={() => qc.invalidateQueries({ queryKey: ["pathao-reconciliation-runs"] })} />
 
       {/* Step 1 — source */}
       <Card className="overflow-hidden border-border/70 shadow-sm">
