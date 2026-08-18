@@ -141,6 +141,35 @@ export function EditPoDialog({
   const setLine = (key: string, patch: Partial<Line>) =>
     setLines((prev) => prev.map((l) => (l.key === key ? { ...l, ...patch } : l)));
 
+  /** Color chip toggle: khali line e boshabe, na hole notun line banabe, ar off korle line remove/clear. */
+  const toggleVariant = (line: Line, variantId: string) => {
+    setLines((prev) => {
+      if (line.variant_id === variantId) {
+        return prev.map((l) => (l.key === line.key ? { ...l, variant_id: null } : l));
+      }
+      const other = prev.find(
+        (l) => l.key !== line.key && l.product_id === line.product_id && l.variant_id === variantId,
+      );
+      if (other) {
+        // already added on another line — toggle off (locked line remove kora jabe na)
+        if (other.locked || other.id) return prev.map((l) => (l.key === other.key ? { ...l, variant_id: null } : l));
+        return prev.filter((l) => l.key !== other.key);
+      }
+      if (!line.variant_id) {
+        return prev.map((l) => (l.key === line.key ? { ...l, variant_id: variantId } : l));
+      }
+      const idx = prev.findIndex((l) => l.key === line.key);
+      const clone: Line = {
+        ...line,
+        key: `new_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`,
+        id: undefined,
+        variant_id: variantId,
+        locked: false,
+      };
+      return [...prev.slice(0, idx + 1), clone, ...prev.slice(idx + 1)];
+    });
+  };
+
   const addLine = () =>
     setLines((prev) => [
       ...prev,
@@ -309,34 +338,46 @@ export function EditPoDialog({
                     </div>
 
                     {vars.length > 0 ? (
-                      <div className="flex items-center gap-1.5">
-                        <Palette className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
-                        <Select
-                          value={l.variant_id ?? "__none"}
-                          disabled={itemsLocked || l.locked}
-                          onValueChange={(v) => setLine(l.key, { variant_id: v === "__none" ? null : v })}
-                        >
-                          <SelectTrigger className="h-8 text-xs">
-                            <SelectValue placeholder="Color / variation" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="__none">No variation</SelectItem>
-                            {vars.map((v) => (
-                              <SelectItem key={v.id} value={v.id}>
-                                <span className="flex items-center gap-2">
-                                  <span
-                                    className="h-3 w-3 rounded-full border"
-                                    style={{ background: v.color_hex ?? "transparent" }}
-                                  />
-                                  {variantLabel(v)}
-                                  {usedVariantIds.has(v.id) && v.id !== l.variant_id && (
-                                    <span className="text-[10px] text-muted-foreground">· already added</span>
-                                  )}
-                                </span>
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
+                      <div className="space-y-1">
+                        <div className="flex items-center gap-1.5 text-[10px] uppercase tracking-wide text-muted-foreground">
+                          <Palette className="h-3.5 w-3.5 shrink-0" /> Colors ({vars.length}) — multiple select kora jabe
+                        </div>
+                        <div className="flex flex-wrap items-center gap-1.5">
+                          {vars.map((v) => {
+                            const onThisLine = l.variant_id === v.id;
+                            const onOtherLine = !onThisLine && usedVariantIds.has(v.id);
+                            return (
+                              <button
+                                key={v.id}
+                                type="button"
+                                disabled={itemsLocked || l.locked}
+                                onClick={() => toggleVariant(l, v.id)}
+                                title={onOtherLine ? "Already added (onno line e)" : variantLabel(v)}
+                                className={
+                                  "inline-flex items-center gap-1.5 rounded-full border px-2 py-1 text-[11px] transition disabled:opacity-50 " +
+                                  (onThisLine
+                                    ? "border-primary bg-primary/10 font-semibold text-primary"
+                                    : onOtherLine
+                                      ? "border-dashed border-primary/40 text-muted-foreground"
+                                      : "border-border hover:border-primary/50")
+                                }
+                              >
+                                <span className="h-3 w-3 rounded-full border" style={{ background: v.color_hex ?? "transparent" }} />
+                                {variantLabel(v)}
+                                {onOtherLine && <span className="text-[9px]">✓</span>}
+                              </button>
+                            );
+                          })}
+                          {l.variant_id && !itemsLocked && !l.locked && (
+                            <button
+                              type="button"
+                              onClick={() => setLine(l.key, { variant_id: null })}
+                              className="rounded-full border border-dashed px-2 py-1 text-[11px] text-muted-foreground hover:border-destructive/50 hover:text-destructive"
+                            >
+                              Clear
+                            </button>
+                          )}
+                        </div>
                       </div>
                     ) : l.variant_id ? (
                       <Badge variant="outline" className="text-[10px]">Variant {l.variant_id.slice(0, 6)}</Badge>
