@@ -20,6 +20,70 @@ function num(v: unknown): number {
   return Number.isFinite(n) ? n : 0;
 }
 
+/**
+ * Pathao's `order.paid` / payment-invoice webhook only carries identifiers —
+ * no money fields. We therefore pull the invoice CSV once per invoice_id and
+ * look up the real amounts for the consignment.
+ */
+type InvoiceAmounts = {
+  collected: number;
+  delivery_fee: number;
+  cod_fee: number;
+  other_fee: number;
+  discount: number;
+  total_fee: number;
+  payout: number;
+  invoice_date: string | null;
+  row_type: "paid" | "return" | "partial";
+};
+
+const invoiceCsvCache = new Map<string, { at: number; rows: Map<string, InvoiceAmounts> }>();
+const INVOICE_CACHE_MS = 10 * 60_000;
+
+async function loadInvoiceAmounts(
+  supabase: AnyRec,
+  invoiceId: string,
+  brandId: string | null,
+): Promise<Map<string, InvoiceAmounts>> {
+  const hit = invoiceCsvCache.get(invoiceId);
+  if (hit && Date.now() - hit.at < INVOICE_CACHE_MS) return hit.rows;
+
+  const map = new Map<string, InvoiceAmounts>();
+  try {
+    const [{ loadPathaoCreds }, { fetchOnePathaoInvoiceCsv }, { parsePathaoCsv }] = await Promise.all([
+      import("./pathao.server"),
+      import("./pathao-invoices.server"),
+      import("./pathao-csv"),
+    ]);
+    const creds = await loadPathaoCreds(supabase, brandId);
+    const { csv } = await fetchOnePathaoInvoiceCsv(
+      { username: creds.username, password: creds.password, store_id: creds.store_id },
+      invoiceId,
+    );
+    if (csv) {
+      for (const r of parsePathaoCsv(csv)) {
+        const amounts: InvoiceAmounts = {
+          collected: r.collected,
+          delivery_fee: r.delivery_fee,
+          cod_fee: r.cod_fee,
+          other_fee: r.other_fee,
+          discount: r.discount,
+          total_fee: r.total_fee,
+          payout: r.payout,
+          invoice_date: r.invoice_date,
+          row_type: r.row_type,
+        };
+        if (r.consignment_id) map.set(`c:${String(r.consignment_id).trim().toUpperCase()}`, amounts);
+        if (r.merchant_order_id) map.set(`m:${String(r.merchant_order_id).trim().toUpperCase()}`, amounts);
+      }
+    }
+  } catch {
+    // credentials missing / portal down → keep zeros, row stays visible
+  }
+  invoiceCsvCache.set(invoiceId, { at: Date.now(), rows: map });
+  return map;
+}
+
 export function isPaymentInvoiceEvent(payload: AnyRec): boolean {
   const ev = String(payload?.event ?? payload?.data?.event ?? "").toLowerCase();
   if (!ev) return false;
@@ -105,14 +169,15 @@ export async function ingestPathaoPaymentInvoice(supabase: AnyRec, payload: AnyR
     return { ok: true, action: "ignored", reason: "no identifiers" };
   }
 
-  const collected = num(d.collected_amount ?? d.amount_to_collect ?? d.collected ?? 0);
-  const deliveryFee = num(d.delivery_fee);
-  const codFee = num(d.cod_fee);
-  const discount = num(d.discount);
-  const otherFee = num(d.additional_charge) + num(d.insta_fee) + num(d.instapay_fee);
-  const totalFee = d.total_fee != null ? num(d.total_fee) : deliveryFee + codFee + otherFee - discount;
-  const payout = d.payout != null ? num(d.payout) : collected - totalFee;
-  const invoiceDate: string = String(d.invoice_date ?? d.payment_date ?? d.updated_at ?? new Date().toISOString()).slice(0, 10);
+  let collected = num(d.collected_amount ?? d.amount_to_collect ?? d.collected ?? 0);
+  let deliveryFee = num(d.delivery_fee);
+  let codFee = num(d.cod_fee);
+  let discount = num(d.discount);
+  let otherFee = num(d.additional_charge) + num(d.insta_fee) + num(d.instapay_fee);
+  let totalFee = d.total_fee != null ? num(d.total_fee) : deliveryFee + codFee + otherFee - discount;
+  let payout = d.payout != null ? num(d.payout) : collected - totalFee;
+  let invoiceDate: string = String(d.invoice_date ?? d.payment_date ?? d.updated_at ?? new Date().toISOString()).slice(0, 10);
+  let csvRowType: "paid" | "return" | "partial" | null = null;
 
   // ---- match order ----
   let orderId: string | null = null;
@@ -151,6 +216,27 @@ export async function ingestPathaoPaymentInvoice(supabase: AnyRec, payload: AnyR
     }
   }
 
+  // ---- amount enrichment ----
+  // Pathao's webhook payload has no money fields, so payout/fee would land as
+  // 0. Pull the real numbers from the invoice CSV (cached per invoice_id).
+  if (collected === 0 && totalFee === 0 && payout === 0 && invoiceId) {
+    const amounts = await loadInvoiceAmounts(supabase, String(invoiceId), brandId);
+    const hit =
+      (consignmentId ? amounts.get(`c:${consignmentId.trim().toUpperCase()}`) : undefined) ??
+      (merchantOrderId ? amounts.get(`m:${merchantOrderId.trim().toUpperCase()}`) : undefined);
+    if (hit) {
+      collected = hit.collected;
+      deliveryFee = hit.delivery_fee;
+      codFee = hit.cod_fee;
+      otherFee = hit.other_fee;
+      discount = hit.discount;
+      totalFee = hit.total_fee;
+      payout = hit.payout;
+      csvRowType = hit.row_type;
+      if (hit.invoice_date) invoiceDate = hit.invoice_date.slice(0, 10);
+    }
+  }
+
   // ---- duplicate guard (consignment already booked in a live run) ----
   if (consignmentId) {
     const { data: prior } = await supabase
@@ -162,7 +248,7 @@ export async function ingestPathaoPaymentInvoice(supabase: AnyRec, payload: AnyR
     if (live) return { ok: true, action: "duplicate", invoiceId, reason: "consignment already reconciled" };
   }
 
-  const matchType = rowTypeFor(event, collected, orderTotal);
+  const matchType = csvRowType ?? rowTypeFor(event, collected, orderTotal);
 
   // ---- run (one per invoice + brand) ----
   const sourceName = `instapay:${invoiceId ?? invoiceDate}`;
