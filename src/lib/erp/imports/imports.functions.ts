@@ -137,6 +137,7 @@ export const getPurchaseOrderDetail = createServerFn({ method: "POST" })
         freight_cost_bdt, customs_duty_bdt, other_charges_bdt,
         total_units, landed_cost_per_unit_bdt,
         shipping_weight_kg, shipping_rate_per_kg, shipping_cost_bdt,
+        local_delivery_total_bdt,
         agent_commission_cny, agent_commission_per_unit_bdt, agent_commission_total_bdt,
         supplier:supplier_id ( id, name, phone, source_link, address, currency )
       `).eq("id", data.poId).maybeSingle(),
@@ -169,8 +170,9 @@ export const getPurchaseOrderDetail = createServerFn({ method: "POST" })
         .limit(100),
       context.supabase.from("imp_po_releases").select(`
         id, release_number, warehouse_id, released_at, notes, created_at,
+        local_delivery_bdt, delivery_note,
         items:imp_po_release_items ( id, po_item_id, product_id, variant_id, sku_snapshot,
-          quantity, damaged_qty, unit_landed_cost_bdt )
+          quantity, damaged_qty, missing_qty, unit_landed_cost_bdt )
       `).eq("po_id", data.poId).order("release_number"),
     ]);
     if (poRes.error) throw poRes.error;
