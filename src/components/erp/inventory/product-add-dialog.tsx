@@ -68,6 +68,7 @@ type Form = {
   video_url: string;
   age_group: string;
   colors: ColorDraft[];
+  listing_brand_ids: string[];
 };
 
 const empty = (brandId: string): Form => ({
@@ -83,6 +84,7 @@ const empty = (brandId: string): Form => ({
   image: "", gallery: [], video_url: "",
   age_group: "",
   colors: [],
+  listing_brand_ids: brandId ? [brandId] : [],
 });
 
 const slugify = (s: string) =>
@@ -197,6 +199,23 @@ export function ProductAddDialog({ open, onClose }: Props) {
       const { data, error } = await supabase.from("products").insert(payload as never).select("id").single();
       if (error) throw error;
       const newProductId = (data as { id: string }).id;
+
+      // Brand listings (multi-brand storefront visibility)
+      const listingBrands = Array.from(new Set([f.brand_id, ...f.listing_brand_ids])).filter(Boolean);
+      if (listingBrands.length > 0) {
+        const { error: lErr } = await supabase.from("product_brand_listings").insert(
+          listingBrands.map((bid, idx) => ({
+            product_id: newProductId,
+            brand_id: bid,
+            slug: f.slug.trim(),
+            price: null,
+            compare_at_price: null,
+            is_active: true,
+            display_order: idx,
+          })) as never,
+        );
+        if (lErr) throw new Error(`Product saved, but brand listing failed: ${lErr.message}`);
+      }
 
       // Seed parent-level opening stock movement ONLY if no color variants (variants seed their own below)
       const startStock = Number(f.initial_stock) || 0;
