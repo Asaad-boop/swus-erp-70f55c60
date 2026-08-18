@@ -262,7 +262,7 @@ export function QuantityReleaseCard({
                       value={d.qty || ""}
                       placeholder="0"
                       disabled={remaining === 0}
-                      onChange={(e) => setDraftFor(it.id, { qty: Math.max(0, Number(e.target.value) || 0) })}
+                      onChange={(e) => setDraftFor(it.id, { qty: Math.min(remaining, Math.max(0, Number(e.target.value) || 0)) })}
                     />
                   </TableCell>
                   <TableCell className="text-right">
@@ -272,7 +272,7 @@ export function QuantityReleaseCard({
                       value={d.damaged || ""}
                       placeholder="0"
                       disabled={remaining === 0}
-                      onChange={(e) => setDraftFor(it.id, { damaged: Math.max(0, Number(e.target.value) || 0) })}
+                      onChange={(e) => setDraftFor(it.id, { damaged: Math.min(remaining, Math.max(0, Number(e.target.value) || 0)) })}
                     />
                   </TableCell>
                 </TableRow>
