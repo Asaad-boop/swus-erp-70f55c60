@@ -44,9 +44,10 @@ async function loadInvoiceAmounts(
   supabase: AnyRec,
   invoiceId: string,
   brandId: string | null,
+  force = false,
 ): Promise<Map<string, InvoiceAmounts>> {
   const hit = invoiceCsvCache.get(invoiceId);
-  if (hit && Date.now() - hit.at < INVOICE_CACHE_MS) return hit.rows;
+  if (!force && hit && Date.now() - hit.at < INVOICE_CACHE_MS) return hit.rows;
 
   const map = new Map<string, InvoiceAmounts>();
   try {
@@ -361,6 +362,10 @@ export async function ingestPathaoPaymentInvoice(supabase: AnyRec, payload: AnyR
 }
 
 async function bumpRunCounts(supabase: AnyRec, runId: string) {
+  return recountRun(supabase, runId);
+}
+
+async function recountRun(supabase: AnyRec, runId: string) {
   const { data: rows } = await supabase
     .from("erp_reconciliation_rows")
     .select("match_status")
@@ -499,4 +504,154 @@ async function applyInstapayRow(
     .from("erp_reconciliation_rows")
     .update({ applied_income_txn_id: incomeId, applied_expense_txn_id: expenseId })
     .eq("id", p.rowId);
+}
+/**
+ * Re-apply an InstaPay invoice: pull the merchant CSV for `invoiceId`, write the
+ * real collected/fee/payout onto the rows that were ingested with zeros, post
+ * the wallet payout, and recompute the run totals. Idempotent.
+ */
+export async function backfillInstapayInvoice(
+  supabase: AnyRec,
+  invoiceId: string,
+  opts: { onlyZeroRows?: boolean } = {},
+): Promise<AnyRec> {
+  const onlyZero = opts.onlyZeroRows !== false;
+  const sourceName = `instapay:${invoiceId}`;
+
+  const { data: run } = await supabase
+    .from("erp_reconciliation_runs")
+    .select("id, brand_id, status")
+    .eq("courier", "pathao")
+    .eq("source_filename", sourceName)
+    .neq("status", "reverted")
+    .order("created_at", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+  if (!run?.id) return { ok: false, invoiceId, reason: "run not found" };
+
+  const { data: rows } = await supabase
+    .from("erp_reconciliation_rows")
+    .select("id, consignment_id, merchant_order_id, matched_order_id, brand_id, payout, invoice_date")
+    .eq("run_id", run.id);
+  const list = (rows ?? []) as AnyRec[];
+  if (!list.length) return { ok: false, invoiceId, reason: "no rows" };
+
+  const amounts = await loadInvoiceAmounts(supabase, invoiceId, run.brand_id ?? null, true);
+  if (!amounts.size) return { ok: false, invoiceId, reason: "invoice csv unavailable" };
+
+  let updated = 0;
+  let applied = 0;
+  let payoutSum = 0;
+  const errors: string[] = [];
+
+  for (const r of list) {
+    if (onlyZero && num(r.payout) !== 0) {
+      payoutSum += num(r.payout);
+      continue;
+    }
+    const hit =
+      (r.consignment_id ? amounts.get(`c:${String(r.consignment_id).trim().toUpperCase()}`) : undefined) ??
+      (r.merchant_order_id ? amounts.get(`m:${String(r.merchant_order_id).trim().toUpperCase()}`) : undefined);
+    if (!hit) continue;
+
+    const brandId: string | null = r.brand_id ?? run.brand_id ?? null;
+    let orderTotal: number | null = null;
+    if (r.matched_order_id) {
+      const { data: o } = await supabase.from("orders").select("total").eq("id", r.matched_order_id).maybeSingle();
+      if (o) orderTotal = num(o.total);
+    }
+    const matchType = hit.row_type ?? rowTypeFor("", hit.collected, orderTotal);
+    const invoiceDate = (hit.invoice_date ?? r.invoice_date ?? new Date().toISOString()).slice(0, 10);
+
+    const { error: upErr } = await supabase
+      .from("erp_reconciliation_rows")
+      .update({
+        collected: hit.collected,
+        delivery_fee: hit.delivery_fee,
+        cod_fee: hit.cod_fee,
+        other_fee: hit.other_fee,
+        discount: hit.discount,
+        total_fee: hit.total_fee,
+        payout: hit.payout,
+        invoice_date: invoiceDate,
+        match_type: matchType,
+        return_fee: matchType === "return" ? hit.total_fee : 0,
+        partial_amount: matchType === "partial" ? hit.collected : 0,
+        amount_diff: matchType === "paid" && orderTotal != null ? hit.collected - orderTotal : null,
+      })
+      .eq("id", r.id);
+    if (upErr && /event_uidx|duplicate key/i.test(upErr.message ?? "")) {
+      // A still-draft CSV run holds the same consignment/date/payout. The
+      // applied InstaPay row is the ground truth — drop the unapplied twin.
+      if (r.consignment_id) {
+        const { data: twins } = await supabase
+          .from("erp_reconciliation_rows")
+          .select("id, run_id, applied_income_txn_id, applied_expense_txn_id, run:run_id(status)")
+          .eq("consignment_id", r.consignment_id)
+          .neq("run_id", run.id);
+        for (const t of (twins ?? []) as AnyRec[]) {
+          if (t.run?.status === "draft" && !t.applied_income_txn_id && !t.applied_expense_txn_id) {
+            await supabase.from("erp_reconciliation_rows").delete().eq("id", t.id);
+            await recountRun(supabase, t.run_id);
+          }
+        }
+      }
+      const { error: retryErr } = await supabase
+        .from("erp_reconciliation_rows")
+        .update({
+          collected: hit.collected,
+          delivery_fee: hit.delivery_fee,
+          cod_fee: hit.cod_fee,
+          other_fee: hit.other_fee,
+          discount: hit.discount,
+          total_fee: hit.total_fee,
+          payout: hit.payout,
+          invoice_date: invoiceDate,
+          match_type: matchType,
+        })
+        .eq("id", r.id);
+      if (retryErr) errors.push(`${r.consignment_id ?? r.id}: ${retryErr.message}`);
+    } else if (upErr) {
+      errors.push(`${r.consignment_id ?? r.id}: ${upErr.message}`);
+    }
+    updated += 1;
+    payoutSum += hit.payout;
+
+    if (r.matched_order_id && brandId) {
+      await applyInstapayRow(supabase, {
+        rowId: r.id,
+        orderId: r.matched_order_id,
+        brandId,
+        consignmentId: r.consignment_id ?? null,
+        matchType,
+        collected: hit.collected,
+        totalFee: hit.total_fee,
+        payout: hit.payout,
+        txnDate: invoiceDate,
+        label: `Pathao InstaPay · ${invoiceId}`,
+      });
+      applied += 1;
+    }
+  }
+
+  // recompute run money totals from its rows
+  const { data: fresh } = await supabase
+    .from("erp_reconciliation_rows")
+    .select("collected, total_fee, payout")
+    .eq("run_id", run.id);
+  const f = (fresh ?? []) as AnyRec[];
+  await supabase
+    .from("erp_reconciliation_runs")
+    .update({
+      total_rows: f.length,
+      total_collected: f.reduce((s, x) => s + num(x.collected), 0),
+      total_fee: f.reduce((s, x) => s + num(x.total_fee), 0),
+      total_payout: f.reduce((s, x) => s + num(x.payout), 0),
+      status: "applied",
+      applied_at: new Date().toISOString(),
+    })
+    .eq("id", run.id);
+  await recountRun(supabase, run.id);
+
+  return { ok: true, invoiceId, runId: run.id, rows: list.length, updated, applied, payout: +payoutSum.toFixed(2), errors };
 }

@@ -62,6 +62,7 @@ import { Route as ApiPublicWebhooksShopifyOrderRouteImport } from './routes/api/
 import { Route as ApiPublicWebhookPathaoRouteImport } from './routes/api/public/webhook.pathao'
 import { Route as ApiPublicMktTrackerDotjsRouteImport } from './routes/api/public/mkt.tracker[.]js'
 import { Route as ApiPublicMktTrackRouteImport } from './routes/api/public/mkt.track'
+import { Route as ApiPublicInstapayBackfillRouteImport } from './routes/api/public/instapay.backfill'
 import { Route as ApiPublicHubExtensionDotzipRouteImport } from './routes/api/public/hub.extension[.]zip'
 import { Route as ApiPublicHubCaptureRouteImport } from './routes/api/public/hub.capture'
 import { Route as ApiPublicCronSyncPathaoInvoicesRouteImport } from './routes/api/public/cron.sync-pathao-invoices'
@@ -435,6 +436,12 @@ const ApiPublicMktTrackRoute = ApiPublicMktTrackRouteImport.update({
   path: '/api/public/mkt/track',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiPublicInstapayBackfillRoute =
+  ApiPublicInstapayBackfillRouteImport.update({
+    id: '/api/public/instapay/backfill',
+    path: '/api/public/instapay/backfill',
+    getParentRoute: () => rootRouteImport,
+  } as any)
 const ApiPublicHubExtensionDotzipRoute =
   ApiPublicHubExtensionDotzipRouteImport.update({
     id: '/api/public/hub/extension.zip',
@@ -998,6 +1005,7 @@ export interface FileRoutesByFullPath {
   '/api/public/cron/sync-pathao-invoices': typeof ApiPublicCronSyncPathaoInvoicesRoute
   '/api/public/hub/capture': typeof ApiPublicHubCaptureRoute
   '/api/public/hub/extension.zip': typeof ApiPublicHubExtensionDotzipRoute
+  '/api/public/instapay/backfill': typeof ApiPublicInstapayBackfillRoute
   '/api/public/mkt/track': typeof ApiPublicMktTrackRoute
   '/api/public/mkt/tracker.js': typeof ApiPublicMktTrackerDotjsRoute
   '/api/public/webhook/pathao': typeof ApiPublicWebhookPathaoRoute
@@ -1118,6 +1126,7 @@ export interface FileRoutesByTo {
   '/api/public/cron/sync-pathao-invoices': typeof ApiPublicCronSyncPathaoInvoicesRoute
   '/api/public/hub/capture': typeof ApiPublicHubCaptureRoute
   '/api/public/hub/extension.zip': typeof ApiPublicHubExtensionDotzipRoute
+  '/api/public/instapay/backfill': typeof ApiPublicInstapayBackfillRoute
   '/api/public/mkt/track': typeof ApiPublicMktTrackRoute
   '/api/public/mkt/tracker.js': typeof ApiPublicMktTrackerDotjsRoute
   '/api/public/webhook/pathao': typeof ApiPublicWebhookPathaoRoute
@@ -1250,6 +1259,7 @@ export interface FileRoutesById {
   '/api/public/cron/sync-pathao-invoices': typeof ApiPublicCronSyncPathaoInvoicesRoute
   '/api/public/hub/capture': typeof ApiPublicHubCaptureRoute
   '/api/public/hub/extension.zip': typeof ApiPublicHubExtensionDotzipRoute
+  '/api/public/instapay/backfill': typeof ApiPublicInstapayBackfillRoute
   '/api/public/mkt/track': typeof ApiPublicMktTrackRoute
   '/api/public/mkt/tracker.js': typeof ApiPublicMktTrackerDotjsRoute
   '/api/public/webhook/pathao': typeof ApiPublicWebhookPathaoRoute
@@ -1382,6 +1392,7 @@ export interface FileRouteTypes {
     | '/api/public/cron/sync-pathao-invoices'
     | '/api/public/hub/capture'
     | '/api/public/hub/extension.zip'
+    | '/api/public/instapay/backfill'
     | '/api/public/mkt/track'
     | '/api/public/mkt/tracker.js'
     | '/api/public/webhook/pathao'
@@ -1502,6 +1513,7 @@ export interface FileRouteTypes {
     | '/api/public/cron/sync-pathao-invoices'
     | '/api/public/hub/capture'
     | '/api/public/hub/extension.zip'
+    | '/api/public/instapay/backfill'
     | '/api/public/mkt/track'
     | '/api/public/mkt/tracker.js'
     | '/api/public/webhook/pathao'
@@ -1633,6 +1645,7 @@ export interface FileRouteTypes {
     | '/api/public/cron/sync-pathao-invoices'
     | '/api/public/hub/capture'
     | '/api/public/hub/extension.zip'
+    | '/api/public/instapay/backfill'
     | '/api/public/mkt/track'
     | '/api/public/mkt/tracker.js'
     | '/api/public/webhook/pathao'
@@ -1673,6 +1686,7 @@ export interface RootRouteChildren {
   ApiPublicCronSyncPathaoInvoicesRoute: typeof ApiPublicCronSyncPathaoInvoicesRoute
   ApiPublicHubCaptureRoute: typeof ApiPublicHubCaptureRoute
   ApiPublicHubExtensionDotzipRoute: typeof ApiPublicHubExtensionDotzipRoute
+  ApiPublicInstapayBackfillRoute: typeof ApiPublicInstapayBackfillRoute
   ApiPublicMktTrackRoute: typeof ApiPublicMktTrackRoute
   ApiPublicMktTrackerDotjsRoute: typeof ApiPublicMktTrackerDotjsRoute
   ApiPublicWebhookPathaoRoute: typeof ApiPublicWebhookPathaoRoute
@@ -2050,6 +2064,13 @@ declare module '@tanstack/react-router' {
       path: '/api/public/mkt/track'
       fullPath: '/api/public/mkt/track'
       preLoaderRoute: typeof ApiPublicMktTrackRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/public/instapay/backfill': {
+      id: '/api/public/instapay/backfill'
+      path: '/api/public/instapay/backfill'
+      fullPath: '/api/public/instapay/backfill'
+      preLoaderRoute: typeof ApiPublicInstapayBackfillRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/api/public/hub/extension.zip': {
@@ -2969,6 +2990,7 @@ const rootRouteChildren: RootRouteChildren = {
   ApiPublicCronSyncPathaoInvoicesRoute: ApiPublicCronSyncPathaoInvoicesRoute,
   ApiPublicHubCaptureRoute: ApiPublicHubCaptureRoute,
   ApiPublicHubExtensionDotzipRoute: ApiPublicHubExtensionDotzipRoute,
+  ApiPublicInstapayBackfillRoute: ApiPublicInstapayBackfillRoute,
   ApiPublicMktTrackRoute: ApiPublicMktTrackRoute,
   ApiPublicMktTrackerDotjsRoute: ApiPublicMktTrackerDotjsRoute,
   ApiPublicWebhookPathaoRoute: ApiPublicWebhookPathaoRoute,
