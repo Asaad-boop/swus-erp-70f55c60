@@ -118,6 +118,41 @@ export function BrandListingsEditor({ productId, ownerBrandId, productSlug, prod
         )}
       </div>
 
+      <div className="flex items-center gap-2">
+        <Button
+          type="button" size="sm" variant="outline" className="h-7 text-xs"
+          onClick={() =>
+            setDrafts((prev) => {
+              const next = { ...prev };
+              for (const b of brands) {
+                if (!next[b.id]) {
+                  next[b.id] = {
+                    brand_id: b.id, price: null, compare_at_price: null, slug: productSlug,
+                    title_override: null, image_override: null, description_override: null, is_active: true,
+                  };
+                }
+              }
+              return next;
+            })
+          }
+        >
+          Select all brands
+        </Button>
+        <Button
+          type="button" size="sm" variant="ghost" className="h-7 text-xs"
+          onClick={() =>
+            setDrafts((prev) => (prev[ownerBrandId] ? { [ownerBrandId]: prev[ownerBrandId] } : {
+              [ownerBrandId]: {
+                brand_id: ownerBrandId, price: null, compare_at_price: null, slug: productSlug,
+                title_override: null, image_override: null, description_override: null, is_active: true,
+              },
+            }))
+          }
+        >
+          Owner brand only
+        </Button>
+      </div>
+
       <div className="space-y-2">
         {brands.map((b) => {
           const on = !!drafts[b.id];
