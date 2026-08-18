@@ -1331,6 +1331,34 @@ export const releasePoQuantity = createServerFn({ method: "POST" })
       .limit(1);
     const nextNumber = Number((lastRel?.[0] as any)?.release_number ?? 0) + 1;
 
+    // --- Optional: ei release-er pro-rata due ekhoni pay ---
+    const paymentsDone: Array<{ type: string; amount: number }> = [];
+    if (data.payment) {
+      const payDate = data.payment.payment_date ?? new Date().toISOString().slice(0, 10);
+      const parts: Array<{ type: "supplier_payment" | "shipping"; amount: number; suffix: string }> = [
+        { type: "supplier_payment", amount: +Number(data.payment.goods_amount_bdt ?? 0).toFixed(2), suffix: "goods" },
+        { type: "shipping", amount: +Number(data.payment.shipping_amount_bdt ?? 0).toFixed(2), suffix: "ship" },
+      ];
+      for (const p of parts) {
+        if (p.amount <= 0) continue;
+        const { error: payErr } = await context.supabase.rpc("imp_record_payment_rpc", {
+          _payload: {
+            brand_id: (po as any).brand_id,
+            po_id: data.po_id,
+            payment_type: p.type,
+            amount_bdt: p.amount,
+            wallet_id: data.payment.wallet_id,
+            payment_date: payDate,
+            reference: data.payment.reference ?? undefined,
+            notes: `Release #${nextNumber} — ${p.suffix} due for released pcs`,
+            idempotency_key: `${data.payment.idempotency_key}:${p.suffix}`,
+          },
+        });
+        if (payErr) throw payErr;
+        paymentsDone.push({ type: p.type, amount: p.amount });
+      }
+    }
+
     const { data: release, error: relErr } = await context.supabase
       .from("imp_po_releases")
       .insert({
