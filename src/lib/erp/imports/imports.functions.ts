@@ -1257,6 +1257,15 @@ export const releasePoQuantity = createServerFn({ method: "POST" })
         quantity: z.number().int().nonnegative(),
         damaged_qty: z.number().int().nonnegative().default(0),
       })).min(1),
+      // Ei release-er pcs onushare purchase + shipping due ekhoni pay kora (optional)
+      payment: z.object({
+        wallet_id: z.string().uuid(),
+        goods_amount_bdt: z.number().nonnegative().default(0),
+        shipping_amount_bdt: z.number().nonnegative().default(0),
+        payment_date: z.string().optional(),
+        reference: z.string().optional(),
+        idempotency_key: z.string().min(8),
+      }).optional(),
     }).parse(d),
   )
   .handler(async ({ data, context }) => {
