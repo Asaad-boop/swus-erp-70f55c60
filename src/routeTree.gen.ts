@@ -64,6 +64,7 @@ import { Route as ApiPublicMktTrackerDotjsRouteImport } from './routes/api/publi
 import { Route as ApiPublicMktTrackRouteImport } from './routes/api/public/mkt.track'
 import { Route as ApiPublicHubExtensionDotzipRouteImport } from './routes/api/public/hub.extension[.]zip'
 import { Route as ApiPublicHubCaptureRouteImport } from './routes/api/public/hub.capture'
+import { Route as ApiPublicCronSyncPathaoInvoicesRouteImport } from './routes/api/public/cron.sync-pathao-invoices'
 import { Route as ApiPublicCronSyncMarketingRouteImport } from './routes/api/public/cron.sync-marketing'
 import { Route as ApiPublicCronSyncCourierRouteImport } from './routes/api/public/cron.sync-courier'
 import { Route as ApiPublicCronRunRecurringRouteImport } from './routes/api/public/cron.run-recurring'
@@ -445,6 +446,12 @@ const ApiPublicHubCaptureRoute = ApiPublicHubCaptureRouteImport.update({
   path: '/api/public/hub/capture',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiPublicCronSyncPathaoInvoicesRoute =
+  ApiPublicCronSyncPathaoInvoicesRouteImport.update({
+    id: '/api/public/cron/sync-pathao-invoices',
+    path: '/api/public/cron/sync-pathao-invoices',
+    getParentRoute: () => rootRouteImport,
+  } as any)
 const ApiPublicCronSyncMarketingRoute =
   ApiPublicCronSyncMarketingRouteImport.update({
     id: '/api/public/cron/sync-marketing',
@@ -988,6 +995,7 @@ export interface FileRoutesByFullPath {
   '/api/public/cron/run-recurring': typeof ApiPublicCronRunRecurringRoute
   '/api/public/cron/sync-courier': typeof ApiPublicCronSyncCourierRoute
   '/api/public/cron/sync-marketing': typeof ApiPublicCronSyncMarketingRoute
+  '/api/public/cron/sync-pathao-invoices': typeof ApiPublicCronSyncPathaoInvoicesRoute
   '/api/public/hub/capture': typeof ApiPublicHubCaptureRoute
   '/api/public/hub/extension.zip': typeof ApiPublicHubExtensionDotzipRoute
   '/api/public/mkt/track': typeof ApiPublicMktTrackRoute
@@ -1107,6 +1115,7 @@ export interface FileRoutesByTo {
   '/api/public/cron/run-recurring': typeof ApiPublicCronRunRecurringRoute
   '/api/public/cron/sync-courier': typeof ApiPublicCronSyncCourierRoute
   '/api/public/cron/sync-marketing': typeof ApiPublicCronSyncMarketingRoute
+  '/api/public/cron/sync-pathao-invoices': typeof ApiPublicCronSyncPathaoInvoicesRoute
   '/api/public/hub/capture': typeof ApiPublicHubCaptureRoute
   '/api/public/hub/extension.zip': typeof ApiPublicHubExtensionDotzipRoute
   '/api/public/mkt/track': typeof ApiPublicMktTrackRoute
@@ -1238,6 +1247,7 @@ export interface FileRoutesById {
   '/api/public/cron/run-recurring': typeof ApiPublicCronRunRecurringRoute
   '/api/public/cron/sync-courier': typeof ApiPublicCronSyncCourierRoute
   '/api/public/cron/sync-marketing': typeof ApiPublicCronSyncMarketingRoute
+  '/api/public/cron/sync-pathao-invoices': typeof ApiPublicCronSyncPathaoInvoicesRoute
   '/api/public/hub/capture': typeof ApiPublicHubCaptureRoute
   '/api/public/hub/extension.zip': typeof ApiPublicHubExtensionDotzipRoute
   '/api/public/mkt/track': typeof ApiPublicMktTrackRoute
@@ -1369,6 +1379,7 @@ export interface FileRouteTypes {
     | '/api/public/cron/run-recurring'
     | '/api/public/cron/sync-courier'
     | '/api/public/cron/sync-marketing'
+    | '/api/public/cron/sync-pathao-invoices'
     | '/api/public/hub/capture'
     | '/api/public/hub/extension.zip'
     | '/api/public/mkt/track'
@@ -1488,6 +1499,7 @@ export interface FileRouteTypes {
     | '/api/public/cron/run-recurring'
     | '/api/public/cron/sync-courier'
     | '/api/public/cron/sync-marketing'
+    | '/api/public/cron/sync-pathao-invoices'
     | '/api/public/hub/capture'
     | '/api/public/hub/extension.zip'
     | '/api/public/mkt/track'
@@ -1618,6 +1630,7 @@ export interface FileRouteTypes {
     | '/api/public/cron/run-recurring'
     | '/api/public/cron/sync-courier'
     | '/api/public/cron/sync-marketing'
+    | '/api/public/cron/sync-pathao-invoices'
     | '/api/public/hub/capture'
     | '/api/public/hub/extension.zip'
     | '/api/public/mkt/track'
@@ -1657,6 +1670,7 @@ export interface RootRouteChildren {
   ApiPublicCronRunRecurringRoute: typeof ApiPublicCronRunRecurringRoute
   ApiPublicCronSyncCourierRoute: typeof ApiPublicCronSyncCourierRoute
   ApiPublicCronSyncMarketingRoute: typeof ApiPublicCronSyncMarketingRoute
+  ApiPublicCronSyncPathaoInvoicesRoute: typeof ApiPublicCronSyncPathaoInvoicesRoute
   ApiPublicHubCaptureRoute: typeof ApiPublicHubCaptureRoute
   ApiPublicHubExtensionDotzipRoute: typeof ApiPublicHubExtensionDotzipRoute
   ApiPublicMktTrackRoute: typeof ApiPublicMktTrackRoute
@@ -2050,6 +2064,13 @@ declare module '@tanstack/react-router' {
       path: '/api/public/hub/capture'
       fullPath: '/api/public/hub/capture'
       preLoaderRoute: typeof ApiPublicHubCaptureRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/public/cron/sync-pathao-invoices': {
+      id: '/api/public/cron/sync-pathao-invoices'
+      path: '/api/public/cron/sync-pathao-invoices'
+      fullPath: '/api/public/cron/sync-pathao-invoices'
+      preLoaderRoute: typeof ApiPublicCronSyncPathaoInvoicesRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/api/public/cron/sync-marketing': {
@@ -2945,6 +2966,7 @@ const rootRouteChildren: RootRouteChildren = {
   ApiPublicCronRunRecurringRoute: ApiPublicCronRunRecurringRoute,
   ApiPublicCronSyncCourierRoute: ApiPublicCronSyncCourierRoute,
   ApiPublicCronSyncMarketingRoute: ApiPublicCronSyncMarketingRoute,
+  ApiPublicCronSyncPathaoInvoicesRoute: ApiPublicCronSyncPathaoInvoicesRoute,
   ApiPublicHubCaptureRoute: ApiPublicHubCaptureRoute,
   ApiPublicHubExtensionDotzipRoute: ApiPublicHubExtensionDotzipRoute,
   ApiPublicMktTrackRoute: ApiPublicMktTrackRoute,
