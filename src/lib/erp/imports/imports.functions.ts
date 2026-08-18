@@ -137,6 +137,7 @@ export const getPurchaseOrderDetail = createServerFn({ method: "POST" })
         freight_cost_bdt, customs_duty_bdt, other_charges_bdt,
         total_units, landed_cost_per_unit_bdt,
         shipping_weight_kg, shipping_rate_per_kg, shipping_cost_bdt,
+        local_delivery_total_bdt,
         agent_commission_cny, agent_commission_per_unit_bdt, agent_commission_total_bdt,
         supplier:supplier_id ( id, name, phone, source_link, address, currency )
       `).eq("id", data.poId).maybeSingle(),
@@ -169,8 +170,9 @@ export const getPurchaseOrderDetail = createServerFn({ method: "POST" })
         .limit(100),
       context.supabase.from("imp_po_releases").select(`
         id, release_number, warehouse_id, released_at, notes, created_at,
+        local_delivery_bdt, delivery_note,
         items:imp_po_release_items ( id, po_item_id, product_id, variant_id, sku_snapshot,
-          quantity, damaged_qty, unit_landed_cost_bdt )
+          quantity, damaged_qty, missing_qty, unit_landed_cost_bdt )
       `).eq("po_id", data.poId).order("release_number"),
     ]);
     if (poRes.error) throw poRes.error;
@@ -1339,7 +1341,17 @@ export const releasePoQuantity = createServerFn({ method: "POST" })
         po_item_id: z.string().uuid(),
         quantity: z.number().int().nonnegative(),
         damaged_qty: z.number().int().nonnegative().default(0),
+        missing_qty: z.number().int().nonnegative().default(0),
       })).min(1),
+      // Local delivery (BD warehouse theke amader kache ana) charge
+      local_delivery: z.object({
+        amount_bdt: z.number().nonnegative(),
+        note: z.string().optional(),
+        wallet_id: z.string().uuid().optional(),
+        payment_date: z.string().optional(),
+        reference: z.string().optional(),
+        idempotency_key: z.string().min(8).optional(),
+      }).optional(),
       // Ei release-er pcs onushare purchase + shipping due ekhoni pay kora (optional)
       payment: z.object({
         wallet_id: z.string().uuid(),
@@ -1356,7 +1368,7 @@ export const releasePoQuantity = createServerFn({ method: "POST" })
 
     const { data: po, error: pErr } = await context.supabase
       .from("imp_purchase_orders")
-      .select("id, brand_id, status, receive_mode, fx_rate, fx_rate_cny_bdt, shipping_cost_bdt, shipping_total_bdt, local_courier_total_bdt, freight_cost_bdt, customs_duty_bdt, other_charges_bdt, agent_commission_per_unit_bdt")
+      .select("id, brand_id, status, receive_mode, fx_rate, fx_rate_cny_bdt, shipping_cost_bdt, shipping_total_bdt, local_courier_total_bdt, local_delivery_total_bdt, freight_cost_bdt, customs_duty_bdt, other_charges_bdt, agent_commission_per_unit_bdt")
       .eq("id", data.po_id)
       .maybeSingle();
     if (pErr) throw pErr;
@@ -1372,25 +1384,45 @@ export const releasePoQuantity = createServerFn({ method: "POST" })
     // Already released quantities
     const { data: prevReleases, error: rErr } = await context.supabase
       .from("imp_po_release_items")
-      .select("po_item_id, quantity, damaged_qty, release:release_id!inner ( po_id )")
+      .select("po_item_id, quantity, damaged_qty, missing_qty, release:release_id!inner ( po_id )")
       .eq("release.po_id", data.po_id);
     if (rErr) throw rErr;
     const releasedMap = new Map<string, number>();
     for (const r of prevReleases ?? []) {
       const k = (r as any).po_item_id as string;
-      releasedMap.set(k, (releasedMap.get(k) ?? 0) + Number((r as any).quantity ?? 0) + Number((r as any).damaged_qty ?? 0));
+      releasedMap.set(
+        k,
+        (releasedMap.get(k) ?? 0) +
+          Number((r as any).quantity ?? 0) +
+          Number((r as any).damaged_qty ?? 0) +
+          Number((r as any).missing_qty ?? 0),
+      );
     }
 
-    const lines = data.items.filter((l) => l.quantity > 0 || l.damaged_qty > 0);
+    const lines = data.items.filter((l) => l.quantity > 0 || l.damaged_qty > 0 || l.missing_qty > 0);
     if (lines.length === 0) throw new Error("Nothing to release");
 
     for (const l of lines) {
       const pi = itemMap.get(l.po_item_id);
       if (!pi) throw new Error("Item not part of this PO");
       const remaining = Number(pi.quantity ?? 0) - (releasedMap.get(l.po_item_id) ?? 0);
-      if (l.quantity + l.damaged_qty > remaining) {
+      if (l.quantity + l.damaged_qty + l.missing_qty > remaining) {
         throw new Error(`${pi.name_snapshot ?? "Item"}: only ${remaining} pcs remaining`);
       }
+    }
+
+    // Local delivery charge — PO-r moddhe jog hoy, tai landed cost e o dhora pore
+    const localDelivery = Math.max(0, Number(data.local_delivery?.amount_bdt ?? 0));
+    if (localDelivery > 0) {
+      const { error: ldErr } = await context.supabase
+        .from("imp_purchase_orders")
+        .update({
+          local_delivery_total_bdt: +(
+            Number((po as any).local_delivery_total_bdt ?? 0) + localDelivery
+          ).toFixed(4),
+        } as any)
+        .eq("id", data.po_id);
+      if (ldErr) throw ldErr;
     }
 
     // Landed cost per unit
@@ -1399,6 +1431,8 @@ export const releasePoQuantity = createServerFn({ method: "POST" })
     const overheadTotal =
       Number((po as any).shipping_total_bdt ?? (po as any).shipping_cost_bdt ?? 0) +
       Number((po as any).local_courier_total_bdt ?? 0) +
+      Number((po as any).local_delivery_total_bdt ?? 0) +
+      localDelivery +
       Number((po as any).freight_cost_bdt ?? 0) +
       Number((po as any).customs_duty_bdt ?? 0) +
       Number((po as any).other_charges_bdt ?? 0);
@@ -1442,6 +1476,28 @@ export const releasePoQuantity = createServerFn({ method: "POST" })
       }
     }
 
+    // Local delivery charge wallet theke pay (optional)
+    let localDeliveryPaymentId: string | null = null;
+    if (localDelivery > 0 && data.local_delivery?.wallet_id) {
+      const { data: ldPay, error: ldPayErr } = await context.supabase.rpc("imp_record_payment_rpc", {
+        _payload: {
+          brand_id: (po as any).brand_id,
+          po_id: data.po_id,
+          payment_type: "local_courier",
+          amount_bdt: +localDelivery.toFixed(2),
+          wallet_id: data.local_delivery.wallet_id,
+          payment_date: data.local_delivery.payment_date ?? new Date().toISOString().slice(0, 10),
+          reference: data.local_delivery.reference ?? undefined,
+          notes: `Release #${nextNumber} — local delivery charge`,
+          idempotency_key:
+            data.local_delivery.idempotency_key ?? `qtyrel_ld:${data.po_id}:${nextNumber}:${Date.now()}`,
+        },
+      });
+      if (ldPayErr) throw ldPayErr;
+      localDeliveryPaymentId = (ldPay as any)?.payment_id ?? (typeof ldPay === "string" ? ldPay : null);
+      paymentsDone.push({ type: "local_courier", amount: +localDelivery.toFixed(2) });
+    }
+
     const { data: release, error: relErr } = await context.supabase
       .from("imp_po_releases")
       .insert({
@@ -1450,8 +1506,11 @@ export const releasePoQuantity = createServerFn({ method: "POST" })
         release_number: nextNumber,
         warehouse_id: data.warehouse_id ?? null,
         notes: data.notes ?? null,
+        local_delivery_bdt: localDelivery,
+        delivery_note: data.local_delivery?.note ?? null,
+        delivery_payment_id: localDeliveryPaymentId,
         created_by: context.userId,
-      })
+      } as any)
       .select("id, release_number")
       .single();
     if (relErr) throw relErr;
@@ -1470,10 +1529,11 @@ export const releasePoQuantity = createServerFn({ method: "POST" })
           product_id: pi?.product_id ?? null,
           variant_id: pi?.variant_id ?? null,
           sku_snapshot: pi?.sku_snapshot ?? null,
-          quantity: Math.max(1, l.quantity || 1),
+          quantity: Math.max(0, l.quantity ?? 0),
           damaged_qty: l.damaged_qty ?? 0,
+          missing_qty: l.missing_qty ?? 0,
           unit_landed_cost_bdt: landed,
-        })
+        } as any)
         .select("id")
         .single();
       if (riErr) throw riErr;
@@ -1498,7 +1558,10 @@ export const releasePoQuantity = createServerFn({ method: "POST" })
           .eq("id", (relItem as any).id);
         movements.push({ po_item_id: l.po_item_id, qty: l.quantity, unit_cost: landed, movement_id: movId });
       }
-      releasedMap.set(l.po_item_id, (releasedMap.get(l.po_item_id) ?? 0) + l.quantity + (l.damaged_qty ?? 0));
+      releasedMap.set(
+        l.po_item_id,
+        (releasedMap.get(l.po_item_id) ?? 0) + l.quantity + (l.damaged_qty ?? 0) + (l.missing_qty ?? 0),
+      );
     }
 
     // Update PO status based on total released
@@ -1515,6 +1578,7 @@ export const releasePoQuantity = createServerFn({ method: "POST" })
       release_number: nextNumber,
       movements,
       payments: paymentsDone,
+      local_delivery_bdt: localDelivery,
       landed_per_unit_overhead: +overheadPerUnit.toFixed(4),
       status: nextStatus,
       total_released: totalReleased,

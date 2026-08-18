@@ -6778,6 +6778,7 @@ export type Database = {
           created_at: string
           damaged_qty: number
           id: string
+          missing_qty: number
           po_item_id: string
           product_id: string | null
           quantity: number
@@ -6791,6 +6792,7 @@ export type Database = {
           created_at?: string
           damaged_qty?: number
           id?: string
+          missing_qty?: number
           po_item_id: string
           product_id?: string | null
           quantity: number
@@ -6804,6 +6806,7 @@ export type Database = {
           created_at?: string
           damaged_qty?: number
           id?: string
+          missing_qty?: number
           po_item_id?: string
           product_id?: string | null
           quantity?: number
@@ -6835,7 +6838,10 @@ export type Database = {
           brand_id: string
           created_at: string
           created_by: string | null
+          delivery_note: string | null
+          delivery_payment_id: string | null
           id: string
+          local_delivery_bdt: number
           notes: string | null
           po_id: string
           release_number: number
@@ -6846,7 +6852,10 @@ export type Database = {
           brand_id: string
           created_at?: string
           created_by?: string | null
+          delivery_note?: string | null
+          delivery_payment_id?: string | null
           id?: string
+          local_delivery_bdt?: number
           notes?: string | null
           po_id: string
           release_number: number
@@ -6857,7 +6866,10 @@ export type Database = {
           brand_id?: string
           created_at?: string
           created_by?: string | null
+          delivery_note?: string | null
+          delivery_payment_id?: string | null
           id?: string
+          local_delivery_bdt?: number
           notes?: string | null
           po_id?: string
           release_number?: number
@@ -6921,6 +6933,7 @@ export type Database = {
           id: string
           landed_cost_per_unit_bdt: number | null
           local_courier_total_bdt: number
+          local_delivery_total_bdt: number
           notes: string | null
           order_date: string
           other_charges_bdt: number
@@ -6960,6 +6973,7 @@ export type Database = {
           id?: string
           landed_cost_per_unit_bdt?: number | null
           local_courier_total_bdt?: number
+          local_delivery_total_bdt?: number
           notes?: string | null
           order_date?: string
           other_charges_bdt?: number
@@ -6999,6 +7013,7 @@ export type Database = {
           id?: string
           landed_cost_per_unit_bdt?: number | null
           local_courier_total_bdt?: number
+          local_delivery_total_bdt?: number
           notes?: string | null
           order_date?: string
           other_charges_bdt?: number

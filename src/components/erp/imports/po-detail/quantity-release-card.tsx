@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { toast } from "sonner";
-import { AlertTriangle, Boxes, Loader2, PackageCheck, Warehouse, Wallet } from "lucide-react";
+import { AlertTriangle, Boxes, Loader2, PackageCheck, Warehouse, Wallet, Truck } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -22,9 +22,11 @@ type Release = {
   released_at: string;
   notes: string | null;
   items: Array<{
-    id: string; po_item_id: string; quantity: number; damaged_qty: number;
+    id: string; po_item_id: string; quantity: number; damaged_qty: number; missing_qty?: number;
     unit_landed_cost_bdt: number; sku_snapshot: string | null;
   }>;
+  local_delivery_bdt?: number | null;
+  delivery_note?: string | null;
 };
 
 export function QuantityReleaseCard({
@@ -51,7 +53,13 @@ export function QuantityReleaseCard({
     const m = new Map<string, number>();
     for (const r of releases) {
       for (const it of r.items ?? []) {
-        m.set(it.po_item_id, (m.get(it.po_item_id) ?? 0) + Number(it.quantity ?? 0) + Number(it.damaged_qty ?? 0));
+        m.set(
+          it.po_item_id,
+          (m.get(it.po_item_id) ?? 0) +
+            Number(it.quantity ?? 0) +
+            Number(it.damaged_qty ?? 0) +
+            Number(it.missing_qty ?? 0),
+        );
       }
     }
     return m;
@@ -59,7 +67,10 @@ export function QuantityReleaseCard({
 
   const [warehouseId, setWarehouseId] = useState("");
   const [notes, setNotes] = useState("");
-  const [draft, setDraft] = useState<Record<string, { qty: number; damaged: number }>>({});
+  const [draft, setDraft] = useState<Record<string, { qty: number; damaged: number; missing: number }>>({});
+  const [ldAmount, setLdAmount] = useState("");
+  const [ldNote, setLdNote] = useState("");
+  const [ldWallet, setLdWallet] = useState("");
   const [payNow, setPayNow] = useState(true);
   const [payWallet, setPayWallet] = useState("");
   const [payOverride, setPayOverride] = useState<string | null>(null);
@@ -74,16 +85,19 @@ export function QuantityReleaseCard({
     if (def) setWarehouseId(def.id);
   }, [warehouses, warehouseId]);
 
-  const getDraft = (id: string) => draft[id] ?? { qty: 0, damaged: 0 };
-  const setDraftFor = (id: string, patch: Partial<{ qty: number; damaged: number }>) =>
+  const getDraft = (id: string) => draft[id] ?? { qty: 0, damaged: 0, missing: 0 };
+  const setDraftFor = (id: string, patch: Partial<{ qty: number; damaged: number; missing: number }>) =>
     setDraft((d) => ({ ...d, [id]: { ...getDraft(id), ...patch } }));
+
+  const localDelivery = Math.max(0, Number(ldAmount) || 0);
 
   const totalOrdered = items.reduce((s, i) => s + Number(i.quantity ?? 0), 0);
   const totalReleased = Array.from(releasedByItem.values()).reduce((s, n) => s + n, 0);
   const pct = totalOrdered > 0 ? Math.round((totalReleased / totalOrdered) * 100) : 0;
-  const draftTotal = items.reduce((s, i) => s + getDraft(i.id).qty + getDraft(i.id).damaged, 0);
+  const lineTotal = (i: any) => getDraft(i.id).qty + getDraft(i.id).damaged + getDraft(i.id).missing;
+  const draftTotal = items.reduce((s, i) => s + lineTotal(i), 0);
   const remainingFor = (i: any) => Math.max(0, Number(i.quantity ?? 0) - (releasedByItem.get(i.id) ?? 0));
-  const hasOverRelease = items.some((i) => getDraft(i.id).qty + getDraft(i.id).damaged > remainingFor(i));
+  const hasOverRelease = items.some((i) => lineTotal(i) > remainingFor(i));
 
   // Landed cost preview — mirrors the server formula in releasePoQuantity()
   const fx = Number(po?.fx_rate_cny_bdt ?? po?.fx_rate ?? 0);
@@ -91,6 +105,8 @@ export function QuantityReleaseCard({
   const overheadTotal =
     Number(po?.shipping_total_bdt ?? po?.shipping_cost_bdt ?? 0) +
     Number(po?.local_courier_total_bdt ?? 0) +
+    Number(po?.local_delivery_total_bdt ?? 0) +
+    localDelivery +
     Number(po?.freight_cost_bdt ?? 0) +
     Number(po?.customs_duty_bdt ?? 0) +
     Number(po?.other_charges_bdt ?? 0);
@@ -120,13 +136,14 @@ export function QuantityReleaseCard({
       const unitCny = Number(i.unit_cost_cny ?? i.unit_cost_foreign ?? 0);
       const goodsUnit = unitCny * fx;
       const landed = +(goodsUnit + overheadPerUnit + commissionPerUnit).toFixed(4);
-      const pcs = d.qty + d.damaged;
+      const pcs = d.qty + d.damaged + d.missing;
       return {
         id: i.id,
         title: i.product?.title ?? i.name_snapshot ?? "Item",
         sku: i.product?.sku ?? i.sku_snapshot ?? "—",
         qty: d.qty,
         damaged: d.damaged,
+        missing: d.missing,
         landed,
         value: landed * d.qty,
         damagedValue: landed * d.damaged,
@@ -136,16 +153,17 @@ export function QuantityReleaseCard({
         shipDue: shipDuePerUnit * pcs,
       };
     })
-    .filter((l) => l.qty > 0 || l.damaged > 0);
+    .filter((l) => l.qty > 0 || l.damaged > 0 || l.missing > 0);
 
   const previewQty = previewLines.reduce((s, l) => s + l.qty, 0);
   const previewDamaged = previewLines.reduce((s, l) => s + l.damaged, 0);
+  const previewMissing = previewLines.reduce((s, l) => s + l.missing, 0);
   const previewValue = previewLines.reduce((s, l) => s + l.value, 0);
   const previewDamagedValue = previewLines.reduce((s, l) => s + l.damagedValue, 0);
   const previewGoodsDue = previewLines.reduce((s, l) => s + l.goodsDue, 0);
   const previewShipDue = previewLines.reduce((s, l) => s + l.shipDue, 0);
   const previewTotalDue = previewGoodsDue + previewShipDue;
-  const previewPcs = previewLines.reduce((s, l) => s + l.qty + l.damaged, 0);
+  const previewPcs = previewLines.reduce((s, l) => s + l.qty + l.damaged + l.missing, 0);
   // Weighted (line-wise) effective rate for ei release
   const effGoodsDuePerUnit = previewPcs > 0 ? previewGoodsDue / previewPcs : goodsDuePerUnit;
 
@@ -155,10 +173,10 @@ export function QuantityReleaseCard({
   const paidPct = grandTotal > 0 ? Math.round((paid / grandTotal) * 100) : 0;
 
   // Pro-rata due: joto pcs release hoyeche (+ ekhon hobe) toto tar baki purchase + shipping
-  const draftPcs = previewQty + previewDamaged;
+  const draftPcs = previewQty + previewDamaged + previewMissing;
   // Line-wise released share: already-released pcs + ei draft, protita line-er nijer rate diye
   const releasedShare = items.reduce((s, i) => {
-    const pcs = (releasedByItem.get(i.id) ?? 0) + getDraft(i.id).qty + getDraft(i.id).damaged;
+    const pcs = (releasedByItem.get(i.id) ?? 0) + lineTotal(i);
     return s + pcs * (goodsDuePerUnitFor(i) + shipDuePerUnit);
   }, 0);
   const dueForReleased = Math.max(0, Math.min(due || releasedShare, releasedShare));
@@ -173,8 +191,22 @@ export function QuantityReleaseCard({
           warehouse_id: warehouseId || undefined,
           notes: notes || undefined,
           items: items
-            .map((i) => ({ po_item_id: i.id, quantity: getDraft(i.id).qty, damaged_qty: getDraft(i.id).damaged }))
-            .filter((l) => l.quantity > 0 || l.damaged_qty > 0),
+            .map((i) => ({
+              po_item_id: i.id,
+              quantity: getDraft(i.id).qty,
+              damaged_qty: getDraft(i.id).damaged,
+              missing_qty: getDraft(i.id).missing,
+            }))
+            .filter((l) => l.quantity > 0 || l.damaged_qty > 0 || l.missing_qty > 0),
+          local_delivery: localDelivery > 0
+            ? {
+                amount_bdt: +localDelivery.toFixed(2),
+                note: ldNote || undefined,
+                wallet_id: ldWallet || undefined,
+                payment_date: new Date().toISOString().slice(0, 10),
+                idempotency_key: `qtyrelld:${poId}:${Date.now()}`,
+              }
+            : undefined,
           payment: payNow && payWallet && amt > 0
             ? {
                 wallet_id: payWallet,
@@ -194,6 +226,8 @@ export function QuantityReleaseCard({
       );
       setDraft({});
       setNotes("");
+      setLdAmount("");
+      setLdNote("");
       setPayOverride(null);
       qc.invalidateQueries({ queryKey: ["imp-po", poId] });
     },
@@ -201,10 +235,10 @@ export function QuantityReleaseCard({
   });
 
   const fillRemaining = () => {
-    const next: Record<string, { qty: number; damaged: number }> = {};
+    const next: Record<string, { qty: number; damaged: number; missing: number }> = {};
     for (const i of items) {
       const rem = Number(i.quantity ?? 0) - (releasedByItem.get(i.id) ?? 0);
-      if (rem > 0) next[i.id] = { qty: rem, damaged: 0 };
+      if (rem > 0) next[i.id] = { qty: rem, damaged: 0, missing: 0 };
     }
     setDraft(next);
   };
@@ -237,6 +271,7 @@ export function QuantityReleaseCard({
               <TableHead className="text-right">Remaining</TableHead>
               <TableHead className="text-right w-[110px]">Release now</TableHead>
               <TableHead className="text-right w-[110px]">Damaged</TableHead>
+              <TableHead className="text-right w-[110px]">Missing</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -245,7 +280,7 @@ export function QuantityReleaseCard({
               const rel = releasedByItem.get(it.id) ?? 0;
               const remaining = Math.max(0, ordered - rel);
               const d = getDraft(it.id);
-              const over = d.qty + d.damaged > remaining;
+              const over = d.qty + d.damaged + d.missing > remaining;
               return (
                 <TableRow key={it.id}>
                   <TableCell>
@@ -296,6 +331,16 @@ export function QuantityReleaseCard({
                       onChange={(e) => setDraftFor(it.id, { damaged: Math.min(remaining, Math.max(0, Number(e.target.value) || 0)) })}
                     />
                   </TableCell>
+                  <TableCell className="text-right">
+                    <Input
+                      type="number" min={0}
+                      className="h-8 text-right tabular-nums"
+                      value={d.missing || ""}
+                      placeholder="0"
+                      disabled={remaining === 0}
+                      onChange={(e) => setDraftFor(it.id, { missing: Math.min(remaining, Math.max(0, Number(e.target.value) || 0)) })}
+                    />
+                  </TableCell>
                 </TableRow>
               );
             })}
@@ -329,6 +374,50 @@ export function QuantityReleaseCard({
               Release {draftTotal > 0 ? `${draftTotal} pcs` : ""}
             </Button>
           </div>
+        </div>
+
+        <div className="p-4 border-t border-border bg-sky-500/5 space-y-3">
+          <div className="text-sm font-medium inline-flex items-center gap-2">
+            <Truck className="h-4 w-4 text-sky-600" />
+            Local delivery charge (BD warehouse → amader kache)
+          </div>
+          <div className="grid md:grid-cols-3 gap-3">
+            <div>
+              <Label className="text-xs">Charge (BDT)</Label>
+              <Input
+                type="number" min={0} className="h-9 tabular-nums"
+                value={ldAmount}
+                placeholder="0"
+                onChange={(e) => setLdAmount(e.target.value)}
+              />
+            </div>
+            <div>
+              <Label className="text-xs">Pay from wallet (optional)</Label>
+              <Select value={ldWallet} onValueChange={setLdWallet}>
+                <SelectTrigger className="h-9"><SelectValue placeholder="Record only (pay later)" /></SelectTrigger>
+                <SelectContent>
+                  {(wallets as any[]).filter((w) => w.is_active).map((w) => (
+                    <SelectItem key={w.id} value={w.id}>{w.name} ({fmtBdt(w.current_balance)})</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div>
+              <Label className="text-xs">Delivery note</Label>
+              <Input
+                className="h-9"
+                value={ldNote}
+                placeholder="e.g. Sundarban courier, 3 bosta"
+                onChange={(e) => setLdNote(e.target.value)}
+              />
+            </div>
+          </div>
+          {localDelivery > 0 && (
+            <p className="text-[11px] text-muted-foreground">
+              {fmtBdt(localDelivery)} PO-r total cost e jog hobe, tai per-piece landed cost o beshi dekhabe
+              {ldWallet ? " — ei wallet theke taka kete jabe." : " — ekhon wallet theke katbe na, due hishebe thakbe."}
+            </p>
+          )}
         </div>
 
         {draftTotal > 0 && previewTotalDue > 0 && (
@@ -442,6 +531,7 @@ export function QuantityReleaseCard({
             </div>
             <Badge variant="outline" className="text-[11px]">
               {previewQty} pcs{previewDamaged > 0 ? ` + ${previewDamaged} damaged` : ""}
+              {previewMissing > 0 ? ` + ${previewMissing} missing` : ""}
             </Badge>
           </div>
           <Table>
@@ -450,6 +540,7 @@ export function QuantityReleaseCard({
                 <TableHead>Product</TableHead>
                 <TableHead className="text-right">Pcs to stock</TableHead>
                 <TableHead className="text-right">Damaged</TableHead>
+                <TableHead className="text-right">Missing</TableHead>
                 <TableHead className="text-right">Landed / pc</TableHead>
                 <TableHead className="text-right">Line value</TableHead>
               </TableRow>
@@ -465,13 +556,16 @@ export function QuantityReleaseCard({
                   <TableCell className="text-right tabular-nums">
                     {l.damaged > 0 ? <span className="text-orange-600">{l.damaged}</span> : "—"}
                   </TableCell>
+                  <TableCell className="text-right tabular-nums">
+                    {l.missing > 0 ? <span className="text-red-600">{l.missing}</span> : "—"}
+                  </TableCell>
                   <TableCell className="text-right tabular-nums">{fmtBdt(l.landed)}</TableCell>
                   <TableCell className="text-right tabular-nums font-semibold">{fmtBdt(l.value)}</TableCell>
                 </TableRow>
               ))}
             </TableBody>
           </Table>
-          <div className="p-4 border-t border-border grid sm:grid-cols-3 gap-3 text-sm">
+          <div className="p-4 border-t border-border grid sm:grid-cols-4 gap-3 text-sm">
             <div>
               <div className="text-xs text-muted-foreground">Stock in</div>
               <div className="font-semibold tabular-nums">{previewQty} pcs</div>
@@ -481,6 +575,10 @@ export function QuantityReleaseCard({
               <div className="font-semibold tabular-nums">
                 {previewDamaged} pcs {previewDamaged > 0 && <span className="text-xs text-muted-foreground">({fmtBdt(previewDamagedValue)})</span>}
               </div>
+            </div>
+            <div>
+              <div className="text-xs text-muted-foreground">Missing (kom paoa)</div>
+              <div className="font-semibold tabular-nums text-red-600">{previewMissing} pcs</div>
             </div>
             <div className="sm:text-right">
               <div className="text-xs text-muted-foreground">Inventory value add</div>
@@ -554,6 +652,8 @@ export function QuantityReleaseCard({
             {releases.map((r) => {
               const qty = (r.items ?? []).reduce((s, i) => s + Number(i.quantity ?? 0), 0);
               const dmg = (r.items ?? []).reduce((s, i) => s + Number(i.damaged_qty ?? 0), 0);
+              const miss = (r.items ?? []).reduce((s, i) => s + Number(i.missing_qty ?? 0), 0);
+              const ld = Number(r.local_delivery_bdt ?? 0);
               const value = (r.items ?? []).reduce((s, i) => s + Number(i.quantity ?? 0) * Number(i.unit_landed_cost_bdt ?? 0), 0);
               return (
                 <div key={r.id} className="p-3 flex items-center gap-3 flex-wrap text-sm">
@@ -561,8 +661,18 @@ export function QuantityReleaseCard({
                   <span className="text-muted-foreground text-xs">{new Date(r.released_at).toLocaleString()}</span>
                   <span className="tabular-nums font-medium">{qty} pcs</span>
                   {dmg > 0 && <span className="text-xs text-orange-600 tabular-nums">{dmg} damaged</span>}
+                  {miss > 0 && <span className="text-xs text-red-600 tabular-nums">{miss} missing</span>}
+                  {ld > 0 && (
+                    <span className="text-xs text-sky-600 tabular-nums inline-flex items-center gap-1">
+                      <Truck className="h-3 w-3" />{fmtBdt(ld)}
+                    </span>
+                  )}
                   <span className="ml-auto tabular-nums font-semibold">{fmtBdt(value)}</span>
-                  {r.notes && <div className="w-full text-xs text-muted-foreground">{r.notes}</div>}
+                  {(r.notes || r.delivery_note) && (
+                    <div className="w-full text-xs text-muted-foreground">
+                      {[r.notes, r.delivery_note].filter(Boolean).join(" · ")}
+                    </div>
+                  )}
                 </div>
               );
             })}
