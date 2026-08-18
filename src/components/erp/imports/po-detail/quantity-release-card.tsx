@@ -14,6 +14,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { listWarehouses, releasePoQuantity } from "@/lib/erp/imports/imports.functions";
 import { fmtBdt } from "@/lib/erp/imports/types";
+import { useAccounts } from "@/hooks/erp/use-finance-query";
 
 type Release = {
   id: string;
@@ -59,6 +60,10 @@ export function QuantityReleaseCard({
   const [warehouseId, setWarehouseId] = useState("");
   const [notes, setNotes] = useState("");
   const [draft, setDraft] = useState<Record<string, { qty: number; damaged: number }>>({});
+  const [payNow, setPayNow] = useState(true);
+  const [payWallet, setPayWallet] = useState("");
+  const [payOverride, setPayOverride] = useState<string | null>(null);
+  const { data: wallets = [] } = useAccounts(brandId ? [brandId] : []);
 
   // Ekta matro warehouse thakle (ba default thakle) auto select — protibar select korte hobe na
   useEffect(() => {
