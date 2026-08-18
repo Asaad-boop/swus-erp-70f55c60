@@ -315,7 +315,17 @@ export function ProductAddDialog({ open, onClose }: Props) {
                 </Field>
                 <div className="grid grid-cols-2 gap-4">
                   <Field label="Brand" required>
-                    <Select value={f.brand_id} onValueChange={(v) => { set("brand_id", v); set("category_id", ""); }}>
+                    <Select
+                      value={f.brand_id}
+                      onValueChange={(v) => {
+                        setF((p) => ({
+                          ...p,
+                          brand_id: v,
+                          category_id: "",
+                          listing_brand_ids: Array.from(new Set([v, ...p.listing_brand_ids])),
+                        }));
+                      }}
+                    >
                       <SelectTrigger><SelectValue placeholder="Select brand" /></SelectTrigger>
                       <SelectContent>
                         {brands.map((b) => <SelectItem key={b.id} value={b.id}>{b.name}</SelectItem>)}
@@ -333,6 +343,65 @@ export function ProductAddDialog({ open, onClose }: Props) {
                     </Select>
                   </Field>
                 </div>
+                <Field
+                  label="Sell on brands"
+                  hint="Ei product kon kon brand er storefront e dekhabe (multi-brand)"
+                >
+                  <div className="rounded-lg border p-3 space-y-2">
+                    <div className="flex items-center justify-between">
+                      <span className="text-[11px] text-muted-foreground">
+                        {f.listing_brand_ids.length} of {brands.length} brands selected
+                      </span>
+                      <div className="flex gap-1">
+                        <Button
+                          type="button" size="sm" variant="outline" className="h-6 px-2 text-[11px]"
+                          onClick={() => set("listing_brand_ids", brands.map((b) => b.id))}
+                        >
+                          All brands
+                        </Button>
+                        <Button
+                          type="button" size="sm" variant="ghost" className="h-6 px-2 text-[11px]"
+                          onClick={() => set("listing_brand_ids", f.brand_id ? [f.brand_id] : [])}
+                        >
+                          Owner only
+                        </Button>
+                      </div>
+                    </div>
+                    <div className="grid grid-cols-2 gap-2">
+                      {brands.map((b) => {
+                        const on = f.listing_brand_ids.includes(b.id);
+                        const isOwner = b.id === f.brand_id;
+                        return (
+                          <button
+                            key={b.id}
+                            type="button"
+                            disabled={isOwner}
+                            onClick={() =>
+                              set(
+                                "listing_brand_ids",
+                                on ? f.listing_brand_ids.filter((x) => x !== b.id) : [...f.listing_brand_ids, b.id],
+                              )
+                            }
+                            className={cn(
+                              "flex items-center gap-2 rounded-md border px-2.5 py-2 text-xs text-left transition",
+                              on ? "border-primary/40 bg-primary/5 font-medium" : "bg-muted/20 hover:bg-muted/40",
+                              isOwner && "opacity-90 cursor-default",
+                            )}
+                          >
+                            <span className={cn(
+                              "grid h-4 w-4 shrink-0 place-items-center rounded border",
+                              on ? "bg-primary border-primary text-primary-foreground" : "border-muted-foreground/40",
+                            )}>
+                              {on && <Check className="h-3 w-3" />}
+                            </span>
+                            <span className="truncate">{b.name}</span>
+                            {isOwner && <Badge variant="secondary" className="ml-auto text-[9px] px-1 py-0">Owner</Badge>}
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
+                </Field>
                 <Field label="Shop by Age" hint="Toyora storefront e age filter er jonno">
                   <Select value={f.age_group || "none"} onValueChange={(v) => set("age_group", v === "none" ? "" : v)}>
                     <SelectTrigger><SelectValue placeholder="All ages" /></SelectTrigger>
