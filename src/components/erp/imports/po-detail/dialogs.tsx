@@ -440,6 +440,33 @@ export function EditPaymentDialog({
   const availableAfterRefund = newWalletBal + (sameWallet ? origAmt : 0);
   const shortBy = amount - availableAfterRefund;
 
+  type ImpactRow = { id: string; name: string; refund: number; deduct: number; net: number; before: number; after: number };
+  const impactRows: ImpactRow[] = useMemo(() => {
+    const bal = (id: string) => Number(wallets.find((w) => w.id === id)?.current_balance ?? 0);
+    const nameOf = (id: string, fb: string) => wallets.find((w) => w.id === id)?.name ?? fb;
+    const map = new Map<string, ImpactRow>();
+    const touch = (id: string, fb: string) => {
+      if (!map.has(id)) {
+        const before = bal(id);
+        map.set(id, { id, name: nameOf(id, fb), refund: 0, deduct: 0, net: 0, before, after: before });
+      }
+      return map.get(id)!;
+    };
+    if (payment.wallet_id) {
+      const r = touch(payment.wallet_id, oldWalletName);
+      r.refund += origAmt;
+    }
+    if (walletId) {
+      const r = touch(walletId, newWalletName);
+      r.deduct += amount;
+    }
+    for (const r of map.values()) {
+      r.net = r.refund - r.deduct;
+      r.after = r.before + r.net;
+    }
+    return [...map.values()];
+  }, [wallets, walletId, payment.wallet_id, amount, origAmt, oldWalletName, newWalletName]);
+
   return (
     <Dialog open onOpenChange={onClose}>
       <DialogContent>
