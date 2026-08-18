@@ -1556,6 +1556,24 @@ export const releasePoQuantity = createServerFn({ method: "POST" })
           .from("imp_po_release_items")
           .update({ stock_movement_id: movId as any })
           .eq("id", (relItem as any).id);
+
+        // Per-pcs landed cost ta product-er cost e boshe jak — inventory value / profit
+        // report shob jaygay ei cost dekhabe.
+        const { data: prodRow } = await context.supabase
+          .from("products")
+          .select("id, weighted_avg_cost, cost_price")
+          .eq("id", pi.product_id as string)
+          .maybeSingle();
+        const productWac = Number((prodRow as any)?.weighted_avg_cost ?? 0);
+        const newCost = +(productWac > 0 ? productWac : landed).toFixed(2);
+        await context.supabase
+          .from("products")
+          .update({
+            cost_price: newCost,
+            ...(productWac > 0 ? {} : { weighted_avg_cost: landed }),
+          } as any)
+          .eq("id", pi.product_id as string);
+
         movements.push({ po_item_id: l.po_item_id, qty: l.quantity, unit_cost: landed, movement_id: movId });
       }
       releasedMap.set(
