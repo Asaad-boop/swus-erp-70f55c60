@@ -136,13 +136,14 @@ export function QuantityReleaseCard({
       const unitCny = Number(i.unit_cost_cny ?? i.unit_cost_foreign ?? 0);
       const goodsUnit = unitCny * fx;
       const landed = +(goodsUnit + overheadPerUnit + commissionPerUnit).toFixed(4);
-      const pcs = d.qty + d.damaged;
+      const pcs = d.qty + d.damaged + d.missing;
       return {
         id: i.id,
         title: i.product?.title ?? i.name_snapshot ?? "Item",
         sku: i.product?.sku ?? i.sku_snapshot ?? "—",
         qty: d.qty,
         damaged: d.damaged,
+        missing: d.missing,
         landed,
         value: landed * d.qty,
         damagedValue: landed * d.damaged,
@@ -152,16 +153,17 @@ export function QuantityReleaseCard({
         shipDue: shipDuePerUnit * pcs,
       };
     })
-    .filter((l) => l.qty > 0 || l.damaged > 0);
+    .filter((l) => l.qty > 0 || l.damaged > 0 || l.missing > 0);
 
   const previewQty = previewLines.reduce((s, l) => s + l.qty, 0);
   const previewDamaged = previewLines.reduce((s, l) => s + l.damaged, 0);
+  const previewMissing = previewLines.reduce((s, l) => s + l.missing, 0);
   const previewValue = previewLines.reduce((s, l) => s + l.value, 0);
   const previewDamagedValue = previewLines.reduce((s, l) => s + l.damagedValue, 0);
   const previewGoodsDue = previewLines.reduce((s, l) => s + l.goodsDue, 0);
   const previewShipDue = previewLines.reduce((s, l) => s + l.shipDue, 0);
   const previewTotalDue = previewGoodsDue + previewShipDue;
-  const previewPcs = previewLines.reduce((s, l) => s + l.qty + l.damaged, 0);
+  const previewPcs = previewLines.reduce((s, l) => s + l.qty + l.damaged + l.missing, 0);
   // Weighted (line-wise) effective rate for ei release
   const effGoodsDuePerUnit = previewPcs > 0 ? previewGoodsDue / previewPcs : goodsDuePerUnit;
 
@@ -171,10 +173,10 @@ export function QuantityReleaseCard({
   const paidPct = grandTotal > 0 ? Math.round((paid / grandTotal) * 100) : 0;
 
   // Pro-rata due: joto pcs release hoyeche (+ ekhon hobe) toto tar baki purchase + shipping
-  const draftPcs = previewQty + previewDamaged;
+  const draftPcs = previewQty + previewDamaged + previewMissing;
   // Line-wise released share: already-released pcs + ei draft, protita line-er nijer rate diye
   const releasedShare = items.reduce((s, i) => {
-    const pcs = (releasedByItem.get(i.id) ?? 0) + getDraft(i.id).qty + getDraft(i.id).damaged;
+    const pcs = (releasedByItem.get(i.id) ?? 0) + lineTotal(i);
     return s + pcs * (goodsDuePerUnitFor(i) + shipDuePerUnit);
   }, 0);
   const dueForReleased = Math.max(0, Math.min(due || releasedShare, releasedShare));
@@ -189,8 +191,22 @@ export function QuantityReleaseCard({
           warehouse_id: warehouseId || undefined,
           notes: notes || undefined,
           items: items
-            .map((i) => ({ po_item_id: i.id, quantity: getDraft(i.id).qty, damaged_qty: getDraft(i.id).damaged }))
-            .filter((l) => l.quantity > 0 || l.damaged_qty > 0),
+            .map((i) => ({
+              po_item_id: i.id,
+              quantity: getDraft(i.id).qty,
+              damaged_qty: getDraft(i.id).damaged,
+              missing_qty: getDraft(i.id).missing,
+            }))
+            .filter((l) => l.quantity > 0 || l.damaged_qty > 0 || l.missing_qty > 0),
+          local_delivery: localDelivery > 0
+            ? {
+                amount_bdt: +localDelivery.toFixed(2),
+                note: ldNote || undefined,
+                wallet_id: ldWallet || undefined,
+                payment_date: new Date().toISOString().slice(0, 10),
+                idempotency_key: `qtyrelld:${poId}:${Date.now()}`,
+              }
+            : undefined,
           payment: payNow && payWallet && amt > 0
             ? {
                 wallet_id: payWallet,
@@ -210,6 +226,8 @@ export function QuantityReleaseCard({
       );
       setDraft({});
       setNotes("");
+      setLdAmount("");
+      setLdNote("");
       setPayOverride(null);
       qc.invalidateQueries({ queryKey: ["imp-po", poId] });
     },
@@ -217,10 +235,10 @@ export function QuantityReleaseCard({
   });
 
   const fillRemaining = () => {
-    const next: Record<string, { qty: number; damaged: number }> = {};
+    const next: Record<string, { qty: number; damaged: number; missing: number }> = {};
     for (const i of items) {
       const rem = Number(i.quantity ?? 0) - (releasedByItem.get(i.id) ?? 0);
-      if (rem > 0) next[i.id] = { qty: rem, damaged: 0 };
+      if (rem > 0) next[i.id] = { qty: rem, damaged: 0, missing: 0 };
     }
     setDraft(next);
   };
