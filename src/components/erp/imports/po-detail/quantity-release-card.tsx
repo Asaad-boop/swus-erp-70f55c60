@@ -271,6 +271,7 @@ export function QuantityReleaseCard({
               <TableHead className="text-right">Remaining</TableHead>
               <TableHead className="text-right w-[110px]">Release now</TableHead>
               <TableHead className="text-right w-[110px]">Damaged</TableHead>
+              <TableHead className="text-right w-[110px]">Missing</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -279,7 +280,7 @@ export function QuantityReleaseCard({
               const rel = releasedByItem.get(it.id) ?? 0;
               const remaining = Math.max(0, ordered - rel);
               const d = getDraft(it.id);
-              const over = d.qty + d.damaged > remaining;
+              const over = d.qty + d.damaged + d.missing > remaining;
               return (
                 <TableRow key={it.id}>
                   <TableCell>
@@ -330,6 +331,16 @@ export function QuantityReleaseCard({
                       onChange={(e) => setDraftFor(it.id, { damaged: Math.min(remaining, Math.max(0, Number(e.target.value) || 0)) })}
                     />
                   </TableCell>
+                  <TableCell className="text-right">
+                    <Input
+                      type="number" min={0}
+                      className="h-8 text-right tabular-nums"
+                      value={d.missing || ""}
+                      placeholder="0"
+                      disabled={remaining === 0}
+                      onChange={(e) => setDraftFor(it.id, { missing: Math.min(remaining, Math.max(0, Number(e.target.value) || 0)) })}
+                    />
+                  </TableCell>
                 </TableRow>
               );
             })}
@@ -363,6 +374,50 @@ export function QuantityReleaseCard({
               Release {draftTotal > 0 ? `${draftTotal} pcs` : ""}
             </Button>
           </div>
+        </div>
+
+        <div className="p-4 border-t border-border bg-sky-500/5 space-y-3">
+          <div className="text-sm font-medium inline-flex items-center gap-2">
+            <Truck className="h-4 w-4 text-sky-600" />
+            Local delivery charge (BD warehouse → amader kache)
+          </div>
+          <div className="grid md:grid-cols-3 gap-3">
+            <div>
+              <Label className="text-xs">Charge (BDT)</Label>
+              <Input
+                type="number" min={0} className="h-9 tabular-nums"
+                value={ldAmount}
+                placeholder="0"
+                onChange={(e) => setLdAmount(e.target.value)}
+              />
+            </div>
+            <div>
+              <Label className="text-xs">Pay from wallet (optional)</Label>
+              <Select value={ldWallet} onValueChange={setLdWallet}>
+                <SelectTrigger className="h-9"><SelectValue placeholder="Record only (pay later)" /></SelectTrigger>
+                <SelectContent>
+                  {(wallets as any[]).filter((w) => w.is_active).map((w) => (
+                    <SelectItem key={w.id} value={w.id}>{w.name} ({fmtBdt(w.current_balance)})</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div>
+              <Label className="text-xs">Delivery note</Label>
+              <Input
+                className="h-9"
+                value={ldNote}
+                placeholder="e.g. Sundarban courier, 3 bosta"
+                onChange={(e) => setLdNote(e.target.value)}
+              />
+            </div>
+          </div>
+          {localDelivery > 0 && (
+            <p className="text-[11px] text-muted-foreground">
+              {fmtBdt(localDelivery)} PO-r total cost e jog hobe, tai per-piece landed cost o beshi dekhabe
+              {ldWallet ? " — ei wallet theke taka kete jabe." : " — ekhon wallet theke katbe na, due hishebe thakbe."}
+            </p>
+          )}
         </div>
 
         {draftTotal > 0 && previewTotalDue > 0 && (
