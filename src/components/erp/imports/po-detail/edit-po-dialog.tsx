@@ -156,6 +156,7 @@ export function EditPoDialog({
   }, [variantRows]);
 
   const fxNum = Number(fx) || 0;
+  const extrasBdt = (Number(freight) || 0) + (Number(customs) || 0) + (Number(otherCharges) || 0) + (Number(agentComm) || 0) * fxNum;
   const subtotalForeign = lines.reduce((s, l) => s + (Number(l.qty) || 0) * (Number(l.unit) || 0), 0);
   const subtotalBdt = subtotalForeign * fxNum;
   const totalQty = lines.reduce((s, l) => s + (Number(l.qty) || 0), 0);
@@ -206,8 +207,8 @@ export function EditPoDialog({
   const mut = useMutation({
     mutationFn: async () => {
       if (!orderDate) throw new Error("Order date lagbe");
-      if (!itemsLocked) {
-        if (fxNum <= 0) throw new Error("FX rate 0 er beshi hote hobe");
+      if (!itemsLocked && fxNum <= 0) throw new Error("FX rate 0 er beshi hote hobe");
+      {
         if (lines.length === 0) throw new Error("At least 1 product lagbe");
         for (const l of lines) {
           if (!l.name_snapshot.trim()) throw new Error("Product name khali ache");
@@ -264,7 +265,7 @@ export function EditPoDialog({
         <DialogHeader>
           <DialogTitle>Edit Purchase Order — {po.po_number}</DialogTitle>
           <DialogDescription>
-            Header info shob shomoy edit kora jabe. Product lines tokhoni edit hobe jokhon kono carton release/in-stock hoy nai.
+            Header, charges ar product lines shob edit kora jabe. Release/stock howa line delete kora jabe na, ar FX rate lock thake.
           </DialogDescription>
         </DialogHeader>
 
@@ -308,11 +309,12 @@ export function EditPoDialog({
               <span className="font-semibold text-sm">Products</span>
               <Badge variant="outline" className="text-[10px]">{lines.length} lines · {totalQty} pcs</Badge>
             </div>
-            {itemsLocked ? (
-              <Badge variant="secondary" className="text-[10px] gap-1"><Lock className="h-3 w-3" />Locked (released/in-stock)</Badge>
-            ) : (
+            <div className="flex items-center gap-2">
+              {itemsLocked && (
+                <Badge variant="secondary" className="text-[10px] gap-1"><Lock className="h-3 w-3" />FX locked (released/in-stock)</Badge>
+              )}
               <Button size="sm" variant="outline" onClick={addLine}><Plus className="h-3.5 w-3.5 mr-1" />Add product</Button>
-            )}
+            </div>
           </div>
 
           <div className="divide-y">
@@ -337,7 +339,7 @@ export function EditPoDialog({
                         </div>
                       )}
                       <div className="min-w-0 flex-1">
-                        {po.brand_id && !itemsLocked ? (
+                        {po.brand_id && !l.locked ? (
                           <ProductPicker
                             brandId={po.brand_id}
                             value={{ id: l.product_id, title: l.name_snapshot, sku: l.sku_snapshot, image: l.image_snapshot }}
@@ -354,7 +356,7 @@ export function EditPoDialog({
                         ) : (
                           <Input
                             value={l.name_snapshot}
-                            disabled={itemsLocked}
+                            disabled={l.locked}
                             onChange={(e) => setLine(l.key, { name_snapshot: e.target.value })}
                           />
                         )}
@@ -379,7 +381,7 @@ export function EditPoDialog({
                               <button
                                 key={v.id}
                                 type="button"
-                                disabled={itemsLocked || l.locked}
+                                disabled={l.locked}
                                 onClick={() => toggleVariant(l, v.id)}
                                 title={onOtherLine ? "Already added (onno line e)" : variantLabel(v)}
                                 className={
@@ -397,7 +399,7 @@ export function EditPoDialog({
                               </button>
                             );
                           })}
-                          {l.variant_id && !itemsLocked && !l.locked && (
+                          {l.variant_id && !l.locked && (
                             <button
                               type="button"
                               onClick={() => setLine(l.key, { variant_id: null })}
@@ -415,14 +417,14 @@ export function EditPoDialog({
                   <div className="col-span-4 md:col-span-2 space-y-1.5">
                     <Label className="text-[11px] text-muted-foreground">Qty</Label>
                     <Input
-                      type="number" min={1} value={l.qty} disabled={itemsLocked}
+                      type="number" min={1} value={l.qty}
                       onChange={(e) => setLine(l.key, { qty: e.target.value })}
                     />
                   </div>
                   <div className="col-span-4 md:col-span-2 space-y-1.5">
                     <Label className="text-[11px] text-muted-foreground">Unit {currency}</Label>
                     <Input
-                      type="number" step="0.01" min={0} value={l.unit} disabled={itemsLocked}
+                      type="number" step="0.01" min={0} value={l.unit}
                       onChange={(e) => setLine(l.key, { unit: e.target.value })}
                     />
                   </div>
@@ -434,7 +436,7 @@ export function EditPoDialog({
                   </div>
                   <div className="col-span-1 flex justify-end">
                     <div className="flex flex-col items-end">
-                    {!itemsLocked && vars.length > 0 && (
+                    {vars.length > 0 && (
                       <Button
                         size="icon" variant="ghost" title="Duplicate line for another color"
                         onClick={() => {
@@ -457,7 +459,7 @@ export function EditPoDialog({
                     <Button
                       size="icon" variant="ghost"
                       className="text-destructive hover:text-destructive"
-                      disabled={itemsLocked || l.locked}
+                      disabled={l.locked}
                       title={l.locked ? "Carton/release e allocated" : "Remove line"}
                       onClick={() => setLines((prev) => prev.filter((x) => x.key !== l.key))}
                     >
