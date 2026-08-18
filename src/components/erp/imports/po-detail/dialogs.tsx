@@ -14,6 +14,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { useAccounts } from "@/hooks/erp/use-finance-query";
 import { editImportPayment, markArrivedInBd, receiveQuantityBd, recordImportPayment, releaseCarton, reverseImportPayment } from "@/lib/erp/imports/imports.functions";
 import { fmtBdt, newIdemKey } from "@/lib/erp/imports/types";
+import { cn } from "@/lib/utils";
 import { BillTile } from "./atoms";
 
 export function ArrivedDialog({ poId, onClose, brandId }: { poId: string; onClose: () => void; brandId: string }) {
