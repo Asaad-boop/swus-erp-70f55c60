@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
-import { Loader2, Plus, Trash2, Lock, Save } from "lucide-react";
+import { Loader2, Plus, Trash2, Lock, Save, Copy, Package, Palette } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -15,6 +15,20 @@ import {
 import { ProductPicker } from "@/components/erp/imports/product-picker";
 import { listImportSuppliers, updateImportPo } from "@/lib/erp/imports/imports.functions";
 import { fmtBdt } from "@/lib/erp/imports/types";
+import { supabase } from "@/integrations/supabase/client";
+import { cn } from "@/lib/utils";
+
+type VariantMeta = {
+  id: string;
+  product_id: string;
+  color_name: string | null;
+  color_hex: string | null;
+  image: string | null;
+  sku: string | null;
+  stock: number | null;
+};
+
+const variantLabel = (v: VariantMeta) => v.color_name || v.sku || `Variant ${v.id.slice(0, 4)}`;
 
 type Line = {
   key: string;
