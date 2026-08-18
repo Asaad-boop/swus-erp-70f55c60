@@ -580,7 +580,40 @@ export async function backfillInstapayInvoice(
         amount_diff: matchType === "paid" && orderTotal != null ? hit.collected - orderTotal : null,
       })
       .eq("id", r.id);
-    if (upErr) errors.push(`${r.consignment_id ?? r.id}: ${upErr.message}`);
+    if (upErr && /event_uidx|duplicate key/i.test(upErr.message ?? "")) {
+      // A still-draft CSV run holds the same consignment/date/payout. The
+      // applied InstaPay row is the ground truth — drop the unapplied twin.
+      if (r.consignment_id) {
+        const { data: twins } = await supabase
+          .from("erp_reconciliation_rows")
+          .select("id, run_id, applied_income_txn_id, applied_expense_txn_id, run:run_id(status)")
+          .eq("consignment_id", r.consignment_id)
+          .neq("run_id", run.id);
+        for (const t of (twins ?? []) as AnyRec[]) {
+          if (t.run?.status === "draft" && !t.applied_income_txn_id && !t.applied_expense_txn_id) {
+            await supabase.from("erp_reconciliation_rows").delete().eq("id", t.id);
+            await recountRun(supabase, t.run_id);
+          }
+        }
+      }
+      const { error: retryErr } = await supabase
+        .from("erp_reconciliation_rows")
+        .update({
+          collected: hit.collected,
+          delivery_fee: hit.delivery_fee,
+          cod_fee: hit.cod_fee,
+          other_fee: hit.other_fee,
+          discount: hit.discount,
+          total_fee: hit.total_fee,
+          payout: hit.payout,
+          invoice_date: invoiceDate,
+          match_type: matchType,
+        })
+        .eq("id", r.id);
+      if (retryErr) errors.push(`${r.consignment_id ?? r.id}: ${retryErr.message}`);
+    } else if (upErr) {
+      errors.push(`${r.consignment_id ?? r.id}: ${upErr.message}`);
+    }
     updated += 1;
     payoutSum += hit.payout;
 
