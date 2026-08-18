@@ -1431,6 +1431,7 @@ export const releasePoQuantity = createServerFn({ method: "POST" })
       release_id: (release as any).id,
       release_number: nextNumber,
       movements,
+      payments: paymentsDone,
       landed_per_unit_overhead: +overheadPerUnit.toFixed(4),
       status: nextStatus,
       total_released: totalReleased,
