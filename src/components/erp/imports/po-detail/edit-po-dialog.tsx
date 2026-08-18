@@ -228,9 +228,15 @@ export function EditPoDialog({
           currency,
           fx_rate: itemsLocked ? undefined : fxNum,
           notes: notes.trim() ? notes.trim() : null,
-          items: itemsLocked
-            ? undefined
-            : lines.map((l) => ({
+          po_number: poNumber.trim() || undefined,
+          cargo_agent_id: agentId ? agentId : null,
+          shipped_at: shippedAt || null,
+          freight_cost_bdt: Number(freight) || 0,
+          customs_duty_bdt: Number(customs) || 0,
+          other_charges_bdt: Number(otherCharges) || 0,
+          agent_commission_cny: Number(agentComm) || 0,
+          total_weight_kg: Number(weightKg) || 0,
+          items: lines.map((l) => ({
                 id: l.id,
                 product_id: l.product_id,
                 variant_id: l.variant_id,
