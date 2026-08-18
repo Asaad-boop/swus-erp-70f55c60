@@ -24,7 +24,7 @@ import {
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { ColorsManager } from "./colors-manager";
-import { BrandListingsEditor } from "./brand-listings-editor";
+import { BrandListingsEditor, QuickBrandListings } from "./brand-listings-editor";
 import { ComboItemsEditor } from "./combo-items-editor";
 
 type Props = { product: ProductRow | null; onClose: () => void };
@@ -258,6 +258,13 @@ export function ProductEditDialog({ product, onClose }: Props) {
                         </Select>
                       </Field>
                     </div>
+                    <Field label="Sell on brands" hint="Ek product multiple brand er storefront e dekhabe">
+                      <QuickBrandListings
+                        productId={product?.id ?? null}
+                        ownerBrandId={f.brand_id}
+                        productSlug={f.slug}
+                      />
+                    </Field>
                     <Field label="Category">
                       <Select value={f.category_id || "none"} onValueChange={(v) => set("category_id", v === "none" ? "" : v)} disabled={!f.brand_id}>
                         <SelectTrigger><SelectValue placeholder="Uncategorized" /></SelectTrigger>
