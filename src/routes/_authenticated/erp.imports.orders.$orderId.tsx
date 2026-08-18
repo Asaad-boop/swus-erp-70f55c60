@@ -497,6 +497,17 @@ function PoDetailPage() {
       {arrivedOpen && brandId && (
         <ArrivedDialog poId={po.id} onClose={() => setArrivedOpen(false)} brandId={brandId} />
       )}
+      {qtyArrivedOpen && brandId && (
+        <QtyArrivedDialog
+          poId={po.id}
+          brandId={brandId}
+          onClose={() => setQtyArrivedOpen(false)}
+          initialWeight={Number(po.shipping_weight_kg) || 0}
+          initialRate={Number(po.shipping_rate_per_kg) || 0}
+          initialCustoms={Number(po.customs_duty_bdt) || 0}
+          initialOther={Number(po.other_charges_bdt) || 0}
+        />
+      )}
       {paymentOpen && brandId && (
         <PaymentDialog
           poId={po.id}
