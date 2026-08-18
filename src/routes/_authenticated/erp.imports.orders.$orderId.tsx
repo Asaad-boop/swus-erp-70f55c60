@@ -239,9 +239,11 @@ function PoDetailPage() {
         <Progress value={paidPct} className="h-2 [&>div]:bg-emerald-500" />
         <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mt-4 text-xs">
           <Mini label="SUBTOTAL" value={fmtBdt(po.product_subtotal_bdt)} />
-          <Mini label="SHIPPING CN→BD" value={fmtBdt(po.shipping_total_bdt)} />
-          <Mini label="LOCAL COURIER" value={fmtBdt(po.local_courier_total_bdt)} />
-          <Mini label="OUTSTANDING DUE" value={fmtBdt(po.due_bdt)} valueClass="text-orange-600" />
+          {Number(po.shipping_total_bdt) > 0 && <Mini label="SHIPPING CN→BD" value={fmtBdt(po.shipping_total_bdt)} />}
+          {Number(po.local_courier_total_bdt) > 0 && <Mini label="LOCAL COURIER" value={fmtBdt(po.local_courier_total_bdt)} />}
+          {Number(po.due_bdt) > 0
+            ? <Mini label="OUTSTANDING DUE" value={fmtBdt(po.due_bdt)} valueClass="text-orange-600" />
+            : <Mini label="OUTSTANDING DUE" value="Full paid ✓" valueClass="text-emerald-600" />}
         </div>
         {Number(po.due_bdt) > 0 && (
           <div className="mt-4 rounded-md border border-orange-300/70 dark:border-orange-900/50 bg-orange-50/60 dark:bg-orange-950/20 px-3 py-2.5 flex items-center gap-3 flex-wrap">
