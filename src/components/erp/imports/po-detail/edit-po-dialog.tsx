@@ -16,7 +16,6 @@ import { ProductPicker } from "@/components/erp/imports/product-picker";
 import { listImportSuppliers, updateImportPo } from "@/lib/erp/imports/imports.functions";
 import { fmtBdt } from "@/lib/erp/imports/types";
 import { supabase } from "@/integrations/supabase/client";
-import { cn } from "@/lib/utils";
 
 type VariantMeta = {
   id: string;
