@@ -255,31 +255,87 @@ export function EditPoDialog({
           <div className="divide-y">
             {lines.map((l) => {
               const lineTotal = (Number(l.qty) || 0) * (Number(l.unit) || 0) * fxNum;
+              const vars = l.product_id ? (variantsByProduct[l.product_id] ?? []) : [];
+              const picked = vars.find((v) => v.id === l.variant_id) ?? null;
+              const usedVariantIds = new Set(
+                lines.filter((x) => x.product_id === l.product_id && x.variant_id).map((x) => x.variant_id as string),
+              );
+              const thumb = picked?.image || l.image_snapshot;
               return (
                 <div key={l.key} className="p-3 grid grid-cols-12 gap-2 items-end">
                   <div className="col-span-12 md:col-span-5 space-y-1.5">
                     <Label className="text-[11px] text-muted-foreground">Product</Label>
-                    {po.brand_id && !l.id ? (
-                      <ProductPicker
-                        brandId={po.brand_id}
-                        value={{ id: l.product_id, title: l.name_snapshot, sku: l.sku_snapshot, image: l.image_snapshot }}
-                        onChange={(p) =>
-                          setLine(l.key, {
-                            product_id: p.id,
-                            name_snapshot: p.title,
-                            sku_snapshot: p.sku ?? null,
-                            image_snapshot: p.image ?? null,
-                          })
-                        }
-                      />
-                    ) : (
-                      <Input
-                        value={l.name_snapshot}
-                        disabled={itemsLocked}
-                        onChange={(e) => setLine(l.key, { name_snapshot: e.target.value })}
-                      />
-                    )}
-                    {l.sku_snapshot && <div className="text-[10px] font-mono text-muted-foreground">{l.sku_snapshot}</div>}
+                    <div className="flex items-start gap-2">
+                      {thumb ? (
+                        <img src={thumb} alt={l.name_snapshot} loading="lazy" className="h-9 w-9 shrink-0 rounded-md border object-cover" />
+                      ) : (
+                        <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-md border bg-muted">
+                          <Package className="h-4 w-4 text-muted-foreground" />
+                        </div>
+                      )}
+                      <div className="min-w-0 flex-1">
+                        {po.brand_id && !itemsLocked ? (
+                          <ProductPicker
+                            brandId={po.brand_id}
+                            value={{ id: l.product_id, title: l.name_snapshot, sku: l.sku_snapshot, image: l.image_snapshot }}
+                            onChange={(p) =>
+                              setLine(l.key, {
+                                product_id: p.id,
+                                name_snapshot: p.title,
+                                sku_snapshot: p.sku ?? null,
+                                image_snapshot: p.image ?? null,
+                                variant_id: null,
+                              })
+                            }
+                          />
+                        ) : (
+                          <Input
+                            value={l.name_snapshot}
+                            disabled={itemsLocked}
+                            onChange={(e) => setLine(l.key, { name_snapshot: e.target.value })}
+                          />
+                        )}
+                        {(picked?.sku || l.sku_snapshot) && (
+                          <div className="mt-0.5 truncate text-[10px] font-mono text-muted-foreground">
+                            {picked?.sku || l.sku_snapshot}
+                          </div>
+                        )}
+                      </div>
+                    </div>
+
+                    {vars.length > 0 ? (
+                      <div className="flex items-center gap-1.5">
+                        <Palette className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
+                        <Select
+                          value={l.variant_id ?? "__none"}
+                          disabled={itemsLocked || l.locked}
+                          onValueChange={(v) => setLine(l.key, { variant_id: v === "__none" ? null : v })}
+                        >
+                          <SelectTrigger className="h-8 text-xs">
+                            <SelectValue placeholder="Color / variation" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="__none">No variation</SelectItem>
+                            {vars.map((v) => (
+                              <SelectItem key={v.id} value={v.id}>
+                                <span className="flex items-center gap-2">
+                                  <span
+                                    className="h-3 w-3 rounded-full border"
+                                    style={{ background: v.color_hex ?? "transparent" }}
+                                  />
+                                  {variantLabel(v)}
+                                  {usedVariantIds.has(v.id) && v.id !== l.variant_id && (
+                                    <span className="text-[10px] text-muted-foreground">· already added</span>
+                                  )}
+                                </span>
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+                    ) : l.variant_id ? (
+                      <Badge variant="outline" className="text-[10px]">Variant {l.variant_id.slice(0, 6)}</Badge>
+                    ) : null}
                   </div>
                   <div className="col-span-4 md:col-span-2 space-y-1.5">
                     <Label className="text-[11px] text-muted-foreground">Qty</Label>
@@ -302,6 +358,27 @@ export function EditPoDialog({
                     </div>
                   </div>
                   <div className="col-span-1 flex justify-end">
+                    <div className="flex flex-col items-end">
+                    {!itemsLocked && vars.length > 0 && (
+                      <Button
+                        size="icon" variant="ghost" title="Duplicate line for another color"
+                        onClick={() => {
+                          const next = vars.find((v) => !usedVariantIds.has(v.id));
+                          setLines((prev) => [
+                            ...prev,
+                            {
+                              ...l,
+                              key: `new_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`,
+                              id: undefined,
+                              locked: false,
+                              variant_id: next?.id ?? null,
+                            },
+                          ]);
+                        }}
+                      >
+                        <Copy className="h-3.5 w-3.5" />
+                      </Button>
+                    )}
                     <Button
                       size="icon" variant="ghost"
                       className="text-destructive hover:text-destructive"
@@ -311,6 +388,7 @@ export function EditPoDialog({
                     >
                       <Trash2 className="h-4 w-4" />
                     </Button>
+                    </div>
                   </div>
                 </div>
               );
