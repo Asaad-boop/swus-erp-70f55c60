@@ -5687,9 +5687,13 @@ export type Database = {
         Row: {
           brand_id: string | null
           cost_price: number
+          courier_cost: number
           created_at: string
           created_by: string | null
+          discount_pct: number
           id: string
+          is_active: boolean
+          lead_time_days: number
           marketing_cost: number
           month: string
           note: string | null
@@ -5706,9 +5710,13 @@ export type Database = {
         Insert: {
           brand_id?: string | null
           cost_price?: number
+          courier_cost?: number
           created_at?: string
           created_by?: string | null
+          discount_pct?: number
           id?: string
+          is_active?: boolean
+          lead_time_days?: number
           marketing_cost?: number
           month: string
           note?: string | null
@@ -5725,9 +5733,13 @@ export type Database = {
         Update: {
           brand_id?: string | null
           cost_price?: number
+          courier_cost?: number
           created_at?: string
           created_by?: string | null
+          discount_pct?: number
           id?: string
+          is_active?: boolean
+          lead_time_days?: number
           marketing_cost?: number
           month?: string
           note?: string | null

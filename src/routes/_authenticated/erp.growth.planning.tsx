@@ -1106,7 +1106,14 @@ function PlanningPage() {
         </TabsContent>
 
         <TabsContent value="manual" forceMount className="data-[state=inactive]:hidden">
-          <ManualPlanner brandId={brandId} month={month} onTotals={setManualTotals} />
+          <ManualPlanner
+            brandId={brandId}
+            month={month}
+            targetRevenue={plan?.target_revenue ?? 0}
+            targetProfit={plan?.target_profit ?? 0}
+            targetAdSpend={plan?.target_ad_spend ?? 0}
+            onTotals={setManualTotals}
+          />
         </TabsContent>
       </Tabs>
     </div>
