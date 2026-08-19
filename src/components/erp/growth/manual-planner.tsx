@@ -403,7 +403,7 @@ export function ManualPlanner({
       return [
         r.is_active ? "yes" : "no", r.product_name, r.qty, r.sell_price, r.discount_pct,
         m.netPrice.toFixed(2), r.cost_price, r.marketing_cost, r.packaging_cost, r.courier_cost,
-        r.return_pct, r.return_cost, r.lead_time_days, Math.round(m.delivered),
+        r.return_pct, r.return_cost, r.lead_time_days,
         r.sell_days, m.unitsPerDay.toFixed(1), Math.round(m.revenuePerDay), Math.round(m.adPerDay),
         Math.round(m.delivered),
         Math.round(m.revenue), Math.round(m.cogs), Math.round(m.marketing), Math.round(m.packaging),
