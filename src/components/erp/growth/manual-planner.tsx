@@ -829,6 +829,20 @@ function Kpi({
 }
 
 function Coverage({ label, value, detail, invert }: { label: string; value: number; detail: string; invert?: boolean }) {
+  return <CoverageInner label={label} value={value} detail={detail} invert={invert} />;
+}
+
+function MiniStat({ label, value, sub }: { label: string; value: string; sub?: string }) {
+  return (
+    <div className="rounded-lg border bg-muted/20 p-3">
+      <p className="text-[11px] uppercase tracking-wide text-muted-foreground">{label}</p>
+      <p className="mt-1 font-display text-lg font-semibold tabular-nums">{value}</p>
+      {sub && <p className="mt-0.5 text-xs text-muted-foreground">{sub}</p>}
+    </div>
+  );
+}
+
+function CoverageInner({ label, value, detail, invert }: { label: string; value: number; detail: string; invert?: boolean }) {
   const capped = Math.max(0, Math.min(100, value));
   const good = invert ? value <= 100 : value >= 100;
   return (
