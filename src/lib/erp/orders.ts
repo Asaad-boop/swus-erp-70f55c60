@@ -34,7 +34,8 @@ export const STATUS_GROUPS: { key: StatusGroup; label: string; statuses: OrderSt
 // Top-of-page tabs (reference layout). Each tab maps to one or more of our statuses.
 export type StatusTabKey =
   | "all" | "pending" | "packing" | "shipped" | "in_transit" | "delivered"
-  | "partial" | "pending_return" | "returned" | "exchange" | "on_hold" | "cancelled" | "incomplete" | "ready_to_ship";
+  | "partial" | "pending_return" | "returned" | "paid_return" | "completed"
+  | "exchange" | "on_hold" | "cancelled" | "incomplete" | "ready_to_ship";
 
 export const STATUS_TABS: { key: StatusTabKey; label: string; statuses: OrderStatus[] }[] = [
   { key: "pending", label: "Pending", statuses: ["confirmed"] },
@@ -42,10 +43,12 @@ export const STATUS_TABS: { key: StatusTabKey; label: string; statuses: OrderSta
   { key: "ready_to_ship", label: "RTS", statuses: ["ready_to_ship"] },
   { key: "shipped", label: "Shipped", statuses: ["shipped"] },
   { key: "in_transit", label: "In Transit", statuses: ["in_transit"] },
-  { key: "delivered", label: "Delivered", statuses: ["delivered", "completed"] },
+  { key: "delivered", label: "Delivered", statuses: ["delivered"] },
   { key: "partial", label: "Partial", statuses: ["partial_delivered", "partial_return"] },
   { key: "pending_return", label: "Pending Return", statuses: ["pending_return", "return_in_transit"] },
   { key: "returned", label: "Returned", statuses: ["returned"] },
+  { key: "paid_return", label: "Paid Return", statuses: ["paid_return", "unpaid_return"] },
+  { key: "completed", label: "Completed", statuses: ["completed", "paid"] },
   { key: "exchange", label: "Exchange", statuses: ["exchange", "exchanged"] },
   { key: "on_hold", label: "On Hold", statuses: ["on_hold"] },
   { key: "cancelled", label: "Cancelled", statuses: ["cancelled"] },
