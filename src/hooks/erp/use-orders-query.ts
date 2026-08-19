@@ -5,8 +5,45 @@ import type { OrderRow, OrderStatus } from "@/lib/erp/orders";
 import { statusSinceTs } from "@/lib/erp/orders";
 import { fetchCourierHistoryFn } from "@/lib/erp/courier-history.functions";
 import { applyBrandScope } from "@/lib/erp/apply-brand-scope";
+import { normalizeCourierStatus, type CourierBucket } from "@/hooks/erp/use-courier-shipments";
 
 const WEB_ORDER_SOURCE_FILTER = "source.not.in.(website,pixel,utm)";
+
+export type OrdersSortKey = "created_at" | "total" | "updated_at" | "invoice_no";
+export type OrdersSortDir = "asc" | "desc";
+
+/** Coarse ilike prefilters per courier bucket — results are re-checked exactly
+ *  with normalizeCourierStatus, so these only need to be supersets. */
+const BUCKET_PREFILTER: Partial<Record<CourierBucket, string[]>> = {
+  delivered: ["%deliver%"],
+  out_for_delivery: ["%deliver%", "%way%"],
+  returned: ["%return%"],
+  cancelled: ["%cancel%"],
+  on_hold: ["%hold%", "%lost%", "%damag%", "%fail%", "%unsuccess%", "%reject%"],
+  in_transit: ["%transit%", "%forward%", "%reach%", "%hub%", "%received%"],
+  picked_up: ["%pick%", "%collect%"],
+};
+
+/** Resolve the set of order ids whose latest shipment falls in `bucket`. */
+async function orderIdsForCourierBucket(bucket: CourierBucket): Promise<string[]> {
+  let q = supabase
+    .from("courier_shipments")
+    .select("order_id,status,updated_at")
+    .order("updated_at", { ascending: false })
+    .limit(20000);
+  const patterns = BUCKET_PREFILTER[bucket];
+  if (patterns) q = q.or(patterns.map((p) => `status.ilike.${p}`).join(","));
+  const { data, error } = await q;
+  if (error) throw error;
+  const seen = new Set<string>();
+  const out: string[] = [];
+  for (const r of (data ?? []) as { order_id: string; status: string | null }[]) {
+    if (!r.order_id || seen.has(r.order_id)) continue;
+    seen.add(r.order_id);
+    if (normalizeCourierStatus(r.status) === bucket) out.push(r.order_id);
+  }
+  return out;
+}
 
 export type OrdersFilter = {
   brandId: string | null;
@@ -23,6 +60,18 @@ export type OrdersFilter = {
   ids?: string[] | null;
   /** Print status filter: "all" (default), "printed", or "unprinted". */
   printedFilter?: "all" | "printed" | "unprinted";
+  sortKey?: OrdersSortKey;
+  sortDir?: OrdersSortDir;
+  /** Live courier bucket (server-side resolved). */
+  courierBucket?: CourierBucket | null;
+  paymentMethod?: string | null;
+  paymentStatus?: string | null;
+  city?: string | null;
+  assignee?: string | null;
+  amountMin?: number | null;
+  amountMax?: number | null;
+  /** "any" | "with" | "without" — advance payment presence. */
+  advanceFilter?: "any" | "with" | "without";
 };
 
 export function useOrdersQuery(filter: OrdersFilter) {
@@ -34,7 +83,13 @@ export function useOrdersQuery(filter: OrdersFilter) {
   return useQuery({
     queryKey: ["orders", filter],
     enabled: brandIds.length > 0 && (filter.ids == null || filter.ids.length > 0),
+    placeholderData: keepPreviousData,
     queryFn: async () => {
+      let bucketIds: string[] | null = null;
+      if (filter.courierBucket) {
+        bucketIds = await orderIdsForCourierBucket(filter.courierBucket);
+        if (bucketIds.length === 0) return { rows: [] as OrderRow[], total: 0 };
+      }
       let q = applyBrandScope(
         supabase
           .from("orders")
@@ -43,7 +98,7 @@ export function useOrdersQuery(filter: OrdersFilter) {
             { count: "exact" },
           ),
         brandIds,
-      ).order("created_at", { ascending: false });
+      ).order(filter.sortKey ?? "created_at", { ascending: (filter.sortDir ?? "desc") === "asc", nullsFirst: false });
 
       if (filter.ids && filter.ids.length > 0) {
         q = q.in("id", filter.ids);
@@ -59,16 +114,25 @@ export function useOrdersQuery(filter: OrdersFilter) {
         q = q.neq("status", "pre_order");
         q = q.or(`status.neq.confirmed,source.is.null,${WEB_ORDER_SOURCE_FILTER},web_status.eq.complete`);
       }
+      if (bucketIds) q = q.in("id", bucketIds);
       if (filter.printedFilter === "printed") q = q.not("printed_at", "is", null);
       else if (filter.printedFilter === "unprinted") q = q.is("printed_at", null);
       if (filter.source) q = q.eq("source", filter.source as never);
       if (filter.courier) q = q.eq("courier_name", filter.courier);
+      if (filter.paymentMethod) q = q.eq("payment_method", filter.paymentMethod);
+      if (filter.paymentStatus) q = q.eq("payment_status", filter.paymentStatus as never);
+      if (filter.city) q = q.ilike("shipping_city", `%${filter.city}%`);
+      if (filter.assignee) q = q.eq("assigned_to", filter.assignee);
+      if (filter.amountMin != null) q = q.gte("total", filter.amountMin);
+      if (filter.amountMax != null) q = q.lte("total", filter.amountMax);
+      if (filter.advanceFilter === "with") q = q.gt("advance_amount", 0);
+      else if (filter.advanceFilter === "without") q = q.or("advance_amount.is.null,advance_amount.eq.0");
       if (filter.dateFrom) q = q.gte("created_at", filter.dateFrom);
       if (filter.dateTo) q = q.lte("created_at", filter.dateTo);
       if (filter.search.trim()) {
         const s = filter.search.trim();
         q = q.or(
-          `shipping_name.ilike.%${s}%,shipping_phone.ilike.%${s}%,guest_name.ilike.%${s}%,guest_phone.ilike.%${s}%,tracking_number.ilike.%${s}%`,
+          `invoice_no.ilike.%${s}%,shipping_name.ilike.%${s}%,shipping_phone.ilike.%${s}%,guest_name.ilike.%${s}%,guest_phone.ilike.%${s}%,tracking_number.ilike.%${s}%`,
         );
       }
 
