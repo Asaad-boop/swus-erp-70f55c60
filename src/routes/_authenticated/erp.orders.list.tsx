@@ -716,28 +716,30 @@ function OrdersPage() {
       </div>
 
       {view === "orders" && (
-      <div className="flex items-center justify-between text-sm rounded-xl border bg-card px-4 py-2.5 shadow-sm">
-        <div className="flex items-center gap-3 text-muted-foreground">
-          <span>
-            Page <span className="font-semibold text-foreground tabular-nums">{filter.page + 1}</span> of <span className="font-semibold text-foreground tabular-nums">{totalPages}</span>
-          </span>
-          <Select
-            value={String(filter.pageSize)}
-            onValueChange={(v) => setFilter((f) => ({ ...f, pageSize: Number(v), page: 0 }))}
-          >
-            <SelectTrigger className="h-8 w-[110px]"><SelectValue /></SelectTrigger>
-            <SelectContent>
-              <SelectItem value="25">25 / page</SelectItem>
-              <SelectItem value="50">50 / page</SelectItem>
-              <SelectItem value="100">100 / page</SelectItem>
-            </SelectContent>
-          </Select>
-        </div>
-        <div className="flex gap-2">
-          <Button variant="outline" size="sm" disabled={filter.page === 0} onClick={() => setFilter({ ...filter, page: filter.page - 1 })}>Prev</Button>
-          <Button variant="outline" size="sm" disabled={filter.page + 1 >= totalPages} onClick={() => setFilter({ ...filter, page: filter.page + 1 })}>Next</Button>
-        </div>
-      </div>
+      <OrdersPagination
+        page={filter.page}
+        pageSize={filter.pageSize}
+        total={total}
+        rowsOnPage={visibleRows.length}
+        onPage={(p) => setFilter((f) => ({ ...f, page: p }))}
+        onPageSize={(n) => setFilter((f) => ({ ...f, pageSize: n, page: 0 }))}
+      />
+      )}
+
+      {view === "orders" && (
+        <OrdersSelectionBar
+          count={selectedIds.size}
+          totalMatching={total}
+          allMatchingSelected={selectedIds.size >= total}
+          isSelectingAll={selectingAll}
+          onSelectAllMatching={selectAllMatching}
+          onClear={() => setSelectedIds(new Set())}
+          onQuickStatus={(s) => bulkStatus.mutate(s)}
+          onPrint={() => setPrintMode("invoice")}
+          onBookCourier={() => setPathaoBulkOpen(true)}
+          onSyncCourier={() => setSyncOpen(true)}
+          isPending={bulkStatus.isPending}
+        />
       )}
 
       <OrderDrawer orderId={openId} onClose={() => setOpenId(null)} />
