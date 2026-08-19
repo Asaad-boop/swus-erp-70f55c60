@@ -1,4 +1,4 @@
-import { createFileRoute, Link } from "@tanstack/react-router";
+import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Plus, Download, RefreshCw, Inbox, Truck } from "lucide-react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
@@ -7,13 +7,19 @@ import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useBrand } from "@/contexts/brand-context";
-import { useOrdersQuery, useOrderStatusCounts, type OrdersFilter } from "@/hooks/erp/use-orders-query";
+import {
+  useOrdersQuery, useOrderStatusCounts, fetchAllMatchingOrderIds,
+  type OrdersFilter, type OrdersSortKey, type OrdersSortDir,
+} from "@/hooks/erp/use-orders-query";
 import { useCourierShipments, normalizeCourierStatus, COURIER_BUCKETS, COURIER_BUCKET_META, type CourierBucket, type CourierShipmentRow } from "@/hooks/erp/use-courier-shipments";
 import { applyBrandScope } from "@/lib/erp/apply-brand-scope";
 import { OrdersStatusTabs } from "@/components/erp/orders/orders-status-tabs";
 import { OrdersToolbar } from "@/components/erp/orders/orders-toolbar";
 import { OrdersBulkActions } from "@/components/erp/orders/orders-bulk-actions";
 import { OrdersTable } from "@/components/erp/orders/orders-table";
+import { OrdersSelectionBar } from "@/components/erp/orders/orders-selection-bar";
+import { OrdersPagination } from "@/components/erp/orders/orders-pagination";
+import { useOrdersPrefs, useSavedViews } from "@/hooks/erp/use-orders-prefs";
 import { OrderDrawer } from "@/components/erp/orders/order-drawer";
 import { IncompleteOrdersTable } from "@/components/erp/orders/incomplete-orders-table";
 import { useAbandonedCartCount } from "@/hooks/erp/use-abandoned-carts-query";
@@ -22,24 +28,88 @@ import { PreorderConvertDialog } from "@/components/erp/orders/preorder-convert-
 import { BulkPrintDialog, type PrintMode } from "@/components/erp/orders/bulk-print-dialog";
 import { CourierStatusSyncDialog } from "@/components/erp/orders/courier-status-sync-dialog";
 import { PhoneHistorySyncDialog } from "@/components/erp/orders/phone-history-sync-dialog";
-import { downloadCsv, exportOrdersCsv, statusAge, statusSinceTs, tabForStatuses, type OrderRow, type OrderStatus } from "@/lib/erp/orders";
+import { downloadCsv, exportOrdersCsv, statusAge, statusSinceTs, tabForStatuses, STATUS_TABS, type OrderRow, type OrderStatus } from "@/lib/erp/orders";
 import { AlertTriangle, RefreshCcw } from "lucide-react";
 
 const WEB_ORDER_SOURCE_FILTER = "source.not.in.(website,pixel,utm)";
 
+type OrdersSearch = {
+  q?: string; tab?: string; page?: number; size?: number;
+  sort?: OrdersSortKey; dir?: OrdersSortDir;
+  src?: string; from?: string; to?: string;
+  courier?: string; bucket?: CourierBucket;
+  pm?: string; ps?: string; city?: string; assignee?: string;
+  min?: number; max?: number;
+  adv?: "any" | "with" | "without";
+  printed?: "all" | "printed" | "unprinted";
+  view?: "orders" | "incomplete";
+};
+
+const str = (v: unknown) => (typeof v === "string" && v ? v : undefined);
+const num = (v: unknown) => {
+  const n = Number(v);
+  return v === "" || v == null || Number.isNaN(n) ? undefined : n;
+};
+
 export const Route = createFileRoute("/_authenticated/erp/orders/list")({
   head: () => ({ meta: [{ title: "Orders — ERP" }] }),
+  validateSearch: (s: Record<string, unknown>): OrdersSearch => ({
+    q: str(s['q']),
+    tab: str(s['tab']),
+    page: num(s['page']),
+    size: num(s['size']),
+    sort: str(s['sort']) as OrdersSortKey | undefined,
+    dir: str(s['dir']) === "asc" ? "asc" : str(s['dir']) === "desc" ? "desc" : undefined,
+    src: str(s['src']),
+    from: str(s['from']),
+    to: str(s['to']),
+    courier: str(s['courier']),
+    bucket: str(s['bucket']) as CourierBucket | undefined,
+    pm: str(s['pm']),
+    ps: str(s['ps']),
+    city: str(s['city']),
+    assignee: str(s['assignee']),
+    min: num(s['min']),
+    max: num(s['max']),
+    adv: (["any", "with", "without"] as const).find((x) => x === s['adv']),
+    printed: (["all", "printed", "unprinted"] as const).find((x) => x === s['printed']),
+    view: s['view'] === "incomplete" ? "incomplete" : undefined,
+  }),
   component: OrdersPage,
 });
 
 function OrdersPage() {
   const qc = useQueryClient();
+  const navigate = useNavigate({ from: "/erp/orders/list" });
+  const sp = Route.useSearch();
   const { activeBrand, brandIds, isAllBrands } = useBrand();
-  const [filter, setFilter] = useState<OrdersFilter>({
-    brandId: null, brandIds: [], search: "", statuses: ["confirmed"], source: null,
-    dateFrom: null, dateTo: null, courier: null, page: 0, pageSize: 50,
-  });
-  const [view, setView] = useState<"orders" | "incomplete">("orders");
+  const [filter, setFilter] = useState<OrdersFilter>(() => ({
+    brandId: null,
+    brandIds: [],
+    search: sp.q ?? "",
+    statuses: STATUS_TABS.find((t) => t.key === (sp.tab ?? "pending"))?.statuses ?? ["confirmed"],
+    source: sp.src ?? null,
+    dateFrom: sp.from ?? null,
+    dateTo: sp.to ?? null,
+    courier: sp.courier ?? null,
+    page: sp.page ?? 0,
+    pageSize: sp.size ?? 50,
+    sortKey: sp.sort ?? "created_at",
+    sortDir: sp.dir ?? "desc",
+    courierBucket: sp.bucket ?? null,
+    paymentMethod: sp.pm ?? null,
+    paymentStatus: sp.ps ?? null,
+    city: sp.city ?? null,
+    assignee: sp.assignee ?? null,
+    amountMin: sp.min ?? null,
+    amountMax: sp.max ?? null,
+    advanceFilter: sp.adv ?? "any",
+    printedFilter: sp.printed ?? "all",
+  }));
+  const [view, setView] = useState<"orders" | "incomplete">(sp.view === "incomplete" ? "incomplete" : "orders");
+  const prefs = useOrdersPrefs();
+  const savedViews = useSavedViews();
+  const [selectingAll, setSelectingAll] = useState(false);
   const [incompletePage, setIncompletePage] = useState(0);
   const [exporting, setExporting] = useState(false);
 
