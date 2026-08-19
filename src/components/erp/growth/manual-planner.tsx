@@ -141,6 +141,7 @@ export function ManualPlanner({
   const [raw, setRaw] = useState<Record<string, string>>({});
   const [search, setSearch] = useState("");
   const [targetPct, setTargetPct] = useState(20);
+  const [sellDaysAll, setSellDaysAll] = useState("30");
   const [pickerOpen, setPickerOpen] = useState(false);
 
   useEffect(() => setDraft({}), [brandId, month]);
