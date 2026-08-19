@@ -70,7 +70,14 @@ export type OrderDashboardSummary = {
   daily: { d: string; orders: number; value: number; delivered: number }[];
   sources: { source: string; orders: number; value: number }[];
   brands: { brand_id: string | null; name: string | null; orders: number; value: number }[];
-  products: { name: string | null; qty: number; value: number }[];
+  products: {
+    name: string | null;
+    qty: number;
+    value: number;
+    orders?: number;
+    delivered_qty?: number;
+    image?: string | null;
+  }[];
   cities: { city: string; orders: number; value: number; delivered: number }[];
   confirmers: { user_id: string; name: string; orders: number; value: number }[];
   couriers: { courier: string; orders: number; delivered: number; returned: number }[];
