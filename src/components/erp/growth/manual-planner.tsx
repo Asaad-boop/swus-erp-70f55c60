@@ -601,6 +601,7 @@ export function ManualPlanner({
                     <th className="px-2 py-2 text-left font-medium">On</th>
                     <th className="sticky left-0 z-10 bg-muted/50 px-3 py-2 text-left font-medium">Product</th>
                     <th className="px-2 py-2 text-right font-medium">Qty</th>
+                    <th className="px-2 py-2 text-right font-medium">দিন</th>
                     <th className="px-2 py-2 text-right font-medium">Sell</th>
                     <th className="px-2 py-2 text-right font-medium">Disc %</th>
                     <th className="px-2 py-2 text-right font-medium">Cost</th>
@@ -609,7 +610,6 @@ export function ManualPlanner({
                     <th className="px-2 py-2 text-right font-medium">Courier/pc</th>
                     <th className="px-2 py-2 text-right font-medium">Ret %</th>
                     <th className="px-2 py-2 text-right font-medium">Ret cost</th>
-                    <th className="px-2 py-2 text-right font-medium">দিন</th>
                     <th className="px-2 py-2 text-right font-medium">Pcs/day</th>
                     <th className="px-2 py-2 text-right font-medium">Ads/day</th>
                     <th className="px-2 py-2 text-right font-medium">Revenue</th>
@@ -647,6 +647,7 @@ export function ManualPlanner({
                           />
                         </td>
                         <td className="px-2 py-1.5 text-right">{numCell(r, "qty", "w-[68px]")}</td>
+                        <td className="px-2 py-1.5 text-right">{numCell(r, "sell_days", "w-[62px]")}</td>
                         <td className="px-2 py-1.5 text-right">{numCell(r, "sell_price")}</td>
                         <td className="px-2 py-1.5 text-right">{numCell(r, "discount_pct", "w-[62px]")}</td>
                         <td className="px-2 py-1.5 text-right">{numCell(r, "cost_price")}</td>
@@ -655,7 +656,6 @@ export function ManualPlanner({
                         <td className="px-2 py-1.5 text-right">{numCell(r, "courier_cost", "w-[70px]")}</td>
                         <td className="px-2 py-1.5 text-right">{numCell(r, "return_pct", "w-[58px]")}</td>
                         <td className="px-2 py-1.5 text-right">{numCell(r, "return_cost", "w-[70px]")}</td>
-                        <td className="px-2 py-1.5 text-right">{numCell(r, "sell_days", "w-[62px]")}</td>
                         <td className="px-2 py-1.5 text-right tabular-nums text-muted-foreground">
                           {m.unitsPerDay.toFixed(1)}
                         </td>
@@ -717,13 +717,15 @@ export function ManualPlanner({
                     <td />
                     <td className="sticky left-0 z-10 bg-muted/30 px-3 py-2">Total (active)</td>
                     <td className="px-2 py-2 text-right tabular-nums">{num(totals.qty)}</td>
+                    <td className="px-2 py-2 text-right tabular-nums text-muted-foreground">
+                      {num(totals.maxDays)}
+                    </td>
                     <td colSpan={3} />
                     <td className="px-2 py-2 text-right tabular-nums">{bdt(totals.marketing)}</td>
                     <td className="px-2 py-2 text-right tabular-nums">{bdt(totals.packaging)}</td>
                     <td className="px-2 py-2 text-right tabular-nums">{bdt(totals.courier)}</td>
                     <td className="px-2 py-2" />
                     <td className="px-2 py-2 text-right tabular-nums">{bdt(totals.returns)}</td>
-                    <td className="px-2 py-2" />
                     <td className="px-2 py-2 text-right tabular-nums">{totals.unitsPerDay.toFixed(1)}</td>
                     <td className="px-2 py-2 text-right tabular-nums">{bdt(totals.adPerDay)}</td>
                     <td className="px-2 py-2 text-right tabular-nums">{bdt(totals.revenue)}</td>
