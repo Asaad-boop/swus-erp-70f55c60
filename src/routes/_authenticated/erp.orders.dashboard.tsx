@@ -23,6 +23,7 @@ import {
   type DashboardFilterState,
 } from "@/components/erp/orders/dashboard/dashboard-filter-bar";
 import { DashboardKpiStrip, money } from "@/components/erp/orders/dashboard/dashboard-kpis";
+import { DashboardInsights } from "@/components/erp/orders/dashboard/dashboard-insights";
 import { DashboardCharts } from "@/components/erp/orders/dashboard/dashboard-charts";
 import {
   ALL_COLUMNS,
@@ -59,6 +60,7 @@ function OrderDashboardPage() {
   const [dir, setDir] = useState<"asc" | "desc">("desc");
   const [columns, setColumns] = useState<string[]>(DEFAULT_COLUMNS);
   const [showCharts, setShowCharts] = useState(true);
+  const [compare, setCompare] = useState(true);
   const [exporting, setExporting] = useState(false);
 
   const scopedBrandIds = useMemo(
@@ -89,10 +91,29 @@ function OrderDashboardPage() {
   const fetchRows = useServerFn(listOrderDashboardRows);
   const fetchCsv = useServerFn(exportOrderDashboardCsv);
 
+  /** Immediately-preceding window of the same length. */
+  const prevFilter: OrderDashboardFilter | null = useMemo(() => {
+    if (!filter.from || !filter.to) return null;
+    const from = new Date(`${filter.from}T00:00:00`);
+    const to = new Date(`${filter.to}T00:00:00`);
+    const days = Math.max(1, Math.round((to.getTime() - from.getTime()) / 86400000) + 1);
+    const pTo = new Date(from.getTime() - 86400000);
+    const pFrom = new Date(pTo.getTime() - (days - 1) * 86400000);
+    const ymd = (d: Date) => d.toISOString().slice(0, 10);
+    return { ...filter, from: ymd(pFrom), to: ymd(pTo) };
+  }, [filter]);
+
   const summaryQ = useQuery({
     queryKey: ["order-dashboard-summary", filter],
     queryFn: () => fetchSummary({ data: filter }),
     enabled: scopedBrandIds.length > 0,
+    placeholderData: keepPreviousData,
+  });
+
+  const prevQ = useQuery({
+    queryKey: ["order-dashboard-summary-prev", prevFilter],
+    queryFn: () => fetchSummary({ data: prevFilter! }),
+    enabled: compare && !!prevFilter && scopedBrandIds.length > 0,
     placeholderData: keepPreviousData,
   });
 
@@ -148,6 +169,14 @@ function OrderDashboardPage() {
           </p>
         </div>
         <div className="flex items-center gap-2">
+          <Button
+            variant={compare ? "secondary" : "outline"}
+            size="sm"
+            onClick={() => setCompare((v) => !v)}
+            title="আগের সমান সময়ের সাথে তুলনা"
+          >
+            Compare
+          </Button>
           <Button variant="outline" size="sm" onClick={() => setShowCharts((v) => !v)}>
             {showCharts ? "Hide charts" : "Show charts"}
           </Button>
@@ -182,6 +211,7 @@ function OrderDashboardPage() {
             onClick={() => {
               summaryQ.refetch();
               rowsQ.refetch();
+              if (compare) prevQ.refetch();
             }}
           >
             <RefreshCw className={`h-3.5 w-3.5 ${summaryQ.isFetching || rowsQ.isFetching ? "animate-spin" : ""}`} />
@@ -209,11 +239,15 @@ function OrderDashboardPage() {
           {Array.from({ length: 10 }).map((_, i) => <Skeleton key={i} className="h-20" />)}
         </div>
       ) : summary ? (
-        <DashboardKpiStrip
-          kpis={summary.kpis}
-          activeStatuses={state.statuses}
-          onPickStatuses={(s) => patch({ statuses: s })}
-        />
+        <>
+          <DashboardKpiStrip
+            kpis={summary.kpis}
+            prev={compare ? prevQ.data?.kpis : null}
+            activeStatuses={state.statuses}
+            onPickStatuses={(s) => patch({ statuses: s })}
+          />
+          <DashboardInsights summary={summary} prev={compare ? prevQ.data ?? null : null} />
+        </>
       ) : null}
 
       {showCharts && summary ? <DashboardCharts summary={summary} /> : null}
