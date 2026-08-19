@@ -123,6 +123,38 @@ function OrdersPage() {
   );
 
   const { data, isLoading, isFetching } = useOrdersQuery(effective);
+
+  // Keep the URL in sync so filters survive reloads and can be shared.
+  const activeTabKey = view === "incomplete" ? "incomplete" : tabForStatuses(filter.statuses);
+  useEffect(() => {
+    navigate({
+      replace: true,
+      search: {
+        q: filter.search || undefined,
+        tab: activeTabKey,
+        page: filter.page || undefined,
+        size: filter.pageSize !== 50 ? filter.pageSize : undefined,
+        sort: filter.sortKey !== "created_at" ? filter.sortKey : undefined,
+        dir: filter.sortDir !== "desc" ? filter.sortDir : undefined,
+        src: filter.source ?? undefined,
+        from: filter.dateFrom ?? undefined,
+        to: filter.dateTo ?? undefined,
+        courier: filter.courier ?? undefined,
+        bucket: filter.courierBucket ?? undefined,
+        pm: filter.paymentMethod ?? undefined,
+        ps: filter.paymentStatus ?? undefined,
+        city: filter.city ?? undefined,
+        assignee: filter.assignee ?? undefined,
+        min: filter.amountMin ?? undefined,
+        max: filter.amountMax ?? undefined,
+        adv: filter.advanceFilter && filter.advanceFilter !== "any" ? filter.advanceFilter : undefined,
+        printed: filter.printedFilter && filter.printedFilter !== "all" ? filter.printedFilter : undefined,
+        view: view === "incomplete" ? "incomplete" : undefined,
+      } satisfies OrdersSearch,
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [filter, view, activeTabKey]);
+
   const { data: countsData } = useOrderStatusCounts(effective);
   const { data: incompleteCount } = useAbandonedCartCount(effective.brandId, effective.brandIds);
   const rows = data?.rows ?? [];
