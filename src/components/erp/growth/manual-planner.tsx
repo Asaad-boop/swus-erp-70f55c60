@@ -346,9 +346,16 @@ export function ManualPlanner({
             returns: a.returns + m.returns,
             capital: a.capital + m.capital,
             profit: a.profit + m.profit,
+            unitsPerDay: a.unitsPerDay + m.unitsPerDay,
+            revenuePerDay: a.revenuePerDay + m.revenuePerDay,
+            adPerDay: a.adPerDay + m.adPerDay,
+            maxDays: Math.max(a.maxDays, m.days),
           };
         },
-        { qty: 0, delivered: 0, revenue: 0, cogs: 0, marketing: 0, packaging: 0, courier: 0, returns: 0, capital: 0, profit: 0 },
+        {
+          qty: 0, delivered: 0, revenue: 0, cogs: 0, marketing: 0, packaging: 0, courier: 0,
+          returns: 0, capital: 0, profit: 0, unitsPerDay: 0, revenuePerDay: 0, adPerDay: 0, maxDays: 0,
+        },
       ),
     [active],
   );
@@ -387,6 +394,7 @@ export function ManualPlanner({
     const head = [
       "Active", "Product", "Qty", "Sell price", "Discount %", "Net price", "Cost price",
       "Marketing/pc", "Packaging/pc", "Courier/pc", "Return %", "Return cost/pc", "Lead days",
+      "Sell days", "Units/day", "Revenue/day", "Ad spend/day",
       "Delivered units", "Revenue", "COGS", "Marketing total", "Packaging total", "Courier total",
       "Return loss", "Profit", "Profit/pc", "Margin %", "CM/pc", "Break-even units", "ROAS", "Capital",
     ];
@@ -396,6 +404,8 @@ export function ManualPlanner({
         r.is_active ? "yes" : "no", r.product_name, r.qty, r.sell_price, r.discount_pct,
         m.netPrice.toFixed(2), r.cost_price, r.marketing_cost, r.packaging_cost, r.courier_cost,
         r.return_pct, r.return_cost, r.lead_time_days, Math.round(m.delivered),
+        r.sell_days, m.unitsPerDay.toFixed(1), Math.round(m.revenuePerDay), Math.round(m.adPerDay),
+        Math.round(m.delivered),
         Math.round(m.revenue), Math.round(m.cogs), Math.round(m.marketing), Math.round(m.packaging),
         Math.round(m.courier), Math.round(m.returns), Math.round(m.profit), m.perUnit.toFixed(2),
         m.margin.toFixed(1), m.cmPerUnit.toFixed(2),
