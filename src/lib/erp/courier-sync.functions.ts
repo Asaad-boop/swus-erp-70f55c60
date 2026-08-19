@@ -3,6 +3,7 @@ import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import {
   mapCourierStatus,
+  resolveCourierTransition,
   normalizeCourierStatus,
   type CourierProvider,
   type CourierStatusMappingOverrides,
