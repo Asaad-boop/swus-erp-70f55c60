@@ -5704,6 +5704,7 @@ export type Database = {
           qty: number
           return_cost: number
           return_pct: number
+          sell_days: number
           sell_price: number
           updated_at: string
         }
@@ -5727,6 +5728,7 @@ export type Database = {
           qty?: number
           return_cost?: number
           return_pct?: number
+          sell_days?: number
           sell_price?: number
           updated_at?: string
         }
@@ -5750,6 +5752,7 @@ export type Database = {
           qty?: number
           return_cost?: number
           return_pct?: number
+          sell_days?: number
           sell_price?: number
           updated_at?: string
         }

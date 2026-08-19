@@ -34,6 +34,7 @@ export type PlanScenarioRow = {
   return_pct: number;
   return_cost: number;
   lead_time_days: number;
+  sell_days: number;
   is_active: boolean;
   note: string | null;
   position: number;
@@ -41,7 +42,8 @@ export type PlanScenarioRow = {
 
 type NumField =
   | "qty" | "sell_price" | "discount_pct" | "cost_price" | "marketing_cost"
-  | "packaging_cost" | "courier_cost" | "return_pct" | "return_cost" | "lead_time_days";
+  | "packaging_cost" | "courier_cost" | "return_pct" | "return_cost" | "lead_time_days"
+  | "sell_days";
 
 const bdt = (n: number) => fmtValue(n, "bdt");
 const num = (n: number) => Math.round(n).toLocaleString("en-BD");
@@ -64,6 +66,7 @@ async function fetchScenarioRows(brandId: string | null, month: string) {
     return_pct: Number(r.return_pct ?? 0),
     return_cost: Number(r.return_cost ?? 0),
     lead_time_days: Number(r.lead_time_days ?? 0),
+    sell_days: Number(r.sell_days ?? 30) || 30,
     is_active: r.is_active !== false,
   }));
 }
@@ -93,9 +96,16 @@ export function rowMath(r: PlanScenarioRow) {
   const roas = marketing > 0 ? revenue / marketing : Infinity;
   const capital = cogs + packaging;
   const maxCac = cmPerUnit; // ad spend/unit ceiling before losing money
+  // কত দিনে বিক্রি করতে চাই → per-day pace
+  const days = Math.max(1, Number(r.sell_days) || 30);
+  const unitsPerDay = r.qty / days;
+  const revenuePerDay = revenue / days;
+  const adPerDay = marketing / days;
+  const profitPerDay = profit / days;
   return {
     netPrice, returnUnits, delivered, revenue, cogs, marketing, packaging, courier,
     returns, cost, profit, margin, perUnit, cmPerUnit, breakEvenUnits, roas, capital, maxCac,
+    days, unitsPerDay, revenuePerDay, adPerDay, profitPerDay,
   };
 }
 
@@ -197,6 +207,7 @@ export function ManualPlanner({
           return_pct: r.return_pct,
           return_cost: r.return_cost,
           lead_time_days: r.lead_time_days,
+          sell_days: r.sell_days,
           is_active: r.is_active,
         } as never)
         .eq("id", r.id);
@@ -303,6 +314,7 @@ export function ManualPlanner({
           return_pct: r.return_pct,
           return_cost: r.return_cost,
           lead_time_days: r.lead_time_days,
+          sell_days: r.sell_days,
           is_active: r.is_active,
           note: r.note,
           position: allRows.length + i,
@@ -334,9 +346,16 @@ export function ManualPlanner({
             returns: a.returns + m.returns,
             capital: a.capital + m.capital,
             profit: a.profit + m.profit,
+            unitsPerDay: a.unitsPerDay + m.unitsPerDay,
+            revenuePerDay: a.revenuePerDay + m.revenuePerDay,
+            adPerDay: a.adPerDay + m.adPerDay,
+            maxDays: Math.max(a.maxDays, m.days),
           };
         },
-        { qty: 0, delivered: 0, revenue: 0, cogs: 0, marketing: 0, packaging: 0, courier: 0, returns: 0, capital: 0, profit: 0 },
+        {
+          qty: 0, delivered: 0, revenue: 0, cogs: 0, marketing: 0, packaging: 0, courier: 0,
+          returns: 0, capital: 0, profit: 0, unitsPerDay: 0, revenuePerDay: 0, adPerDay: 0, maxDays: 0,
+        },
       ),
     [active],
   );
@@ -375,6 +394,7 @@ export function ManualPlanner({
     const head = [
       "Active", "Product", "Qty", "Sell price", "Discount %", "Net price", "Cost price",
       "Marketing/pc", "Packaging/pc", "Courier/pc", "Return %", "Return cost/pc", "Lead days",
+      "Sell days", "Units/day", "Revenue/day", "Ad spend/day",
       "Delivered units", "Revenue", "COGS", "Marketing total", "Packaging total", "Courier total",
       "Return loss", "Profit", "Profit/pc", "Margin %", "CM/pc", "Break-even units", "ROAS", "Capital",
     ];
@@ -383,7 +403,9 @@ export function ManualPlanner({
       return [
         r.is_active ? "yes" : "no", r.product_name, r.qty, r.sell_price, r.discount_pct,
         m.netPrice.toFixed(2), r.cost_price, r.marketing_cost, r.packaging_cost, r.courier_cost,
-        r.return_pct, r.return_cost, r.lead_time_days, Math.round(m.delivered),
+        r.return_pct, r.return_cost, r.lead_time_days,
+        r.sell_days, m.unitsPerDay.toFixed(1), Math.round(m.revenuePerDay), Math.round(m.adPerDay),
+        Math.round(m.delivered),
         Math.round(m.revenue), Math.round(m.cogs), Math.round(m.marketing), Math.round(m.packaging),
         Math.round(m.courier), Math.round(m.returns), Math.round(m.profit), m.perUnit.toFixed(2),
         m.margin.toFixed(1), m.cmPerUnit.toFixed(2),
@@ -449,13 +471,33 @@ export function ManualPlanner({
         />
         <Kpi label="Ad budget" value={bdt(totals.marketing)} sub={totalRoas > 0 ? `ROAS ${totalRoas.toFixed(2)}x` : "—"} />
         <Kpi label="Capital lagbe" value={bdt(totals.capital)} sub="COGS + packaging" />
-        <Kpi label="Units" value={num(totals.qty)} sub={`Per day ${num(totals.qty / daysInMonth)} pcs`} />
+        <Kpi
+          label="Units"
+          value={num(totals.qty)}
+          sub={`Sell window-এ ${totals.unitsPerDay.toFixed(1)} pcs/day`}
+        />
         <Kpi
           label="Per day sales"
-          value={bdt(totals.revenue / daysInMonth)}
-          sub={`Ad ${bdt(totals.marketing / daysInMonth)}/day`}
+          value={bdt(totals.revenuePerDay)}
+          sub={`Ad ${bdt(totals.adPerDay)}/day · window ${num(totals.maxDays || daysInMonth)} দিন`}
         />
       </div>
+
+      {/* Sell window + ad pacing */}
+      {active.length > 0 && (
+        <Card>
+          <CardContent className="grid gap-3 p-4 sm:grid-cols-2 lg:grid-cols-4">
+            <MiniStat label="Sell window" value={`${num(totals.maxDays || daysInMonth)} দিন`} sub="সবচেয়ে দীর্ঘ product plan" />
+            <MiniStat label="Per day units" value={`${totals.unitsPerDay.toFixed(1)} pcs`} sub={`মোট ${num(totals.qty)} pcs`} />
+            <MiniStat label="Per day ad cost" value={bdt(totals.adPerDay)} sub={`মোট ads ${bdt(totals.marketing)}`} />
+            <MiniStat
+              label="Per day profit"
+              value={bdt(totals.maxDays > 0 ? totals.profit / totals.maxDays : 0)}
+              sub={`Month-এ ${num(daysInMonth)} দিন ধরলে ${bdt(totals.profit / daysInMonth)}`}
+            />
+          </CardContent>
+        </Card>
+      )}
 
       {/* Coverage vs month target */}
       {(targetRevenue > 0 || targetProfit > 0 || targetAdSpend > 0) && (
@@ -567,6 +609,9 @@ export function ManualPlanner({
                     <th className="px-2 py-2 text-right font-medium">Courier/pc</th>
                     <th className="px-2 py-2 text-right font-medium">Ret %</th>
                     <th className="px-2 py-2 text-right font-medium">Ret cost</th>
+                    <th className="px-2 py-2 text-right font-medium">দিন</th>
+                    <th className="px-2 py-2 text-right font-medium">Pcs/day</th>
+                    <th className="px-2 py-2 text-right font-medium">Ads/day</th>
                     <th className="px-2 py-2 text-right font-medium">Revenue</th>
                     <th className="px-2 py-2 text-right font-medium">Profit</th>
                     <th className="px-2 py-2 text-right font-medium">CM/pc</th>
@@ -610,6 +655,13 @@ export function ManualPlanner({
                         <td className="px-2 py-1.5 text-right">{numCell(r, "courier_cost", "w-[70px]")}</td>
                         <td className="px-2 py-1.5 text-right">{numCell(r, "return_pct", "w-[58px]")}</td>
                         <td className="px-2 py-1.5 text-right">{numCell(r, "return_cost", "w-[70px]")}</td>
+                        <td className="px-2 py-1.5 text-right">{numCell(r, "sell_days", "w-[62px]")}</td>
+                        <td className="px-2 py-1.5 text-right tabular-nums text-muted-foreground">
+                          {m.unitsPerDay.toFixed(1)}
+                        </td>
+                        <td className="px-2 py-1.5 text-right tabular-nums text-muted-foreground">
+                          {bdt(m.adPerDay)}
+                        </td>
                         <td className="px-2 py-1.5 text-right tabular-nums">{bdt(m.revenue)}</td>
                         <td className={cn("px-2 py-1.5 text-right font-medium tabular-nums", m.profit < 0 ? "text-destructive" : "text-emerald-600")}>
                           {bdt(m.profit)}
@@ -671,6 +723,9 @@ export function ManualPlanner({
                     <td className="px-2 py-2 text-right tabular-nums">{bdt(totals.courier)}</td>
                     <td className="px-2 py-2" />
                     <td className="px-2 py-2 text-right tabular-nums">{bdt(totals.returns)}</td>
+                    <td className="px-2 py-2" />
+                    <td className="px-2 py-2 text-right tabular-nums">{totals.unitsPerDay.toFixed(1)}</td>
+                    <td className="px-2 py-2 text-right tabular-nums">{bdt(totals.adPerDay)}</td>
                     <td className="px-2 py-2 text-right tabular-nums">{bdt(totals.revenue)}</td>
                     <td className={cn("px-2 py-2 text-right tabular-nums", totals.profit < 0 ? "text-destructive" : "text-emerald-600")}>
                       {bdt(totals.profit)}
@@ -774,6 +829,20 @@ function Kpi({
 }
 
 function Coverage({ label, value, detail, invert }: { label: string; value: number; detail: string; invert?: boolean }) {
+  return <CoverageInner label={label} value={value} detail={detail} invert={invert} />;
+}
+
+function MiniStat({ label, value, sub }: { label: string; value: string; sub?: string }) {
+  return (
+    <div className="rounded-lg border bg-muted/20 p-3">
+      <p className="text-[11px] uppercase tracking-wide text-muted-foreground">{label}</p>
+      <p className="mt-1 font-display text-lg font-semibold tabular-nums">{value}</p>
+      {sub && <p className="mt-0.5 text-xs text-muted-foreground">{sub}</p>}
+    </div>
+  );
+}
+
+function CoverageInner({ label, value, detail, invert }: { label: string; value: number; detail: string; invert?: boolean }) {
   const capped = Math.max(0, Math.min(100, value));
   const good = invert ? value <= 100 : value >= 100;
   return (
@@ -800,6 +869,7 @@ function BulkApply({ onApply, pending }: { onApply: (p: Partial<PlanScenarioRow>
     qty: "Qty", sell_price: "Sell price", discount_pct: "Discount %", cost_price: "Cost price",
     marketing_cost: "Marketing/pc", packaging_cost: "Packaging/pc", courier_cost: "Courier/pc",
     return_pct: "Return %", return_cost: "Return cost/pc", lead_time_days: "Lead days",
+    sell_days: "কত দিনে বিক্রি",
   };
   return (
     <Popover open={open} onOpenChange={setOpen}>
