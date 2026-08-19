@@ -2,6 +2,7 @@ import { createFileRoute } from "@tanstack/react-router";
 import {
   mapCourierStatus,
   normalizeCourierStatus,
+  resolveCourierTransition,
   type CourierStatusMappingOverrides,
 } from "@/lib/erp/courier-status-mapping";
 
@@ -133,8 +134,11 @@ async function processPathao(payload: any, expected: string): Promise<Response> 
           if (m && typeof m === "object") overrides = m as CourierStatusMappingOverrides;
         }
 
-        const mapped = mapCourierStatus("pathao", rawStatus, overrides);
-        if (!mapped || mapped === currentStatus) {
+        const mapped = resolveCourierTransition(
+          currentStatus,
+          mapCourierStatus("pathao", rawStatus, overrides),
+        );
+        if (!mapped) {
           return Response.json({ ok: true, matched: true, action: "noop", raw: normalizeCourierStatus(rawStatus) });
         }
 

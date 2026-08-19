@@ -3,6 +3,7 @@ import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import {
   mapCourierStatus,
+  resolveCourierTransition,
   normalizeCourierStatus,
   type CourierProvider,
   type CourierStatusMappingOverrides,
@@ -343,7 +344,12 @@ async function syncOne(
     if (!raw) return { ...base, error: "Status not found in response" };
 
     base.raw_status = normalizeCourierStatus(raw);
-    base.mapped_status = mapCourierStatus(provider, raw, mappingOverrides);
+    // Never downgrade an already-resolved fulfillment outcome (delivered /
+    // partial_delivered / settled) from a courier settlement ping.
+    base.mapped_status = resolveCourierTransition(
+      base.current_status,
+      mapCourierStatus(provider, raw, mappingOverrides),
+    );
     base.ok = true;
     return base;
   } catch (e) {
