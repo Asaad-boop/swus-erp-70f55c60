@@ -484,7 +484,21 @@ export function OrdersTable({ rows, loading, selectedIds, onToggleSelect, onTogg
     },
   ];
 
-  const table = useReactTable({ data: rows, columns, getCoreRowModel: getCoreRowModel() });
+  // Give every column a stable id (derived from its header label) so column
+  // visibility preferences can address them, then drop hidden ones.
+  const withIds: ColumnDef<OrderRow>[] = columns.map((c) => ({
+    ...c,
+    id: c.id ?? (typeof c.header === "string" ? c.header.toLowerCase().replace(/\s+/g, "_") : undefined),
+  }));
+  const visibleColumns = withIds.filter((c) => !c.id || !hiddenColumns.includes(c.id));
+
+  const table = useReactTable({ data: rows, columns: visibleColumns, getCoreRowModel: getCoreRowModel() });
+  const compact = density === "compact";
+  const SORTABLE: Record<string, "created_at" | "total" | "invoice_no"> = {
+    date: "created_at",
+    total: "total",
+    invoice: "invoice_no",
+  };
 
   return (
     <div className="bg-card overflow-x-auto">
@@ -492,11 +506,35 @@ export function OrdersTable({ rows, loading, selectedIds, onToggleSelect, onTogg
         <TableHeader className="bg-muted/40 sticky top-0 z-10 backdrop-blur">
           {table.getHeaderGroups().map((hg) => (
             <TableRow key={hg.id} className="hover:bg-transparent border-b">
-              {hg.headers.map((h) => (
-                <TableHead key={h.id} className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground h-10 px-3">
-                  {flexRender(h.column.columnDef.header, h.getContext())}
-                </TableHead>
-              ))}
+              {hg.headers.map((h) => {
+                const sortAs = SORTABLE[h.id];
+                const isSorted = !!sortAs && sortKey === sortAs;
+                return (
+                  <TableHead
+                    key={h.id}
+                    className={cn(
+                      "text-[10px] font-bold uppercase tracking-wider text-muted-foreground px-3",
+                      compact ? "h-8" : "h-10",
+                    )}
+                  >
+                    {sortAs && onSortChange ? (
+                      <button
+                        type="button"
+                        onClick={() => onSortChange(sortAs)}
+                        className={cn(
+                          "inline-flex items-center gap-1 hover:text-foreground transition-colors",
+                          isSorted && "text-foreground",
+                        )}
+                      >
+                        {flexRender(h.column.columnDef.header, h.getContext())}
+                        <span className="text-[9px]">{isSorted ? (sortDir === "asc" ? "▲" : "▼") : "↕"}</span>
+                      </button>
+                    ) : (
+                      flexRender(h.column.columnDef.header, h.getContext())
+                    )}
+                  </TableHead>
+                );
+              })}
             </TableRow>
           ))}
         </TableHeader>
@@ -504,14 +542,14 @@ export function OrdersTable({ rows, loading, selectedIds, onToggleSelect, onTogg
           {loading ? (
             Array.from({ length: 8 }).map((_, i) => (
               <TableRow key={i}>
-                {columns.map((_c, j) => (
+                {visibleColumns.map((_c, j) => (
                   <TableCell key={j}><Skeleton className="h-5 w-full" /></TableCell>
                 ))}
               </TableRow>
             ))
           ) : rows.length === 0 ? (
             <TableRow>
-              <TableCell colSpan={columns.length} className="h-32 text-center text-muted-foreground">
+              <TableCell colSpan={visibleColumns.length} className="h-32 text-center text-muted-foreground">
                 No orders found
               </TableCell>
             </TableRow>
@@ -519,11 +557,14 @@ export function OrdersTable({ rows, loading, selectedIds, onToggleSelect, onTogg
             table.getRowModel().rows.map((row) => (
               <TableRow
                 key={row.id}
-                className="cursor-pointer transition-colors border-b last:border-0 hover:bg-muted/50 group/row"
+                className={cn(
+                  "cursor-pointer transition-colors border-b last:border-0 hover:bg-muted/50 group/row",
+                  selectedIds.has(row.original.id) && "bg-primary/5",
+                )}
                 onClick={() => onRowClick(row.original.id)}
               >
                 {row.getVisibleCells().map((cell) => (
-                  <TableCell key={cell.id} className="py-3 px-3 align-middle">
+                  <TableCell key={cell.id} className={cn("px-3 align-middle", compact ? "py-1.5" : "py-3")}>
                     {flexRender(cell.column.columnDef.cell, cell.getContext())}
                   </TableCell>
                 ))}
