@@ -486,10 +486,10 @@ export function OrdersTable({ rows, loading, selectedIds, onToggleSelect, onTogg
 
   // Give every column a stable id (derived from its header label) so column
   // visibility preferences can address them, then drop hidden ones.
-  const withIds: ColumnDef<OrderRow>[] = columns.map((c) => ({
+  const withIds = columns.map((c) => ({
     ...c,
     id: c.id ?? (typeof c.header === "string" ? c.header.toLowerCase().replace(/\s+/g, "_") : undefined),
-  }));
+  })) as ColumnDef<OrderRow>[];
   const visibleColumns = withIds.filter((c) => !c.id || !hiddenColumns.includes(c.id));
 
   const table = useReactTable({ data: rows, columns: visibleColumns, getCoreRowModel: getCoreRowModel() });
