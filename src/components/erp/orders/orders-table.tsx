@@ -53,10 +53,17 @@ type Props = {
   flashOrderIds?: Set<string>;
   onSyncRow?: (orderId: string) => void;
   onPreorder?: (orderId: string) => void;
+  /** Row height preset. */
+  density?: "comfortable" | "compact";
+  /** Column ids hidden by the user. */
+  hiddenColumns?: string[];
+  sortKey?: string;
+  sortDir?: "asc" | "desc";
+  onSortChange?: (key: "created_at" | "total" | "invoice_no" | "updated_at") => void;
 };
 
 
-export function OrdersTable({ rows, loading, selectedIds, onToggleSelect, onToggleAll, onRowClick, onStatusChange, pendingStatusIds, shipmentsByOrderId, flashOrderIds, onSyncRow, onPreorder }: Props) {
+export function OrdersTable({ rows, loading, selectedIds, onToggleSelect, onToggleAll, onRowClick, onStatusChange, pendingStatusIds, shipmentsByOrderId, flashOrderIds, onSyncRow, onPreorder, density = "comfortable", hiddenColumns = [], sortKey, sortDir, onSortChange }: Props) {
   const copyText = (text: string, label: string) => {
     navigator.clipboard?.writeText(text).then(() => toast.success(`${label} copied`));
   };
