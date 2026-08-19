@@ -126,10 +126,9 @@ function OrdersPage() {
 
   // Keep the URL in sync so filters survive reloads and can be shared.
   const activeTabKey = view === "incomplete" ? "incomplete" : tabForStatuses(filter.statuses);
+  const lastSearchRef = useRef<string | null>(null);
   useEffect(() => {
-    navigate({
-      replace: true,
-      search: {
+    const search = {
         q: filter.search || undefined,
         tab: activeTabKey,
         page: filter.page || undefined,
@@ -150,8 +149,11 @@ function OrdersPage() {
         adv: filter.advanceFilter && filter.advanceFilter !== "any" ? filter.advanceFilter : undefined,
         printed: filter.printedFilter && filter.printedFilter !== "all" ? filter.printedFilter : undefined,
         view: view === "incomplete" ? "incomplete" : undefined,
-      } satisfies OrdersSearch,
-    });
+    } satisfies OrdersSearch;
+    const serialized = JSON.stringify(search);
+    if (lastSearchRef.current === serialized) return;
+    lastSearchRef.current = serialized;
+    navigate({ replace: true, search });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [filter, view, activeTabKey]);
 
