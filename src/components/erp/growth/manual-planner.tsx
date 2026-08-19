@@ -34,6 +34,7 @@ export type PlanScenarioRow = {
   return_pct: number;
   return_cost: number;
   lead_time_days: number;
+  sell_days: number;
   is_active: boolean;
   note: string | null;
   position: number;
@@ -41,7 +42,8 @@ export type PlanScenarioRow = {
 
 type NumField =
   | "qty" | "sell_price" | "discount_pct" | "cost_price" | "marketing_cost"
-  | "packaging_cost" | "courier_cost" | "return_pct" | "return_cost" | "lead_time_days";
+  | "packaging_cost" | "courier_cost" | "return_pct" | "return_cost" | "lead_time_days"
+  | "sell_days";
 
 const bdt = (n: number) => fmtValue(n, "bdt");
 const num = (n: number) => Math.round(n).toLocaleString("en-BD");
@@ -64,6 +66,7 @@ async function fetchScenarioRows(brandId: string | null, month: string) {
     return_pct: Number(r.return_pct ?? 0),
     return_cost: Number(r.return_cost ?? 0),
     lead_time_days: Number(r.lead_time_days ?? 0),
+    sell_days: Number(r.sell_days ?? 30) || 30,
     is_active: r.is_active !== false,
   }));
 }
@@ -93,9 +96,16 @@ export function rowMath(r: PlanScenarioRow) {
   const roas = marketing > 0 ? revenue / marketing : Infinity;
   const capital = cogs + packaging;
   const maxCac = cmPerUnit; // ad spend/unit ceiling before losing money
+  // কত দিনে বিক্রি করতে চাই → per-day pace
+  const days = Math.max(1, Number(r.sell_days) || 30);
+  const unitsPerDay = r.qty / days;
+  const revenuePerDay = revenue / days;
+  const adPerDay = marketing / days;
+  const profitPerDay = profit / days;
   return {
     netPrice, returnUnits, delivered, revenue, cogs, marketing, packaging, courier,
     returns, cost, profit, margin, perUnit, cmPerUnit, breakEvenUnits, roas, capital, maxCac,
+    days, unitsPerDay, revenuePerDay, adPerDay, profitPerDay,
   };
 }
 
