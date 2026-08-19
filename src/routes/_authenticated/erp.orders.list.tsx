@@ -1,4 +1,4 @@
-import { createFileRoute, Link } from "@tanstack/react-router";
+import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Plus, Download, RefreshCw, Inbox, Truck } from "lucide-react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
@@ -7,13 +7,19 @@ import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useBrand } from "@/contexts/brand-context";
-import { useOrdersQuery, useOrderStatusCounts, type OrdersFilter } from "@/hooks/erp/use-orders-query";
+import {
+  useOrdersQuery, useOrderStatusCounts, fetchAllMatchingOrderIds,
+  type OrdersFilter, type OrdersSortKey, type OrdersSortDir,
+} from "@/hooks/erp/use-orders-query";
 import { useCourierShipments, normalizeCourierStatus, COURIER_BUCKETS, COURIER_BUCKET_META, type CourierBucket, type CourierShipmentRow } from "@/hooks/erp/use-courier-shipments";
 import { applyBrandScope } from "@/lib/erp/apply-brand-scope";
 import { OrdersStatusTabs } from "@/components/erp/orders/orders-status-tabs";
 import { OrdersToolbar } from "@/components/erp/orders/orders-toolbar";
 import { OrdersBulkActions } from "@/components/erp/orders/orders-bulk-actions";
 import { OrdersTable } from "@/components/erp/orders/orders-table";
+import { OrdersSelectionBar } from "@/components/erp/orders/orders-selection-bar";
+import { OrdersPagination } from "@/components/erp/orders/orders-pagination";
+import { useOrdersPrefs, useSavedViews } from "@/hooks/erp/use-orders-prefs";
 import { OrderDrawer } from "@/components/erp/orders/order-drawer";
 import { IncompleteOrdersTable } from "@/components/erp/orders/incomplete-orders-table";
 import { useAbandonedCartCount } from "@/hooks/erp/use-abandoned-carts-query";
@@ -22,24 +28,88 @@ import { PreorderConvertDialog } from "@/components/erp/orders/preorder-convert-
 import { BulkPrintDialog, type PrintMode } from "@/components/erp/orders/bulk-print-dialog";
 import { CourierStatusSyncDialog } from "@/components/erp/orders/courier-status-sync-dialog";
 import { PhoneHistorySyncDialog } from "@/components/erp/orders/phone-history-sync-dialog";
-import { downloadCsv, exportOrdersCsv, statusAge, statusSinceTs, tabForStatuses, type OrderRow, type OrderStatus } from "@/lib/erp/orders";
+import { downloadCsv, exportOrdersCsv, statusAge, statusSinceTs, tabForStatuses, STATUS_TABS, type OrderRow, type OrderStatus } from "@/lib/erp/orders";
 import { AlertTriangle, RefreshCcw } from "lucide-react";
 
 const WEB_ORDER_SOURCE_FILTER = "source.not.in.(website,pixel,utm)";
 
+type OrdersSearch = {
+  q?: string; tab?: string; page?: number; size?: number;
+  sort?: OrdersSortKey; dir?: OrdersSortDir;
+  src?: string; from?: string; to?: string;
+  courier?: string; bucket?: CourierBucket;
+  pm?: string; ps?: string; city?: string; assignee?: string;
+  min?: number; max?: number;
+  adv?: "any" | "with" | "without";
+  printed?: "all" | "printed" | "unprinted";
+  view?: "orders" | "incomplete";
+};
+
+const str = (v: unknown) => (typeof v === "string" && v ? v : undefined);
+const num = (v: unknown) => {
+  const n = Number(v);
+  return v === "" || v == null || Number.isNaN(n) ? undefined : n;
+};
+
 export const Route = createFileRoute("/_authenticated/erp/orders/list")({
   head: () => ({ meta: [{ title: "Orders — ERP" }] }),
+  validateSearch: (s: Record<string, unknown>): OrdersSearch => ({
+    q: str(s['q']),
+    tab: str(s['tab']),
+    page: num(s['page']),
+    size: num(s['size']),
+    sort: str(s['sort']) as OrdersSortKey | undefined,
+    dir: str(s['dir']) === "asc" ? "asc" : str(s['dir']) === "desc" ? "desc" : undefined,
+    src: str(s['src']),
+    from: str(s['from']),
+    to: str(s['to']),
+    courier: str(s['courier']),
+    bucket: str(s['bucket']) as CourierBucket | undefined,
+    pm: str(s['pm']),
+    ps: str(s['ps']),
+    city: str(s['city']),
+    assignee: str(s['assignee']),
+    min: num(s['min']),
+    max: num(s['max']),
+    adv: (["any", "with", "without"] as const).find((x) => x === s['adv']),
+    printed: (["all", "printed", "unprinted"] as const).find((x) => x === s['printed']),
+    view: s['view'] === "incomplete" ? "incomplete" : undefined,
+  }),
   component: OrdersPage,
 });
 
 function OrdersPage() {
   const qc = useQueryClient();
+  const navigate = useNavigate({ from: "/erp/orders/list" });
+  const sp = Route.useSearch();
   const { activeBrand, brandIds, isAllBrands } = useBrand();
-  const [filter, setFilter] = useState<OrdersFilter>({
-    brandId: null, brandIds: [], search: "", statuses: ["confirmed"], source: null,
-    dateFrom: null, dateTo: null, courier: null, page: 0, pageSize: 50,
-  });
-  const [view, setView] = useState<"orders" | "incomplete">("orders");
+  const [filter, setFilter] = useState<OrdersFilter>(() => ({
+    brandId: null,
+    brandIds: [],
+    search: sp.q ?? "",
+    statuses: STATUS_TABS.find((t) => t.key === (sp.tab ?? "pending"))?.statuses ?? ["confirmed"],
+    source: sp.src ?? null,
+    dateFrom: sp.from ?? null,
+    dateTo: sp.to ?? null,
+    courier: sp.courier ?? null,
+    page: sp.page ?? 0,
+    pageSize: sp.size ?? 50,
+    sortKey: sp.sort ?? "created_at",
+    sortDir: sp.dir ?? "desc",
+    courierBucket: sp.bucket ?? null,
+    paymentMethod: sp.pm ?? null,
+    paymentStatus: sp.ps ?? null,
+    city: sp.city ?? null,
+    assignee: sp.assignee ?? null,
+    amountMin: sp.min ?? null,
+    amountMax: sp.max ?? null,
+    advanceFilter: sp.adv ?? "any",
+    printedFilter: sp.printed ?? "all",
+  }));
+  const [view, setView] = useState<"orders" | "incomplete">(sp.view === "incomplete" ? "incomplete" : "orders");
+  const prefs = useOrdersPrefs();
+  const savedViews = useSavedViews();
+  const [selectingAll, setSelectingAll] = useState(false);
   const [incompletePage, setIncompletePage] = useState(0);
   const [exporting, setExporting] = useState(false);
 
@@ -53,6 +123,38 @@ function OrdersPage() {
   );
 
   const { data, isLoading, isFetching } = useOrdersQuery(effective);
+
+  // Keep the URL in sync so filters survive reloads and can be shared.
+  const activeTabKey = view === "incomplete" ? "incomplete" : tabForStatuses(filter.statuses);
+  useEffect(() => {
+    navigate({
+      replace: true,
+      search: {
+        q: filter.search || undefined,
+        tab: activeTabKey,
+        page: filter.page || undefined,
+        size: filter.pageSize !== 50 ? filter.pageSize : undefined,
+        sort: filter.sortKey !== "created_at" ? filter.sortKey : undefined,
+        dir: filter.sortDir !== "desc" ? filter.sortDir : undefined,
+        src: filter.source ?? undefined,
+        from: filter.dateFrom ?? undefined,
+        to: filter.dateTo ?? undefined,
+        courier: filter.courier ?? undefined,
+        bucket: filter.courierBucket ?? undefined,
+        pm: filter.paymentMethod ?? undefined,
+        ps: filter.paymentStatus ?? undefined,
+        city: filter.city ?? undefined,
+        assignee: filter.assignee ?? undefined,
+        min: filter.amountMin ?? undefined,
+        max: filter.amountMax ?? undefined,
+        adv: filter.advanceFilter && filter.advanceFilter !== "any" ? filter.advanceFilter : undefined,
+        printed: filter.printedFilter && filter.printedFilter !== "all" ? filter.printedFilter : undefined,
+        view: view === "incomplete" ? "incomplete" : undefined,
+      } satisfies OrdersSearch,
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [filter, view, activeTabKey]);
+
   const { data: countsData } = useOrderStatusCounts(effective);
   const { data: incompleteCount } = useAbandonedCartCount(effective.brandId, effective.brandIds);
   const rows = data?.rows ?? [];
@@ -68,7 +170,11 @@ function OrdersPage() {
   const [syncOpen, setSyncOpen] = useState(false);
   const [singleSyncId, setSingleSyncId] = useState<string | null>(null);
   const [phoneHistOpen, setPhoneHistOpen] = useState(false);
-  const [courierStatusFilter, setCourierStatusFilter] = useState<CourierBucket | "all">("all");
+  // Live courier bucket is resolved server-side (see useOrdersQuery) so counts
+  // and pagination stay correct instead of filtering only the current page.
+  const courierStatusFilter: CourierBucket | "all" = filter.courierBucket ?? "all";
+  const setCourierStatusFilter = (v: CourierBucket | "all") =>
+    setFilter((f) => ({ ...f, courierBucket: v === "all" ? null : v, page: 0 }));
   const [lastSyncedAt, setLastSyncedAt] = useState<number | null>(null);
   const [flashIds, setFlashIds] = useState<Set<string>>(new Set());
 
@@ -76,15 +182,7 @@ function OrdersPage() {
   const pageOrderIds = useMemo(() => rows.map((r) => r.id), [rows]);
   const { data: shipmentsMap = {} } = useCourierShipments(pageOrderIds);
 
-  // Apply client-side courier status filter
-  const visibleRows = useMemo(() => {
-    if (courierStatusFilter === "all") return rows;
-    return rows.filter((r) => {
-      const s = shipmentsMap[r.id];
-      const bucket = s ? normalizeCourierStatus(s.status) : null;
-      return bucket === courierStatusFilter;
-    });
-  }, [rows, shipmentsMap, courierStatusFilter]);
+  const visibleRows = rows;
 
   // Realtime: subscribe to courier_shipments UPDATE/INSERT
   const idsKey = useMemo(() => [...pageOrderIds].sort().join(","), [pageOrderIds]);
@@ -208,6 +306,24 @@ function OrdersPage() {
   const toggleAll = (checked: boolean) => {
     if (checked) setSelectedIds(new Set(visibleRows.map((r) => r.id)));
     else setSelectedIds(new Set());
+  };
+
+  /** Select every order matching the current filter, not just this page. */
+  const selectAllMatching = async () => {
+    setSelectingAll(true);
+    try {
+      const ids = await fetchAllMatchingOrderIds(effective);
+      setSelectedIds(new Set(ids));
+      toast.success(`${ids.length.toLocaleString()} orders selected`);
+    } catch (e) {
+      toast.error((e as Error).message);
+    } finally {
+      setSelectingAll(false);
+    }
+  };
+
+  const applyView = (searchObj: Record<string, unknown>) => {
+    setFilter((f) => ({ ...f, ...(searchObj as Partial<OrdersFilter>), page: 0 }));
   };
 
   const statusMutation = useMutation({
@@ -344,6 +460,29 @@ function OrdersPage() {
     view === "incomplete" ? "incomplete"
       : tabForStatuses(effective.statuses);
 
+  // Keyboard shortcuts: "/" focus search, "a" select page, "Esc" clear, "r" refresh.
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      const t = e.target as HTMLElement | null;
+      const typing = !!t && (t.tagName === "INPUT" || t.tagName === "TEXTAREA" || t.isContentEditable);
+      if (e.key === "Escape") { setSelectedIds(new Set()); return; }
+      if (typing || e.metaKey || e.ctrlKey || e.altKey) return;
+      if (e.key === "/") {
+        e.preventDefault();
+        document.querySelector<HTMLInputElement>("input[data-orders-search]")?.focus();
+      } else if (e.key === "a") {
+        e.preventDefault();
+        setSelectedIds(new Set(visibleRows.map((r) => r.id)));
+      } else if (e.key === "r") {
+        e.preventDefault();
+        handleRefresh();
+      }
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [visibleRows]);
+
   return (
     <div className="p-4 md:p-6 space-y-4 min-h-screen bg-gradient-to-b from-muted/30 via-muted/10 to-background">
       <header className="flex flex-wrap items-end justify-between gap-3">
@@ -476,6 +615,25 @@ function OrdersPage() {
           <OrdersToolbar
           filter={effective}
           onChange={setFilter}
+          density={prefs.density}
+          onDensityChange={prefs.setDensity}
+          hiddenColumns={prefs.hiddenColumns}
+          onToggleColumn={prefs.toggleColumn}
+          onResetColumns={prefs.resetColumns}
+          savedViews={savedViews.views}
+          onSaveView={(name) =>
+            savedViews.save(name, {
+              search: filter.search, source: filter.source, courier: filter.courier,
+              courierBucket: filter.courierBucket ?? null, paymentMethod: filter.paymentMethod ?? null,
+              paymentStatus: filter.paymentStatus ?? null, city: filter.city ?? null,
+              assignee: filter.assignee ?? null, amountMin: filter.amountMin ?? null,
+              amountMax: filter.amountMax ?? null, advanceFilter: filter.advanceFilter ?? "any",
+              printedFilter: filter.printedFilter ?? "all", dateFrom: filter.dateFrom, dateTo: filter.dateTo,
+              statuses: filter.statuses, sortKey: filter.sortKey, sortDir: filter.sortDir,
+            })
+          }
+          onApplyView={(v) => applyView(v.search)}
+          onDeleteView={savedViews.remove}
           rightSlot={
             <OrdersBulkActions
               selectedCount={selectedIds.size}
@@ -512,6 +670,18 @@ function OrdersPage() {
         <OrdersTable
           rows={visibleRows}
           loading={isLoading}
+          density={prefs.density}
+          hiddenColumns={prefs.hiddenColumns}
+          sortKey={filter.sortKey ?? "created_at"}
+          sortDir={filter.sortDir ?? "desc"}
+          onSortChange={(key) =>
+            setFilter((f) => ({
+              ...f,
+              sortKey: key,
+              sortDir: f.sortKey === key ? ((f.sortDir ?? "desc") === "desc" ? "asc" : "desc") : "desc",
+              page: 0,
+            }))
+          }
           selectedIds={selectedIds}
           onToggleSelect={toggleSelect}
           onToggleAll={toggleAll}
@@ -546,28 +716,30 @@ function OrdersPage() {
       </div>
 
       {view === "orders" && (
-      <div className="flex items-center justify-between text-sm rounded-xl border bg-card px-4 py-2.5 shadow-sm">
-        <div className="flex items-center gap-3 text-muted-foreground">
-          <span>
-            Page <span className="font-semibold text-foreground tabular-nums">{filter.page + 1}</span> of <span className="font-semibold text-foreground tabular-nums">{totalPages}</span>
-          </span>
-          <Select
-            value={String(filter.pageSize)}
-            onValueChange={(v) => setFilter((f) => ({ ...f, pageSize: Number(v), page: 0 }))}
-          >
-            <SelectTrigger className="h-8 w-[110px]"><SelectValue /></SelectTrigger>
-            <SelectContent>
-              <SelectItem value="25">25 / page</SelectItem>
-              <SelectItem value="50">50 / page</SelectItem>
-              <SelectItem value="100">100 / page</SelectItem>
-            </SelectContent>
-          </Select>
-        </div>
-        <div className="flex gap-2">
-          <Button variant="outline" size="sm" disabled={filter.page === 0} onClick={() => setFilter({ ...filter, page: filter.page - 1 })}>Prev</Button>
-          <Button variant="outline" size="sm" disabled={filter.page + 1 >= totalPages} onClick={() => setFilter({ ...filter, page: filter.page + 1 })}>Next</Button>
-        </div>
-      </div>
+      <OrdersPagination
+        page={filter.page}
+        pageSize={filter.pageSize}
+        total={total}
+        rowsOnPage={visibleRows.length}
+        onPage={(p) => setFilter((f) => ({ ...f, page: p }))}
+        onPageSize={(n) => setFilter((f) => ({ ...f, pageSize: n, page: 0 }))}
+      />
+      )}
+
+      {view === "orders" && (
+        <OrdersSelectionBar
+          count={selectedIds.size}
+          totalMatching={total}
+          allMatchingSelected={selectedIds.size >= total}
+          isSelectingAll={selectingAll}
+          onSelectAllMatching={selectAllMatching}
+          onClear={() => setSelectedIds(new Set())}
+          onQuickStatus={(s) => bulkStatus.mutate(s)}
+          onPrint={() => setPrintMode("invoice")}
+          onBookCourier={() => setPathaoBulkOpen(true)}
+          onSyncCourier={() => setSyncOpen(true)}
+          isPending={bulkStatus.isPending}
+        />
       )}
 
       <OrderDrawer orderId={openId} onClose={() => setOpenId(null)} />
