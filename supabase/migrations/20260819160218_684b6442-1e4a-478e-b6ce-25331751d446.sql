@@ -1,0 +1,1 @@
+ALTER TABLE public.hub_plan_scenarios ADD COLUMN IF NOT EXISTS sell_days integer NOT NULL DEFAULT 30;
