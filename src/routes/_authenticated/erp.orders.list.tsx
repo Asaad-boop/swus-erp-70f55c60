@@ -460,6 +460,29 @@ function OrdersPage() {
     view === "incomplete" ? "incomplete"
       : tabForStatuses(effective.statuses);
 
+  // Keyboard shortcuts: "/" focus search, "a" select page, "Esc" clear, "r" refresh.
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      const t = e.target as HTMLElement | null;
+      const typing = !!t && (t.tagName === "INPUT" || t.tagName === "TEXTAREA" || t.isContentEditable);
+      if (e.key === "Escape") { setSelectedIds(new Set()); return; }
+      if (typing || e.metaKey || e.ctrlKey || e.altKey) return;
+      if (e.key === "/") {
+        e.preventDefault();
+        document.querySelector<HTMLInputElement>("input[data-orders-search]")?.focus();
+      } else if (e.key === "a") {
+        e.preventDefault();
+        setSelectedIds(new Set(visibleRows.map((r) => r.id)));
+      } else if (e.key === "r") {
+        e.preventDefault();
+        handleRefresh();
+      }
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [visibleRows]);
+
   return (
     <div className="p-4 md:p-6 space-y-4 min-h-screen bg-gradient-to-b from-muted/30 via-muted/10 to-background">
       <header className="flex flex-wrap items-end justify-between gap-3">
