@@ -216,6 +216,86 @@ export function DashboardCharts({ summary }: { summary: OrderDashboardSummary })
           </CardContent>
         </Card>
       )}
+
+      {couriers.length > 0 && (
+        <Card>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm">Courier performance</CardTitle>
+          </CardHeader>
+          <CardContent className="h-[260px] overflow-auto pt-0 text-sm">
+            <table className="w-full">
+              <thead className="text-[11px] uppercase text-muted-foreground">
+                <tr>
+                  <th className="text-left font-medium">Courier</th>
+                  <th className="text-right font-medium">Orders</th>
+                  <th className="text-right font-medium">Delivered</th>
+                  <th className="text-right font-medium">Return</th>
+                </tr>
+              </thead>
+              <tbody>
+                {couriers.map((c) => {
+                  const dr = c.orders ? (c.delivered / c.orders) * 100 : 0;
+                  const rr = c.orders ? (c.returned / c.orders) * 100 : 0;
+                  return (
+                    <tr key={c.courier} className="border-b last:border-0">
+                      <td className="py-1.5 capitalize">{c.courier || "—"}</td>
+                      <td className="py-1.5 text-right tabular-nums">{c.orders}</td>
+                      <td className="py-1.5 text-right tabular-nums text-emerald-600 dark:text-emerald-400">
+                        {dr.toFixed(0)}%
+                      </td>
+                      <td className="py-1.5 text-right tabular-nums text-red-600 dark:text-red-400">
+                        {rr.toFixed(0)}%
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </CardContent>
+        </Card>
+      )}
+
+      {payments.length > 0 && (
+        <Card>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm">Payment mix</CardTitle>
+          </CardHeader>
+          <CardContent className="h-[260px] pt-0">
+            <ResponsiveContainer width="100%" height="100%">
+              <BarChart data={payments} margin={{ left: 4, right: 4, top: 8 }}>
+                <CartesianGrid strokeDasharray="3 3" className="stroke-muted" vertical={false} />
+                <XAxis dataKey="payment_status" tick={{ fontSize: 11 }} />
+                <YAxis tick={{ fontSize: 11 }} width={40} />
+                <Tooltip contentStyle={{ fontSize: 12 }} formatter={(v: number, n: string) => (n === "Value" ? money(v) : v)} />
+                <Bar dataKey="orders" name="Orders" fill="#06b6d4" radius={[3, 3, 0, 0]} />
+              </BarChart>
+            </ResponsiveContainer>
+          </CardContent>
+        </Card>
+      )}
+
+      {weekday.length > 0 && (
+        <Card>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm">Weekday pattern</CardTitle>
+          </CardHeader>
+          <CardContent className="h-[260px] pt-0">
+            <ResponsiveContainer width="100%" height="100%">
+              <BarChart data={weekday} margin={{ left: 4, right: 4, top: 8 }}>
+                <CartesianGrid strokeDasharray="3 3" className="stroke-muted" vertical={false} />
+                <XAxis dataKey="label" tick={{ fontSize: 11 }} />
+                <YAxis tick={{ fontSize: 11 }} width={40} />
+                <Tooltip
+                  contentStyle={{ fontSize: 12 }}
+                  formatter={(v: number, n: string) => (n === "Avg/day" ? Number(v).toFixed(1) : v)}
+                />
+                <Bar dataKey="orders" name="Orders" fill="#f59e0b" radius={[3, 3, 0, 0]} />
+                <Bar dataKey="avg" name="Avg/day" fill="#8b5cf6" radius={[3, 3, 0, 0]} />
+              </BarChart>
+            </ResponsiveContainer>
+          </CardContent>
+        </Card>
+      )}
     </div>
   );
 }
