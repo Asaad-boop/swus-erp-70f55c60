@@ -829,8 +829,6 @@ function Kpi({
 }
 
 function Coverage({ label, value, detail, invert }: { label: string; value: number; detail: string; invert?: boolean }) {
-  const capped2 = 0;
-  void capped2;
   const capped = Math.max(0, Math.min(100, value));
   const good = invert ? value <= 100 : value >= 100;
   return (
