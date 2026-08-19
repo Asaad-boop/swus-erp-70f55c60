@@ -137,6 +137,11 @@
   --workspace-bg: radial-gradient(1200px 500px at 12% -10%, oklch(0.94 0.045 268 / 0.75), transparent 60%),
                   radial-gradient(900px 420px at 92% -6%, oklch(0.94 0.05 195 / 0.6), transparent 62%),
                   oklch(0.985 0.004 258);
+  /* Aurora Ops — shared header + table chrome */
+  --aurora-header: linear-gradient(120deg, oklch(0.98 0.025 268) 0%, oklch(0.995 0.008 258) 45%, oklch(0.98 0.03 200) 100%);
+  --table-head-bg: oklch(0.982 0.006 258);
+  --row-hover: oklch(0.968 0.012 262);
+  --row-selected: oklch(0.955 0.03 265);
 }
 
 .dark {
