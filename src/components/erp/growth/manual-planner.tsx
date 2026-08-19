@@ -488,7 +488,31 @@ export function ManualPlanner({
       {active.length > 0 && (
         <Card>
           <CardContent className="grid gap-3 p-4 sm:grid-cols-2 lg:grid-cols-4">
-            <MiniStat label="Sell window" value={`${num(totals.maxDays || daysInMonth)} দিন`} sub="সবচেয়ে দীর্ঘ product plan" />
+            <div className="rounded-lg border bg-muted/30 p-3">
+              <div className="text-[10px] uppercase tracking-wide text-muted-foreground">Sell window</div>
+              <div className="mt-1 flex items-center gap-1.5">
+                <Input
+                  type="text"
+                  inputMode="numeric"
+                  className="h-8 w-16 text-right text-base font-semibold tabular-nums"
+                  value={sellDaysAll}
+                  onChange={(e) => /^\d*$/.test(e.target.value) && setSellDaysAll(e.target.value)}
+                />
+                <span className="text-sm font-semibold">দিন</span>
+                <Button
+                  size="sm"
+                  variant="secondary"
+                  className="h-8 px-2"
+                  disabled={bulkApply.isPending || !sellDaysAll}
+                  onClick={() => bulkApply.mutate({ sell_days: Math.max(1, Number(sellDaysAll) || 30) })}
+                >
+                  Apply
+                </Button>
+              </div>
+              <div className="mt-1 text-[11px] text-muted-foreground">
+                এখন সবচেয়ে দীর্ঘ plan {num(totals.maxDays || daysInMonth)} দিন
+              </div>
+            </div>
             <MiniStat label="Per day units" value={`${totals.unitsPerDay.toFixed(1)} pcs`} sub={`মোট ${num(totals.qty)} pcs`} />
             <MiniStat label="Per day ad cost" value={bdt(totals.adPerDay)} sub={`মোট ads ${bdt(totals.marketing)}`} />
             <MiniStat
