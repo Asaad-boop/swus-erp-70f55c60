@@ -693,22 +693,22 @@ function OrdersPage() {
           onPreorder={(id) => { setPreorderIds([id]); setPreorderOpen(true); }}
         />
         {!isLoading && visibleRows.length === 0 && (
-          <div className="flex flex-col items-center justify-center gap-3 py-16 text-center">
-            <div className="h-14 w-14 rounded-full bg-muted flex items-center justify-center">
-              <Inbox className="h-7 w-7 text-muted-foreground" />
-            </div>
-            <div>
-              <div className="font-semibold">No orders found</div>
-              <div className="text-sm text-muted-foreground">
-                {courierFilterActive
-                  ? `No orders with courier status "${COURIER_BUCKET_META[courierStatusFilter as CourierBucket].label}" on this page.`
-                  : "Try adjusting your filters or date range."}
-              </div>
-            </div>
-            {(hasActiveFilters || courierFilterActive) && (
-              <Button variant="outline" size="sm" onClick={() => { clearAllFilters(); setCourierStatusFilter("all"); }}>Clear filters</Button>
-            )}
-          </div>
+          <EmptyState
+            icon={<Inbox className="h-7 w-7" />}
+            title="No orders found"
+            description={
+              courierFilterActive
+                ? `No orders with courier status "${COURIER_BUCKET_META[courierStatusFilter as CourierBucket].label}" on this page.`
+                : "Try adjusting your filters or date range."
+            }
+            action={
+              (hasActiveFilters || courierFilterActive) ? (
+                <Button variant="outline" size="sm" onClick={() => { clearAllFilters(); setCourierStatusFilter("all"); }}>
+                  Clear filters
+                </Button>
+              ) : undefined
+            }
+          />
         )}
           </>
         )}
