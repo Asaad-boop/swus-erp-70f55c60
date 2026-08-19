@@ -106,3 +106,42 @@ export function mapCourierStatus(
   const table = getMergedMap(provider, overrides);
   return table[key] ?? null;
 }
+
+/**
+ * Guard against courier feeds downgrading an already-resolved fulfillment
+ * outcome. Pathao keeps reporting settlement events (`paid_return`,
+ * `payment_*`) after a parcel was delivered/partially delivered, which used to
+ * flip real `delivered` / `partial_delivered` orders into the return family.
+ *
+ * Key = current order status that is already resolved.
+ * Value = the only statuses a courier feed may still move it to.
+ */
+const ALLOWED_FROM_RESOLVED: Partial<Record<OrderStatus, OrderStatus[]>> = {
+  delivered: ["paid", "completed", "partial_delivered"],
+  partial_delivered: ["completed"],
+  returned: ["paid_return", "unpaid_return", "partial_return", "completed"],
+  paid_return: ["completed"],
+  unpaid_return: ["paid_return", "completed"],
+  partial_return: ["completed"],
+  exchange: ["exchanged", "delivered", "completed"],
+  exchanged: ["completed"],
+  paid: [],
+  completed: [],
+  cancelled: [],
+};
+
+/**
+ * Returns the status to apply, or `null` when the courier update must be
+ * ignored (no change / illegal downgrade).
+ */
+export function resolveCourierTransition(
+  current: OrderStatus | string | null | undefined,
+  mapped: OrderStatus | null | undefined,
+): OrderStatus | null {
+  if (!mapped) return null;
+  if (!current) return mapped;
+  if (mapped === current) return null;
+  const allow = ALLOWED_FROM_RESOLVED[current as OrderStatus];
+  if (allow && !allow.includes(mapped)) return null;
+  return mapped;
+}
