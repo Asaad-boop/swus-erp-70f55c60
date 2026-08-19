@@ -534,6 +534,25 @@ export function ManualPlanner({
                 />
               </div>
               <BulkApply onApply={(p) => bulkApply.mutate(p)} pending={bulkApply.isPending} />
+              <div className="flex items-center gap-1 rounded-md border px-2 py-1">
+                <span className="text-xs text-muted-foreground">কত দিনে বিক্রি</span>
+                <Input
+                  type="text"
+                  inputMode="numeric"
+                  className="h-7 w-14 text-right tabular-nums"
+                  value={sellDaysAll}
+                  onChange={(e) => /^\d*$/.test(e.target.value) && setSellDaysAll(e.target.value)}
+                />
+                <Button
+                  size="sm"
+                  variant="ghost"
+                  className="h-7 px-2"
+                  disabled={bulkApply.isPending || !sellDaysAll}
+                  onClick={() => bulkApply.mutate({ sell_days: Math.max(1, Number(sellDaysAll) || 30) })}
+                >
+                  সব row-এ
+                </Button>
+              </div>
               <Button size="sm" variant="outline" onClick={() => copyPrev.mutate()} disabled={copyPrev.isPending}>
                 <Copy className="mr-1 h-3.5 w-3.5" /> আগের মাস
               </Button>
