@@ -555,6 +555,14 @@ export type HubMonthPlan = {
   target_order_qty: number;
   target_order_value: number;
   notes: string | null;
+  /** Added in the advanced projection upgrade — default 0 on older rows. */
+  target_ad_spend: number;
+  target_orders: number;
+  target_aov: number;
+  target_roas: number;
+  target_margin_pct: number;
+  opex_monthly: number;
+  delivery_rate_pct: number;
 };
 
 export function monthStart(d = new Date()) {
@@ -618,7 +626,24 @@ export async function fetchMonthPlan(brandId: string | null, month: string) {
   q = brandId ? q.eq("brand_id", brandId) : q.is("brand_id", null);
   const { data, error } = await q.maybeSingle();
   if (error) throw error;
-  return (data ?? null) as unknown as HubMonthPlan | null;
+  if (!data) return null;
+  const r = data as unknown as Record<string, unknown>;
+  const n = (k: string) => Number(r[k] ?? 0) || 0;
+  return {
+    ...(data as unknown as HubMonthPlan),
+    target_revenue: n("target_revenue"),
+    target_profit: n("target_profit"),
+    target_new_products: n("target_new_products"),
+    target_order_qty: n("target_order_qty"),
+    target_order_value: n("target_order_value"),
+    target_ad_spend: n("target_ad_spend"),
+    target_orders: n("target_orders"),
+    target_aov: n("target_aov"),
+    target_roas: n("target_roas"),
+    target_margin_pct: n("target_margin_pct"),
+    opex_monthly: n("opex_monthly"),
+    delivery_rate_pct: n("delivery_rate_pct"),
+  } satisfies HubMonthPlan;
 }
 
 export async function saveMonthPlan(
