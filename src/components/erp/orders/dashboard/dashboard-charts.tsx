@@ -142,9 +142,9 @@ export function DashboardCharts({ summary }: { summary: OrderDashboardSummary })
             </ResponsiveContainer>
             <div className="-mt-6 flex flex-wrap justify-center gap-2 text-[11px]">
               {sources.map((s, i) => (
-                <span key={s.source} className="flex items-center gap-1">
+                <span key={`${s.source ?? "none"}-${i}`} className="flex items-center gap-1">
                   <span className="h-2 w-2 rounded-full" style={{ background: PIE_COLORS[i % PIE_COLORS.length] }} />
-                  {s.source} ({s.orders})
+                  {s.source || "—"} ({s.orders})
                 </span>
               ))}
             </div>
@@ -160,9 +160,9 @@ export function DashboardCharts({ summary }: { summary: OrderDashboardSummary })
           <CardContent className="h-[260px] overflow-auto pt-0 text-sm">
             <table className="w-full">
               <tbody>
-                {cities.map((c) => (
-                  <tr key={c.city} className="border-b last:border-0">
-                    <td className="py-1.5">{c.city}</td>
+                {cities.map((c, i) => (
+                  <tr key={`${c.city ?? "unknown"}-${i}`} className="border-b last:border-0">
+                    <td className="py-1.5">{c.city || "—"}</td>
                     <td className="py-1.5 text-right tabular-nums">{c.orders}</td>
                     <td className="py-1.5 text-right tabular-nums text-emerald-600 dark:text-emerald-400">
                       {c.orders ? `${((c.delivered / c.orders) * 100).toFixed(0)}%` : "—"}
@@ -186,9 +186,9 @@ export function DashboardCharts({ summary }: { summary: OrderDashboardSummary })
           <CardContent className="h-[260px] overflow-auto pt-0 text-sm">
             <table className="w-full">
               <tbody>
-                {confirmers.map((c) => (
-                  <tr key={c.user_id} className="border-b last:border-0">
-                    <td className="py-1.5">{c.name}</td>
+                {confirmers.map((c, i) => (
+                  <tr key={`${c.user_id ?? "none"}-${i}`} className="border-b last:border-0">
+                    <td className="py-1.5">{c.name || "—"}</td>
                     <td className="py-1.5 text-right tabular-nums">{c.orders} orders</td>
                     <td className="py-1.5 text-right tabular-nums text-muted-foreground">{money(c.value)}</td>
                   </tr>
@@ -215,11 +215,11 @@ export function DashboardCharts({ summary }: { summary: OrderDashboardSummary })
                 </tr>
               </thead>
               <tbody>
-                {couriers.map((c) => {
+                {couriers.map((c, i) => {
                   const dr = c.orders ? (c.delivered / c.orders) * 100 : 0;
                   const rr = c.orders ? (c.returned / c.orders) * 100 : 0;
                   return (
-                    <tr key={c.courier} className="border-b last:border-0">
+                    <tr key={`${c.courier ?? "none"}-${i}`} className="border-b last:border-0">
                       <td className="py-1.5 capitalize">{c.courier || "—"}</td>
                       <td className="py-1.5 text-right tabular-nums">{c.orders}</td>
                       <td className="py-1.5 text-right tabular-nums text-emerald-600 dark:text-emerald-400">
