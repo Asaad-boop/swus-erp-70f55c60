@@ -566,19 +566,21 @@ function NewOrderPage() {
   });
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-slate-50/70 to-slate-50 pb-32 dark:from-background dark:to-background">
+    <div className="min-h-screen workspace-bg pb-32">
       {/* Top bar */}
-      <div className="sticky top-0 z-10 border-b border-border/60 bg-background/85 backdrop-blur-xl">
+      <div className="sticky top-0 z-10 border-b border-[var(--panel-border)] bg-[var(--aurora-header)] backdrop-blur-xl">
         <div className="mx-auto flex max-w-6xl items-center justify-between gap-3 px-4 py-3 md:px-6">
           <div className="flex items-center gap-3">
             <Button variant="ghost" size="icon" className="rounded-xl" onClick={() => navigate({ to: "/erp/orders" })}>
               <ArrowLeft className="h-4 w-4" />
             </Button>
             <div>
-              <h1 className="text-lg font-bold tracking-tight md:text-xl">
+              <div className="text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground">
+                {effectiveBrand?.name ?? (isAllBrands ? "Pick a brand" : "Select a brand")} · Orders
+              </div>
+              <h1 className="font-display text-lg font-bold leading-tight tracking-tight md:text-xl">
                 New Order <span className="ml-1 font-normal text-muted-foreground">— নতুন অর্ডার</span>
               </h1>
-              <div className="text-[11px] text-muted-foreground">{effectiveBrand?.name ?? (isAllBrands ? "Pick a brand for this order" : "Select a brand")}</div>
             </div>
           </div>
           <div className="flex items-center gap-2">
