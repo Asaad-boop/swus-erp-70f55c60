@@ -5553,42 +5553,63 @@ export type Database = {
           brand_id: string | null
           created_at: string
           created_by: string | null
+          delivery_rate_pct: number
           id: string
           month: string
           notes: string | null
+          opex_monthly: number
+          target_ad_spend: number
+          target_aov: number
+          target_margin_pct: number
           target_new_products: number
           target_order_qty: number
           target_order_value: number
+          target_orders: number
           target_profit: number
           target_revenue: number
+          target_roas: number
           updated_at: string
         }
         Insert: {
           brand_id?: string | null
           created_at?: string
           created_by?: string | null
+          delivery_rate_pct?: number
           id?: string
           month: string
           notes?: string | null
+          opex_monthly?: number
+          target_ad_spend?: number
+          target_aov?: number
+          target_margin_pct?: number
           target_new_products?: number
           target_order_qty?: number
           target_order_value?: number
+          target_orders?: number
           target_profit?: number
           target_revenue?: number
+          target_roas?: number
           updated_at?: string
         }
         Update: {
           brand_id?: string | null
           created_at?: string
           created_by?: string | null
+          delivery_rate_pct?: number
           id?: string
           month?: string
           notes?: string | null
+          opex_monthly?: number
+          target_ad_spend?: number
+          target_aov?: number
+          target_margin_pct?: number
           target_new_products?: number
           target_order_qty?: number
           target_order_value?: number
+          target_orders?: number
           target_profit?: number
           target_revenue?: number
+          target_roas?: number
           updated_at?: string
         }
         Relationships: [
