@@ -207,6 +207,7 @@ export function ManualPlanner({
           return_pct: r.return_pct,
           return_cost: r.return_cost,
           lead_time_days: r.lead_time_days,
+          sell_days: r.sell_days,
           is_active: r.is_active,
         } as never)
         .eq("id", r.id);
@@ -313,6 +314,7 @@ export function ManualPlanner({
           return_pct: r.return_pct,
           return_cost: r.return_cost,
           lead_time_days: r.lead_time_days,
+          sell_days: r.sell_days,
           is_active: r.is_active,
           note: r.note,
           position: allRows.length + i,
@@ -810,6 +812,7 @@ function BulkApply({ onApply, pending }: { onApply: (p: Partial<PlanScenarioRow>
     qty: "Qty", sell_price: "Sell price", discount_pct: "Discount %", cost_price: "Cost price",
     marketing_cost: "Marketing/pc", packaging_cost: "Packaging/pc", courier_cost: "Courier/pc",
     return_pct: "Return %", return_cost: "Return cost/pc", lead_time_days: "Lead days",
+    sell_days: "কত দিনে বিক্রি",
   };
   return (
     <Popover open={open} onOpenChange={setOpen}>
