@@ -471,13 +471,33 @@ export function ManualPlanner({
         />
         <Kpi label="Ad budget" value={bdt(totals.marketing)} sub={totalRoas > 0 ? `ROAS ${totalRoas.toFixed(2)}x` : "—"} />
         <Kpi label="Capital lagbe" value={bdt(totals.capital)} sub="COGS + packaging" />
-        <Kpi label="Units" value={num(totals.qty)} sub={`Per day ${num(totals.qty / daysInMonth)} pcs`} />
+        <Kpi
+          label="Units"
+          value={num(totals.qty)}
+          sub={`Sell window-এ ${totals.unitsPerDay.toFixed(1)} pcs/day`}
+        />
         <Kpi
           label="Per day sales"
-          value={bdt(totals.revenue / daysInMonth)}
-          sub={`Ad ${bdt(totals.marketing / daysInMonth)}/day`}
+          value={bdt(totals.revenuePerDay)}
+          sub={`Ad ${bdt(totals.adPerDay)}/day · window ${num(totals.maxDays || daysInMonth)} দিন`}
         />
       </div>
+
+      {/* Sell window + ad pacing */}
+      {active.length > 0 && (
+        <Card>
+          <CardContent className="grid gap-3 p-4 sm:grid-cols-2 lg:grid-cols-4">
+            <MiniStat label="Sell window" value={`${num(totals.maxDays || daysInMonth)} দিন`} sub="সবচেয়ে দীর্ঘ product plan" />
+            <MiniStat label="Per day units" value={`${totals.unitsPerDay.toFixed(1)} pcs`} sub={`মোট ${num(totals.qty)} pcs`} />
+            <MiniStat label="Per day ad cost" value={bdt(totals.adPerDay)} sub={`মোট ads ${bdt(totals.marketing)}`} />
+            <MiniStat
+              label="Per day profit"
+              value={bdt(totals.maxDays > 0 ? totals.profit / totals.maxDays : 0)}
+              sub={`Month-এ ${num(daysInMonth)} দিন ধরলে ${bdt(totals.profit / daysInMonth)}`}
+            />
+          </CardContent>
+        </Card>
+      )}
 
       {/* Coverage vs month target */}
       {(targetRevenue > 0 || targetProfit > 0 || targetAdSpend > 0) && (
@@ -589,6 +609,9 @@ export function ManualPlanner({
                     <th className="px-2 py-2 text-right font-medium">Courier/pc</th>
                     <th className="px-2 py-2 text-right font-medium">Ret %</th>
                     <th className="px-2 py-2 text-right font-medium">Ret cost</th>
+                    <th className="px-2 py-2 text-right font-medium">দিন</th>
+                    <th className="px-2 py-2 text-right font-medium">Pcs/day</th>
+                    <th className="px-2 py-2 text-right font-medium">Ads/day</th>
                     <th className="px-2 py-2 text-right font-medium">Revenue</th>
                     <th className="px-2 py-2 text-right font-medium">Profit</th>
                     <th className="px-2 py-2 text-right font-medium">CM/pc</th>
@@ -632,6 +655,13 @@ export function ManualPlanner({
                         <td className="px-2 py-1.5 text-right">{numCell(r, "courier_cost", "w-[70px]")}</td>
                         <td className="px-2 py-1.5 text-right">{numCell(r, "return_pct", "w-[58px]")}</td>
                         <td className="px-2 py-1.5 text-right">{numCell(r, "return_cost", "w-[70px]")}</td>
+                        <td className="px-2 py-1.5 text-right">{numCell(r, "sell_days", "w-[62px]")}</td>
+                        <td className="px-2 py-1.5 text-right tabular-nums text-muted-foreground">
+                          {m.unitsPerDay.toFixed(1)}
+                        </td>
+                        <td className="px-2 py-1.5 text-right tabular-nums text-muted-foreground">
+                          {bdt(m.adPerDay)}
+                        </td>
                         <td className="px-2 py-1.5 text-right tabular-nums">{bdt(m.revenue)}</td>
                         <td className={cn("px-2 py-1.5 text-right font-medium tabular-nums", m.profit < 0 ? "text-destructive" : "text-emerald-600")}>
                           {bdt(m.profit)}
@@ -693,6 +723,9 @@ export function ManualPlanner({
                     <td className="px-2 py-2 text-right tabular-nums">{bdt(totals.courier)}</td>
                     <td className="px-2 py-2" />
                     <td className="px-2 py-2 text-right tabular-nums">{bdt(totals.returns)}</td>
+                    <td className="px-2 py-2" />
+                    <td className="px-2 py-2 text-right tabular-nums">{totals.unitsPerDay.toFixed(1)}</td>
+                    <td className="px-2 py-2 text-right tabular-nums">{bdt(totals.adPerDay)}</td>
                     <td className="px-2 py-2 text-right tabular-nums">{bdt(totals.revenue)}</td>
                     <td className={cn("px-2 py-2 text-right tabular-nums", totals.profit < 0 ? "text-destructive" : "text-emerald-600")}>
                       {bdt(totals.profit)}
