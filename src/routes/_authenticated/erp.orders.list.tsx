@@ -19,6 +19,8 @@ import { OrdersBulkActions } from "@/components/erp/orders/orders-bulk-actions";
 import { OrdersTable } from "@/components/erp/orders/orders-table";
 import { OrdersSelectionBar } from "@/components/erp/orders/orders-selection-bar";
 import { OrdersPagination } from "@/components/erp/orders/orders-pagination";
+import { ErpPageHeader, HeaderChip } from "@/components/erp/ui/page-header";
+import { EmptyState } from "@/components/erp/ui/data-panel";
 import { useOrdersPrefs, useSavedViews } from "@/hooks/erp/use-orders-prefs";
 import { OrderDrawer } from "@/components/erp/orders/order-drawer";
 import { IncompleteOrdersTable } from "@/components/erp/orders/incomplete-orders-table";
@@ -486,33 +488,27 @@ function OrdersPage() {
   }, [visibleRows]);
 
   return (
-    <div className="p-4 md:p-6 space-y-4 min-h-screen bg-gradient-to-b from-muted/30 via-muted/10 to-background">
-      <header className="flex flex-wrap items-end justify-between gap-3">
-        <div className="min-w-0">
-          <div className="flex items-center gap-2 text-[10px] uppercase tracking-[0.2em] text-muted-foreground font-bold">
-            <span className="relative inline-flex h-2 w-2">
-              <span className="absolute inline-flex h-full w-full rounded-full bg-emerald-500 opacity-60 animate-ping" />
-              <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500" />
-            </span>
-            {activeBrand?.name ?? "All brands"} · Orders
-          </div>
-          <div className="flex items-baseline gap-3 mt-1.5">
-            <h1 className="text-[28px] font-bold tracking-tight leading-none">Orders</h1>
-            <div className="inline-flex items-center gap-1.5 px-2 py-1 rounded-md bg-foreground/5 border text-xs">
-              <span className="tabular-nums font-bold text-foreground">{total.toLocaleString()}</span>
-              <span className="text-muted-foreground">total</span>
-              {isFetching && <span className="text-primary font-medium">· syncing</span>}
-            </div>
-          </div>
-        </div>
-        <div className="flex items-center gap-1.5">
+    <div className="p-4 md:p-6 space-y-4 min-h-screen workspace-bg">
+      <ErpPageHeader
+        live
+        eyebrow={`${activeBrand?.name ?? "All brands"} · Orders`}
+        title="Orders"
+        chips={
+          <>
+            <HeaderChip value={total.toLocaleString()} label="total" />
+            {selectedIds.size > 0 && <HeaderChip tone="primary" value={selectedIds.size} label="selected" />}
+            {isFetching && <HeaderChip tone="primary" value="●" label="syncing" />}
+          </>
+        }
+        actions={
+          <>
           {lastSyncedAt && (
             <span className="text-[10px] text-muted-foreground hidden sm:inline">
               Last synced {relTimeShort(lastSyncedAt)}
             </span>
           )}
           <Select value={courierStatusFilter} onValueChange={(v) => setCourierStatusFilter(v as CourierBucket | "all")}>
-            <SelectTrigger className="h-9 w-[170px]">
+            <SelectTrigger className="h-9 w-[170px] bg-[var(--panel-bg)]">
               <span className="flex items-center gap-1.5 text-xs">
                 <Truck className="h-3.5 w-3.5 text-muted-foreground" />
                 <SelectValue placeholder="Courier status" />
@@ -528,7 +524,7 @@ function OrdersPage() {
               ))}
             </SelectContent>
           </Select>
-          <div className="inline-flex rounded-lg border bg-card shadow-sm overflow-hidden">
+          <div className="inline-flex overflow-hidden rounded-lg border border-[var(--panel-border)] bg-[var(--panel-bg)] shadow-sm">
             <Button
               variant="ghost"
               size="sm"
@@ -547,10 +543,11 @@ function OrdersPage() {
               <Plus className="h-3.5 w-3.5" />New Order
             </Button>
           </Link>
-        </div>
-      </header>
+          </>
+        }
+      />
 
-      <div className="rounded-xl border bg-card shadow-sm overflow-hidden">
+      <div className="overflow-hidden rounded-2xl border border-[var(--panel-border)] bg-[var(--panel-bg)] shadow-[var(--shadow-panel)]">
         <OrdersStatusTabs
           active={activeTab}
           counts={countsData?.counts ?? {}}
@@ -696,22 +693,22 @@ function OrdersPage() {
           onPreorder={(id) => { setPreorderIds([id]); setPreorderOpen(true); }}
         />
         {!isLoading && visibleRows.length === 0 && (
-          <div className="flex flex-col items-center justify-center gap-3 py-16 text-center">
-            <div className="h-14 w-14 rounded-full bg-muted flex items-center justify-center">
-              <Inbox className="h-7 w-7 text-muted-foreground" />
-            </div>
-            <div>
-              <div className="font-semibold">No orders found</div>
-              <div className="text-sm text-muted-foreground">
-                {courierFilterActive
-                  ? `No orders with courier status "${COURIER_BUCKET_META[courierStatusFilter as CourierBucket].label}" on this page.`
-                  : "Try adjusting your filters or date range."}
-              </div>
-            </div>
-            {(hasActiveFilters || courierFilterActive) && (
-              <Button variant="outline" size="sm" onClick={() => { clearAllFilters(); setCourierStatusFilter("all"); }}>Clear filters</Button>
-            )}
-          </div>
+          <EmptyState
+            icon={<Inbox className="h-7 w-7" />}
+            title="No orders found"
+            description={
+              courierFilterActive
+                ? `No orders with courier status "${COURIER_BUCKET_META[courierStatusFilter as CourierBucket].label}" on this page.`
+                : "Try adjusting your filters or date range."
+            }
+            action={
+              (hasActiveFilters || courierFilterActive) ? (
+                <Button variant="outline" size="sm" onClick={() => { clearAllFilters(); setCourierStatusFilter("all"); }}>
+                  Clear filters
+                </Button>
+              ) : undefined
+            }
+          />
         )}
           </>
         )}

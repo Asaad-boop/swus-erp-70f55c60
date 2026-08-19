@@ -501,9 +501,9 @@ export function OrdersTable({ rows, loading, selectedIds, onToggleSelect, onTogg
   };
 
   return (
-    <div className="bg-card overflow-x-auto">
+    <div className="overflow-x-auto bg-[var(--panel-bg)] [scrollbar-width:thin]">
       <Table>
-        <TableHeader className="bg-muted/40 sticky top-0 z-10 backdrop-blur">
+        <TableHeader className="sticky top-0 z-20 bg-[var(--table-head-bg)]/95 backdrop-blur supports-[backdrop-filter]:bg-[var(--table-head-bg)]/80 shadow-[0_1px_0_0_var(--panel-border)]">
           {table.getHeaderGroups().map((hg) => (
             <TableRow key={hg.id} className="hover:bg-transparent border-b">
               {hg.headers.map((h) => {
@@ -541,9 +541,11 @@ export function OrdersTable({ rows, loading, selectedIds, onToggleSelect, onTogg
         <TableBody>
           {loading ? (
             Array.from({ length: 8 }).map((_, i) => (
-              <TableRow key={i}>
+              <TableRow key={i} className="border-b last:border-0">
                 {visibleColumns.map((_c, j) => (
-                  <TableCell key={j}><Skeleton className="h-5 w-full" /></TableCell>
+                  <TableCell key={j} className={cn("px-3", compact ? "py-1.5" : "py-3")}>
+                    <Skeleton className="h-5 w-full" style={{ opacity: 1 - i * 0.08 }} />
+                  </TableCell>
                 ))}
               </TableRow>
             ))
@@ -558,8 +560,9 @@ export function OrdersTable({ rows, loading, selectedIds, onToggleSelect, onTogg
               <TableRow
                 key={row.id}
                 className={cn(
-                  "cursor-pointer transition-colors border-b last:border-0 hover:bg-muted/50 group/row",
-                  selectedIds.has(row.original.id) && "bg-primary/5",
+                  "group/row cursor-pointer border-b last:border-0 transition-colors duration-150",
+                  "hover:bg-[var(--row-hover)]",
+                  selectedIds.has(row.original.id) && "bg-[var(--row-selected)] hover:bg-[var(--row-selected)]",
                 )}
                 onClick={() => onRowClick(row.original.id)}
               >

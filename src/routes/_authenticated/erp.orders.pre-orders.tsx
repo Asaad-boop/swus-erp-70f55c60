@@ -29,6 +29,7 @@ import {
   Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle,
 } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
+import { ErpPageHeader, HeaderChip } from "@/components/erp/ui/page-header";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
 export const Route = createFileRoute("/_authenticated/erp/orders/pre-orders")({
@@ -215,33 +216,29 @@ function PreOrdersPage() {
   });
 
   return (
-    <div className="space-y-5 p-4 pb-24 md:p-6">
-      {/* Header */}
-      <div className="relative overflow-hidden rounded-2xl border bg-card p-5 shadow-sm">
-        <div className="pointer-events-none absolute -right-16 -top-24 h-56 w-56 rounded-full bg-indigo-500/10 blur-3xl" />
-        <div className="pointer-events-none absolute -bottom-24 left-1/3 h-48 w-48 rounded-full bg-emerald-500/10 blur-3xl" />
-        <div className="relative flex flex-wrap items-start justify-between gap-3">
-          <div className="flex items-start gap-3">
-            <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-indigo-600/10 text-indigo-600 ring-1 ring-inset ring-indigo-600/20">
-              <CalendarClock className="h-5 w-5" />
-            </span>
-            <div>
-              <h1 className="text-xl font-bold tracking-tight">Pre-orders</h1>
-              <p className="mt-0.5 max-w-xl text-xs text-muted-foreground">
-                Promise date, advance আর due — সব একসাথে। Stock এলে call দিয়ে confirm করলেই packaging queue-তে যাবে।
-              </p>
-            </div>
-          </div>
-          <div className="flex items-center gap-2">
+    <div className="min-h-screen space-y-5 p-4 pb-24 md:p-6 workspace-bg">
+      <ErpPageHeader
+        live
+        eyebrow="Orders · Pre-order pipeline"
+        title="Pre-orders"
+        subtitle="Promise date, advance আর due — সব একসাথে। Stock এলে call দিয়ে confirm করলেই packaging queue-তে যাবে।"
+        chips={
+          <>
+            <HeaderChip value={kpis.live} label="live" tone="primary" />
+            {kpis.overdue > 0 && <HeaderChip value={kpis.overdue} label="overdue" tone="danger" />}
+          </>
+        }
+        actions={
+          <>
             <Button variant="outline" size="sm" onClick={() => setBlastOpen(true)} className="gap-1.5" disabled={scopeIds.length === 0}>
               <MessageSquare className="h-3.5 w-3.5" /> সবাইকে SMS
             </Button>
             <Button variant="outline" size="sm" onClick={refresh} className="gap-1.5">
               <RefreshCw className={cn("h-3.5 w-3.5 transition-transform", listQuery.isFetching && "animate-spin")} /> Refresh
             </Button>
-          </div>
-        </div>
-      </div>
+          </>
+        }
+      />
 
       <Dialog open={blastOpen} onOpenChange={setBlastOpen}>
         <DialogContent className="max-w-lg">
