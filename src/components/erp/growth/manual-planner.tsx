@@ -74,7 +74,7 @@ async function fetchScenarioRows(brandId: string | null, month: string) {
  * while ads / packaging / courier are paid on every dispatched piece.
  */
 export function rowMath(r: PlanScenarioRow) {
-  const netPrice = r.sell_price * (1 - r.return_pct * 0 - r.discount_pct / 100);
+  const netPrice = r.sell_price * (1 - r.discount_pct / 100);
   const returnUnits = (r.qty * r.return_pct) / 100;
   const delivered = Math.max(0, r.qty - returnUnits);
   const revenue = delivered * netPrice;
