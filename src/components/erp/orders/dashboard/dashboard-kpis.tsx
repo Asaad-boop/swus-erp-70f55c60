@@ -1,10 +1,36 @@
 import { Card } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
+import { ArrowDownRight, ArrowRight, ArrowUpRight } from "lucide-react";
 import type { DashboardKpis } from "@/lib/erp/orders-dashboard.functions";
 
 export function money(n: number | null | undefined) {
   const v = Number(n ?? 0);
   return `৳${v.toLocaleString("en-BD", { maximumFractionDigits: 0 })}`;
+}
+
+function Delta({ cur, prev, invert }: { cur: number; prev?: number; invert?: boolean }) {
+  if (prev === undefined || prev === null) return null;
+  if (!prev && !cur) return null;
+  const pct = prev ? ((cur - prev) / Math.abs(prev)) * 100 : 100;
+  const up = cur >= prev;
+  const good = invert ? !up : up;
+  const Icon = Math.abs(pct) < 0.5 ? ArrowRight : up ? ArrowUpRight : ArrowDownRight;
+  return (
+    <span
+      className={cn(
+        "inline-flex items-center gap-0.5 rounded px-1 py-px text-[10px] font-semibold tabular-nums",
+        Math.abs(pct) < 0.5
+          ? "bg-muted text-muted-foreground"
+          : good
+            ? "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400"
+            : "bg-red-500/10 text-red-600 dark:text-red-400",
+      )}
+      title="আগের সমান সময়ের তুলনায়"
+    >
+      <Icon className="h-3 w-3" />
+      {Math.abs(pct) >= 999 ? "999+" : Math.abs(pct).toFixed(0)}%
+    </span>
+  );
 }
 
 function Kpi({
@@ -14,6 +40,7 @@ function Kpi({
   tone = "default",
   onClick,
   active,
+  delta,
 }: {
   label: string;
   value: string;
@@ -21,6 +48,7 @@ function Kpi({
   tone?: "default" | "success" | "warning" | "danger" | "info";
   onClick?: () => void;
   active?: boolean;
+  delta?: React.ReactNode;
 }) {
   const toneClass = {
     default: "text-foreground",
@@ -39,7 +67,10 @@ function Kpi({
       )}
     >
       <div className="text-[11px] uppercase tracking-wide text-muted-foreground">{label}</div>
-      <div className={cn("mt-1 text-xl font-semibold tabular-nums", toneClass)}>{value}</div>
+      <div className="mt-1 flex items-center gap-1.5">
+        <span className={cn("text-xl font-semibold tabular-nums", toneClass)}>{value}</span>
+        {delta}
+      </div>
       {sub ? <div className="text-[11px] text-muted-foreground">{sub}</div> : null}
     </Card>
   );
@@ -47,15 +78,18 @@ function Kpi({
 
 export function DashboardKpiStrip({
   kpis,
+  prev,
   onPickStatuses,
   activeStatuses,
 }: {
   kpis: DashboardKpis;
+  prev?: DashboardKpis | null;
   onPickStatuses: (statuses: string[]) => void;
   activeStatuses: string[];
 }) {
   const deliveryRate = kpis.total_orders ? (kpis.delivered_orders / kpis.total_orders) * 100 : 0;
   const returnRate = kpis.total_orders ? (kpis.returned_orders / kpis.total_orders) * 100 : 0;
+  const cancelRate = kpis.total_orders ? (kpis.cancelled_orders / kpis.total_orders) * 100 : 0;
   const same = (a: string[]) =>
     a.length === activeStatuses.length && a.every((s) => activeStatuses.includes(s));
 
@@ -65,7 +99,12 @@ export function DashboardKpiStrip({
 
   return (
     <div className="grid grid-cols-2 gap-2 md:grid-cols-4 xl:grid-cols-6">
-      <Kpi label="Total orders" value={kpis.total_orders.toLocaleString()} sub={money(kpis.total_value)} />
+      <Kpi
+        label="Total orders"
+        value={kpis.total_orders.toLocaleString()}
+        sub={money(kpis.total_value)}
+        delta={<Delta cur={kpis.total_orders} prev={prev?.total_orders} />}
+      />
       <Kpi
         label="Delivered"
         value={kpis.delivered_orders.toLocaleString()}
@@ -73,6 +112,7 @@ export function DashboardKpiStrip({
         tone="success"
         onClick={() => onPickStatuses(same(delivered) ? [] : delivered)}
         active={same(delivered)}
+        delta={<Delta cur={kpis.delivered_orders} prev={prev?.delivered_orders} />}
       />
       <Kpi
         label="In transit"
@@ -88,21 +128,41 @@ export function DashboardKpiStrip({
         tone="danger"
         onClick={() => onPickStatuses(same(returned) ? [] : returned)}
         active={same(returned)}
+        delta={<Delta cur={kpis.returned_orders} prev={prev?.returned_orders} invert />}
       />
       <Kpi
         label="Cancelled"
         value={kpis.cancelled_orders.toLocaleString()}
+        sub={`${cancelRate.toFixed(1)}% of orders`}
         onClick={() => onPickStatuses(same(["cancelled"]) ? [] : ["cancelled"])}
         active={same(["cancelled"])}
+        delta={<Delta cur={kpis.cancelled_orders} prev={prev?.cancelled_orders} invert />}
       />
-      <Kpi label="Paid orders" value={kpis.paid_orders.toLocaleString()} tone="success" />
+      <Kpi
+        label="Delivered value"
+        value={money(kpis.delivered_value)}
+        tone="success"
+        sub={`${kpis.paid_orders.toLocaleString()} paid orders`}
+        delta={<Delta cur={kpis.delivered_value} prev={prev?.delivered_value} />}
+      />
       <Kpi label="Advance collected" value={money(kpis.advance_collected)} tone="info" />
       <Kpi label="COD outstanding" value={money(kpis.cod_outstanding)} tone="warning" />
-      <Kpi label="Avg order value" value={money(kpis.avg_order_value)} />
+      <Kpi
+        label="Avg order value"
+        value={money(kpis.avg_order_value)}
+        delta={<Delta cur={kpis.avg_order_value} prev={prev?.avg_order_value} />}
+      />
+      <Kpi
+        label="Delivery rate"
+        value={`${deliveryRate.toFixed(1)}%`}
+        sub={`Return ${returnRate.toFixed(1)}% · Cancel ${cancelRate.toFixed(1)}%`}
+        tone={deliveryRate >= 70 ? "success" : deliveryRate >= 50 ? "warning" : "danger"}
+      />
       <Kpi
         label="Confirm → delivery"
         value={`${(kpis.avg_confirm_to_delivery_hours / 24).toFixed(1)} d`}
         sub={`${kpis.avg_confirm_to_delivery_hours.toFixed(0)} hours avg`}
+        delta={<Delta cur={kpis.avg_confirm_to_delivery_hours} prev={prev?.avg_confirm_to_delivery_hours} invert />}
       />
     </div>
   );
