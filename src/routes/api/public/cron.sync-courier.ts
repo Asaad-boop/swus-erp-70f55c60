@@ -2,6 +2,7 @@ import { createFileRoute } from "@tanstack/react-router";
 import {
   mapCourierStatus,
   normalizeCourierStatus,
+  resolveCourierTransition,
   type CourierProvider,
   type CourierStatusMappingOverrides,
 } from "@/lib/erp/courier-status-mapping";
@@ -217,7 +218,8 @@ export const Route = createFileRoute("/api/public/cron/sync-courier")({
                   return;
                 }
                 const overrides = await loadMapping(o.brand_id);
-                const mapped = mapCourierStatus(provider, raw, overrides);
+                const mappedRaw = mapCourierStatus(provider, raw, overrides);
+                const mapped = resolveCourierTransition(o.status as string, mappedRaw);
                 // If courier reports cancelled, drop the shipment row instead
                 // of cancelling the order. Next run picks the next active one.
                 if (/cancel/i.test(raw) && ship?.id) {
