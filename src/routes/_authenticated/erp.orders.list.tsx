@@ -615,6 +615,25 @@ function OrdersPage() {
           <OrdersToolbar
           filter={effective}
           onChange={setFilter}
+          density={prefs.density}
+          onDensityChange={prefs.setDensity}
+          hiddenColumns={prefs.hiddenColumns}
+          onToggleColumn={prefs.toggleColumn}
+          onResetColumns={prefs.resetColumns}
+          savedViews={savedViews.views}
+          onSaveView={(name) =>
+            savedViews.save(name, {
+              search: filter.search, source: filter.source, courier: filter.courier,
+              courierBucket: filter.courierBucket ?? null, paymentMethod: filter.paymentMethod ?? null,
+              paymentStatus: filter.paymentStatus ?? null, city: filter.city ?? null,
+              assignee: filter.assignee ?? null, amountMin: filter.amountMin ?? null,
+              amountMax: filter.amountMax ?? null, advanceFilter: filter.advanceFilter ?? "any",
+              printedFilter: filter.printedFilter ?? "all", dateFrom: filter.dateFrom, dateTo: filter.dateTo,
+              statuses: filter.statuses, sortKey: filter.sortKey, sortDir: filter.sortDir,
+            })
+          }
+          onApplyView={(v) => applyView(v.search)}
+          onDeleteView={savedViews.remove}
           rightSlot={
             <OrdersBulkActions
               selectedCount={selectedIds.size}
@@ -651,6 +670,18 @@ function OrdersPage() {
         <OrdersTable
           rows={visibleRows}
           loading={isLoading}
+          density={prefs.density}
+          hiddenColumns={prefs.hiddenColumns}
+          sortKey={filter.sortKey ?? "created_at"}
+          sortDir={filter.sortDir ?? "desc"}
+          onSortChange={(key) =>
+            setFilter((f) => ({
+              ...f,
+              sortKey: key,
+              sortDir: f.sortKey === key ? ((f.sortDir ?? "desc") === "desc" ? "asc" : "desc") : "desc",
+              page: 0,
+            }))
+          }
           selectedIds={selectedIds}
           onToggleSelect={toggleSelect}
           onToggleAll={toggleAll}
