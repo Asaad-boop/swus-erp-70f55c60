@@ -308,6 +308,24 @@ function OrdersPage() {
     else setSelectedIds(new Set());
   };
 
+  /** Select every order matching the current filter, not just this page. */
+  const selectAllMatching = async () => {
+    setSelectingAll(true);
+    try {
+      const ids = await fetchAllMatchingOrderIds(effective);
+      setSelectedIds(new Set(ids));
+      toast.success(`${ids.length.toLocaleString()} orders selected`);
+    } catch (e) {
+      toast.error((e as Error).message);
+    } finally {
+      setSelectingAll(false);
+    }
+  };
+
+  const applyView = (searchObj: Record<string, unknown>) => {
+    setFilter((f) => ({ ...f, ...(searchObj as Partial<OrdersFilter>), page: 0 }));
+  };
+
   const statusMutation = useMutation({
     mutationFn: async ({ id, status }: { id: string; status: OrderStatus }) => {
       const { error } = await supabase.rpc("transition_order_status", { _order_id: id, _new_status: status });
