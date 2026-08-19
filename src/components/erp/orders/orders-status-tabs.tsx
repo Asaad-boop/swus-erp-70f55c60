@@ -12,6 +12,8 @@ const TAB_DOT: Record<StatusTabKey, string> = {
   partial:        "bg-emerald-400",
   pending_return: "bg-orange-500",
   returned:       "bg-red-500",
+  paid_return:    "bg-teal-500",
+  completed:      "bg-emerald-700",
   exchange:       "bg-violet-500",
   on_hold:        "bg-yellow-500",
   cancelled:      "bg-zinc-400",
