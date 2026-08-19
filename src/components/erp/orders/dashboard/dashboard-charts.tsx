@@ -18,6 +18,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { statusBadge } from "@/lib/erp/orders";
 import type { OrderDashboardSummary } from "@/lib/erp/orders-dashboard.functions";
 import { money } from "./dashboard-kpis";
+import { TopProducts } from "./top-products";
 
 const PIE_COLORS = ["#3b82f6", "#10b981", "#f59e0b", "#8b5cf6", "#ef4444", "#06b6d4", "#eab308", "#71717a"];
 
@@ -175,26 +176,7 @@ export function DashboardCharts({ summary }: { summary: OrderDashboardSummary })
         </Card>
       )}
 
-      {products.length > 0 && (
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm">Top products</CardTitle>
-          </CardHeader>
-          <CardContent className="h-[260px] overflow-auto pt-0 text-sm">
-            <table className="w-full">
-              <tbody>
-                {products.map((p) => (
-                  <tr key={p.name ?? "—"} className="border-b last:border-0">
-                    <td className="max-w-[240px] truncate py-1.5">{p.name ?? "—"}</td>
-                    <td className="py-1.5 text-right tabular-nums">{p.qty} pcs</td>
-                    <td className="py-1.5 text-right tabular-nums text-muted-foreground">{money(p.value)}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </CardContent>
-        </Card>
-      )}
+      <TopProducts products={products} />
 
       {confirmers.length > 0 && (
         <Card>
