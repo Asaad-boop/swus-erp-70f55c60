@@ -170,7 +170,11 @@ function OrdersPage() {
   const [syncOpen, setSyncOpen] = useState(false);
   const [singleSyncId, setSingleSyncId] = useState<string | null>(null);
   const [phoneHistOpen, setPhoneHistOpen] = useState(false);
-  const [courierStatusFilter, setCourierStatusFilter] = useState<CourierBucket | "all">("all");
+  // Live courier bucket is resolved server-side (see useOrdersQuery) so counts
+  // and pagination stay correct instead of filtering only the current page.
+  const courierStatusFilter: CourierBucket | "all" = filter.courierBucket ?? "all";
+  const setCourierStatusFilter = (v: CourierBucket | "all") =>
+    setFilter((f) => ({ ...f, courierBucket: v === "all" ? null : v, page: 0 }));
   const [lastSyncedAt, setLastSyncedAt] = useState<number | null>(null);
   const [flashIds, setFlashIds] = useState<Set<string>>(new Set());
 
@@ -178,15 +182,7 @@ function OrdersPage() {
   const pageOrderIds = useMemo(() => rows.map((r) => r.id), [rows]);
   const { data: shipmentsMap = {} } = useCourierShipments(pageOrderIds);
 
-  // Apply client-side courier status filter
-  const visibleRows = useMemo(() => {
-    if (courierStatusFilter === "all") return rows;
-    return rows.filter((r) => {
-      const s = shipmentsMap[r.id];
-      const bucket = s ? normalizeCourierStatus(s.status) : null;
-      return bucket === courierStatusFilter;
-    });
-  }, [rows, shipmentsMap, courierStatusFilter]);
+  const visibleRows = rows;
 
   // Realtime: subscribe to courier_shipments UPDATE/INSERT
   const idsKey = useMemo(() => [...pageOrderIds].sort().join(","), [pageOrderIds]);
