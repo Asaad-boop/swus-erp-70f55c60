@@ -176,6 +176,64 @@ export function useOrdersQuery(filter: OrdersFilter) {
 }
 
 export function useOrderDetail(orderId: string | null) {
+  return useOrderDetailInner(orderId);
+}
+
+/** Fetch every order id matching the current filter (for "select all matching"). */
+export async function fetchAllMatchingOrderIds(filter: OrdersFilter, cap = 5000): Promise<string[]> {
+  const brandIds = filter.brandIds && filter.brandIds.length > 0
+    ? filter.brandIds
+    : filter.brandId ? [filter.brandId] : [];
+  if (brandIds.length === 0) return [];
+  let bucketIds: string[] | null = null;
+  if (filter.courierBucket) {
+    bucketIds = await orderIdsForCourierBucket(filter.courierBucket);
+    if (bucketIds.length === 0) return [];
+  }
+  const out: string[] = [];
+  const pageSize = 1000;
+  for (let page = 0; out.length < cap; page++) {
+    let q = applyBrandScope(supabase.from("orders").select("id"), brandIds)
+      .order("created_at", { ascending: false });
+    if (filter.statuses.length > 0) {
+      q = q.in("status", filter.statuses);
+      if (filter.statuses.includes("confirmed")) {
+        q = q.or(`status.neq.confirmed,source.is.null,${WEB_ORDER_SOURCE_FILTER},web_status.eq.complete`);
+      }
+    } else {
+      q = q.neq("status", "new").neq("status", "pre_order");
+      q = q.or(`status.neq.confirmed,source.is.null,${WEB_ORDER_SOURCE_FILTER},web_status.eq.complete`);
+    }
+    if (bucketIds) q = q.in("id", bucketIds);
+    if (filter.printedFilter === "printed") q = q.not("printed_at", "is", null);
+    else if (filter.printedFilter === "unprinted") q = q.is("printed_at", null);
+    if (filter.source) q = q.eq("source", filter.source as never);
+    if (filter.courier) q = q.eq("courier_name", filter.courier);
+    if (filter.paymentMethod) q = q.eq("payment_method", filter.paymentMethod);
+    if (filter.paymentStatus) q = q.eq("payment_status", filter.paymentStatus as never);
+    if (filter.city) q = q.ilike("shipping_city", `%${filter.city}%`);
+    if (filter.assignee) q = q.eq("assigned_to", filter.assignee);
+    if (filter.amountMin != null) q = q.gte("total", filter.amountMin);
+    if (filter.amountMax != null) q = q.lte("total", filter.amountMax);
+    if (filter.advanceFilter === "with") q = q.gt("advance_amount", 0);
+    else if (filter.advanceFilter === "without") q = q.or("advance_amount.is.null,advance_amount.eq.0");
+    if (filter.dateFrom) q = q.gte("created_at", filter.dateFrom);
+    if (filter.dateTo) q = q.lte("created_at", filter.dateTo);
+    if (filter.search.trim()) {
+      const s = filter.search.trim();
+      q = q.or(`invoice_no.ilike.%${s}%,shipping_name.ilike.%${s}%,shipping_phone.ilike.%${s}%,guest_name.ilike.%${s}%,guest_phone.ilike.%${s}%,tracking_number.ilike.%${s}%`);
+    }
+    const from = page * pageSize;
+    const { data, error } = await q.range(from, from + pageSize - 1);
+    if (error) throw error;
+    const batch = (data ?? []) as { id: string }[];
+    out.push(...batch.map((r) => r.id));
+    if (batch.length < pageSize) break;
+  }
+  return out.slice(0, cap);
+}
+
+function useOrderDetailInner(orderId: string | null) {
   return useQuery({
     queryKey: ["order-detail", orderId],
     enabled: !!orderId,
