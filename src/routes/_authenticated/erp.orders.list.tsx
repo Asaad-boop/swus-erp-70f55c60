@@ -488,66 +488,52 @@ function OrdersPage() {
   }, [visibleRows]);
 
   return (
-    <div className="p-4 md:p-6 space-y-4 min-h-screen workspace-bg">
+    <div className="p-4 md:p-6 min-h-screen bg-background">
       <ErpPageHeader
         live
-        eyebrow={`${activeBrand?.name ?? "All brands"} · Orders`}
+        eyebrow={activeBrand?.name ?? "All brands"}
         title="Orders"
         chips={
           <>
-            <HeaderChip value={total.toLocaleString()} label="total" />
+            <HeaderChip value={total.toLocaleString()} label="orders" />
             {selectedIds.size > 0 && <HeaderChip tone="primary" value={selectedIds.size} label="selected" />}
-            {isFetching && <HeaderChip tone="primary" value="●" label="syncing" />}
           </>
         }
         actions={
           <>
           {lastSyncedAt && (
-            <span className="text-[10px] text-muted-foreground hidden sm:inline">
-              Last synced {relTimeShort(lastSyncedAt)}
+            <span className="text-[10px] text-muted-foreground/70 hidden md:inline">
+              Synced {relTimeShort(lastSyncedAt)}
             </span>
           )}
-          <Select value={courierStatusFilter} onValueChange={(v) => setCourierStatusFilter(v as CourierBucket | "all")}>
-            <SelectTrigger className="h-9 w-[170px] bg-[var(--panel-bg)]">
-              <span className="flex items-center gap-1.5 text-xs">
-                <Truck className="h-3.5 w-3.5 text-muted-foreground" />
-                <SelectValue placeholder="Courier status" />
-              </span>
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">All courier statuses</SelectItem>
-              {COURIER_BUCKETS.map((b) => (
-                <SelectItem key={b} value={b}>
-                  {COURIER_BUCKET_META[b].label}
-                  {courierCounts[b] ? ` (${courierCounts[b]})` : ""}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-          <div className="inline-flex overflow-hidden rounded-lg border border-[var(--panel-border)] bg-[var(--panel-bg)] shadow-sm">
-            <Button
-              variant="ghost"
-              size="sm"
-              className="h-9 rounded-none border-r"
-              onClick={handleRefresh}
-              title="Refresh"
-            >
-              <RefreshCw className={`h-3.5 w-3.5 ${isFetching ? "animate-spin" : ""}`} />
-            </Button>
-            <Button variant="ghost" size="sm" className="h-9 rounded-none gap-1.5" onClick={handleExport} disabled={exporting}>
-              <Download className={`h-3.5 w-3.5 ${exporting ? "animate-pulse" : ""}`} /> {exporting ? "Exporting…" : "Export"}
-            </Button>
-          </div>
+          <Button
+            variant="ghost"
+            size="sm"
+            className="h-8 w-8 p-0 rounded-lg text-muted-foreground hover:text-foreground"
+            onClick={handleRefresh}
+            title="Refresh (r)"
+          >
+            <RefreshCw className={`h-3.5 w-3.5 ${isFetching ? "animate-spin" : ""}`} />
+          </Button>
+          <Button
+            variant="ghost"
+            size="sm"
+            className="h-8 gap-1.5 rounded-lg px-2.5 text-[12.5px] font-normal text-muted-foreground hover:text-foreground"
+            onClick={handleExport}
+            disabled={exporting}
+          >
+            <Download className={`h-3.5 w-3.5 ${exporting ? "animate-pulse" : ""}`} /> {exporting ? "Exporting…" : "Export"}
+          </Button>
           <Link to="/erp/orders/new">
-            <Button size="sm" className="h-9 shadow-sm gap-1.5 px-3">
-              <Plus className="h-3.5 w-3.5" />New Order
+            <Button size="sm" className="h-8 gap-1.5 rounded-lg px-3 text-[12.5px] shadow-none">
+              <Plus className="h-3.5 w-3.5" />New order
             </Button>
           </Link>
           </>
         }
       />
 
-      <div className="overflow-hidden rounded-2xl border border-[var(--panel-border)] bg-[var(--panel-bg)] shadow-[var(--shadow-panel)]">
+      <div className="overflow-hidden rounded-xl border border-[var(--panel-border)] bg-card">
         <OrdersStatusTabs
           active={activeTab}
           counts={countsData?.counts ?? {}}
