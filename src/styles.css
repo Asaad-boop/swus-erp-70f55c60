@@ -134,14 +134,48 @@
   --shadow-panel: 0 1px 2px oklch(0.2 0.04 265 / 0.05), 0 8px 20px -18px oklch(0.2 0.04 265 / 0.35);
   --shadow-panel-lg: 0 2px 4px oklch(0.2 0.04 265 / 0.05), 0 18px 40px -24px oklch(0.2 0.04 265 / 0.38);
   --glass-bg: oklch(1 0 0 / 0.72);
-  --workspace-bg: radial-gradient(1200px 500px at 12% -10%, oklch(0.94 0.045 268 / 0.75), transparent 60%),
-                  radial-gradient(900px 420px at 92% -6%, oklch(0.94 0.05 195 / 0.6), transparent 62%),
+  --workspace-bg: radial-gradient(1400px 580px at 10% -12%, oklch(0.95 0.05 268 / 0.85), transparent 58%),
+                  radial-gradient(1000px 480px at 90% -8%, oklch(0.95 0.06 205 / 0.72), transparent 60%),
+                  radial-gradient(800px 400px at 50% -10%, oklch(0.98 0.02 250 / 0.55), transparent 55%),
                   oklch(0.985 0.004 258);
   /* Aurora Ops — shared header + table chrome */
   --aurora-header: linear-gradient(120deg, oklch(0.98 0.025 268) 0%, oklch(0.995 0.008 258) 45%, oklch(0.98 0.03 200) 100%);
   --table-head-bg: oklch(0.982 0.006 258);
   --row-hover: oklch(0.968 0.012 262);
-  --row-selected: oklch(0.955 0.03 265);
+  /* Order status pipeline — vibrant status accents */
+  --status-pending: oklch(0.64 0.19 245);
+  --status-pending-glow: oklch(0.64 0.19 245 / 0.42);
+  --status-packing: oklch(0.58 0.22 295);
+  --status-packing-glow: oklch(0.58 0.22 295 / 0.44);
+  --status-ready-to-ship: oklch(0.65 0.16 195);
+  --status-ready-to-ship-glow: oklch(0.65 0.16 195 / 0.42);
+  --status-shipped: oklch(0.78 0.17 75);
+  --status-shipped-glow: oklch(0.78 0.17 75 / 0.42);
+  --status-in-transit: oklch(0.8 0.16 65);
+  --status-in-transit-glow: oklch(0.8 0.16 65 / 0.42);
+  --status-delivered: oklch(0.62 0.18 155);
+  --status-delivered-glow: oklch(0.62 0.18 155 / 0.45);
+  --status-partial: oklch(0.72 0.15 155);
+  --status-partial-glow: oklch(0.72 0.15 155 / 0.4);
+  --status-pending-return: oklch(0.72 0.18 45);
+  --status-pending-return-glow: oklch(0.72 0.18 45 / 0.42);
+  --status-returned: oklch(0.62 0.22 25);
+  --status-returned-glow: oklch(0.62 0.22 25 / 0.45);
+  --status-paid-return: oklch(0.62 0.16 175);
+  --status-paid-return-glow: oklch(0.62 0.16 175 / 0.42);
+  --status-completed: oklch(0.56 0.2 150);
+  --status-completed-glow: oklch(0.56 0.2 150 / 0.45);
+  --status-exchange: oklch(0.6 0.2 285);
+  --status-exchange-glow: oklch(0.6 0.2 285 / 0.44);
+  --status-on-hold: oklch(0.6 0.03 250);
+  --status-on-hold-glow: oklch(0.6 0.03 250 / 0.35);
+  --status-cancelled: oklch(0.6 0.22 15);
+  --status-cancelled-glow: oklch(0.6 0.22 15 / 0.45);
+  --status-all: oklch(0.55 0.03 260);
+  --status-all-glow: oklch(0.55 0.03 260 / 0.35);
+  --status-incomplete: oklch(0.65 0.03 260);
+  --status-incomplete-glow: oklch(0.65 0.03 260 / 0.32);
+}
 }
 
 .dark {
@@ -205,8 +239,9 @@
   --shadow-panel: 0 1px 2px oklch(0 0 0 / 0.35), 0 10px 26px -20px oklch(0 0 0 / 0.7);
   --shadow-panel-lg: 0 2px 6px oklch(0 0 0 / 0.4), 0 22px 46px -26px oklch(0 0 0 / 0.75);
   --glass-bg: oklch(0.18 0.05 282 / 0.7);
-  --workspace-bg: radial-gradient(1200px 500px at 12% -10%, oklch(0.32 0.1 275 / 0.55), transparent 60%),
-                  radial-gradient(900px 420px at 92% -6%, oklch(0.3 0.09 205 / 0.45), transparent 62%),
+  --workspace-bg: radial-gradient(1400px 580px at 10% -12%, oklch(0.34 0.11 275 / 0.65), transparent 58%),
+                  radial-gradient(1000px 480px at 90% -8%, oklch(0.32 0.1 205 / 0.55), transparent 60%),
+                  radial-gradient(800px 400px at 50% -10%, oklch(0.4 0.06 250 / 0.35), transparent 55%),
                   oklch(0.13 0.04 280);
   --aurora-header: linear-gradient(120deg, oklch(0.24 0.07 275) 0%, oklch(0.19 0.045 282) 50%, oklch(0.22 0.06 205) 100%);
   --table-head-bg: oklch(0.21 0.05 282);
