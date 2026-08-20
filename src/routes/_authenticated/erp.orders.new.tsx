@@ -335,31 +335,63 @@ function NewOrderPage() {
 
   // ── items ─────────────────────────────────────────────────────────────
   const [items, setItems] = useState<LineItem[]>([]);
-  const [skuQuery, setSkuQuery] = useState("");
-  const [nameQuery, setNameQuery] = useState("");
+  const [productSearch, setProductSearch] = useState("");
   const [featuredOnly, setFeaturedOnly] = useState(false);
 
+
   const { data: products = [], isFetching: searching } = useQuery({
-    queryKey: ["new-order-products", effectiveBrandId, nameQuery, skuQuery, featuredOnly],
+    queryKey: ["new-order-products", effectiveBrandId, productSearch, featuredOnly],
     enabled: !!effectiveBrandId,
+
     queryFn: async () => {
       // Cross-brand catalog: shob brand er product dekhabo, chhoto brand tag shoho.
       // Current brand er listing thakle price/title override apply hobe.
-      let q = supabase
-        .from("products")
-        .select("id,title,price,image,stock,is_featured,brand_id,updated_at,brands(name)")
-        .eq("is_active", true)
-        .order("updated_at", { ascending: false })
-        .limit(40);
-      if (nameQuery.trim()) q = q.ilike("title", `%${nameQuery.trim()}%`);
-      if (featuredOnly) q = q.eq("is_featured", true);
-      const { data, error } = await q;
-      if (error) throw error;
+      // Single search box: name, SKU, barcode, slug, and variant SKUs all match.
+      const term = productSearch.trim();
+      const clean = term.replace(/[,&()]/g, " ");
       type Row = {
         id: string; title: string; price: number; image: string | null; stock: number;
-        is_featured: boolean; brand_id: string | null; brands: { name: string } | null;
+        is_featured: boolean; brand_id: string | null; brands: { name: string } | null; sku: string | null;
       };
-      const base = (data ?? []) as unknown as Row[];
+      let base: Row[] = [];
+      if (term.length > 0) {
+        const [prodRes, varRes] = await Promise.all([
+          supabase
+            .from("products")
+            .select("id")
+            .eq("is_active", true)
+            .or(`title.ilike.%${clean}%,sku.ilike.%${clean}%,barcode.ilike.%${clean}%,slug.ilike.%${clean}%`)
+            .limit(200),
+          supabase.from("product_variants").select("product_id").ilike("sku", `%${clean}%`).limit(200),
+        ]);
+        if (prodRes.error) throw prodRes.error;
+        if (varRes.error) throw varRes.error;
+        const ids = new Set<string>([
+          ...((prodRes.data ?? []) as { id: string }[]).map((r) => r.id),
+          ...((varRes.data ?? []) as { product_id: string }[]).map((r) => r.product_id),
+        ]);
+        if (ids.size === 0) return [];
+        const { data, error } = await supabase
+          .from("products")
+          .select("id,title,price,image,stock,is_featured,brand_id,updated_at,sku,brands(name)")
+          .eq("is_active", true)
+          .in("id", [...ids])
+          .order("updated_at", { ascending: false })
+          .limit(200);
+        if (error) throw error;
+        base = (data ?? []) as unknown as Row[];
+      } else {
+        let q = supabase
+          .from("products")
+          .select("id,title,price,image,stock,is_featured,brand_id,updated_at,sku,brands(name)")
+          .eq("is_active", true)
+          .order("updated_at", { ascending: false })
+          .limit(40);
+        if (featuredOnly) q = q.eq("is_featured", true);
+        const { data, error } = await q;
+        if (error) throw error;
+        base = (data ?? []) as unknown as Row[];
+      }
 
       // Overrides for the current brand
       const { data: listings } = await supabase
@@ -379,21 +411,15 @@ function NewOrderPage() {
           image: o?.image_override ?? p.image,
           stock: p.stock,
           is_featured: p.is_featured,
+          sku: p.sku,
           brand_name: p.brands?.name ?? null,
           own_brand: p.brand_id === effectiveBrandId,
         };
       });
-      if (skuQuery.trim()) {
-        const { data: vs } = await supabase
-          .from("product_variants")
-          .select("product_id,sku")
-          .ilike("sku", `%${skuQuery.trim()}%`)
-          .limit(50);
-        const ids = new Set((vs ?? []).map((v) => v.product_id));
-        rows = rows.filter((p) => ids.has(p.id));
-      }
+      if (featuredOnly && term.length > 0) rows = rows.filter((p) => p.is_featured);
       return rows;
     },
+
 
   });
 
@@ -1100,16 +1126,16 @@ function NewOrderPage() {
                     <Star className={cn("h-4 w-4", featuredOnly && "fill-current")} />
                   </Button>
                 </div>
-                <div className="space-y-2">
-                  <div className="relative">
-                    <Search className="absolute left-3 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-muted-foreground" />
-                    <Input className="h-9 pl-9" placeholder="Search by Code / SKU" value={skuQuery} onChange={(e) => setSkuQuery(e.target.value)} />
-                  </div>
-                  <div className="relative">
-                    <Search className="absolute left-3 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-muted-foreground" />
-                    <Input className="h-9 pl-9" placeholder="Search by Name" value={nameQuery} onChange={(e) => setNameQuery(e.target.value)} />
-                  </div>
+                <div className="relative">
+                  <Search className="absolute left-3 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-muted-foreground" />
+                  <Input
+                    className="h-9 pl-9"
+                    placeholder="Search by name, SKU or code…"
+                    value={productSearch}
+                    onChange={(e) => setProductSearch(e.target.value)}
+                  />
                 </div>
+
                 <div className="max-h-[520px] space-y-1.5 overflow-y-auto rounded-xl border bg-muted/20 p-2">
                   {searching && (
                     <div className="flex items-center gap-2 p-3 text-xs text-muted-foreground">
