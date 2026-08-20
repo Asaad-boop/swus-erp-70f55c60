@@ -506,75 +506,28 @@ export async function applyReconRunCore(
           .eq("reference_id", orderId)
           .in("reference_type", ["order_courier", "order_delivery", "order_return_charge"]);
 
-        // Idempotency: drop any payout/deduction this order already got from a
-        // previous reconciliation apply on the same wallet, so re-applying an
-        // invoice replaces (never stacks) the wallet effect.
+        // INVOICE-FIRST MODEL: rows no longer move cash. The whole invoice payout
+        // is posted once as a single wallet transaction (see settleInvoiceTotalCore),
+        // so the wallet always equals the courier statement even when some rows
+        // stay unmatched. Here we only clear legacy per-row postings.
         await supabase
           .from("erp_transactions")
           .delete()
           .eq("reference_id", orderId)
           .eq("reference_type", "order")
-          .eq("account_id", walletId);
+          .ilike("description", "Pathao reconciliation%");
 
-        // Wallet cash model (approach b): the courier deducts its fees
-        // BEFORE handing us the payout. We therefore only book what actually
-        // lands in (or comes out of) the wallet — the payout itself — and
-        // do NOT post a separate courier-charge expense against our account.
-        //   payout > 0 → income = payout
-        //   payout < 0 → expense = -payout (courier ate into other rows'
-        //                collections inside this same invoice)
-        //   payout = 0 → no cash txn (pure return with zero fee)
-        // Fee visibility lives on erp_reconciliation_rows.total_fee and on
-        // order_items.courier_cost_allocated (per-SKU P&L below).
         void returnFee; // kept in schema for history, no longer used on apply
         void partialAmount; // status/amount handled below via orderUpdate
-        let incomeId: string | null = null;
-        let expenseId: string | null = null;
-        const incomeAmount = payoutNum > 0 ? payoutNum : 0;
-        const expenseAmount = payoutNum < 0 ? -payoutNum : 0;
-        if (incomeAmount > 0) {
-          const { data: inc, error: incErr } = await supabase
-            .from("erp_transactions")
-            .insert({
-              brand_id: rowBrand,
-              txn_type: "income",
-              account_id: walletId,
-              amount: incomeAmount,
-              transaction_date: txnDate,
-              reference_type: "order",
-              reference_id: orderId,
-              description: `${description} · payout`,
-              created_by: userId,
-            })
-            .select("id")
-            .single();
-          if (incErr) throw incErr;
-          incomeId = (inc as { id: string }).id;
-        }
-        if (expenseAmount > 0) {
-          const { data: exp, error: expErr } = await supabase
-            .from("erp_transactions")
-            .insert({
-              brand_id: rowBrand,
-              txn_type: "expense",
-              account_id: walletId,
-              category_id: feeCategoryId,
-              amount: expenseAmount,
-              transaction_date: txnDate,
-              reference_type: "order",
-              reference_id: orderId,
-              description: `${description} · courier deduction (return/fee)`,
-              created_by: userId,
-            })
-            .select("id")
-            .single();
-          if (expErr) throw expErr;
-          expenseId = (exp as { id: string }).id;
-        }
+        void feeCategoryId;
+        void description;
+        const incomeId: string | null = null;
+        const expenseId: string | null = null;
         // For downstream displays: courier_fee = the invoice total_fee (what
         // the courier charged for this shipment — visibility only, not a
-        // wallet debit). net_collected = payout (actual wallet effect).
+        // wallet debit). net_collected = payout (allocation of the invoice).
         const displayFee = Number(r.total_fee);
+
 
         // Update order — branch by match_type
         const orderUpdate: Record<string, unknown> = {
