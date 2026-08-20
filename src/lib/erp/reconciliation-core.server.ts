@@ -252,11 +252,17 @@ export async function createReconRunCore(
     const orderById = new Map<string, { total: number; brand_id: string | null }>();
     const appliedOrderIds = new Set<string>();
     if (matchedIds.length) {
-      const ords = await fetchInChunks<{ id: string; total: number; brand_id: string | null }>(
+      const ords = await fetchInChunks<{ id: string; total: number; brand_id: string | null; advance_amount: number | null }>(
         matchedIds,
-        (chunk) => supabase.from("orders").select("id, total, brand_id").in("id", chunk),
+        (chunk) => supabase.from("orders").select("id, total, brand_id, advance_amount").in("id", chunk),
       );
-      ords.forEach((o) => orderById.set(o.id, { total: Number(o.total), brand_id: o.brand_id ?? null }));
+      ords.forEach((o) =>
+        orderById.set(o.id, {
+          total: Number(o.total),
+          brand_id: o.brand_id ?? null,
+          advance: Number(o.advance_amount ?? 0),
+        }),
+      );
 
        const applied = await fetchInChunks<{ matched_order_id: string }>(matchedIds, (chunk) =>
         supabase
