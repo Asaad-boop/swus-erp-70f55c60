@@ -11,13 +11,13 @@ export function OrdersPagination({
   page: number;
   pageSize: number;
   total: number;
-  rowsOnPage: number;
+  rowsOnPage?: number;
   onPage: (p: number) => void;
   onPageSize: (n: number) => void;
 }) {
   const totalPages = Math.max(1, Math.ceil(total / pageSize));
   const start = total === 0 ? 0 : page * pageSize + 1;
-  const end = total === 0 ? 0 : page * pageSize + rowsOnPage;
+  const end = total === 0 ? 0 : Math.min(total, page * pageSize + (rowsOnPage ?? pageSize));
   const [jump, setJump] = useState("");
 
   const pages = pageNumbers(page + 1, totalPages);
