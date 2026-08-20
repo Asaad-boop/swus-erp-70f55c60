@@ -275,17 +275,6 @@ function OrdersPage() {
   const [nudgeDismissed, setNudgeDismissed] = useState(false);
   useEffect(() => { setNudgeDismissed(false); }, [filter.page, filter.statuses.join(",")]);
 
-  const courierCounts = useMemo(() => {
-    const counts: Partial<Record<CourierBucket, number>> = {};
-    for (const r of rows) {
-      const s = shipmentsMap[r.id];
-      const b = s ? normalizeCourierStatus(s.status) : null;
-      if (!b) continue;
-      counts[b] = (counts[b] ?? 0) + 1;
-    }
-    return counts;
-  }, [rows, shipmentsMap]);
-
   // BUG 1: clear selection when page/filter/tab/view changes
   useEffect(() => {
     setSelectedIds(new Set());
