@@ -106,33 +106,21 @@ function rowTypeFor(event: string, collected: number, orderTotal: number | null)
 }
 
 /** Find (or create) the brand's INSTAPAY PATHAO wallet account. */
-export async function ensureInstapayWallet(supabase: AnyRec, brandId: string): Promise<string> {
+/**
+ * Legacy lookup only: the old row-wise flow created a per-brand "INSTAPAY
+ * PATHAO" mfs wallet. We no longer create it — invoice-first settlement posts
+ * to the brand's default COD wallet. Returns null when no legacy wallet exists.
+ */
+export async function findInstapayWallet(supabase: AnyRec, brandId: string): Promise<string | null> {
   const { data: found } = await supabase
     .from("erp_accounts")
     .select("id")
     .eq("brand_id", brandId)
     .ilike("name", INSTAPAY_WALLET_NAME)
     .maybeSingle();
-  if (found?.id) return found.id as string;
-
-  const { data: created, error } = await supabase
-    .from("erp_accounts")
-    .insert({
-      brand_id: brandId,
-      name: INSTAPAY_WALLET_NAME,
-      account_type: "bkash",
-      account_subtype: "bkash",
-      wallet_type: "mfs",
-      opening_balance: 0,
-      current_balance: 0,
-      is_active: true,
-      notes: "Pathao InstaPay payouts (auto from webhook)",
-    })
-    .select("id")
-    .single();
-  if (error) throw new Error(error.message);
-  return (created as { id: string }).id;
+  return (found?.id as string | undefined) ?? null;
 }
+
 
 /** Is auto-apply enabled for this brand? Defaults to true. */
 async function autoApplyEnabled(supabase: AnyRec, brandId: string | null): Promise<boolean> {
