@@ -36,7 +36,7 @@ export type DispatchOrder = {
   updated_at: string | null;
   created_at: string | null;
   packaged_at: string | null;
-  items?: Array<{ name: string; variant_label: string | null; quantity: number; sku: string | null; price: number; image: string | null }>;
+  items?: Array<{ name: string; variant_label: string | null; quantity: number; price: number; image: string | null }>;
 };
 
 export type DispatchData = Record<DispatchStage, DispatchOrder[]>;
@@ -72,6 +72,8 @@ const STAGE_OF: Record<string, DispatchStage> = {
   packed: "packed",
   ready_to_ship: "ready",
   shipped: "shipped",
+  courier_entry: "shipped",
+  in_transit: "shipped",
   on_hold: "hold",
 };
 
@@ -143,7 +145,7 @@ export function preflight(o: DispatchOrder): string[] {
 }
 
 const SELECT =
-  "id, invoice_no, brand_id, status, total, payment_method, courier_name, shipping_name, guest_name, shipping_phone, guest_phone, shipping_address, shipping_thana, shipping_city, shipping_district, tracking_number, printed_at, updated_at, created_at, packaged_at, items:order_items(name, variant_label, quantity, sku, price, image)";
+  "id, invoice_no, brand_id, status, total, payment_method, courier_name, shipping_name, guest_name, shipping_phone, guest_phone, shipping_address, shipping_thana, shipping_city, shipping_district, tracking_number, printed_at, updated_at, created_at, packaged_at, items:order_items(name, variant_label, quantity, price, image)";
 
 const EMPTY: DispatchData = { pending: [], packed: [], ready: [], shipped: [], hold: [] };
 
@@ -197,7 +199,7 @@ export function useDispatch() {
         applyBrandScope(supabase.from("orders").select(SELECT).eq("status", "ready_to_ship"), brandIds)
           .order("updated_at", { ascending: true })
           .limit(600),
-        applyBrandScope(supabase.from("orders").select(SELECT).eq("status", "shipped").gte("updated_at", todayIso), brandIds)
+        applyBrandScope(supabase.from("orders").select(SELECT).in("status", ["shipped", "courier_entry", "in_transit"] as unknown as never[]).gte("updated_at", todayIso), brandIds)
           .order("updated_at", { ascending: false })
           .limit(600),
         applyBrandScope(supabase.from("orders").select(SELECT).eq("status", "on_hold"), brandIds)
