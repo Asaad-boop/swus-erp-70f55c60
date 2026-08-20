@@ -565,32 +565,32 @@ function OrdersPage() {
         ) : (
           <>
           {stuckIds.length > 0 && !nudgeDismissed && (
-            <div className="flex items-center gap-2 px-3 py-2 border-b bg-amber-500/10 text-[12px]">
+            <div className="flex items-center gap-2 px-3 py-1.5 border-b border-[var(--panel-border)] bg-amber-500/[0.07] text-[12px]">
               <AlertTriangle className="h-3.5 w-3.5 text-amber-600 shrink-0" />
-              <span className="font-medium text-foreground/90">
-                <span className="tabular-nums font-bold">{stuckIds.length}</span> order{stuckIds.length > 1 ? "s" : ""} stuck 3+ days in current status
+              <span className="text-foreground/90">
+                <span className="tabular-nums font-semibold">{stuckIds.length}</span> order{stuckIds.length > 1 ? "s" : ""} stuck 3+ days
               </span>
-              <span className="text-muted-foreground hidden sm:inline">— bulk sync courier status?</span>
               <div className="flex-1" />
               <Button
                 size="sm"
-                variant="outline"
-                className="h-7 gap-1.5 text-[11px]"
+                variant="ghost"
+                className="h-7 gap-1.5 text-[11px] font-normal"
                 onClick={() => setSelectedIds(new Set(stuckIds))}
               >
                 Select {stuckIds.length}
               </Button>
               <Button
                 size="sm"
-                className="h-7 gap-1.5 text-[11px]"
+                variant="outline"
+                className="h-7 gap-1.5 text-[11px] font-normal"
                 onClick={() => { setSelectedIds(new Set(stuckIds)); setSyncOpen(true); }}
               >
-                <RefreshCcw className="h-3 w-3" /> Sync all
+                <RefreshCcw className="h-3 w-3" /> Sync
               </Button>
               <button
                 type="button"
                 onClick={() => setNudgeDismissed(true)}
-                className="ml-1 h-6 w-6 grid place-items-center rounded hover:bg-muted text-muted-foreground"
+                className="ml-0.5 h-6 w-6 grid place-items-center rounded text-muted-foreground hover:text-foreground"
                 title="Dismiss"
               >
                 ×
