@@ -696,20 +696,17 @@ function OrdersPage() {
             }
           />
         )}
+        <OrdersPagination
+          page={filter.page}
+          pageSize={filter.pageSize}
+          total={total}
+          rowsOnPage={visibleRows.length}
+          onPage={(p) => setFilter((f) => ({ ...f, page: p }))}
+          onPageSize={(n) => setFilter((f) => ({ ...f, pageSize: n, page: 0 }))}
+        />
           </>
         )}
       </div>
-
-      {view === "orders" && (
-      <OrdersPagination
-        page={filter.page}
-        pageSize={filter.pageSize}
-        total={total}
-        rowsOnPage={visibleRows.length}
-        onPage={(p) => setFilter((f) => ({ ...f, page: p }))}
-        onPageSize={(n) => setFilter((f) => ({ ...f, pageSize: n, page: 0 }))}
-      />
-      )}
 
       {view === "orders" && (
         <OrdersSelectionBar
