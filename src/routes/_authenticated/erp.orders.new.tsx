@@ -54,6 +54,8 @@ type ProductHit = {
   stock: number;
   is_featured: boolean;
   sku?: string | null;
+  brand_name?: string | null;
+  own_brand?: boolean;
 };
 
 type DeliveryMethod = "pathao" | "steadfast" | "manual";
