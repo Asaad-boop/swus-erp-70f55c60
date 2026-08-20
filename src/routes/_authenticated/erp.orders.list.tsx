@@ -188,7 +188,7 @@ function OrdersPage() {
 
   // Stable update helper that writes the next filter state to the URL.
   const filterRef = useRef(filter);
-  const viewRef = useRef(view);
+  const viewRef = useRef<"incomplete" | "orders">(view);
   filterRef.current = filter;
   viewRef.current = view;
   const updateFilter = useCallback(
