@@ -293,7 +293,12 @@ export async function createReconRunCore(
             amountDiff = null;
             status = "matched";
           } else {
-            amountDiff = r.collected - Number(ord.total);
+            // Prepaid (bKash/advance) orders: the customer already paid us, so
+            // the courier collects only the remaining COD (often 0) and simply
+            // deducts its delivery/COD fees from the invoice. Compare against
+            // the expected COD, not the full order total.
+            const expectedCod = Math.max(0, Number(ord.total) - Number(ord.advance ?? 0));
+            amountDiff = r.collected - expectedCod;
             status =
               Math.abs(amountDiff) <= data.tolerance ? "matched" : "amount_mismatch";
           }
