@@ -3,17 +3,15 @@ import { useCallback, useEffect, useState } from "react";
 export type Density = "comfortable" | "compact";
 
 export const ORDER_COLUMNS: { id: string; label: string; lockable?: boolean }[] = [
-  { id: "date", label: "Date" },
-  { id: "invoice", label: "Invoice" },
-  { id: "brand", label: "Brand" },
-  { id: "products", label: "Products" },
+  { id: "order", label: "Order" },
   { id: "customer", label: "Customer" },
-  { id: "note", label: "Note" },
+  { id: "products", label: "Product" },
+  { id: "payment", label: "Payment" },
+  { id: "live_courier_status", label: "Delivery" },
   { id: "status", label: "Status" },
   { id: "total", label: "Total" },
   { id: "courier", label: "Courier" },
-  { id: "source", label: "Source" },
-  { id: "live_courier_status", label: "Live Status" },
+  { id: "note", label: "Note" },
 ];
 
 const KEY = "erp.orders.prefs.v1";
