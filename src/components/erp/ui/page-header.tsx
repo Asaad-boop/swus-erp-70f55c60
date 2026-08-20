@@ -17,39 +17,35 @@ type Props = {
 };
 
 /**
- * Shared ERP page header ("Aurora Ops"). Gives every module the same rhythm:
- * eyebrow → title + chips → actions.
+ * Shared ERP page header. Quiet, minimal rhythm:
+ * eyebrow → title + inline meta → actions. No heavy card, no gradient block.
  */
 export function ErpPageHeader({ eyebrow, title, subtitle, chips, actions, live = false, className }: Props) {
   return (
     <header
       className={cn(
-        "relative overflow-hidden rounded-2xl border px-4 py-3.5 md:px-5 md:py-4",
-        "bg-[var(--aurora-header)] border-[var(--panel-border)] shadow-[var(--shadow-panel)]",
+        "flex flex-wrap items-center justify-between gap-x-4 gap-y-2 pb-3",
         className,
       )}
     >
-      <div className="relative flex flex-wrap items-end justify-between gap-3">
-        <div className="min-w-0">
+        <div className="min-w-0 flex items-center gap-3">
+          <div className="min-w-0">
           {eyebrow != null && (
-            <div className="flex items-center gap-2 text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground">
+            <div className="flex items-center gap-1.5 text-[10px] font-medium uppercase tracking-[0.14em] text-muted-foreground/80">
               {live && (
-                <span className="relative inline-flex h-2 w-2">
-                  <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-500 opacity-60" />
-                  <span className="relative inline-flex h-2 w-2 rounded-full bg-emerald-500" />
-                </span>
+                <span className="inline-flex h-1.5 w-1.5 rounded-full bg-emerald-500" />
               )}
               <span className="truncate">{eyebrow}</span>
             </div>
           )}
-          <div className="mt-1.5 flex flex-wrap items-baseline gap-x-3 gap-y-1.5">
-            <h1 className="text-[26px] md:text-[28px] font-bold leading-none tracking-tight font-display">{title}</h1>
+          <div className="mt-1 flex flex-wrap items-baseline gap-x-2.5 gap-y-1">
+            <h1 className="text-[19px] md:text-[21px] font-semibold leading-none tracking-tight font-display">{title}</h1>
             {chips}
           </div>
-          {subtitle != null && <p className="mt-1.5 text-xs text-muted-foreground">{subtitle}</p>}
+          {subtitle != null && <p className="mt-1 text-xs text-muted-foreground">{subtitle}</p>}
+          </div>
         </div>
         {actions != null && <div className="flex flex-wrap items-center gap-1.5">{actions}</div>}
-      </div>
     </header>
   );
 }
@@ -67,22 +63,16 @@ export function HeaderChip({
   className?: string;
 }) {
   const tones: Record<string, string> = {
-    neutral: "bg-foreground/5 border-[var(--panel-border)] text-foreground",
-    primary: "bg-primary/10 border-primary/25 text-primary",
-    success: "bg-emerald-500/10 border-emerald-500/25 text-emerald-700 dark:text-emerald-400",
-    warning: "bg-amber-500/10 border-amber-500/25 text-amber-700 dark:text-amber-400",
-    danger: "bg-destructive/10 border-destructive/25 text-destructive",
+    neutral: "text-muted-foreground",
+    primary: "text-primary",
+    success: "text-emerald-600 dark:text-emerald-400",
+    warning: "text-amber-600 dark:text-amber-400",
+    danger: "text-destructive",
   };
   return (
-    <span
-      className={cn(
-        "inline-flex items-center gap-1.5 rounded-md border px-2 py-1 text-xs",
-        tones[tone],
-        className,
-      )}
-    >
-      <span className="font-bold tabular-nums">{value}</span>
-      {label != null && <span className="text-muted-foreground">{label}</span>}
+    <span className={cn("inline-flex items-baseline gap-1 text-[11px]", tones[tone], className)}>
+      <span className="font-semibold tabular-nums">{value}</span>
+      {label != null && <span className="text-muted-foreground/70">{label}</span>}
     </span>
   );
 }
