@@ -439,21 +439,25 @@ function ProductSearchPanel({
 
   const { data: results, isFetching } = useQuery({
     queryKey: ["erp-product-search", brandId, debounced],
-    enabled: !!brandId,
     queryFn: async () => {
+      // Cross-brand catalog: dui brand er product-i add kora jabe, shudhu chhoto brand tag dekhabe.
       let q = supabase
         .from("products")
-        .select("id,title,price,image,stock,is_featured,slug")
-        .eq("brand_id", brandId!)
+        .select("id,title,price,image,stock,is_featured,slug,sku,brand_id,brands(name)")
         .eq("is_active", true)
         .order("is_featured", { ascending: false })
         .order("created_at", { ascending: false })
-        .limit(20);
+        .limit(30);
       if (debounced.name) q = q.ilike("title", `%${debounced.name}%`);
-      if (debounced.code) q = q.or(`slug.ilike.%${debounced.code}%,id.eq.${debounced.code}`);
+      if (debounced.code) {
+        const c = debounced.code.replace(/[,()]/g, " ");
+        q = q.or(`slug.ilike.%${c}%,sku.ilike.%${c}%,barcode.ilike.%${c}%,title.ilike.%${c}%`);
+      }
       const { data, error } = await q;
       if (error) throw error;
-      return (data ?? []) as (ProductLite & { slug: string })[];
+      return (data ?? []) as unknown as (ProductLite & {
+        slug: string; sku: string | null; brand_id: string | null; brands: { name: string } | null;
+      })[];
     },
   });
 
@@ -516,7 +520,17 @@ function ProductSearchPanel({
                   {p.is_featured && <Star className="h-3 w-3 text-amber-500 fill-amber-500 shrink-0" />}
                   {p.title}
                 </div>
-                <div className="text-[10px] text-muted-foreground font-mono">SKU: {p.slug?.slice(0, 24) ?? p.id.slice(0, 8)}</div>
+                <div className="flex items-center gap-1.5">
+                  <span className="text-[10px] text-muted-foreground font-mono">SKU: {p.sku ?? p.slug?.slice(0, 24) ?? p.id.slice(0, 8)}</span>
+                  {p.brands?.name && (
+                    <span className={cn(
+                      "rounded px-1 py-px text-[9px] font-semibold",
+                      p.brand_id === brandId
+                        ? "bg-sky-500/10 text-sky-700 dark:text-sky-300"
+                        : "bg-muted text-muted-foreground",
+                    )}>{p.brands.name}</span>
+                  )}
+                </div>
                 <div className="flex items-center gap-2 text-[10px] mt-0.5">
                   <span className="text-rose-600">Price: ৳{bdtCompact(Number(p.price))}</span>
                   <span className={cn("text-muted-foreground", p.stock <= 0 && "text-rose-600")}>Stock: {p.stock}</span>

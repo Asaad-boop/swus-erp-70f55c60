@@ -409,7 +409,7 @@ export const searchProductsForCase = createServerFn({ method: "POST" })
     let q = sb.from("products")
       .select("id, title, sku, image, price, brand_id")
       .limit(25);
-    if (data.brandIds?.length) q = q.in("brand_id", data.brandIds);
+    // Cross-brand: dui brand er product-i replacement hishebe select kora jabe.
     const needle = (data.q ?? "").trim();
     if (needle) {
       const like = `%${needle}%`;

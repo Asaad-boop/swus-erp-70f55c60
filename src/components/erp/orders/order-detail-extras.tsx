@@ -924,9 +924,9 @@ export function ExchangeDialog({
 
   const { data: results } = useQuery({
     queryKey: ["exchange-product-search", brandId, replacementSearch],
-    enabled: !!brandId && replacementSearch.length >= 2,
+    enabled: replacementSearch.length >= 2,
     queryFn: async () => {
-      const { data } = await supabase.from("products").select("id, title, price, stock").eq("brand_id", brandId!).eq("is_active", true).ilike("title", `%${replacementSearch}%`).limit(8);
+      const { data } = await supabase.from("products").select("id, title, price, stock").eq("is_active", true).ilike("title", `%${replacementSearch}%`).limit(8);
       return data ?? [];
     },
   });

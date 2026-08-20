@@ -268,7 +268,7 @@ function AddComponent({
         .neq("id", excludeProductId)
         .order("title")
         .limit(30);
-      if (brandId) q = q.eq("brand_id", brandId);
+      // Cross-brand: dui brand er product-i combo te use kora jabe.
       if (search.trim()) q = q.ilike("title", `%${search.trim()}%`);
       const { data, error } = await q;
       if (error) throw error;
