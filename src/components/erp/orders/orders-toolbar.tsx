@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import {
   Search, X, Calendar as CalendarIcon, ArrowUpDown, Rows3, Rows4,
-  Bookmark, BookmarkPlus, Trash2, SlidersHorizontal, Check,
+  Bookmark, BookmarkPlus, Trash2, Check, Columns3, ChevronDown,
 } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -45,9 +45,9 @@ type Props = {
   onDeleteView?: (id: string) => void;
 };
 
-/** Ghost-styled control used across the toolbar so the row reads as one quiet strip. */
+/** Bordered pill control — matches the reference toolbar chrome. */
 const CTRL =
-  "h-8 gap-1.5 rounded-lg px-2.5 text-[12.5px] font-normal text-muted-foreground hover:text-foreground hover:bg-foreground/[0.05]";
+  "h-9 gap-2 rounded-xl border border-[var(--panel-border)] bg-card px-3 text-[13px] font-medium text-foreground/80 shadow-none hover:bg-foreground/[0.03] hover:text-foreground";
 
 export function OrdersToolbar({
   filter, onChange, rightSlot,
@@ -91,36 +91,54 @@ export function OrdersToolbar({
     : "Any date";
 
   return (
-    <div className="border-b border-[var(--panel-border)]">
-      <div className="flex flex-wrap items-center gap-1 px-2.5 py-2">
+    <div className="rounded-2xl border border-[var(--panel-border)] bg-card px-3 py-2.5">
+      <div className="flex flex-wrap items-center gap-2">
         {/* Search — the only prominent control */}
-        <div className="relative flex-1 min-w-[200px] max-w-sm">
-          <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground/70" />
+        <div className="relative flex-1 min-w-[220px] max-w-md">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground/70" />
           <Input
             data-orders-search
-            placeholder="Search orders…"
+            placeholder="Search orders, invoice, customer, phone…"
             value={searchInput}
             onChange={(e) => setSearchInput(e.target.value)}
-            className="h-8 pl-8 pr-7 rounded-lg border-transparent bg-foreground/[0.04] text-[12.5px] shadow-none placeholder:text-muted-foreground/70 focus-visible:border-border focus-visible:bg-background"
+            className="h-9 pl-9 pr-8 rounded-xl border-[var(--panel-border)] bg-background text-[13px] shadow-none placeholder:text-muted-foreground/70"
           />
           {searchInput && (
             <button
               type="button"
               onClick={() => setSearchInput("")}
-              className="absolute right-1.5 top-1/2 -translate-y-1/2 h-5 w-5 grid place-items-center rounded text-muted-foreground hover:text-foreground"
+              className="absolute right-2 top-1/2 -translate-y-1/2 h-5 w-5 grid place-items-center rounded text-muted-foreground hover:text-foreground"
             >
               <X className="h-3.5 w-3.5" />
             </button>
           )}
         </div>
 
-        <span className="mx-1 h-4 w-px bg-border hidden sm:block" />
+        {/* Quick selects */}
+        <QuickSelect
+          label="Courier"
+          value={filter.courier}
+          options={QUICK_COURIERS}
+          onSelect={(v) => update({ courier: v })}
+        />
+        <QuickSelect
+          label="Source"
+          value={filter.source}
+          options={QUICK_SOURCES}
+          onSelect={(v) => update({ source: v })}
+        />
+        <QuickSelect
+          label="Payment"
+          value={filter.paymentMethod}
+          options={QUICK_PAYMENTS}
+          onSelect={(v) => update({ paymentMethod: v })}
+        />
 
         {/* Date range */}
         <Popover>
           <PopoverTrigger asChild>
-            <Button variant="ghost" size="sm" className={cn(CTRL, (filter.dateFrom || filter.dateTo) && "text-foreground bg-foreground/[0.05]")}>
-              <CalendarIcon className="h-3.5 w-3.5" /> {dateLabel}
+            <Button variant="ghost" size="sm" className={cn(CTRL, (filter.dateFrom || filter.dateTo) && "border-primary/50 text-foreground")}>
+              <CalendarIcon className="h-4 w-4 text-muted-foreground" /> {dateLabel}
             </Button>
           </PopoverTrigger>
           <PopoverContent align="start" className="w-64 p-2">
@@ -171,6 +189,8 @@ export function OrdersToolbar({
           </PopoverContent>
         </Popover>
 
+        <div className="flex-1" />
+
         {/* Everything filter-ish behind one button */}
         <OrdersFilterPanel filter={filter} onChange={update} activeCount={advancedCount} triggerClassName={CTRL} />
 
@@ -178,7 +198,7 @@ export function OrdersToolbar({
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
             <Button variant="ghost" size="sm" className={CTRL}>
-              <ArrowUpDown className="h-3.5 w-3.5" />
+              <ArrowUpDown className="h-4 w-4 text-muted-foreground" />
               <span className="hidden md:inline">{SORT_LABEL[filter.sortKey ?? "created_at"]}</span>
               <span className="text-muted-foreground/70">{(filter.sortDir ?? "desc") === "desc" ? "↓" : "↑"}</span>
             </Button>
@@ -208,7 +228,7 @@ export function OrdersToolbar({
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <Button variant="ghost" size="sm" className={CTRL}>
-                <SlidersHorizontal className="h-3.5 w-3.5" /> <span className="hidden lg:inline">Display</span>
+                <Columns3 className="h-4 w-4 text-muted-foreground" /> <span className="hidden lg:inline">Customize Columns</span>
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end" className="w-52">
@@ -253,7 +273,7 @@ export function OrdersToolbar({
           <Popover open={saveOpen} onOpenChange={setSaveOpen}>
             <PopoverTrigger asChild>
               <Button variant="ghost" size="sm" className={CTRL}>
-                <Bookmark className="h-3.5 w-3.5" />
+                <Bookmark className="h-4 w-4 text-muted-foreground" />
                 <span className="hidden lg:inline">Views</span>
                 {savedViews.length > 0 && <span className="tabular-nums text-[11px] text-muted-foreground/70">{savedViews.length}</span>}
               </Button>
@@ -306,29 +326,66 @@ export function OrdersToolbar({
       </div>
 
       {chips.length > 0 && (
-        <div className="flex flex-wrap items-center gap-1 px-2.5 pb-2">
+        <div className="mt-2.5 flex flex-wrap items-center gap-1.5 border-t border-[var(--panel-border)] pt-2.5">
           {chips.map((c) => (
             <button
               key={c.key}
               type="button"
               onClick={c.clear}
-              className="group inline-flex items-center gap-1.5 h-6 pl-2 pr-1.5 rounded-md bg-foreground/[0.05] text-[11px] hover:bg-foreground/[0.09] transition-colors"
+              className="group inline-flex items-center gap-1.5 h-7 pl-2.5 pr-2 rounded-full bg-primary/[0.08] text-[11.5px] text-primary hover:bg-primary/[0.14] transition-colors"
             >
-              <span className="text-muted-foreground">{c.label}</span>
-              <span className="text-foreground truncate max-w-[160px]">{c.value}</span>
-              <X className="h-3 w-3 text-muted-foreground/70 group-hover:text-destructive" />
+              <span className="opacity-70">{c.label}:</span>
+              <span className="font-medium truncate max-w-[160px]">{c.value}</span>
+              <X className="h-3 w-3 opacity-60 group-hover:opacity-100" />
             </button>
           ))}
           <button
             type="button"
             onClick={reset}
-            className="h-6 px-2 rounded-md text-[11px] text-muted-foreground hover:text-foreground"
+            className="h-7 px-2 rounded-md text-[11.5px] font-medium text-primary hover:underline"
           >
             Clear all
           </button>
         </div>
       )}
     </div>
+  );
+}
+
+const QUICK_COURIERS = ["pathao", "steadfast", "redx", "paperfly", "sundarban"];
+const QUICK_SOURCES = ["website", "manual", "facebook", "phone", "shopify"];
+const QUICK_PAYMENTS = ["cod", "bkash", "nagad", "rocket", "card", "bank"];
+
+function QuickSelect({
+  label, value, options, onSelect,
+}: {
+  label: string;
+  value: string | null | undefined;
+  options: string[];
+  onSelect: (v: string | null) => void;
+}) {
+  return (
+    <DropdownMenu>
+      <DropdownMenuTrigger asChild>
+        <Button variant="ghost" size="sm" className={cn(CTRL, value && "border-primary/50 text-foreground")}>
+          <span className="capitalize">{value ?? label}</span>
+          <ChevronDown className="h-3.5 w-3.5 text-muted-foreground" />
+        </Button>
+      </DropdownMenuTrigger>
+      <DropdownMenuContent align="start" className="w-44">
+        <DropdownMenuItem className="text-xs" onClick={() => onSelect(null)}>
+          <span className="flex-1">All {label.toLowerCase()}</span>
+          {!value && <Check className="h-3.5 w-3.5" />}
+        </DropdownMenuItem>
+        <DropdownMenuSeparator />
+        {options.map((o) => (
+          <DropdownMenuItem key={o} className="text-xs capitalize" onClick={() => onSelect(o)}>
+            <span className="flex-1">{o}</span>
+            {value === o && <Check className="h-3.5 w-3.5" />}
+          </DropdownMenuItem>
+        ))}
+      </DropdownMenuContent>
+    </DropdownMenu>
   );
 }
 
