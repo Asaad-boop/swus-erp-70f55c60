@@ -1,17 +1,16 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useEffect, useMemo, useRef, useState } from "react";
-import { Plus, Download, RefreshCw, Inbox, Truck } from "lucide-react";
+import { Plus, Download, RefreshCw, Inbox } from "lucide-react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useBrand } from "@/contexts/brand-context";
 import {
   useOrdersQuery, useOrderStatusCounts, fetchAllMatchingOrderIds,
   type OrdersFilter, type OrdersSortKey, type OrdersSortDir,
 } from "@/hooks/erp/use-orders-query";
-import { useCourierShipments, normalizeCourierStatus, COURIER_BUCKETS, COURIER_BUCKET_META, type CourierBucket, type CourierShipmentRow } from "@/hooks/erp/use-courier-shipments";
+import { useCourierShipments, COURIER_BUCKET_META, type CourierBucket, type CourierShipmentRow } from "@/hooks/erp/use-courier-shipments";
 import { applyBrandScope } from "@/lib/erp/apply-brand-scope";
 import { OrdersStatusTabs } from "@/components/erp/orders/orders-status-tabs";
 import { OrdersToolbar } from "@/components/erp/orders/orders-toolbar";
@@ -276,17 +275,6 @@ function OrdersPage() {
   const [nudgeDismissed, setNudgeDismissed] = useState(false);
   useEffect(() => { setNudgeDismissed(false); }, [filter.page, filter.statuses.join(",")]);
 
-  const courierCounts = useMemo(() => {
-    const counts: Partial<Record<CourierBucket, number>> = {};
-    for (const r of rows) {
-      const s = shipmentsMap[r.id];
-      const b = s ? normalizeCourierStatus(s.status) : null;
-      if (!b) continue;
-      counts[b] = (counts[b] ?? 0) + 1;
-    }
-    return counts;
-  }, [rows, shipmentsMap]);
-
   // BUG 1: clear selection when page/filter/tab/view changes
   useEffect(() => {
     setSelectedIds(new Set());
@@ -488,66 +476,52 @@ function OrdersPage() {
   }, [visibleRows]);
 
   return (
-    <div className="p-4 md:p-6 space-y-4 min-h-screen workspace-bg">
+    <div className="p-4 md:p-6 min-h-screen bg-background">
       <ErpPageHeader
         live
-        eyebrow={`${activeBrand?.name ?? "All brands"} · Orders`}
+        eyebrow={activeBrand?.name ?? "All brands"}
         title="Orders"
         chips={
           <>
-            <HeaderChip value={total.toLocaleString()} label="total" />
+            <HeaderChip value={total.toLocaleString()} label="orders" />
             {selectedIds.size > 0 && <HeaderChip tone="primary" value={selectedIds.size} label="selected" />}
-            {isFetching && <HeaderChip tone="primary" value="●" label="syncing" />}
           </>
         }
         actions={
           <>
           {lastSyncedAt && (
-            <span className="text-[10px] text-muted-foreground hidden sm:inline">
-              Last synced {relTimeShort(lastSyncedAt)}
+            <span className="text-[10px] text-muted-foreground/70 hidden md:inline">
+              Synced {relTimeShort(lastSyncedAt)}
             </span>
           )}
-          <Select value={courierStatusFilter} onValueChange={(v) => setCourierStatusFilter(v as CourierBucket | "all")}>
-            <SelectTrigger className="h-9 w-[170px] bg-[var(--panel-bg)]">
-              <span className="flex items-center gap-1.5 text-xs">
-                <Truck className="h-3.5 w-3.5 text-muted-foreground" />
-                <SelectValue placeholder="Courier status" />
-              </span>
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">All courier statuses</SelectItem>
-              {COURIER_BUCKETS.map((b) => (
-                <SelectItem key={b} value={b}>
-                  {COURIER_BUCKET_META[b].label}
-                  {courierCounts[b] ? ` (${courierCounts[b]})` : ""}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-          <div className="inline-flex overflow-hidden rounded-lg border border-[var(--panel-border)] bg-[var(--panel-bg)] shadow-sm">
-            <Button
-              variant="ghost"
-              size="sm"
-              className="h-9 rounded-none border-r"
-              onClick={handleRefresh}
-              title="Refresh"
-            >
-              <RefreshCw className={`h-3.5 w-3.5 ${isFetching ? "animate-spin" : ""}`} />
-            </Button>
-            <Button variant="ghost" size="sm" className="h-9 rounded-none gap-1.5" onClick={handleExport} disabled={exporting}>
-              <Download className={`h-3.5 w-3.5 ${exporting ? "animate-pulse" : ""}`} /> {exporting ? "Exporting…" : "Export"}
-            </Button>
-          </div>
+          <Button
+            variant="ghost"
+            size="sm"
+            className="h-8 w-8 p-0 rounded-lg text-muted-foreground hover:text-foreground"
+            onClick={handleRefresh}
+            title="Refresh (r)"
+          >
+            <RefreshCw className={`h-3.5 w-3.5 ${isFetching ? "animate-spin" : ""}`} />
+          </Button>
+          <Button
+            variant="ghost"
+            size="sm"
+            className="h-8 gap-1.5 rounded-lg px-2.5 text-[12.5px] font-normal text-muted-foreground hover:text-foreground"
+            onClick={handleExport}
+            disabled={exporting}
+          >
+            <Download className={`h-3.5 w-3.5 ${exporting ? "animate-pulse" : ""}`} /> {exporting ? "Exporting…" : "Export"}
+          </Button>
           <Link to="/erp/orders/new">
-            <Button size="sm" className="h-9 shadow-sm gap-1.5 px-3">
-              <Plus className="h-3.5 w-3.5" />New Order
+            <Button size="sm" className="h-8 gap-1.5 rounded-lg px-3 text-[12.5px] shadow-none">
+              <Plus className="h-3.5 w-3.5" />New order
             </Button>
           </Link>
           </>
         }
       />
 
-      <div className="overflow-hidden rounded-2xl border border-[var(--panel-border)] bg-[var(--panel-bg)] shadow-[var(--shadow-panel)]">
+      <div className="overflow-hidden rounded-xl border border-[var(--panel-border)] bg-card">
         <OrdersStatusTabs
           active={activeTab}
           counts={countsData?.counts ?? {}}
@@ -579,32 +553,32 @@ function OrdersPage() {
         ) : (
           <>
           {stuckIds.length > 0 && !nudgeDismissed && (
-            <div className="flex items-center gap-2 px-3 py-2 border-b bg-amber-500/10 text-[12px]">
+            <div className="flex items-center gap-2 px-3 py-1.5 border-b border-[var(--panel-border)] bg-amber-500/[0.07] text-[12px]">
               <AlertTriangle className="h-3.5 w-3.5 text-amber-600 shrink-0" />
-              <span className="font-medium text-foreground/90">
-                <span className="tabular-nums font-bold">{stuckIds.length}</span> order{stuckIds.length > 1 ? "s" : ""} stuck 3+ days in current status
+              <span className="text-foreground/90">
+                <span className="tabular-nums font-semibold">{stuckIds.length}</span> order{stuckIds.length > 1 ? "s" : ""} stuck 3+ days
               </span>
-              <span className="text-muted-foreground hidden sm:inline">— bulk sync courier status?</span>
               <div className="flex-1" />
               <Button
                 size="sm"
-                variant="outline"
-                className="h-7 gap-1.5 text-[11px]"
+                variant="ghost"
+                className="h-7 gap-1.5 text-[11px] font-normal"
                 onClick={() => setSelectedIds(new Set(stuckIds))}
               >
                 Select {stuckIds.length}
               </Button>
               <Button
                 size="sm"
-                className="h-7 gap-1.5 text-[11px]"
+                variant="outline"
+                className="h-7 gap-1.5 text-[11px] font-normal"
                 onClick={() => { setSelectedIds(new Set(stuckIds)); setSyncOpen(true); }}
               >
-                <RefreshCcw className="h-3 w-3" /> Sync all
+                <RefreshCcw className="h-3 w-3" /> Sync
               </Button>
               <button
                 type="button"
                 onClick={() => setNudgeDismissed(true)}
-                className="ml-1 h-6 w-6 grid place-items-center rounded hover:bg-muted text-muted-foreground"
+                className="ml-0.5 h-6 w-6 grid place-items-center rounded text-muted-foreground hover:text-foreground"
                 title="Dismiss"
               >
                 ×
@@ -710,20 +684,17 @@ function OrdersPage() {
             }
           />
         )}
+        <OrdersPagination
+          page={filter.page}
+          pageSize={filter.pageSize}
+          total={total}
+          rowsOnPage={visibleRows.length}
+          onPage={(p) => setFilter((f) => ({ ...f, page: p }))}
+          onPageSize={(n) => setFilter((f) => ({ ...f, pageSize: n, page: 0 }))}
+        />
           </>
         )}
       </div>
-
-      {view === "orders" && (
-      <OrdersPagination
-        page={filter.page}
-        pageSize={filter.pageSize}
-        total={total}
-        rowsOnPage={visibleRows.length}
-        onPage={(p) => setFilter((f) => ({ ...f, page: p }))}
-        onPageSize={(n) => setFilter((f) => ({ ...f, pageSize: n, page: 0 }))}
-      />
-      )}
 
       {view === "orders" && (
         <OrdersSelectionBar

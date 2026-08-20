@@ -23,52 +23,53 @@ export function OrdersPagination({
   const pages = pageNumbers(page + 1, totalPages);
 
   return (
-    <div className="flex flex-wrap items-center justify-between gap-3 text-sm rounded-xl border bg-card px-4 py-2.5 shadow-sm">
+    <div className="flex flex-wrap items-center justify-between gap-3 border-t border-[var(--panel-border)] px-3 py-2 text-[12.5px]">
       <div className="flex items-center gap-3 text-muted-foreground">
         <span className="tabular-nums">
-          Showing <span className="font-semibold text-foreground">{start.toLocaleString()}–{end.toLocaleString()}</span> of{" "}
-          <span className="font-semibold text-foreground">{total.toLocaleString()}</span>
+          {start.toLocaleString()}–{end.toLocaleString()} of {total.toLocaleString()}
         </span>
         <Select value={String(pageSize)} onValueChange={(v) => onPageSize(Number(v))}>
-          <SelectTrigger className="h-8 w-[110px]"><SelectValue /></SelectTrigger>
+          <SelectTrigger className="h-7 w-[95px] rounded-lg border-transparent bg-foreground/[0.04] text-xs shadow-none"><SelectValue /></SelectTrigger>
           <SelectContent>
             {[25, 50, 100, 200].map((n) => <SelectItem key={n} value={String(n)}>{n} / page</SelectItem>)}
           </SelectContent>
         </Select>
       </div>
 
-      <div className="flex items-center gap-1">
-        <Button variant="outline" size="icon" className="h-8 w-8" disabled={page === 0} onClick={() => onPage(0)} title="First page">
-          <ChevronsLeft className="h-4 w-4" />
+      <div className="flex items-center gap-0.5">
+        <Button variant="ghost" size="icon" className="h-7 w-7 text-muted-foreground" disabled={page === 0} onClick={() => onPage(0)} title="First page">
+          <ChevronsLeft className="h-3.5 w-3.5" />
         </Button>
-        <Button variant="outline" size="icon" className="h-8 w-8" disabled={page === 0} onClick={() => onPage(page - 1)} title="Previous">
-          <ChevronLeft className="h-4 w-4" />
+        <Button variant="ghost" size="icon" className="h-7 w-7 text-muted-foreground" disabled={page === 0} onClick={() => onPage(page - 1)} title="Previous">
+          <ChevronLeft className="h-3.5 w-3.5" />
         </Button>
         {pages.map((p, i) =>
           p === "…" ? (
-            <span key={`gap-${i}`} className="px-1.5 text-muted-foreground">…</span>
+            <span key={`gap-${i}`} className="px-1 text-muted-foreground/60">…</span>
           ) : (
             <button
               key={p}
               onClick={() => onPage(p - 1)}
               className={cn(
-                "h-8 min-w-8 px-2 rounded-md text-xs font-semibold tabular-nums transition-colors",
-                p === page + 1 ? "bg-foreground text-background" : "hover:bg-muted text-muted-foreground",
+                "h-7 min-w-7 px-1.5 rounded-md text-xs tabular-nums transition-colors",
+                p === page + 1
+                  ? "bg-foreground/[0.07] font-semibold text-foreground"
+                  : "text-muted-foreground hover:text-foreground hover:bg-foreground/[0.04]",
               )}
             >
               {p}
             </button>
           ),
         )}
-        <Button variant="outline" size="icon" className="h-8 w-8" disabled={page + 1 >= totalPages} onClick={() => onPage(page + 1)} title="Next">
-          <ChevronRight className="h-4 w-4" />
+        <Button variant="ghost" size="icon" className="h-7 w-7 text-muted-foreground" disabled={page + 1 >= totalPages} onClick={() => onPage(page + 1)} title="Next">
+          <ChevronRight className="h-3.5 w-3.5" />
         </Button>
-        <Button variant="outline" size="icon" className="h-8 w-8" disabled={page + 1 >= totalPages} onClick={() => onPage(totalPages - 1)} title="Last page">
-          <ChevronsRight className="h-4 w-4" />
+        <Button variant="ghost" size="icon" className="h-7 w-7 text-muted-foreground" disabled={page + 1 >= totalPages} onClick={() => onPage(totalPages - 1)} title="Last page">
+          <ChevronsRight className="h-3.5 w-3.5" />
         </Button>
 
         <form
-          className="ml-2 flex items-center gap-1"
+          className="ml-1.5 hidden sm:flex items-center gap-1"
           onSubmit={(e) => {
             e.preventDefault();
             const n = Number(jump);
@@ -79,11 +80,10 @@ export function OrdersPagination({
           <Input
             value={jump}
             onChange={(e) => setJump(e.target.value)}
-            placeholder={`1–${totalPages}`}
-            className="h-8 w-[76px] text-xs"
+            placeholder={`Go to 1–${totalPages}`}
+            className="h-7 w-[92px] rounded-lg border-transparent bg-foreground/[0.04] text-xs shadow-none"
             inputMode="numeric"
           />
-          <Button type="submit" size="sm" variant="outline" className="h-8 text-xs">Go</Button>
         </form>
       </div>
     </div>

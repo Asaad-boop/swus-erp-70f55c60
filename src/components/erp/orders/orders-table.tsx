@@ -501,11 +501,11 @@ export function OrdersTable({ rows, loading, selectedIds, onToggleSelect, onTogg
   };
 
   return (
-    <div className="overflow-x-auto bg-[var(--panel-bg)] [scrollbar-width:thin]">
+    <div className="overflow-x-auto bg-card [scrollbar-width:thin]">
       <Table>
-        <TableHeader className="sticky top-0 z-20 bg-[var(--table-head-bg)]/95 backdrop-blur supports-[backdrop-filter]:bg-[var(--table-head-bg)]/80 shadow-[0_1px_0_0_var(--panel-border)]">
+        <TableHeader className="sticky top-0 z-20 bg-card/95 backdrop-blur supports-[backdrop-filter]:bg-card/80 shadow-[0_1px_0_0_var(--panel-border)]">
           {table.getHeaderGroups().map((hg) => (
-            <TableRow key={hg.id} className="hover:bg-transparent border-b">
+            <TableRow key={hg.id} className="hover:bg-transparent border-b border-[var(--panel-border)]">
               {hg.headers.map((h) => {
                 const sortAs = SORTABLE[h.id];
                 const isSorted = !!sortAs && sortKey === sortAs;
@@ -513,8 +513,8 @@ export function OrdersTable({ rows, loading, selectedIds, onToggleSelect, onTogg
                   <TableHead
                     key={h.id}
                     className={cn(
-                      "text-[10px] font-bold uppercase tracking-wider text-muted-foreground px-3",
-                      compact ? "h-8" : "h-10",
+                      "text-[10px] font-medium uppercase tracking-[0.12em] text-muted-foreground/80 px-3",
+                      compact ? "h-8" : "h-9",
                     )}
                   >
                     {sortAs && onSortChange ? (
@@ -527,7 +527,7 @@ export function OrdersTable({ rows, loading, selectedIds, onToggleSelect, onTogg
                         )}
                       >
                         {flexRender(h.column.columnDef.header, h.getContext())}
-                        <span className="text-[9px]">{isSorted ? (sortDir === "asc" ? "▲" : "▼") : "↕"}</span>
+                        <span className="text-[9px] opacity-60">{isSorted ? (sortDir === "asc" ? "▲" : "▼") : "↕"}</span>
                       </button>
                     ) : (
                       flexRender(h.column.columnDef.header, h.getContext())
@@ -560,9 +560,9 @@ export function OrdersTable({ rows, loading, selectedIds, onToggleSelect, onTogg
               <TableRow
                 key={row.id}
                 className={cn(
-                  "group/row cursor-pointer border-b last:border-0 transition-colors duration-150",
-                  "hover:bg-[var(--row-hover)]",
-                  selectedIds.has(row.original.id) && "bg-[var(--row-selected)] hover:bg-[var(--row-selected)]",
+                  "group/row cursor-pointer border-b border-[var(--panel-border)] last:border-0 transition-colors duration-150",
+                  "hover:bg-foreground/[0.025]",
+                  selectedIds.has(row.original.id) && "bg-primary/[0.06] hover:bg-primary/[0.08]",
                 )}
                 onClick={() => onRowClick(row.original.id)}
               >

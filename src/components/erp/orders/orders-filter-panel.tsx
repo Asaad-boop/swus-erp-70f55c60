@@ -12,15 +12,17 @@ import { cn } from "@/lib/utils";
 const COURIERS = ["pathao", "steadfast", "redx", "paperfly", "sundarban"];
 const PAYMENT_METHODS = ["cod", "bkash", "nagad", "rocket", "card", "bank"];
 const PAYMENT_STATUSES = ["unpaid", "partial", "paid", "refunded"];
+const SOURCES = ["website", "manual", "facebook", "phone", "shopify"];
 
 export type AdvancedFilterPatch = Partial<OrdersFilter>;
 
 export function OrdersFilterPanel({
-  filter, onChange, activeCount,
+  filter, onChange, activeCount, triggerClassName,
 }: {
   filter: OrdersFilter;
   onChange: (patch: AdvancedFilterPatch) => void;
   activeCount: number;
+  triggerClassName?: string;
 }) {
   const [open, setOpen] = useState(false);
   const { data: staff = [] } = useStaffList();
@@ -29,19 +31,20 @@ export function OrdersFilterPanel({
     onChange({
       courier: null, courierBucket: null, paymentMethod: null, paymentStatus: null,
       city: null, assignee: null, amountMin: null, amountMax: null, advanceFilter: "any",
+      source: null, printedFilter: "all",
     });
 
   return (
     <Popover open={open} onOpenChange={setOpen}>
       <PopoverTrigger asChild>
         <Button
-          variant={activeCount > 0 ? "default" : "outline"}
+          variant="ghost"
           size="sm"
-          className={cn("h-9 gap-1.5", activeCount > 0 && "shadow-sm")}
+          className={cn(triggerClassName ?? "h-9 gap-1.5", activeCount > 0 && "text-foreground bg-foreground/[0.05]")}
         >
           <SlidersHorizontal className="h-3.5 w-3.5" /> Filters
           {activeCount > 0 && (
-            <span className="ml-0.5 inline-flex h-4 min-w-4 items-center justify-center rounded-full bg-background/25 px-1 text-[10px] font-bold tabular-nums">
+            <span className="ml-0.5 inline-flex h-4 min-w-4 items-center justify-center rounded-full bg-primary/15 px-1 text-[10px] font-semibold tabular-nums text-primary">
               {activeCount}
             </span>
           )}
@@ -49,13 +52,37 @@ export function OrdersFilterPanel({
       </PopoverTrigger>
       <PopoverContent align="start" className="w-[420px] p-4">
         <div className="flex items-center justify-between mb-3">
-          <div className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Advanced filters</div>
+          <div className="text-[10px] font-medium uppercase tracking-wider text-muted-foreground">Filters</div>
           <Button variant="ghost" size="sm" className="h-7 gap-1 text-[11px]" onClick={clear}>
             <RotateCcw className="h-3 w-3" /> Reset
           </Button>
         </div>
 
         <div className="grid grid-cols-2 gap-3">
+          <Field label="Source">
+            <Select value={filter.source ?? "all"} onValueChange={(v) => onChange({ source: v === "all" ? null : v })}>
+              <SelectTrigger className="h-8 text-xs"><SelectValue /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All sources</SelectItem>
+                {SOURCES.map((s) => <SelectItem key={s} value={s} className="capitalize">{s}</SelectItem>)}
+              </SelectContent>
+            </Select>
+          </Field>
+
+          <Field label="Print status">
+            <Select
+              value={filter.printedFilter ?? "all"}
+              onValueChange={(v) => onChange({ printedFilter: v as "all" | "printed" | "unprinted" })}
+            >
+              <SelectTrigger className="h-8 text-xs"><SelectValue /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All prints</SelectItem>
+                <SelectItem value="printed">Printed</SelectItem>
+                <SelectItem value="unprinted">Not printed</SelectItem>
+              </SelectContent>
+            </Select>
+          </Field>
+
           <Field label="Courier">
             <Select value={filter.courier ?? "all"} onValueChange={(v) => onChange({ courier: v === "all" ? null : v })}>
               <SelectTrigger className="h-8 text-xs"><SelectValue /></SelectTrigger>

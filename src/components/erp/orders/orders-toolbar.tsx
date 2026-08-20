@@ -1,11 +1,10 @@
 import { useEffect, useState } from "react";
 import {
-  Search, X, Calendar as CalendarIcon, ArrowUpDown, Printer, Rows3, Rows4,
-  Columns3, Bookmark, BookmarkPlus, Trash2, ChevronDown,
+  Search, X, Calendar as CalendarIcon, ArrowUpDown, Rows3, Rows4,
+  Bookmark, BookmarkPlus, Trash2, SlidersHorizontal, Check,
 } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import {
   DropdownMenu, DropdownMenuCheckboxItem, DropdownMenuContent, DropdownMenuItem,
   DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger,
@@ -24,6 +23,13 @@ const SORT_LABEL: Record<OrdersSortKey, string> = {
   invoice_no: "Invoice no",
 };
 
+const DATE_PRESETS = [
+  { label: "Today", days: 0 },
+  { label: "Last 7 days", days: 6 },
+  { label: "Last 30 days", days: 29 },
+  { label: "Last 90 days", days: 89 },
+];
+
 type Props = {
   filter: OrdersFilter;
   onChange: (next: OrdersFilter) => void;
@@ -38,6 +44,10 @@ type Props = {
   onApplyView?: (v: SavedView) => void;
   onDeleteView?: (id: string) => void;
 };
+
+/** Ghost-styled control used across the toolbar so the row reads as one quiet strip. */
+const CTRL =
+  "h-8 gap-1.5 rounded-lg px-2.5 text-[12.5px] font-normal text-muted-foreground hover:text-foreground hover:bg-foreground/[0.05]";
 
 export function OrdersToolbar({
   filter, onChange, rightSlot,
@@ -68,194 +78,170 @@ export function OrdersToolbar({
   const chips = buildChips(filter, update);
   const advancedCount = [
     filter.courier, filter.courierBucket, filter.paymentMethod, filter.paymentStatus,
-    filter.city, filter.assignee, filter.amountMin, filter.amountMax,
+    filter.city, filter.assignee, filter.amountMin, filter.amountMax, filter.source,
     filter.advanceFilter && filter.advanceFilter !== "any" ? filter.advanceFilter : null,
+    filter.printedFilter && filter.printedFilter !== "all" ? filter.printedFilter : null,
   ].filter((v) => v != null && v !== "").length;
 
   const [viewName, setViewName] = useState("");
   const [saveOpen, setSaveOpen] = useState(false);
 
+  const dateLabel = filter.dateFrom || filter.dateTo
+    ? `${filter.dateFrom?.slice(5, 10) ?? "…"} → ${filter.dateTo?.slice(5, 10) ?? "…"}`
+    : "Any date";
+
   return (
-    <div className="border-b bg-card/60 backdrop-blur supports-[backdrop-filter]:bg-card/50">
-      <div className="flex flex-wrap items-center gap-2 px-3 py-2.5">
-        <div className="relative flex-1 min-w-[220px] max-w-md">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+    <div className="border-b border-[var(--panel-border)]">
+      <div className="flex flex-wrap items-center gap-1 px-2.5 py-2">
+        {/* Search — the only prominent control */}
+        <div className="relative flex-1 min-w-[200px] max-w-sm">
+          <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground/70" />
           <Input
             data-orders-search
-            placeholder="Search invoice, customer, phone, tracking…  (press /)"
+            placeholder="Search orders…"
             value={searchInput}
             onChange={(e) => setSearchInput(e.target.value)}
-            className="pl-9 pr-8 h-9 bg-background/80 border-border/80 focus-visible:ring-primary/40"
+            className="h-8 pl-8 pr-7 rounded-lg border-transparent bg-foreground/[0.04] text-[12.5px] shadow-none placeholder:text-muted-foreground/70 focus-visible:border-border focus-visible:bg-background"
           />
           {searchInput && (
             <button
               type="button"
               onClick={() => setSearchInput("")}
-              className="absolute right-2 top-1/2 -translate-y-1/2 h-5 w-5 grid place-items-center rounded hover:bg-muted text-muted-foreground"
+              className="absolute right-1.5 top-1/2 -translate-y-1/2 h-5 w-5 grid place-items-center rounded text-muted-foreground hover:text-foreground"
             >
               <X className="h-3.5 w-3.5" />
             </button>
           )}
         </div>
 
-        <OrdersFilterPanel filter={filter} onChange={update} activeCount={advancedCount} />
+        <span className="mx-1 h-4 w-px bg-border hidden sm:block" />
+
+        {/* Date range */}
+        <Popover>
+          <PopoverTrigger asChild>
+            <Button variant="ghost" size="sm" className={cn(CTRL, (filter.dateFrom || filter.dateTo) && "text-foreground bg-foreground/[0.05]")}>
+              <CalendarIcon className="h-3.5 w-3.5" /> {dateLabel}
+            </Button>
+          </PopoverTrigger>
+          <PopoverContent align="start" className="w-64 p-2">
+            <div className="grid gap-0.5">
+              {DATE_PRESETS.map((p) => (
+                <button
+                  key={p.label}
+                  type="button"
+                  className="h-8 rounded-md px-2 text-left text-xs hover:bg-muted"
+                  onClick={() => {
+                    const to = new Date(); to.setHours(23, 59, 59, 999);
+                    const from = new Date(); from.setDate(from.getDate() - p.days); from.setHours(0, 0, 0, 0);
+                    update({ dateFrom: from.toISOString(), dateTo: to.toISOString() });
+                  }}
+                >
+                  {p.label}
+                </button>
+              ))}
+              <button
+                type="button"
+                className="h-8 rounded-md px-2 text-left text-xs hover:bg-muted"
+                onClick={() => update({ dateFrom: null, dateTo: null })}
+              >
+                All time
+              </button>
+            </div>
+            <div className="mt-2 border-t pt-2 space-y-1.5">
+              <div className="text-[10px] uppercase tracking-wider text-muted-foreground">Custom</div>
+              <div className="flex items-center gap-1.5">
+                <Input
+                  type="date"
+                  value={filter.dateFrom?.slice(0, 10) ?? ""}
+                  onChange={(e) => update({ dateFrom: e.target.value ? new Date(e.target.value).toISOString() : null })}
+                  className="h-8 text-xs"
+                />
+                <span className="text-muted-foreground text-xs">→</span>
+                <Input
+                  type="date"
+                  value={filter.dateTo?.slice(0, 10) ?? ""}
+                  onChange={(e) => {
+                    const v = e.target.value;
+                    update({ dateTo: v ? new Date(`${v}T23:59:59`).toISOString() : null });
+                  }}
+                  className="h-8 text-xs"
+                />
+              </div>
+            </div>
+          </PopoverContent>
+        </Popover>
+
+        {/* Everything filter-ish behind one button */}
+        <OrdersFilterPanel filter={filter} onChange={update} activeCount={advancedCount} triggerClassName={CTRL} />
 
         {/* Sort */}
-        <div className="inline-flex items-center rounded-md border h-9 bg-background overflow-hidden">
-          <Select
-            value={filter.sortKey ?? "created_at"}
-            onValueChange={(v) => update({ sortKey: v as OrdersSortKey })}
-          >
-            <SelectTrigger className="h-9 w-[150px] border-0 rounded-none focus:ring-0 text-xs">
-              <span className="flex items-center gap-1.5">
-                <ArrowUpDown className="h-3.5 w-3.5 text-muted-foreground" />
-                <SelectValue />
-              </span>
-            </SelectTrigger>
-            <SelectContent>
-              {(Object.keys(SORT_LABEL) as OrdersSortKey[]).map((k) => (
-                <SelectItem key={k} value={k}>{SORT_LABEL[k]}</SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-          <button
-            type="button"
-            onClick={() => update({ sortDir: (filter.sortDir ?? "desc") === "desc" ? "asc" : "desc" })}
-            className="h-9 px-2.5 border-l text-[11px] font-semibold text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
-            title="Toggle sort direction"
-          >
-            {(filter.sortDir ?? "desc") === "desc" ? "▼ Desc" : "▲ Asc"}
-          </button>
-        </div>
-
-        <Select value={filter.source ?? "all"} onValueChange={(v) => update({ source: v === "all" ? null : v })}>
-          <SelectTrigger className="w-[130px] h-9"><SelectValue placeholder="Source" /></SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">All sources</SelectItem>
-            <SelectItem value="website">Website</SelectItem>
-            <SelectItem value="manual">Manual</SelectItem>
-            <SelectItem value="facebook">Facebook</SelectItem>
-            <SelectItem value="phone">Phone</SelectItem>
-            <SelectItem value="shopify">Shopify</SelectItem>
-          </SelectContent>
-        </Select>
-
-        <Select
-          value={filter.printedFilter ?? "all"}
-          onValueChange={(v) => update({ printedFilter: v as "all" | "printed" | "unprinted" })}
-        >
-          <SelectTrigger className="w-[140px] h-9">
-            <span className="flex items-center gap-1.5 text-xs">
-              <Printer className="h-3.5 w-3.5 text-muted-foreground" />
-              <SelectValue placeholder="Print status" />
-            </span>
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">All prints</SelectItem>
-            <SelectItem value="printed">Printed</SelectItem>
-            <SelectItem value="unprinted">Not printed</SelectItem>
-          </SelectContent>
-        </Select>
-
-        <div className="flex items-center gap-1 rounded-md border h-9 px-2 bg-background">
-          <CalendarIcon className="h-3.5 w-3.5 text-muted-foreground" />
-          <Input
-            type="date"
-            value={filter.dateFrom?.slice(0, 10) ?? ""}
-            onChange={(e) => update({ dateFrom: e.target.value ? new Date(e.target.value).toISOString() : null })}
-            className="border-0 h-7 px-1 w-[120px] text-xs focus-visible:ring-0"
-          />
-          <span className="text-muted-foreground text-xs">→</span>
-          <Input
-            type="date"
-            value={filter.dateTo?.slice(0, 10) ?? ""}
-            onChange={(e) => {
-              const v = e.target.value;
-              update({ dateTo: v ? new Date(`${v}T23:59:59`).toISOString() : null });
-            }}
-            className="border-0 h-7 px-1 w-[120px] text-xs focus-visible:ring-0"
-          />
-        </div>
-
-        {/* Quick date presets */}
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
-            <Button variant="outline" size="sm" className="h-9 gap-1 text-xs">
-              Quick range <ChevronDown className="h-3 w-3" />
+            <Button variant="ghost" size="sm" className={CTRL}>
+              <ArrowUpDown className="h-3.5 w-3.5" />
+              <span className="hidden md:inline">{SORT_LABEL[filter.sortKey ?? "created_at"]}</span>
+              <span className="text-muted-foreground/70">{(filter.sortDir ?? "desc") === "desc" ? "↓" : "↑"}</span>
             </Button>
           </DropdownMenuTrigger>
-          <DropdownMenuContent align="start">
-            {[
-              { label: "Today", days: 0 },
-              { label: "Last 7 days", days: 6 },
-              { label: "Last 30 days", days: 29 },
-              { label: "Last 90 days", days: 89 },
-            ].map((p) => (
-              <DropdownMenuItem
-                key={p.label}
-                onClick={() => {
-                  const to = new Date(); to.setHours(23, 59, 59, 999);
-                  const from = new Date(); from.setDate(from.getDate() - p.days); from.setHours(0, 0, 0, 0);
-                  update({ dateFrom: from.toISOString(), dateTo: to.toISOString() });
-                }}
-              >
-                {p.label}
+          <DropdownMenuContent align="start" className="w-48">
+            <DropdownMenuLabel className="text-[10px] uppercase tracking-wider text-muted-foreground">Sort by</DropdownMenuLabel>
+            {(Object.keys(SORT_LABEL) as OrdersSortKey[]).map((k) => (
+              <DropdownMenuItem key={k} onClick={() => update({ sortKey: k })} className="text-xs">
+                <span className="flex-1">{SORT_LABEL[k]}</span>
+                {(filter.sortKey ?? "created_at") === k && <Check className="h-3.5 w-3.5" />}
               </DropdownMenuItem>
             ))}
             <DropdownMenuSeparator />
-            <DropdownMenuItem onClick={() => update({ dateFrom: null, dateTo: null })}>All time</DropdownMenuItem>
+            {(["desc", "asc"] as const).map((d) => (
+              <DropdownMenuItem key={d} onClick={() => update({ sortDir: d })} className="text-xs">
+                <span className="flex-1">{d === "desc" ? "Newest / highest first" : "Oldest / lowest first"}</span>
+                {(filter.sortDir ?? "desc") === d && <Check className="h-3.5 w-3.5" />}
+              </DropdownMenuItem>
+            ))}
           </DropdownMenuContent>
         </DropdownMenu>
 
         <div className="flex-1" />
 
-        {/* Density */}
-        {onDensityChange && (
-          <div className="inline-flex rounded-md border overflow-hidden h-9">
-            {([["comfortable", Rows3], ["compact", Rows4]] as const).map(([d, Icon]) => (
-              <button
-                key={d}
-                type="button"
-                onClick={() => onDensityChange(d)}
-                title={d === "comfortable" ? "Comfortable rows" : "Compact rows"}
-                className={cn(
-                  "px-2.5 transition-colors",
-                  density === d ? "bg-foreground text-background" : "text-muted-foreground hover:text-foreground",
-                )}
-              >
-                <Icon className="h-3.5 w-3.5" />
-              </button>
-            ))}
-          </div>
-        )}
-
-        {/* Columns */}
-        {onToggleColumn && (
+        {/* Display: density + columns in one menu */}
+        {(onDensityChange || onToggleColumn) && (
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <Button variant="outline" size="sm" className="h-9 gap-1.5">
-                <Columns3 className="h-3.5 w-3.5" /> Columns
+              <Button variant="ghost" size="sm" className={CTRL}>
+                <SlidersHorizontal className="h-3.5 w-3.5" /> <span className="hidden lg:inline">Display</span>
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end" className="w-52">
-              <DropdownMenuLabel className="text-[10px] uppercase tracking-wider text-muted-foreground">
-                Visible columns
-              </DropdownMenuLabel>
-              <DropdownMenuSeparator />
-              {ORDER_COLUMNS.map((c) => (
-                <DropdownMenuCheckboxItem
-                  key={c.id}
-                  checked={!hiddenColumns.includes(c.id)}
-                  onCheckedChange={() => onToggleColumn(c.id)}
-                  onSelect={(e) => e.preventDefault()}
-                >
-                  {c.label}
-                </DropdownMenuCheckboxItem>
-              ))}
-              {onResetColumns && (
+              {onDensityChange && (
                 <>
+                  <DropdownMenuLabel className="text-[10px] uppercase tracking-wider text-muted-foreground">Row height</DropdownMenuLabel>
+                  {([["comfortable", Rows3, "Comfortable"], ["compact", Rows4, "Compact"]] as const).map(([d, Icon, label]) => (
+                    <DropdownMenuItem key={d} onClick={() => onDensityChange(d)} className="text-xs">
+                      <Icon className="h-3.5 w-3.5" />
+                      <span className="flex-1">{label}</span>
+                      {density === d && <Check className="h-3.5 w-3.5" />}
+                    </DropdownMenuItem>
+                  ))}
                   <DropdownMenuSeparator />
-                  <DropdownMenuItem onClick={onResetColumns}>Show all</DropdownMenuItem>
+                </>
+              )}
+              {onToggleColumn && (
+                <>
+                  <DropdownMenuLabel className="text-[10px] uppercase tracking-wider text-muted-foreground">Columns</DropdownMenuLabel>
+                  {ORDER_COLUMNS.map((c) => (
+                    <DropdownMenuCheckboxItem
+                      key={c.id}
+                      checked={!hiddenColumns.includes(c.id)}
+                      onCheckedChange={() => onToggleColumn(c.id)}
+                      onSelect={(e) => e.preventDefault()}
+                      className="text-xs"
+                    >
+                      {c.label}
+                    </DropdownMenuCheckboxItem>
+                  ))}
+                  {onResetColumns && (
+                    <DropdownMenuItem onClick={onResetColumns} className="text-xs">Show all columns</DropdownMenuItem>
+                  )}
                 </>
               )}
             </DropdownMenuContent>
@@ -266,16 +252,15 @@ export function OrdersToolbar({
         {onSaveView && (
           <Popover open={saveOpen} onOpenChange={setSaveOpen}>
             <PopoverTrigger asChild>
-              <Button variant="outline" size="sm" className="h-9 gap-1.5">
-                <Bookmark className="h-3.5 w-3.5" /> Views
-                {savedViews.length > 0 && (
-                  <span className="text-[10px] font-bold tabular-nums text-muted-foreground">{savedViews.length}</span>
-                )}
+              <Button variant="ghost" size="sm" className={CTRL}>
+                <Bookmark className="h-3.5 w-3.5" />
+                <span className="hidden lg:inline">Views</span>
+                {savedViews.length > 0 && <span className="tabular-nums text-[11px] text-muted-foreground/70">{savedViews.length}</span>}
               </Button>
             </PopoverTrigger>
             <PopoverContent align="end" className="w-72 p-3">
-              <div className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground mb-2">Saved views</div>
-              <div className="space-y-1 max-h-56 overflow-y-auto">
+              <div className="text-[10px] font-medium uppercase tracking-wider text-muted-foreground mb-2">Saved views</div>
+              <div className="space-y-0.5 max-h-56 overflow-y-auto">
                 {savedViews.length === 0 && (
                   <div className="text-xs text-muted-foreground py-2">No saved views yet.</div>
                 )}
@@ -321,23 +306,23 @@ export function OrdersToolbar({
       </div>
 
       {chips.length > 0 && (
-        <div className="flex flex-wrap items-center gap-1.5 px-3 pb-2.5">
+        <div className="flex flex-wrap items-center gap-1 px-2.5 pb-2">
           {chips.map((c) => (
             <button
               key={c.key}
               type="button"
               onClick={c.clear}
-              className="group inline-flex items-center gap-1.5 h-6 pl-2 pr-1.5 rounded-full border bg-background text-[11px] font-medium hover:border-destructive/50 transition-colors"
+              className="group inline-flex items-center gap-1.5 h-6 pl-2 pr-1.5 rounded-md bg-foreground/[0.05] text-[11px] hover:bg-foreground/[0.09] transition-colors"
             >
-              <span className="text-muted-foreground">{c.label}:</span>
+              <span className="text-muted-foreground">{c.label}</span>
               <span className="text-foreground truncate max-w-[160px]">{c.value}</span>
-              <X className="h-3 w-3 text-muted-foreground group-hover:text-destructive" />
+              <X className="h-3 w-3 text-muted-foreground/70 group-hover:text-destructive" />
             </button>
           ))}
           <button
             type="button"
             onClick={reset}
-            className="h-6 px-2 rounded-full text-[11px] font-semibold text-muted-foreground hover:text-foreground hover:bg-muted"
+            className="h-6 px-2 rounded-md text-[11px] text-muted-foreground hover:text-foreground"
           >
             Clear all
           </button>
