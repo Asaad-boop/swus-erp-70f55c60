@@ -53,9 +53,9 @@ export function ExchangeCaseDialog({ open, onClose, brandId, productId, productN
 
   const replacementsQ = useQuery({
     queryKey: ["exch-replacements", brandId, productSearch],
-    enabled: open && !!brandId,
+    enabled: open,
     queryFn: async () => {
-      let q = supabase.from("products").select("id,title,sku").eq("brand_id", brandId).order("title").limit(30);
+      let q = supabase.from("products").select("id,title,sku").eq("is_active", true).order("title").limit(30);
       if (productSearch.trim()) q = q.or(`title.ilike.%${productSearch}%,sku.ilike.%${productSearch}%`);
       const { data, error } = await q;
       if (error) throw error;
