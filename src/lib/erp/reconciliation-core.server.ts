@@ -648,3 +648,98 @@ export async function applyReconRunCore(
 
     return { applied, failed, done, nextCursor: lastId, errors: errors.slice(0, 10) };
 }
+
+/**
+ * INVOICE-FIRST SETTLEMENT
+ * ------------------------
+ * The courier statement is the ground truth for cash. Whatever the invoice's
+ * net payout is, that exact amount lands in the brand's default COD wallet —
+ * even if some rows stayed unmatched or mismatched. Row matching only decides
+ * *allocation* (which order got what), never the wallet balance.
+ *
+ * Idempotent: keyed on reference_type='cod_invoice' + reference_id=<runId>.
+ * Re-applying or re-syncing the same invoice replaces, never stacks.
+ */
+export async function settleInvoiceTotalCore(
+  supabase: Sb,
+  userId: string | null,
+  data: { runId: string; walletAccountId?: string | null; brandId?: string | null },
+): Promise<{ posted: boolean; amount: number; walletId: string | null; brandId: string | null; reason?: string }> {
+  const { data: run, error: runErr } = await supabase
+    .from("erp_reconciliation_runs")
+    .select("id, brand_id, total_payout, source_filename, created_at")
+    .eq("id", data.runId)
+    .maybeSingle();
+  if (runErr) throw new Error(runErr.message);
+  if (!run) throw new Error("Run not found");
+
+  const amount = Number(run.total_payout ?? 0);
+
+  // Zero-amount guard: webhook-origin runs sometimes arrive before the CSV
+  // exists. Never post a 0 Tk settlement — wait for the amount re-sync.
+  if (!amount) {
+    await supabase
+      .from("erp_transactions")
+      .delete()
+      .eq("reference_type", "cod_invoice")
+      .eq("reference_id", data.runId);
+    return { posted: false, amount: 0, walletId: null, brandId: null, reason: "Invoice amount is 0 — awaiting amount sync" };
+  }
+
+  // Primary brand: explicit → run brand → most common brand across the rows.
+  let brandId: string | null = data.brandId ?? run.brand_id ?? null;
+  if (!brandId) {
+    const { data: rows } = await supabase
+      .from("erp_reconciliation_rows")
+      .select("brand_id")
+      .eq("run_id", data.runId)
+      .not("brand_id", "is", null)
+      .limit(2000);
+    const tally = new Map<string, number>();
+    for (const r of (rows ?? []) as Array<{ brand_id: string }>) {
+      tally.set(r.brand_id, (tally.get(r.brand_id) ?? 0) + 1);
+    }
+    brandId = [...tally.entries()].sort((a, b) => b[1] - a[1])[0]?.[0] ?? null;
+  }
+  if (!brandId) {
+    return { posted: false, amount, walletId: null, brandId: null, reason: "No brand could be resolved for this invoice" };
+  }
+
+  // Default COD wallet for the primary brand (override wins).
+  let walletId = data.walletAccountId ?? null;
+  if (!walletId) {
+    const { data: st } = await supabase
+      .from("erp_settings")
+      .select("default_cod_wallet_id")
+      .eq("brand_id", brandId)
+      .maybeSingle();
+    walletId = (st?.default_cod_wallet_id as string | null) ?? null;
+  }
+  if (!walletId) {
+    throw new Error("Default COD wallet is not set for this brand. Finance → Settings → Default COD Wallet.");
+  }
+
+  // Replace any previous settlement for this invoice (idempotent).
+  await supabase
+    .from("erp_transactions")
+    .delete()
+    .eq("reference_type", "cod_invoice")
+    .eq("reference_id", data.runId);
+
+  const txnDate = String(run.created_at ?? new Date().toISOString()).slice(0, 10);
+  const label = run.source_filename ? ` · ${run.source_filename}` : "";
+  const { error: insErr } = await supabase.from("erp_transactions").insert({
+    brand_id: brandId,
+    txn_type: amount > 0 ? "income" : "expense",
+    account_id: walletId,
+    amount: Math.abs(amount),
+    transaction_date: txnDate,
+    reference_type: "cod_invoice",
+    reference_id: data.runId,
+    description: `Courier invoice settlement${label}`,
+    created_by: userId,
+  });
+  if (insErr) throw new Error(insErr.message);
+
+  return { posted: true, amount, walletId, brandId };
+}
