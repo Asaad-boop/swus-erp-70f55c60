@@ -249,14 +249,20 @@ export async function createReconRunCore(
 
     // Pass 3: bulk fetch matched orders + already-applied duplicates
     const matchedIds = [...new Set(pre.map((p) => p.matchedOrderId).filter(Boolean) as string[])];
-    const orderById = new Map<string, { total: number; brand_id: string | null }>();
+    const orderById = new Map<string, { total: number; brand_id: string | null; advance: number }>();
     const appliedOrderIds = new Set<string>();
     if (matchedIds.length) {
-      const ords = await fetchInChunks<{ id: string; total: number; brand_id: string | null }>(
+      const ords = await fetchInChunks<{ id: string; total: number; brand_id: string | null; advance_amount: number | null }>(
         matchedIds,
-        (chunk) => supabase.from("orders").select("id, total, brand_id").in("id", chunk),
+        (chunk) => supabase.from("orders").select("id, total, brand_id, advance_amount").in("id", chunk),
       );
-      ords.forEach((o) => orderById.set(o.id, { total: Number(o.total), brand_id: o.brand_id ?? null }));
+      ords.forEach((o) =>
+        orderById.set(o.id, {
+          total: Number(o.total),
+          brand_id: o.brand_id ?? null,
+          advance: Number(o.advance_amount ?? 0),
+        }),
+      );
 
        const applied = await fetchInChunks<{ matched_order_id: string }>(matchedIds, (chunk) =>
         supabase
@@ -287,7 +293,12 @@ export async function createReconRunCore(
             amountDiff = null;
             status = "matched";
           } else {
-            amountDiff = r.collected - Number(ord.total);
+            // Prepaid (bKash/advance) orders: the customer already paid us, so
+            // the courier collects only the remaining COD (often 0) and simply
+            // deducts its delivery/COD fees from the invoice. Compare against
+            // the expected COD, not the full order total.
+            const expectedCod = Math.max(0, Number(ord.total) - Number(ord.advance ?? 0));
+            amountDiff = r.collected - expectedCod;
             status =
               Math.abs(amountDiff) <= data.tolerance ? "matched" : "amount_mismatch";
           }
