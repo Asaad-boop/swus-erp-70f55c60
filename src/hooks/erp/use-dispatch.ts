@@ -72,6 +72,8 @@ const STAGE_OF: Record<string, DispatchStage> = {
   packed: "packed",
   ready_to_ship: "ready",
   shipped: "shipped",
+  courier_entry: "shipped",
+  in_transit: "shipped",
   on_hold: "hold",
 };
 
@@ -197,7 +199,7 @@ export function useDispatch() {
         applyBrandScope(supabase.from("orders").select(SELECT).eq("status", "ready_to_ship"), brandIds)
           .order("updated_at", { ascending: true })
           .limit(600),
-        applyBrandScope(supabase.from("orders").select(SELECT).eq("status", "shipped").gte("updated_at", todayIso), brandIds)
+        applyBrandScope(supabase.from("orders").select(SELECT).in("status", ["shipped", "courier_entry", "in_transit"] as unknown as never[]).gte("updated_at", todayIso), brandIds)
           .order("updated_at", { ascending: false })
           .limit(600),
         applyBrandScope(supabase.from("orders").select(SELECT).eq("status", "on_hold"), brandIds)
