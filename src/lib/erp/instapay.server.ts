@@ -255,15 +255,21 @@ export async function ingestPathaoPaymentInvoice(supabase: AnyRec, payload: AnyR
   const sourceName = `instapay:${invoiceId ?? invoiceDate}`;
   let runId: string | null = null;
   {
-    let q = supabase
+    // One run per invoice. Earlier versions keyed on (invoice, brand), which
+    // created duplicate runs when the first webhook row had no brand match.
+    const { data: candidates } = await supabase
       .from("erp_reconciliation_runs")
-      .select("id, total_rows, total_collected, total_fee, total_payout, status")
+      .select("id, brand_id, total_rows, total_collected, total_fee, total_payout, status")
       .eq("courier", "pathao")
       .eq("source_filename", sourceName)
       .neq("status", "reverted")
-      .limit(1);
-    q = brandId ? q.eq("brand_id", brandId) : q.is("brand_id", null);
-    const { data: existing } = await q.maybeSingle();
+      .order("created_at", { ascending: true })
+      .limit(5);
+    const pool = (candidates ?? []) as AnyRec[];
+    const existing = pool.find((r) => brandId && r.brand_id === brandId) ?? pool[0] ?? null;
+    if (existing?.id && brandId && !existing.brand_id) {
+      await supabase.from("erp_reconciliation_runs").update({ brand_id: brandId }).eq("id", existing.id);
+    }
     if (existing?.id) {
       runId = existing.id;
       await supabase

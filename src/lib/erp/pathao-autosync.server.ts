@@ -157,6 +157,23 @@ export async function runPathaoAutoSync(
     result.errors.push((e as Error).message);
   }
 
+  // Repair InstaPay webhook runs that landed with 0 payout (CSV wasn't ready yet)
+  // and settle their invoice totals to the default COD wallet.
+  try {
+    const { resyncZeroPayoutInstapay } = await import("./instapay-resync.server");
+    const rz = await resyncZeroPayoutInstapay(sb, { userId: opts.userId ?? null });
+    if (rz.errors.length) result.errors.push(...rz.errors.slice(0, 3));
+    if (rz.fixed || rz.settled || rz.merged) {
+      result.runs.push(
+        ...rz.items
+          .filter((i) => i.runId)
+          .map((i) => ({ invoiceId: i.invoiceId, runId: i.runId as string, rows: 0, applied: 0, failed: 0 })),
+      );
+    }
+  } catch (e) {
+    result.errors.push(`instapay resync: ${(e as Error).message}`);
+  }
+
   const totalApplied = result.runs.reduce((s, r) => s + r.applied, 0);
   await writeAutoSyncConfig(sb, {
     lastRunAt: new Date().toISOString(),
