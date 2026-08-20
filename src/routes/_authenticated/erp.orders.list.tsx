@@ -1,5 +1,5 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Plus, Download, RefreshCw, Inbox } from "lucide-react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
@@ -46,6 +46,56 @@ type OrdersSearch = {
   view?: "orders" | "incomplete";
 };
 
+function searchFromFilter(filter: OrdersFilter, view: "orders" | "incomplete"): OrdersSearch {
+  const activeTabKey = view === "incomplete" ? "incomplete" : tabForStatuses(filter.statuses);
+  return {
+    q: filter.search || undefined,
+    tab: activeTabKey,
+    page: filter.page || undefined,
+    size: filter.pageSize !== 50 ? filter.pageSize : undefined,
+    sort: filter.sortKey !== "created_at" ? filter.sortKey : undefined,
+    dir: filter.sortDir !== "desc" ? filter.sortDir : undefined,
+    src: filter.source ?? undefined,
+    from: filter.dateFrom ?? undefined,
+    to: filter.dateTo ?? undefined,
+    courier: filter.courier ?? undefined,
+    bucket: filter.courierBucket ?? undefined,
+    pm: filter.paymentMethod ?? undefined,
+    ps: filter.paymentStatus ?? undefined,
+    city: filter.city ?? undefined,
+    assignee: filter.assignee ?? undefined,
+    min: filter.amountMin ?? undefined,
+    max: filter.amountMax ?? undefined,
+    adv: filter.advanceFilter && filter.advanceFilter !== "any" ? filter.advanceFilter : undefined,
+    printed: filter.printedFilter && filter.printedFilter !== "all" ? filter.printedFilter : undefined,
+    view: view === "incomplete" ? "incomplete" : undefined,
+  };
+}
+
+function filterToSearch(filter: Partial<OrdersFilter>): OrdersSearch {
+  return {
+    q: filter.search || undefined,
+    tab: filter.statuses ? tabForStatuses(filter.statuses) : undefined,
+    page: filter.page ?? undefined,
+    size: filter.pageSize ?? undefined,
+    sort: filter.sortKey ?? undefined,
+    dir: filter.sortDir ?? undefined,
+    src: filter.source ?? undefined,
+    from: filter.dateFrom ?? undefined,
+    to: filter.dateTo ?? undefined,
+    courier: filter.courier ?? undefined,
+    bucket: filter.courierBucket ?? undefined,
+    pm: filter.paymentMethod ?? undefined,
+    ps: filter.paymentStatus ?? undefined,
+    city: filter.city ?? undefined,
+    assignee: filter.assignee ?? undefined,
+    min: filter.amountMin ?? undefined,
+    max: filter.amountMax ?? undefined,
+    adv: filter.advanceFilter && filter.advanceFilter !== "any" ? filter.advanceFilter : undefined,
+    printed: filter.printedFilter && filter.printedFilter !== "all" ? filter.printedFilter : undefined,
+  };
+}
+
 const str = (v: unknown) => (typeof v === "string" && v ? v : undefined);
 const num = (v: unknown) => {
   const n = Number(v);
@@ -84,30 +134,41 @@ function OrdersPage() {
   const navigate = useNavigate({ from: "/erp/orders/list" });
   const sp = Route.useSearch();
   const { activeBrand, brandIds, isAllBrands } = useBrand();
-  const [filter, setFilter] = useState<OrdersFilter>(() => ({
-    brandId: null,
-    brandIds: [],
-    search: sp.q ?? "",
-    statuses: STATUS_TABS.find((t) => t.key === (sp.tab ?? "pending"))?.statuses ?? ["confirmed"],
-    source: sp.src ?? null,
-    dateFrom: sp.from ?? null,
-    dateTo: sp.to ?? null,
-    courier: sp.courier ?? null,
-    page: sp.page ?? 0,
-    pageSize: sp.size ?? 50,
-    sortKey: sp.sort ?? "created_at",
-    sortDir: sp.dir ?? "desc",
-    courierBucket: sp.bucket ?? null,
-    paymentMethod: sp.pm ?? null,
-    paymentStatus: sp.ps ?? null,
-    city: sp.city ?? null,
-    assignee: sp.assignee ?? null,
-    amountMin: sp.min ?? null,
-    amountMax: sp.max ?? null,
-    advanceFilter: sp.adv ?? "any",
-    printedFilter: sp.printed ?? "all",
-  }));
-  const [view, setView] = useState<"orders" | "incomplete">(sp.view === "incomplete" ? "incomplete" : "orders");
+
+  // URL is the single source of truth for filters and the active tab/view.
+  const spKey = useMemo(() => JSON.stringify(sp), [sp]);
+  const view = sp.view === "incomplete" ? "incomplete" : "orders";
+
+  const filter = useMemo<OrdersFilter>(
+    () => {
+      const tab = STATUS_TABS.find((t) => t.key === (sp.tab ?? "pending"));
+      return {
+        brandId: activeBrand?.id ?? null,
+        brandIds: isAllBrands ? brandIds : activeBrand ? [activeBrand.id] : [],
+        search: sp.q ?? "",
+        statuses: view === "incomplete" ? [] : (tab?.statuses ?? ["confirmed"]),
+        source: sp.src ?? null,
+        dateFrom: sp.from ?? null,
+        dateTo: sp.to ?? null,
+        courier: sp.courier ?? null,
+        page: sp.page ?? 0,
+        pageSize: sp.size ?? 50,
+        sortKey: sp.sort ?? "created_at",
+        sortDir: sp.dir ?? "desc",
+        courierBucket: sp.bucket ?? null,
+        paymentMethod: sp.pm ?? null,
+        paymentStatus: sp.ps ?? null,
+        city: sp.city ?? null,
+        assignee: sp.assignee ?? null,
+        amountMin: sp.min ?? null,
+        amountMax: sp.max ?? null,
+        advanceFilter: sp.adv ?? "any",
+        printedFilter: sp.printed ?? "all",
+      };
+    },
+    [spKey, activeBrand?.id, isAllBrands, brandIds],
+  );
+
   const prefs = useOrdersPrefs();
   const savedViews = useSavedViews();
   const [selectingAll, setSelectingAll] = useState(false);
@@ -120,43 +181,24 @@ function OrdersPage() {
       brandId: activeBrand?.id ?? null,
       brandIds: isAllBrands ? brandIds : activeBrand ? [activeBrand.id] : [],
     }),
-    [filter, activeBrand?.id, isAllBrands, brandIds, activeBrand],
+    [filter, activeBrand?.id, isAllBrands, brandIds],
   );
 
   const { data, isLoading, isFetching } = useOrdersQuery(effective);
 
-  // Keep the URL in sync so filters survive reloads and can be shared.
-  const activeTabKey = view === "incomplete" ? "incomplete" : tabForStatuses(filter.statuses);
-  const lastSearchRef = useRef<string | null>(null);
-  useEffect(() => {
-    const search = {
-        q: filter.search || undefined,
-        tab: activeTabKey,
-        page: filter.page || undefined,
-        size: filter.pageSize !== 50 ? filter.pageSize : undefined,
-        sort: filter.sortKey !== "created_at" ? filter.sortKey : undefined,
-        dir: filter.sortDir !== "desc" ? filter.sortDir : undefined,
-        src: filter.source ?? undefined,
-        from: filter.dateFrom ?? undefined,
-        to: filter.dateTo ?? undefined,
-        courier: filter.courier ?? undefined,
-        bucket: filter.courierBucket ?? undefined,
-        pm: filter.paymentMethod ?? undefined,
-        ps: filter.paymentStatus ?? undefined,
-        city: filter.city ?? undefined,
-        assignee: filter.assignee ?? undefined,
-        min: filter.amountMin ?? undefined,
-        max: filter.amountMax ?? undefined,
-        adv: filter.advanceFilter && filter.advanceFilter !== "any" ? filter.advanceFilter : undefined,
-        printed: filter.printedFilter && filter.printedFilter !== "all" ? filter.printedFilter : undefined,
-        view: view === "incomplete" ? "incomplete" : undefined,
-    } satisfies OrdersSearch;
-    const serialized = JSON.stringify(search);
-    if (lastSearchRef.current === serialized) return;
-    lastSearchRef.current = serialized;
-    navigate({ replace: true, search });
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [filter, view, activeTabKey]);
+  // Stable update helper that writes the next filter state to the URL.
+  const filterRef = useRef(filter);
+  const viewRef = useRef(view);
+  filterRef.current = filter;
+  viewRef.current = view;
+  const updateFilter = useCallback(
+    (patchOrFn: Partial<OrdersFilter> | ((f: OrdersFilter) => Partial<OrdersFilter>)) => {
+      const patch = typeof patchOrFn === "function" ? patchOrFn(filterRef.current) : patchOrFn;
+      const nextFilter = { ...filterRef.current, ...patch };
+      navigate({ replace: true, search: searchFromFilter(nextFilter, viewRef.current) });
+    },
+    [navigate],
+  );
 
   const { data: countsData } = useOrderStatusCounts(effective);
   const { data: incompleteCount } = useAbandonedCartCount(effective.brandId, effective.brandIds);
@@ -177,7 +219,7 @@ function OrdersPage() {
   // and pagination stay correct instead of filtering only the current page.
   const courierStatusFilter: CourierBucket | "all" = filter.courierBucket ?? "all";
   const setCourierStatusFilter = (v: CourierBucket | "all") =>
-    setFilter((f) => ({ ...f, courierBucket: v === "all" ? null : v, page: 0 }));
+    updateFilter({ courierBucket: v === "all" ? null : v, page: 0 });
   const [lastSyncedAt, setLastSyncedAt] = useState<number | null>(null);
   const [flashIds, setFlashIds] = useState<Set<string>>(new Set());
 
@@ -315,7 +357,7 @@ function OrdersPage() {
   };
 
   const applyView = (searchObj: Record<string, unknown>) => {
-    setFilter((f) => ({ ...f, ...(searchObj as Partial<OrdersFilter>), page: 0 }));
+    navigate({ replace: true, search: { ...sp, ...filterToSearch(searchObj as Partial<OrdersFilter>), page: 0 } });
   };
 
   const statusMutation = useMutation({
@@ -442,8 +484,7 @@ function OrdersPage() {
   };
 
   const clearAllFilters = () => {
-    setFilter((f) => ({ ...f, search: "", source: null, courier: null, dateFrom: null, dateTo: null, statuses: [], page: 0 }));
-    setView("orders");
+    navigate({ replace: true, search: { tab: "all" } });
   };
   const hasActiveFilters = !!(filter.search || filter.source || filter.courier || filter.dateFrom || filter.dateTo || filter.statuses.length > 0);
 
@@ -527,19 +568,18 @@ function OrdersPage() {
           counts={countsData?.counts ?? {}}
           total={countsData?.total ?? 0}
           incompleteCount={incompleteCount ?? 0}
-          onChange={(statuses, key) => {
+          onChange={(_statuses, key) => {
+            setIncompletePage(0);
             if (key === "incomplete") {
-              setView("incomplete");
-              setIncompletePage(0);
+              navigate({ replace: true, search: { ...sp, tab: "incomplete", view: "incomplete" } });
             } else {
-              setView("orders");
-              setFilter({ ...filter, statuses, page: 0 });
+              navigate({ replace: true, search: { ...sp, tab: key, view: undefined } });
             }
           }}
         />
         {view === "incomplete" ? (
           <>
-            <OrdersToolbar filter={effective} onChange={setFilter} />
+            <OrdersToolbar filter={effective} onChange={updateFilter} />
             <IncompleteOrdersTable
               brandId={effective.brandId}
               brandIds={effective.brandIds}
@@ -587,7 +627,7 @@ function OrdersPage() {
           )}
           <OrdersToolbar
           filter={effective}
-          onChange={setFilter}
+          onChange={updateFilter}
           density={prefs.density}
           onDensityChange={prefs.setDensity}
           hiddenColumns={prefs.hiddenColumns}
@@ -648,7 +688,7 @@ function OrdersPage() {
           sortKey={filter.sortKey ?? "created_at"}
           sortDir={filter.sortDir ?? "desc"}
           onSortChange={(key) =>
-            setFilter((f) => ({
+            updateFilter((f) => ({
               ...f,
               sortKey: key,
               sortDir: f.sortKey === key ? ((f.sortDir ?? "desc") === "desc" ? "asc" : "desc") : "desc",
@@ -689,8 +729,8 @@ function OrdersPage() {
           pageSize={filter.pageSize}
           total={total}
           rowsOnPage={visibleRows.length}
-          onPage={(p) => setFilter((f) => ({ ...f, page: p }))}
-          onPageSize={(n) => setFilter((f) => ({ ...f, pageSize: n, page: 0 }))}
+          onPage={(p) => updateFilter({ page: p })}
+          onPageSize={(n) => updateFilter({ pageSize: n, page: 0 })}
         />
           </>
         )}
