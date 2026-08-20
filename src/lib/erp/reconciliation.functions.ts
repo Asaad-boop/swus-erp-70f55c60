@@ -223,6 +223,31 @@ export const revertPathaoReconciliationRun = createServerFn({ method: "POST" })
     return { ok: true, reverted: txnIds.length, restored: matchedOrders.length };
   });
 
+/**
+ * Manually (re)post an invoice's full payout to the brand's default COD wallet.
+ * Useful after an amount re-sync, or when the default wallet was set later.
+ */
+export const settleInvoiceToWallet = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d) =>
+    z
+      .object({
+        runId: z.string().uuid(),
+        walletAccountId: z.string().uuid().nullable().optional(),
+        brandId: z.string().uuid().nullable().optional(),
+      })
+      .parse(d),
+  )
+  .handler(async ({ data, context }) => {
+    const { settleInvoiceTotalCore } = await import("./reconciliation-core.server");
+    return settleInvoiceTotalCore(context.supabase, context.userId, {
+      runId: data.runId,
+      walletAccountId: data.walletAccountId ?? null,
+      brandId: data.brandId ?? null,
+    });
+  });
+
+
 // ---------- Delete draft run ----------
 
 export const deletePathaoReconciliationRun = createServerFn({ method: "POST" })
