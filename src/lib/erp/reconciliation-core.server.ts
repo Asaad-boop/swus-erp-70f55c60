@@ -506,75 +506,28 @@ export async function applyReconRunCore(
           .eq("reference_id", orderId)
           .in("reference_type", ["order_courier", "order_delivery", "order_return_charge"]);
 
-        // Idempotency: drop any payout/deduction this order already got from a
-        // previous reconciliation apply on the same wallet, so re-applying an
-        // invoice replaces (never stacks) the wallet effect.
+        // INVOICE-FIRST MODEL: rows no longer move cash. The whole invoice payout
+        // is posted once as a single wallet transaction (see settleInvoiceTotalCore),
+        // so the wallet always equals the courier statement even when some rows
+        // stay unmatched. Here we only clear legacy per-row postings.
         await supabase
           .from("erp_transactions")
           .delete()
           .eq("reference_id", orderId)
           .eq("reference_type", "order")
-          .eq("account_id", walletId);
+          .ilike("description", "Pathao reconciliation%");
 
-        // Wallet cash model (approach b): the courier deducts its fees
-        // BEFORE handing us the payout. We therefore only book what actually
-        // lands in (or comes out of) the wallet — the payout itself — and
-        // do NOT post a separate courier-charge expense against our account.
-        //   payout > 0 → income = payout
-        //   payout < 0 → expense = -payout (courier ate into other rows'
-        //                collections inside this same invoice)
-        //   payout = 0 → no cash txn (pure return with zero fee)
-        // Fee visibility lives on erp_reconciliation_rows.total_fee and on
-        // order_items.courier_cost_allocated (per-SKU P&L below).
         void returnFee; // kept in schema for history, no longer used on apply
         void partialAmount; // status/amount handled below via orderUpdate
-        let incomeId: string | null = null;
-        let expenseId: string | null = null;
-        const incomeAmount = payoutNum > 0 ? payoutNum : 0;
-        const expenseAmount = payoutNum < 0 ? -payoutNum : 0;
-        if (incomeAmount > 0) {
-          const { data: inc, error: incErr } = await supabase
-            .from("erp_transactions")
-            .insert({
-              brand_id: rowBrand,
-              txn_type: "income",
-              account_id: walletId,
-              amount: incomeAmount,
-              transaction_date: txnDate,
-              reference_type: "order",
-              reference_id: orderId,
-              description: `${description} · payout`,
-              created_by: userId,
-            })
-            .select("id")
-            .single();
-          if (incErr) throw incErr;
-          incomeId = (inc as { id: string }).id;
-        }
-        if (expenseAmount > 0) {
-          const { data: exp, error: expErr } = await supabase
-            .from("erp_transactions")
-            .insert({
-              brand_id: rowBrand,
-              txn_type: "expense",
-              account_id: walletId,
-              category_id: feeCategoryId,
-              amount: expenseAmount,
-              transaction_date: txnDate,
-              reference_type: "order",
-              reference_id: orderId,
-              description: `${description} · courier deduction (return/fee)`,
-              created_by: userId,
-            })
-            .select("id")
-            .single();
-          if (expErr) throw expErr;
-          expenseId = (exp as { id: string }).id;
-        }
+        void feeCategoryId;
+        void description;
+        const incomeId: string | null = null;
+        const expenseId: string | null = null;
         // For downstream displays: courier_fee = the invoice total_fee (what
         // the courier charged for this shipment — visibility only, not a
-        // wallet debit). net_collected = payout (actual wallet effect).
+        // wallet debit). net_collected = payout (allocation of the invoice).
         const displayFee = Number(r.total_fee);
+
 
         // Update order — branch by match_type
         const orderUpdate: Record<string, unknown> = {
@@ -667,15 +620,126 @@ export async function applyReconRunCore(
     const done = fetchedCount < data.limit;
 
     if (done) {
+      // Invoice-first settlement: post the full invoice payout to the default
+      // COD wallet exactly once (idempotent), regardless of row match results.
+      let settleNote: string | null = null;
+      try {
+        const s = await settleInvoiceTotalCore(supabase, userId, {
+          runId: data.runId,
+          walletAccountId: data.walletAccountId ?? null,
+        });
+        settleNote = s.posted
+          ? `Invoice settled: ${s.amount} → wallet`
+          : (s.reason ?? null);
+      } catch (e) {
+        settleNote = `Wallet settlement failed: ${(e as Error).message}`;
+        errors.push(settleNote);
+      }
       await supabase
         .from("erp_reconciliation_runs")
         .update({
           status: failed === 0 ? "applied" : "partial",
           applied_at: new Date().toISOString(),
-          notes: errors.length ? errors.slice(0, 10).join("\n") : null,
+          notes: errors.length ? errors.slice(0, 10).join("\n") : settleNote,
         })
         .eq("id", data.runId);
     }
 
+
     return { applied, failed, done, nextCursor: lastId, errors: errors.slice(0, 10) };
+}
+
+/**
+ * INVOICE-FIRST SETTLEMENT
+ * ------------------------
+ * The courier statement is the ground truth for cash. Whatever the invoice's
+ * net payout is, that exact amount lands in the brand's default COD wallet —
+ * even if some rows stayed unmatched or mismatched. Row matching only decides
+ * *allocation* (which order got what), never the wallet balance.
+ *
+ * Idempotent: keyed on reference_type='cod_invoice' + reference_id=<runId>.
+ * Re-applying or re-syncing the same invoice replaces, never stacks.
+ */
+export async function settleInvoiceTotalCore(
+  supabase: Sb,
+  userId: string | null,
+  data: { runId: string; walletAccountId?: string | null; brandId?: string | null },
+): Promise<{ posted: boolean; amount: number; walletId: string | null; brandId: string | null; reason?: string }> {
+  const { data: run, error: runErr } = await supabase
+    .from("erp_reconciliation_runs")
+    .select("id, brand_id, total_payout, source_filename, created_at")
+    .eq("id", data.runId)
+    .maybeSingle();
+  if (runErr) throw new Error(runErr.message);
+  if (!run) throw new Error("Run not found");
+
+  const amount = Number(run.total_payout ?? 0);
+
+  // Zero-amount guard: webhook-origin runs sometimes arrive before the CSV
+  // exists. Never post a 0 Tk settlement — wait for the amount re-sync.
+  if (!amount) {
+    await supabase
+      .from("erp_transactions")
+      .delete()
+      .eq("reference_type", "cod_invoice")
+      .eq("reference_id", data.runId);
+    return { posted: false, amount: 0, walletId: null, brandId: null, reason: "Invoice amount is 0 — awaiting amount sync" };
+  }
+
+  // Primary brand: explicit → run brand → most common brand across the rows.
+  let brandId: string | null = data.brandId ?? run.brand_id ?? null;
+  if (!brandId) {
+    const { data: rows } = await supabase
+      .from("erp_reconciliation_rows")
+      .select("brand_id")
+      .eq("run_id", data.runId)
+      .not("brand_id", "is", null)
+      .limit(2000);
+    const tally = new Map<string, number>();
+    for (const r of (rows ?? []) as Array<{ brand_id: string }>) {
+      tally.set(r.brand_id, (tally.get(r.brand_id) ?? 0) + 1);
+    }
+    brandId = [...tally.entries()].sort((a, b) => b[1] - a[1])[0]?.[0] ?? null;
+  }
+  if (!brandId) {
+    return { posted: false, amount, walletId: null, brandId: null, reason: "No brand could be resolved for this invoice" };
+  }
+
+  // Default COD wallet for the primary brand (override wins).
+  let walletId = data.walletAccountId ?? null;
+  if (!walletId) {
+    const { data: st } = await supabase
+      .from("erp_settings")
+      .select("default_cod_wallet_id")
+      .eq("brand_id", brandId)
+      .maybeSingle();
+    walletId = (st?.default_cod_wallet_id as string | null) ?? null;
+  }
+  if (!walletId) {
+    throw new Error("Default COD wallet is not set for this brand. Finance → Settings → Default COD Wallet.");
+  }
+
+  // Replace any previous settlement for this invoice (idempotent).
+  await supabase
+    .from("erp_transactions")
+    .delete()
+    .eq("reference_type", "cod_invoice")
+    .eq("reference_id", data.runId);
+
+  const txnDate = String(run.created_at ?? new Date().toISOString()).slice(0, 10);
+  const label = run.source_filename ? ` · ${run.source_filename}` : "";
+  const { error: insErr } = await supabase.from("erp_transactions").insert({
+    brand_id: brandId,
+    txn_type: amount > 0 ? "income" : "expense",
+    account_id: walletId,
+    amount: Math.abs(amount),
+    transaction_date: txnDate,
+    reference_type: "cod_invoice",
+    reference_id: data.runId,
+    description: `Courier invoice settlement${label}`,
+    created_by: userId,
+  });
+  if (insErr) throw new Error(insErr.message);
+
+  return { posted: true, amount, walletId, brandId };
 }

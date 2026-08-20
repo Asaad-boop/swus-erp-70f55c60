@@ -1993,6 +1993,16 @@ function ApplyDialog({
             Amount mismatch row gulao apply koro (invoice amount diye)
           </label>
 
+          <div className="rounded-md border border-emerald-500/40 bg-emerald-500/5 p-2.5 text-xs text-emerald-800 dark:text-emerald-300 flex items-start gap-2">
+            <CheckCircle2 className="h-3.5 w-3.5 mt-0.5 shrink-0" />
+            <span>
+              <strong>Invoice-first:</strong> invoice-er puro net payout ek line-e default COD wallet-e post hobe —
+              kono row unmatched/mismatch thakleo wallet balance courier statement-er soman thakbe. Row matching
+              shudhu kon order koto pelo ta thik kore, taka noy.
+            </span>
+          </div>
+
+
           {missingBrands.length > 0 && (
             <div className="rounded-md border border-amber-500/40 bg-amber-500/5 p-2 text-xs text-amber-700 dark:text-amber-300 flex items-start gap-2">
               <AlertTriangle className="h-3.5 w-3.5 mt-0.5 shrink-0" />
