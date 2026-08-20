@@ -9,10 +9,14 @@ type Props = {
   onScan: (value: string) => void;
   placeholder?: string;
   disabled?: boolean;
+  /** Suppress the on-screen keyboard (mobile camera / hardware-scanner mode). */
+  noKeyboard?: boolean;
+  /** Hide the Submit button (mobile compact bar). */
+  hideSubmit?: boolean;
 };
 
 export const ScanInput = forwardRef<ScanInputHandle, Props>(function ScanInput(
-  { onScan, placeholder, disabled },
+  { onScan, placeholder, disabled, noKeyboard, hideSubmit },
   ref,
 ) {
   const inputRef = useRef<HTMLInputElement>(null);
@@ -94,13 +98,20 @@ export const ScanInput = forwardRef<ScanInputHandle, Props>(function ScanInput(
           onBlur={onBlur}
           placeholder={placeholder ?? "Scan or type invoice number…"}
           disabled={disabled}
-          className="pl-10 h-14 text-lg font-mono"
+          className="pl-10 h-14 text-base sm:text-lg font-mono"
           autoFocus
+          inputMode={noKeyboard ? "none" : "text"}
+          enterKeyHint="go"
+          autoCapitalize="off"
+          autoCorrect="off"
+          spellCheck={false}
         />
       </div>
-      <Button size="lg" onClick={submit} disabled={disabled || !value.trim()}>
-        Submit
-      </Button>
+      {!hideSubmit && (
+        <Button size="lg" onClick={submit} disabled={disabled || !value.trim()}>
+          Submit
+        </Button>
+      )}
     </div>
   );
 });
