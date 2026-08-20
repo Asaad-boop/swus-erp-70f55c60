@@ -1,7 +1,7 @@
 import { useCallback, useMemo, useState } from "react";
 import { toast } from "sonner";
 import {
-  Truck, Printer, BarChart3, FileText, Loader2, RefreshCw, ScanLine, LayoutGrid, Rows3,
+  Printer, BarChart3, FileText, Loader2, RefreshCw, ScanLine, LayoutGrid, Rows3,
   Volume2, VolumeX, Undo2, AlertCircle, X, RotateCw, Zap,
 } from "lucide-react";
 import { Card } from "@/components/ui/card";
@@ -92,9 +92,10 @@ export function DispatchShell() {
   return (
     <div className="space-y-4">
       <ErpPageHeader
+        eyebrow="Operations"
         title="Dispatch Center"
-        description="Pending → Packed → Ready to Ship → Shipped"
-        icon={Truck}
+        subtitle="Pending → Packed → Ready to Ship → Shipped"
+        live
         actions={
           <div className="flex flex-wrap items-center gap-1.5">
             <Button
