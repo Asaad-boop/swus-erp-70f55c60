@@ -28,7 +28,7 @@ function initials(name: string) {
 
 type Props = {
   brandId: string | null | undefined;
-  variant?: "chip" | "dot" | "compact";
+  variant?: "chip" | "dot" | "compact" | "text";
   className?: string;
 };
 
@@ -46,6 +46,14 @@ export function BrandBadge({ brandId, variant = "chip", className }: Props) {
       <span className={cn("inline-flex items-center gap-1.5", className)} title={name}>
         <span className={cn("h-2 w-2 rounded-full", tone.dot)} />
         <span className="text-xs text-muted-foreground">{name}</span>
+      </span>
+    );
+  }
+
+  if (variant === "text") {
+    return (
+      <span className={cn("font-semibold", tone.text, className)} title={name}>
+        {name}
       </span>
     );
   }

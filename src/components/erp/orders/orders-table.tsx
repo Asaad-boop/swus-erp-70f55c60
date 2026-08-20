@@ -98,49 +98,46 @@ export function OrdersTable({ rows, loading, selectedIds, onToggleSelect, onTogg
       size: 40,
     },
     {
-      header: "Date",
-      cell: ({ row }) => (
-        <div className="text-xs leading-tight whitespace-nowrap">
-          <div className="font-medium">{format(new Date(row.original.created_at), "dd/MM/yyyy,")}</div>
-          <div>{format(new Date(row.original.created_at), "h:mm a")}</div>
-          <div className="text-[10px] text-muted-foreground mt-0.5">{relTime(row.original.created_at)}</div>
-        </div>
-      ),
-    },
-    {
-      header: "Invoice",
+      header: "Order",
+      id: "order",
       cell: ({ row }) => {
-        const inv = invoiceDisplay(row.original);
-        const printedAt = row.original.printed_at;
+        const o = row.original;
+        const inv = invoiceDisplay(o);
+        const printedAt = o.printed_at;
         return (
-          <div className="flex items-center gap-1 whitespace-nowrap">
-            <span className="font-mono text-xs font-semibold">{inv}</span>
-            <button
-              onClick={(e) => { e.stopPropagation(); copyText(inv, "Invoice"); }}
-              className="p-0.5 rounded hover:bg-muted text-muted-foreground"
-              title="Copy invoice number"
-            >
-              <Copy className="h-3 w-3" />
-            </button>
-            <span
-              title={printedAt ? `Printed ${format(new Date(printedAt), "dd/MM/yyyy h:mm a")}` : "Not printed yet"}
-              className={cn(
-                "inline-flex items-center justify-center h-5 w-5 rounded-md ring-1 ring-inset shadow-sm",
-                printedAt
-                  ? "bg-emerald-500 text-white ring-emerald-600 dark:bg-emerald-500 dark:text-white dark:ring-emerald-400"
-                  : "bg-muted text-muted-foreground/70 ring-border",
-              )}
-              aria-label={printedAt ? "Printed" : "Not printed"}
-            >
-              <Printer className="h-3.5 w-3.5" strokeWidth={2.75} />
-            </span>
+          <div className="min-w-[168px] whitespace-nowrap">
+            <div className="flex items-center gap-1.5">
+              <span className="font-mono text-[13px] font-semibold text-foreground">{inv}</span>
+              <button
+                onClick={(e) => { e.stopPropagation(); copyText(inv, "Invoice"); }}
+                className="p-0.5 rounded text-muted-foreground/60 hover:text-foreground hover:bg-muted"
+                title="Copy invoice number"
+              >
+                <Copy className="h-3 w-3" />
+              </button>
+              <span
+                title={printedAt ? `Printed ${format(new Date(printedAt), "dd/MM/yyyy h:mm a")}` : "Not printed yet"}
+                className={cn(
+                  "inline-flex items-center justify-center h-4.5 w-4.5 rounded",
+                  printedAt ? "text-emerald-600 dark:text-emerald-400" : "text-muted-foreground/35",
+                )}
+                aria-label={printedAt ? "Printed" : "Not printed"}
+              >
+                <Printer className="h-3.5 w-3.5" strokeWidth={2.4} />
+              </span>
+            </div>
+            <div className="mt-1 text-[11.5px] text-muted-foreground tabular-nums">
+              {format(new Date(o.created_at), "dd MMM yyyy, h:mm a")}
+              <span className="text-muted-foreground/60"> · {relTime(o.created_at)}</span>
+            </div>
+            <div className="mt-0.5 flex items-center gap-1 text-[11px] text-muted-foreground/80">
+              <span className="capitalize">{o.source ?? "manual"}</span>
+              <span className="text-muted-foreground/40">•</span>
+              <BrandBadge brandId={o.brand_id} variant="text" className="text-[11px]" />
+            </div>
           </div>
         );
       },
-    },
-    {
-      header: "Brand",
-      cell: ({ row }) => <BrandBadge brandId={row.original.brand_id} />,
     },
     {
       header: "Products",
@@ -154,8 +151,11 @@ export function OrdersTable({ rows, loading, selectedIds, onToggleSelect, onTogg
         const addr = [o.shipping_address, o.shipping_city, o.shipping_district].filter(Boolean).join(", ");
         const name = customerName(o);
         return (
-          <div className="min-w-[220px] max-w-[280px]">
-            <div className="text-xs space-y-0.5 min-w-0">
+          <div className="flex min-w-[220px] max-w-[290px] items-start gap-2.5">
+            <span className="mt-0.5 grid h-8 w-8 shrink-0 place-items-center rounded-full bg-primary/10 text-[11px] font-bold uppercase text-primary">
+              {avatarInitials(name)}
+            </span>
+            <div className="text-xs space-y-0.5 min-w-0 flex-1">
               <div className="flex items-center gap-1 min-w-0">
                 <span className="font-semibold text-sm truncate text-foreground">{name}</span>
                 {name && <CopyIconBtn value={name} label="Name" className="shrink-0" />}
@@ -226,6 +226,25 @@ export function OrdersTable({ rows, loading, selectedIds, onToggleSelect, onTogg
       },
     },
     {
+      header: "Payment",
+      id: "payment",
+      cell: ({ row }) => {
+        const o = row.original;
+        const method = (o.payment_method ?? "cod").toLowerCase();
+        const tone = method === "cod"
+          ? "bg-amber-50 text-amber-700 border-amber-200 dark:bg-amber-950/40 dark:text-amber-300 dark:border-amber-900/60"
+          : "bg-emerald-50 text-emerald-700 border-emerald-200 dark:bg-emerald-950/40 dark:text-emerald-300 dark:border-emerald-900/60";
+        return (
+          <div className="flex flex-col items-start gap-1 whitespace-nowrap">
+            <span className={cn("inline-flex h-5 items-center rounded-full border px-2 text-[10px] font-bold uppercase tracking-wider", tone)}>
+              {method}
+            </span>
+            <AdvanceBadge advance={o.advance_amount} total={o.total} txnId={(o as any).advance_txn_id} variant="full" />
+          </div>
+        );
+      },
+    },
+    {
       header: "Status",
       cell: ({ row }) => {
         const b = statusBadge(row.original.status);
@@ -282,15 +301,11 @@ export function OrdersTable({ rows, loading, selectedIds, onToggleSelect, onTogg
       cell: ({ row }) => (
         <div className="text-right whitespace-nowrap">
           <div className="font-bold text-sm tabular-nums">৳{Number(row.original.total).toLocaleString()}</div>
-          {row.original.payment_method && (
-            <div className="text-[10px] uppercase tracking-wider text-muted-foreground font-medium">{row.original.payment_method}</div>
-          )}
           {row.original.actual_shipping_cost != null && Number(row.original.actual_shipping_cost) > 0 && (
             <div className="text-[10px] text-muted-foreground font-medium tabular-nums" title="Courier delivery cost">
               Delivery ৳{Number(row.original.actual_shipping_cost).toLocaleString()}
             </div>
           )}
-          <AdvanceBadge advance={row.original.advance_amount} total={row.original.total} txnId={(row.original as any).advance_txn_id} variant="full" className="mt-1" />
         </div>
       ),
     },
@@ -353,7 +368,7 @@ export function OrdersTable({ rows, loading, selectedIds, onToggleSelect, onTogg
       ),
     },
     {
-      header: "Live Status",
+      header: "Delivery",
       id: "live_courier_status",
       cell: ({ row }) => {
         const o = row.original;
@@ -495,9 +510,8 @@ export function OrdersTable({ rows, loading, selectedIds, onToggleSelect, onTogg
   const table = useReactTable({ data: rows, columns: visibleColumns, getCoreRowModel: getCoreRowModel() });
   const compact = density === "compact";
   const SORTABLE: Record<string, "created_at" | "total" | "invoice_no"> = {
-    date: "created_at",
+    order: "created_at",
     total: "total",
-    invoice: "invoice_no",
   };
 
   return (
@@ -513,7 +527,7 @@ export function OrdersTable({ rows, loading, selectedIds, onToggleSelect, onTogg
                   <TableHead
                     key={h.id}
                     className={cn(
-                      "text-[10px] font-medium uppercase tracking-[0.12em] text-muted-foreground/80 px-3",
+                      "text-[10.5px] font-semibold uppercase tracking-[0.1em] text-muted-foreground/70 px-3",
                       compact ? "h-8" : "h-9",
                     )}
                   >
@@ -578,6 +592,12 @@ export function OrdersTable({ rows, loading, selectedIds, onToggleSelect, onTogg
       </Table>
     </div>
   );
+}
+
+function avatarInitials(name: string | null | undefined): string {
+  const n = (name ?? "").trim();
+  if (!n) return "?";
+  return n.split(/\s+/).slice(0, 2).map((w) => w[0]?.toUpperCase() ?? "").join("") || "?";
 }
 
 function relTime(iso: string): string {

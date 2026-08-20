@@ -25,22 +25,26 @@ export function OrdersPagination({
   return (
     <div className="flex flex-wrap items-center justify-between gap-3 border-t border-[var(--panel-border)] px-3 py-2 text-[12.5px]">
       <div className="flex items-center gap-3 text-muted-foreground">
-        <span className="tabular-nums">
-          {start.toLocaleString()}–{end.toLocaleString()} of {total.toLocaleString()}
+        <span className="inline-flex items-center gap-2">
+          Show
+          <Select value={String(pageSize)} onValueChange={(v) => onPageSize(Number(v))}>
+            <SelectTrigger className="h-8 w-[72px] rounded-lg border-[var(--panel-border)] bg-card text-xs shadow-none"><SelectValue /></SelectTrigger>
+            <SelectContent>
+              {[25, 50, 100, 200].map((n) => <SelectItem key={n} value={String(n)}>{n}</SelectItem>)}
+            </SelectContent>
+          </Select>
+          entries
         </span>
-        <Select value={String(pageSize)} onValueChange={(v) => onPageSize(Number(v))}>
-          <SelectTrigger className="h-7 w-[95px] rounded-lg border-transparent bg-foreground/[0.04] text-xs shadow-none"><SelectValue /></SelectTrigger>
-          <SelectContent>
-            {[25, 50, 100, 200].map((n) => <SelectItem key={n} value={String(n)}>{n} / page</SelectItem>)}
-          </SelectContent>
-        </Select>
+        <span className="hidden sm:inline tabular-nums text-muted-foreground/80">
+          Showing {start.toLocaleString()} to {end.toLocaleString()} of {total.toLocaleString()} orders
+        </span>
       </div>
 
       <div className="flex items-center gap-0.5">
-        <Button variant="ghost" size="icon" className="h-7 w-7 text-muted-foreground" disabled={page === 0} onClick={() => onPage(0)} title="First page">
+        <Button variant="ghost" size="icon" className="h-8 w-8 rounded-lg border border-[var(--panel-border)] bg-card text-muted-foreground" disabled={page === 0} onClick={() => onPage(0)} title="First page">
           <ChevronsLeft className="h-3.5 w-3.5" />
         </Button>
-        <Button variant="ghost" size="icon" className="h-7 w-7 text-muted-foreground" disabled={page === 0} onClick={() => onPage(page - 1)} title="Previous">
+        <Button variant="ghost" size="icon" className="h-8 w-8 rounded-lg border border-[var(--panel-border)] bg-card text-muted-foreground" disabled={page === 0} onClick={() => onPage(page - 1)} title="Previous">
           <ChevronLeft className="h-3.5 w-3.5" />
         </Button>
         {pages.map((p, i) =>
@@ -51,20 +55,20 @@ export function OrdersPagination({
               key={p}
               onClick={() => onPage(p - 1)}
               className={cn(
-                "h-7 min-w-7 px-1.5 rounded-md text-xs tabular-nums transition-colors",
+                "h-8 min-w-8 px-2 rounded-lg border text-xs tabular-nums transition-colors",
                 p === page + 1
-                  ? "bg-foreground/[0.07] font-semibold text-foreground"
-                  : "text-muted-foreground hover:text-foreground hover:bg-foreground/[0.04]",
+                  ? "border-primary bg-primary text-primary-foreground font-semibold"
+                  : "border-[var(--panel-border)] bg-card text-muted-foreground hover:text-foreground hover:bg-foreground/[0.04]",
               )}
             >
               {p}
             </button>
           ),
         )}
-        <Button variant="ghost" size="icon" className="h-7 w-7 text-muted-foreground" disabled={page + 1 >= totalPages} onClick={() => onPage(page + 1)} title="Next">
+        <Button variant="ghost" size="icon" className="h-8 w-8 rounded-lg border border-[var(--panel-border)] bg-card text-muted-foreground" disabled={page + 1 >= totalPages} onClick={() => onPage(page + 1)} title="Next">
           <ChevronRight className="h-3.5 w-3.5" />
         </Button>
-        <Button variant="ghost" size="icon" className="h-7 w-7 text-muted-foreground" disabled={page + 1 >= totalPages} onClick={() => onPage(totalPages - 1)} title="Last page">
+        <Button variant="ghost" size="icon" className="h-8 w-8 rounded-lg border border-[var(--panel-border)] bg-card text-muted-foreground" disabled={page + 1 >= totalPages} onClick={() => onPage(totalPages - 1)} title="Last page">
           <ChevronsRight className="h-3.5 w-3.5" />
         </Button>
 

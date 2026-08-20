@@ -40,9 +40,9 @@ export function OrdersFilterPanel({
         <Button
           variant="ghost"
           size="sm"
-          className={cn(triggerClassName ?? "h-9 gap-1.5", activeCount > 0 && "text-foreground bg-foreground/[0.05]")}
+          className={cn(triggerClassName ?? "h-9 gap-1.5", activeCount > 0 && "border-primary/50 text-foreground")}
         >
-          <SlidersHorizontal className="h-3.5 w-3.5" /> Filters
+          <SlidersHorizontal className="h-4 w-4 text-muted-foreground" /> More Filters
           {activeCount > 0 && (
             <span className="ml-0.5 inline-flex h-4 min-w-4 items-center justify-center rounded-full bg-primary/15 px-1 text-[10px] font-semibold tabular-nums text-primary">
               {activeCount}

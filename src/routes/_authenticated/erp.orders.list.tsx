@@ -522,6 +522,7 @@ function OrdersPage() {
         live
         eyebrow={activeBrand?.name ?? "All brands"}
         title="Orders"
+        subtitle="Manage and track all your orders in one place"
         chips={
           <>
             <HeaderChip value={total.toLocaleString()} label="orders" />
@@ -538,31 +539,31 @@ function OrdersPage() {
           <Button
             variant="ghost"
             size="sm"
-            className="h-8 w-8 p-0 rounded-lg text-muted-foreground hover:text-foreground"
+            className="h-9 gap-2 rounded-xl border border-[var(--panel-border)] bg-card px-3 text-[13px] font-medium text-foreground/80 hover:text-foreground"
             onClick={handleRefresh}
             title="Refresh (r)"
           >
-            <RefreshCw className={`h-3.5 w-3.5 ${isFetching ? "animate-spin" : ""}`} />
+            <RefreshCw className={`h-4 w-4 ${isFetching ? "animate-spin" : ""}`} /> Sync
           </Button>
           <Button
             variant="ghost"
             size="sm"
-            className="h-8 gap-1.5 rounded-lg px-2.5 text-[12.5px] font-normal text-muted-foreground hover:text-foreground"
+            className="h-9 gap-2 rounded-xl border border-[var(--panel-border)] bg-card px-3 text-[13px] font-medium text-foreground/80 hover:text-foreground"
             onClick={handleExport}
             disabled={exporting}
           >
             <Download className={`h-3.5 w-3.5 ${exporting ? "animate-pulse" : ""}`} /> {exporting ? "Exporting…" : "Export"}
           </Button>
           <Link to="/erp/orders/new">
-            <Button size="sm" className="h-8 gap-1.5 rounded-lg px-3 text-[12.5px] shadow-none">
-              <Plus className="h-3.5 w-3.5" />New order
+            <Button size="sm" className="h-9 gap-2 rounded-xl px-3.5 text-[13px] shadow-sm">
+              <Plus className="h-4 w-4" />Create Order
             </Button>
           </Link>
           </>
         }
       />
 
-      <div className="overflow-hidden rounded-xl border border-[var(--panel-border)] bg-card">
+      <div className="space-y-3">
         <OrdersStatusTabs
           active={activeTab}
           counts={countsData?.counts ?? {}}
@@ -580,6 +581,7 @@ function OrdersPage() {
         {view === "incomplete" ? (
           <>
             <OrdersToolbar filter={effective} onChange={updateFilter} />
+            <div className="overflow-hidden rounded-2xl border border-[var(--panel-border)] bg-card">
             <IncompleteOrdersTable
               brandId={effective.brandId}
               brandIds={effective.brandIds}
@@ -589,11 +591,12 @@ function OrdersPage() {
               onPageChange={setIncompletePage}
               onOpenOrder={setOpenId}
             />
+            </div>
           </>
         ) : (
           <>
           {stuckIds.length > 0 && !nudgeDismissed && (
-            <div className="flex items-center gap-2 px-3 py-1.5 border-b border-[var(--panel-border)] bg-amber-500/[0.07] text-[12px]">
+            <div className="flex items-center gap-2 rounded-xl border border-amber-300/50 bg-amber-500/[0.07] px-3 py-2 text-[12px] dark:border-amber-900/50">
               <AlertTriangle className="h-3.5 w-3.5 text-amber-600 shrink-0" />
               <span className="text-foreground/90">
                 <span className="tabular-nums font-semibold">{stuckIds.length}</span> order{stuckIds.length > 1 ? "s" : ""} stuck 3+ days
@@ -680,6 +683,7 @@ function OrdersPage() {
             />
           }
         />
+        <div className="overflow-hidden rounded-2xl border border-[var(--panel-border)] bg-card">
         <OrdersTable
           rows={visibleRows}
           loading={isLoading}
@@ -732,6 +736,7 @@ function OrdersPage() {
           onPage={(p) => updateFilter({ page: p })}
           onPageSize={(n) => updateFilter({ pageSize: n, page: 0 })}
         />
+        </div>
           </>
         )}
       </div>
