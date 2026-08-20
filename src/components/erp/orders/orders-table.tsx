@@ -254,43 +254,34 @@ export function OrdersTable({ rows, loading, selectedIds, onToggleSelect, onTogg
         const age = statusAge(statusSinceTs(row.original));
         const ageClass =
           age.tone === "fresh"
-            ? "bg-emerald-50 text-emerald-700 border-emerald-200 dark:bg-emerald-950/40 dark:text-emerald-300 dark:border-emerald-900/60"
+            ? "text-muted-foreground"
             : age.tone === "warn"
-            ? "bg-amber-50 text-amber-700 border-amber-200 dark:bg-amber-950/40 dark:text-amber-300 dark:border-amber-900/60"
-            : "bg-rose-50 text-rose-700 border-rose-200 dark:bg-rose-950/40 dark:text-rose-300 dark:border-rose-900/60";
+              ? "text-amber-600 dark:text-amber-400"
+              : "text-rose-600 dark:text-rose-400";
         return (
           <div className="flex flex-col gap-1 items-start">
-            <div className="flex items-center gap-1.5 flex-wrap">
+            <div className="flex items-baseline gap-2">
               <span className={cn("inline-flex items-center gap-1.5 pl-1.5 pr-2.5 h-6 rounded-full text-[11px] font-semibold whitespace-nowrap", b.className)}>
                 <span className="h-1.5 w-1.5 rounded-full" style={{ backgroundColor: accent }} />
                 {b.label}
               </span>
               <span
-                className={cn(
-                  "inline-flex items-center h-5 px-1.5 rounded-full border text-[10px] font-semibold tabular-nums whitespace-nowrap",
-                  ageClass,
-                )}
+                className={cn("text-[10.5px] font-medium tabular-nums whitespace-nowrap", ageClass)}
                 title={`Current status since ${new Date(statusSinceTs(row.original)).toLocaleString()}`}
               >
                 {age.label}
               </span>
             </div>
-            {settle && (
-              <span className={cn("inline-flex items-center h-5 px-2 rounded-full border text-[10px] font-bold tracking-wide uppercase", settle.className)}>
-                {settle.label}
-              </span>
-            )}
-            {recon && (
-              <span
-                className={cn(
-                  "inline-flex items-center gap-1 h-5 px-1.5 rounded-full border text-[10px] font-semibold whitespace-nowrap",
-                  recon.className,
+            {(settle || recon) && (
+              <div className="flex flex-wrap items-center gap-x-2 gap-y-0.5 text-[10px] font-semibold uppercase tracking-wide">
+                {settle && <span className={cn(settle.label === "Unpaid" ? "text-rose-600 dark:text-rose-400" : "text-emerald-600 dark:text-emerald-400")}>{settle.label}</span>}
+                {recon && (
+                  <span className="text-muted-foreground" title={recon.tooltip}>
+                    <span aria-hidden className="mr-0.5">{recon.icon}</span>
+                    COD {recon.label}
+                  </span>
                 )}
-                title={recon.tooltip}
-              >
-                <span aria-hidden>{recon.icon}</span>
-                COD {recon.label}
-              </span>
+              </div>
             )}
           </div>
         );
