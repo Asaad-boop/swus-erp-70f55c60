@@ -19,8 +19,15 @@ async function run(request: Request): Promise<Response> {
   const admin = tryGetSupabaseAdmin();
   if (!admin) return Response.json({ ok: false, error: "Supabase admin client unavailable" });
 
-  const { runPathaoAutoSync } = await import("@/lib/erp/pathao-autosync.server");
   const lookback = Number(url.searchParams.get("days") ?? "") || undefined;
+
+  // ?mode=resync → only repair zero-payout InstaPay runs (cheap, run often).
+  if (url.searchParams.get("mode") === "resync") {
+    const { resyncZeroPayoutInstapay } = await import("@/lib/erp/instapay-resync.server");
+    return Response.json(await resyncZeroPayoutInstapay(admin, {}));
+  }
+
+  const { runPathaoAutoSync } = await import("@/lib/erp/pathao-autosync.server");
   const res = await runPathaoAutoSync(admin, { lookbackDays: lookback });
   return Response.json(res);
 }

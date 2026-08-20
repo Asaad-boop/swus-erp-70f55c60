@@ -1,7 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { toast } from "sonner";
-import { RefreshCw, Loader2, Zap, CheckCircle2, AlertTriangle } from "lucide-react";
+import { RefreshCw, Loader2, Zap, CheckCircle2, AlertTriangle, Wallet } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
@@ -11,6 +11,7 @@ import {
   getPathaoAutoSyncStatusFn,
   setPathaoAutoSyncConfigFn,
   runPathaoAutoSyncNowFn,
+  resyncInstapayAmountsFn,
 } from "@/lib/erp/pathao-autosync.functions";
 
 function timeAgo(iso: string | null) {
@@ -61,6 +62,22 @@ export function AutoSyncCard({ onSynced }: { onSynced?: () => void }) {
     onError: (e: Error) => toast.error(e.message),
   });
 
+  const resyncFn = useServerFn(resyncInstapayAmountsFn);
+  const resync = useMutation({
+    mutationFn: () => resyncFn({ data: {} }),
+    onSuccess: (r: any) => {
+      qc.invalidateQueries({ queryKey: ["pathao-autosync-status"] });
+      onSynced?.();
+      if (!r?.scanned && !r?.merged) toast.success("Kono zero-payout invoice nei");
+      else
+        toast.success(
+          `${r.fixed} invoice amount update · ${r.settled} wallet settle${r.merged ? ` · ${r.merged} duplicate merge` : ""}`,
+        );
+      if (r?.errors?.length) toast.error(r.errors[0]);
+    },
+    onError: (e: Error) => toast.error(e.message),
+  });
+
   const err = cfg?.lastStatus === "error";
 
   return (
@@ -107,6 +124,17 @@ export function AutoSyncCard({ onSynced }: { onSynced?: () => void }) {
               />
               <Label className="text-xs">Auto apply</Label>
             </div>
+            <Button
+              size="sm"
+              variant="outline"
+              className="gap-2"
+              disabled={resync.isPending}
+              onClick={() => resync.mutate()}
+              title="Zero-payout InstaPay invoice gulor amount re-pull kore wallet e settle kore"
+            >
+              {resync.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Wallet className="h-4 w-4" />}
+              Re-sync amounts
+            </Button>
             <Button size="sm" className="gap-2" disabled={run.isPending} onClick={() => run.mutate()}>
               {run.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <RefreshCw className="h-4 w-4" />}
               Sync now

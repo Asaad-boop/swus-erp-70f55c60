@@ -47,3 +47,16 @@ export const runPathaoAutoSyncNowFn = createServerFn({ method: "POST" })
     const { runPathaoAutoSync } = await import("./pathao-autosync.server");
     return await runPathaoAutoSync(supabase, { force: true, lookbackDays: data.lookbackDays, userId });
   });
+
+/** Re-pull amounts for zero-payout InstaPay runs, merge duplicates, settle wallets. */
+export const resyncInstapayAmountsFn = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d) => z.object({ invoiceIds: z.array(z.string()).optional() }).parse(d ?? {}))
+  .handler(async ({ data, context }) => {
+    const { supabase, userId } = context;
+    await assertFinanceRole(supabase, userId);
+    const { tryGetSupabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const { resyncZeroPayoutInstapay } = await import("./instapay-resync.server");
+    const sb = tryGetSupabaseAdmin() ?? supabase;
+    return await resyncZeroPayoutInstapay(sb, { invoiceIds: data.invoiceIds, userId });
+  });
