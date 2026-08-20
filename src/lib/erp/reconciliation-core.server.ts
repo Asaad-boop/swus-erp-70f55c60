@@ -540,15 +540,38 @@ export async function applyReconRunCore(
         const displayFee = Number(r.total_fee);
 
 
+        // Courier API truth-check: Pathao lists prepaid / zero-COD parcels
+        // under "return"-shaped invoice lines even when the parcel was actually
+        // delivered. Never downgrade a parcel the courier API reports as
+        // delivered just because the invoice line looks like a return.
+        let effectiveMatchType = matchType;
+        if (matchType === "return") {
+          const { data: ship } = await supabase
+            .from("courier_shipments")
+            .select("response_payload")
+            .eq("order_id", orderId)
+            .order("updated_at", { ascending: false })
+            .limit(1)
+            .maybeSingle();
+          const apiStatus = String(
+            (ship?.response_payload as { order_status?: string } | null)?.order_status ?? "",
+          ).toLowerCase();
+          if (apiStatus.includes("deliver") && !apiStatus.includes("partial")) {
+            effectiveMatchType = "paid";
+          } else if (apiStatus.includes("partial")) {
+            effectiveMatchType = "partial";
+          }
+        }
+
         // Update order — branch by match_type
         const orderUpdate: Record<string, unknown> = {
           reconciliation_status: "reconciled",
           courier_fee: displayFee,
           net_collected: payoutNum,
         };
-        if (matchType === "return") {
+        if (effectiveMatchType === "return") {
           orderUpdate.status = "returned";
-        } else if (matchType === "partial") {
+        } else if (effectiveMatchType === "partial") {
           orderUpdate.status = "partial_delivered";
           orderUpdate.payment_status = "partial";
           orderUpdate.partial_amount = partialAmount > 0 ? partialAmount : Number(r.collected ?? 0);
@@ -558,6 +581,7 @@ export async function applyReconRunCore(
           orderUpdate.payment_status = "paid";
           orderUpdate.delivered_at = new Date(txnDate).toISOString();
         }
+
         const { error: oErr } = await supabase
           .from("orders")
           .update(orderUpdate as never)
