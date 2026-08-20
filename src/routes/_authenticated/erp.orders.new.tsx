@@ -1139,6 +1139,18 @@ function NewOrderPage() {
                           <div className="line-clamp-2 text-[12px] font-semibold leading-tight">{p.title}</div>
                           {p.is_featured && <Star className="h-3 w-3 shrink-0 fill-amber-400 text-amber-400" />}
                         </div>
+                        {p.brand_name && (
+                          <span
+                            className={cn(
+                              "mt-1 inline-flex max-w-full truncate rounded px-1.5 py-[1px] text-[9px] font-semibold uppercase tracking-wide",
+                              p.own_brand
+                                ? "bg-indigo-100 text-indigo-700"
+                                : "bg-muted text-muted-foreground",
+                            )}
+                          >
+                            {p.brand_name}
+                          </span>
+                        )}
                         <div className="mt-1 flex items-center justify-between text-[10px] tabular-nums">
                           <span className="font-bold text-primary">৳{Number(p.price).toLocaleString()}</span>
                           <span className={cn("font-semibold", p.stock <= 0 ? "text-rose-600" : "text-emerald-700")}>
