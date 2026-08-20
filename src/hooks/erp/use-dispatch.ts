@@ -191,6 +191,8 @@ export function useDispatch() {
 
       const [pending, packed, ready, shipped, hold] = await Promise.all([
         applyBrandScope(supabase.from("orders").select(SELECT).in("status", PENDING_STATUSES as unknown as never[]), brandIds)
+          // web-source orders stay in the Web Orders queue until web_status = complete
+          .or("status.neq.confirmed,source.is.null,source.not.in.(website,pixel,utm),web_status.eq.complete")
           .order("created_at", { ascending: true })
           .limit(600),
         applyBrandScope(supabase.from("orders").select(SELECT).eq("status", "packed"), brandIds)
