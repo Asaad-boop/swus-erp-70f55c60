@@ -189,8 +189,6 @@ export function OrdersToolbar({
           </PopoverContent>
         </Popover>
 
-        <div className="flex-1" />
-
         {/* Everything filter-ish behind one button */}
         <OrdersFilterPanel filter={filter} onChange={update} activeCount={advancedCount} triggerClassName={CTRL} />
 
