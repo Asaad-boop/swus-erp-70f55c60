@@ -274,7 +274,7 @@ export function OrdersTable({ rows, loading, selectedIds, onToggleSelect, onTogg
             </div>
             {(settle || recon) && (
               <div className="flex flex-wrap items-center gap-x-2 gap-y-0.5 text-[10px] font-semibold uppercase tracking-wide">
-                {settle && <span className={cn("text-muted-foreground", settle.textClassName)}>{settle.label}</span>}
+                {settle && <span className={cn(settle.label === "Unpaid" ? "text-rose-600 dark:text-rose-400" : "text-emerald-600 dark:text-emerald-400")}>{settle.label}</span>}
                 {recon && (
                   <span className="text-muted-foreground" title={recon.tooltip}>
                     <span aria-hidden className="mr-0.5">{recon.icon}</span>

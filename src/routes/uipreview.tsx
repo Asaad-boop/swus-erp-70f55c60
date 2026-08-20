@@ -16,7 +16,7 @@ function P() {
     sortKey: "created_at", sortDir: "desc", courierBucket: null, paymentMethod: null,
     paymentStatus: null, city: null, assignee: null, amountMin: null, amountMax: null,
     advanceFilter: "any", printedFilter: "all",
-  } as OrdersFilter);
+  } as unknown as OrdersFilter);
   const counts: Record<string, number> = { pending: 42, packing: 12, ready_to_ship: 8, shipped: 30, in_transit: 55, delivered: 810, partial: 6, pending_return: 9, returned: 71, paid_return: 3, completed: 640, exchange: 2, on_hold: 4, cancelled: 27 };
 
   const rows = [1,2,3,4,5].map((i) => ({
