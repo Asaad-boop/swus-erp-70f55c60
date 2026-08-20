@@ -175,7 +175,7 @@
   --status-all-glow: oklch(0.55 0.03 260 / 0.35);
   --status-incomplete: oklch(0.65 0.03 260);
   --status-incomplete-glow: oklch(0.65 0.03 260 / 0.32);
-}
+  --row-selected: oklch(0.955 0.03 265);
 }
 
 .dark {
