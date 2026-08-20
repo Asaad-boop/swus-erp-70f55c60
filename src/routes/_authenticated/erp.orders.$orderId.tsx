@@ -439,21 +439,25 @@ function ProductSearchPanel({
 
   const { data: results, isFetching } = useQuery({
     queryKey: ["erp-product-search", brandId, debounced],
-    enabled: !!brandId,
     queryFn: async () => {
+      // Cross-brand catalog: dui brand er product-i add kora jabe, shudhu chhoto brand tag dekhabe.
       let q = supabase
         .from("products")
-        .select("id,title,price,image,stock,is_featured,slug")
-        .eq("brand_id", brandId!)
+        .select("id,title,price,image,stock,is_featured,slug,sku,brand_id,brands(name)")
         .eq("is_active", true)
         .order("is_featured", { ascending: false })
         .order("created_at", { ascending: false })
-        .limit(20);
+        .limit(30);
       if (debounced.name) q = q.ilike("title", `%${debounced.name}%`);
-      if (debounced.code) q = q.or(`slug.ilike.%${debounced.code}%,id.eq.${debounced.code}`);
+      if (debounced.code) {
+        const c = debounced.code.replace(/[,()]/g, " ");
+        q = q.or(`slug.ilike.%${c}%,sku.ilike.%${c}%,barcode.ilike.%${c}%,title.ilike.%${c}%`);
+      }
       const { data, error } = await q;
       if (error) throw error;
-      return (data ?? []) as (ProductLite & { slug: string })[];
+      return (data ?? []) as unknown as (ProductLite & {
+        slug: string; sku: string | null; brand_id: string | null; brands: { name: string } | null;
+      })[];
     },
   });
 
