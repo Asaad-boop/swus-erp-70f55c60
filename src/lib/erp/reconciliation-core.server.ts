@@ -620,15 +620,31 @@ export async function applyReconRunCore(
     const done = fetchedCount < data.limit;
 
     if (done) {
+      // Invoice-first settlement: post the full invoice payout to the default
+      // COD wallet exactly once (idempotent), regardless of row match results.
+      let settleNote: string | null = null;
+      try {
+        const s = await settleInvoiceTotalCore(supabase, userId, {
+          runId: data.runId,
+          walletAccountId: data.walletAccountId ?? null,
+        });
+        settleNote = s.posted
+          ? `Invoice settled: ${s.amount} → wallet`
+          : (s.reason ?? null);
+      } catch (e) {
+        settleNote = `Wallet settlement failed: ${(e as Error).message}`;
+        errors.push(settleNote);
+      }
       await supabase
         .from("erp_reconciliation_runs")
         .update({
           status: failed === 0 ? "applied" : "partial",
           applied_at: new Date().toISOString(),
-          notes: errors.length ? errors.slice(0, 10).join("\n") : null,
+          notes: errors.length ? errors.slice(0, 10).join("\n") : settleNote,
         })
         .eq("id", data.runId);
     }
+
 
     return { applied, failed, done, nextCursor: lastId, errors: errors.slice(0, 10) };
 }
