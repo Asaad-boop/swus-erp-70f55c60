@@ -520,7 +520,17 @@ function ProductSearchPanel({
                   {p.is_featured && <Star className="h-3 w-3 text-amber-500 fill-amber-500 shrink-0" />}
                   {p.title}
                 </div>
-                <div className="text-[10px] text-muted-foreground font-mono">SKU: {p.slug?.slice(0, 24) ?? p.id.slice(0, 8)}</div>
+                <div className="flex items-center gap-1.5">
+                  <span className="text-[10px] text-muted-foreground font-mono">SKU: {p.sku ?? p.slug?.slice(0, 24) ?? p.id.slice(0, 8)}</span>
+                  {p.brands?.name && (
+                    <span className={cn(
+                      "rounded px-1 py-px text-[9px] font-semibold",
+                      p.brand_id === brandId
+                        ? "bg-sky-500/10 text-sky-700 dark:text-sky-300"
+                        : "bg-muted text-muted-foreground",
+                    )}>{p.brands.name}</span>
+                  )}
+                </div>
                 <div className="flex items-center gap-2 text-[10px] mt-0.5">
                   <span className="text-rose-600">Price: ৳{bdtCompact(Number(p.price))}</span>
                   <span className={cn("text-muted-foreground", p.stock <= 0 && "text-rose-600")}>Stock: {p.stock}</span>
