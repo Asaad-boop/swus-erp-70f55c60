@@ -26,6 +26,8 @@ import {
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
 } from "@/components/ui/table";
 import { cn } from "@/lib/utils";
+import { AccountCombobox } from "@/components/erp/finance/account-combobox";
+
 
 import {
   listDollarPurchases,
@@ -622,22 +624,21 @@ function PurchaseDialog({
             </div>
           </Field>
           <Field label="Paid From Account" required className="col-span-2">
-            <Select value={form.paidFromAccountId} onValueChange={(v) => setForm({ ...form, paidFromAccountId: v })}>
-              <SelectTrigger><SelectValue placeholder="Cash / Bank / bKash / Card" /></SelectTrigger>
-              <SelectContent>
-                {opts?.accounts.map((a) => (
-                  <SelectItem key={a.id} value={a.id}>
-                    {a.name} <span className="text-muted-foreground">({a.account_type} · {fmtBDT(Number(a.current_balance))})</span>
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+            <AccountCombobox
+              accounts={(opts?.accounts ?? []) as any}
+              value={form.paidFromAccountId}
+              onChange={(v) => setForm({ ...form, paidFromAccountId: v })}
+              requiredAmount={total}
+              brandNames={Object.fromEntries((opts?.brands ?? []).map((b: any) => [b.id, b.name]))}
+              placeholder="Cash / Bank / bKash / Card"
+            />
             {insufficient && (
               <div className="text-xs text-amber-700 flex items-center gap-1 mt-1">
                 <AlertCircle className="h-3 w-3" /> Account balance is below total. Confirm will fail unless negative balance is allowed in settings.
               </div>
             )}
           </Field>
+
           <Field label="Payment Method">
             <Input value={form.paymentMethod ?? ""} onChange={(e) => setForm({ ...form, paymentMethod: e.target.value })} placeholder="e.g. Card / bKash send" />
           </Field>
