@@ -247,6 +247,39 @@
   --table-head-bg: oklch(0.21 0.05 282);
   --row-hover: oklch(1 0 0 / 0.05);
   --row-selected: oklch(0.62 0.19 256 / 0.16);
+  /* Status pipeline — dark mode (brighter chroma for glow) */
+  --status-pending: oklch(0.7 0.22 245);
+  --status-pending-glow: oklch(0.7 0.22 245 / 0.55);
+  --status-packing: oklch(0.65 0.24 295);
+  --status-packing-glow: oklch(0.65 0.24 295 / 0.55);
+  --status-ready-to-ship: oklch(0.72 0.18 195);
+  --status-ready-to-ship-glow: oklch(0.72 0.18 195 / 0.55);
+  --status-shipped: oklch(0.85 0.18 75);
+  --status-shipped-glow: oklch(0.85 0.18 75 / 0.5);
+  --status-in-transit: oklch(0.86 0.17 65);
+  --status-in-transit-glow: oklch(0.86 0.17 65 / 0.5);
+  --status-delivered: oklch(0.7 0.2 155);
+  --status-delivered-glow: oklch(0.7 0.2 155 / 0.55);
+  --status-partial: oklch(0.78 0.16 155);
+  --status-partial-glow: oklch(0.78 0.16 155 / 0.5);
+  --status-pending-return: oklch(0.8 0.2 45);
+  --status-pending-return-glow: oklch(0.8 0.2 45 / 0.55);
+  --status-returned: oklch(0.68 0.24 25);
+  --status-returned-glow: oklch(0.68 0.24 25 / 0.55);
+  --status-paid-return: oklch(0.68 0.18 175);
+  --status-paid-return-glow: oklch(0.68 0.18 175 / 0.55);
+  --status-completed: oklch(0.64 0.22 150);
+  --status-completed-glow: oklch(0.64 0.22 150 / 0.55);
+  --status-exchange: oklch(0.68 0.22 285);
+  --status-exchange-glow: oklch(0.68 0.22 285 / 0.55);
+  --status-on-hold: oklch(0.7 0.04 250);
+  --status-on-hold-glow: oklch(0.7 0.04 250 / 0.4);
+  --status-cancelled: oklch(0.68 0.24 15);
+  --status-cancelled-glow: oklch(0.68 0.24 15 / 0.55);
+  --status-all: oklch(0.72 0.04 250);
+  --status-all-glow: oklch(0.72 0.04 250 / 0.4);
+  --status-incomplete: oklch(0.78 0.04 250);
+  --status-incomplete-glow: oklch(0.78 0.04 250 / 0.35);
 }
 
 @layer base {
