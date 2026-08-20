@@ -191,11 +191,26 @@ function OrdersPage() {
   const viewRef = useRef<"incomplete" | "orders">(view);
   filterRef.current = filter;
   viewRef.current = view;
+  const spRef = useRef(sp);
+  spRef.current = sp;
   const updateFilter = useCallback(
     (patchOrFn: Partial<OrdersFilter> | ((f: OrdersFilter) => Partial<OrdersFilter>)) => {
       const patch = typeof patchOrFn === "function" ? patchOrFn(filterRef.current) : patchOrFn;
       const nextFilter = { ...filterRef.current, ...patch };
-      navigate({ replace: true, search: searchFromFilter(nextFilter, viewRef.current) });
+      const nextSearch = searchFromFilter(nextFilter, viewRef.current);
+      // Skip no-op navigations — repeatedly committing the same location makes
+      // the router loop ("Maximum update depth exceeded").
+      const cur = spRef.current as Record<string, unknown>;
+      const next = nextSearch as Record<string, unknown>;
+      const keys = new Set([...Object.keys(cur), ...Object.keys(next)]);
+      let changed = false;
+      for (const k of keys) {
+        const a = cur[k] ?? undefined;
+        const b = next[k] ?? undefined;
+        if (a !== b) { changed = true; break; }
+      }
+      if (!changed) return;
+      navigate({ replace: true, search: nextSearch });
     },
     [navigate],
   );
