@@ -1,26 +1,29 @@
 import { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
-import { ChevronLeft, ChevronRight } from "lucide-react";
+import {
+  ChevronLeft, ChevronRight, List, Clock, Package, PackageCheck, Truck, Send,
+  CheckCircle2, PieChart, Undo2, RotateCcw, BadgeDollarSign, CheckCheck, Repeat,
+  PauseCircle, XCircle, AlertCircle, type LucideIcon,
+} from "lucide-react";
 import { cn } from "@/lib/utils";
 import { STATUS_TABS, type OrderStatus, type StatusTabKey } from "@/lib/erp/orders";
 
-/** Per-status CSS color variables for bold active pills + glow. */
-const ACCENT: Record<string, string> = {
-  pending: "bg-blue-500",
-  packing: "bg-purple-500",
-  ready_to_ship: "bg-cyan-500",
-  shipped: "bg-amber-500",
-  in_transit: "bg-amber-500",
-  delivered: "bg-emerald-500",
-  partial: "bg-emerald-400",
-  pending_return: "bg-orange-500",
-  returned: "bg-red-500",
-  paid_return: "bg-teal-500",
-  completed: "bg-emerald-600",
-  exchange: "bg-violet-500",
-  on_hold: "bg-slate-400",
-  cancelled: "bg-rose-500",
-  all: "bg-foreground/50",
-  incomplete: "bg-zinc-400",
+const ICON: Record<string, LucideIcon> = {
+  all: List,
+  pending: Clock,
+  packing: Package,
+  ready_to_ship: PackageCheck,
+  shipped: Truck,
+  in_transit: Send,
+  delivered: CheckCircle2,
+  partial: PieChart,
+  pending_return: Undo2,
+  returned: RotateCcw,
+  paid_return: BadgeDollarSign,
+  completed: CheckCheck,
+  exchange: Repeat,
+  on_hold: PauseCircle,
+  cancelled: XCircle,
+  incomplete: AlertCircle,
 };
 
 const ACCENT_VAR: Record<string, string> = {
@@ -42,28 +45,6 @@ const ACCENT_VAR: Record<string, string> = {
   incomplete: "var(--status-incomplete)",
 };
 
-const ACCENT_GLOW: Record<string, string> = {
-  pending: "var(--status-pending-glow)",
-  packing: "var(--status-packing-glow)",
-  ready_to_ship: "var(--status-ready-to-ship-glow)",
-  shipped: "var(--status-shipped-glow)",
-  in_transit: "var(--status-in-transit-glow)",
-  delivered: "var(--status-delivered-glow)",
-  partial: "var(--status-partial-glow)",
-  pending_return: "var(--status-pending-return-glow)",
-  returned: "var(--status-returned-glow)",
-  paid_return: "var(--status-paid-return-glow)",
-  completed: "var(--status-completed-glow)",
-  exchange: "var(--status-exchange-glow)",
-  on_hold: "var(--status-on-hold-glow)",
-  cancelled: "var(--status-cancelled-glow)",
-  all: "var(--status-all-glow)",
-  incomplete: "var(--status-incomplete-glow)",
-};
-
-/** Insert a hairline divider before these tabs to separate pipeline phases. */
-const DIVIDER_BEFORE = new Set<StatusTabKey>(["delivered", "pending_return", "completed", "on_hold", "all"]);
-
 type Props = {
   active: StatusTabKey;
   counts: Record<string, number>;
@@ -72,6 +53,10 @@ type Props = {
   incompleteCount?: number;
 };
 
+/**
+ * Card-style status tabs: tinted icon + label + count, mirroring the
+ * reference order-list layout. Horizontally scrollable with edge affordances.
+ */
 export function OrdersStatusTabs({ active, counts, total, onChange, incompleteCount = 0 }: Props) {
   const scrollerRef = useRef<HTMLDivElement>(null);
   const activeRef = useRef<HTMLButtonElement>(null);
@@ -95,24 +80,23 @@ export function OrdersStatusTabs({ active, counts, total, onChange, incompleteCo
     return () => ro.disconnect();
   }, [measure]);
 
-  // Keep the selected tab in view (e.g. after reload with a deep-linked tab).
   useLayoutEffect(() => {
     activeRef.current?.scrollIntoView({ block: "nearest", inline: "nearest" });
   }, [active]);
 
   const nudge = (dir: -1 | 1) =>
-    scrollerRef.current?.scrollBy({ left: dir * 260, behavior: "smooth" });
+    scrollerRef.current?.scrollBy({ left: dir * 320, behavior: "smooth" });
 
   return (
-    <div className="relative border-b border-[var(--panel-border)] bg-[var(--panel-bg)]/70 backdrop-blur-sm">
+    <div className="relative">
       {edges.left && (
         <>
-          <div className="pointer-events-none absolute inset-y-0 left-0 z-10 w-12 bg-gradient-to-r from-[var(--panel-bg)] to-transparent" />
+          <div className="pointer-events-none absolute inset-y-0 left-0 z-10 w-10 bg-gradient-to-r from-background to-transparent" />
           <button
             type="button"
             aria-label="Scroll left"
             onClick={() => nudge(-1)}
-            className="absolute left-1 top-1/2 z-20 -translate-y-1/2 rounded-lg p-1.5 text-muted-foreground shadow-sm hover:bg-foreground/[0.06] hover:text-foreground"
+            className="absolute left-0 top-1/2 z-20 -translate-y-1/2 rounded-full border border-border bg-card p-1 text-muted-foreground shadow-sm hover:text-foreground"
           >
             <ChevronLeft className="h-4 w-4" />
           </button>
@@ -120,12 +104,12 @@ export function OrdersStatusTabs({ active, counts, total, onChange, incompleteCo
       )}
       {edges.right && (
         <>
-          <div className="pointer-events-none absolute inset-y-0 right-0 z-10 w-12 bg-gradient-to-l from-[var(--panel-bg)] to-transparent" />
+          <div className="pointer-events-none absolute inset-y-0 right-0 z-10 w-10 bg-gradient-to-l from-background to-transparent" />
           <button
             type="button"
             aria-label="Scroll right"
             onClick={() => nudge(1)}
-            className="absolute right-1 top-1/2 z-20 -translate-y-1/2 rounded-lg p-1.5 text-muted-foreground shadow-sm hover:bg-foreground/[0.06] hover:text-foreground"
+            className="absolute right-0 top-1/2 z-20 -translate-y-1/2 rounded-full border border-border bg-card p-1 text-muted-foreground shadow-sm hover:text-foreground"
           >
             <ChevronRight className="h-4 w-4" />
           </button>
@@ -138,7 +122,7 @@ export function OrdersStatusTabs({ active, counts, total, onChange, incompleteCo
         className="overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
         role="tablist"
       >
-        <div className="flex min-w-max items-stretch gap-1 px-2 py-2">
+        <div className="flex min-w-max items-stretch gap-2.5 py-0.5">
           {STATUS_TABS.map((t) => {
             const c =
               t.key === "all"
@@ -147,59 +131,47 @@ export function OrdersStatusTabs({ active, counts, total, onChange, incompleteCo
                   ? incompleteCount
                   : t.statuses.reduce((sum, s) => sum + (counts[s] ?? 0), 0);
             const isActive = active === t.key;
-            const accent = ACCENT[t.key] ?? "bg-foreground/40";
-            const accentVar = ACCENT_VAR[t.key] ?? "var(--status-all)";
-            const accentGlow = ACCENT_GLOW[t.key] ?? "var(--status-all-glow)";
+            const accent = ACCENT_VAR[t.key] ?? "var(--status-all)";
+            const Icon = ICON[t.key] ?? List;
             return (
-              <div key={t.key} className="flex items-stretch">
-                {DIVIDER_BEFORE.has(t.key) && (
-                  <span className="my-2.5 mr-1.5 w-px shrink-0 bg-[var(--panel-border)]" />
+              <button
+                key={t.key}
+                ref={isActive ? activeRef : undefined}
+                type="button"
+                role="tab"
+                aria-selected={isActive}
+                onClick={() => onChange(t.statuses, t.key)}
+                className={cn(
+                  "group relative flex min-w-[118px] items-center gap-2.5 rounded-xl border px-3.5 py-2.5 text-left transition-all duration-150",
+                  isActive
+                    ? "border-primary/60 bg-primary/[0.05] shadow-[0_1px_2px_rgba(0,0,0,0.04)]"
+                    : "border-[var(--panel-border)] bg-card hover:border-border hover:bg-foreground/[0.02]",
                 )}
-                <button
-                  ref={isActive ? activeRef : undefined}
-                  type="button"
-                  role="tab"
-                  aria-selected={isActive}
-                  onClick={() => onChange(t.statuses, t.key)}
-                  className={cn(
-                    "group relative inline-flex h-10 items-center gap-1.5 whitespace-nowrap rounded-xl px-3 text-[13px] transition-all duration-200",
-                    isActive
-                      ? "font-semibold text-white shadow-md"
-                      : "text-muted-foreground hover:bg-foreground/[0.06] hover:text-foreground",
-                  )}
-                  style={
-                    isActive
-                      ? {
-                          backgroundColor: accentVar,
-                          boxShadow: `0 0 22px ${accentGlow}, 0 4px 10px oklch(0 0 0 / 0.09)`,
-                        }
-                      : undefined
-                  }
+              >
+                <span
+                  className="grid h-8 w-8 shrink-0 place-items-center rounded-lg"
+                  style={{
+                    backgroundColor: `color-mix(in oklab, ${accent} 14%, transparent)`,
+                    color: accent,
+                  }}
                 >
+                  <Icon className="h-4 w-4" strokeWidth={2.2} />
+                </span>
+                <span className="min-w-0">
                   <span
                     className={cn(
-                      "h-2 w-2 shrink-0 rounded-full transition-all",
-                      isActive ? "bg-white/90 shadow-[0_0_6px_rgba(255,255,255,0.7)]" : cn(accent, "opacity-60 group-hover:opacity-100"),
+                      "block truncate text-[12.5px] font-semibold leading-none",
+                      isActive ? "text-foreground" : "text-muted-foreground",
                     )}
-                  />
-                  <span>{t.label}</span>
-                  {c > 0 && (
-                    <span
-                      className={cn(
-                        "rounded-full px-1.5 py-px text-[11px] font-semibold tabular-nums transition-colors",
-                        isActive
-                          ? "bg-white/25 text-white"
-                          : "bg-foreground/[0.06] text-muted-foreground/80",
-                      )}
-                    >
-                      {c.toLocaleString()}
-                    </span>
-                  )}
-                  {isActive && (
-                    <span className="absolute inset-x-3 -bottom-1 h-1 rounded-full bg-white/50 shadow-[0_0_8px_rgba(255,255,255,0.6)]" />
-                  )}
-                </button>
-              </div>
+                    style={isActive ? { color: accent } : undefined}
+                  >
+                    {t.label}
+                  </span>
+                  <span className="mt-1 block text-[17px] font-bold leading-none tabular-nums text-foreground">
+                    {c.toLocaleString()}
+                  </span>
+                </span>
+              </button>
             );
           })}
         </div>
