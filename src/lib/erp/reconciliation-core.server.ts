@@ -249,7 +249,7 @@ export async function createReconRunCore(
 
     // Pass 3: bulk fetch matched orders + already-applied duplicates
     const matchedIds = [...new Set(pre.map((p) => p.matchedOrderId).filter(Boolean) as string[])];
-    const orderById = new Map<string, { total: number; brand_id: string | null }>();
+    const orderById = new Map<string, { total: number; brand_id: string | null; advance: number }>();
     const appliedOrderIds = new Set<string>();
     if (matchedIds.length) {
       const ords = await fetchInChunks<{ id: string; total: number; brand_id: string | null; advance_amount: number | null }>(
