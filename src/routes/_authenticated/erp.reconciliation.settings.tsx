@@ -127,7 +127,7 @@ function ReconciliationSettingsPage() {
       toast.success("Default saved — reconciliation will use it automatically");
       void qc.invalidateQueries({ queryKey: ["recon_settings_all_brands"] });
       void qc.invalidateQueries({ queryKey: ["erp_settings_cod_wallet"] });
-      void qc.invalidateQueries({ queryKey: ["recon_brand_wallet_map"] });
+      void qc.invalidateQueries({ queryKey: ["erp-settings-cod"] });
     },
     onError: (e: Error) => toast.error(e.message),
   });
