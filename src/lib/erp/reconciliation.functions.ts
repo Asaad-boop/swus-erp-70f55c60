@@ -179,6 +179,14 @@ export const revertPathaoReconciliationRun = createServerFn({ method: "POST" })
       await supabase.from("erp_transactions").delete().in("id", txnIds);
     }
 
+    // Invoice-first model: remove the single invoice-level wallet settlement.
+    await supabase
+      .from("erp_transactions")
+      .delete()
+      .eq("reference_type", "cod_invoice")
+      .eq("reference_id", data.runId);
+
+
     // Re-post delivery-time baseline for every matched order. Since apply now
     // deletes the pre-reconciliation order_delivery/order_courier/order_return_charge
     // rows (replace-on-reconciliation), revert must restore them — otherwise the
