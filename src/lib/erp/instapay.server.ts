@@ -106,33 +106,21 @@ function rowTypeFor(event: string, collected: number, orderTotal: number | null)
 }
 
 /** Find (or create) the brand's INSTAPAY PATHAO wallet account. */
-export async function ensureInstapayWallet(supabase: AnyRec, brandId: string): Promise<string> {
+/**
+ * Legacy lookup only: the old row-wise flow created a per-brand "INSTAPAY
+ * PATHAO" mfs wallet. We no longer create it — invoice-first settlement posts
+ * to the brand's default COD wallet. Returns null when no legacy wallet exists.
+ */
+export async function findInstapayWallet(supabase: AnyRec, brandId: string): Promise<string | null> {
   const { data: found } = await supabase
     .from("erp_accounts")
     .select("id")
     .eq("brand_id", brandId)
     .ilike("name", INSTAPAY_WALLET_NAME)
     .maybeSingle();
-  if (found?.id) return found.id as string;
-
-  const { data: created, error } = await supabase
-    .from("erp_accounts")
-    .insert({
-      brand_id: brandId,
-      name: INSTAPAY_WALLET_NAME,
-      account_type: "bkash",
-      account_subtype: "bkash",
-      wallet_type: "mfs",
-      opening_balance: 0,
-      current_balance: 0,
-      is_active: true,
-      notes: "Pathao InstaPay payouts (auto from webhook)",
-    })
-    .select("id")
-    .single();
-  if (error) throw new Error(error.message);
-  return (created as { id: string }).id;
+  return (found?.id as string | undefined) ?? null;
 }
+
 
 /** Is auto-apply enabled for this brand? Defaults to true. */
 async function autoApplyEnabled(supabase: AnyRec, brandId: string | null): Promise<boolean> {
@@ -407,7 +395,9 @@ async function applyInstapayRow(
     label: string;
   },
 ) {
-  const walletId = await ensureInstapayWallet(supabase, p.brandId);
+  // INVOICE-FIRST: no per-order cash posting. The invoice net payout is posted
+  // once to the brand's default COD wallet by settleInvoiceTotalCore, so rows
+  // only drive allocation/status — never the wallet balance.
 
   // Replace-on-reconciliation: invoice is ground truth.
   await supabase
@@ -416,53 +406,20 @@ async function applyInstapayRow(
     .eq("reference_id", p.orderId)
     .in("reference_type", ["order_courier", "order_delivery", "order_return_charge"]);
 
-  // Idempotency: remove any earlier payout/deduction posted for this order on
-  // the same wallet so a re-sent invoice replaces instead of stacking.
-  await supabase
-    .from("erp_transactions")
-    .delete()
-    .eq("reference_id", p.orderId)
-    .eq("reference_type", "order")
-    .eq("account_id", walletId);
-
-  let incomeId: string | null = null;
-  let expenseId: string | null = null;
-
-  if (p.payout > 0) {
-    const { data: inc, error } = await supabase
+  // Clear any legacy per-order payout/deduction posted by the old row-wise flow.
+  const legacyWalletId = await findInstapayWallet(supabase, p.brandId);
+  if (legacyWalletId) {
+    await supabase
       .from("erp_transactions")
-      .insert({
-        brand_id: p.brandId,
-        txn_type: "income",
-        account_id: walletId,
-        amount: p.payout,
-        transaction_date: p.txnDate,
-        reference_type: "order",
-        reference_id: p.orderId,
-        description: `${p.label} · payout`,
-      })
-      .select("id")
-      .single();
-    if (error) throw new Error(error.message);
-    incomeId = (inc as { id: string }).id;
-  } else if (p.payout < 0) {
-    const { data: exp, error } = await supabase
-      .from("erp_transactions")
-      .insert({
-        brand_id: p.brandId,
-        txn_type: "expense",
-        account_id: walletId,
-        amount: -p.payout,
-        transaction_date: p.txnDate,
-        reference_type: "order",
-        reference_id: p.orderId,
-        description: `${p.label} · courier deduction`,
-      })
-      .select("id")
-      .single();
-    if (error) throw new Error(error.message);
-    expenseId = (exp as { id: string }).id;
+      .delete()
+      .eq("reference_id", p.orderId)
+      .eq("reference_type", "order")
+      .eq("account_id", legacyWalletId);
   }
+
+  const incomeId: string | null = null;
+  const expenseId: string | null = null;
+
 
   const orderUpdate: AnyRec = {
     reconciliation_status: "reconciled",
