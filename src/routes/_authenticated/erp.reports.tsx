@@ -858,10 +858,11 @@ const PRODUCT_SORTS: { key: ProductSort; label: string }[] = [
   { key: "return_rate", label: "Return %" },
 ];
 
-function ProductsTab({ args, enabled }: { args: RpcArgs; enabled: boolean }) {
+function ProductsTab({ args, enabled, rangeLabel }: { args: RpcArgs; enabled: boolean; rangeLabel?: string }) {
   const [level, setLevel] = useState<"product" | "variant">("product");
   const [sort, setSort] = useState<ProductSort>("net_revenue");
   const [search, setSearch] = useState("");
+
 
   const q = useQuery({
     queryKey: ["rpt-products", JSON.stringify(args), level],
