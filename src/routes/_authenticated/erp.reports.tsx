@@ -31,6 +31,8 @@ import { ControlTab } from "@/components/erp/reports/control-tab";
 import { AdsPanel } from "@/components/erp/reports/marketing-extras";
 import { CourierPerformancePanel, DeliveryAreaPanel } from "@/components/erp/reports/delivery-extras";
 import { ReportIndexDrawer } from "@/components/erp/reports/report-index-drawer";
+import { Product360Panel } from "@/components/erp/reports/product-360";
+
 
 const TAB_VALUES = [
   "overview", "sales", "orders", "products", "customers",
