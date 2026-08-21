@@ -1,6 +1,7 @@
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
+import { courierCodDue } from "@/lib/erp/courier-cod";
 
 async function assertCourierRole(supabase: any, userId: string) {
   const [{ data: admin }, { data: ops }] = await Promise.all([
@@ -55,11 +56,12 @@ export const steadfastBookOrderFn = createServerFn({ method: "POST" })
 
     const { data: order, error: oErr } = await supabase
       .from("orders")
-      .select("id, brand_id, shipping_name, shipping_phone, guest_name, guest_phone, shipping_address, shipping_thana, shipping_city, shipping_district, total")
+      .select("id, brand_id, shipping_name, shipping_phone, guest_name, guest_phone, shipping_address, shipping_thana, shipping_city, shipping_district, total, advance_amount")
       .eq("id", data.orderId)
       .maybeSingle();
     if (oErr) throw oErr;
     if (!order) throw new Error("Order not found");
+    const codAmount = courierCodDue(order.total, order.advance_amount);
 
     const name = order.shipping_name || order.guest_name || "Customer";
     const phone = (order.shipping_phone || order.guest_phone || "").replace(/[^0-9]/g, "");
@@ -78,7 +80,7 @@ export const steadfastBookOrderFn = createServerFn({ method: "POST" })
       recipient_name: name,
       recipient_phone: phone,
       recipient_address: address,
-      cod_amount: data.cod_amount,
+      cod_amount: codAmount,
       note: data.note,
       item_description: data.item_description,
     });
@@ -99,7 +101,7 @@ export const steadfastBookOrderFn = createServerFn({ method: "POST" })
         tracking_code: tracking,
         delivery_fee: null,
         status,
-        request_payload: data as never,
+        request_payload: { ...data, cod_amount: codAmount, order_total: Number(order.total ?? 0), advance_deducted: Number(order.advance_amount ?? 0) } as never,
         response_payload: result as never,
         created_by: userId,
       })

@@ -43,6 +43,10 @@ export function BookPathaoDialog({ open, onOpenChange, orderId, defaultAmount, b
   const [estimated, setEstimated] = useState<number | null>(null);
   const [locationManuallySelected, setLocationManuallySelected] = useState(false);
 
+  useEffect(() => {
+    if (open) setAmount(String(defaultAmount || 0));
+  }, [open, defaultAmount]);
+
   const { data: cities = [], isLoading: cityLoading, error: cityError } = usePathaoCities(brandId);
   const { data: zones = [] } = usePathaoZones(cityId, brandId);
   const { data: areas = [] } = usePathaoAreas(zoneId, brandId);
@@ -213,7 +217,8 @@ export function BookPathaoDialog({ open, onOpenChange, orderId, defaultAmount, b
               </div>
               <div>
                 <Label className="text-xs">COD (৳)</Label>
-                <Input type="number" min="0" value={amount} onChange={(e) => setAmount(e.target.value)} />
+            <Input type="number" min="0" value={amount} readOnly />
+            <p className="mt-1 text-[11px] text-muted-foreground">Order total থেকে paid advance বাদ দিয়ে auto-calculated.</p>
               </div>
             </div>
 

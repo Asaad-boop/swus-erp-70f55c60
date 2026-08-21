@@ -34,6 +34,7 @@ import { useCurrentRole } from "@/hooks/use-current-role";
 import { useOrderLock } from "@/hooks/erp/use-order-lock";
 import type { OrderLockState } from "@/hooks/erp/use-order-lock";
 import { cn } from "@/lib/utils";
+import { courierCodDue } from "@/lib/erp/courier-cod";
 
 export const Route = createFileRoute("/_authenticated/erp/orders/$orderId")({
   head: () => ({ meta: [{ title: "Web Order Details — ERP" }] }),
@@ -2157,8 +2158,8 @@ function splitCourierProviders(providers?: HistProvider[] | null) {
       </div>
 
       <PrintableInvoice order={order} items={items as never} />
-      <BookPathaoDialog open={bookOpen} onOpenChange={setBookOpen} orderId={orderId} defaultAmount={Number(order.total ?? 0)} brandId={order.brand_id ?? null} />
-      <BookSteadfastDialog open={bookSteadfastOpen} onOpenChange={setBookSteadfastOpen} orderId={orderId} defaultAmount={Number(order.total ?? 0)} />
+      <BookPathaoDialog open={bookOpen} onOpenChange={setBookOpen} orderId={orderId} defaultAmount={courierCodDue(order.total, order.advance_amount)} brandId={order.brand_id ?? null} />
+      <BookSteadfastDialog open={bookSteadfastOpen} onOpenChange={setBookSteadfastOpen} orderId={orderId} defaultAmount={courierCodDue(order.total, order.advance_amount)} />
       <ReturnDialog
         open={returnOpen}
         onOpenChange={setReturnOpen}
