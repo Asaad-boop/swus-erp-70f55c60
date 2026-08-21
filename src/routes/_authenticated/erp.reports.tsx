@@ -280,8 +280,9 @@ function ReportsHub() {
             </TabsContent>
 
             <TabsContent value="products" className="mt-4 space-y-4">
-              <ProductsTab args={args} enabled={enabled} />
+              <ProductsTab args={args} enabled={enabled} rangeLabel={rangeLabel} />
             </TabsContent>
+
 
             <TabsContent value="customers" className="mt-4 space-y-4">
               <CustomersTab args={args} enabled={enabled} />
