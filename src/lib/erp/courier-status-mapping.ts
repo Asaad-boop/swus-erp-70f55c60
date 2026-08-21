@@ -7,80 +7,146 @@ export function normalizeCourierStatus(raw: string | null | undefined): string {
   return (raw ?? "").toString().trim().toLowerCase().replace(/[\s-]+/g, "_");
 }
 
-/** Default mapping per provider. Key = normalized raw status, value = ERP status. */
+/**
+ * Default mapping per provider. Key = normalized raw status, value = ERP status.
+ *
+ * Rules:
+ * - Only *fulfillment* events map. Payment/settlement events (paid, payment_invoice,
+ *   invoice_paid, payment_processing, payment_completed) are intentionally NOT mapped —
+ *   `paid` / `completed` are set only by the reconciliation RPCs
+ *   (reconcile_courier_settlement / apply_settlement_variance_action).
+ * - Unknown keys return null and the courier update is ignored (no downgrade).
+ * - Keep this table in sync with the Postgres function public.map_courier_status_to_order.
+ */
 export const DEFAULT_PATHAO_MAP: Record<string, OrderStatus> = {
-  pickup_requested: "ready_to_ship",
-  assigned_for_pickup: "ready_to_ship",
+  // --- Booked / awaiting pickup ---
   pending: "ready_to_ship",
-  picked: "shipped",
-  pickup: "shipped",
+  pickup_requested: "ready_to_ship",
+  waiting_for_pickup: "ready_to_ship",
+  waiting_for_pick_up: "ready_to_ship",
+  assigned_for_pickup: "ready_to_ship",
+  pickup_rescheduled: "ready_to_ship",
   pickup_failed: "on_hold",
   pickup_cancelled: "cancelled",
-  pickup_rescheduled: "on_hold",
+
+  // --- Picked up by rider ---
+  picked: "shipped",
+  pickup: "shipped",
+  picked_up: "shipped",
+  collected: "shipped",
+
+  // --- Moving through network ---
   at_the_sorting_hub: "in_transit",
   at_sorting_hub: "in_transit",
+  sorting_hub: "in_transit",
   in_transit: "in_transit",
   received_at_last_mile_hub: "in_transit",
+  last_mile_hub: "in_transit",
+  hub_received: "in_transit",
   at_delivery_hub: "in_transit",
   on_the_way_to_delivery_hub: "in_transit",
+  forwarded: "in_transit",
+  reached: "in_transit",
+  rider_assigned: "in_transit",
   assigned_for_delivery: "in_transit",
   on_delivery: "in_transit",
   out_for_delivery: "in_transit",
-  delivery_rescheduled: "on_hold",
+
+  // --- Final delivery outcomes ---
   delivered: "delivered",
+  delivery_success: "delivered",
   partial_delivery: "partial_delivered",
   partial_delivered: "partial_delivered",
-  paid_return: "paid_return",
-  unpaid_return: "unpaid_return",
-  // Payment/settlement events — NOT fulfillment. Do NOT transition order.status
-  // from raw courier payment pings; `completed` is set only via the
-  // reconcile_courier_settlement / apply_settlement_variance_action RPCs.
-  // Keys intentionally omitted: paid, invoice_paid, payment_invoice,
-  // payment_completed, payment_processing.
-  payment_processing: "on_hold",
-  completed: "completed",
+
+  // --- Problem / temporary states ---
   delivery_failed: "on_hold",
+  delivery_hold: "on_hold",
+  delivery_rescheduled: "on_hold",
   hold: "on_hold",
   on_hold: "on_hold",
   merchant_confirmed: "on_hold",
-  return: "return_in_transit",
-  returning: "return_in_transit",
-  returned: "returned",
-  return_to_pickup: "return_in_transit",
-  return_to_merchant: "return_in_transit",
-  return_rescheduled: "on_hold",
-  cancelled: "cancelled",
-  canceled: "cancelled",
-  exchange: "exchange",
-  exchanged: "exchange",
+  customer_unreachable: "on_hold",
   lost: "on_hold",
   damaged: "on_hold",
+
+  // --- Return journey ---
+  return: "return_in_transit",
+  returning: "return_in_transit",
+  return_processing: "return_in_transit",
+  pending_return: "return_in_transit",
+  return_in_transit: "return_in_transit",
+  return_to_pickup: "return_in_transit",
+  return_to_merchant: "return_in_transit",
+  on_the_way_to_return: "return_in_transit",
+  return_rescheduled: "return_in_transit",
+  returned: "returned",
+  return_completed: "returned",
+  paid_return: "paid_return",
+  unpaid_return: "unpaid_return",
+  partial_delivered_return: "partial_return",
+  partial_return: "partial_return",
+
+  // --- Exchange ---
+  exchange: "exchange",
+  exchanged: "exchange",
+
+  // --- Cancellation ---
+  cancelled: "cancelled",
+  canceled: "cancelled",
+  cancelled_by_courier: "cancelled",
 };
 
 export const DEFAULT_STEADFAST_MAP: Record<string, OrderStatus> = {
+  // --- Booked / awaiting pickup ---
   pending: "ready_to_ship",
   in_review: "ready_to_ship",
-  hold: "on_hold",
+
+  // --- Moving ---
+  picked: "shipped",
+  picked_up: "shipped",
   in_transit: "in_transit",
+  out_for_delivery: "in_transit",
+
+  // --- Final delivery outcomes ---
   delivered: "delivered",
   partial_delivered: "partial_delivered",
-  // Payment events — see Pathao note above. Not fulfillment transitions.
-  // Omitted: paid, payment_paid.
+
+  // --- Problem / temporary states ---
+  hold: "on_hold",
+  on_hold: "on_hold",
   delivery_failed: "on_hold",
-  cancelled: "cancelled",
+  lost: "on_hold",
+  damaged: "on_hold",
   unknown: "on_hold",
   unknown_approval: "on_hold",
-  return: "return_in_transit",
-  returned: "returned",
-  partial_delivered_return: "partial_return",
-  // *_approval_pending variants — awaiting merchant/courier approval, treat as hold.
+
+  // Steadfast *_approval_pending — outcome claimed but not confirmed yet.
+  // Treat as hold so nothing resolves before the courier confirms.
   delivered_approval_pending: "on_hold",
   partial_delivered_approval_pending: "on_hold",
   cancelled_approval_pending: "on_hold",
   unknown_approval_pending: "on_hold",
   return_approval_pending: "on_hold",
   hold_approval_pending: "on_hold",
+
+  // --- Return journey ---
+  return: "return_in_transit",
+  returning: "return_in_transit",
+  pending_return: "return_in_transit",
+  return_in_transit: "return_in_transit",
+  returned: "returned",
+  partial_delivered_return: "partial_return",
+  partial_return: "partial_return",
+  paid_return: "paid_return",
+  unpaid_return: "unpaid_return",
+
+  // --- Exchange / cancellation ---
+  exchange: "exchange",
+  exchanged: "exchange",
+  cancelled: "cancelled",
+  canceled: "cancelled",
 };
+
 
 export type CourierStatusMappingOverrides = {
   pathao?: Record<string, OrderStatus>;
