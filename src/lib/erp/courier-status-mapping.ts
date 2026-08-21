@@ -184,13 +184,15 @@ export function mapCourierStatus(
  */
 const ALLOWED_FROM_RESOLVED: Partial<Record<OrderStatus, OrderStatus[]>> = {
   delivered: ["paid", "completed", "partial_delivered"],
-  partial_delivered: ["completed", "partial_return"],
+  partial_delivered: ["paid", "completed", "partial_return"],
+  return_in_transit: ["returned", "paid_return", "unpaid_return", "partial_return", "delivered", "partial_delivered", "exchange", "completed"],
   returned: ["paid_return", "unpaid_return", "partial_return", "completed"],
   paid_return: ["completed"],
   unpaid_return: ["paid_return", "completed"],
   partial_return: ["completed"],
   exchange: ["exchanged", "delivered", "completed"],
   exchanged: ["completed"],
+
   paid: [],
   completed: [],
   cancelled: [],
