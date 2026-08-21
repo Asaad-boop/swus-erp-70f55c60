@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { toast } from "sonner";
@@ -24,6 +24,10 @@ export function BookSteadfastDialog({ open, onOpenChange, orderId, defaultAmount
   const [amount, setAmount] = useState(String(defaultAmount || 0));
   const [desc, setDesc] = useState("");
   const [note, setNote] = useState("");
+
+  useEffect(() => {
+    if (open) setAmount(String(defaultAmount || 0));
+  }, [open, defaultAmount]);
 
   const book = useMutation({
     mutationFn: async () =>
@@ -56,7 +60,8 @@ export function BookSteadfastDialog({ open, onOpenChange, orderId, defaultAmount
         <div className="grid gap-3">
           <div>
             <Label className="text-xs">COD amount (৳)</Label>
-            <Input type="number" min="0" value={amount} onChange={(e) => setAmount(e.target.value)} />
+            <Input type="number" min="0" value={amount} readOnly />
+            <p className="mt-1 text-[11px] text-muted-foreground">Order total থেকে paid advance বাদ দিয়ে auto-calculated.</p>
           </div>
           <div>
             <Label className="text-xs">Item description</Label>

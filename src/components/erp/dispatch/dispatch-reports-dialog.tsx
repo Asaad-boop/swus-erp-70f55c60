@@ -3,6 +3,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "
 import { Button } from "@/components/ui/button";
 import { Printer, Download, ClipboardList, FileText, CheckCircle2 } from "lucide-react";
 import { format } from "date-fns";
+import { courierCodDue } from "@/lib/erp/courier-cod";
 
 type Order = {
   id: string;
@@ -10,6 +11,7 @@ type Order = {
   brand_id: string | null;
   status: string;
   total: number | null;
+  advance_amount: number | null;
   payment_method: string | null;
   courier_name: string | null;
   shipping_name: string | null;
@@ -33,6 +35,9 @@ function bdt(n: number) {
 }
 function sum(rows: Order[]) {
   return rows.reduce((s, r) => s + (r.total ?? 0), 0);
+}
+function codSum(rows: Order[]) {
+  return rows.filter(isCod).reduce((sum, order) => sum + courierCodDue(order.total, order.advance_amount), 0);
 }
 
 function groupBy<T>(rows: T[], key: (r: T) => string) {
@@ -122,7 +127,7 @@ export function DispatchReportsDialog({
   const byCourier = useMemo(() => groupBy([...ready, ...shipped], (o) => o.courier_name ?? "Unassigned"), [ready, shipped]);
 
   const codShipped = shipped.filter(isCod);
-  const codShippedAmount = sum(codShipped);
+  const codShippedAmount = codSum(codShipped);
 
   return (
     <Dialog open={open} onOpenChange={(o) => !o && onClose()}>
@@ -164,7 +169,7 @@ export function DispatchReportsDialog({
             head={["Courier", "Parcels", "COD parcels", "COD ৳"]}
             rows={byCourier.map(([c, rows]) => {
               const codRows = rows.filter(isCod);
-              return [c, rows.length, codRows.length, bdt(sum(codRows))];
+              return [c, rows.length, codRows.length, bdt(codSum(codRows))];
             })}
           />
         </Section>

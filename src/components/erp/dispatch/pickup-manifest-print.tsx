@@ -1,5 +1,6 @@
 import { format } from "date-fns";
 import { useBrand } from "@/contexts/brand-context";
+import { courierCodDue } from "@/lib/erp/courier-cod";
 
 type Item = { name: string; quantity: number };
 type Order = {
@@ -11,6 +12,7 @@ type Order = {
   shipping_thana?: string | null;
   shipping_city?: string | null;
   total?: number | null;
+  advance_amount?: number | null;
   payment_method?: string | null;
   courier_name?: string | null;
   tracking_number?: string | null;
@@ -36,7 +38,7 @@ export function PickupManifestPrint({ orders }: { orders: Order[] }) {
   const totalParcels = orders.length;
   const totalUnits = orders.reduce((s, o) => s + qtyOf(o), 0);
   const codOrders = orders.filter(isCod);
-  const codAmount = codOrders.reduce((s, o) => s + (o.total ?? 0), 0);
+  const codAmount = codOrders.reduce((s, o) => s + courierCodDue(o.total, o.advance_amount), 0);
 
   const groups = new Map<string, Order[]>();
   for (const o of orders) {
@@ -75,7 +77,7 @@ export function PickupManifestPrint({ orders }: { orders: Order[] }) {
         {groupList.map(([key, list]) => {
           const name = brandName(key === "__none__" ? null : key);
           const units = list.reduce((s, o) => s + qtyOf(o), 0);
-          const cod = list.filter(isCod).reduce((s, o) => s + (o.total ?? 0), 0);
+          const cod = list.filter(isCod).reduce((s, o) => s + courierCodDue(o.total, o.advance_amount), 0);
           return (
             <span
               key={key}
@@ -100,7 +102,7 @@ export function PickupManifestPrint({ orders }: { orders: Order[] }) {
       {groupList.map(([key, list]) => {
         const name = brandName(key === "__none__" ? null : key);
         const units = list.reduce((s, o) => s + qtyOf(o), 0);
-        const cod = list.filter(isCod).reduce((s, o) => s + (o.total ?? 0), 0);
+        const cod = list.filter(isCod).reduce((s, o) => s + courierCodDue(o.total, o.advance_amount), 0);
         return (
           <div key={key} className="mb-4 break-inside-avoid">
             <div className="flex items-end justify-between border-b border-black pb-1 mb-1">
@@ -129,7 +131,7 @@ export function PickupManifestPrint({ orders }: { orders: Order[] }) {
               <tbody>
                 {list.map((o, i) => {
                   const qty = qtyOf(o);
-                  const codv = isCod(o) ? (o.total ?? 0) : 0;
+                  const codv = isCod(o) ? courierCodDue(o.total, o.advance_amount) : 0;
                   return (
                     <tr key={i} className="border-b border-neutral-200 align-top">
                       <td className="py-1 pr-2 tabular-nums">{i + 1}</td>

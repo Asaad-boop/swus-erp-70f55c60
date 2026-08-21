@@ -19,6 +19,7 @@ import { DispatchTable } from "./dispatch-table";
 import { PackerMode } from "./packer-mode";
 import { ShipDialog } from "./ship-dialog";
 import { isDispatchMuted, setDispatchMuted, primeAudio } from "@/lib/erp/dispatch/feedback";
+import { courierCodDue } from "@/lib/erp/courier-cod";
 import {
   bdt, isCod, stageFor, sumTotal, timeAgo,
   useDispatch, type DispatchOrder, type DispatchStage,
@@ -331,7 +332,7 @@ export function DispatchShell() {
       />
 
       <div className="text-[11px] text-muted-foreground">
-        COD shipped today: {codShipped.length} · {bdt(sumTotal(codShipped))}
+        COD shipped today: {codShipped.length} · {bdt(codShipped.reduce((sum, order) => sum + courierCodDue(order.total, order.advance_amount), 0))}
       </div>
     </div>
   );

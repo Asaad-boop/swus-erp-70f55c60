@@ -5,6 +5,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Loader2, Truck, AlertTriangle, CheckCircle2 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { courierCodDue } from "@/lib/erp/courier-cod";
 import {
   bdt, customerName, customerPhone, fullAddress, isCod, preflight,
   type CourierProvider, type DispatchOrder, type UseDispatch,
@@ -62,7 +63,7 @@ export function ShipDialog({
           <div className="text-xs text-muted-foreground">{customerPhone(order) || "no phone"}</div>
           <div className="text-xs text-muted-foreground line-clamp-2">{fullAddress(order) || "no address"}</div>
           <div className="text-xs font-semibold pt-1">
-            {isCod(order) ? `COD ${bdt(order.total ?? 0)}` : `PREPAID · ${bdt(order.total ?? 0)}`}
+            {isCod(order) ? `COD ${bdt(courierCodDue(order.total, order.advance_amount))}` : `PREPAID · ${bdt(order.total ?? 0)}`}
           </div>
         </div>
 
