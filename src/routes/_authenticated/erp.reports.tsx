@@ -908,7 +908,16 @@ function ProductsTab({ args, enabled, rangeLabel }: { args: RpcArgs; enabled: bo
 
   return (
     <>
+      <Product360Panel
+        brandIds={args._brand_ids}
+        from={args._from}
+        to={args._to}
+        enabled={enabled}
+        rangeLabel={rangeLabel}
+      />
+
       <Panel title={`Top ${level === "variant" ? "variants" : "products"} by ${PRODUCT_SORTS.find((s) => s.key === sort)?.label.toLowerCase()}`}>
+
         {q.isLoading ? (
           <Skeleton className="h-[300px] rounded-lg" />
         ) : chartRows.length === 0 ? (
