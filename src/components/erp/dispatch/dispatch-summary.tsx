@@ -1,14 +1,12 @@
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";
 import { Download } from "lucide-react";
-import { courierCodDue } from "@/lib/erp/courier-cod";
 
 type Order = {
   id: string;
   invoice_no: string | null;
   status: string;
   total: number | null;
-  advance_amount: number | null;
   payment_method: string | null;
   courier_name: string | null;
   updated_at?: string | null;
@@ -32,7 +30,7 @@ export function DispatchSummary({
   const shippedTotal = shippedToday.reduce((s, o) => s + (o.total ?? 0), 0);
   const codTotal = shippedToday
     .filter((o) => (o.payment_method ?? "").toLowerCase().includes("cod"))
-    .reduce((s, o) => s + courierCodDue(o.total, o.advance_amount), 0);
+    .reduce((s, o) => s + (o.total ?? 0), 0);
 
   const byCourier = new Map<string, { count: number; value: number }>();
   for (const o of shippedToday) {

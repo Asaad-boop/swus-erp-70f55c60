@@ -4,7 +4,6 @@ import {
   X, PackageOpen, PackagePlus, Send, Camera, Undo2, Volume2, VolumeX, Loader2, CheckCircle2, AlertCircle, Phone, MapPin, Keyboard, KeyboardOff, ChevronDown,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { courierCodDue } from "@/lib/erp/courier-cod";
 import { ScanInput, type ScanInputHandle } from "./scan-input";
 import { CameraScanner } from "./camera-scanner";
 import {
@@ -176,7 +175,7 @@ export function PackerMode({ d, onExit }: { d: UseDispatch; onExit: () => void }
                       isCod(order) ? "bg-amber-500/15 text-amber-700 dark:text-amber-400" : "bg-emerald-500/15 text-emerald-700 dark:text-emerald-400",
                     )}
                   >
-                    {isCod(order) ? "COD" : "PAID"} {bdt(isCod(order) ? courierCodDue(order.total, order.advance_amount) : order.total ?? 0)}
+                    {isCod(order) ? "COD" : "PAID"} {bdt(order.total ?? 0)}
                   </span>
                   <span className="text-muted-foreground text-sm font-medium">{itemCount(order)} pcs</span>
                 </div>

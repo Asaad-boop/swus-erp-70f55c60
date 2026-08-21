@@ -2,7 +2,6 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Button } from "@/components/ui/button";
 import { Phone, MapPin, Package, Clock, Printer, AlertTriangle, ChevronRight } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { courierCodDue } from "@/lib/erp/courier-cod";
 import { FixMenu } from "./fix-menu";
 import {
   bdt, customerArea, customerName, customerPhone, isCod, itemCount, preflight, stageTime, timeAgo,
@@ -93,7 +92,7 @@ export function OrderCard({
 
         <div className="text-right shrink-0 flex flex-col items-end gap-1">
           <div className="flex items-center gap-0.5">
-            <span className="text-xs font-bold tabular-nums">{bdt(cod ? courierCodDue(order.total, order.advance_amount) : order.total ?? 0)}</span>
+            <span className="text-xs font-bold tabular-nums">{bdt(order.total ?? 0)}</span>
             <FixMenu order={order} d={d} />
           </div>
           <div className="flex items-center gap-1 text-[10px] text-muted-foreground">

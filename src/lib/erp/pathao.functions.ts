@@ -1,7 +1,6 @@
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
-import { courierCodDue } from "@/lib/erp/courier-cod";
 
 async function assertCourierRole(supabase: any, userId: string) {
   const [{ data: admin }, { data: ops }, { data: cs }] = await Promise.all([
@@ -506,12 +505,11 @@ export const pathaoBookOrderFn = createServerFn({ method: "POST" })
 
     const { data: order, error: oErr } = await supabase
       .from("orders")
-      .select("id, brand_id, shipping_name, shipping_phone, guest_name, guest_phone, shipping_address, shipping_thana, shipping_city, shipping_district, total, advance_amount")
+      .select("id, brand_id, shipping_name, shipping_phone, guest_name, guest_phone, shipping_address, shipping_thana, shipping_city, shipping_district, total")
       .eq("id", data.orderId)
       .maybeSingle();
     if (oErr) throw oErr;
     if (!order) throw new Error("Order not found");
-    const amountToCollect = courierCodDue(order.total, order.advance_amount);
 
     const name = order.shipping_name || order.guest_name || "Customer";
     const phone = order.shipping_phone || order.guest_phone || "";
@@ -558,14 +556,14 @@ export const pathaoBookOrderFn = createServerFn({ method: "POST" })
       special_instruction: data.special_instruction,
       item_quantity: data.item_quantity,
       item_weight: data.item_weight,
-      amount_to_collect: amountToCollect,
+      amount_to_collect: Math.round(data.amount_to_collect),
       item_description: data.item_description,
     });
 
     const consignment = result?.consignment_id || result?.data?.consignment_id || null;
     const tracking = result?.tracking_code || result?.data?.tracking_code || null;
     const fee = readPositiveNumber(result, ["delivery_fee", "delivery_charge", "normal_delivery", "same_day_delivery"]) ?? 0;
-    const actualCost = pathaoActualCost(result, fee, amountToCollect, locationPayload?.recipient_city ?? null);
+    const actualCost = pathaoActualCost(result, fee, data.amount_to_collect, locationPayload?.recipient_city ?? null);
     const status = result?.order_status || result?.data?.order_status || "Pickup_Requested";
 
     const { data: shipment, error: sErr } = await supabase
@@ -579,7 +577,7 @@ export const pathaoBookOrderFn = createServerFn({ method: "POST" })
         tracking_code: tracking,
         delivery_fee: fee || null,
         status,
-        request_payload: { ...data, amount_to_collect: amountToCollect, order_total: Number(order.total ?? 0), advance_deducted: Number(order.advance_amount ?? 0), pathao_location_source: locationPayload?.source ?? "pathao_auto_address", detected_location: detectedLocation } as never,
+        request_payload: { ...data, pathao_location_source: locationPayload?.source ?? "pathao_auto_address", detected_location: detectedLocation } as never,
         response_payload: result as never,
         created_by: userId,
       })
@@ -685,13 +683,12 @@ export const pathaoBookOrderAutoFn = createServerFn({ method: "POST" })
     const { data: order, error: oErr } = await supabase
       .from("orders")
       .select(
-        "id, invoice_no, brand_id, shipping_name, shipping_phone, guest_name, guest_phone, shipping_address, shipping_thana, shipping_city, shipping_district, total, advance_amount, pathao_city_id, pathao_zone_id, pathao_area_id, items:order_items(name, quantity)",
+        "id, invoice_no, brand_id, shipping_name, shipping_phone, guest_name, guest_phone, shipping_address, shipping_thana, shipping_city, shipping_district, total, pathao_city_id, pathao_zone_id, pathao_area_id, items:order_items(name, quantity)",
       )
       .eq("id", data.orderId)
       .maybeSingle();
     if (oErr) throw oErr;
     if (!order) throw new Error("Order not found");
-    const amountToCollect = courierCodDue(order.total, order.advance_amount);
 
     // Bail early if already booked with Pathao
     const { data: existing } = await supabase
@@ -763,14 +760,14 @@ export const pathaoBookOrderAutoFn = createServerFn({ method: "POST" })
       item_type: data.item_type,
       item_quantity: totalQty,
       item_weight: data.item_weight,
-      amount_to_collect: amountToCollect,
+      amount_to_collect: Math.round(Number(order.total) || 0),
       item_description: desc,
     });
 
     const consignment = result?.consignment_id || result?.data?.consignment_id || null;
     const tracking = result?.tracking_code || result?.data?.tracking_code || null;
     const fee = readPositiveNumber(result, ["delivery_fee", "delivery_charge", "normal_delivery", "same_day_delivery"]) ?? 0;
-    const actualCost = pathaoActualCost(result, fee, amountToCollect, locationPayload?.recipient_city ?? null);
+    const actualCost = pathaoActualCost(result, fee, Number(order.total) || 0, locationPayload?.recipient_city ?? null);
     const status = result?.order_status || result?.data?.order_status || "Pickup_Requested";
 
     const { data: shipment, error: sErr } = await supabase
@@ -786,9 +783,6 @@ export const pathaoBookOrderAutoFn = createServerFn({ method: "POST" })
         status,
         request_payload: {
           auto: true,
-          amount_to_collect: amountToCollect,
-          order_total: Number(order.total ?? 0),
-          advance_deducted: Number(order.advance_amount ?? 0),
           pathao_location_source: locationPayload ? "pathao_address" : "pathao_auto_address",
           address,
           detected_location: detectedLocation,
