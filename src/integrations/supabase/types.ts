@@ -13348,6 +13348,15 @@ export type Database = {
         Args: { _brand_ids: string[]; _from: string; _to: string }
         Returns: Json
       }
+      rpt_product_360: {
+        Args: {
+          _brand_ids: string[]
+          _from: string
+          _product_id: string
+          _to: string
+        }
+        Returns: Json
+      }
       rpt_product_performance: {
         Args: {
           _basis?: string
@@ -13377,6 +13386,22 @@ export type Database = {
           units: number
           variant_id: string
           variant_label: string
+        }[]
+      }
+      rpt_product_search: {
+        Args: { _brand_ids: string[]; _limit?: number; _q?: string }
+        Returns: {
+          brand_id: string
+          brand_name: string
+          cost_price: number
+          image: string
+          is_active: boolean
+          price: number
+          product_id: string
+          sku: string
+          stock: number
+          title: string
+          weighted_avg_cost: number
         }[]
       }
       rpt_reconcile_chain: {
