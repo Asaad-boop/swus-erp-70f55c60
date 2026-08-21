@@ -31,6 +31,8 @@ import { ControlTab } from "@/components/erp/reports/control-tab";
 import { AdsPanel } from "@/components/erp/reports/marketing-extras";
 import { CourierPerformancePanel, DeliveryAreaPanel } from "@/components/erp/reports/delivery-extras";
 import { ReportIndexDrawer } from "@/components/erp/reports/report-index-drawer";
+import { Product360Panel } from "@/components/erp/reports/product-360";
+
 
 const TAB_VALUES = [
   "overview", "sales", "orders", "products", "customers",
@@ -280,8 +282,9 @@ function ReportsHub() {
             </TabsContent>
 
             <TabsContent value="products" className="mt-4 space-y-4">
-              <ProductsTab args={args} enabled={enabled} />
+              <ProductsTab args={args} enabled={enabled} rangeLabel={rangeLabel} />
             </TabsContent>
+
 
             <TabsContent value="customers" className="mt-4 space-y-4">
               <CustomersTab args={args} enabled={enabled} />
@@ -857,10 +860,11 @@ const PRODUCT_SORTS: { key: ProductSort; label: string }[] = [
   { key: "return_rate", label: "Return %" },
 ];
 
-function ProductsTab({ args, enabled }: { args: RpcArgs; enabled: boolean }) {
+function ProductsTab({ args, enabled, rangeLabel }: { args: RpcArgs; enabled: boolean; rangeLabel?: string }) {
   const [level, setLevel] = useState<"product" | "variant">("product");
   const [sort, setSort] = useState<ProductSort>("net_revenue");
   const [search, setSearch] = useState("");
+
 
   const q = useQuery({
     queryKey: ["rpt-products", JSON.stringify(args), level],
@@ -906,7 +910,16 @@ function ProductsTab({ args, enabled }: { args: RpcArgs; enabled: boolean }) {
 
   return (
     <>
+      <Product360Panel
+        brandIds={args._brand_ids}
+        from={args._from}
+        to={args._to}
+        enabled={enabled}
+        rangeLabel={rangeLabel}
+      />
+
       <Panel title={`Top ${level === "variant" ? "variants" : "products"} by ${PRODUCT_SORTS.find((s) => s.key === sort)?.label.toLowerCase()}`}>
+
         {q.isLoading ? (
           <Skeleton className="h-[300px] rounded-lg" />
         ) : chartRows.length === 0 ? (
