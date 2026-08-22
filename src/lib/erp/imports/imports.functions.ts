@@ -1607,8 +1607,100 @@ export const releasePoQuantity = createServerFn({ method: "POST" })
   });
 
 /* ============================================================
+   Warehouse QC — release warehouse e pouchale good/damaged/extra confirm
+   ============================================================ */
+
+export const qcPoRelease = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d: unknown) =>
+    z.object({
+      release_id: z.string().uuid(),
+      notes: z.string().optional(),
+      items: z.array(z.object({
+        release_item_id: z.string().uuid(),
+        good_qty: z.number().int().nonnegative(),
+        damaged_qty: z.number().int().nonnegative().default(0),
+        extra_qty: z.number().int().nonnegative().default(0),
+      })).min(1),
+    }).parse(d),
+  )
+  .handler(async ({ data, context }) => {
+    await assertAnyRole(context.supabase, context.userId, ["admin", "operations", "warehouse_staff"]);
+
+    const { data: rel, error: rErr } = await context.supabase
+      .from("imp_po_releases")
+      .select("id, po_id, release_number, qc_status")
+      .eq("id", data.release_id)
+      .maybeSingle();
+    if (rErr) throw rErr;
+    if (!rel) throw new Error("Release not found");
+
+    const { data: relItems, error: iErr } = await context.supabase
+      .from("imp_po_release_items")
+      .select("id, product_id, variant_id, quantity, damaged_qty, missing_qty, unit_landed_cost_bdt, qc_good_qty, qc_extra_qty")
+      .eq("release_id", data.release_id);
+    if (iErr) throw iErr;
+    const map = new Map<string, any>((relItems ?? []).map((r: any) => [r.id, r]));
+
+    const applied: any[] = [];
+    for (const l of data.items) {
+      const ri = map.get(l.release_item_id);
+      if (!ri) throw new Error("Line not part of this release");
+      // Ekhon stock e ache koto — age QC hoye thakle sei number, na hole release quantity
+      const currentStocked =
+        ri.qc_good_qty === null || ri.qc_good_qty === undefined
+          ? Number(ri.quantity ?? 0)
+          : Number(ri.qc_good_qty ?? 0) + Number(ri.qc_extra_qty ?? 0);
+      const nextStocked = l.good_qty + l.extra_qty;
+      const delta = nextStocked - currentStocked;
+
+      if (delta !== 0 && ri.product_id) {
+        const { error: aErr } = await context.supabase.rpc("adjust_stock_v2", {
+          _product_id: ri.product_id as string,
+          _variant_id: (ri.variant_id ?? null) as any,
+          _delta: delta,
+          _reason: delta > 0 ? "import_receive" : "damage",
+          _source: "import",
+          _unit_cost: Number(ri.unit_landed_cost_bdt ?? 0),
+          _reference_type: "imp_po_release_qc",
+          _reference_id: data.release_id,
+          _idempotency_key: `imp_qc:${l.release_item_id}:${nextStocked}`,
+          _note: `Release #${(rel as any).release_number} QC — good ${l.good_qty}, damaged ${l.damaged_qty}, extra ${l.extra_qty}`,
+        });
+        if (aErr) throw aErr;
+      }
+
+      const { error: uErr } = await context.supabase
+        .from("imp_po_release_items")
+        .update({
+          qc_good_qty: l.good_qty,
+          qc_damaged_qty: l.damaged_qty,
+          qc_extra_qty: l.extra_qty,
+        } as any)
+        .eq("id", l.release_item_id);
+      if (uErr) throw uErr;
+
+      applied.push({ release_item_id: l.release_item_id, delta, stocked: nextStocked });
+    }
+
+    const { error: relUErr } = await context.supabase
+      .from("imp_po_releases")
+      .update({
+        qc_status: "done",
+        qc_at: new Date().toISOString(),
+        qc_by: context.userId,
+        qc_notes: data.notes ?? null,
+      } as any)
+      .eq("id", data.release_id);
+    if (relUErr) throw relUErr;
+
+    return { ok: true, applied };
+  });
+
+/* ============================================================
    EDIT Import PO (header + product lines)
    ============================================================ */
+
 
 const editPoItemSchema = z.object({
   id: z.string().uuid().optional(),
