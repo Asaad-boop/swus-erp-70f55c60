@@ -17,6 +17,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { listWarehouses, releasePoQuantity } from "@/lib/erp/imports/imports.functions";
 import { fmtBdt, netDue } from "@/lib/erp/imports/types";
 import { useAccounts } from "@/hooks/erp/use-finance-query";
+import { AccountCombobox } from "@/components/erp/finance/account-combobox";
 
 type Release = {
   id: string;
@@ -88,6 +89,18 @@ export function QuantityReleaseCard({
     const def = list.find((w) => w.is_default) ?? (list.length === 1 ? list[0] : null);
     if (def) setWarehouseId(def.id);
   }, [warehouses, warehouseId]);
+
+  // Wallet auto-select: default / cash / ekta matro wallet thakle
+  useEffect(() => {
+    if (payWallet) return;
+    const list = (wallets as any[]).filter((w) => w.is_active);
+    if (!list.length) return;
+    const def =
+      list.find((w) => w.is_default) ??
+      (list.length === 1 ? list[0] : null);
+    if (def) setPayWallet(def.id);
+  }, [wallets, payWallet]);
+
 
   const getDraft = (id: string) => draft[id] ?? { qty: 0, damaged: 0, missing: 0 };
   const setDraftFor = (id: string, patch: Partial<{ qty: number; damaged: number; missing: number }>) => {
@@ -202,10 +215,20 @@ export function QuantityReleaseCard({
   }, 0);
   const dueForReleased = Math.max(0, Math.min(due || releasedShare, releasedShare));
 
+  // ---- Payment for ei release ----
+  const payAmount = payNow
+    ? Math.min(previewTotalDue, Math.max(0, Number(payOverride ?? previewTotalDue.toFixed(2)) || 0))
+    : 0;
+  const selectedWallet = (wallets as any[]).find((w) => w.id === payWallet);
+  const walletBalance = Number(selectedWallet?.current_balance ?? 0);
+  const insufficient = !!selectedWallet && payAmount > walletBalance;
+  const payBlocked = payNow && previewTotalDue > 0 && !payWallet;
+
   const mut = useMutation({
     mutationFn: () => {
-      const amt = payNow ? Math.max(0, Number(payOverride ?? previewTotalDue.toFixed(2)) || 0) : 0;
+      const amt = payAmount;
       const ratio = previewTotalDue > 0 ? Math.min(1, amt / previewTotalDue) : 0;
+
       return releaseFn({
         data: {
           po_id: poId,
@@ -391,7 +414,7 @@ export function QuantityReleaseCard({
             </Button>
             <Button
               size="sm"
-              disabled={draftTotal <= 0 || hasOverRelease || mut.isPending || (payNow && previewTotalDue > 0 && !payWallet)}
+              disabled={draftTotal <= 0 || hasOverRelease || mut.isPending || payBlocked}
               onClick={() => setConfirmOpen(true)}
             >
               {mut.isPending ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <PackageCheck className="h-4 w-4 mr-2" />}
@@ -418,14 +441,14 @@ export function QuantityReleaseCard({
             </div>
             <div>
               <Label className="text-xs">Pay from wallet (optional)</Label>
-              <Select value={ldWallet} onValueChange={setLdWallet}>
-                <SelectTrigger className="h-9"><SelectValue placeholder="Record only (pay later)" /></SelectTrigger>
-                <SelectContent>
-                  {(wallets as any[]).filter((w) => w.is_active).map((w) => (
-                    <SelectItem key={w.id} value={w.id}>{w.name} ({fmtBdt(w.current_balance)})</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              <AccountCombobox
+                accounts={(wallets as any[]).filter((w) => w.is_active)}
+                value={ldWallet}
+                onChange={setLdWallet}
+                requiredAmount={localDelivery}
+                placeholder="Record only (pay later)"
+              />
+
             </div>
             <div>
               <Label className="text-xs">Delivery note</Label>
@@ -445,35 +468,59 @@ export function QuantityReleaseCard({
           )}
         </div>
 
-        {draftTotal > 0 && previewTotalDue > 0 && (
+        {draftTotal > 0 && (
           <div className="p-4 border-t border-border bg-orange-500/5 space-y-3">
-            <div className="flex items-center justify-between gap-3 flex-wrap">
-              <div className="text-sm font-medium inline-flex items-center gap-2">
-                <Wallet className="h-4 w-4 text-orange-600" />
-                Ei {draftTotal} pcs-er due — purchase {fmtBdt(previewGoodsDue)} + shipping {fmtBdt(previewShipDue)} ={" "}
-                <span className="text-orange-600 font-semibold tabular-nums">{fmtBdt(previewTotalDue)}</span>
+            <div className="flex items-start justify-between gap-3 flex-wrap">
+              <div>
+                <div className="text-sm font-medium inline-flex items-center gap-2">
+                  <Wallet className="h-4 w-4 text-orange-600" />
+                  Ei {draftTotal} pcs-er payment
+                </div>
+                <p className="text-[11px] text-muted-foreground mt-0.5">
+                  Purchase {fmtBdt(previewGoodsDue)} + shipping {fmtBdt(previewShipDue)} ={" "}
+                  <span className="text-orange-600 font-semibold tabular-nums">{fmtBdt(previewTotalDue)}</span>
+                  {localDelivery > 0 && <> · local delivery {fmtBdt(localDelivery)} alada</>}
+                </p>
               </div>
-              <Button
-                type="button"
-                size="sm"
-                variant={payNow ? "default" : "outline"}
-                onClick={() => setPayNow((v) => !v)}
-              >
-                {payNow ? "Pay with release ✓" : "Pay later"}
-              </Button>
+              <div className="inline-flex rounded-md border border-border overflow-hidden">
+                <button
+                  type="button"
+                  onClick={() => setPayNow(true)}
+                  className={`px-3 py-1.5 text-xs font-medium ${payNow ? "bg-emerald-600 text-white" : "bg-background text-muted-foreground"}`}
+                >
+                  Ekhon pay
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setPayNow(false)}
+                  className={`px-3 py-1.5 text-xs font-medium ${!payNow ? "bg-orange-600 text-white" : "bg-background text-muted-foreground"}`}
+                >
+                  Pay later
+                </button>
+              </div>
             </div>
-            {payNow && (
+
+            {previewTotalDue <= 0 ? (
+              <p className="text-xs text-emerald-700 dark:text-emerald-400">
+                Ei pcs-er purchase + shipping age thekei paid — kono payment lagbe na.
+              </p>
+            ) : payNow ? (
               <div className="grid md:grid-cols-2 gap-3">
                 <div>
                   <Label className="text-xs">Wallet / account</Label>
-                  <Select value={payWallet} onValueChange={setPayWallet}>
-                    <SelectTrigger className="h-9"><SelectValue placeholder="Select wallet" /></SelectTrigger>
-                    <SelectContent>
-                      {(wallets as any[]).filter((w) => w.is_active).map((w) => (
-                        <SelectItem key={w.id} value={w.id}>{w.name} ({fmtBdt(w.current_balance)})</SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+                  <AccountCombobox
+                    accounts={(wallets as any[]).filter((w) => w.is_active)}
+                    value={payWallet}
+                    onChange={setPayWallet}
+                    requiredAmount={payAmount}
+                    placeholder="Kon wallet theke taka jabe?"
+                  />
+                  {selectedWallet && (
+                    <p className={`text-[11px] mt-1 tabular-nums ${insufficient ? "text-red-600" : "text-muted-foreground"}`}>
+                      Balance {fmtBdt(walletBalance)} → payment er por {fmtBdt(walletBalance - payAmount)}
+                      {insufficient && " — balance kom!"}
+                    </p>
+                  )}
                 </div>
                 <div>
                   <Label className="text-xs">Pay amount (BDT)</Label>
@@ -482,14 +529,38 @@ export function QuantityReleaseCard({
                     value={payOverride ?? previewTotalDue.toFixed(2)}
                     onChange={(e) => setPayOverride(e.target.value)}
                   />
-                  <p className="text-[11px] text-muted-foreground mt-1">
-                    Kom dile purchase + shipping pro-rata bhabe adjust hobe, baki ta due thakbe.
+                  <div className="flex flex-wrap gap-1.5 mt-1.5">
+                    {[
+                      { k: "Full", v: previewTotalDue },
+                      { k: "Purchase only", v: previewGoodsDue },
+                      { k: "Shipping only", v: previewShipDue },
+                      { k: "Half", v: previewTotalDue / 2 },
+                    ].filter((c) => c.v > 0).map((c) => (
+                      <button
+                        key={c.k}
+                        type="button"
+                        onClick={() => setPayOverride(c.v.toFixed(2))}
+                        className="px-2 py-0.5 rounded border border-border text-[11px] hover:bg-muted"
+                      >
+                        {c.k} · {fmtBdt(c.v)}
+                      </button>
+                    ))}
+                  </div>
+                  <p className="text-[11px] text-muted-foreground mt-1 tabular-nums">
+                    {payAmount >= previewTotalDue - 0.5
+                      ? "Ei release-er due purapuri clear hobe ✓"
+                      : `Baki ${fmtBdt(Math.max(0, previewTotalDue - payAmount))} due thakbe — purchase/shipping pro-rata adjust hobe.`}
                   </p>
                 </div>
               </div>
+            ) : (
+              <p className="text-xs text-orange-700 dark:text-orange-300">
+                Ekhon taka katbe na — {fmtBdt(previewTotalDue)} PO-r due hishebe thakbe, pore "Supplier payment" theke dite parben.
+              </p>
             )}
           </div>
         )}
+
       </Card>
 
       {grandTotal > 0 && due > 0 && (
@@ -752,13 +823,27 @@ export function QuantityReleaseCard({
                 <span className="text-muted-foreground">Ekhon pay hocche</span>
                 <span className="font-semibold tabular-nums text-emerald-600">
                   {payNow && payWallet
-                    ? `${fmtBdt(Math.max(0, Number(payOverride ?? previewTotalDue.toFixed(2)) || 0))} — ${(wallets as any[]).find((w) => w.id === payWallet)?.name ?? ""}`
+                    ? `${fmtBdt(payAmount)} — ${selectedWallet?.name ?? ""}`
                     : "Pay later (due thakbe)"}
                 </span>
               </div>
+              {payNow && payWallet && (
+                <>
+                  <RowLine label="Wallet balance (por)" value={fmtBdt(walletBalance - payAmount)} />
+                  <RowLine
+                    label="Ei release-er baki due"
+                    value={fmtBdt(Math.max(0, previewTotalDue - payAmount))}
+                  />
+                </>
+              )}
             </div>
 
-            {payNow && previewTotalDue > 0 && !payWallet && (
+            {insufficient && (
+              <div className="text-xs text-red-600 inline-flex items-center gap-1.5">
+                <AlertTriangle className="h-3.5 w-3.5" /> Wallet balance er cheye payment beshi — tobuo continue kora jabe.
+              </div>
+            )}
+            {payBlocked && (
               <div className="text-xs text-orange-600 inline-flex items-center gap-1.5">
                 <AlertTriangle className="h-3.5 w-3.5" /> Wallet select korun, na hole "Pay later" e switch korun.
               </div>
@@ -769,8 +854,9 @@ export function QuantityReleaseCard({
             <Button variant="ghost" onClick={() => setConfirmOpen(false)} disabled={mut.isPending}>Cancel</Button>
             <Button
               onClick={() => mut.mutate()}
-              disabled={mut.isPending || draftTotal <= 0 || hasOverRelease || (payNow && previewTotalDue > 0 && !payWallet)}
+              disabled={mut.isPending || draftTotal <= 0 || hasOverRelease || payBlocked}
             >
+
               {mut.isPending
                 ? <><Loader2 className="h-4 w-4 mr-2 animate-spin" />Processing…</>
                 : <><PackageCheck className="h-4 w-4 mr-2" />Confirm & add to stock</>}
