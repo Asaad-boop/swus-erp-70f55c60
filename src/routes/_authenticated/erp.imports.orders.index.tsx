@@ -1,7 +1,7 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Plus, Search, Filter, Package, Wallet, AlertTriangle, TrendingUp, X, ArrowUpDown, Boxes, Trash2, Download, CheckSquare, Loader2 } from "lucide-react";
 import { useBrand } from "@/contexts/brand-context";
 import { Card } from "@/components/ui/card";
@@ -16,7 +16,7 @@ import { toast } from "sonner";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { cn } from "@/lib/utils";
 import { listPurchaseOrders, deleteImportPo } from "@/lib/erp/imports/imports.functions";
-import { PO_STATUS_LABEL, fmtBdt, type ImpPoStatus } from "@/lib/erp/imports/types";
+import { PO_STATUS_LABEL, fmtBdt, netDue, type ImpPoStatus } from "@/lib/erp/imports/types";
 import { ProductThumbStack } from "./erp.imports.index";
 
 export const Route = createFileRoute("/_authenticated/erp/imports/orders/")({
@@ -55,6 +55,9 @@ function PoListPage() {
     onError: (e: Error) => toast.error(e.message),
   });
 
+  // Brand switch korle purono selection carry kora ucit na
+  useEffect(() => { setSelected(new Set()); }, [brandKey]);
+
   const listFn = useServerFn(listPurchaseOrders);
   const { data = [], isLoading } = useQuery({
     queryKey: ["imp-pos", brandKey, status],
@@ -68,7 +71,7 @@ function PoListPage() {
   const kpis = useMemo(() => {
     const totalSpend = rows.reduce((s, p) => s + Number(p.grand_total_bdt || 0), 0);
     const totalPaid = rows.reduce((s, p) => s + Number(p.paid_bdt || 0), 0);
-    const totalDue = rows.reduce((s, p) => s + Number(p.due_bdt || 0), 0);
+    const totalDue = rows.reduce((s, p) => s + netDue(p.due_bdt), 0);
     const active = rows.filter((p) => !["completed", "cancelled"].includes(p.status)).length;
     const overdue = rows.filter((p) => Number(p.due_bdt || 0) > 0 && p.status === "completed").length;
     return { totalSpend, totalPaid, totalDue, active, overdue, count: rows.length };
@@ -84,7 +87,7 @@ function PoListPage() {
       )) return false;
       const total = Number(p.grand_total_bdt || 0);
       const paid = Number(p.paid_bdt || 0);
-      if (payState === "paid" && (total === 0 || paid < total)) return false;
+      if (payState === "paid" && (total === 0 || netDue(total - paid) > 0)) return false;
       if (payState === "partial" && (paid === 0 || paid >= total)) return false;
       if (payState === "unpaid" && paid > 0) return false;
       return true;
@@ -94,7 +97,7 @@ function PoListPage() {
       const dir = sortDir === "asc" ? 1 : -1;
       switch (sortBy) {
         case "total": return dir * (Number(a.grand_total_bdt || 0) - Number(b.grand_total_bdt || 0));
-        case "due":   return dir * (Number(a.due_bdt || 0) - Number(b.due_bdt || 0));
+        case "due":   return dir * (netDue(a.due_bdt) - netDue(b.due_bdt));
         case "status":return dir * String(a.status).localeCompare(String(b.status));
         default:      return dir * String(a.order_date || "").localeCompare(String(b.order_date || ""));
       }
@@ -136,7 +139,7 @@ function PoListPage() {
     (a, r) => ({
       total: a.total + Number(r.grand_total_bdt || 0),
       paid: a.paid + Number(r.paid_bdt || 0),
-      due: a.due + Number(r.due_bdt || 0),
+      due: a.due + netDue(r.due_bdt),
     }),
     { total: 0, paid: 0, due: 0 },
   );
@@ -268,7 +271,7 @@ function PoListPage() {
               filtered.map((p: any) => {
                 const total = Number(p.grand_total_bdt || 0);
                 const paid = Number(p.paid_bdt || 0);
-                const due = Number(p.due_bdt || 0);
+                const due = netDue(p.due_bdt);
                 const pct = total > 0 ? Math.min(100, Math.round((paid / total) * 100)) : 0;
                 const supplier = p.supplier?.name ?? "—";
                 const agentName = p.agent?.name ?? "No agent";
