@@ -183,7 +183,7 @@ export function QtyArrivedDialog({
         </div>
         <DialogFooter>
           <Button variant="ghost" onClick={onClose}>Cancel</Button>
-          <Button disabled={shipping < 0 || mut.isPending} onClick={() => mut.mutate()}>
+          <Button disabled={mut.isPending || (payNow && (!walletId || amount <= 0))} onClick={() => mut.mutate()}>
             {mut.isPending && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}Save
           </Button>
         </DialogFooter>

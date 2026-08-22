@@ -515,6 +515,7 @@ function PoDetailPage() {
           initialRate={Number(po.shipping_rate_per_kg) || 0}
           initialCustoms={Number(po.customs_duty_bdt) || 0}
           initialOther={Number(po.other_charges_bdt) || 0}
+          initialShippingTotal={Number(po.shipping_total_bdt ?? po.shipping_cost_bdt) || 0}
         />
       )}
       {paymentOpen && brandId && (
