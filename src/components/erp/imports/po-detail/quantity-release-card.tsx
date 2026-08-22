@@ -203,10 +203,20 @@ export function QuantityReleaseCard({
   }, 0);
   const dueForReleased = Math.max(0, Math.min(due || releasedShare, releasedShare));
 
+  // ---- Payment for ei release ----
+  const payAmount = payNow
+    ? Math.min(previewTotalDue, Math.max(0, Number(payOverride ?? previewTotalDue.toFixed(2)) || 0))
+    : 0;
+  const selectedWallet = (wallets as any[]).find((w) => w.id === payWallet);
+  const walletBalance = Number(selectedWallet?.current_balance ?? 0);
+  const insufficient = !!selectedWallet && payAmount > walletBalance;
+  const payBlocked = payNow && previewTotalDue > 0 && !payWallet;
+
   const mut = useMutation({
     mutationFn: () => {
-      const amt = payNow ? Math.max(0, Number(payOverride ?? previewTotalDue.toFixed(2)) || 0) : 0;
+      const amt = payAmount;
       const ratio = previewTotalDue > 0 ? Math.min(1, amt / previewTotalDue) : 0;
+
       return releaseFn({
         data: {
           po_id: poId,
