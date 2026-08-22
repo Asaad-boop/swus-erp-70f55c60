@@ -248,7 +248,9 @@ export function QuantityReleaseCard({
       setLdAmount("");
       setLdNote("");
       setPayOverride(null);
+      setConfirmOpen(false);
       qc.invalidateQueries({ queryKey: ["imp-po", poId] });
+
     },
     onError: (e: any) => toast.error(e?.message ?? "Release failed"),
   });
