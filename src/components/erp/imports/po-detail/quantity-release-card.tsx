@@ -702,6 +702,89 @@ export function QuantityReleaseCard({
           </div>
         </Card>
       )}
+
+      <Dialog open={confirmOpen} onOpenChange={(v) => !mut.isPending && setConfirmOpen(v)}>
+        <DialogContent className="max-w-lg">
+          <DialogHeader>
+            <DialogTitle className="inline-flex items-center gap-2">
+              <PackageCheck className="h-5 w-5 text-emerald-600" />
+              Confirm release — {draftTotal} pcs
+            </DialogTitle>
+            <DialogDescription>
+              Confirm korle ei pcs gulo stock e dhukbe ar oi pcs-er due adjust hobe. Baki pcs pore release kora jabe.
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-3 text-sm">
+            <div className="rounded-md border border-border divide-y divide-border">
+              {previewLines.map((l) => (
+                <div key={l.id} className="p-2.5 flex items-center gap-2">
+                  <div className="min-w-0">
+                    <div className="truncate font-medium">{l.title}</div>
+                    <div className="text-[10px] font-mono text-muted-foreground">{l.sku}</div>
+                  </div>
+                  <div className="ml-auto text-right tabular-nums">
+                    <div className="font-semibold">{l.qty} pcs → stock</div>
+                    {(l.damaged > 0 || l.missing > 0) && (
+                      <div className="text-[11px] text-muted-foreground">
+                        {l.damaged > 0 && <span className="text-orange-600">{l.damaged} damaged </span>}
+                        {l.missing > 0 && <span className="text-red-600">{l.missing} missing</span>}
+                      </div>
+                    )}
+                    <div className="text-[11px] text-muted-foreground">Landed {fmtBdt(l.landed)}/pc</div>
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            <div className="rounded-md border border-border p-3 space-y-1.5">
+              <RowLine label="Warehouse" value={(warehouses as any[]).find((w) => w.id === warehouseId)?.name ?? "—"} />
+              <RowLine label="Purchase due (ei pcs)" value={fmtBdt(previewGoodsDue)} />
+              <RowLine label="Shipping / overhead (ei pcs)" value={fmtBdt(previewShipDue)} />
+              {localDelivery > 0 && <RowLine label="Local delivery" value={fmtBdt(localDelivery)} />}
+              <div className="flex justify-between pt-1.5 border-t border-border">
+                <span className="text-muted-foreground">Total due for ei release</span>
+                <span className="font-semibold tabular-nums text-orange-600">{fmtBdt(previewTotalDue)}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-muted-foreground">Ekhon pay hocche</span>
+                <span className="font-semibold tabular-nums text-emerald-600">
+                  {payNow && payWallet
+                    ? `${fmtBdt(Math.max(0, Number(payOverride ?? previewTotalDue.toFixed(2)) || 0))} — ${(wallets as any[]).find((w) => w.id === payWallet)?.name ?? ""}`
+                    : "Pay later (due thakbe)"}
+                </span>
+              </div>
+            </div>
+
+            {payNow && previewTotalDue > 0 && !payWallet && (
+              <div className="text-xs text-orange-600 inline-flex items-center gap-1.5">
+                <AlertTriangle className="h-3.5 w-3.5" /> Wallet select korun, na hole "Pay later" e switch korun.
+              </div>
+            )}
+          </div>
+
+          <DialogFooter>
+            <Button variant="ghost" onClick={() => setConfirmOpen(false)} disabled={mut.isPending}>Cancel</Button>
+            <Button
+              onClick={() => mut.mutate()}
+              disabled={mut.isPending || draftTotal <= 0 || hasOverRelease || (payNow && previewTotalDue > 0 && !payWallet)}
+            >
+              {mut.isPending
+                ? <><Loader2 className="h-4 w-4 mr-2 animate-spin" />Processing…</>
+                : <><PackageCheck className="h-4 w-4 mr-2" />Confirm & add to stock</>}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+    </div>
+  );
+}
+
+function RowLine({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="flex justify-between">
+      <span className="text-muted-foreground">{label}</span>
+      <span className="tabular-nums font-medium">{value}</span>
     </div>
   );
 }
