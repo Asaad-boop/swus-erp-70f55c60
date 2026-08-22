@@ -90,6 +90,18 @@ export function QuantityReleaseCard({
     if (def) setWarehouseId(def.id);
   }, [warehouses, warehouseId]);
 
+  // Wallet auto-select: default / cash / ekta matro wallet thakle
+  useEffect(() => {
+    if (payWallet) return;
+    const list = (wallets as any[]).filter((w) => w.is_active);
+    if (!list.length) return;
+    const def =
+      list.find((w) => w.is_default) ??
+      (list.length === 1 ? list[0] : null);
+    if (def) setPayWallet(def.id);
+  }, [wallets, payWallet]);
+
+
   const getDraft = (id: string) => draft[id] ?? { qty: 0, damaged: 0, missing: 0 };
   const setDraftFor = (id: string, patch: Partial<{ qty: number; damaged: number; missing: number }>) => {
     // Draft bodlale purono manual pay-amount ta stale hoye jay — reset kore din
