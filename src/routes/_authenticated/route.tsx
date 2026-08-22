@@ -26,7 +26,7 @@ function AuthGate() {
 
   const { roles, allowedPages, pageMode } = access.data;
   const isAdmin = isSuperRole(roles);
-  const path = location.pathname;
+  const path = location.pathname.length > 1 ? location.pathname.replace(/\/+$/, "") : location.pathname;
   const isErp = path === "/erp" || path.startsWith("/erp/");
 
   // 1. No role modules AND no custom page grants → nothing to show.
