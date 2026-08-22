@@ -6817,6 +6817,10 @@ export type Database = {
           missing_qty: number
           po_item_id: string
           product_id: string | null
+          qc_damaged_qty: number | null
+          qc_extra_qty: number
+          qc_good_qty: number | null
+          qc_movement_id: string | null
           quantity: number
           release_id: string
           sku_snapshot: string | null
@@ -6831,6 +6835,10 @@ export type Database = {
           missing_qty?: number
           po_item_id: string
           product_id?: string | null
+          qc_damaged_qty?: number | null
+          qc_extra_qty?: number
+          qc_good_qty?: number | null
+          qc_movement_id?: string | null
           quantity: number
           release_id: string
           sku_snapshot?: string | null
@@ -6845,6 +6853,10 @@ export type Database = {
           missing_qty?: number
           po_item_id?: string
           product_id?: string | null
+          qc_damaged_qty?: number | null
+          qc_extra_qty?: number
+          qc_good_qty?: number | null
+          qc_movement_id?: string | null
           quantity?: number
           release_id?: string
           sku_snapshot?: string | null
@@ -6880,6 +6892,10 @@ export type Database = {
           local_delivery_bdt: number
           notes: string | null
           po_id: string
+          qc_at: string | null
+          qc_by: string | null
+          qc_notes: string | null
+          qc_status: string
           release_number: number
           released_at: string
           warehouse_id: string | null
@@ -6894,6 +6910,10 @@ export type Database = {
           local_delivery_bdt?: number
           notes?: string | null
           po_id: string
+          qc_at?: string | null
+          qc_by?: string | null
+          qc_notes?: string | null
+          qc_status?: string
           release_number: number
           released_at?: string
           warehouse_id?: string | null
@@ -6908,6 +6928,10 @@ export type Database = {
           local_delivery_bdt?: number
           notes?: string | null
           po_id?: string
+          qc_at?: string | null
+          qc_by?: string | null
+          qc_notes?: string | null
+          qc_status?: string
           release_number?: number
           released_at?: string
           warehouse_id?: string | null
