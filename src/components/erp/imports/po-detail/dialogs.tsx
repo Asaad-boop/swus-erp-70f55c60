@@ -65,7 +65,7 @@ export function ArrivedDialog({ poId, onClose, brandId }: { poId: string; onClos
           <div className="border-t border-border pt-3">
             <div className="text-[11px] tracking-wider font-semibold text-muted-foreground mb-2">PAY SHIPPING NOW (OPTIONAL)</div>
             <div className="grid grid-cols-2 gap-3">
-              <div><Label>Amount</Label><Input type="number" step="0.01" value={amount} onChange={(e) => { setAmount(Number(e.target.value)); setPayNow(true); }} /></div>
+              <div><Label>Amount</Label><Input type="number" step="0.01" value={amount} onChange={(e) => { setAmount(Number(e.target.value)); setAmountTouched(true); setPayNow(true); }} /></div>
               <div>
                 <Label>From Wallet</Label>
                 <Select value={walletId} onValueChange={(v) => { setWalletId(v); setPayNow(true); }}>
