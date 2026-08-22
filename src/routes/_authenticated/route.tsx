@@ -5,6 +5,7 @@ import {
   useLocation,
   useNavigate,
 } from "@tanstack/react-router";
+import { useEffect, useRef } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { hasBackofficeAccess, isSuperRole, moduleForPath, resolveAccess } from "@/lib/erp/access";
@@ -76,7 +77,7 @@ function AuthGate() {
         : firstAllowedPage(pageMode === "custom" ? allowedPages : null);
     // Landing page itself blocked → send them to their first allowed page.
     if (path === "/erp" && fallback && fallback !== "/erp") {
-      return <Navigate to={fallback as never} replace />;
+      return <RedirectOnce to={fallback} />;
     }
     return (
       <div className="min-h-screen flex items-center justify-center p-6 bg-background">
