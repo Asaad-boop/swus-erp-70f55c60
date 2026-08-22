@@ -18,6 +18,7 @@ import { listWarehouses, releasePoQuantity } from "@/lib/erp/imports/imports.fun
 import { fmtBdt, netDue } from "@/lib/erp/imports/types";
 import { useAccounts } from "@/hooks/erp/use-finance-query";
 import { AccountCombobox } from "@/components/erp/finance/account-combobox";
+import { ReleaseHistory } from "./release-history";
 
 type Release = {
   id: string;
@@ -745,43 +746,8 @@ export function QuantityReleaseCard({
         </Card>
       )}
 
-      {releases.length > 0 && (
-        <Card className="overflow-hidden">
-          <div className="p-4 border-b border-border flex items-center justify-between">
-            <h3 className="font-semibold">Release history</h3>
-            <Badge variant="outline" className="text-[11px]">{releases.length}</Badge>
-          </div>
-          <div className="divide-y divide-border">
-            {releases.map((r) => {
-              const qty = (r.items ?? []).reduce((s, i) => s + Number(i.quantity ?? 0), 0);
-              const dmg = (r.items ?? []).reduce((s, i) => s + Number(i.damaged_qty ?? 0), 0);
-              const miss = (r.items ?? []).reduce((s, i) => s + Number(i.missing_qty ?? 0), 0);
-              const ld = Number(r.local_delivery_bdt ?? 0);
-              const value = (r.items ?? []).reduce((s, i) => s + Number(i.quantity ?? 0) * Number(i.unit_landed_cost_bdt ?? 0), 0);
-              return (
-                <div key={r.id} className="p-3 flex items-center gap-3 flex-wrap text-sm">
-                  <Badge variant="secondary" className="font-mono">#{r.release_number}</Badge>
-                  <span className="text-muted-foreground text-xs">{new Date(r.released_at).toLocaleString()}</span>
-                  <span className="tabular-nums font-medium">{qty} pcs</span>
-                  {dmg > 0 && <span className="text-xs text-orange-600 tabular-nums">{dmg} damaged</span>}
-                  {miss > 0 && <span className="text-xs text-red-600 tabular-nums">{miss} missing</span>}
-                  {ld > 0 && (
-                    <span className="text-xs text-sky-600 tabular-nums inline-flex items-center gap-1">
-                      <Truck className="h-3 w-3" />{fmtBdt(ld)}
-                    </span>
-                  )}
-                  <span className="ml-auto tabular-nums font-semibold">{fmtBdt(value)}</span>
-                  {(r.notes || r.delivery_note) && (
-                    <div className="w-full text-xs text-muted-foreground">
-                      {[r.notes, r.delivery_note].filter(Boolean).join(" · ")}
-                    </div>
-                  )}
-                </div>
-              );
-            })}
-          </div>
-        </Card>
-      )}
+      <ReleaseHistory poId={poId} releases={releases as any} items={items} />
+
 
       <Dialog open={confirmOpen} onOpenChange={(v) => !mut.isPending && setConfirmOpen(v)}>
         <DialogContent className="max-w-lg">
