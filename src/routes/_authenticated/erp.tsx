@@ -45,7 +45,7 @@ function ErpLayout() {
                 <SheetTrigger asChild>
                   <Button variant="ghost" size="icon"><MenuIcon className="h-5 w-5" /></Button>
                 </SheetTrigger>
-                <SheetContent side="left" className="p-0 w-60"><ErpSidebar /></SheetContent>
+                <SheetContent side="left" className="p-0 w-60 overflow-y-auto"><ErpSidebar mobile /></SheetContent>
               </Sheet>
               <span className="font-display font-semibold tracking-tight">ERP</span>
             </div>

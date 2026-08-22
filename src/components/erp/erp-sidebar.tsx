@@ -82,7 +82,7 @@ import { useMyAllowedPages } from "@/hooks/use-my-allowed-pages";
 const ACTIVE_GROUP_KEY = "sidebar_active_group";
 const FAV_KEY = "erp.sidebar.favs";
 
-export function ErpSidebar() {
+export function ErpSidebar({ mobile = false }: { mobile?: boolean } = {}) {
   const location = useLocation();
   const { openSearch } = useGlobalSearch();
   const [collapsed, setCollapsed] = useState<boolean>(false);
@@ -436,9 +436,10 @@ export function ErpSidebar() {
       <aside
         data-collapsed={collapsed}
         className={cn(
-          "hidden md:flex flex-col border-r border-border/70 bg-sidebar/95 backdrop-blur-xl h-screen sticky top-0 shrink-0",
+          "flex-col border-r border-border/70 bg-sidebar/95 backdrop-blur-xl h-screen sticky top-0 shrink-0",
+          mobile ? "flex w-full border-r-0" : "hidden md:flex",
           "transition-[width] duration-300 ease-[cubic-bezier(0.32,0.72,0,1)]",
-          collapsed ? "w-[64px]" : "w-60",
+          mobile ? "" : collapsed ? "w-[64px]" : "w-60",
         )}
       >
         {/* Brand header */}
