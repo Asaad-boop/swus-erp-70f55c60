@@ -1,10 +1,10 @@
 import {
   createFileRoute,
-  Navigate,
   Outlet,
   useLocation,
   useNavigate,
 } from "@tanstack/react-router";
+import { useEffect, useRef } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { hasBackofficeAccess, isSuperRole, moduleForPath, resolveAccess } from "@/lib/erp/access";
@@ -17,12 +17,27 @@ export const Route = createFileRoute("/_authenticated")({
   component: AuthGate,
 });
 
+/** Fires navigate exactly once, even if the component re-renders while the
+ *  navigation is still pending (a plain <Navigate> loops forever there). */
+function RedirectOnce({ to }: { to: string }) {
+  const navigate = useNavigate();
+  const done = useRef(false);
+  useEffect(() => {
+    if (done.current) return;
+    done.current = true;
+    void navigate({ to: to as never, replace: true });
+  }, [navigate, to]);
+  return <div className="min-h-screen bg-background" />;
+}
+
 function AuthGate() {
   const location = useLocation();
   const navigate = useNavigate();
   const access = useMyAccessProfile();
-  if (access.isLoading) return <div className="min-h-screen bg-background" />;
-  if (access.isError || !access.data?.userId) return <Navigate to="/auth" replace />;
+  if (access.hasSession === null || access.isLoading || (access.hasSession && access.isPending))
+    return <div className="min-h-screen bg-background" />;
+  if (access.hasSession === false || access.isError || !access.data?.userId)
+    return <RedirectOnce to="/auth" />;
 
   const { roles, allowedPages, pageMode } = access.data;
   const isAdmin = isSuperRole(roles);
@@ -61,7 +76,7 @@ function AuthGate() {
         : firstAllowedPage(pageMode === "custom" ? allowedPages : null);
     // Landing page itself blocked → send them to their first allowed page.
     if (path === "/erp" && fallback && fallback !== "/erp") {
-      return <Navigate to={fallback as never} replace />;
+      return <RedirectOnce to={fallback} />;
     }
     return (
       <div className="min-h-screen flex items-center justify-center p-6 bg-background">
