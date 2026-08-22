@@ -811,13 +811,27 @@ export function QuantityReleaseCard({
                 <span className="text-muted-foreground">Ekhon pay hocche</span>
                 <span className="font-semibold tabular-nums text-emerald-600">
                   {payNow && payWallet
-                    ? `${fmtBdt(Math.max(0, Number(payOverride ?? previewTotalDue.toFixed(2)) || 0))} — ${(wallets as any[]).find((w) => w.id === payWallet)?.name ?? ""}`
+                    ? `${fmtBdt(payAmount)} — ${selectedWallet?.name ?? ""}`
                     : "Pay later (due thakbe)"}
                 </span>
               </div>
+              {payNow && payWallet && (
+                <>
+                  <RowLine label="Wallet balance (por)" value={fmtBdt(walletBalance - payAmount)} />
+                  <RowLine
+                    label="Ei release-er baki due"
+                    value={fmtBdt(Math.max(0, previewTotalDue - payAmount))}
+                  />
+                </>
+              )}
             </div>
 
-            {payNow && previewTotalDue > 0 && !payWallet && (
+            {insufficient && (
+              <div className="text-xs text-red-600 inline-flex items-center gap-1.5">
+                <AlertTriangle className="h-3.5 w-3.5" /> Wallet balance er cheye payment beshi — tobuo continue kora jabe.
+              </div>
+            )}
+            {payBlocked && (
               <div className="text-xs text-orange-600 inline-flex items-center gap-1.5">
                 <AlertTriangle className="h-3.5 w-3.5" /> Wallet select korun, na hole "Pay later" e switch korun.
               </div>
@@ -828,8 +842,9 @@ export function QuantityReleaseCard({
             <Button variant="ghost" onClick={() => setConfirmOpen(false)} disabled={mut.isPending}>Cancel</Button>
             <Button
               onClick={() => mut.mutate()}
-              disabled={mut.isPending || draftTotal <= 0 || hasOverRelease || (payNow && previewTotalDue > 0 && !payWallet)}
+              disabled={mut.isPending || draftTotal <= 0 || hasOverRelease || payBlocked}
             >
+
               {mut.isPending
                 ? <><Loader2 className="h-4 w-4 mr-2 animate-spin" />Processing…</>
                 : <><PackageCheck className="h-4 w-4 mr-2" />Confirm & add to stock</>}
