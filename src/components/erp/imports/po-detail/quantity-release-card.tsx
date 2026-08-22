@@ -394,7 +394,14 @@ export function QuantityReleaseCard({
           </TableBody>
         </Table>
 
+        {draftTotal <= 0 && due > 0 && (
+          <div className="px-4 py-3 border-t border-border bg-orange-500/5 text-xs text-orange-700 dark:text-orange-300">
+            Upore quantity boshan — tarpor ei jaygay <b>payment option</b> (wallet + amount, Ekhon pay / Pay later) chole ashbe.
+          </div>
+        )}
+
         {draftTotal > 0 && (
+
           <div className="p-4 border-t border-border bg-orange-500/5 space-y-3">
             <div className="flex items-start justify-between gap-3 flex-wrap">
               <div>
