@@ -60,7 +60,7 @@ function AuthGate() {
         ? "/erp"
         : firstAllowedPage(pageMode === "custom" ? allowedPages : null);
     // Landing page itself blocked → send them to their first allowed page.
-    if (path !== fallback && (path === "/erp" || path === "/erp/")) {
+    if (path === "/erp" && fallback && fallback !== "/erp") {
       return <Navigate to={fallback as never} replace />;
     }
     return (
