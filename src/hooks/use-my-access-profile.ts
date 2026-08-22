@@ -24,7 +24,7 @@ export function useMyAccessProfile(enabled = true) {
     };
   }, []);
 
-  return useQuery({
+  const query = useQuery({
     queryKey: MY_ACCESS_QUERY_KEY,
     queryFn: () => getProfile(),
     enabled: enabled && hasSession === true,
@@ -33,4 +33,6 @@ export function useMyAccessProfile(enabled = true) {
     refetchInterval: 30_000,
     retry: false,
   });
+
+  return Object.assign(query, { hasSession });
 }
