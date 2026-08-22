@@ -94,17 +94,22 @@ export function PaymentDialog({ poId, brandId, grandTotal, dueAmount, onClose }:
 
 export function QtyArrivedDialog({
   poId, brandId, onClose,
-  initialWeight = 0, initialRate = 0, initialCustoms = 0, initialOther = 0,
+  initialWeight = 0, initialRate = 0, initialCustoms = 0, initialOther = 0, initialShippingTotal = 0,
 }: {
   poId: string; brandId: string; onClose: () => void;
   initialWeight?: number; initialRate?: number; initialCustoms?: number; initialOther?: number;
+  initialShippingTotal?: number;
 }) {
   const fn = useServerFn(receiveQuantityBd);
   const qc = useQueryClient();
   const { data: wallets = [] } = useAccounts([brandId]);
   const [weight, setWeight] = useState<number>(initialWeight);
   const [rate, setRate] = useState<number>(initialRate);
-  const [flat, setFlat] = useState<number>(0);
+  // Age flat shipping bill deoa thakle (weight × rate na thakleo) seta prefill hobe,
+  // na hole "Edit receiving bill" korle purono shipping 0 hoye muche jeto.
+  const [flat, setFlat] = useState<number>(
+    initialWeight > 0 && initialRate > 0 ? 0 : Number(initialShippingTotal) || 0,
+  );
   const [customs, setCustoms] = useState<number>(initialCustoms);
   const [other, setOther] = useState<number>(initialOther);
   const [payNow, setPayNow] = useState(false);
