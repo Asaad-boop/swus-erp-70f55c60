@@ -53,6 +53,16 @@ export function fmtBdt(n: number | string | null | undefined): string {
   return "৳" + v.toLocaleString("en-BD", { maximumFractionDigits: 2 });
 }
 
+/**
+ * FX/pro-rata rounding-e ৳0.01–0.99 residue thake — eta due na.
+ * UI-te "Pay Due ৳0.02" dekhano bondho korte ei helper use korun.
+ */
+export function netDue(n: number | string | null | undefined): number {
+  const v = Number(n ?? 0);
+  if (!isFinite(v)) return 0;
+  return Math.abs(v) < 1 ? 0 : v;
+}
+
 export function newIdemKey(prefix: string = "imp"): string {
   return `${prefix}_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 10)}`;
 }
