@@ -119,6 +119,8 @@ function PoDetailPage() {
   const deliveredPieces = cartons.filter((c) => c.status === "in_stock").reduce((s, c) => s + Number(c.expected_quantity || 0), 0);
   const deliveredPct = totalPieces > 0 ? Math.round((deliveredPieces / totalPieces) * 100) : 0;
   const paidPct = Number(po.grand_total_bdt) > 0 ? Math.round((Number(po.paid_bdt) / Number(po.grand_total_bdt)) * 100) : 0;
+  // FX/pro-rata rounding-e ৳0.01 residue thake — seta due hishebe dekhabo na
+  const dueAmt = netDue(po.due_bdt);
 
   const stageCounts = PIPELINE_STAGES.map((s) => {
     const list = cartons.filter((c) => c.status === s.key);
