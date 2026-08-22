@@ -171,8 +171,10 @@ export const getPurchaseOrderDetail = createServerFn({ method: "POST" })
       context.supabase.from("imp_po_releases").select(`
         id, release_number, warehouse_id, released_at, notes, created_at,
         local_delivery_bdt, delivery_note,
+        qc_status, qc_at, qc_notes,
         items:imp_po_release_items ( id, po_item_id, product_id, variant_id, sku_snapshot,
-          quantity, damaged_qty, missing_qty, unit_landed_cost_bdt )
+          quantity, damaged_qty, missing_qty, unit_landed_cost_bdt,
+          qc_good_qty, qc_damaged_qty, qc_extra_qty )
       `).eq("po_id", data.poId).order("release_number"),
     ]);
     if (poRes.error) throw poRes.error;
