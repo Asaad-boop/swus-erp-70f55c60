@@ -19,7 +19,7 @@ import {
   getPurchaseOrderDetail, updateCartonStage, deleteImportPo, setPoReceiveMode,
 } from "@/lib/erp/imports/imports.functions";
 import {
-  PO_STATUS_LABEL, fmtBdt, newIdemKey,
+  PO_STATUS_LABEL, fmtBdt, newIdemKey, netDue,
   type ImpPoStatus, type ImpCartonStatus,
 } from "@/lib/erp/imports/types";
 import { LandedCostCard } from "@/components/erp/imports/landed-cost-card";
@@ -119,6 +119,8 @@ function PoDetailPage() {
   const deliveredPieces = cartons.filter((c) => c.status === "in_stock").reduce((s, c) => s + Number(c.expected_quantity || 0), 0);
   const deliveredPct = totalPieces > 0 ? Math.round((deliveredPieces / totalPieces) * 100) : 0;
   const paidPct = Number(po.grand_total_bdt) > 0 ? Math.round((Number(po.paid_bdt) / Number(po.grand_total_bdt)) * 100) : 0;
+  // FX/pro-rata rounding-e ৳0.01 residue thake — seta due hishebe dekhabo na
+  const dueAmt = netDue(po.due_bdt);
 
   const stageCounts = PIPELINE_STAGES.map((s) => {
     const list = cartons.filter((c) => c.status === s.key);
@@ -169,12 +171,12 @@ function PoDetailPage() {
               <Pencil className="h-4 w-4 mr-1" />Edit PO
             </Button>
             <Button
-              variant={Number(po.due_bdt) > 0 ? "default" : "outline"}
-              className={Number(po.due_bdt) > 0 ? "bg-orange-600 hover:bg-orange-700 text-white" : ""}
+              variant={dueAmt > 0 ? "default" : "outline"}
+              className={dueAmt > 0 ? "bg-orange-600 hover:bg-orange-700 text-white" : ""}
               onClick={() => setPaymentOpen(true)}
             >
               <Wallet className="h-4 w-4 mr-1" />
-              {Number(po.due_bdt) > 0 ? `Pay Due ${fmtBdt(po.due_bdt)}` : "Record Payment"}
+              {dueAmt > 0 ? `Pay Due ${fmtBdt(dueAmt)}` : "Record Payment"}
             </Button>
             <Button variant="outline" className="text-destructive hover:text-destructive" onClick={() => setDeleteOpen(true)}>
               <Trash2 className="h-4 w-4 mr-1" />Delete PO
@@ -185,7 +187,7 @@ function PoDetailPage() {
         <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mt-5">
           <KpiTile icon="$" label="Grand Total" value={fmtBdt(po.grand_total_bdt)} />
           <KpiTile icon={<PackageCheck className="h-4 w-4 text-emerald-600" />} label="Paid" value={fmtBdt(po.paid_bdt)} valueClass="text-emerald-600" />
-          <KpiTile icon={<AlertTriangle className="h-4 w-4 text-orange-600" />} label="Due" value={fmtBdt(po.due_bdt)} valueClass="text-orange-600" />
+          <KpiTile icon={<AlertTriangle className="h-4 w-4 text-orange-600" />} label="Due" value={fmtBdt(dueAmt)} valueClass="text-orange-600" />
           <KpiTile
             icon={<CheckCircle2 className="h-4 w-4 text-blue-600" />}
             label={isQtyMode ? "Released" : "Delivered"}
@@ -243,15 +245,15 @@ function PoDetailPage() {
           <Mini label="SUBTOTAL" value={fmtBdt(po.product_subtotal_bdt)} />
           {Number(po.shipping_total_bdt) > 0 && <Mini label="SHIPPING CN→BD" value={fmtBdt(po.shipping_total_bdt)} />}
           {Number(po.local_courier_total_bdt) > 0 && <Mini label="LOCAL COURIER" value={fmtBdt(po.local_courier_total_bdt)} />}
-          {Number(po.due_bdt) > 0
-            ? <Mini label="OUTSTANDING DUE" value={fmtBdt(po.due_bdt)} valueClass="text-orange-600" />
+          {dueAmt > 0
+            ? <Mini label="OUTSTANDING DUE" value={fmtBdt(dueAmt)} valueClass="text-orange-600" />
             : <Mini label="OUTSTANDING DUE" value="Full paid ✓" valueClass="text-emerald-600" />}
         </div>
-        {Number(po.due_bdt) > 0 && (
+        {dueAmt > 0 && (
           <div className="mt-4 rounded-md border border-orange-300/70 dark:border-orange-900/50 bg-orange-50/60 dark:bg-orange-950/20 px-3 py-2.5 flex items-center gap-3 flex-wrap">
             <AlertTriangle className="h-4 w-4 text-orange-600 shrink-0" />
             <div className="flex-1 min-w-0 text-xs text-orange-800 dark:text-orange-200">
-              <span className="font-semibold">Outstanding due:</span> <span className="tabular-nums font-mono">{fmtBdt(po.due_bdt)}</span>
+              <span className="font-semibold">Outstanding due:</span> <span className="tabular-nums font-mono">{fmtBdt(dueAmt)}</span>
               {" — "}Carton "released without payment" hoyeche. Ekhon supplier ke pay korte parben.
             </div>
             <Button size="sm" className="bg-orange-600 hover:bg-orange-700 text-white" onClick={() => setPaymentOpen(true)}>
@@ -434,7 +436,7 @@ function PoDetailPage() {
               poNumber={po.po_number}
               poItems={items}
               brandId={brandId}
-              poDue={Number(po.due_bdt)}
+              poDue={dueAmt}
               poPaid={poPaidForRelease}
               poSupplierTotal={poSupplierTotal}
               onStage={(stage) => stageMut.mutate({ carton_id: c.id, new_stage: stage })}
@@ -515,6 +517,7 @@ function PoDetailPage() {
           initialRate={Number(po.shipping_rate_per_kg) || 0}
           initialCustoms={Number(po.customs_duty_bdt) || 0}
           initialOther={Number(po.other_charges_bdt) || 0}
+          initialShippingTotal={Number(po.shipping_total_bdt ?? po.shipping_cost_bdt) || 0}
         />
       )}
       {paymentOpen && brandId && (
@@ -522,7 +525,7 @@ function PoDetailPage() {
           poId={po.id}
           brandId={brandId}
           grandTotal={Number(po.grand_total_bdt) || 0}
-          dueAmount={Number(po.due_bdt) || 0}
+          dueAmount={dueAmt}
           onClose={() => setPaymentOpen(false)}
         />
       )}

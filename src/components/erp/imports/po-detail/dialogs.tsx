@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { toast } from "sonner";
@@ -25,11 +25,15 @@ export function ArrivedDialog({ poId, onClose, brandId }: { poId: string; onClos
   const [rate, setRate] = useState<number>(0);
   const [payNow, setPayNow] = useState(false);
   const [amount, setAmount] = useState<number>(0);
+  const [amountTouched, setAmountTouched] = useState(false);
   const [walletId, setWalletId] = useState("");
   const [ref, setRef] = useState("");
 
-  const total = weight * rate;
-  useMemo(() => { if (payNow && amount === 0) setAmount(total); /* eslint-disable-next-line */ }, [total, payNow]);
+  const total = +(weight * rate).toFixed(2);
+  // Amount user nije na likhle shipping total auto follow korbe (render-e setState kora jabe na)
+  useEffect(() => {
+    if (!amountTouched) setAmount(total);
+  }, [total, amountTouched]);
 
   const mut = useMutation({
     mutationFn: async () => {
@@ -61,7 +65,7 @@ export function ArrivedDialog({ poId, onClose, brandId }: { poId: string; onClos
           <div className="border-t border-border pt-3">
             <div className="text-[11px] tracking-wider font-semibold text-muted-foreground mb-2">PAY SHIPPING NOW (OPTIONAL)</div>
             <div className="grid grid-cols-2 gap-3">
-              <div><Label>Amount</Label><Input type="number" step="0.01" value={amount} onChange={(e) => { setAmount(Number(e.target.value)); setPayNow(true); }} /></div>
+              <div><Label>Amount</Label><Input type="number" step="0.01" value={amount} onChange={(e) => { setAmount(Number(e.target.value)); setAmountTouched(true); setPayNow(true); }} /></div>
               <div>
                 <Label>From Wallet</Label>
                 <Select value={walletId} onValueChange={(v) => { setWalletId(v); setPayNow(true); }}>
@@ -90,17 +94,22 @@ export function PaymentDialog({ poId, brandId, grandTotal, dueAmount, onClose }:
 
 export function QtyArrivedDialog({
   poId, brandId, onClose,
-  initialWeight = 0, initialRate = 0, initialCustoms = 0, initialOther = 0,
+  initialWeight = 0, initialRate = 0, initialCustoms = 0, initialOther = 0, initialShippingTotal = 0,
 }: {
   poId: string; brandId: string; onClose: () => void;
   initialWeight?: number; initialRate?: number; initialCustoms?: number; initialOther?: number;
+  initialShippingTotal?: number;
 }) {
   const fn = useServerFn(receiveQuantityBd);
   const qc = useQueryClient();
   const { data: wallets = [] } = useAccounts([brandId]);
   const [weight, setWeight] = useState<number>(initialWeight);
   const [rate, setRate] = useState<number>(initialRate);
-  const [flat, setFlat] = useState<number>(0);
+  // Age flat shipping bill deoa thakle (weight × rate na thakleo) seta prefill hobe,
+  // na hole "Edit receiving bill" korle purono shipping 0 hoye muche jeto.
+  const [flat, setFlat] = useState<number>(
+    initialWeight > 0 && initialRate > 0 ? 0 : Number(initialShippingTotal) || 0,
+  );
   const [customs, setCustoms] = useState<number>(initialCustoms);
   const [other, setOther] = useState<number>(initialOther);
   const [payNow, setPayNow] = useState(false);
@@ -174,7 +183,7 @@ export function QtyArrivedDialog({
         </div>
         <DialogFooter>
           <Button variant="ghost" onClick={onClose}>Cancel</Button>
-          <Button disabled={shipping < 0 || mut.isPending} onClick={() => mut.mutate()}>
+          <Button disabled={mut.isPending || (payNow && (!walletId || amount <= 0))} onClick={() => mut.mutate()}>
             {mut.isPending && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}Save
           </Button>
         </DialogFooter>

@@ -13,7 +13,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { listWarehouses, releasePoQuantity } from "@/lib/erp/imports/imports.functions";
-import { fmtBdt } from "@/lib/erp/imports/types";
+import { fmtBdt, netDue } from "@/lib/erp/imports/types";
 import { useAccounts } from "@/hooks/erp/use-finance-query";
 
 type Release = {
@@ -86,8 +86,25 @@ export function QuantityReleaseCard({
   }, [warehouses, warehouseId]);
 
   const getDraft = (id: string) => draft[id] ?? { qty: 0, damaged: 0, missing: 0 };
-  const setDraftFor = (id: string, patch: Partial<{ qty: number; damaged: number; missing: number }>) =>
+  const setDraftFor = (id: string, patch: Partial<{ qty: number; damaged: number; missing: number }>) => {
+    // Draft bodlale purono manual pay-amount ta stale hoye jay — reset kore din
+    setPayOverride(null);
     setDraft((d) => ({ ...d, [id]: { ...getDraft(id), ...patch } }));
+  };
+  /** qty + damaged + missing kokhono remaining ke charie jete parbe na */
+  const clampField = (
+    it: any,
+    field: "qty" | "damaged" | "missing",
+    raw: number,
+  ) => {
+    const ordered = Number(it.quantity ?? 0);
+    const remaining = Math.max(0, ordered - (releasedByItem.get(it.id) ?? 0));
+    const d = getDraft(it.id);
+    const others = (["qty", "damaged", "missing"] as const)
+      .filter((k) => k !== field)
+      .reduce((s, k) => s + Number(d[k] ?? 0), 0);
+    return Math.min(Math.max(0, remaining - others), Math.max(0, raw));
+  };
 
   const localDelivery = Math.max(0, Number(ldAmount) || 0);
 
@@ -169,7 +186,7 @@ export function QuantityReleaseCard({
 
   const grandTotal = Number(po?.grand_total_bdt ?? 0);
   const paid = Number(po?.paid_bdt ?? 0);
-  const due = Number(po?.due_bdt ?? 0);
+  const due = netDue(po?.due_bdt);
   const paidPct = grandTotal > 0 ? Math.round((paid / grandTotal) * 100) : 0;
 
   // Pro-rata due: joto pcs release hoyeche (+ ekhon hobe) toto tar baki purchase + shipping
@@ -241,6 +258,7 @@ export function QuantityReleaseCard({
       if (rem > 0) next[i.id] = { qty: rem, damaged: 0, missing: 0 };
     }
     setDraft(next);
+    setPayOverride(null);
   };
 
   return (
@@ -318,7 +336,7 @@ export function QuantityReleaseCard({
                       value={d.qty || ""}
                       placeholder="0"
                       disabled={remaining === 0}
-                      onChange={(e) => setDraftFor(it.id, { qty: Math.min(remaining, Math.max(0, Number(e.target.value) || 0)) })}
+                      onChange={(e) => setDraftFor(it.id, { qty: clampField(it, "qty", Number(e.target.value) || 0) })}
                     />
                   </TableCell>
                   <TableCell className="text-right">
@@ -328,7 +346,7 @@ export function QuantityReleaseCard({
                       value={d.damaged || ""}
                       placeholder="0"
                       disabled={remaining === 0}
-                      onChange={(e) => setDraftFor(it.id, { damaged: Math.min(remaining, Math.max(0, Number(e.target.value) || 0)) })}
+                      onChange={(e) => setDraftFor(it.id, { damaged: clampField(it, "damaged", Number(e.target.value) || 0) })}
                     />
                   </TableCell>
                   <TableCell className="text-right">
@@ -338,7 +356,7 @@ export function QuantityReleaseCard({
                       value={d.missing || ""}
                       placeholder="0"
                       disabled={remaining === 0}
-                      onChange={(e) => setDraftFor(it.id, { missing: Math.min(remaining, Math.max(0, Number(e.target.value) || 0)) })}
+                      onChange={(e) => setDraftFor(it.id, { missing: clampField(it, "missing", Number(e.target.value) || 0) })}
                     />
                   </TableCell>
                 </TableRow>
