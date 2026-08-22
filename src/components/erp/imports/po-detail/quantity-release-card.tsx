@@ -445,35 +445,59 @@ export function QuantityReleaseCard({
           )}
         </div>
 
-        {draftTotal > 0 && previewTotalDue > 0 && (
+        {draftTotal > 0 && (
           <div className="p-4 border-t border-border bg-orange-500/5 space-y-3">
-            <div className="flex items-center justify-between gap-3 flex-wrap">
-              <div className="text-sm font-medium inline-flex items-center gap-2">
-                <Wallet className="h-4 w-4 text-orange-600" />
-                Ei {draftTotal} pcs-er due — purchase {fmtBdt(previewGoodsDue)} + shipping {fmtBdt(previewShipDue)} ={" "}
-                <span className="text-orange-600 font-semibold tabular-nums">{fmtBdt(previewTotalDue)}</span>
+            <div className="flex items-start justify-between gap-3 flex-wrap">
+              <div>
+                <div className="text-sm font-medium inline-flex items-center gap-2">
+                  <Wallet className="h-4 w-4 text-orange-600" />
+                  Ei {draftTotal} pcs-er payment
+                </div>
+                <p className="text-[11px] text-muted-foreground mt-0.5">
+                  Purchase {fmtBdt(previewGoodsDue)} + shipping {fmtBdt(previewShipDue)} ={" "}
+                  <span className="text-orange-600 font-semibold tabular-nums">{fmtBdt(previewTotalDue)}</span>
+                  {localDelivery > 0 && <> · local delivery {fmtBdt(localDelivery)} alada</>}
+                </p>
               </div>
-              <Button
-                type="button"
-                size="sm"
-                variant={payNow ? "default" : "outline"}
-                onClick={() => setPayNow((v) => !v)}
-              >
-                {payNow ? "Pay with release ✓" : "Pay later"}
-              </Button>
+              <div className="inline-flex rounded-md border border-border overflow-hidden">
+                <button
+                  type="button"
+                  onClick={() => setPayNow(true)}
+                  className={`px-3 py-1.5 text-xs font-medium ${payNow ? "bg-emerald-600 text-white" : "bg-background text-muted-foreground"}`}
+                >
+                  Ekhon pay
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setPayNow(false)}
+                  className={`px-3 py-1.5 text-xs font-medium ${!payNow ? "bg-orange-600 text-white" : "bg-background text-muted-foreground"}`}
+                >
+                  Pay later
+                </button>
+              </div>
             </div>
-            {payNow && (
+
+            {previewTotalDue <= 0 ? (
+              <p className="text-xs text-emerald-700 dark:text-emerald-400">
+                Ei pcs-er purchase + shipping age thekei paid — kono payment lagbe na.
+              </p>
+            ) : payNow ? (
               <div className="grid md:grid-cols-2 gap-3">
                 <div>
                   <Label className="text-xs">Wallet / account</Label>
-                  <Select value={payWallet} onValueChange={setPayWallet}>
-                    <SelectTrigger className="h-9"><SelectValue placeholder="Select wallet" /></SelectTrigger>
-                    <SelectContent>
-                      {(wallets as any[]).filter((w) => w.is_active).map((w) => (
-                        <SelectItem key={w.id} value={w.id}>{w.name} ({fmtBdt(w.current_balance)})</SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+                  <AccountCombobox
+                    accounts={(wallets as any[]).filter((w) => w.is_active)}
+                    value={payWallet}
+                    onChange={setPayWallet}
+                    requiredAmount={payAmount}
+                    placeholder="Kon wallet theke taka jabe?"
+                  />
+                  {selectedWallet && (
+                    <p className={`text-[11px] mt-1 tabular-nums ${insufficient ? "text-red-600" : "text-muted-foreground"}`}>
+                      Balance {fmtBdt(walletBalance)} → payment er por {fmtBdt(walletBalance - payAmount)}
+                      {insufficient && " — balance kom!"}
+                    </p>
+                  )}
                 </div>
                 <div>
                   <Label className="text-xs">Pay amount (BDT)</Label>
@@ -482,14 +506,38 @@ export function QuantityReleaseCard({
                     value={payOverride ?? previewTotalDue.toFixed(2)}
                     onChange={(e) => setPayOverride(e.target.value)}
                   />
-                  <p className="text-[11px] text-muted-foreground mt-1">
-                    Kom dile purchase + shipping pro-rata bhabe adjust hobe, baki ta due thakbe.
+                  <div className="flex flex-wrap gap-1.5 mt-1.5">
+                    {[
+                      { k: "Full", v: previewTotalDue },
+                      { k: "Purchase only", v: previewGoodsDue },
+                      { k: "Shipping only", v: previewShipDue },
+                      { k: "Half", v: previewTotalDue / 2 },
+                    ].filter((c) => c.v > 0).map((c) => (
+                      <button
+                        key={c.k}
+                        type="button"
+                        onClick={() => setPayOverride(c.v.toFixed(2))}
+                        className="px-2 py-0.5 rounded border border-border text-[11px] hover:bg-muted"
+                      >
+                        {c.k} · {fmtBdt(c.v)}
+                      </button>
+                    ))}
+                  </div>
+                  <p className="text-[11px] text-muted-foreground mt-1 tabular-nums">
+                    {payAmount >= previewTotalDue - 0.5
+                      ? "Ei release-er due purapuri clear hobe ✓"
+                      : `Baki ${fmtBdt(Math.max(0, previewTotalDue - payAmount))} due thakbe — purchase/shipping pro-rata adjust hobe.`}
                   </p>
                 </div>
               </div>
+            ) : (
+              <p className="text-xs text-orange-700 dark:text-orange-300">
+                Ekhon taka katbe na — {fmtBdt(previewTotalDue)} PO-r due hishebe thakbe, pore "Supplier payment" theke dite parben.
+              </p>
             )}
           </div>
         )}
+
       </Card>
 
       {grandTotal > 0 && due > 0 && (
