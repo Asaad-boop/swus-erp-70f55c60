@@ -36,6 +36,19 @@ export function CartonReceiveDialog({
     return m;
   });
 
+  // Onno carton-er jonno dialog khulle purono carton-er quantity dekhacchilo — reset kore nin
+  useEffect(() => {
+    if (!open) return;
+    const m: Record<string, { received: number; damaged: number }> = {};
+    (carton?.items ?? []).forEach((it: any) => {
+      m[it.id] = {
+        received: Number(it.received_qty ?? it.quantity_expected ?? 0),
+        damaged: Number(it.damaged_qty ?? 0),
+      };
+    });
+    setRows(m);
+  }, [open, carton?.id, carton?.items]);
+
   const mut = useMutation({
     mutationFn: () => fn({
       data: {
