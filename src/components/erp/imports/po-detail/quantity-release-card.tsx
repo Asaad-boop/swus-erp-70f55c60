@@ -74,7 +74,9 @@ export function QuantityReleaseCard({
   const [payNow, setPayNow] = useState(true);
   const [payWallet, setPayWallet] = useState("");
   const [payOverride, setPayOverride] = useState<string | null>(null);
+  const [confirmOpen, setConfirmOpen] = useState(false);
   const { data: wallets = [] } = useAccounts(brandId ? [brandId] : []);
+
 
   // Ekta matro warehouse thakle (ba default thakle) auto select — protibar select korte hobe na
   useEffect(() => {
