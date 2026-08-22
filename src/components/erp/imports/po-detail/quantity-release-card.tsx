@@ -402,7 +402,7 @@ export function QuantityReleaseCard({
             </Button>
             <Button
               size="sm"
-              disabled={draftTotal <= 0 || hasOverRelease || mut.isPending || (payNow && previewTotalDue > 0 && !payWallet)}
+              disabled={draftTotal <= 0 || hasOverRelease || mut.isPending || payBlocked}
               onClick={() => setConfirmOpen(true)}
             >
               {mut.isPending ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <PackageCheck className="h-4 w-4 mr-2" />}
