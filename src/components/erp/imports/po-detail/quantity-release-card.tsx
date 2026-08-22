@@ -18,6 +18,7 @@ import { listWarehouses, releasePoQuantity } from "@/lib/erp/imports/imports.fun
 import { fmtBdt, netDue } from "@/lib/erp/imports/types";
 import { useAccounts } from "@/hooks/erp/use-finance-query";
 import { AccountCombobox } from "@/components/erp/finance/account-combobox";
+import { ReleaseHistory } from "./release-history";
 
 type Release = {
   id: string;
