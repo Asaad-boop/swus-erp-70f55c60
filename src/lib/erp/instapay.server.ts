@@ -478,19 +478,42 @@ export async function backfillInstapayInvoice(
   invoiceId: string,
   opts: { onlyZeroRows?: boolean } = {},
 ): Promise<AnyRec> {
-  const onlyZero = opts.onlyZeroRows !== false;
   const sourceName = `instapay:${invoiceId}`;
 
-  const { data: run } = await supabase
+  // Pathao can split one invoice across multiple webhook runs (the first rows
+  // arrive before the brand is resolved). Backfill every live run, otherwise
+  // the older run keeps showing ৳0 payout.
+  const { data: runs } = await supabase
     .from("erp_reconciliation_runs")
     .select("id, brand_id, status")
     .eq("courier", "pathao")
     .eq("source_filename", sourceName)
     .neq("status", "reverted")
-    .order("created_at", { ascending: false })
-    .limit(1)
-    .maybeSingle();
+    .order("created_at", { ascending: true });
+
+  const runList = (runs ?? []) as AnyRec[];
+  if (!runList.length) return { ok: false, invoiceId, reason: "run not found" };
+  if (runList.length === 1) return backfillInstapayRun(supabase, invoiceId, runList[0], opts);
+
+  const results = [] as AnyRec[];
+  for (const r of runList) results.push(await backfillInstapayRun(supabase, invoiceId, r, opts));
+  return {
+    ok: results.some((r) => r.ok),
+    invoiceId,
+    runs: results,
+    payout: +results.reduce((s, r) => s + num(r.payout ?? 0), 0).toFixed(2),
+  };
+}
+
+async function backfillInstapayRun(
+  supabase: AnyRec,
+  invoiceId: string,
+  run: AnyRec,
+  opts: { onlyZeroRows?: boolean } = {},
+): Promise<AnyRec> {
+  const onlyZero = opts.onlyZeroRows !== false;
   if (!run?.id) return { ok: false, invoiceId, reason: "run not found" };
+
 
   const { data: rows } = await supabase
     .from("erp_reconciliation_rows")
