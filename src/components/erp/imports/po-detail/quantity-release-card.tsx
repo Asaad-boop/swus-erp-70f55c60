@@ -429,14 +429,14 @@ export function QuantityReleaseCard({
             </div>
             <div>
               <Label className="text-xs">Pay from wallet (optional)</Label>
-              <Select value={ldWallet} onValueChange={setLdWallet}>
-                <SelectTrigger className="h-9"><SelectValue placeholder="Record only (pay later)" /></SelectTrigger>
-                <SelectContent>
-                  {(wallets as any[]).filter((w) => w.is_active).map((w) => (
-                    <SelectItem key={w.id} value={w.id}>{w.name} ({fmtBdt(w.current_balance)})</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              <AccountCombobox
+                accounts={(wallets as any[]).filter((w) => w.is_active)}
+                value={ldWallet}
+                onChange={setLdWallet}
+                requiredAmount={localDelivery}
+                placeholder="Record only (pay later)"
+              />
+
             </div>
             <div>
               <Label className="text-xs">Delivery note</Label>
