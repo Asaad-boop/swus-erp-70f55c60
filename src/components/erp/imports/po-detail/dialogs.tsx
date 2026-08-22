@@ -25,11 +25,15 @@ export function ArrivedDialog({ poId, onClose, brandId }: { poId: string; onClos
   const [rate, setRate] = useState<number>(0);
   const [payNow, setPayNow] = useState(false);
   const [amount, setAmount] = useState<number>(0);
+  const [amountTouched, setAmountTouched] = useState(false);
   const [walletId, setWalletId] = useState("");
   const [ref, setRef] = useState("");
 
-  const total = weight * rate;
-  useMemo(() => { if (payNow && amount === 0) setAmount(total); /* eslint-disable-next-line */ }, [total, payNow]);
+  const total = +(weight * rate).toFixed(2);
+  // Amount user nije na likhle shipping total auto follow korbe (render-e setState kora jabe na)
+  useEffect(() => {
+    if (!amountTouched) setAmount(total);
+  }, [total, amountTouched]);
 
   const mut = useMutation({
     mutationFn: async () => {
