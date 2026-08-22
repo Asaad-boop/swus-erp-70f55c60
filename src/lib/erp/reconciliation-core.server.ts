@@ -548,20 +548,28 @@ export async function applyReconRunCore(
         if (matchType === "return") {
           const { data: ship } = await supabase
             .from("courier_shipments")
-            .select("response_payload")
+            .select("status, response_payload")
             .eq("order_id", orderId)
             .order("updated_at", { ascending: false })
             .limit(1)
             .maybeSingle();
-          const apiStatus = String(
+          // `status` is the normalized column kept fresh by the webhook/sync;
+          // response_payload can be a stale snapshot from booking time, so
+          // consider both and let the strongest signal win.
+          const payloadStatus = String(
             (ship?.response_payload as { order_status?: string } | null)?.order_status ?? "",
           ).toLowerCase();
-          if (apiStatus.includes("deliver") && !apiStatus.includes("partial")) {
-            effectiveMatchType = "paid";
-          } else if (apiStatus.includes("partial")) {
-            effectiveMatchType = "partial";
+          const colStatus = String(ship?.status ?? "").toLowerCase();
+          const signals = [colStatus, payloadStatus].filter(Boolean);
+          const isReturned = signals.some((s) => s.includes("return"));
+          const isPartial = signals.some((s) => s.includes("partial"));
+          const isDelivered = signals.some((s) => s.includes("deliver") && !s.includes("partial"));
+          if (!isReturned) {
+            if (isPartial) effectiveMatchType = "partial";
+            else if (isDelivered) effectiveMatchType = "paid";
           }
         }
+
 
         // Update order — branch by match_type
         const orderUpdate: Record<string, unknown> = {
