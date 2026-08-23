@@ -42,14 +42,13 @@ export type WalletReconciliation = {
   };
 };
 
-const num = (v: unknown) => Number(v ?? 0) || 0;
-
 export const getWalletReconciliation = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
   .inputValidator((d) => z.object({ limit: z.number().int().min(20).max(500).optional() }).parse(d ?? {}))
   .handler(async ({ data, context }): Promise<WalletReconciliation> => {
     const { supabase } = context;
     const limit = data.limit ?? 200;
+    const num = (v: unknown) => Number(v ?? 0) || 0;
 
     // 1) InstaPay / Pathao COD wallets
     const { data: accts, error: accErr } = await supabase
@@ -172,4 +171,16 @@ export const getWalletReconciliation = createServerFn({ method: "GET" })
     totals.gap = Math.round((totals.expectedPayout - totals.postedPayout) * 100) / 100;
 
     return { accounts: accountRows, runs: runRows, totals };
+  });
+
+/** Post wallet settlements for InstaPay runs that have payout but no (or partial) posting. */
+export const settleMissingInstapayPostings = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .handler(async ({ context }) => {
+    const { supabase, userId } = context;
+    const { tryGetSupabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const { settleUnsettledInstapayRuns } = await import("./instapay-resync.server");
+    const sb = tryGetSupabaseAdmin() ?? supabase;
+    const posted = await settleUnsettledInstapayRuns(sb, userId);
+    return { posted };
   });
