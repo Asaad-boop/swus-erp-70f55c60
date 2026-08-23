@@ -352,6 +352,8 @@ export async function ingestPathaoPaymentInvoice(supabase: AnyRec, payload: AnyR
     .update({ status: "applied", applied_at: new Date().toISOString() })
     .eq("id", runId);
 
+  if (!runId) throw new Error("InstaPay run was not created");
+
   // A webhook invoice is assembled row-by-row. Re-settle the current run total
   // after every applied row; settleInvoiceTotalCore replaces the prior posting
   // for this run, so the wallet always matches the latest invoice total without
