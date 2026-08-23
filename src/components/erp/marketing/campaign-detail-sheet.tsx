@@ -62,6 +62,14 @@ export function CampaignDetailSheet({
                     <Package className="mr-1.5 h-3.5 w-3.5" />
                     Products
                   </TabsTrigger>
+                  <TabsTrigger value="bulk" className="text-xs">
+                    <Upload className="mr-1.5 h-3.5 w-3.5" />
+                    Bulk link
+                  </TabsTrigger>
+                  <TabsTrigger value="audit" className="text-xs">
+                    <ScanSearch className="mr-1.5 h-3.5 w-3.5" />
+                    Audit
+                  </TabsTrigger>
                   <TabsTrigger value="targets" className="text-xs">
                     <Target className="mr-1.5 h-3.5 w-3.5" />
                     Targets
@@ -69,6 +77,12 @@ export function CampaignDetailSheet({
                 </TabsList>
                 <TabsContent value="products" className="mt-3">
                   <ProductsTab campaign={row} from={from} to={to} />
+                </TabsContent>
+                <TabsContent value="bulk" className="mt-3">
+                  <BulkLinkTab campaign={row} />
+                </TabsContent>
+                <TabsContent value="audit" className="mt-3">
+                  <CampaignAuditTab campaign={row} from={from} to={to} />
                 </TabsContent>
                 <TabsContent value="targets" className="mt-3">
                   <TargetsTab row={row} onSaved={onClose} />
