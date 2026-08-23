@@ -1664,7 +1664,9 @@ export const qcPoRelease = createServerFn({ method: "POST" })
           _unit_cost: Number(ri.unit_landed_cost_bdt ?? 0),
           _reference_type: "imp_po_release_qc",
           _reference_id: data.release_id,
-          _idempotency_key: `imp_qc:${l.release_item_id}:${nextStocked}`,
+          // Key must be unique per applied correction, not per resulting total —
+          // otherwise editing back to a previously saved number no-ops the stock fix.
+          _idempotency_key: `imp_qc:${l.release_item_id}:${currentStocked}->${nextStocked}:${crypto.randomUUID()}`,
           _note: `Release #${(rel as any).release_number} QC — good ${l.good_qty}, damaged ${l.damaged_qty}, extra ${l.extra_qty}`,
         });
         if (aErr) throw aErr;
