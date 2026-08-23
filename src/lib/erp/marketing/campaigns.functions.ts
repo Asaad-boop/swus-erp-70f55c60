@@ -285,3 +285,336 @@ export const getCampaignProductCounts = createServerFn({ method: "POST" })
     for (const r of rows ?? []) out[(r as any).campaign_id] = (out[(r as any).campaign_id] ?? 0) + 1;
     return out;
   });
+
+/* ------------------------------------------------------------------ */
+/* Bulk product linking (SKU / CSV paste)                              */
+/* ------------------------------------------------------------------ */
+
+export type BulkLinkResult = {
+  linked: number;
+  matched: { sku: string; product_id: string; title: string }[];
+  alreadyLinked: string[];
+  notFound: string[];
+};
+
+export const bulkLinkCampaignProductsBySku = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d: unknown) =>
+    z
+      .object({
+        campaignId: z.string().uuid(),
+        raw: z.string().min(1).max(50_000),
+        weight: z.number().min(0).max(100).default(1),
+        dryRun: z.boolean().default(false),
+      })
+      .parse(d),
+  )
+  .handler(async ({ data, context }): Promise<BulkLinkResult> => {
+    const sb = context.supabase;
+
+    // Accept newline / comma / tab / semicolon separated. For CSV rows we take
+    // the first non-empty cell of each line (typical "sku,qty,note" exports).
+    const tokens = Array.from(
+      new Set(
+        data.raw
+          .split(/\r?\n/)
+          .flatMap((line) => {
+            const cells = line.split(/[,;\t]/).map((c) => c.trim().replace(/^"|"$/g, ""));
+            const first = cells.find((c) => c.length > 0);
+            return first ? [first] : [];
+          })
+          .map((s) => s.trim())
+          .filter((s) => s.length > 0 && !/^sku$/i.test(s)),
+      ),
+    ).slice(0, 500);
+
+    if (tokens.length === 0) return { linked: 0, matched: [], alreadyLinked: [], notFound: [] };
+
+    const { data: camp, error: cErr } = await sb
+      .from("mkt_campaigns")
+      .select("brand_id")
+      .eq("id", data.campaignId)
+      .maybeSingle();
+    if (cErr) throw cErr;
+    if (!camp?.brand_id)
+      throw new Error("Campaign-e brand assign kora nei — age brand assign korun.");
+
+    const { data: prods, error: pErr } = await sb
+      .from("products")
+      .select("id, title, sku")
+      .in("sku", tokens);
+    if (pErr) throw pErr;
+
+    // Fall back to variant SKUs for anything unmatched.
+    const bySku = new Map<string, { id: string; title: string }>();
+    for (const p of prods ?? [])
+      if ((p as any).sku) bySku.set(String((p as any).sku).toLowerCase(), { id: (p as any).id, title: (p as any).title });
+
+    const missing = tokens.filter((t) => !bySku.has(t.toLowerCase()));
+    if (missing.length > 0) {
+      const { data: vars, error: vErr } = await sb
+        .from("product_variants")
+        .select("sku, product_id, products(title)")
+        .in("sku", missing);
+      if (vErr) throw vErr;
+      for (const v of vars ?? []) {
+        const sku = String((v as any).sku ?? "").toLowerCase();
+        if (sku && !bySku.has(sku))
+          bySku.set(sku, {
+            id: (v as any).product_id,
+            title: ((v as any).products?.title as string) ?? "—",
+          });
+      }
+    }
+
+    const matched: BulkLinkResult["matched"] = [];
+    const notFound: string[] = [];
+    for (const t of tokens) {
+      const hit = bySku.get(t.toLowerCase());
+      if (hit) matched.push({ sku: t, product_id: hit.id, title: hit.title });
+      else notFound.push(t);
+    }
+
+    const { data: existing, error: eErr } = await sb
+      .from("mkt_campaign_products")
+      .select("product_id")
+      .eq("campaign_id", data.campaignId);
+    if (eErr) throw eErr;
+    const already = new Set((existing ?? []).map((r: any) => r.product_id as string));
+
+    const fresh = matched.filter((m) => !already.has(m.product_id));
+    const alreadyLinked = matched.filter((m) => already.has(m.product_id)).map((m) => m.sku);
+
+    if (!data.dryRun && fresh.length > 0) {
+      const rows = fresh.map((m) => ({
+        campaign_id: data.campaignId,
+        product_id: m.product_id,
+        brand_id: camp.brand_id,
+        weight: data.weight,
+      }));
+      const { error } = await sb
+        .from("mkt_campaign_products")
+        .upsert(rows as never, { onConflict: "campaign_id,product_id" });
+      if (error) throw error;
+    }
+
+    return { linked: data.dryRun ? 0 : fresh.length, matched, alreadyLinked, notFound };
+  });
+
+/* ------------------------------------------------------------------ */
+/* Automatic product match suggestions                                 */
+/* ------------------------------------------------------------------ */
+
+export type ProductMatchSuggestion = {
+  product_id: string;
+  title: string;
+  sku: string | null;
+  image: string | null;
+  qty: number;
+  orders: number;
+  revenue: number;
+  title_sim: number;
+  sku_hit: boolean;
+  reason: string;
+  score: number;
+};
+
+export const getProductMatchSuggestions = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d: unknown) =>
+    z
+      .object({
+        campaignId: z.string().uuid(),
+        from: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
+        to: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
+        limit: z.number().int().min(1).max(50).default(20),
+      })
+      .parse(d),
+  )
+  .handler(async ({ data, context }) => {
+    const { data: rows, error } = await context.supabase.rpc("mkt_product_match_suggestions", {
+      _campaign_id: data.campaignId,
+      _from: data.from,
+      _to: data.to,
+      _limit: data.limit,
+    } as never);
+    if (error) throw error;
+    return (Array.isArray(rows) ? rows : []) as ProductMatchSuggestion[];
+  });
+
+/* ------------------------------------------------------------------ */
+/* Attribution audit                                                    */
+/* ------------------------------------------------------------------ */
+
+export type AttributionPathStep = {
+  event_type: string;
+  at: string;
+  url: string | null;
+  referrer: string | null;
+  utm_campaign: string | null;
+  utm_source: string | null;
+};
+
+export type AttributionAuditRow = {
+  order_id: string;
+  invoice_no: string | null;
+  created_at: string;
+  status: string;
+  confirmation_status: string | null;
+  web_status: string | null;
+  order_source: string | null;
+  total: number;
+  customer_name: string | null;
+  phone: string | null;
+  outcome: "delivered" | "returned" | "cancelled" | "in_progress";
+  attr_source: string;
+  confidence: number;
+  campaign_id: string | null;
+  campaign_name: string | null;
+  adset_name: string | null;
+  ad_name: string | null;
+  utm_source: string | null;
+  utm_medium: string | null;
+  utm_campaign: string | null;
+  utm_content: string | null;
+  utm_term: string | null;
+  fbclid: string | null;
+  note: string | null;
+  match_rule: string;
+  products: { product_id: string | null; title: string; sku: string | null; qty: number }[];
+  path: AttributionPathStep[];
+  step_count: number;
+  first_touch: string | null;
+  last_touch: string | null;
+};
+
+export const getAttributionAudit = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d: unknown) =>
+    z
+      .object({
+        brandIds: z.array(z.string().uuid()).min(1),
+        from: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
+        to: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
+        campaignId: z.string().uuid().nullable().optional(),
+        outcome: z.enum(["all", "delivered", "returned", "cancelled", "in_progress"]).default("all"),
+        search: z.string().max(120).nullable().optional(),
+        limit: z.number().int().min(1).max(500).default(200),
+      })
+      .parse(d),
+  )
+  .handler(async ({ data, context }) => {
+    const { data: rows, error } = await context.supabase.rpc("mkt_attribution_audit", {
+      _brand_ids: data.brandIds,
+      _from: data.from,
+      _to: data.to,
+      _campaign_id: data.campaignId ?? null,
+      _outcome: data.outcome,
+      _search: data.search ?? null,
+      _limit: data.limit,
+    } as never);
+    if (error) throw error;
+    return (Array.isArray(rows) ? rows : []) as AttributionAuditRow[];
+  });
+
+/* ------------------------------------------------------------------ */
+/* Budget pacing                                                        */
+/* ------------------------------------------------------------------ */
+
+export type BudgetPacingRow = {
+  campaign_id: string;
+  name: string;
+  status: string;
+  daily_budget: number;
+  planned: number;
+  has_budget_row: boolean;
+  scaling_status: string | null;
+  spend: number;
+  expected_to_date: number;
+  pace_pct: number | null;
+  projected_spend: number;
+  remaining: number;
+  avg_daily_spend: number;
+  required_daily: number;
+  days_elapsed: number;
+  total_days: number;
+  orders: number;
+  delivered_orders: number;
+  revenue: number;
+  roas: number;
+  target_roas: number | null;
+  pace_state: "over" | "under" | "on_track" | "no_plan";
+};
+
+export const getBudgetPacing = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d: unknown) =>
+    z
+      .object({
+        brandIds: z.array(z.string().uuid()).min(1),
+        from: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
+        to: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
+      })
+      .parse(d),
+  )
+  .handler(async ({ data, context }) => {
+    const { data: rows, error } = await context.supabase.rpc("mkt_budget_pacing", {
+      _brand_ids: data.brandIds,
+      _from: data.from,
+      _to: data.to,
+    } as never);
+    if (error) throw error;
+    return (Array.isArray(rows) ? rows : []) as BudgetPacingRow[];
+  });
+
+export const upsertCampaignBudget = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d: unknown) =>
+    z
+      .object({
+        campaignId: z.string().uuid(),
+        periodStart: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
+        periodEnd: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
+        plannedSpend: z.number().min(0).max(100_000_000),
+        targetRoas: z.number().min(0).max(1000).nullable().optional(),
+      })
+      .parse(d),
+  )
+  .handler(async ({ data, context }) => {
+    const sb = context.supabase;
+    const { data: camp, error: cErr } = await sb
+      .from("mkt_campaigns")
+      .select("brand_id, name")
+      .eq("id", data.campaignId)
+      .maybeSingle();
+    if (cErr) throw cErr;
+    if (!camp?.brand_id) throw new Error("Campaign-e brand assign kora nei.");
+
+    const { data: existing, error: eErr } = await sb
+      .from("mkt_budgets")
+      .select("id")
+      .eq("campaign_id", data.campaignId)
+      .eq("period_start", data.periodStart)
+      .eq("period_end", data.periodEnd)
+      .maybeSingle();
+    if (eErr) throw eErr;
+
+    const payload = {
+      brand_id: camp.brand_id,
+      campaign_id: data.campaignId,
+      name: camp.name ?? "Campaign budget",
+      period_start: data.periodStart,
+      period_end: data.periodEnd,
+      planned_spend: data.plannedSpend,
+      target_roas: data.targetRoas ?? null,
+    } as never;
+
+    if (existing?.id) {
+      const { error } = await sb.from("mkt_budgets").update(payload).eq("id", existing.id);
+      if (error) throw error;
+    } else {
+      const { error } = await sb.from("mkt_budgets").insert(payload);
+      if (error) throw error;
+    }
+    return { ok: true };
+  });
