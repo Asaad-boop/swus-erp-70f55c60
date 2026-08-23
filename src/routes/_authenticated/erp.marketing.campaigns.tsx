@@ -678,80 +678,8 @@ function ChildRow({
   );
 }
 
-function TargetDialog({ row, onClose }: { row: MktNodeRow | null; onClose: () => void }) {
-  const qc = useQueryClient();
-  const save = useServerFn(setCampaignTargets);
-  const [roas, setRoas] = useState("");
-  const [cpa, setCpa] = useState("");
-  const [seeded, setSeeded] = useState<string | null>(null);
 
-  if (row && seeded !== row.id) {
-    setSeeded(row.id);
-    setRoas(row.target_roas == null ? "" : String(row.target_roas));
-    setCpa(row.target_cpa == null ? "" : String(row.target_cpa));
-  }
 
-  const m = useMutation({
-    mutationFn: () =>
-      save({
-        data: {
-          campaignId: row!.id,
-          targetRoas: roas.trim() === "" ? null : Number(roas),
-          targetCpa: cpa.trim() === "" ? null : Number(cpa),
-        },
-      }),
-    onSuccess: () => {
-      toast.success("Target save holo");
-      qc.invalidateQueries({ queryKey: ["mkt-level"] });
-      onClose();
-    },
-    onError: (e: any) => toast.error(e?.message ?? "Save fail"),
-  });
-
-  return (
-    <Dialog open={!!row} onOpenChange={(o) => !o && onClose()}>
-      <DialogContent className="sm:max-w-md">
-        <DialogHeader>
-          <DialogTitle className="text-sm">Target — {row?.name}</DialogTitle>
-        </DialogHeader>
-        <div className="grid grid-cols-2 gap-3">
-          <div className="space-y-1.5">
-            <Label className="text-xs">Target ROAS (x)</Label>
-            <Input
-              value={roas}
-              onChange={(e) => setRoas(e.target.value)}
-              inputMode="decimal"
-              placeholder="e.g. 3"
-            />
-            <p className="text-[10px] text-muted-foreground">
-              Actual: {row && row.roas > 0 ? `${row.roas.toFixed(2)}x` : "—"}
-            </p>
-          </div>
-          <div className="space-y-1.5">
-            <Label className="text-xs">Target CPA (৳)</Label>
-            <Input
-              value={cpa}
-              onChange={(e) => setCpa(e.target.value)}
-              inputMode="decimal"
-              placeholder="e.g. 350"
-            />
-            <p className="text-[10px] text-muted-foreground">
-              Actual CAC: {row && row.cac > 0 ? bdt(row.cac) : "—"}
-            </p>
-          </div>
-        </div>
-        <DialogFooter>
-          <Button variant="outline" size="sm" onClick={onClose}>
-            Cancel
-          </Button>
-          <Button size="sm" onClick={() => m.mutate()} disabled={m.isPending}>
-            Save
-          </Button>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
-  );
-}
 
 function UnassignedPanel({ brands }: { brands: { id: string; name: string }[] }) {
   const qc = useQueryClient();
