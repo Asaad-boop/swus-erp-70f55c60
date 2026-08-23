@@ -486,9 +486,18 @@ function CampaignRow({
             )}
             <span className="font-medium truncate max-w-[280px]">{row.name}</span>
           </button>
-          {row.objective && (
-            <div className="text-[10px] text-muted-foreground pl-5">{row.objective}</div>
-          )}
+          <div className="flex items-center gap-1.5 pl-5">
+            {row.objective && (
+              <span className="text-[10px] text-muted-foreground">{row.objective}</span>
+            )}
+            <Badge
+              variant="outline"
+              className={`h-4 gap-1 px-1.5 text-[10px] font-normal ${productCount > 0 ? "border-primary/30 text-primary" : "text-muted-foreground"}`}
+            >
+              <Package className="h-2.5 w-2.5" />
+              {productCount > 0 ? `${productCount} product` : "no product"}
+            </Badge>
+          </div>
         </td>
         <td className="px-3 py-2 text-right">
           <Badge variant="outline" className={`font-normal ${statusTone(row.status)}`}>
