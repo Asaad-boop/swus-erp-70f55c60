@@ -12503,6 +12503,18 @@ export type Database = {
         Args: { _brand_ids: string[]; _from: string; _to: string }
         Returns: Json
       }
+      mkt_attribution_audit: {
+        Args: {
+          _brand_ids: string[]
+          _campaign_id?: string
+          _from: string
+          _limit?: number
+          _outcome?: string
+          _search?: string
+          _to: string
+        }
+        Returns: Json
+      }
       mkt_attribution_explorer: {
         Args: {
           p_brand_id: string
@@ -12549,6 +12561,10 @@ export type Database = {
           suggested_campaign_id: string
           suggested_campaign_name: string
         }[]
+      }
+      mkt_budget_pacing: {
+        Args: { _brand_ids: string[]; _from: string; _to: string }
+        Returns: Json
       }
       mkt_budget_status: {
         Args: { _brand_ids: string[]; _from: string; _to: string }
@@ -12830,6 +12846,15 @@ export type Database = {
           returned_units: number
           units_sold: number
         }[]
+      }
+      mkt_product_match_suggestions: {
+        Args: {
+          _campaign_id: string
+          _from: string
+          _limit?: number
+          _to: string
+        }
+        Returns: Json
       }
       mkt_product_perf: {
         Args: { _brand_ids: string[]; _from: string; _to: string }

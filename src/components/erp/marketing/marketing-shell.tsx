@@ -5,6 +5,7 @@ import {
   Target,
   Image as ImageIcon,
   GitBranch,
+  ScanSearch,
   PackagePlus,
   CalendarClock,
   BellRing,
@@ -46,6 +47,12 @@ export const MARKETING_NAV: MarketingNavItem[] = [
     label: "Attribution & Funnel",
     short: "Attribution",
     icon: GitBranch,
+  },
+  {
+    to: "/erp/marketing/audit",
+    label: "Attribution Audit",
+    short: "Audit",
+    icon: ScanSearch,
   },
   { to: "/erp/marketing/products", label: "Product & LTV", short: "Products", icon: PackagePlus },
   {
