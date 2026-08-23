@@ -1,5 +1,5 @@
 import { createFileRoute, Link, Outlet, useLocation } from "@tanstack/react-router";
-import { LayoutDashboard, FileSpreadsheet, Clock, AlertCircle, Settings2 } from "lucide-react";
+import { LayoutDashboard, FileSpreadsheet, Clock, AlertCircle, Settings2, Wallet } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 export const Route = createFileRoute("/_authenticated/erp/reconciliation")({
@@ -12,6 +12,7 @@ const tabs = [
   { to: "/erp/reconciliation/pending", label: "Pending COD", icon: Clock, exact: false },
   { to: "/erp/reconciliation/outstanding", label: "Outstanding", icon: AlertCircle, exact: false },
   { to: "/erp/reconciliation/invoice", label: "Invoice Upload", icon: FileSpreadsheet, exact: false },
+  { to: "/erp/reconciliation/wallets", label: "Wallet Recon", icon: Wallet, exact: false },
   { to: "/erp/reconciliation/settings", label: "Settings", icon: Settings2, exact: false },
 ] as const;
 
