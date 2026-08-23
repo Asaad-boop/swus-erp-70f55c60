@@ -129,14 +129,141 @@ export const getCampaignProducts = createServerFn({ method: "POST" })
   .handler(async ({ data, context }) => {
     const { data: rows, error } = await context.supabase
       .from("mkt_campaign_products")
-      .select("id, product_id, weight, products(title, sku)")
+      .select("id, product_id, weight, note, products(title, sku, image)")
       .eq("campaign_id", data.campaignId);
     if (error) throw error;
     return (rows ?? []).map((r: any) => ({
       id: r.id as string,
       product_id: r.product_id as string,
       weight: Number(r.weight ?? 1),
+      note: (r.note as string) ?? null,
       title: (r.products?.title as string) ?? "—",
       sku: (r.products?.sku as string) ?? null,
+      image: (r.products?.image as string) ?? null,
     }));
   });
+
+export type CampaignProductPerf = {
+  product_id: string;
+  title: string;
+  sku: string | null;
+  image: string | null;
+  orders: number;
+  qty: number;
+  delivered_orders: number;
+  delivered_qty: number;
+  revenue: number;
+  booked_revenue: number;
+  cogs: number;
+  gross_profit: number;
+  linked: boolean;
+  weight: number;
+};
+
+/** Products that actually sold through this campaign's attributed orders. */
+export const getCampaignProductPerf = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d: unknown) =>
+    z
+      .object({
+        campaignId: z.string().uuid(),
+        from: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
+        to: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
+      })
+      .parse(d),
+  )
+  .handler(async ({ data, context }) => {
+    const { data: rows, error } = await context.supabase.rpc("mkt_campaign_product_perf", {
+      _campaign_id: data.campaignId,
+      _from: data.from,
+      _to: data.to,
+    } as never);
+    if (error) throw error;
+    return (Array.isArray(rows) ? rows : []) as CampaignProductPerf[];
+  });
+
+export const searchProductsForCampaign = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d: unknown) => z.object({ q: z.string().max(120) }).parse(d))
+  .handler(async ({ data, context }) => {
+    const term = data.q.trim();
+    let query = context.supabase
+      .from("products")
+      .select("id, title, sku, image")
+      .order("created_at", { ascending: false })
+      .limit(25);
+    if (term) query = query.or(`title.ilike.%${term}%,sku.ilike.%${term}%`);
+    const { data: rows, error } = await query;
+    if (error) throw error;
+    return (rows ?? []) as { id: string; title: string; sku: string | null; image: string | null }[];
+  });
+
+export const linkCampaignProducts = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d: unknown) =>
+    z
+      .object({
+        campaignId: z.string().uuid(),
+        productIds: z.array(z.string().uuid()).min(1).max(100),
+        weight: z.number().min(0).max(100).default(1),
+      })
+      .parse(d),
+  )
+  .handler(async ({ data, context }) => {
+    const sb = context.supabase;
+    const { data: camp, error: cErr } = await sb
+      .from("mkt_campaigns")
+      .select("brand_id")
+      .eq("id", data.campaignId)
+      .maybeSingle();
+    if (cErr) throw cErr;
+    if (!camp?.brand_id) throw new Error("Campaign-e brand assign kora nei — age brand assign korun.");
+    const rows = data.productIds.map((pid) => ({
+      campaign_id: data.campaignId,
+      product_id: pid,
+      brand_id: camp.brand_id,
+      weight: data.weight,
+    }));
+    const { error } = await sb
+      .from("mkt_campaign_products")
+      .upsert(rows as never, { onConflict: "campaign_id,product_id" });
+    if (error) throw error;
+    return { ok: true, count: rows.length };
+  });
+
+export const unlinkCampaignProduct = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d: unknown) =>
+    z.object({ campaignId: z.string().uuid(), productId: z.string().uuid() }).parse(d),
+  )
+  .handler(async ({ data, context }) => {
+    const { error } = await context.supabase
+      .from("mkt_campaign_products")
+      .delete()
+      .eq("campaign_id", data.campaignId)
+      .eq("product_id", data.productId);
+    if (error) throw error;
+    return { ok: true };
+  });
+
+export const setCampaignProductWeight = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d: unknown) =>
+    z
+      .object({
+        campaignId: z.string().uuid(),
+        productId: z.string().uuid(),
+        weight: z.number().min(0).max(100),
+      })
+      .parse(d),
+  )
+  .handler(async ({ data, context }) => {
+    const { error } = await context.supabase
+      .from("mkt_campaign_products")
+      .update({ weight: data.weight } as never)
+      .eq("campaign_id", data.campaignId)
+      .eq("product_id", data.productId);
+    if (error) throw error;
+    return { ok: true };
+  });
+
