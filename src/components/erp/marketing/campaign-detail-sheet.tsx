@@ -2,13 +2,24 @@ import { useMemo, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { toast } from "sonner";
-import { Link2, Plus, Search, Trash2, Sparkles, Package, Target } from "lucide-react";
+import {
+  Link2,
+  Plus,
+  Search,
+  Trash2,
+  Sparkles,
+  Package,
+  Target,
+  Upload,
+  ScanSearch,
+} from "lucide-react";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
   getCampaignProducts,
@@ -18,6 +29,10 @@ import {
   unlinkCampaignProduct,
   setCampaignProductWeight,
   setCampaignTargets,
+  bulkLinkCampaignProductsBySku,
+  getProductMatchSuggestions,
+  getAttributionAudit,
+  type BulkLinkResult,
   type MktNodeRow,
 } from "@/lib/erp/marketing/campaigns.functions";
 
