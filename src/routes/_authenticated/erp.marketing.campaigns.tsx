@@ -461,6 +461,7 @@ function CampaignRow({
   row,
   brandIds,
   range,
+  productCount,
   open,
   onToggle,
   onEdit,
@@ -468,6 +469,7 @@ function CampaignRow({
   row: MktNodeRow;
   brandIds: string[];
   range: MktRangeValue;
+  productCount: number;
   open: boolean;
   onToggle: () => void;
   onEdit: () => void;
