@@ -267,3 +267,21 @@ export const setCampaignProductWeight = createServerFn({ method: "POST" })
     return { ok: true };
   });
 
+
+/** Linked product counts for a set of campaigns (row badges). */
+export const getCampaignProductCounts = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d: unknown) =>
+    z.object({ campaignIds: z.array(z.string().uuid()).max(500) }).parse(d),
+  )
+  .handler(async ({ data, context }) => {
+    if (data.campaignIds.length === 0) return {} as Record<string, number>;
+    const { data: rows, error } = await context.supabase
+      .from("mkt_campaign_products")
+      .select("campaign_id")
+      .in("campaign_id", data.campaignIds);
+    if (error) throw error;
+    const out: Record<string, number> = {};
+    for (const r of rows ?? []) out[(r as any).campaign_id] = (out[(r as any).campaign_id] ?? 0) + 1;
+    return out;
+  });
