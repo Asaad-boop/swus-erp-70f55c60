@@ -639,5 +639,20 @@ async function backfillInstapayRun(
     .eq("id", run.id);
   await recountRun(supabase, run.id);
 
-  return { ok: true, invoiceId, runId: run.id, rows: list.length, updated, applied, payout: +payoutSum.toFixed(2), errors };
+  // The wallet settlement was skipped while the payout was still 0, so post it
+  // now that the invoice carries real amounts. Idempotent (keyed on run id).
+  let settled = false;
+  let settleReason: string | undefined;
+  try {
+    const { settleInvoiceTotalCore } = await import("./reconciliation-core.server");
+    const s = await settleInvoiceTotalCore(supabase, null, { runId: run.id });
+    settled = s.posted;
+    settleReason = s.reason;
+  } catch (e) {
+    settleReason = (e as Error).message;
+    errors.push(`settle: ${settleReason}`);
+  }
+
+  return { ok: true, invoiceId, runId: run.id, rows: list.length, updated, applied, payout: +payoutSum.toFixed(2), settled, settleReason, errors };
 }
+
