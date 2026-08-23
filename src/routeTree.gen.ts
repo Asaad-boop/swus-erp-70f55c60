@@ -73,6 +73,7 @@ import { Route as ApiPublicCatalogBrandSlugRouteImport } from './routes/api/publ
 import { Route as AuthenticatedErpStocktakeNewRouteImport } from './routes/_authenticated/erp.stocktake.new'
 import { Route as AuthenticatedErpStocktakeSessionIdRouteImport } from './routes/_authenticated/erp.stocktake.$sessionId'
 import { Route as AuthenticatedErpReturnsCaseIdRouteImport } from './routes/_authenticated/erp.returns.$caseId'
+import { Route as AuthenticatedErpReconciliationWalletsRouteImport } from './routes/_authenticated/erp.reconciliation.wallets'
 import { Route as AuthenticatedErpReconciliationSettingsRouteImport } from './routes/_authenticated/erp.reconciliation.settings'
 import { Route as AuthenticatedErpReconciliationPendingRouteImport } from './routes/_authenticated/erp.reconciliation.pending'
 import { Route as AuthenticatedErpReconciliationOutstandingRouteImport } from './routes/_authenticated/erp.reconciliation.outstanding'
@@ -501,6 +502,12 @@ const AuthenticatedErpReturnsCaseIdRoute =
     id: '/$caseId',
     path: '/$caseId',
     getParentRoute: () => AuthenticatedErpReturnsRoute,
+  } as any)
+const AuthenticatedErpReconciliationWalletsRoute =
+  AuthenticatedErpReconciliationWalletsRouteImport.update({
+    id: '/wallets',
+    path: '/wallets',
+    getParentRoute: () => AuthenticatedErpReconciliationRoute,
   } as any)
 const AuthenticatedErpReconciliationSettingsRoute =
   AuthenticatedErpReconciliationSettingsRouteImport.update({
@@ -1003,6 +1010,7 @@ export interface FileRoutesByFullPath {
   '/erp/reconciliation/outstanding': typeof AuthenticatedErpReconciliationOutstandingRoute
   '/erp/reconciliation/pending': typeof AuthenticatedErpReconciliationPendingRoute
   '/erp/reconciliation/settings': typeof AuthenticatedErpReconciliationSettingsRoute
+  '/erp/reconciliation/wallets': typeof AuthenticatedErpReconciliationWalletsRoute
   '/erp/returns/$caseId': typeof AuthenticatedErpReturnsCaseIdRoute
   '/erp/stocktake/$sessionId': typeof AuthenticatedErpStocktakeSessionIdRoute
   '/erp/stocktake/new': typeof AuthenticatedErpStocktakeNewRoute
@@ -1125,6 +1133,7 @@ export interface FileRoutesByTo {
   '/erp/reconciliation/outstanding': typeof AuthenticatedErpReconciliationOutstandingRoute
   '/erp/reconciliation/pending': typeof AuthenticatedErpReconciliationPendingRoute
   '/erp/reconciliation/settings': typeof AuthenticatedErpReconciliationSettingsRoute
+  '/erp/reconciliation/wallets': typeof AuthenticatedErpReconciliationWalletsRoute
   '/erp/returns/$caseId': typeof AuthenticatedErpReturnsCaseIdRoute
   '/erp/stocktake/$sessionId': typeof AuthenticatedErpStocktakeSessionIdRoute
   '/erp/stocktake/new': typeof AuthenticatedErpStocktakeNewRoute
@@ -1259,6 +1268,7 @@ export interface FileRoutesById {
   '/_authenticated/erp/reconciliation/outstanding': typeof AuthenticatedErpReconciliationOutstandingRoute
   '/_authenticated/erp/reconciliation/pending': typeof AuthenticatedErpReconciliationPendingRoute
   '/_authenticated/erp/reconciliation/settings': typeof AuthenticatedErpReconciliationSettingsRoute
+  '/_authenticated/erp/reconciliation/wallets': typeof AuthenticatedErpReconciliationWalletsRoute
   '/_authenticated/erp/returns/$caseId': typeof AuthenticatedErpReturnsCaseIdRoute
   '/_authenticated/erp/stocktake/$sessionId': typeof AuthenticatedErpStocktakeSessionIdRoute
   '/_authenticated/erp/stocktake/new': typeof AuthenticatedErpStocktakeNewRoute
@@ -1393,6 +1403,7 @@ export interface FileRouteTypes {
     | '/erp/reconciliation/outstanding'
     | '/erp/reconciliation/pending'
     | '/erp/reconciliation/settings'
+    | '/erp/reconciliation/wallets'
     | '/erp/returns/$caseId'
     | '/erp/stocktake/$sessionId'
     | '/erp/stocktake/new'
@@ -1515,6 +1526,7 @@ export interface FileRouteTypes {
     | '/erp/reconciliation/outstanding'
     | '/erp/reconciliation/pending'
     | '/erp/reconciliation/settings'
+    | '/erp/reconciliation/wallets'
     | '/erp/returns/$caseId'
     | '/erp/stocktake/$sessionId'
     | '/erp/stocktake/new'
@@ -1648,6 +1660,7 @@ export interface FileRouteTypes {
     | '/_authenticated/erp/reconciliation/outstanding'
     | '/_authenticated/erp/reconciliation/pending'
     | '/_authenticated/erp/reconciliation/settings'
+    | '/_authenticated/erp/reconciliation/wallets'
     | '/_authenticated/erp/returns/$caseId'
     | '/_authenticated/erp/stocktake/$sessionId'
     | '/_authenticated/erp/stocktake/new'
@@ -2155,6 +2168,13 @@ declare module '@tanstack/react-router' {
       fullPath: '/erp/returns/$caseId'
       preLoaderRoute: typeof AuthenticatedErpReturnsCaseIdRouteImport
       parentRoute: typeof AuthenticatedErpReturnsRoute
+    }
+    '/_authenticated/erp/reconciliation/wallets': {
+      id: '/_authenticated/erp/reconciliation/wallets'
+      path: '/wallets'
+      fullPath: '/erp/reconciliation/wallets'
+      preLoaderRoute: typeof AuthenticatedErpReconciliationWalletsRouteImport
+      parentRoute: typeof AuthenticatedErpReconciliationRoute
     }
     '/_authenticated/erp/reconciliation/settings': {
       id: '/_authenticated/erp/reconciliation/settings'
@@ -2858,6 +2878,7 @@ interface AuthenticatedErpReconciliationRouteChildren {
   AuthenticatedErpReconciliationOutstandingRoute: typeof AuthenticatedErpReconciliationOutstandingRoute
   AuthenticatedErpReconciliationPendingRoute: typeof AuthenticatedErpReconciliationPendingRoute
   AuthenticatedErpReconciliationSettingsRoute: typeof AuthenticatedErpReconciliationSettingsRoute
+  AuthenticatedErpReconciliationWalletsRoute: typeof AuthenticatedErpReconciliationWalletsRoute
   AuthenticatedErpReconciliationIndexRoute: typeof AuthenticatedErpReconciliationIndexRoute
 }
 
@@ -2871,6 +2892,8 @@ const AuthenticatedErpReconciliationRouteChildren: AuthenticatedErpReconciliatio
       AuthenticatedErpReconciliationPendingRoute,
     AuthenticatedErpReconciliationSettingsRoute:
       AuthenticatedErpReconciliationSettingsRoute,
+    AuthenticatedErpReconciliationWalletsRoute:
+      AuthenticatedErpReconciliationWalletsRoute,
     AuthenticatedErpReconciliationIndexRoute:
       AuthenticatedErpReconciliationIndexRoute,
   }
