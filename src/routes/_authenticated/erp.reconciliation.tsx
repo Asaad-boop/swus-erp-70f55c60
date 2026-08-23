@@ -1,5 +1,5 @@
 import { createFileRoute, Link, Outlet, useLocation } from "@tanstack/react-router";
-import { LayoutDashboard, FileSpreadsheet, Clock, AlertCircle, Settings2 } from "lucide-react";
+import { LayoutDashboard, FileSpreadsheet, Clock, AlertCircle, Settings2, Wallet } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 export const Route = createFileRoute("/_authenticated/erp/reconciliation")({
