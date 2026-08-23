@@ -7,25 +7,19 @@ import {
   ChevronRight,
   ChevronDown,
   RefreshCcw,
-  Target,
   Search,
   AlertTriangle,
+  Download,
+  Package,
+  ArrowUpDown,
   Target as PageIcon,
 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Skeleton } from "@/components/ui/skeleton";
-import {
-  Dialog,
-  DialogContent,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
 import {
   Select,
   SelectContent,
@@ -35,6 +29,7 @@ import {
 } from "@/components/ui/select";
 import { useBrand } from "@/contexts/brand-context";
 import { BrandTabs } from "@/components/erp/marketing/marketing-shell";
+import { CampaignDetailSheet } from "@/components/erp/marketing/campaign-detail-sheet";
 import {
   DateRangePicker,
   buildPreset,
@@ -42,11 +37,12 @@ import {
 } from "@/components/erp/marketing/date-range-picker";
 import {
   getMktLevel,
-  setCampaignTargets,
   listUnassignedCampaigns,
   assignCampaignsToBrand,
+  getCampaignProductCounts,
   type MktNodeRow,
 } from "@/lib/erp/marketing/campaigns.functions";
+
 
 export const Route = createFileRoute("/_authenticated/erp/marketing/campaigns")({
   head: () => ({
