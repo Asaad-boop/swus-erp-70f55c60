@@ -520,8 +520,8 @@ function CampaignRow({
           <TargetBadge row={row} />
         </td>
         <td className="px-3 py-2 text-right">
-          <Button size="sm" variant="ghost" className="h-7 px-2" onClick={onEdit}>
-            <Target className="h-3.5 w-3.5" />
+          <Button size="sm" variant="ghost" className="h-7 px-2 text-[11px]" onClick={onEdit}>
+            Open
           </Button>
         </td>
       </tr>
