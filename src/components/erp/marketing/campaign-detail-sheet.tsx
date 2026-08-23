@@ -443,3 +443,243 @@ function TargetsTab({ row, onSaved }: { row: MktNodeRow; onSaved: () => void }) 
     </div>
   );
 }
+
+/* ------------------------------------------------------------------ */
+/* Bulk link + smart suggestions                                        */
+/* ------------------------------------------------------------------ */
+
+function BulkLinkTab({ campaign }: { campaign: MktNodeRow }) {
+  const qc = useQueryClient();
+  const [raw, setRaw] = useState("");
+  const [result, setResult] = useState<BulkLinkResult | null>(null);
+  const bulk = useServerFn(bulkLinkCampaignProductsBySku);
+  const linkFn = useServerFn(linkCampaignProducts);
+  const suggestFn = useServerFn(getProductMatchSuggestions);
+
+  const today = new Date().toISOString().slice(0, 10);
+  const from = new Date(Date.now() - 89 * 86400_000).toISOString().slice(0, 10);
+
+  const suggestions = useQuery({
+    queryKey: ["mkt-match-suggest", campaign.id, from, today],
+    queryFn: () => suggestFn({ data: { campaignId: campaign.id, from, to: today, limit: 20 } }),
+    staleTime: 300_000,
+    refetchOnWindowFocus: false,
+  });
+
+  const run = useMutation({
+    mutationFn: (dryRun: boolean) =>
+      bulk({ data: { campaignId: campaign.id, raw, weight: 1, dryRun } }),
+    onSuccess: (r, dryRun) => {
+      setResult(r);
+      if (!dryRun) {
+        toast.success(`${r.linked} product link holo`);
+        qc.invalidateQueries({ queryKey: ["mkt-campaign-products", campaign.id] });
+        qc.invalidateQueries({ queryKey: ["mkt-match-suggest", campaign.id] });
+      }
+    },
+    onError: (e: any) => toast.error(e?.message ?? "Bulk link fail"),
+  });
+
+  const linkOne = useMutation({
+    mutationFn: (productId: string) =>
+      linkFn({ data: { campaignId: campaign.id, productIds: [productId], weight: 1 } }),
+    onSuccess: () => {
+      toast.success("Link holo");
+      qc.invalidateQueries({ queryKey: ["mkt-campaign-products", campaign.id] });
+      qc.invalidateQueries({ queryKey: ["mkt-match-suggest", campaign.id] });
+    },
+    onError: (e: any) => toast.error(e?.message ?? "Link fail"),
+  });
+
+  const sug = suggestions.data ?? [];
+
+  return (
+    <div className="space-y-5">
+      <section className="space-y-2">
+        <div>
+          <Label className="text-xs">SKU / CSV paste</Label>
+          <p className="text-[10px] text-muted-foreground">
+            Each line-e ekta SKU (parent ba variant). CSV hole prothom column-tai SKU dhora hobe.
+            Max 500.
+          </p>
+        </div>
+        <Textarea
+          value={raw}
+          onChange={(e) => setRaw(e.target.value)}
+          rows={6}
+          placeholder={"HOB-CUBOFO-0004\nHOB-KIDPRA-0011,20\nSKU-123"}
+          className="font-mono text-xs"
+        />
+        <div className="flex flex-wrap gap-2">
+          <Button
+            size="sm"
+            variant="outline"
+            disabled={!raw.trim() || run.isPending}
+            onClick={() => run.mutate(true)}
+          >
+            Preview
+          </Button>
+          <Button
+            size="sm"
+            disabled={!raw.trim() || run.isPending}
+            onClick={() => run.mutate(false)}
+          >
+            <Upload className="mr-1.5 h-3.5 w-3.5" />
+            Link all
+          </Button>
+        </div>
+
+        {result && (
+          <div className="space-y-2 rounded-md border p-2 text-[11px]">
+            <div className="flex flex-wrap gap-2">
+              <Badge variant="outline" className="border-emerald-500/30 text-emerald-600">
+                Matched {result.matched.length}
+              </Badge>
+              <Badge variant="outline">Already {result.alreadyLinked.length}</Badge>
+              <Badge variant="outline" className="border-rose-500/30 text-rose-600">
+                Not found {result.notFound.length}
+              </Badge>
+              {result.linked > 0 && <Badge>Linked {result.linked}</Badge>}
+            </div>
+            {result.matched.length > 0 && (
+              <div className="max-h-32 space-y-0.5 overflow-y-auto">
+                {result.matched.map((m) => (
+                  <div key={m.product_id} className="truncate">
+                    <span className="font-mono text-[10px] text-muted-foreground">{m.sku}</span> —{" "}
+                    {m.title}
+                  </div>
+                ))}
+              </div>
+            )}
+            {result.notFound.length > 0 && (
+              <p className="text-rose-600">Not found: {result.notFound.join(", ")}</p>
+            )}
+          </div>
+        )}
+      </section>
+
+      <section className="space-y-2">
+        <div className="flex items-center gap-1.5">
+          <Sparkles className="h-3.5 w-3.5 text-amber-500" />
+          <h4 className="text-xs font-semibold">Auto match suggestions</h4>
+          <span className="text-[10px] text-muted-foreground">
+            (name similarity + last 90d attribution)
+          </span>
+        </div>
+        {suggestions.isLoading ? (
+          <Skeleton className="h-20 w-full" />
+        ) : sug.length === 0 ? (
+          <p className="rounded-md border border-dashed p-3 text-xs text-muted-foreground">
+            Kono suggestion nei — campaign name ba attributed order theke match pawa jayni.
+          </p>
+        ) : (
+          <div className="space-y-1">
+            {sug.map((s: any) => (
+              <div
+                key={s.product_id}
+                className="flex items-center gap-2 rounded-md border px-2 py-1.5 text-[11px]"
+              >
+                <Thumb src={s.image ?? null} />
+                <div className="min-w-0 flex-1">
+                  <div className="truncate">{s.title}</div>
+                  <div className="truncate text-[10px] text-muted-foreground">
+                    {s.sku ? `${s.sku} · ` : ""}
+                    {s.reason ?? "matched"}
+                  </div>
+                </div>
+                <Badge variant="outline" className="h-5 shrink-0 font-normal">
+                  {Math.round((s.score ?? 0) * 100)}%
+                </Badge>
+                <Button
+                  size="sm"
+                  variant="ghost"
+                  className="h-6 shrink-0 px-2"
+                  disabled={linkOne.isPending}
+                  onClick={() => linkOne.mutate(s.product_id)}
+                >
+                  <Plus className="h-3.5 w-3.5" />
+                </Button>
+              </div>
+            ))}
+          </div>
+        )}
+      </section>
+    </div>
+  );
+}
+
+/* ------------------------------------------------------------------ */
+/* Campaign-scoped attribution audit                                    */
+/* ------------------------------------------------------------------ */
+
+function CampaignAuditTab({
+  campaign,
+  from,
+  to,
+}: {
+  campaign: MktNodeRow;
+  from: string;
+  to: string;
+}) {
+  const fetchAudit = useServerFn(getAttributionAudit);
+  const q = useQuery({
+    queryKey: ["mkt-campaign-audit", campaign.id, from, to],
+    queryFn: () =>
+      fetchAudit({
+        data: {
+          brandIds: campaign.brand_id ? [campaign.brand_id] : [],
+          from,
+          to,
+          campaignId: campaign.id,
+          outcome: "all" as const,
+          limit: 100,
+        },
+      }),
+    enabled: !!campaign.brand_id,
+    staleTime: 60_000,
+    refetchOnWindowFocus: false,
+  });
+
+  if (!campaign.brand_id)
+    return (
+      <p className="rounded-md border border-dashed p-3 text-xs text-muted-foreground">
+        Campaign-e brand assign nei, tai audit dekhano jacche na.
+      </p>
+    );
+  if (q.isLoading) return <Skeleton className="h-32 w-full" />;
+  const rows = q.data ?? [];
+  if (rows.length === 0)
+    return (
+      <p className="rounded-md border border-dashed p-3 text-xs text-muted-foreground">
+        Ei range-e ei campaign-e attributed order nei.
+      </p>
+    );
+
+  const tone: Record<string, string> = {
+    delivered: "text-emerald-600",
+    returned: "text-rose-600",
+    cancelled: "text-muted-foreground",
+    in_progress: "text-sky-600",
+  };
+
+  return (
+    <div className="space-y-1.5">
+      {rows.map((r) => (
+        <div key={r.order_id} className="rounded-md border px-2 py-1.5 text-[11px]">
+          <div className="flex flex-wrap items-center gap-1.5">
+            <span className="font-medium">{r.invoice_no ?? r.order_id.slice(0, 8)}</span>
+            <span className={tone[r.outcome]}>{r.outcome}</span>
+            <span className="text-muted-foreground">· {bdt(r.total)}</span>
+            <Badge variant="outline" className="h-4 px-1.5 text-[10px] font-normal">
+              {r.attr_source}
+            </Badge>
+            <span className="text-[10px] text-muted-foreground">
+              conf {Math.round(r.confidence * 100)}% · {r.step_count} steps
+            </span>
+          </div>
+          <div className="truncate text-[10px] text-muted-foreground">{r.match_rule}</div>
+        </div>
+      ))}
+    </div>
+  );
+}
