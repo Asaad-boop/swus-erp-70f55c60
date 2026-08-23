@@ -93,9 +93,44 @@ export async function mergeDuplicateInstapayRuns(sb: AnyRec): Promise<number> {
 }
 
 /**
+ * Post the invoice-total wallet settlement for any live InstaPay run that has a
+ * non-zero payout but no `cod_invoice` transaction yet (typically runs whose
+ * amounts arrived later via CSV backfill, after the 0-amount settle guard).
+ */
+export async function settleUnsettledInstapayRuns(sb: AnyRec, userId: string | null = null): Promise<number> {
+  const { data } = await sb
+    .from("erp_reconciliation_runs")
+    .select("id, total_payout")
+    .eq("courier", "pathao")
+    .like("source_filename", "instapay:%")
+    .neq("status", "reverted")
+    .order("created_at", { ascending: false })
+    .limit(300);
+
+  let posted = 0;
+  for (const run of (data ?? []) as AnyRec[]) {
+    if (!Number(run.total_payout ?? 0)) continue;
+    const { count } = await sb
+      .from("erp_transactions")
+      .select("id", { count: "exact", head: true })
+      .eq("reference_type", "cod_invoice")
+      .eq("reference_id", run.id);
+    if ((count ?? 0) > 0) continue;
+    try {
+      const s = await settleInvoiceTotalCore(sb, userId, { runId: run.id });
+      if (s.posted) posted += 1;
+    } catch {
+      /* brand/wallet not resolvable — surfaced elsewhere */
+    }
+  }
+  return posted;
+}
+
+/**
  * Re-sync every InstaPay run whose payout is still 0 (or an explicit list of
  * invoice IDs), then post the invoice-first wallet settlement.
  */
+
 export async function resyncZeroPayoutInstapay(
   sb: AnyRec,
   opts: { invoiceIds?: string[]; userId?: string | null; limit?: number } = {},
@@ -156,6 +191,13 @@ export async function resyncZeroPayoutInstapay(
     }
   }
 
+  try {
+    out.settled += await settleUnsettledInstapayRuns(sb, opts.userId ?? null);
+  } catch (e) {
+    out.errors.push(`settle sweep: ${(e as Error).message}`);
+  }
+
   out.ok = out.errors.length === 0;
   return out;
 }
+
