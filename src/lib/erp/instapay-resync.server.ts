@@ -191,6 +191,13 @@ export async function resyncZeroPayoutInstapay(
     }
   }
 
+  try {
+    out.settled += await settleUnsettledInstapayRuns(sb, opts.userId ?? null);
+  } catch (e) {
+    out.errors.push(`settle sweep: ${(e as Error).message}`);
+  }
+
   out.ok = out.errors.length === 0;
   return out;
 }
+
