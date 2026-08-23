@@ -12554,6 +12554,10 @@ export type Database = {
         Args: { _brand_ids: string[]; _from: string; _to: string }
         Returns: Json
       }
+      mkt_campaign_product_perf: {
+        Args: { _campaign_id: string; _from: string; _to: string }
+        Returns: Json
+      }
       mkt_campaign_summary: {
         Args: {
           p_brand_id: string

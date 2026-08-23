@@ -7,25 +7,19 @@ import {
   ChevronRight,
   ChevronDown,
   RefreshCcw,
-  Target,
   Search,
   AlertTriangle,
+  Download,
+  Package,
+  ArrowUpDown,
   Target as PageIcon,
 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Skeleton } from "@/components/ui/skeleton";
-import {
-  Dialog,
-  DialogContent,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
 import {
   Select,
   SelectContent,
@@ -35,6 +29,7 @@ import {
 } from "@/components/ui/select";
 import { useBrand } from "@/contexts/brand-context";
 import { BrandTabs } from "@/components/erp/marketing/marketing-shell";
+import { CampaignDetailSheet } from "@/components/erp/marketing/campaign-detail-sheet";
 import {
   DateRangePicker,
   buildPreset,
@@ -42,11 +37,12 @@ import {
 } from "@/components/erp/marketing/date-range-picker";
 import {
   getMktLevel,
-  setCampaignTargets,
   listUnassignedCampaigns,
   assignCampaignsToBrand,
+  getCampaignProductCounts,
   type MktNodeRow,
 } from "@/lib/erp/marketing/campaigns.functions";
+
 
 export const Route = createFileRoute("/_authenticated/erp/marketing/campaigns")({
   head: () => ({
@@ -79,13 +75,27 @@ function statusTone(s: string) {
   return "bg-muted text-muted-foreground border-border";
 }
 
+type SortKey =
+  | "spend"
+  | "revenue"
+  | "roas"
+  | "orders"
+  | "delivered_orders"
+  | "cac"
+  | "ctr"
+  | "name";
+
 function CampaignWorkspace() {
   const { brands } = useBrand();
   const [brandKey, setBrandKey] = useState("all");
   const [range, setRange] = useState<MktRangeValue>(() => buildPreset("30d"));
   const [q, setQ] = useState("");
+  const [statusFilter, setStatusFilter] = useState("all");
+  const [linkFilter, setLinkFilter] = useState("all");
+  const [sortKey, setSortKey] = useState<SortKey>("spend");
+  const [sortDir, setSortDir] = useState<"asc" | "desc">("desc");
   const [expanded, setExpanded] = useState<Record<string, boolean>>({});
-  const [editing, setEditing] = useState<MktNodeRow | null>(null);
+  const [detail, setDetail] = useState<MktNodeRow | null>(null);
 
   const brandIds = useMemo(() => {
     if (brandKey === "all") return brands.map((b) => b.id);
@@ -103,12 +113,41 @@ function CampaignWorkspace() {
     refetchOnWindowFocus: false,
   });
 
+  const fetchCounts = useServerFn(getCampaignProductCounts);
+  const campaignIds = useMemo(
+    () => (campaigns.data ?? []).map((r) => r.id),
+    [campaigns.data],
+  );
+  const counts = useQuery({
+    queryKey: ["mkt-camp-product-counts", campaignIds.join(",")],
+    queryFn: () => fetchCounts({ data: { campaignIds } }),
+    enabled: campaignIds.length > 0,
+    staleTime: 60_000,
+  });
+  const countMap = counts.data ?? {};
+
   const rows = useMemo(() => {
-    const list = campaigns.data ?? [];
-    if (!q.trim()) return list;
+    let list = campaigns.data ?? [];
     const needle = q.trim().toLowerCase();
-    return list.filter((r) => r.name.toLowerCase().includes(needle));
-  }, [campaigns.data, q]);
+    if (needle) list = list.filter((r) => r.name.toLowerCase().includes(needle));
+    if (statusFilter !== "all") {
+      list = list.filter((r) => {
+        const s = (r.status ?? "").toUpperCase();
+        return statusFilter === "active" ? s === "ACTIVE" : s !== "ACTIVE";
+      });
+    }
+    if (linkFilter !== "all") {
+      list = list.filter((r) =>
+        linkFilter === "linked" ? (countMap[r.id] ?? 0) > 0 : (countMap[r.id] ?? 0) === 0,
+      );
+    }
+    const dir = sortDir === "asc" ? 1 : -1;
+    return [...list].sort((a, b) =>
+      sortKey === "name"
+        ? a.name.localeCompare(b.name) * dir
+        : ((a[sortKey] as number) - (b[sortKey] as number)) * dir,
+    );
+  }, [campaigns.data, q, statusFilter, linkFilter, countMap, sortKey, sortDir]);
 
   const totals = useMemo(() => {
     return rows.reduce(
@@ -117,11 +156,68 @@ function CampaignWorkspace() {
         acc.revenue += r.revenue;
         acc.orders += r.orders;
         acc.delivered += r.delivered_orders;
+        acc.clicks += r.clicks;
         return acc;
       },
-      { spend: 0, revenue: 0, orders: 0, delivered: 0 },
+      { spend: 0, revenue: 0, orders: 0, delivered: 0, clicks: 0 },
     );
   }, [rows]);
+
+  const toggleSort = (k: SortKey) => {
+    if (k === sortKey) setSortDir((d) => (d === "asc" ? "desc" : "asc"));
+    else {
+      setSortKey(k);
+      setSortDir(k === "name" ? "asc" : "desc");
+    }
+  };
+
+  const exportCsv = () => {
+    const head = [
+      "Campaign",
+      "Status",
+      "Objective",
+      "Linked products",
+      "Spend",
+      "Impressions",
+      "Clicks",
+      "CTR %",
+      "CPC",
+      "Orders",
+      "Delivered",
+      "Delivered revenue",
+      "ROAS",
+      "CAC",
+      "Target ROAS",
+      "Target CPA",
+    ];
+    const body = rows.map((r) => [
+      r.name,
+      r.status,
+      r.objective ?? "",
+      countMap[r.id] ?? 0,
+      r.spend,
+      r.impressions,
+      r.clicks,
+      r.ctr,
+      r.cpc,
+      r.orders,
+      r.delivered_orders,
+      r.revenue,
+      r.roas,
+      r.cac,
+      r.target_roas ?? "",
+      r.target_cpa ?? "",
+    ]);
+    const csv = [head, ...body]
+      .map((line) => line.map((c) => `"${String(c).replace(/"/g, '""')}"`).join(","))
+      .join("\n");
+    const url = URL.createObjectURL(new Blob(["\uFEFF" + csv], { type: "text/csv;charset=utf-8" }));
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `campaigns-${range.from}-to-${range.to}.csv`;
+    a.click();
+    URL.revokeObjectURL(url);
+  };
 
   return (
     <div className="mx-auto max-w-[1500px] space-y-4 p-4 md:p-6">
@@ -140,6 +236,10 @@ function CampaignWorkspace() {
         <div className="flex flex-wrap items-center gap-2">
           <BrandTabs value={brandKey} onChange={setBrandKey} />
           <DateRangePicker value={range} onChange={setRange} />
+          <Button size="sm" variant="outline" onClick={exportCsv} disabled={rows.length === 0}>
+            <Download className="mr-1.5 h-3.5 w-3.5" />
+            CSV
+          </Button>
           <Button
             size="sm"
             variant="outline"
@@ -154,25 +254,59 @@ function CampaignWorkspace() {
         </div>
       </div>
 
+      <div className="grid grid-cols-2 gap-2 md:grid-cols-6">
+        <Kpi label="Spend" value={bdt(totals.spend)} />
+        <Kpi label="Delivered rev" value={bdt(totals.revenue)} />
+        <Kpi
+          label="ROAS"
+          value={totals.spend > 0 ? `${(totals.revenue / totals.spend).toFixed(2)}x` : "—"}
+          tone={totals.revenue >= totals.spend ? "good" : "bad"}
+        />
+        <Kpi label="Orders" value={totals.orders.toLocaleString()} />
+        <Kpi label="Delivered orders" value={totals.delivered.toLocaleString()} />
+        <Kpi
+          label="CAC"
+          value={totals.delivered > 0 ? bdt(totals.spend / totals.delivered) : "—"}
+        />
+      </div>
+
       <UnassignedPanel brands={brands} />
 
       <Card>
-        <CardHeader className="pb-2 flex flex-row items-center justify-between gap-3">
+        <CardHeader className="pb-2 flex flex-col gap-2 md:flex-row md:items-center md:justify-between">
           <CardTitle className="text-sm font-semibold">
-            Campaigns{" "}
-            <span className="text-xs font-normal text-muted-foreground">
-              ({rows.length}) · spend {bdt(totals.spend)} · delivered rev {bdt(totals.revenue)} ·
-              ROAS {totals.spend > 0 ? (totals.revenue / totals.spend).toFixed(2) : "—"}x
-            </span>
+            Campaigns <span className="text-xs font-normal text-muted-foreground">({rows.length})</span>
           </CardTitle>
-          <div className="relative w-56">
-            <Search className="h-3.5 w-3.5 absolute left-2 top-1/2 -translate-y-1/2 text-muted-foreground" />
-            <Input
-              value={q}
-              onChange={(e) => setQ(e.target.value)}
-              placeholder="Search campaign"
-              className="h-8 pl-7 text-xs"
-            />
+          <div className="flex flex-wrap items-center gap-2">
+            <Select value={statusFilter} onValueChange={setStatusFilter}>
+              <SelectTrigger className="h-8 w-32 text-xs">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all" className="text-xs">All status</SelectItem>
+                <SelectItem value="active" className="text-xs">Active only</SelectItem>
+                <SelectItem value="inactive" className="text-xs">Not active</SelectItem>
+              </SelectContent>
+            </Select>
+            <Select value={linkFilter} onValueChange={setLinkFilter}>
+              <SelectTrigger className="h-8 w-40 text-xs">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all" className="text-xs">All products</SelectItem>
+                <SelectItem value="linked" className="text-xs">Product linked</SelectItem>
+                <SelectItem value="unlinked" className="text-xs">No product link</SelectItem>
+              </SelectContent>
+            </Select>
+            <div className="relative w-56">
+              <Search className="h-3.5 w-3.5 absolute left-2 top-1/2 -translate-y-1/2 text-muted-foreground" />
+              <Input
+                value={q}
+                onChange={(e) => setQ(e.target.value)}
+                placeholder="Search campaign"
+                className="h-8 pl-7 text-xs"
+              />
+            </div>
           </div>
         </CardHeader>
         <CardContent className="p-0">
@@ -191,17 +325,28 @@ function CampaignWorkspace() {
               <table className="w-full text-xs">
                 <thead className="bg-muted/40 text-muted-foreground">
                   <tr className="[&>th]:px-3 [&>th]:py-2 [&>th]:text-right [&>th:first-child]:text-left">
-                    <th className="min-w-[280px]">Name</th>
+                    <SortTh
+                      k="name"
+                      label="Name"
+                      sortKey={sortKey}
+                      onSort={toggleSort}
+                      className="min-w-[300px] text-left"
+                    />
                     <th>Status</th>
-                    <th>Spend</th>
+                    <SortTh k="spend" label="Spend" sortKey={sortKey} onSort={toggleSort} />
                     <th>Impr.</th>
-                    <th>CTR</th>
+                    <SortTh k="ctr" label="CTR" sortKey={sortKey} onSort={toggleSort} />
                     <th>CPC</th>
-                    <th>Orders</th>
-                    <th>Delivered</th>
-                    <th>Delivered rev</th>
-                    <th>ROAS</th>
-                    <th>CAC</th>
+                    <SortTh k="orders" label="Orders" sortKey={sortKey} onSort={toggleSort} />
+                    <SortTh
+                      k="delivered_orders"
+                      label="Delivered"
+                      sortKey={sortKey}
+                      onSort={toggleSort}
+                    />
+                    <SortTh k="revenue" label="Delivered rev" sortKey={sortKey} onSort={toggleSort} />
+                    <SortTh k="roas" label="ROAS" sortKey={sortKey} onSort={toggleSort} />
+                    <SortTh k="cac" label="CAC" sortKey={sortKey} onSort={toggleSort} />
                     <th>Target</th>
                     <th></th>
                   </tr>
@@ -213,9 +358,10 @@ function CampaignWorkspace() {
                       row={r}
                       brandIds={brandIds}
                       range={range}
+                      productCount={countMap[r.id] ?? 0}
                       open={!!expanded[r.id]}
                       onToggle={() => setExpanded((p) => ({ ...p, [r.id]: !p[r.id] }))}
-                      onEdit={() => setEditing(r)}
+                      onEdit={() => setDetail(r)}
                     />
                   ))}
                 </tbody>
@@ -233,10 +379,57 @@ function CampaignWorkspace() {
         </Card>
       )}
 
-      <TargetDialog row={editing} onClose={() => setEditing(null)} />
+      <CampaignDetailSheet
+        row={detail}
+        from={range.from}
+        to={range.to}
+        onClose={() => setDetail(null)}
+      />
     </div>
   );
 }
+
+function Kpi({ label, value, tone }: { label: string; value: string; tone?: "good" | "bad" }) {
+  return (
+    <div className="rounded-xl border bg-card px-3 py-2">
+      <div className="text-[10px] uppercase tracking-wide text-muted-foreground">{label}</div>
+      <div
+        className={`text-sm font-semibold tabular-nums ${
+          tone === "good" ? "text-emerald-600" : tone === "bad" ? "text-rose-600" : ""
+        }`}
+      >
+        {value}
+      </div>
+    </div>
+  );
+}
+
+function SortTh({
+  k,
+  label,
+  sortKey,
+  onSort,
+  className = "",
+}: {
+  k: SortKey;
+  label: string;
+  sortKey: SortKey;
+  onSort: (k: SortKey) => void;
+  className?: string;
+}) {
+  return (
+    <th className={className}>
+      <button
+        onClick={() => onSort(k)}
+        className={`inline-flex items-center gap-1 hover:text-foreground ${sortKey === k ? "text-foreground font-medium" : ""}`}
+      >
+        {label}
+        <ArrowUpDown className="h-3 w-3 opacity-60" />
+      </button>
+    </th>
+  );
+}
+
 
 function Num({ v, className = "" }: { v: string | number; className?: string }) {
   return <td className={`px-3 py-2 text-right tabular-nums ${className}`}>{v}</td>;
@@ -268,6 +461,7 @@ function CampaignRow({
   row,
   brandIds,
   range,
+  productCount,
   open,
   onToggle,
   onEdit,
@@ -275,6 +469,7 @@ function CampaignRow({
   row: MktNodeRow;
   brandIds: string[];
   range: MktRangeValue;
+  productCount: number;
   open: boolean;
   onToggle: () => void;
   onEdit: () => void;
@@ -291,9 +486,18 @@ function CampaignRow({
             )}
             <span className="font-medium truncate max-w-[280px]">{row.name}</span>
           </button>
-          {row.objective && (
-            <div className="text-[10px] text-muted-foreground pl-5">{row.objective}</div>
-          )}
+          <div className="flex items-center gap-1.5 pl-5">
+            {row.objective && (
+              <span className="text-[10px] text-muted-foreground">{row.objective}</span>
+            )}
+            <Badge
+              variant="outline"
+              className={`h-4 gap-1 px-1.5 text-[10px] font-normal ${productCount > 0 ? "border-primary/30 text-primary" : "text-muted-foreground"}`}
+            >
+              <Package className="h-2.5 w-2.5" />
+              {productCount > 0 ? `${productCount} product` : "no product"}
+            </Badge>
+          </div>
         </td>
         <td className="px-3 py-2 text-right">
           <Badge variant="outline" className={`font-normal ${statusTone(row.status)}`}>
@@ -316,8 +520,8 @@ function CampaignRow({
           <TargetBadge row={row} />
         </td>
         <td className="px-3 py-2 text-right">
-          <Button size="sm" variant="ghost" className="h-7 px-2" onClick={onEdit}>
-            <Target className="h-3.5 w-3.5" />
+          <Button size="sm" variant="ghost" className="h-7 px-2 text-[11px]" onClick={onEdit}>
+            Open
           </Button>
         </td>
       </tr>
@@ -485,80 +689,8 @@ function ChildRow({
   );
 }
 
-function TargetDialog({ row, onClose }: { row: MktNodeRow | null; onClose: () => void }) {
-  const qc = useQueryClient();
-  const save = useServerFn(setCampaignTargets);
-  const [roas, setRoas] = useState("");
-  const [cpa, setCpa] = useState("");
-  const [seeded, setSeeded] = useState<string | null>(null);
 
-  if (row && seeded !== row.id) {
-    setSeeded(row.id);
-    setRoas(row.target_roas == null ? "" : String(row.target_roas));
-    setCpa(row.target_cpa == null ? "" : String(row.target_cpa));
-  }
 
-  const m = useMutation({
-    mutationFn: () =>
-      save({
-        data: {
-          campaignId: row!.id,
-          targetRoas: roas.trim() === "" ? null : Number(roas),
-          targetCpa: cpa.trim() === "" ? null : Number(cpa),
-        },
-      }),
-    onSuccess: () => {
-      toast.success("Target save holo");
-      qc.invalidateQueries({ queryKey: ["mkt-level"] });
-      onClose();
-    },
-    onError: (e: any) => toast.error(e?.message ?? "Save fail"),
-  });
-
-  return (
-    <Dialog open={!!row} onOpenChange={(o) => !o && onClose()}>
-      <DialogContent className="sm:max-w-md">
-        <DialogHeader>
-          <DialogTitle className="text-sm">Target — {row?.name}</DialogTitle>
-        </DialogHeader>
-        <div className="grid grid-cols-2 gap-3">
-          <div className="space-y-1.5">
-            <Label className="text-xs">Target ROAS (x)</Label>
-            <Input
-              value={roas}
-              onChange={(e) => setRoas(e.target.value)}
-              inputMode="decimal"
-              placeholder="e.g. 3"
-            />
-            <p className="text-[10px] text-muted-foreground">
-              Actual: {row && row.roas > 0 ? `${row.roas.toFixed(2)}x` : "—"}
-            </p>
-          </div>
-          <div className="space-y-1.5">
-            <Label className="text-xs">Target CPA (৳)</Label>
-            <Input
-              value={cpa}
-              onChange={(e) => setCpa(e.target.value)}
-              inputMode="decimal"
-              placeholder="e.g. 350"
-            />
-            <p className="text-[10px] text-muted-foreground">
-              Actual CAC: {row && row.cac > 0 ? bdt(row.cac) : "—"}
-            </p>
-          </div>
-        </div>
-        <DialogFooter>
-          <Button variant="outline" size="sm" onClick={onClose}>
-            Cancel
-          </Button>
-          <Button size="sm" onClick={() => m.mutate()} disabled={m.isPending}>
-            Save
-          </Button>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
-  );
-}
 
 function UnassignedPanel({ brands }: { brands: { id: string; name: string }[] }) {
   const qc = useQueryClient();
