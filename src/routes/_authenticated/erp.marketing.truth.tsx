@@ -183,10 +183,20 @@ function CampaignTruthPage() {
         <div className="flex flex-wrap items-center gap-2">
           <BrandTabs value={brandKey} onChange={setBrandKey} />
           <DateRangePicker value={range} onChange={setRange} />
+          <Button
+            variant="secondary"
+            size="sm"
+            onClick={() => rerun.mutate()}
+            disabled={rerun.isPending || brandIds.length === 0}
+          >
+            <Wand2 className="mr-1.5 h-3.5 w-3.5" />
+            {rerun.isPending ? "Matching…" : "Re-run matching"}
+          </Button>
           <Button variant="outline" size="sm" onClick={() => q.refetch()}>
             <RefreshCcw className="mr-1.5 h-3.5 w-3.5" />
             Refresh
           </Button>
+
           <Button variant="outline" size="sm" onClick={exportCsv} disabled={rows.length === 0}>
             <Download className="mr-1.5 h-3.5 w-3.5" />
             CSV
