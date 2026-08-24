@@ -876,6 +876,31 @@ function ProductsTab({ args, enabled, rangeLabel }: { args: RpcArgs; enabled: bo
     },
   });
 
+  // Meta campaign linked ad spend per product (campaign ↔ product links)
+  const adQ = useQuery({
+    queryKey: ["rpt-products-adspend", JSON.stringify(args)],
+    enabled,
+    queryFn: async () => {
+      const { data, error } = await supabase.rpc("mkt_product_perf", {
+        _brand_ids: args._brand_ids, _from: args._from, _to: args._to,
+      } as never);
+      if (error) throw error;
+      const list = (Array.isArray(data) ? data : []) as { product_id: string; ad_spend: number; attributed_orders: number }[];
+      const map = new Map<string, { ad_spend: number; attributed_orders: number }>();
+      for (const r of list) {
+        if (!r?.product_id) continue;
+        const prev = map.get(r.product_id) ?? { ad_spend: 0, attributed_orders: 0 };
+        map.set(r.product_id, {
+          ad_spend: prev.ad_spend + (Number(r.ad_spend) || 0),
+          attributed_orders: prev.attributed_orders + (Number(r.attributed_orders) || 0),
+        });
+      }
+      return map;
+    },
+  });
+
+  const adSpendOf = (productId: string) => adQ.data?.get(productId)?.ad_spend ?? 0;
+
   const rows = useMemo(() => {
     const term = search.trim().toLowerCase();
     const list = (q.data ?? []).filter((r) =>
