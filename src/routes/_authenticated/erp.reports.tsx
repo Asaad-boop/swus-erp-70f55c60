@@ -998,8 +998,8 @@ function ProductsTab({ args, enabled, rangeLabel }: { args: RpcArgs; enabled: bo
               size="sm"
               onClick={() =>
                 exportAoaXlsx(
-                  [["Product", "Variant", "SKU", "Orders", "Units", "Net revenue", "COGS", "Gross profit", "Margin %", "Courier", "Contribution", "Avg price", "Avg cost", "Returned units", "Return %", "Units missing cost"],
-                   ...rows.map((r) => [r.product_name, r.variant_label ?? "", r.sku ?? "", r.orders, r.units, r.net_revenue, r.cogs, r.gross_profit, r.margin_pct, r.courier_cost, r.contribution_profit, r.avg_price, r.avg_cost, r.returned_units, r.return_rate, r.cost_missing_units])],
+                  [["Product", "Variant", "SKU", "Orders", "Units", "Net revenue", "COGS", "Gross profit", "Margin %", "Courier", "Contribution", "Ad spend (Meta)", "Net after ads", "ROAS", "Avg price", "Avg cost", "Returned units", "Return %", "Units missing cost"],
+                   ...rows.map((r) => { const sp = adSpendOf(r.product_id); return [r.product_name, r.variant_label ?? "", r.sku ?? "", r.orders, r.units, r.net_revenue, r.cogs, r.gross_profit, r.margin_pct, r.courier_cost, r.contribution_profit, sp, Number(r.contribution_profit) - sp, sp > 0 ? Number(r.net_revenue) / sp : "", r.avg_price, r.avg_cost, r.returned_units, r.return_rate, r.cost_missing_units]; })],
                   "Products", `product-profit-${level}`,
                 )
               }
