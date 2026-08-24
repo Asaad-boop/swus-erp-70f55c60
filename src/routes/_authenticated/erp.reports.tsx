@@ -360,20 +360,23 @@ function DataHealth({ data, loading }: { data?: Health; loading?: boolean }) {
 
   if (issues.length === 0) {
     return (
-      <div className="flex items-center gap-2 rounded-xl border border-emerald-500/30 bg-emerald-500/5 px-4 py-2.5 text-sm">
-        <Badge variant="outline" className="border-emerald-500/40 text-emerald-600 dark:text-emerald-400">Data health OK</Badge>
-        <span className="text-muted-foreground">All delivered lines have cost and reconciled courier charges.</span>
+      <div className="flex items-center gap-3 rounded-[var(--rpt-radius)] border border-[var(--rpt-rule)] bg-[var(--rpt-surface)] px-4 py-2.5 text-sm">
+        <span aria-hidden className="h-6 w-[2px] rounded-full" style={{ background: "var(--rpt-good)" }} />
+        <span className="rpt-eyebrow" style={{ color: "var(--rpt-good)" }}>Data health OK</span>
+        <span className="rpt-sub">All delivered lines have cost and reconciled courier charges.</span>
       </div>
     );
   }
   return (
-    <div className="flex flex-wrap items-center gap-2 rounded-xl border border-amber-500/30 bg-amber-500/5 px-4 py-2.5 text-sm">
-      <AlertTriangle className="h-4 w-4 text-amber-500" />
-      <span className="font-medium">Data health</span>
+    <div className="flex flex-wrap items-center gap-2 rounded-[var(--rpt-radius)] border border-[var(--rpt-rule)] bg-[var(--rpt-surface)] px-4 py-2.5 text-sm">
+      <span aria-hidden className="h-6 w-[2px] rounded-full" style={{ background: "var(--rpt-bad)" }} />
+      <AlertTriangle className="h-4 w-4" style={{ color: "var(--rpt-bad)" }} />
+      <span className="rpt-eyebrow text-foreground">Data health</span>
       {issues.map((i) => (
-        <Badge key={i} variant="outline" className="border-amber-500/40 font-normal">{i}</Badge>
+        <Badge key={i} variant="outline" className="border-[var(--rpt-border-strong)] font-normal">{i}</Badge>
       ))}
     </div>
+
   );
 }
 
