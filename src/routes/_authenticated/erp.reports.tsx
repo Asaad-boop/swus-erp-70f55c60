@@ -1056,9 +1056,13 @@ function ProductsTab({ args, enabled, rangeLabel }: { args: RpcArgs; enabled: bo
                     <TableCell className={`text-right tabular-nums ${Number(r.gross_profit) < 0 ? "text-rose-600 dark:text-rose-400" : ""}`}>{fmtBdt(r.gross_profit)}</TableCell>
                     <TableCell className="text-right tabular-nums">{Number(r.margin_pct).toFixed(1)}%</TableCell>
                     <TableCell className={`text-right font-medium tabular-nums ${Number(r.contribution_profit) < 0 ? "text-rose-600 dark:text-rose-400" : ""}`}>{fmtBdt(r.contribution_profit)}</TableCell>
+                    <TableCell className="text-right tabular-nums text-muted-foreground">{spend > 0 ? fmtBdt(spend) : "—"}</TableCell>
+                    <TableCell className={`text-right tabular-nums ${spend > 0 ? (netAfterAds < 0 ? "text-rose-600 dark:text-rose-400" : "text-emerald-600 dark:text-emerald-400") : "text-muted-foreground"}`}>{spend > 0 ? fmtBdt(netAfterAds) : "—"}</TableCell>
+                    <TableCell className="text-right tabular-nums">{roas == null ? "—" : `${roas.toFixed(2)}x`}</TableCell>
                     <TableCell className={`text-right tabular-nums ${Number(r.return_rate) > 15 ? "text-rose-600 dark:text-rose-400" : ""}`}>{Number(r.return_rate).toFixed(1)}%</TableCell>
                   </TableRow>
-                ))}
+                  );
+                })}
               </TableBody>
               <TableBody>
                 <TableRow className="bg-muted/40 font-semibold">
