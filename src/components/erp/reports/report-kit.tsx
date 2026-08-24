@@ -1,7 +1,7 @@
 import type { ReactNode } from "react";
 import { Download, FileSpreadsheet, FileText, Printer, TrendingDown, TrendingUp } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { Card } from "@/components/ui/card";
+
 import { Skeleton } from "@/components/ui/skeleton";
 import { Button } from "@/components/ui/button";
 import {
@@ -29,36 +29,40 @@ export function Panel({
   action,
   children,
   className,
+  flush = false,
 }: {
   title?: string;
   subtitle?: string;
   action?: ReactNode;
   children: ReactNode;
   className?: string;
+  /** Remove body padding — use for full-bleed tables. */
+  flush?: boolean;
 }) {
   return (
-    <Card
-      className={cn(
-        "overflow-hidden border-border/60 bg-card/80 shadow-[0_1px_2px_rgba(16,24,40,0.04),0_8px_24px_-16px_rgba(16,24,40,0.25)] backdrop-blur-sm transition-shadow hover:shadow-[0_1px_2px_rgba(16,24,40,0.05),0_12px_32px_-16px_rgba(16,24,40,0.32)]",
-        className,
-      )}
-    >
+    <section className={cn("rpt-surface overflow-hidden", className)}>
       {(title || action) && (
-        <div className="flex flex-wrap items-center justify-between gap-2 border-b border-border/60 bg-gradient-to-r from-muted/50 to-transparent px-4 py-3">
-          <div className="flex items-start gap-2.5">
-            <span aria-hidden className="mt-0.5 h-4 w-1 shrink-0 rounded-full bg-primary/70" />
-            <div>
-              {title && <h3 className="font-display text-sm font-semibold tracking-tight">{title}</h3>}
-              {subtitle && <p className="text-xs text-muted-foreground">{subtitle}</p>}
+        <div className="rpt-head flex flex-wrap items-center justify-between gap-3 px-[var(--rpt-pad)] py-3">
+          <div className="flex min-w-0 items-start gap-2.5">
+            <span
+              aria-hidden
+              className="mt-1 h-3.5 w-[3px] shrink-0 rounded-full"
+              style={{ background: "var(--rpt-accent)" }}
+            />
+            <div className="min-w-0">
+              {title && <h3 className="rpt-title truncate">{title}</h3>}
+              {subtitle && <p className="rpt-sub mt-0.5">{subtitle}</p>}
             </div>
           </div>
           {action}
         </div>
       )}
-      <div className="p-4">{children}</div>
-    </Card>
+      <div className={flush ? "" : "p-[var(--rpt-pad)]"}>{children}</div>
+    </section>
   );
 }
+
+
 
 export type Kpi = {
   label: string;
@@ -93,13 +97,14 @@ function Delta({ k }: { k: Kpi }) {
   return (
     <span
       className={cn(
-        "inline-flex items-center gap-1 text-[11px] font-medium",
-        good ? "text-emerald-600 dark:text-emerald-400" : "text-rose-600 dark:text-rose-400",
+        "inline-flex items-center gap-1 rounded-full px-1.5 py-0.5 text-[11px] font-semibold rpt-num",
+        good
+          ? "bg-[color-mix(in_oklab,var(--rpt-good)_14%,transparent)] text-[var(--rpt-good)]"
+          : "bg-[color-mix(in_oklab,var(--rpt-bad)_14%,transparent)] text-[var(--rpt-bad)]",
       )}
     >
       <Icon className="h-3 w-3" />
       {pct == null ? (up ? "new" : "—") : `${up ? "+" : ""}${pct.toFixed(1)}%`}
-      <span className="text-muted-foreground">vs prev</span>
     </span>
   );
 }
@@ -107,52 +112,46 @@ function Delta({ k }: { k: Kpi }) {
 export function KpiStrip({ items, loading }: { items: Kpi[]; loading?: boolean }) {
   if (loading) {
     return (
-      <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+      <div className="grid gap-[var(--rpt-gap)] sm:grid-cols-2 lg:grid-cols-4">
         {Array.from({ length: 8 }).map((_, i) => (
-          <Skeleton key={i} className="h-[74px] rounded-xl" />
+          <Skeleton key={i} className="h-[92px] rounded-[var(--rpt-radius)]" />
         ))}
       </div>
     );
   }
   return (
-    <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-      {items.map((k) => (
-        <div
-          key={k.label}
-          className={cn(
-            "group relative overflow-hidden rounded-xl border border-border/60 bg-card px-4 py-3",
-            "shadow-[0_1px_2px_rgba(16,24,40,0.04)] transition-all duration-200",
-            "hover:-translate-y-0.5 hover:border-primary/40 hover:shadow-[0_10px_28px_-18px_rgba(16,24,40,0.45)]",
-          )}
-        >
-          <span
-            aria-hidden
-            className={cn(
-              "absolute inset-y-0 left-0 w-[3px] rounded-r-full opacity-70 transition-opacity group-hover:opacity-100",
-              k.tone === "good" ? "bg-emerald-500" : k.tone === "bad" ? "bg-rose-500" : "bg-primary/60",
-            )}
-          />
-          <p className="text-[11px] font-medium uppercase tracking-wide text-muted-foreground">
-            {k.label}
-          </p>
-          <p
-            className={cn(
-              "mt-0.5 font-display text-[22px] font-bold leading-tight tabular-nums tracking-tight",
-              k.tone === "good" && "text-emerald-600 dark:text-emerald-400",
-              k.tone === "bad" && "text-rose-600 dark:text-rose-400",
-            )}
+    <div className="grid gap-[var(--rpt-gap)] sm:grid-cols-2 lg:grid-cols-4">
+      {items.map((k) => {
+        const tone =
+          k.tone === "good" ? "var(--rpt-good)" : k.tone === "bad" ? "var(--rpt-bad)" : "var(--rpt-accent)";
+        return (
+          <div
+            key={k.label}
+            className="rpt-surface group relative overflow-hidden px-4 py-3.5 hover:-translate-y-0.5"
           >
-            {fmtKpi(k)}
-          </p>
-          <div className="mt-0.5 flex flex-col gap-0.5">
-            <Delta k={k} />
-            {k.hint && <p className="text-[11px] text-muted-foreground">{k.hint}</p>}
+            <span
+              aria-hidden
+              className="absolute inset-x-0 top-0 h-[2px] opacity-70 transition-opacity group-hover:opacity-100"
+              style={{ background: `linear-gradient(90deg, ${tone}, transparent 85%)` }}
+            />
+            <p className="rpt-eyebrow truncate">{k.label}</p>
+            <p
+              className="rpt-metric mt-1"
+              style={k.tone && k.tone !== "default" ? { color: tone } : undefined}
+            >
+              {fmtKpi(k)}
+            </p>
+            <div className="mt-1.5 flex flex-wrap items-center gap-x-2 gap-y-1">
+              <Delta k={k} />
+              {k.hint && <p className="rpt-sub truncate">{k.hint}</p>}
+            </div>
           </div>
-        </div>
-      ))}
+        );
+      })}
     </div>
   );
 }
+
 
 /** One export control for every report panel: Excel, CSV and a print-ready PDF. */
 export function ExportMenu({
@@ -217,6 +216,10 @@ export function ExportMenu({
 
 export function EmptyState({ text }: { text: string }) {
   return (
-    <div className="py-10 text-center text-sm text-muted-foreground">{text}</div>
+    <div className="flex flex-col items-center justify-center gap-2 rounded-[var(--rpt-radius)] border border-dashed border-[var(--rpt-border-strong)] bg-[var(--rpt-surface-2)] py-12 text-center">
+      <p className="rpt-eyebrow">No data</p>
+      <p className="rpt-sub max-w-sm">{text}</p>
+    </div>
   );
+
 }

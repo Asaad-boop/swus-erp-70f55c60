@@ -370,3 +370,161 @@
 .erp-sidebar-scroll::-webkit-scrollbar-track { background: transparent; }
 .erp-sidebar-scroll::-webkit-scrollbar-thumb { background: transparent; border-radius: 9999px; transition: background 200ms ease; }
 .erp-sidebar-scroll:hover::-webkit-scrollbar-thumb { background: color-mix(in oklab, var(--muted-foreground) 30%, transparent); }
+
+/* ──────────────────────────────────────────────────────────────
+   Reports design system — one shared language for every report
+   surface (typography scale, spacing rhythm, colour tones).
+   ────────────────────────────────────────────────────────────── */
+:root {
+  --rpt-gap: 1.125rem;
+  --rpt-pad: 1rem;
+  --rpt-radius: 1rem;
+  --rpt-surface: oklch(1 0 0);
+  --rpt-surface-2: oklch(0.988 0.004 258);
+  --rpt-border: oklch(0.925 0.01 258);
+  --rpt-border-strong: oklch(0.87 0.03 262);
+  --rpt-head: linear-gradient(180deg, oklch(0.985 0.008 262) 0%, oklch(1 0 0) 100%);
+  --rpt-hero: linear-gradient(118deg, oklch(0.975 0.03 268) 0%, oklch(0.995 0.008 258) 48%, oklch(0.975 0.032 200) 100%);
+  --rpt-shadow: 0 1px 2px oklch(0.2 0.04 265 / 0.05), 0 10px 26px -22px oklch(0.2 0.04 265 / 0.5);
+  --rpt-shadow-lg: 0 2px 5px oklch(0.2 0.04 265 / 0.06), 0 22px 46px -26px oklch(0.2 0.04 265 / 0.42);
+  --rpt-accent: oklch(0.62 0.19 256);
+  --rpt-good: oklch(0.56 0.15 155);
+  --rpt-bad: oklch(0.58 0.2 22);
+  --rpt-thead: oklch(0.972 0.008 258);
+  --rpt-row-hover: oklch(0.975 0.012 262);
+}
+
+.dark {
+  --rpt-surface: oklch(0.185 0.045 282);
+  --rpt-surface-2: oklch(0.21 0.05 282);
+  --rpt-border: oklch(1 0 0 / 0.08);
+  --rpt-border-strong: oklch(1 0 0 / 0.18);
+  --rpt-head: linear-gradient(180deg, oklch(0.235 0.06 283) 0%, oklch(0.19 0.045 282) 100%);
+  --rpt-hero: linear-gradient(118deg, oklch(0.24 0.07 283) 0%, oklch(0.185 0.045 282) 48%, oklch(0.23 0.06 220) 100%);
+  --rpt-shadow: 0 1px 2px oklch(0 0 0 / 0.4), 0 12px 30px -24px oklch(0 0 0 / 0.8);
+  --rpt-shadow-lg: 0 2px 6px oklch(0 0 0 / 0.45), 0 26px 52px -28px oklch(0 0 0 / 0.85);
+  --rpt-accent: oklch(0.7 0.19 277);
+  --rpt-good: oklch(0.75 0.16 155);
+  --rpt-bad: oklch(0.72 0.19 22);
+  --rpt-thead: oklch(0.225 0.05 282);
+  --rpt-row-hover: oklch(0.235 0.055 282);
+}
+
+/* Vertical rhythm for stacked report sections */
+@utility rpt-stack {
+  display: flex;
+  flex-direction: column;
+  gap: var(--rpt-gap);
+}
+
+@utility rpt-surface {
+  background: var(--rpt-surface);
+  border: 1px solid var(--rpt-border);
+  border-radius: var(--rpt-radius);
+  box-shadow: var(--rpt-shadow);
+  transition: box-shadow 220ms ease, border-color 220ms ease, transform 220ms ease;
+  &:hover {
+    box-shadow: var(--rpt-shadow-lg);
+  }
+}
+
+@utility rpt-head {
+  background: var(--rpt-head);
+  border-bottom: 1px solid var(--rpt-border);
+}
+
+@utility rpt-hero {
+  background: var(--rpt-hero);
+}
+
+/* Typography scale */
+@utility rpt-eyebrow {
+  font-size: 0.6875rem;
+  line-height: 1rem;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--muted-foreground);
+}
+
+@utility rpt-title {
+  font-family: var(--font-display);
+  font-size: 0.875rem;
+  line-height: 1.25rem;
+  font-weight: 650;
+  letter-spacing: -0.01em;
+}
+
+@utility rpt-sub {
+  font-size: 0.75rem;
+  line-height: 1.05rem;
+  color: var(--muted-foreground);
+}
+
+@utility rpt-metric {
+  font-family: var(--font-display);
+  font-size: 1.5rem;
+  line-height: 1.85rem;
+  font-weight: 700;
+  letter-spacing: -0.025em;
+  font-variant-numeric: tabular-nums;
+}
+
+@utility rpt-num {
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -0.01em;
+}
+
+/* Table chrome shared by every report table */
+@utility rpt-table {
+  & thead th {
+    background: var(--rpt-thead);
+    font-size: 0.6875rem;
+    font-weight: 600;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+    color: var(--muted-foreground);
+    white-space: nowrap;
+  }
+  & tbody tr {
+    transition: background-color 140ms ease;
+  }
+  & tbody tr:hover {
+    background: var(--rpt-row-hover);
+  }
+  & td {
+    font-variant-numeric: tabular-nums;
+  }
+}
+
+@utility rpt-tabs {
+  background: color-mix(in oklab, var(--rpt-surface) 82%, transparent);
+  border: 1px solid var(--rpt-border);
+  box-shadow: var(--rpt-shadow);
+  backdrop-filter: blur(14px);
+}
+
+/* Scope wrapper — applies the report table + spacing language to every
+   panel inside the Reports Hub without per-file overrides. */
+.rpt-scope table thead th {
+  background: var(--rpt-thead);
+  font-size: 0.6875rem;
+  font-weight: 600;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: var(--muted-foreground);
+  white-space: nowrap;
+}
+.rpt-scope table tbody tr {
+  transition: background-color 140ms ease;
+}
+.rpt-scope table tbody tr:hover {
+  background: var(--rpt-row-hover);
+}
+.rpt-scope table td,
+.rpt-scope table th {
+  font-variant-numeric: tabular-nums;
+}
+.rpt-scope table tbody td {
+  font-size: 0.8125rem;
+}
