@@ -261,6 +261,20 @@ function CampaignTruthPage() {
                         {r.meta_roas.toFixed(2)}x
                       </td>
                       <td className="p-2 text-right font-medium tabular-nums">{r.orders}</td>
+                      <td className="p-2 text-right">
+                        <div className="flex flex-col items-end gap-0.5">
+                          <Badge
+                            variant="outline"
+                            className={`h-4 px-1 text-[10px] ${matchTone(r.match_status)}`}
+                          >
+                            {matchLabel(r.match_status)}
+                          </Badge>
+                          <span className="text-[10px] tabular-nums text-muted-foreground">
+                            {r.attributed_orders} linked · {r.unlinked_orders} unmatched
+                          </span>
+                        </div>
+                      </td>
+
                       <td
                         className={`p-2 text-right tabular-nums ${
                           r.purchase_gap === 0
