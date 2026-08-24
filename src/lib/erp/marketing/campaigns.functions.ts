@@ -660,6 +660,25 @@ export type CampaignTruthRow = {
   breakeven_roas: number;
   cost_missing_units: number;
   verdict: "scaling" | "profitable" | "breakeven" | "losing" | "no_data";
+  /** Cost attribution split (delivered lines) */
+  courier_cost: number;
+  packaging_cost: number;
+  refund_cost: number;
+  other_cost: number;
+  /** Staff annotations */
+  tags: string[];
+  note: string | null;
+};
+
+export type CampaignTrendPoint = {
+  campaign_id: string;
+  bucket: string;
+  spend: number;
+  delivered_revenue: number;
+  cogs: number;
+  operating_cost: number;
+  gross_profit: number;
+  net_profit: number;
 };
 
 export const getCampaignTruth = createServerFn({ method: "POST" })
@@ -704,6 +723,25 @@ export const getCampaignTruth = createServerFn({ method: "POST" })
       }
     }
 
+    // cost attribution split + staff annotations
+    const { data: splitRaw } = await context.supabase.rpc("mkt_campaign_cost_split", {
+      _brand_ids: data.brandIds,
+      _from: data.from,
+      _to: data.to,
+    } as never);
+    const split = new Map<string, any>();
+    for (const s of (Array.isArray(splitRaw) ? splitRaw : []) as any[]) {
+      if (s?.campaign_id) split.set(s.campaign_id, s);
+    }
+
+    const { data: metaRaw } = await context.supabase
+      .from("mkt_campaign_meta")
+      .select("campaign_id, tags, note");
+    const metaMap = new Map<string, { tags: string[]; note: string | null }>();
+    for (const m of (metaRaw ?? []) as any[]) {
+      metaMap.set(m.campaign_id, { tags: (m.tags ?? []) as string[], note: m.note ?? null });
+    }
+
     const r2 = (n: number) => Math.round(n * 100) / 100;
     return base.map((r) => {
       const p = profit.get(r.id) ?? {
@@ -722,6 +760,8 @@ export const getCampaignTruth = createServerFn({ method: "POST" })
         else if (Math.abs(net) <= Math.max(200, r.spend * 0.05)) verdict = "breakeven";
         else verdict = "losing";
       }
+      const s = split.get(r.id);
+      const ann = metaMap.get(r.id);
       return {
         ...r,
         cogs: r2(p.cogs),
@@ -733,8 +773,65 @@ export const getCampaignTruth = createServerFn({ method: "POST" })
         breakeven_roas: contributionRate > 0 ? r2(1 / contributionRate) : 0,
         cost_missing_units: p.cost_missing_units,
         verdict,
+        courier_cost: Number(s?.courier ?? 0),
+        packaging_cost: Number(s?.packaging ?? 0),
+        refund_cost: Number(s?.refunds ?? 0),
+        other_cost: Number(s?.other ?? 0),
+        tags: ann?.tags ?? [],
+        note: ann?.note ?? null,
       };
     });
+  });
+
+export const saveCampaignMeta = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d: unknown) =>
+    z
+      .object({
+        campaignId: z.string().uuid(),
+        brandId: z.string().uuid().nullable().optional(),
+        tags: z.array(z.string().min(1).max(40)).max(12),
+        note: z.string().max(2000).nullable().optional(),
+      })
+      .parse(d),
+  )
+  .handler(async ({ data, context }) => {
+    const { error } = await context.supabase.from("mkt_campaign_meta").upsert(
+      {
+        campaign_id: data.campaignId,
+        brand_id: data.brandId ?? null,
+        tags: data.tags,
+        note: data.note ?? null,
+        updated_by: context.userId,
+        updated_at: new Date().toISOString(),
+      } as never,
+      { onConflict: "campaign_id" },
+    );
+    if (error) throw error;
+    return { ok: true };
+  });
+
+export const getCampaignTrend = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d: unknown) =>
+    z
+      .object({
+        brandIds: z.array(z.string().uuid()).min(1),
+        from: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
+        to: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
+        grain: z.enum(["day", "week"]).default("day"),
+      })
+      .parse(d),
+  )
+  .handler(async ({ data, context }) => {
+    const { data: rows, error } = await context.supabase.rpc("mkt_campaign_trend", {
+      _brand_ids: data.brandIds,
+      _from: data.from,
+      _to: data.to,
+      _grain: data.grain,
+    } as never);
+    if (error) throw error;
+    return (Array.isArray(rows) ? rows : []) as CampaignTrendPoint[];
   });
 
 export const rerunCampaignMatching = createServerFn({ method: "POST" })
