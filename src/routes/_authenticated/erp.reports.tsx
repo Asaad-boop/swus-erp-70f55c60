@@ -976,7 +976,7 @@ function ProductsTab({ args, enabled, rangeLabel }: { args: RpcArgs; enabled: bo
 
       <Panel
         title="Product profitability"
-        subtitle={`${rows.length} rows · net revenue ${fmtBdt(totals.net_revenue)} · gross profit ${fmtBdt(totals.gross_profit)}`}
+        subtitle={`${rows.length} rows · net revenue ${fmtBdt(totals.net_revenue)} · gross profit ${fmtBdt(totals.gross_profit)} · Meta ad spend ${fmtBdt(totals.ad_spend)} (linked campaigns)`}
         action={
           <div className="flex flex-wrap items-center gap-2">
             <div className="flex gap-1">
