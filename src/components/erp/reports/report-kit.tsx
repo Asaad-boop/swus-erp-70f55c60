@@ -216,6 +216,10 @@ export function ExportMenu({
 
 export function EmptyState({ text }: { text: string }) {
   return (
-    <div className="py-10 text-center text-sm text-muted-foreground">{text}</div>
+    <div className="flex flex-col items-center justify-center gap-2 rounded-[var(--rpt-radius)] border border-dashed border-[var(--rpt-border-strong)] bg-[var(--rpt-surface-2)] py-12 text-center">
+      <p className="rpt-eyebrow">No data</p>
+      <p className="rpt-sub max-w-sm">{text}</p>
+    </div>
   );
+
 }
