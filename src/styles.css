@@ -372,42 +372,64 @@
 .erp-sidebar-scroll:hover::-webkit-scrollbar-thumb { background: color-mix(in oklab, var(--muted-foreground) 30%, transparent); }
 
 /* ──────────────────────────────────────────────────────────────
-   Reports design system — one shared language for every report
-   surface (typography scale, spacing rhythm, colour tones).
+   Reports design system — "Midnight Indigo Editorial".
+   Magazine structure: hairline rules, generous rhythm, display
+   numerals in Sora, indigo as the single accent voice.
    ────────────────────────────────────────────────────────────── */
 :root {
-  --rpt-gap: 1.125rem;
-  --rpt-pad: 1rem;
-  --rpt-radius: 1rem;
+  --rpt-gap: 1.5rem;
+  --rpt-pad: 1.25rem;
+  --rpt-radius: 0.875rem;
+
+  --rpt-page: oklch(0.985 0.004 265);
   --rpt-surface: oklch(1 0 0);
-  --rpt-surface-2: oklch(0.988 0.004 258);
-  --rpt-border: oklch(0.925 0.01 258);
-  --rpt-border-strong: oklch(0.87 0.03 262);
-  --rpt-head: linear-gradient(180deg, oklch(0.985 0.008 262) 0%, oklch(1 0 0) 100%);
-  --rpt-hero: linear-gradient(118deg, oklch(0.975 0.03 268) 0%, oklch(0.995 0.008 258) 48%, oklch(0.975 0.032 200) 100%);
-  --rpt-shadow: 0 1px 2px oklch(0.2 0.04 265 / 0.05), 0 10px 26px -22px oklch(0.2 0.04 265 / 0.5);
-  --rpt-shadow-lg: 0 2px 5px oklch(0.2 0.04 265 / 0.06), 0 22px 46px -26px oklch(0.2 0.04 265 / 0.42);
-  --rpt-accent: oklch(0.62 0.19 256);
-  --rpt-good: oklch(0.56 0.15 155);
-  --rpt-bad: oklch(0.58 0.2 22);
-  --rpt-thead: oklch(0.972 0.008 258);
-  --rpt-row-hover: oklch(0.975 0.012 262);
+  --rpt-surface-2: oklch(0.975 0.006 265);
+  --rpt-ink: oklch(0.19 0.04 275);
+
+  --rpt-border: oklch(0.915 0.008 265);
+  --rpt-border-strong: oklch(0.84 0.02 270);
+  --rpt-rule: oklch(0.2 0.05 277 / 0.14);
+
+  --rpt-head: transparent;
+  --rpt-hero: linear-gradient(120deg, oklch(0.16 0.07 285) 0%, oklch(0.21 0.1 278) 46%, oklch(0.28 0.13 272) 100%);
+  --rpt-hero-ink: oklch(0.97 0.01 270);
+
+  --rpt-shadow: 0 1px 0 var(--rpt-rule);
+  --rpt-shadow-lg: 0 1px 0 var(--rpt-rule), 0 18px 40px -32px oklch(0.16 0.07 285 / 0.55);
+
+  --rpt-accent: oklch(0.52 0.24 277);
+  --rpt-accent-soft: oklch(0.52 0.24 277 / 0.1);
+  --rpt-good: oklch(0.55 0.15 158);
+  --rpt-bad: oklch(0.56 0.21 22);
+
+  --rpt-thead: transparent;
+  --rpt-row-hover: oklch(0.52 0.24 277 / 0.045);
 }
 
 .dark {
-  --rpt-surface: oklch(0.185 0.045 282);
-  --rpt-surface-2: oklch(0.21 0.05 282);
-  --rpt-border: oklch(1 0 0 / 0.08);
-  --rpt-border-strong: oklch(1 0 0 / 0.18);
-  --rpt-head: linear-gradient(180deg, oklch(0.235 0.06 283) 0%, oklch(0.19 0.045 282) 100%);
-  --rpt-hero: linear-gradient(118deg, oklch(0.24 0.07 283) 0%, oklch(0.185 0.045 282) 48%, oklch(0.23 0.06 220) 100%);
-  --rpt-shadow: 0 1px 2px oklch(0 0 0 / 0.4), 0 12px 30px -24px oklch(0 0 0 / 0.8);
-  --rpt-shadow-lg: 0 2px 6px oklch(0 0 0 / 0.45), 0 26px 52px -28px oklch(0 0 0 / 0.85);
-  --rpt-accent: oklch(0.7 0.19 277);
-  --rpt-good: oklch(0.75 0.16 155);
+  --rpt-page: oklch(0.145 0.035 285);
+  --rpt-surface: oklch(0.178 0.042 284);
+  --rpt-surface-2: oklch(0.208 0.05 282);
+  --rpt-ink: oklch(0.96 0.01 270);
+
+  --rpt-border: oklch(1 0 0 / 0.09);
+  --rpt-border-strong: oklch(1 0 0 / 0.2);
+  --rpt-rule: oklch(1 0 0 / 0.1);
+
+  --rpt-head: transparent;
+  --rpt-hero: linear-gradient(120deg, oklch(0.13 0.06 287) 0%, oklch(0.185 0.09 280) 48%, oklch(0.25 0.13 272) 100%);
+  --rpt-hero-ink: oklch(0.97 0.01 270);
+
+  --rpt-shadow: 0 1px 0 var(--rpt-rule);
+  --rpt-shadow-lg: 0 1px 0 var(--rpt-rule), 0 24px 50px -34px oklch(0 0 0 / 0.9);
+
+  --rpt-accent: oklch(0.72 0.18 278);
+  --rpt-accent-soft: oklch(0.72 0.18 278 / 0.14);
+  --rpt-good: oklch(0.76 0.16 158);
   --rpt-bad: oklch(0.72 0.19 22);
-  --rpt-thead: oklch(0.225 0.05 282);
-  --rpt-row-hover: oklch(0.235 0.055 282);
+
+  --rpt-thead: transparent;
+  --rpt-row-hover: oklch(0.72 0.18 278 / 0.08);
 }
 
 /* Vertical rhythm for stacked report sections */
@@ -417,56 +439,91 @@
   gap: var(--rpt-gap);
 }
 
+/* Editorial section: paper card, hairline border, no heavy shadow. */
 @utility rpt-surface {
   background: var(--rpt-surface);
   border: 1px solid var(--rpt-border);
   border-radius: var(--rpt-radius);
   box-shadow: var(--rpt-shadow);
-  transition: box-shadow 220ms ease, border-color 220ms ease, transform 220ms ease;
+  transition: box-shadow 240ms cubic-bezier(0.22, 1, 0.36, 1), border-color 240ms ease, transform 240ms cubic-bezier(0.22, 1, 0.36, 1);
   &:hover {
     box-shadow: var(--rpt-shadow-lg);
+    border-color: var(--rpt-border-strong);
   }
 }
 
+/* Section masthead — hairline rule instead of a filled bar. */
 @utility rpt-head {
   background: var(--rpt-head);
-  border-bottom: 1px solid var(--rpt-border);
+  border-bottom: 1px solid var(--rpt-rule);
 }
 
 @utility rpt-hero {
   background: var(--rpt-hero);
+  color: var(--rpt-hero-ink);
 }
 
-/* Typography scale */
+@utility rpt-page {
+  background: var(--rpt-page);
+}
+
+/* Typography scale — Sora for display, Manrope for text. */
 @utility rpt-eyebrow {
-  font-size: 0.6875rem;
-  line-height: 1rem;
-  font-weight: 600;
-  letter-spacing: 0.08em;
+  font-size: 0.625rem;
+  line-height: 0.95rem;
+  font-weight: 700;
+  letter-spacing: 0.16em;
   text-transform: uppercase;
-  color: var(--muted-foreground);
+  color: color-mix(in oklab, currentColor 58%, transparent);
+}
+
+@utility rpt-kicker {
+  font-family: var(--font-display);
+  font-size: 0.625rem;
+  line-height: 0.95rem;
+  font-weight: 700;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--rpt-accent);
 }
 
 @utility rpt-title {
   font-family: var(--font-display);
-  font-size: 0.875rem;
-  line-height: 1.25rem;
-  font-weight: 650;
-  letter-spacing: -0.01em;
+  font-size: 1.0625rem;
+  line-height: 1.4rem;
+  font-weight: 700;
+  letter-spacing: -0.025em;
+}
+
+@utility rpt-display {
+  font-family: var(--font-display);
+  font-size: clamp(1.9rem, 3.4vw, 2.9rem);
+  line-height: 1.02;
+  font-weight: 800;
+  letter-spacing: -0.045em;
 }
 
 @utility rpt-sub {
-  font-size: 0.75rem;
-  line-height: 1.05rem;
+  font-size: 0.78125rem;
+  line-height: 1.15rem;
   color: var(--muted-foreground);
 }
 
 @utility rpt-metric {
   font-family: var(--font-display);
-  font-size: 1.5rem;
-  line-height: 1.85rem;
-  font-weight: 700;
-  letter-spacing: -0.025em;
+  font-size: 1.625rem;
+  line-height: 2rem;
+  font-weight: 750;
+  letter-spacing: -0.04em;
+  font-variant-numeric: tabular-nums;
+}
+
+@utility rpt-metric-xl {
+  font-family: var(--font-display);
+  font-size: clamp(2.1rem, 4vw, 3rem);
+  line-height: 1.02;
+  font-weight: 800;
+  letter-spacing: -0.05em;
   font-variant-numeric: tabular-nums;
 }
 
@@ -475,51 +532,52 @@
   letter-spacing: -0.01em;
 }
 
+/* Thin accent rule used to open a section or feature tile. */
+@utility rpt-rule {
+  height: 2px;
+  width: 2.25rem;
+  border-radius: 9999px;
+  background: var(--rpt-accent);
+}
+
+@utility rpt-tabs {
+  background: color-mix(in oklab, var(--rpt-surface) 78%, transparent);
+  border: 1px solid var(--rpt-rule);
+  box-shadow: var(--rpt-shadow);
+  backdrop-filter: blur(16px) saturate(160%);
+  -webkit-backdrop-filter: blur(16px) saturate(160%);
+}
+
 /* Table chrome shared by every report table */
 @utility rpt-table {
   & thead th {
     background: var(--rpt-thead);
-    font-size: 0.6875rem;
-    font-weight: 600;
-    letter-spacing: 0.05em;
-    text-transform: uppercase;
-    color: var(--muted-foreground);
-    white-space: nowrap;
-  }
-  & tbody tr {
-    transition: background-color 140ms ease;
-  }
-  & tbody tr:hover {
-    background: var(--rpt-row-hover);
-  }
-  & td {
-    font-variant-numeric: tabular-nums;
+    border-bottom: 1px solid var(--rpt-border-strong);
   }
 }
 
-@utility rpt-tabs {
-  background: color-mix(in oklab, var(--rpt-surface) 82%, transparent);
-  border: 1px solid var(--rpt-border);
-  box-shadow: var(--rpt-shadow);
-  backdrop-filter: blur(14px);
-}
-
-/* Scope wrapper — applies the report table + spacing language to every
+/* Scope wrapper — applies the editorial table language to every
    panel inside the Reports Hub without per-file overrides. */
 .rpt-scope table thead th {
   background: var(--rpt-thead);
-  font-size: 0.6875rem;
-  font-weight: 600;
-  letter-spacing: 0.05em;
+  border-bottom: 1px solid var(--rpt-border-strong);
+  font-family: var(--font-display);
+  font-size: 0.625rem;
+  font-weight: 700;
+  letter-spacing: 0.13em;
   text-transform: uppercase;
   color: var(--muted-foreground);
   white-space: nowrap;
+  height: 2.5rem;
 }
 .rpt-scope table tbody tr {
-  transition: background-color 140ms ease;
+  transition: background-color 160ms ease, box-shadow 160ms ease;
+  border-bottom: 1px solid var(--rpt-rule);
 }
+.rpt-scope table tbody tr:last-child { border-bottom: 0; }
 .rpt-scope table tbody tr:hover {
   background: var(--rpt-row-hover);
+  box-shadow: inset 2px 0 0 var(--rpt-accent);
 }
 .rpt-scope table td,
 .rpt-scope table th {
@@ -527,4 +585,7 @@
 }
 .rpt-scope table tbody td {
   font-size: 0.8125rem;
+  padding-top: 0.6rem;
+  padding-bottom: 0.6rem;
 }
+
