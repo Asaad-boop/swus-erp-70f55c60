@@ -651,6 +651,15 @@ export type CampaignTruthRow = {
   delivery_rate: number;
   cpa: number;
   cac: number;
+  cogs: number;
+  operating_cost: number;
+  gross_profit: number;
+  net_profit: number;
+  net_margin: number;
+  profit_roas: number;
+  breakeven_roas: number;
+  cost_missing_units: number;
+  verdict: "scaling" | "profitable" | "breakeven" | "losing" | "no_data";
 };
 
 export const getCampaignTruth = createServerFn({ method: "POST" })
@@ -671,7 +680,61 @@ export const getCampaignTruth = createServerFn({ method: "POST" })
       _to: data.to,
     } as never);
     if (error) throw error;
-    return (Array.isArray(rows) ? rows : []) as CampaignTruthRow[];
+    const base = (Array.isArray(rows) ? rows : []) as CampaignTruthRow[];
+
+    const { getCampaignProfitMap } = await import("@/lib/erp/marketing/canonical.server");
+    const profit = new Map<
+      string,
+      { cogs: number; operating_cost: number; gross_profit: number; cost_missing_units: number }
+    >();
+    for (const brandId of data.brandIds) {
+      const m = await getCampaignProfitMap(context.supabase, brandId, data.from, data.to);
+      for (const [cid, v] of m) {
+        const cur = profit.get(cid) ?? {
+          cogs: 0,
+          operating_cost: 0,
+          gross_profit: 0,
+          cost_missing_units: 0,
+        };
+        cur.cogs += v.cogs;
+        cur.operating_cost += v.operating_cost;
+        cur.gross_profit += v.gross_profit;
+        cur.cost_missing_units += v.cost_missing_units;
+        profit.set(cid, cur);
+      }
+    }
+
+    const r2 = (n: number) => Math.round(n * 100) / 100;
+    return base.map((r) => {
+      const p = profit.get(r.id) ?? {
+        cogs: 0,
+        operating_cost: 0,
+        gross_profit: 0,
+        cost_missing_units: 0,
+      };
+      const net = p.gross_profit - r.spend;
+      const contributionRate =
+        p.gross_profit > 0 && r.delivered_revenue > 0 ? p.gross_profit / r.delivered_revenue : 0;
+      let verdict: CampaignTruthRow["verdict"] = "no_data";
+      if (r.spend > 0 || p.gross_profit !== 0) {
+        if (net > 0 && r.spend > 0 && p.gross_profit / r.spend >= 1.5) verdict = "scaling";
+        else if (net > 0) verdict = "profitable";
+        else if (Math.abs(net) <= Math.max(200, r.spend * 0.05)) verdict = "breakeven";
+        else verdict = "losing";
+      }
+      return {
+        ...r,
+        cogs: r2(p.cogs),
+        operating_cost: r2(p.operating_cost),
+        gross_profit: r2(p.gross_profit),
+        net_profit: r2(net),
+        net_margin: r.delivered_revenue > 0 ? r2((net / r.delivered_revenue) * 100) : 0,
+        profit_roas: r.spend > 0 ? r2(p.gross_profit / r.spend) : 0,
+        breakeven_roas: contributionRate > 0 ? r2(1 / contributionRate) : 0,
+        cost_missing_units: p.cost_missing_units,
+        verdict,
+      };
+    });
   });
 
 export const rerunCampaignMatching = createServerFn({ method: "POST" })
