@@ -46,6 +46,22 @@ function roasTone(v: number) {
   return "text-rose-600";
 }
 
+type MatchStatus = CampaignTruthRow["match_status"];
+
+function matchLabel(s: MatchStatus) {
+  if (s === "linked") return "Matched";
+  if (s === "partial") return "Partial";
+  if (s === "utm_only") return "UTM only";
+  return "No orders";
+}
+
+function matchTone(s: MatchStatus) {
+  if (s === "linked") return "border-emerald-500/40 bg-emerald-500/10 text-emerald-600";
+  if (s === "partial") return "border-amber-500/40 bg-amber-500/10 text-amber-600";
+  if (s === "utm_only") return "border-sky-500/40 bg-sky-500/10 text-sky-600";
+  return "border-rose-500/40 bg-rose-500/10 text-rose-600";
+}
+
 function CampaignTruthPage() {
   const { brands } = useBrand();
   const [brandKey, setBrandKey] = useState("all");
