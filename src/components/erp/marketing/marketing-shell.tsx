@@ -49,11 +49,18 @@ export const MARKETING_NAV: MarketingNavItem[] = [
     icon: GitBranch,
   },
   {
+    to: "/erp/marketing/truth",
+    label: "Meta vs Actual",
+    short: "Meta vs Actual",
+    icon: Scale,
+  },
+  {
     to: "/erp/marketing/audit",
     label: "Attribution Audit",
     short: "Audit",
     icon: ScanSearch,
   },
+
   { to: "/erp/marketing/products", label: "Product & LTV", short: "Products", icon: PackagePlus },
   {
     to: "/erp/marketing/planning",
