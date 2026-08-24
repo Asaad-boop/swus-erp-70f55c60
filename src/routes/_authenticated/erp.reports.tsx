@@ -912,20 +912,28 @@ function ProductsTab({ args, enabled, rangeLabel }: { args: RpcArgs; enabled: bo
     return [...list].sort((a, b) => Number(b[sort] ?? 0) - Number(a[sort] ?? 0));
   }, [q.data, search, sort]);
 
-  const totals = useMemo(
-    () =>
-      rows.reduce(
-        (acc, r) => ({
+  const totals = useMemo(() => {
+    const seen = new Set<string>();
+    return rows.reduce(
+      (acc, r) => {
+        let spend = 0;
+        if (!seen.has(r.product_id)) {
+          seen.add(r.product_id);
+          spend = adSpendOf(r.product_id);
+        }
+        return {
           units: acc.units + Number(r.units),
           net_revenue: acc.net_revenue + Number(r.net_revenue),
           cogs: acc.cogs + Number(r.cogs),
           gross_profit: acc.gross_profit + Number(r.gross_profit),
           contribution_profit: acc.contribution_profit + Number(r.contribution_profit),
-        }),
-        { units: 0, net_revenue: 0, cogs: 0, gross_profit: 0, contribution_profit: 0 },
-      ),
-    [rows],
-  );
+          ad_spend: acc.ad_spend + spend,
+        };
+      },
+      { units: 0, net_revenue: 0, cogs: 0, gross_profit: 0, contribution_profit: 0, ad_spend: 0 },
+    );
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [rows, adQ.data]);
 
   const chartRows = rows.slice(0, 10).map((r) => ({
     label: (r.variant_label ? `${r.product_name} · ${r.variant_label}` : r.product_name).slice(0, 26),
