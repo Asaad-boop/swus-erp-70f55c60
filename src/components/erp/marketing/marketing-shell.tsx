@@ -6,6 +6,8 @@ import {
   Image as ImageIcon,
   GitBranch,
   ScanSearch,
+  Scale,
+
   PackagePlus,
   CalendarClock,
   BellRing,
