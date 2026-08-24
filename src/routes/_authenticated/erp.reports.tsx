@@ -185,17 +185,19 @@ function ReportsHub() {
     : [];
 
   return (
-    <div className="space-y-5 pb-8">
-      <header className="sticky top-0 z-30 -mb-1 border-b border-border/60 bg-background/85 px-4 py-3 backdrop-blur-xl md:px-6">
+    <div className="rpt-scope space-y-[var(--rpt-gap)] pb-10">
+      <header className="rpt-hero sticky top-0 z-30 -mb-1 border-b border-[var(--rpt-border)] px-4 py-4 backdrop-blur-xl md:px-6">
         <div className="flex flex-wrap items-end justify-between gap-3">
         <div>
-          <h1 className="font-display text-2xl font-bold tracking-tight">
+          <p className="rpt-eyebrow">Business intelligence</p>
+          <h1 className="font-display text-[26px] font-bold leading-tight tracking-[-0.03em]">
             Reports<span className="text-primary">.</span>
           </h1>
-          <p className="text-xs text-muted-foreground md:text-sm">
+          <p className="rpt-sub mt-0.5">
             All numbers come from one accounting source — Dhaka time, {BASIS_LABEL[basis].toLowerCase()} basis.
           </p>
         </div>
+
         <div className="flex flex-wrap items-center gap-2">
           {picker}
           <ReportIndexDrawer onOpenTab={(t) => navigate({ search: { tab: t as TabValue }, replace: true })} />
