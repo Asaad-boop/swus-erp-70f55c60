@@ -1,8 +1,8 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useMemo, useState } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useMutation, useQuery } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
-import { Scale, RefreshCcw, Download, Search } from "lucide-react";
+import { Scale, RefreshCcw, Download, Search, Wand2 } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -15,7 +15,12 @@ import {
   buildPreset,
   type MktRangeValue,
 } from "@/components/erp/marketing/date-range-picker";
-import { getCampaignTruth, type CampaignTruthRow } from "@/lib/erp/marketing/campaigns.functions";
+import { toast } from "sonner";
+import {
+  getCampaignTruth,
+  rerunCampaignMatching,
+  type CampaignTruthRow,
+} from "@/lib/erp/marketing/campaigns.functions";
 
 export const Route = createFileRoute("/_authenticated/erp/marketing/truth")({
   head: () => ({
@@ -81,6 +86,19 @@ function CampaignTruthPage() {
     enabled: brandIds.length > 0,
     staleTime: 60_000,
     refetchOnWindowFocus: false,
+  });
+
+  const runRematch = useServerFn(rerunCampaignMatching);
+  const rerun = useMutation({
+    mutationFn: () => runRematch({ data: { brandIds, from: range.from, to: range.to } }),
+    onSuccess: async (r) => {
+      toast.success(
+        `Matching done — ${r.scanned} order scan, ${r.inserted} নতুন link, ${r.updated} update`,
+      );
+      await q.refetch();
+    },
+    onError: (e: unknown) =>
+      toast.error(e instanceof Error ? e.message : "Re-run matching failed"),
   });
 
   const rows: CampaignTruthRow[] = useMemo(() => {
