@@ -634,6 +634,10 @@ export type CampaignTruthRow = {
   meta_purchase_value: number;
   meta_roas: number;
   orders: number;
+  attributed_orders: number;
+  unlinked_orders: number;
+  match_status: "linked" | "partial" | "utm_only" | "no_orders";
+
   confirmed_orders: number;
   delivered_orders: number;
   returned_orders: number;
