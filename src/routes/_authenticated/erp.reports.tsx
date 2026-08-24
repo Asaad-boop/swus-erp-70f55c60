@@ -1032,7 +1032,11 @@ function ProductsTab({ args, enabled, rangeLabel }: { args: RpcArgs; enabled: bo
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {rows.map((r) => (
+                {rows.map((r) => {
+                  const spend = adSpendOf(r.product_id);
+                  const netAfterAds = Number(r.contribution_profit) - spend;
+                  const roas = spend > 0 ? Number(r.net_revenue) / spend : null;
+                  return (
                   <TableRow key={`${r.product_id}-${r.variant_id ?? "all"}`}>
                     <TableCell>
                       <div className="font-medium">{r.product_name}</div>
