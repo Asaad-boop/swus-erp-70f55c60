@@ -185,20 +185,36 @@ function ReportsHub() {
     : [];
 
   return (
-    <div className="rpt-scope space-y-[var(--rpt-gap)] pb-10">
-      <header className="rpt-hero sticky top-0 z-30 -mb-1 border-b border-[var(--rpt-border)] px-4 py-4 backdrop-blur-xl md:px-6">
-        <div className="flex flex-wrap items-end justify-between gap-3">
-        <div>
-          <p className="rpt-eyebrow">Business intelligence</p>
-          <h1 className="font-display text-[26px] font-bold leading-tight tracking-[-0.03em]">
-            Reports<span className="text-primary">.</span>
+    <div className="rpt-scope rpt-page min-h-screen space-y-[var(--rpt-gap)] pb-14">
+      {/* Masthead — editorial cover band */}
+      <header className="rpt-hero relative overflow-hidden px-5 pb-7 pt-7 md:px-8 md:pb-9 md:pt-10">
+        <span
+          aria-hidden
+          className="pointer-events-none absolute -right-24 -top-24 h-72 w-72 rounded-full opacity-40 blur-3xl"
+          style={{ background: "radial-gradient(circle, oklch(0.62 0.24 277 / 0.6), transparent 70%)" }}
+        />
+        <div className="relative max-w-[1600px]">
+          <div className="flex items-center gap-3">
+            <span aria-hidden className="h-[2px] w-9 rounded-full bg-current opacity-60" />
+            <p className="rpt-eyebrow !text-current opacity-80">Business intelligence · Dhaka</p>
+          </div>
+          <h1 className="rpt-display mt-3">
+            Reports<span style={{ color: "oklch(0.78 0.16 278)" }}>.</span>
           </h1>
-          <p className="rpt-sub mt-0.5">
-            All numbers come from one accounting source — Dhaka time, {BASIS_LABEL[basis].toLowerCase()} basis.
+          <p className="mt-2 max-w-xl text-sm opacity-75">
+            One accounting source of truth — {BASIS_LABEL[basis].toLowerCase()} basis, all brands, no double counting.
           </p>
+          <div className="mt-4 flex flex-wrap items-center gap-x-6 gap-y-1 text-[11px] uppercase tracking-[0.14em] opacity-70">
+            <span>{range.from} — {range.to}</span>
+            <span>{BASIS_LABEL[basis]}</span>
+            <span>{brandIds.length} brand{brandIds.length === 1 ? "" : "s"}</span>
+          </div>
         </div>
+      </header>
 
-        <div className="flex flex-wrap items-center gap-2">
+      {/* Control desk */}
+      <div className="px-4 md:px-6">
+        <div className="rpt-surface flex flex-wrap items-center gap-2 px-3 py-2.5">
           {picker}
           <ReportIndexDrawer onOpenTab={(t) => navigate({ search: { tab: t as TabValue }, replace: true })} />
           <DateRangePicker value={range} onChange={setRange} />
@@ -210,28 +226,29 @@ function ReportsHub() {
               <SelectItem value="confirmed">Confirm date</SelectItem>
             </SelectContent>
           </Select>
-          <Button
-            variant={compare ? "default" : "outline"}
-            size="sm"
-            className="h-9"
-            onClick={() => setCompare((v) => !v)}
-            title={`Compare with ${prevRange.from} → ${prevRange.to}`}
-          >
-            <GitCompareArrows className="mr-1.5 h-3.5 w-3.5" />
-            Compare
-          </Button>
-          <Button
-            variant="outline"
-            size="icon"
-            className="h-9 w-9"
-            onClick={() => { overviewQ.refetch(); prevQ.refetch(); }}
-            aria-label="Refresh"
-          >
-            <RefreshCw className={`h-4 w-4 ${overviewQ.isFetching ? "animate-spin" : ""}`} />
-          </Button>
+          <div className="ml-auto flex items-center gap-2">
+            <Button
+              variant={compare ? "default" : "outline"}
+              size="sm"
+              className="h-9"
+              onClick={() => setCompare((v) => !v)}
+              title={`Compare with ${prevRange.from} → ${prevRange.to}`}
+            >
+              <GitCompareArrows className="mr-1.5 h-3.5 w-3.5" />
+              Compare
+            </Button>
+            <Button
+              variant="outline"
+              size="icon"
+              className="h-9 w-9"
+              onClick={() => { overviewQ.refetch(); prevQ.refetch(); }}
+              aria-label="Refresh"
+            >
+              <RefreshCw className={`h-4 w-4 ${overviewQ.isFetching ? "animate-spin" : ""}`} />
+            </Button>
+          </div>
         </div>
-        </div>
-      </header>
+      </div>
 
       <div className="space-y-[var(--rpt-gap)] px-4 md:px-6">
       {!enabled ? (
@@ -244,8 +261,8 @@ function ReportsHub() {
             value={tab ?? "overview"}
             onValueChange={(v) => navigate({ search: { tab: v as TabValue }, replace: true })}
           >
-            <div className="sticky top-[68px] z-20 -mx-1 overflow-x-auto px-1 py-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
-              <TabsList className="rpt-tabs h-auto w-max gap-1 rounded-full p-1">
+            <div className="sticky top-0 z-20 -mx-4 overflow-x-auto px-4 py-2 md:-mx-6 md:px-6 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+              <TabsList className="rpt-tabs h-auto w-max gap-0 rounded-[var(--rpt-radius)] p-1">
                 {[
                   ["overview", "Overview"], ["sales", "Sales"], ["orders", "Orders"],
                   ["products", "Products"], ["customers", "Customers"], ["inventory", "Inventory"],
@@ -255,9 +272,10 @@ function ReportsHub() {
                   <TabsTrigger
                     key={v}
                     value={v}
-                    className="rounded-full px-3.5 py-1.5 text-xs font-semibold tracking-[-0.01em] text-muted-foreground transition-all data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:shadow-[0_6px_16px_-8px_var(--rpt-accent)]"
+                    className="relative rounded-md px-3.5 py-2 font-display text-[11px] font-bold uppercase tracking-[0.12em] text-muted-foreground transition-all data-[state=active]:bg-[var(--rpt-accent-soft)] data-[state=active]:text-[var(--rpt-accent)] data-[state=active]:shadow-none"
                   >
                     {label}
+
                   </TabsTrigger>
                 ))}
               </TabsList>
