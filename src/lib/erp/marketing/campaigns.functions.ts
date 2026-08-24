@@ -660,6 +660,25 @@ export type CampaignTruthRow = {
   breakeven_roas: number;
   cost_missing_units: number;
   verdict: "scaling" | "profitable" | "breakeven" | "losing" | "no_data";
+  /** Cost attribution split (delivered lines) */
+  courier_cost: number;
+  packaging_cost: number;
+  refund_cost: number;
+  other_cost: number;
+  /** Staff annotations */
+  tags: string[];
+  note: string | null;
+};
+
+export type CampaignTrendPoint = {
+  campaign_id: string;
+  bucket: string;
+  spend: number;
+  delivered_revenue: number;
+  cogs: number;
+  operating_cost: number;
+  gross_profit: number;
+  net_profit: number;
 };
 
 export const getCampaignTruth = createServerFn({ method: "POST" })
