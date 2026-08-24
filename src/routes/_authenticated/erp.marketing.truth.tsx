@@ -102,6 +102,27 @@ type SortKey =
   | "profit_roas"
   | "net_margin";
 
+type ActivityFilter = "all" | "spending" | "no_spend" | "with_orders" | "spend_no_orders";
+
+const ACTIVITY_FILTERS: { key: ActivityFilter; label: string }[] = [
+  { key: "all", label: "All" },
+  { key: "spending", label: "Active spending" },
+  { key: "with_orders", label: "With orders" },
+  { key: "spend_no_orders", label: "Spend · no order" },
+  { key: "no_spend", label: "No spend" },
+];
+
+const activityMatch = (r: CampaignTruthRow, a: ActivityFilter) =>
+  a === "all"
+    ? true
+    : a === "spending"
+      ? r.spend > 0
+      : a === "no_spend"
+        ? r.spend <= 0
+        : a === "with_orders"
+          ? r.orders > 0
+          : r.spend > 0 && r.orders <= 0;
+
 function CampaignTruthPage() {
   const { brands } = useBrand();
   const [brandKey, setBrandKey] = useState("all");
