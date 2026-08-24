@@ -1,8 +1,8 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useMemo, useState } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useMutation, useQuery } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
-import { Scale, RefreshCcw, Download, Search } from "lucide-react";
+import { Scale, RefreshCcw, Download, Search, Wand2 } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -15,7 +15,12 @@ import {
   buildPreset,
   type MktRangeValue,
 } from "@/components/erp/marketing/date-range-picker";
-import { getCampaignTruth, type CampaignTruthRow } from "@/lib/erp/marketing/campaigns.functions";
+import { toast } from "sonner";
+import {
+  getCampaignTruth,
+  rerunCampaignMatching,
+  type CampaignTruthRow,
+} from "@/lib/erp/marketing/campaigns.functions";
 
 export const Route = createFileRoute("/_authenticated/erp/marketing/truth")({
   head: () => ({
@@ -46,6 +51,22 @@ function roasTone(v: number) {
   return "text-rose-600";
 }
 
+type MatchStatus = CampaignTruthRow["match_status"];
+
+function matchLabel(s: MatchStatus) {
+  if (s === "linked") return "Matched";
+  if (s === "partial") return "Partial";
+  if (s === "utm_only") return "UTM only";
+  return "No orders";
+}
+
+function matchTone(s: MatchStatus) {
+  if (s === "linked") return "border-emerald-500/40 bg-emerald-500/10 text-emerald-600";
+  if (s === "partial") return "border-amber-500/40 bg-amber-500/10 text-amber-600";
+  if (s === "utm_only") return "border-sky-500/40 bg-sky-500/10 text-sky-600";
+  return "border-rose-500/40 bg-rose-500/10 text-rose-600";
+}
+
 function CampaignTruthPage() {
   const { brands } = useBrand();
   const [brandKey, setBrandKey] = useState("all");
@@ -65,6 +86,19 @@ function CampaignTruthPage() {
     enabled: brandIds.length > 0,
     staleTime: 60_000,
     refetchOnWindowFocus: false,
+  });
+
+  const runRematch = useServerFn(rerunCampaignMatching);
+  const rerun = useMutation({
+    mutationFn: () => runRematch({ data: { brandIds, from: range.from, to: range.to } }),
+    onSuccess: async (r) => {
+      toast.success(
+        `Matching done — ${r.scanned} order scan, ${r.inserted} নতুন link, ${r.updated} update`,
+      );
+      await q.refetch();
+    },
+    onError: (e: unknown) =>
+      toast.error(e instanceof Error ? e.message : "Re-run matching failed"),
   });
 
   const rows: CampaignTruthRow[] = useMemo(() => {
@@ -104,6 +138,9 @@ function CampaignTruthPage() {
       "Meta value",
       "Meta ROAS",
       "Real orders",
+      "Match status",
+      "Attributed orders",
+      "Unmatched orders",
       "Confirmed",
       "Delivered",
       "Returned",
@@ -127,6 +164,9 @@ function CampaignTruthPage() {
         r.meta_purchase_value,
         r.meta_roas,
         r.orders,
+        r.match_status,
+        r.attributed_orders,
+        r.unlinked_orders,
         r.confirmed_orders,
         r.delivered_orders,
         r.returned_orders,
@@ -167,10 +207,20 @@ function CampaignTruthPage() {
         <div className="flex flex-wrap items-center gap-2">
           <BrandTabs value={brandKey} onChange={setBrandKey} />
           <DateRangePicker value={range} onChange={setRange} />
+          <Button
+            variant="secondary"
+            size="sm"
+            onClick={() => rerun.mutate()}
+            disabled={rerun.isPending || brandIds.length === 0}
+          >
+            <Wand2 className="mr-1.5 h-3.5 w-3.5" />
+            {rerun.isPending ? "Matching…" : "Re-run matching"}
+          </Button>
           <Button variant="outline" size="sm" onClick={() => q.refetch()}>
             <RefreshCcw className="mr-1.5 h-3.5 w-3.5" />
             Refresh
           </Button>
+
           <Button variant="outline" size="sm" onClick={exportCsv} disabled={rows.length === 0}>
             <Download className="mr-1.5 h-3.5 w-3.5" />
             CSV
@@ -231,6 +281,8 @@ function CampaignTruthPage() {
                     <th className="p-2 text-right">Meta value</th>
                     <th className="p-2 text-right">Meta ROAS</th>
                     <th className="p-2 text-right">Real orders</th>
+                    <th className="p-2 text-right">Match</th>
+
                     <th className="p-2 text-right">Gap</th>
                     <th className="p-2 text-right">Delivered</th>
                     <th className="p-2 text-right">Returned</th>
@@ -261,6 +313,20 @@ function CampaignTruthPage() {
                         {r.meta_roas.toFixed(2)}x
                       </td>
                       <td className="p-2 text-right font-medium tabular-nums">{r.orders}</td>
+                      <td className="p-2 text-right">
+                        <div className="flex flex-col items-end gap-0.5">
+                          <Badge
+                            variant="outline"
+                            className={`h-4 px-1 text-[10px] ${matchTone(r.match_status)}`}
+                          >
+                            {matchLabel(r.match_status)}
+                          </Badge>
+                          <span className="text-[10px] tabular-nums text-muted-foreground">
+                            {r.attributed_orders} linked · {r.unlinked_orders} unmatched
+                          </span>
+                        </div>
+                      </td>
+
                       <td
                         className={`p-2 text-right tabular-nums ${
                           r.purchase_gap === 0

@@ -12868,6 +12868,10 @@ export type Database = {
         Args: { p_brand_id: string; p_days?: number; p_trigger?: string }
         Returns: Json
       }
+      mkt_rerun_campaign_matching: {
+        Args: { _brand_ids: string[]; _from: string; _to: string }
+        Returns: Json
+      }
       mkt_upsert_order_attribution: {
         Args: {
           _ad_id?: string
