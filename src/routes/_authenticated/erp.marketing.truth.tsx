@@ -30,9 +30,16 @@ import {
 } from "@/components/erp/marketing/date-range-picker";
 import {
   getCampaignTruth,
+  getCampaignTrend,
   rerunCampaignMatching,
+  type CampaignTrendPoint,
   type CampaignTruthRow,
 } from "@/lib/erp/marketing/campaigns.functions";
+import {
+  CAMPAIGN_TAGS,
+  CampaignTruthDetail,
+  TagChips,
+} from "@/components/erp/marketing/campaign-truth-detail";
 
 export const Route = createFileRoute("/_authenticated/erp/marketing/truth")({
   head: () => ({
@@ -105,6 +112,9 @@ function CampaignTruthPage() {
   const [sortKey, setSortKey] = useState<SortKey>("spend");
   const [sortDesc, setSortDesc] = useState(true);
   const [openRow, setOpenRow] = useState<string | null>(null);
+  const [tagFilter, setTagFilter] = useState<string[]>([]);
+  const [activity, setActivity] = useState<ActivityFilter>("all");
+  const [grain, setGrain] = useState<"day" | "week">("day");
 
   const brandIds = useMemo(() => {
     if (brandKey === "all") return brands.map((b) => b.id);
@@ -120,6 +130,25 @@ function CampaignTruthPage() {
     staleTime: 60_000,
     refetchOnWindowFocus: false,
   });
+
+  const fetchTrend = useServerFn(getCampaignTrend);
+  const trendQ = useQuery({
+    queryKey: ["mkt-campaign-trend", brandIds.slice().sort().join(","), range.from, range.to, grain],
+    queryFn: () => fetchTrend({ data: { brandIds, from: range.from, to: range.to, grain } }),
+    enabled: brandIds.length > 0,
+    staleTime: 60_000,
+    refetchOnWindowFocus: false,
+  });
+
+  const trendByCampaign = useMemo(() => {
+    const m = new Map<string, CampaignTrendPoint[]>();
+    for (const p of trendQ.data ?? []) {
+      const arr = m.get(p.campaign_id);
+      if (arr) arr.push(p);
+      else m.set(p.campaign_id, [p]);
+    }
+    return m;
+  }, [trendQ.data]);
 
   const runRematch = useServerFn(rerunCampaignMatching);
   const rerun = useMutation({
@@ -140,12 +169,21 @@ function CampaignTruthPage() {
     const out = all.filter((r) => {
       if (r.spend < minSpend) return false;
       if (verdictFilter !== "all" && r.verdict !== verdictFilter) return false;
+      if (activity === "spending" && r.spend <= 0) return false;
+      if (activity === "no_spend" && r.spend > 0) return false;
+      if (activity === "with_orders" && r.orders <= 0) return false;
+      if (activity === "spend_no_orders" && !(r.spend > 0 && r.orders <= 0)) return false;
+      if (tagFilter.length > 0 && !tagFilter.every((t) => (r.tags ?? []).includes(t))) return false;
       if (!s) return true;
-      return r.name.toLowerCase().includes(s) || (r.external_id ?? "").includes(s);
+      return (
+        r.name.toLowerCase().includes(s) ||
+        (r.external_id ?? "").includes(s) ||
+        (r.note ?? "").toLowerCase().includes(s)
+      );
     });
     const dir = sortDesc ? -1 : 1;
     return out.sort((a, b) => (Number(a[sortKey]) - Number(b[sortKey])) * dir);
-  }, [all, search, verdictFilter, minSpend, sortKey, sortDesc]);
+  }, [all, search, verdictFilter, minSpend, sortKey, sortDesc, activity, tagFilter]);
 
   const totals = useMemo(
     () =>
@@ -402,6 +440,61 @@ function CampaignTruthPage() {
         </div>
       </div>
 
+      {/* Activity + tag filters */}
+      <div className="flex flex-wrap items-center gap-2">
+        <span className="text-[11px] uppercase tracking-wide text-muted-foreground">Activity</span>
+        {ACTIVITY_FILTERS.map((a) => (
+          <Button
+            key={a.key}
+            variant={activity === a.key ? "default" : "outline"}
+            size="sm"
+            onClick={() => setActivity(a.key)}
+          >
+            {a.label} ({activityCounts[a.key] ?? 0})
+          </Button>
+        ))}
+        <span className="ml-3 text-[11px] uppercase tracking-wide text-muted-foreground">Tags</span>
+        {CAMPAIGN_TAGS.map((t) => {
+          const on = tagFilter.includes(t.key);
+          return (
+            <Button
+              key={t.key}
+              variant={on ? "default" : "outline"}
+              size="sm"
+              onClick={() =>
+                setTagFilter((cur) =>
+                  cur.includes(t.key) ? cur.filter((x) => x !== t.key) : [...cur, t.key],
+                )
+              }
+            >
+              {t.label} ({tagCounts[t.key] ?? 0})
+            </Button>
+          );
+        })}
+        {tagFilter.length > 0 && (
+          <Button variant="ghost" size="sm" onClick={() => setTagFilter([])}>
+            Clear tags
+          </Button>
+        )}
+        <div className="ml-auto flex items-center gap-1">
+          <span className="text-[11px] uppercase tracking-wide text-muted-foreground">Trend</span>
+          <Button
+            variant={grain === "day" ? "default" : "outline"}
+            size="sm"
+            onClick={() => setGrain("day")}
+          >
+            Daily
+          </Button>
+          <Button
+            variant={grain === "week" ? "default" : "outline"}
+            size="sm"
+            onClick={() => setGrain("week")}
+          >
+            Weekly
+          </Button>
+        </div>
+      </div>
+
       {/* Table */}
       <Card>
         <CardContent className="p-0">
@@ -456,10 +549,11 @@ function CampaignTruthPage() {
                               />
                               <div className="min-w-0">
                                 <div className="truncate font-medium">{r.name}</div>
-                                <div className="flex items-center gap-1.5">
+                                <div className="flex flex-wrap items-center gap-1.5">
                                   <Badge variant="outline" className="h-4 px-1 text-[10px]">
                                     {r.status}
                                   </Badge>
+                                  <TagChips tags={r.tags ?? []} />
                                   <span className="truncate font-mono text-[10px] text-muted-foreground">
                                     {r.external_id ?? "—"}
                                   </span>
@@ -533,7 +627,12 @@ function CampaignTruthPage() {
                         {open && (
                           <tr className="border-t bg-muted/20">
                             <td colSpan={13} className="p-3">
-                              <ProfitBridge row={r} />
+                              <CampaignTruthDetail
+                                row={r}
+                                trend={trendByCampaign.get(r.id) ?? []}
+                                brandId={brandIds.length === 1 ? brandIds[0] : null}
+                                onSaved={() => q.refetch()}
+                              />
                             </td>
                           </tr>
                         )}
@@ -606,52 +705,4 @@ function SortTh({
   );
 }
 
-function ProfitBridge({ row }: { row: CampaignTruthRow }) {
-  const steps = [
-    { l: "Delivered revenue", v: row.delivered_revenue, tone: "text-foreground" },
-    { l: "− COGS", v: -row.cogs, tone: "text-rose-600" },
-    { l: "− Courier/packaging/refund", v: -row.operating_cost, tone: "text-rose-600" },
-    { l: "= Gross profit", v: row.gross_profit, tone: "text-foreground font-semibold" },
-    { l: "− Ad spend", v: -row.spend, tone: "text-rose-600" },
-    {
-      l: "= Net profit",
-      v: row.net_profit,
-      tone: row.net_profit >= 0 ? "text-emerald-600 font-semibold" : "text-rose-600 font-semibold",
-    },
-  ];
-  return (
-    <div className="grid gap-3 md:grid-cols-[2fr_1fr]">
-      <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-6">
-        {steps.map((s) => (
-          <div key={s.l} className="rounded-lg border bg-background p-2">
-            <div className="text-[10px] uppercase tracking-wide text-muted-foreground">{s.l}</div>
-            <div className={`mt-0.5 text-sm tabular-nums ${s.tone}`}>{bdt(s.v)}</div>
-          </div>
-        ))}
-      </div>
-      <div className="grid grid-cols-2 gap-2 text-xs">
-        <Stat l="Break-even ROAS" v={row.breakeven_roas ? row.breakeven_roas.toFixed(2) + "x" : "—"} />
-        <Stat l="CAC (delivered)" v={row.cac ? bdt(row.cac) : "—"} />
-        <Stat l="CPA (all orders)" v={row.cpa ? bdt(row.cpa) : "—"} />
-        <Stat
-          l="Return / cancel"
-          v={`${row.returned_orders} / ${row.cancelled_orders}`}
-        />
-        <Stat l="In progress" v={String(row.in_progress_orders)} />
-        <Stat
-          l="Meta value"
-          v={bdt(row.meta_purchase_value)}
-        />
-      </div>
-    </div>
-  );
-}
 
-function Stat({ l, v }: { l: string; v: string }) {
-  return (
-    <div className="rounded-lg border bg-background p-2">
-      <div className="text-[10px] uppercase tracking-wide text-muted-foreground">{l}</div>
-      <div className="mt-0.5 tabular-nums">{v}</div>
-    </div>
-  );
-}
