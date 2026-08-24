@@ -337,6 +337,12 @@ function CampaignTruthPage() {
         r.profit_roas,
         r.breakeven_roas,
         r.cac,
+        r.courier_cost,
+        r.packaging_cost,
+        r.refund_cost,
+        r.other_cost,
+        (r.tags ?? []).join("|"),
+        r.note ?? "",
       ]),
     ]
       .map((l) => l.map((c) => `"${String(c).replace(/"/g, '""')}"`).join(","))
