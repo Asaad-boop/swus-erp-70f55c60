@@ -233,7 +233,7 @@ function ReportsHub() {
         </div>
       </header>
 
-      <div className="space-y-5 px-4 md:px-6">
+      <div className="space-y-[var(--rpt-gap)] px-4 md:px-6">
       {!enabled ? (
         <Panel><EmptyState text="Pick at least one brand to see reports." /></Panel>
       ) : (
@@ -245,7 +245,7 @@ function ReportsHub() {
             onValueChange={(v) => navigate({ search: { tab: v as TabValue }, replace: true })}
           >
             <div className="sticky top-[68px] z-20 -mx-1 overflow-x-auto px-1 py-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
-              <TabsList className="h-auto w-max gap-1 rounded-full border border-border/60 bg-card/80 p-1 shadow-sm backdrop-blur-xl">
+              <TabsList className="rpt-tabs h-auto w-max gap-1 rounded-full p-1">
                 {[
                   ["overview", "Overview"], ["sales", "Sales"], ["orders", "Orders"],
                   ["products", "Products"], ["customers", "Customers"], ["inventory", "Inventory"],
@@ -255,7 +255,7 @@ function ReportsHub() {
                   <TabsTrigger
                     key={v}
                     value={v}
-                    className="rounded-full px-3.5 py-1.5 text-xs font-medium transition-colors data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:shadow-sm"
+                    className="rounded-full px-3.5 py-1.5 text-xs font-semibold tracking-[-0.01em] text-muted-foreground transition-all data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:shadow-[0_6px_16px_-8px_var(--rpt-accent)]"
                   >
                     {label}
                   </TabsTrigger>
@@ -263,7 +263,7 @@ function ReportsHub() {
               </TabsList>
             </div>
 
-            <TabsContent value="overview" className="mt-4 space-y-4">
+            <TabsContent value="overview" className="mt-[var(--rpt-gap)] space-y-[var(--rpt-gap)]">
               {compare && (
                 <p className="text-xs text-muted-foreground">
                   Comparing against previous period: <span className="font-medium">{prevRange.from} → {prevRange.to}</span>
@@ -275,48 +275,48 @@ function ReportsHub() {
               {s && <ProfitBridge s={s} />}
             </TabsContent>
 
-            <TabsContent value="sales" className="mt-4 space-y-4">
+            <TabsContent value="sales" className="mt-[var(--rpt-gap)] space-y-[var(--rpt-gap)]">
               <TrendPanel rows={series} loading={overviewQ.isLoading} showTable rangeLabel={rangeLabel} kpis={kpis} />
               <BreakdownPanel args={args} enabled={enabled} />
             </TabsContent>
 
-            <TabsContent value="orders" className="mt-4 space-y-4">
+            <TabsContent value="orders" className="mt-[var(--rpt-gap)] space-y-[var(--rpt-gap)]">
               <OrdersTab args={args} enabled={enabled} />
             </TabsContent>
 
-            <TabsContent value="products" className="mt-4 space-y-4">
+            <TabsContent value="products" className="mt-[var(--rpt-gap)] space-y-[var(--rpt-gap)]">
               <ProductsTab args={args} enabled={enabled} rangeLabel={rangeLabel} />
             </TabsContent>
 
 
-            <TabsContent value="customers" className="mt-4 space-y-4">
+            <TabsContent value="customers" className="mt-[var(--rpt-gap)] space-y-[var(--rpt-gap)]">
               <CustomersTab args={args} enabled={enabled} />
             </TabsContent>
 
-            <TabsContent value="inventory" className="mt-4 space-y-4">
+            <TabsContent value="inventory" className="mt-[var(--rpt-gap)] space-y-[var(--rpt-gap)]">
               <InventoryTab args={args} enabled={enabled} />
             </TabsContent>
 
-            <TabsContent value="marketing" className="mt-4 space-y-4">
+            <TabsContent value="marketing" className="mt-[var(--rpt-gap)] space-y-[var(--rpt-gap)]">
               <MarketingTab args={args} enabled={enabled} />
               <AdsPanel args={args} enabled={enabled} rangeLabel={rangeLabel} />
             </TabsContent>
 
-            <TabsContent value="returns" className="mt-4 space-y-4">
+            <TabsContent value="returns" className="mt-[var(--rpt-gap)] space-y-[var(--rpt-gap)]">
               <ReturnsTab args={args} enabled={enabled} />
               <CourierPerformancePanel args={args} enabled={enabled} rangeLabel={rangeLabel} />
               <DeliveryAreaPanel args={args} enabled={enabled} rangeLabel={rangeLabel} />
             </TabsContent>
 
-            <TabsContent value="supply" className="mt-4 space-y-4">
+            <TabsContent value="supply" className="mt-[var(--rpt-gap)] space-y-[var(--rpt-gap)]">
               <SupplyTab args={args} enabled={enabled} />
             </TabsContent>
 
-            <TabsContent value="finance" className="mt-4 space-y-4">
+            <TabsContent value="finance" className="mt-[var(--rpt-gap)] space-y-[var(--rpt-gap)]">
               <FinanceTab args={args} enabled={enabled} />
             </TabsContent>
 
-            <TabsContent value="control" className="mt-4 space-y-4">
+            <TabsContent value="control" className="mt-[var(--rpt-gap)] space-y-[var(--rpt-gap)]">
               <ControlTab args={args} enabled={enabled} />
             </TabsContent>
           </Tabs>
