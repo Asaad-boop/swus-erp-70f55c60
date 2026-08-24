@@ -40,29 +40,28 @@ export function Panel({
   flush?: boolean;
 }) {
   return (
-    <Card className={cn("rpt-surface overflow-hidden border-0 bg-transparent p-0 shadow-none", className)}>
-      <div className="rpt-surface overflow-hidden">
-        {(title || action) && (
-          <div className="rpt-head flex flex-wrap items-center justify-between gap-3 px-[var(--rpt-pad)] py-3">
-            <div className="flex min-w-0 items-start gap-2.5">
-              <span
-                aria-hidden
-                className="mt-1 h-3.5 w-[3px] shrink-0 rounded-full"
-                style={{ background: "var(--rpt-accent)" }}
-              />
-              <div className="min-w-0">
-                {title && <h3 className="rpt-title truncate">{title}</h3>}
-                {subtitle && <p className="rpt-sub mt-0.5">{subtitle}</p>}
-              </div>
+    <section className={cn("rpt-surface overflow-hidden", className)}>
+      {(title || action) && (
+        <div className="rpt-head flex flex-wrap items-center justify-between gap-3 px-[var(--rpt-pad)] py-3">
+          <div className="flex min-w-0 items-start gap-2.5">
+            <span
+              aria-hidden
+              className="mt-1 h-3.5 w-[3px] shrink-0 rounded-full"
+              style={{ background: "var(--rpt-accent)" }}
+            />
+            <div className="min-w-0">
+              {title && <h3 className="rpt-title truncate">{title}</h3>}
+              {subtitle && <p className="rpt-sub mt-0.5">{subtitle}</p>}
             </div>
-            {action}
           </div>
-        )}
-        <div className={flush ? "" : "p-[var(--rpt-pad)]"}>{children}</div>
-      </div>
-    </Card>
+          {action}
+        </div>
+      )}
+      <div className={flush ? "" : "p-[var(--rpt-pad)]"}>{children}</div>
+    </section>
   );
 }
+
 
 
 export type Kpi = {
