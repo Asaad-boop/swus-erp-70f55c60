@@ -618,3 +618,54 @@ export const upsertCampaignBudget = createServerFn({ method: "POST" })
     }
     return { ok: true };
   });
+
+/* ------------------------------------------------------------------ */
+/* Meta vs Actual (campaign truth)                                      */
+/* ------------------------------------------------------------------ */
+
+export type CampaignTruthRow = {
+  id: string;
+  name: string;
+  status: string;
+  external_id: string | null;
+  spend: number;
+  clicks: number;
+  meta_purchases: number;
+  meta_purchase_value: number;
+  meta_roas: number;
+  orders: number;
+  confirmed_orders: number;
+  delivered_orders: number;
+  returned_orders: number;
+  cancelled_orders: number;
+  in_progress_orders: number;
+  delivered_revenue: number;
+  booked_revenue: number;
+  actual_roas: number;
+  booked_roas: number;
+  purchase_gap: number;
+  delivery_rate: number;
+  cpa: number;
+  cac: number;
+};
+
+export const getCampaignTruth = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d: unknown) =>
+    z
+      .object({
+        brandIds: z.array(z.string().uuid()).min(1),
+        from: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
+        to: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
+      })
+      .parse(d),
+  )
+  .handler(async ({ data, context }) => {
+    const { data: rows, error } = await context.supabase.rpc("mkt_campaign_truth", {
+      _brand_ids: data.brandIds,
+      _from: data.from,
+      _to: data.to,
+    } as never);
+    if (error) throw error;
+    return (Array.isArray(rows) ? rows : []) as CampaignTruthRow[];
+  });
