@@ -231,6 +231,8 @@ function CampaignTruthPage() {
                     <th className="p-2 text-right">Meta value</th>
                     <th className="p-2 text-right">Meta ROAS</th>
                     <th className="p-2 text-right">Real orders</th>
+                    <th className="p-2 text-right">Match</th>
+
                     <th className="p-2 text-right">Gap</th>
                     <th className="p-2 text-right">Delivered</th>
                     <th className="p-2 text-right">Returned</th>
