@@ -302,6 +302,12 @@ function CampaignTruthPage() {
       "Profit ROAS",
       "Break-even ROAS",
       "CAC",
+      "Courier cost",
+      "Packaging cost",
+      "Refunds",
+      "Other adj.",
+      "Tags",
+      "Note",
     ];
     const csv = [
       head,
