@@ -1025,6 +1025,9 @@ function ProductsTab({ args, enabled, rangeLabel }: { args: RpcArgs; enabled: bo
                   <TableHead className="text-right">Gross profit</TableHead>
                   <TableHead className="text-right">Margin</TableHead>
                   <TableHead className="text-right">Contribution</TableHead>
+                  <TableHead className="text-right">Ad spend</TableHead>
+                  <TableHead className="text-right">Net after ads</TableHead>
+                  <TableHead className="text-right">ROAS</TableHead>
                   <TableHead className="text-right">Return %</TableHead>
                 </TableRow>
               </TableHeader>
