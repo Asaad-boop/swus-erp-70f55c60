@@ -4,7 +4,8 @@ import { useQuery } from "@tanstack/react-query";
 import {
   AreaChart, Area, BarChart, Bar, CartesianGrid, XAxis, YAxis, Tooltip, ResponsiveContainer, Legend,
 } from "recharts";
-import { FileSpreadsheet, AlertTriangle, RefreshCw, Search, GitCompareArrows } from "lucide-react";
+import { FileSpreadsheet, AlertTriangle, RefreshCw, Search, GitCompareArrows, ArrowDown } from "lucide-react";
+import { cn } from "@/lib/utils";
 import { supabase } from "@/integrations/supabase/client";
 import { useMultiBrandPicker } from "@/components/erp/brand-picker-gate";
 import { DateRangePicker, buildPreset, type MktRangeValue } from "@/components/erp/marketing/date-range-picker";
@@ -850,21 +851,37 @@ function OrdersTab({ args, enabled }: { args: RpcArgs; enabled: boolean }) {
   );
 }
 
-type ProductSort = "net_revenue" | "gross_profit" | "units" | "margin_pct" | "return_rate";
+type ProductSort =
+  | "net_revenue" | "gross_profit" | "units" | "margin_pct" | "return_rate"
+  | "contribution_profit" | "ad_spend" | "net_after_ads" | "roas" | "cogs";
 
 const PRODUCT_SORTS: { key: ProductSort; label: string }[] = [
   { key: "net_revenue", label: "Revenue" },
   { key: "gross_profit", label: "Profit" },
+  { key: "contribution_profit", label: "Contribution" },
+  { key: "net_after_ads", label: "Net after ads" },
+  { key: "ad_spend", label: "Ad spend" },
   { key: "units", label: "Units" },
   { key: "margin_pct", label: "Margin %" },
   { key: "return_rate", label: "Return %" },
+];
+
+type ProductFilter = "all" | "winners" | "loss" | "nocost" | "highreturn" | "ads";
+
+const PRODUCT_FILTERS: { key: ProductFilter; label: string }[] = [
+  { key: "all", label: "All" },
+  { key: "winners", label: "Profitable" },
+  { key: "loss", label: "Losing" },
+  { key: "ads", label: "Ad linked" },
+  { key: "highreturn", label: "High return" },
+  { key: "nocost", label: "Missing cost" },
 ];
 
 function ProductsTab({ args, enabled, rangeLabel }: { args: RpcArgs; enabled: boolean; rangeLabel?: string }) {
   const [level, setLevel] = useState<"product" | "variant">("product");
   const [sort, setSort] = useState<ProductSort>("net_revenue");
   const [search, setSearch] = useState("");
-
+  const [filter, setFilter] = useState<ProductFilter>("all");
 
   const q = useQuery({
     queryKey: ["rpt-products", JSON.stringify(args), level],
@@ -901,45 +918,89 @@ function ProductsTab({ args, enabled, rangeLabel }: { args: RpcArgs; enabled: bo
 
   const adSpendOf = (productId: string) => adQ.data?.get(productId)?.ad_spend ?? 0;
 
+  /** Rows enriched with derived ad metrics (spend counted once per product). */
+  const enriched = useMemo(() => {
+    const seen = new Set<string>();
+    return (q.data ?? []).map((r) => {
+      const first = !seen.has(r.product_id);
+      if (first) seen.add(r.product_id);
+      const ad_spend = first ? adSpendOf(r.product_id) : 0;
+      const net_after_ads = Number(r.contribution_profit) - ad_spend;
+      const roas = ad_spend > 0 ? Number(r.net_revenue) / ad_spend : 0;
+      return { ...r, ad_spend, net_after_ads, roas };
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [q.data, adQ.data]);
+
   const rows = useMemo(() => {
     const term = search.trim().toLowerCase();
-    const list = (q.data ?? []).filter((r) =>
-      !term ||
-      r.product_name?.toLowerCase().includes(term) ||
-      (r.sku ?? "").toLowerCase().includes(term) ||
-      (r.variant_label ?? "").toLowerCase().includes(term),
-    );
-    return [...list].sort((a, b) => Number(b[sort] ?? 0) - Number(a[sort] ?? 0));
-  }, [q.data, search, sort]);
+    const list = enriched.filter((r) => {
+      const matchTerm =
+        !term ||
+        r.product_name?.toLowerCase().includes(term) ||
+        (r.sku ?? "").toLowerCase().includes(term) ||
+        (r.variant_label ?? "").toLowerCase().includes(term);
+      if (!matchTerm) return false;
+      switch (filter) {
+        case "winners": return r.net_after_ads > 0;
+        case "loss": return r.net_after_ads < 0;
+        case "ads": return r.ad_spend > 0;
+        case "highreturn": return Number(r.return_rate) > 15;
+        case "nocost": return Number(r.cost_missing_units) > 0;
+        default: return true;
+      }
+    });
+    return [...list].sort((a, b) => Number((b as never)[sort] ?? 0) - Number((a as never)[sort] ?? 0));
+  }, [enriched, search, sort, filter]);
 
-  const totals = useMemo(() => {
-    const seen = new Set<string>();
-    return rows.reduce(
-      (acc, r) => {
-        let spend = 0;
-        if (!seen.has(r.product_id)) {
-          seen.add(r.product_id);
-          spend = adSpendOf(r.product_id);
-        }
-        return {
+  const totals = useMemo(
+    () =>
+      rows.reduce(
+        (acc, r) => ({
           units: acc.units + Number(r.units),
           net_revenue: acc.net_revenue + Number(r.net_revenue),
           cogs: acc.cogs + Number(r.cogs),
           gross_profit: acc.gross_profit + Number(r.gross_profit),
           contribution_profit: acc.contribution_profit + Number(r.contribution_profit),
-          ad_spend: acc.ad_spend + spend,
-        };
-      },
-      { units: 0, net_revenue: 0, cogs: 0, gross_profit: 0, contribution_profit: 0, ad_spend: 0 },
-    );
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [rows, adQ.data]);
+          ad_spend: acc.ad_spend + Number(r.ad_spend),
+        }),
+        { units: 0, net_revenue: 0, cogs: 0, gross_profit: 0, contribution_profit: 0, ad_spend: 0 },
+      ),
+    [rows],
+  );
+
+  const netAfterAdsTotal = totals.contribution_profit - totals.ad_spend;
+  const maxRevenue = Math.max(1, ...rows.map((r) => Number(r.net_revenue)));
+
+  const kpis: Kpi[] = [
+    { label: "Net revenue", value: totals.net_revenue, kind: "money", hint: `${rows.length} ${level === "variant" ? "variants" : "products"} · ${totals.units.toLocaleString()} units` },
+    { label: "Gross profit", value: totals.gross_profit, kind: "money", tone: totals.gross_profit < 0 ? "bad" : "good", hint: totals.net_revenue > 0 ? `${((totals.gross_profit / totals.net_revenue) * 100).toFixed(1)}% margin` : undefined },
+    { label: "Contribution", value: totals.contribution_profit, kind: "money", tone: totals.contribution_profit < 0 ? "bad" : "default", hint: "after courier cost" },
+    { label: "Meta ad spend", value: totals.ad_spend, kind: "money", hint: "linked campaigns only" },
+    { label: "Net after ads", value: netAfterAdsTotal, kind: "money", tone: netAfterAdsTotal < 0 ? "bad" : "good", hint: "contribution − ad spend" },
+    { label: "Blended ROAS", value: totals.ad_spend > 0 ? totals.net_revenue / totals.ad_spend : 0, kind: "number", hint: "net revenue ÷ ad spend" },
+  ];
 
   const chartRows = rows.slice(0, 10).map((r) => ({
     label: (r.variant_label ? `${r.product_name} · ${r.variant_label}` : r.product_name).slice(0, 26),
     gross_profit: Number(r.gross_profit),
     net_revenue: Number(r.net_revenue),
   }));
+
+  const sortBtn = (key: ProductSort, label: string, align: "left" | "right" = "right") => (
+    <button
+      type="button"
+      onClick={() => setSort(key)}
+      className={cn(
+        "inline-flex w-full items-center gap-1 text-[11px] font-semibold uppercase tracking-wide transition-colors hover:text-foreground",
+        align === "right" ? "justify-end" : "justify-start",
+        sort === key ? "text-primary" : "text-muted-foreground",
+      )}
+    >
+      {label}
+      {sort === key && <ArrowDown className="h-3 w-3" />}
+    </button>
+  );
 
   return (
     <>
@@ -951,8 +1012,9 @@ function ProductsTab({ args, enabled, rangeLabel }: { args: RpcArgs; enabled: bo
         rangeLabel={rangeLabel}
       />
 
-      <Panel title={`Top ${level === "variant" ? "variants" : "products"} by ${PRODUCT_SORTS.find((s) => s.key === sort)?.label.toLowerCase()}`}>
+      <KpiStrip items={kpis} loading={q.isLoading} />
 
+      <Panel title={`Top ${level === "variant" ? "variants" : "products"} by ${PRODUCT_SORTS.find((s) => s.key === sort)?.label.toLowerCase()}`}>
         {q.isLoading ? (
           <Skeleton className="h-[300px] rounded-lg" />
         ) : chartRows.length === 0 ? (
@@ -976,19 +1038,30 @@ function ProductsTab({ args, enabled, rangeLabel }: { args: RpcArgs; enabled: bo
 
       <Panel
         title="Product profitability"
-        subtitle={`${rows.length} rows · net revenue ${fmtBdt(totals.net_revenue)} · gross profit ${fmtBdt(totals.gross_profit)} · Meta ad spend ${fmtBdt(totals.ad_spend)} (linked campaigns)`}
+        subtitle={`${rows.length} rows · net after ads ${fmtBdt(netAfterAdsTotal)} · sorted by ${PRODUCT_SORTS.find((s) => s.key === sort)?.label.toLowerCase()}`}
         action={
           <div className="flex flex-wrap items-center gap-2">
-            <div className="flex gap-1">
-              <Button size="sm" variant={level === "product" ? "default" : "outline"} className="h-7 px-2.5 text-xs" onClick={() => setLevel("product")}>Product</Button>
-              <Button size="sm" variant={level === "variant" ? "default" : "outline"} className="h-7 px-2.5 text-xs" onClick={() => setLevel("variant")}>Variant</Button>
+            <div className="flex rounded-lg border border-border/70 bg-muted/40 p-0.5">
+              {(["product", "variant"] as const).map((lv) => (
+                <button
+                  key={lv}
+                  type="button"
+                  onClick={() => setLevel(lv)}
+                  className={cn(
+                    "rounded-md px-2.5 py-1 text-xs font-medium capitalize transition-all",
+                    level === lv ? "bg-background text-foreground shadow-sm" : "text-muted-foreground hover:text-foreground",
+                  )}
+                >
+                  {lv}
+                </button>
+              ))}
             </div>
             <div className="relative">
               <Search className="pointer-events-none absolute left-2 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-muted-foreground" />
               <Input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Search product / SKU" className="h-7 w-[190px] pl-7 text-xs" />
             </div>
             <Select value={sort} onValueChange={(v) => setSort(v as ProductSort)}>
-              <SelectTrigger className="h-7 w-[130px] text-xs"><SelectValue /></SelectTrigger>
+              <SelectTrigger className="h-7 w-[140px] text-xs"><SelectValue /></SelectTrigger>
               <SelectContent>
                 {PRODUCT_SORTS.map((s2) => <SelectItem key={s2.key} value={s2.key}>{s2.label}</SelectItem>)}
               </SelectContent>
@@ -999,7 +1072,7 @@ function ProductsTab({ args, enabled, rangeLabel }: { args: RpcArgs; enabled: bo
               onClick={() =>
                 exportAoaXlsx(
                   [["Product", "Variant", "SKU", "Orders", "Units", "Net revenue", "COGS", "Gross profit", "Margin %", "Courier", "Contribution", "Ad spend (Meta)", "Net after ads", "ROAS", "Avg price", "Avg cost", "Returned units", "Return %", "Units missing cost"],
-                   ...rows.map((r) => { const sp = adSpendOf(r.product_id); return [r.product_name, r.variant_label ?? "", r.sku ?? "", r.orders, r.units, r.net_revenue, r.cogs, r.gross_profit, r.margin_pct, r.courier_cost, r.contribution_profit, sp, Number(r.contribution_profit) - sp, sp > 0 ? Number(r.net_revenue) / sp : "", r.avg_price, r.avg_cost, r.returned_units, r.return_rate, r.cost_missing_units]; })],
+                   ...rows.map((r) => [r.product_name, r.variant_label ?? "", r.sku ?? "", r.orders, r.units, r.net_revenue, r.cogs, r.gross_profit, r.margin_pct, r.courier_cost, r.contribution_profit, r.ad_spend, r.net_after_ads, r.ad_spend > 0 ? r.roas : "", r.avg_price, r.avg_cost, r.returned_units, r.return_rate, r.cost_missing_units])],
                   "Products", `product-profit-${level}`,
                 )
               }
@@ -1009,64 +1082,135 @@ function ProductsTab({ args, enabled, rangeLabel }: { args: RpcArgs; enabled: bo
           </div>
         }
       >
+        <div className="mb-3 flex flex-wrap items-center gap-1.5">
+          {PRODUCT_FILTERS.map((f) => {
+            const count =
+              f.key === "all" ? enriched.length
+              : f.key === "winners" ? enriched.filter((r) => r.net_after_ads > 0).length
+              : f.key === "loss" ? enriched.filter((r) => r.net_after_ads < 0).length
+              : f.key === "ads" ? enriched.filter((r) => r.ad_spend > 0).length
+              : f.key === "highreturn" ? enriched.filter((r) => Number(r.return_rate) > 15).length
+              : enriched.filter((r) => Number(r.cost_missing_units) > 0).length;
+            return (
+              <button
+                key={f.key}
+                type="button"
+                onClick={() => setFilter(f.key)}
+                className={cn(
+                  "inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-[11px] font-medium transition-all",
+                  filter === f.key
+                    ? "border-primary/50 bg-primary/10 text-primary"
+                    : "border-border/60 text-muted-foreground hover:border-border hover:text-foreground",
+                )}
+              >
+                {f.label}
+                <span className="tabular-nums opacity-70">{count}</span>
+              </button>
+            );
+          })}
+        </div>
+
         {q.isLoading ? (
           <Skeleton className="h-[320px] rounded-lg" />
         ) : rows.length === 0 ? (
           <EmptyState text="No delivered product lines in this range." />
         ) : (
-          <div className="max-h-[560px] overflow-auto rounded-lg border">
+          <div className="max-h-[620px] overflow-auto rounded-xl border border-border/60">
             <Table>
-              <TableHeader className="sticky top-0 z-10 bg-muted/60 backdrop-blur">
-                <TableRow>
-                  <TableHead>Product</TableHead>
-                  <TableHead className="text-right">Units</TableHead>
-                  <TableHead className="text-right">Net revenue</TableHead>
-                  <TableHead className="text-right">COGS</TableHead>
-                  <TableHead className="text-right">Gross profit</TableHead>
-                  <TableHead className="text-right">Margin</TableHead>
-                  <TableHead className="text-right">Contribution</TableHead>
-                  <TableHead className="text-right">Ad spend</TableHead>
-                  <TableHead className="text-right">Net after ads</TableHead>
-                  <TableHead className="text-right">ROAS</TableHead>
-                  <TableHead className="text-right">Return %</TableHead>
+              <TableHeader className="sticky top-0 z-10 bg-muted/80 backdrop-blur">
+                <TableRow className="hover:bg-transparent">
+                  <TableHead className="w-[280px]">{sortBtn("net_revenue", "Product", "left")}</TableHead>
+                  <TableHead className="text-right">{sortBtn("units", "Units")}</TableHead>
+                  <TableHead className="text-right">{sortBtn("net_revenue", "Net revenue")}</TableHead>
+                  <TableHead className="text-right">{sortBtn("cogs", "COGS")}</TableHead>
+                  <TableHead className="text-right">{sortBtn("gross_profit", "Gross profit")}</TableHead>
+                  <TableHead className="text-right">{sortBtn("margin_pct", "Margin")}</TableHead>
+                  <TableHead className="text-right">{sortBtn("contribution_profit", "Contribution")}</TableHead>
+                  <TableHead className="text-right">{sortBtn("ad_spend", "Ad spend")}</TableHead>
+                  <TableHead className="text-right">{sortBtn("net_after_ads", "Net after ads")}</TableHead>
+                  <TableHead className="text-right">{sortBtn("roas", "ROAS")}</TableHead>
+                  <TableHead className="text-right">{sortBtn("return_rate", "Return %")}</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {rows.map((r) => {
-                  const spend = adSpendOf(r.product_id);
-                  const netAfterAds = Number(r.contribution_profit) - spend;
-                  const roas = spend > 0 ? Number(r.net_revenue) / spend : null;
+                {rows.map((r, i) => {
+                  const spend = r.ad_spend;
+                  const netAfterAds = r.net_after_ads;
+                  const roas = spend > 0 ? r.roas : null;
+                  const margin = Number(r.margin_pct);
+                  const ret = Number(r.return_rate);
+                  const share = (Number(r.net_revenue) / maxRevenue) * 100;
                   return (
-                  <TableRow key={`${r.product_id}-${r.variant_id ?? "all"}`}>
-                    <TableCell>
-                      <div className="font-medium">{r.product_name}</div>
-                      <div className="flex flex-wrap items-center gap-1.5 text-xs text-muted-foreground">
-                        {r.variant_label && <span>{r.variant_label}</span>}
-                        {r.sku && <span className="font-mono">{r.sku}</span>}
-                        {Number(r.cost_missing_units) > 0 && (
-                          <Badge variant="outline" className="border-amber-500/40 text-amber-600 dark:text-amber-400">
-                            {Number(r.cost_missing_units)} units no cost
-                          </Badge>
+                    <TableRow
+                      key={`${r.product_id}-${r.variant_id ?? "all"}`}
+                      className={cn(
+                        "group transition-colors",
+                        Number(r.contribution_profit) < 0 && "bg-rose-500/[0.04]",
+                      )}
+                    >
+                      <TableCell className="max-w-[300px]">
+                        <div className="flex items-start gap-2.5">
+                          <span
+                            className={cn(
+                              "mt-0.5 inline-flex h-5 w-5 shrink-0 items-center justify-center rounded-md text-[10px] font-bold tabular-nums",
+                              i < 3 ? "bg-primary/15 text-primary" : "bg-muted text-muted-foreground",
+                            )}
+                          >
+                            {i + 1}
+                          </span>
+                          <div className="min-w-0 flex-1">
+                            <div className="truncate font-medium leading-tight">{r.product_name}</div>
+                            <div className="mt-1 flex flex-wrap items-center gap-1.5 text-[11px] text-muted-foreground">
+                              {r.variant_label && <span className="rounded bg-muted px-1.5 py-px">{r.variant_label}</span>}
+                              {r.sku && <span className="font-mono">{r.sku}</span>}
+                              {Number(r.cost_missing_units) > 0 && (
+                                <Badge variant="outline" className="h-4 border-amber-500/40 px-1 text-[10px] text-amber-600 dark:text-amber-400">
+                                  {Number(r.cost_missing_units)} no cost
+                                </Badge>
+                              )}
+                            </div>
+                            <div className="mt-1.5 h-1 w-full overflow-hidden rounded-full bg-muted">
+                              <div className="h-full rounded-full bg-primary/60 transition-all" style={{ width: `${share}%` }} />
+                            </div>
+                          </div>
+                        </div>
+                      </TableCell>
+                      <TableCell className="text-right tabular-nums">{Number(r.units).toLocaleString()}</TableCell>
+                      <TableCell className="text-right font-medium tabular-nums">{fmtBdt(r.net_revenue)}</TableCell>
+                      <TableCell className="text-right tabular-nums text-muted-foreground">{fmtBdt(r.cogs)}</TableCell>
+                      <TableCell className={cn("text-right tabular-nums", Number(r.gross_profit) < 0 && "text-rose-600 dark:text-rose-400")}>{fmtBdt(r.gross_profit)}</TableCell>
+                      <TableCell className="text-right">
+                        <span
+                          className={cn(
+                            "inline-flex rounded-full px-1.5 py-0.5 text-[11px] font-semibold tabular-nums",
+                            margin >= 30 ? "bg-emerald-500/12 text-emerald-600 dark:text-emerald-400"
+                            : margin >= 10 ? "bg-amber-500/12 text-amber-600 dark:text-amber-400"
+                            : "bg-rose-500/12 text-rose-600 dark:text-rose-400",
+                          )}
+                        >
+                          {margin.toFixed(1)}%
+                        </span>
+                      </TableCell>
+                      <TableCell className={cn("text-right font-medium tabular-nums", Number(r.contribution_profit) < 0 && "text-rose-600 dark:text-rose-400")}>{fmtBdt(r.contribution_profit)}</TableCell>
+                      <TableCell className="text-right tabular-nums text-muted-foreground">{spend > 0 ? fmtBdt(spend) : "—"}</TableCell>
+                      <TableCell className={cn("text-right font-semibold tabular-nums", spend > 0 ? (netAfterAds < 0 ? "text-rose-600 dark:text-rose-400" : "text-emerald-600 dark:text-emerald-400") : "text-muted-foreground")}>
+                        {spend > 0 ? fmtBdt(netAfterAds) : "—"}
+                      </TableCell>
+                      <TableCell className="text-right tabular-nums">
+                        {roas == null ? <span className="text-muted-foreground">—</span> : (
+                          <span className={cn("font-medium", roas >= 3 ? "text-emerald-600 dark:text-emerald-400" : roas >= 1.5 ? "text-amber-600 dark:text-amber-400" : "text-rose-600 dark:text-rose-400")}>
+                            {roas.toFixed(2)}x
+                          </span>
                         )}
-                      </div>
-                    </TableCell>
-                    <TableCell className="text-right tabular-nums">{Number(r.units).toLocaleString()}</TableCell>
-                    <TableCell className="text-right tabular-nums">{fmtBdt(r.net_revenue)}</TableCell>
-                    <TableCell className="text-right tabular-nums text-muted-foreground">{fmtBdt(r.cogs)}</TableCell>
-                    <TableCell className={`text-right tabular-nums ${Number(r.gross_profit) < 0 ? "text-rose-600 dark:text-rose-400" : ""}`}>{fmtBdt(r.gross_profit)}</TableCell>
-                    <TableCell className="text-right tabular-nums">{Number(r.margin_pct).toFixed(1)}%</TableCell>
-                    <TableCell className={`text-right font-medium tabular-nums ${Number(r.contribution_profit) < 0 ? "text-rose-600 dark:text-rose-400" : ""}`}>{fmtBdt(r.contribution_profit)}</TableCell>
-                    <TableCell className="text-right tabular-nums text-muted-foreground">{spend > 0 ? fmtBdt(spend) : "—"}</TableCell>
-                    <TableCell className={`text-right tabular-nums ${spend > 0 ? (netAfterAds < 0 ? "text-rose-600 dark:text-rose-400" : "text-emerald-600 dark:text-emerald-400") : "text-muted-foreground"}`}>{spend > 0 ? fmtBdt(netAfterAds) : "—"}</TableCell>
-                    <TableCell className="text-right tabular-nums">{roas == null ? "—" : `${roas.toFixed(2)}x`}</TableCell>
-                    <TableCell className={`text-right tabular-nums ${Number(r.return_rate) > 15 ? "text-rose-600 dark:text-rose-400" : ""}`}>{Number(r.return_rate).toFixed(1)}%</TableCell>
-                  </TableRow>
+                      </TableCell>
+                      <TableCell className={cn("text-right tabular-nums", ret > 15 && "text-rose-600 dark:text-rose-400")}>{ret.toFixed(1)}%</TableCell>
+                    </TableRow>
                   );
                 })}
               </TableBody>
               <TableBody>
-                <TableRow className="bg-muted/40 font-semibold">
-                  <TableCell>Total</TableCell>
+                <TableRow className="sticky bottom-0 z-10 border-t-2 border-border bg-muted/90 font-semibold backdrop-blur hover:bg-muted/90">
+                  <TableCell className="pl-9">Total · {rows.length} rows</TableCell>
                   <TableCell className="text-right tabular-nums">{totals.units.toLocaleString()}</TableCell>
                   <TableCell className="text-right tabular-nums">{fmtBdt(totals.net_revenue)}</TableCell>
                   <TableCell className="text-right tabular-nums">{fmtBdt(totals.cogs)}</TableCell>
@@ -1076,7 +1220,7 @@ function ProductsTab({ args, enabled, rangeLabel }: { args: RpcArgs; enabled: bo
                   </TableCell>
                   <TableCell className="text-right tabular-nums">{fmtBdt(totals.contribution_profit)}</TableCell>
                   <TableCell className="text-right tabular-nums">{fmtBdt(totals.ad_spend)}</TableCell>
-                  <TableCell className="text-right tabular-nums">{fmtBdt(totals.contribution_profit - totals.ad_spend)}</TableCell>
+                  <TableCell className={cn("text-right tabular-nums", netAfterAdsTotal < 0 ? "text-rose-600 dark:text-rose-400" : "text-emerald-600 dark:text-emerald-400")}>{fmtBdt(netAfterAdsTotal)}</TableCell>
                   <TableCell className="text-right tabular-nums">{totals.ad_spend > 0 ? `${(totals.net_revenue / totals.ad_spend).toFixed(2)}x` : "—"}</TableCell>
                   <TableCell />
                 </TableRow>
@@ -1087,4 +1231,5 @@ function ProductsTab({ args, enabled, rangeLabel }: { args: RpcArgs; enabled: bo
       </Panel>
     </>
   );
+
 }
