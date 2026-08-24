@@ -12583,6 +12583,10 @@ export type Database = {
         }
         Returns: Json
       }
+      mkt_campaign_truth: {
+        Args: { _brand_ids: string[]; _from: string; _to: string }
+        Returns: Json
+      }
       mkt_courier_campaign_report: {
         Args: { p_brand_id: string; p_from: string; p_to: string }
         Returns: {
