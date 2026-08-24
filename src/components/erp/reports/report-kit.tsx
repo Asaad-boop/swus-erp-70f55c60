@@ -40,21 +40,15 @@ export function Panel({
   flush?: boolean;
 }) {
   return (
-    <section className={cn("rpt-surface overflow-hidden", className)}>
+    <section className={cn("rpt-surface group/panel overflow-hidden", className)}>
       {(title || action) && (
-        <div className="rpt-head flex flex-wrap items-center justify-between gap-3 px-[var(--rpt-pad)] py-3">
-          <div className="flex min-w-0 items-start gap-2.5">
-            <span
-              aria-hidden
-              className="mt-1 h-3.5 w-[3px] shrink-0 rounded-full"
-              style={{ background: "var(--rpt-accent)" }}
-            />
-            <div className="min-w-0">
-              {title && <h3 className="rpt-title truncate">{title}</h3>}
-              {subtitle && <p className="rpt-sub mt-0.5">{subtitle}</p>}
-            </div>
+        <div className="rpt-head flex flex-wrap items-start justify-between gap-3 px-[var(--rpt-pad)] pb-3 pt-[var(--rpt-pad)]">
+          <div className="min-w-0">
+            <span aria-hidden className="rpt-rule mb-2 block" />
+            {title && <h3 className="rpt-title truncate">{title}</h3>}
+            {subtitle && <p className="rpt-sub mt-1 max-w-2xl">{subtitle}</p>}
           </div>
-          {action}
+          {action && <div className="shrink-0 pt-1">{action}</div>}
         </div>
       )}
       <div className={flush ? "" : "p-[var(--rpt-pad)]"}>{children}</div>
@@ -88,7 +82,7 @@ function Delta({ k }: { k: Kpi }) {
   const cur = Number(k.value ?? 0);
   const diff = cur - prev;
   if (Math.abs(diff) < 1e-9) {
-    return <span className="text-[11px] text-muted-foreground">no change vs prev</span>;
+    return <span className="rpt-eyebrow">flat vs prev</span>;
   }
   const pct = prev === 0 ? null : (diff / Math.abs(prev)) * 100;
   const up = diff > 0;
@@ -97,11 +91,10 @@ function Delta({ k }: { k: Kpi }) {
   return (
     <span
       className={cn(
-        "inline-flex items-center gap-1 rounded-full px-1.5 py-0.5 text-[11px] font-semibold rpt-num",
-        good
-          ? "bg-[color-mix(in_oklab,var(--rpt-good)_14%,transparent)] text-[var(--rpt-good)]"
-          : "bg-[color-mix(in_oklab,var(--rpt-bad)_14%,transparent)] text-[var(--rpt-bad)]",
+        "rpt-num inline-flex items-center gap-1 border-l-2 pl-1.5 text-[11px] font-bold",
+        good ? "text-[var(--rpt-good)]" : "text-[var(--rpt-bad)]",
       )}
+      style={{ borderColor: good ? "var(--rpt-good)" : "var(--rpt-bad)" }}
     >
       <Icon className="h-3 w-3" />
       {pct == null ? (up ? "new" : "—") : `${up ? "+" : ""}${pct.toFixed(1)}%`}
@@ -109,48 +102,82 @@ function Delta({ k }: { k: Kpi }) {
   );
 }
 
+/**
+ * Magazine KPI layout: the first metric runs as the lead story (large
+ * display numeral, accent field), the rest sit in a hairline-ruled grid.
+ */
 export function KpiStrip({ items, loading }: { items: Kpi[]; loading?: boolean }) {
   if (loading) {
     return (
-      <div className="grid gap-[var(--rpt-gap)] sm:grid-cols-2 lg:grid-cols-4">
-        {Array.from({ length: 8 }).map((_, i) => (
-          <Skeleton key={i} className="h-[92px] rounded-[var(--rpt-radius)]" />
+      <div className="grid gap-[var(--rpt-gap)] lg:grid-cols-4">
+        <Skeleton className="h-[168px] rounded-[var(--rpt-radius)] lg:col-span-2" />
+        <Skeleton className="h-[168px] rounded-[var(--rpt-radius)] lg:col-span-2" />
+        {Array.from({ length: 4 }).map((_, i) => (
+          <Skeleton key={i} className="h-[104px] rounded-[var(--rpt-radius)]" />
         ))}
       </div>
     );
   }
+  if (items.length === 0) return null;
+
+  const [lead, ...rest] = items;
+  const toneOf = (k: Kpi) =>
+    k.tone === "good" ? "var(--rpt-good)" : k.tone === "bad" ? "var(--rpt-bad)" : "var(--rpt-accent)";
+
   return (
-    <div className="grid gap-[var(--rpt-gap)] sm:grid-cols-2 lg:grid-cols-4">
-      {items.map((k) => {
-        const tone =
-          k.tone === "good" ? "var(--rpt-good)" : k.tone === "bad" ? "var(--rpt-bad)" : "var(--rpt-accent)";
-        return (
-          <div
-            key={k.label}
-            className="rpt-surface group relative overflow-hidden px-4 py-3.5 hover:-translate-y-0.5"
+    <div className="grid gap-[var(--rpt-gap)] lg:grid-cols-4">
+      {/* Lead metric */}
+      <div
+        className="rpt-surface relative overflow-hidden px-6 py-6 lg:col-span-2"
+        style={{ background: "linear-gradient(135deg, var(--rpt-accent-soft), transparent 62%), var(--rpt-surface)" }}
+      >
+        <span
+          aria-hidden
+          className="absolute inset-y-0 left-0 w-[3px]"
+          style={{ background: toneOf(lead) }}
+        />
+        <p className="rpt-kicker">Lead metric</p>
+        <p className="rpt-eyebrow mt-2 text-foreground">{lead.label}</p>
+        <p className="rpt-metric-xl mt-2" style={{ color: toneOf(lead) }}>
+          {fmtKpi(lead)}
+        </p>
+        <div className="mt-3 flex flex-wrap items-center gap-x-3 gap-y-1">
+          <Delta k={lead} />
+          {lead.hint && <p className="rpt-sub">{lead.hint}</p>}
+        </div>
+      </div>
+
+      {/* Supporting metrics */}
+      {rest.map((k, i) => (
+        <div
+          key={k.label}
+          className={cn(
+            "rpt-surface group relative overflow-hidden px-4 py-4",
+            i === 0 && rest.length > 3 && "lg:col-span-2",
+          )}
+        >
+          <span
+            aria-hidden
+            className="absolute inset-y-3 left-0 w-[2px] opacity-0 transition-opacity group-hover:opacity-100"
+            style={{ background: toneOf(k) }}
+          />
+          <p className="rpt-eyebrow">{k.label}</p>
+          <p
+            className="rpt-metric mt-1.5"
+            style={k.tone && k.tone !== "default" ? { color: toneOf(k) } : undefined}
           >
-            <span
-              aria-hidden
-              className="absolute inset-x-0 top-0 h-[2px] opacity-70 transition-opacity group-hover:opacity-100"
-              style={{ background: `linear-gradient(90deg, ${tone}, transparent 85%)` }}
-            />
-            <p className="rpt-eyebrow truncate">{k.label}</p>
-            <p
-              className="rpt-metric mt-1"
-              style={k.tone && k.tone !== "default" ? { color: tone } : undefined}
-            >
-              {fmtKpi(k)}
-            </p>
-            <div className="mt-1.5 flex flex-wrap items-center gap-x-2 gap-y-1">
-              <Delta k={k} />
-              {k.hint && <p className="rpt-sub truncate">{k.hint}</p>}
-            </div>
+            {fmtKpi(k)}
+          </p>
+          <div className="mt-1.5 flex flex-wrap items-center gap-x-2.5 gap-y-1">
+            <Delta k={k} />
+            {k.hint && <p className="rpt-sub truncate">{k.hint}</p>}
           </div>
-        );
-      })}
+        </div>
+      ))}
     </div>
   );
 }
+
 
 
 /** One export control for every report panel: Excel, CSV and a print-ready PDF. */
