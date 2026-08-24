@@ -248,6 +248,20 @@ function CampaignTruthPage() {
     return m;
   }, [all]);
 
+  const activityCounts = useMemo(() => {
+    const m: Record<string, number> = {};
+    for (const a of ACTIVITY_FILTERS) m[a.key] = all.filter((r) => activityMatch(r, a.key)).length;
+    return m;
+  }, [all]);
+
+  const tagCounts = useMemo(() => {
+    const m: Record<string, number> = {};
+    for (const r of all) for (const t of r.tags ?? []) m[t] = (m[t] ?? 0) + 1;
+    return m;
+  }, [all]);
+
+
+
   const matchHealth =
     totals.linked + totals.unmatched > 0
       ? Math.round((100 * totals.linked) / (totals.linked + totals.unmatched))
