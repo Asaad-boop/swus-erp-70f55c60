@@ -503,3 +503,28 @@
   box-shadow: var(--rpt-shadow);
   backdrop-filter: blur(14px);
 }
+
+/* Scope wrapper — applies the report table + spacing language to every
+   panel inside the Reports Hub without per-file overrides. */
+.rpt-scope table thead th {
+  background: var(--rpt-thead);
+  font-size: 0.6875rem;
+  font-weight: 600;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: var(--muted-foreground);
+  white-space: nowrap;
+}
+.rpt-scope table tbody tr {
+  transition: background-color 140ms ease;
+}
+.rpt-scope table tbody tr:hover {
+  background: var(--rpt-row-hover);
+}
+.rpt-scope table td,
+.rpt-scope table th {
+  font-variant-numeric: tabular-nums;
+}
+.rpt-scope table tbody td {
+  font-size: 0.8125rem;
+}
