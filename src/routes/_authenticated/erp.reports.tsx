@@ -4,7 +4,8 @@ import { useQuery } from "@tanstack/react-query";
 import {
   AreaChart, Area, BarChart, Bar, CartesianGrid, XAxis, YAxis, Tooltip, ResponsiveContainer, Legend,
 } from "recharts";
-import { FileSpreadsheet, AlertTriangle, RefreshCw, Search, GitCompareArrows } from "lucide-react";
+import { FileSpreadsheet, AlertTriangle, RefreshCw, Search, GitCompareArrows, ArrowDown } from "lucide-react";
+import { cn } from "@/lib/utils";
 import { supabase } from "@/integrations/supabase/client";
 import { useMultiBrandPicker } from "@/components/erp/brand-picker-gate";
 import { DateRangePicker, buildPreset, type MktRangeValue } from "@/components/erp/marketing/date-range-picker";
