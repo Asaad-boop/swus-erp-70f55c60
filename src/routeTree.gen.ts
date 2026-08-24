@@ -87,6 +87,7 @@ import { Route as AuthenticatedErpOrdersListRouteImport } from './routes/_authen
 import { Route as AuthenticatedErpOrdersIncompleteReportsRouteImport } from './routes/_authenticated/erp.orders.incomplete-reports'
 import { Route as AuthenticatedErpOrdersDashboardRouteImport } from './routes/_authenticated/erp.orders.dashboard'
 import { Route as AuthenticatedErpOrdersOrderIdRouteImport } from './routes/_authenticated/erp.orders.$orderId'
+import { Route as AuthenticatedErpMarketingTruthRouteImport } from './routes/_authenticated/erp.marketing.truth'
 import { Route as AuthenticatedErpMarketingSettingsRouteImport } from './routes/_authenticated/erp.marketing.settings'
 import { Route as AuthenticatedErpMarketingReportsRouteImport } from './routes/_authenticated/erp.marketing.reports'
 import { Route as AuthenticatedErpMarketingProductsRouteImport } from './routes/_authenticated/erp.marketing.products'
@@ -588,6 +589,12 @@ const AuthenticatedErpOrdersOrderIdRoute =
     path: '/$orderId',
     getParentRoute: () => AuthenticatedErpOrdersRoute,
   } as any)
+const AuthenticatedErpMarketingTruthRoute =
+  AuthenticatedErpMarketingTruthRouteImport.update({
+    id: '/truth',
+    path: '/truth',
+    getParentRoute: () => AuthenticatedErpMarketingRoute,
+  } as any)
 const AuthenticatedErpMarketingSettingsRoute =
   AuthenticatedErpMarketingSettingsRouteImport.update({
     id: '/settings',
@@ -1005,6 +1012,7 @@ export interface FileRoutesByFullPath {
   '/erp/marketing/products': typeof AuthenticatedErpMarketingProductsRoute
   '/erp/marketing/reports': typeof AuthenticatedErpMarketingReportsRoute
   '/erp/marketing/settings': typeof AuthenticatedErpMarketingSettingsRoute
+  '/erp/marketing/truth': typeof AuthenticatedErpMarketingTruthRoute
   '/erp/orders/$orderId': typeof AuthenticatedErpOrdersOrderIdRoute
   '/erp/orders/dashboard': typeof AuthenticatedErpOrdersDashboardRoute
   '/erp/orders/incomplete-reports': typeof AuthenticatedErpOrdersIncompleteReportsRoute
@@ -1129,6 +1137,7 @@ export interface FileRoutesByTo {
   '/erp/marketing/products': typeof AuthenticatedErpMarketingProductsRoute
   '/erp/marketing/reports': typeof AuthenticatedErpMarketingReportsRoute
   '/erp/marketing/settings': typeof AuthenticatedErpMarketingSettingsRoute
+  '/erp/marketing/truth': typeof AuthenticatedErpMarketingTruthRoute
   '/erp/orders/$orderId': typeof AuthenticatedErpOrdersOrderIdRoute
   '/erp/orders/dashboard': typeof AuthenticatedErpOrdersDashboardRoute
   '/erp/orders/incomplete-reports': typeof AuthenticatedErpOrdersIncompleteReportsRoute
@@ -1265,6 +1274,7 @@ export interface FileRoutesById {
   '/_authenticated/erp/marketing/products': typeof AuthenticatedErpMarketingProductsRoute
   '/_authenticated/erp/marketing/reports': typeof AuthenticatedErpMarketingReportsRoute
   '/_authenticated/erp/marketing/settings': typeof AuthenticatedErpMarketingSettingsRoute
+  '/_authenticated/erp/marketing/truth': typeof AuthenticatedErpMarketingTruthRoute
   '/_authenticated/erp/orders/$orderId': typeof AuthenticatedErpOrdersOrderIdRoute
   '/_authenticated/erp/orders/dashboard': typeof AuthenticatedErpOrdersDashboardRoute
   '/_authenticated/erp/orders/incomplete-reports': typeof AuthenticatedErpOrdersIncompleteReportsRoute
@@ -1401,6 +1411,7 @@ export interface FileRouteTypes {
     | '/erp/marketing/products'
     | '/erp/marketing/reports'
     | '/erp/marketing/settings'
+    | '/erp/marketing/truth'
     | '/erp/orders/$orderId'
     | '/erp/orders/dashboard'
     | '/erp/orders/incomplete-reports'
@@ -1525,6 +1536,7 @@ export interface FileRouteTypes {
     | '/erp/marketing/products'
     | '/erp/marketing/reports'
     | '/erp/marketing/settings'
+    | '/erp/marketing/truth'
     | '/erp/orders/$orderId'
     | '/erp/orders/dashboard'
     | '/erp/orders/incomplete-reports'
@@ -1660,6 +1672,7 @@ export interface FileRouteTypes {
     | '/_authenticated/erp/marketing/products'
     | '/_authenticated/erp/marketing/reports'
     | '/_authenticated/erp/marketing/settings'
+    | '/_authenticated/erp/marketing/truth'
     | '/_authenticated/erp/orders/$orderId'
     | '/_authenticated/erp/orders/dashboard'
     | '/_authenticated/erp/orders/incomplete-reports'
@@ -2280,6 +2293,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedErpOrdersOrderIdRouteImport
       parentRoute: typeof AuthenticatedErpOrdersRoute
     }
+    '/_authenticated/erp/marketing/truth': {
+      id: '/_authenticated/erp/marketing/truth'
+      path: '/truth'
+      fullPath: '/erp/marketing/truth'
+      preLoaderRoute: typeof AuthenticatedErpMarketingTruthRouteImport
+      parentRoute: typeof AuthenticatedErpMarketingRoute
+    }
     '/_authenticated/erp/marketing/settings': {
       id: '/_authenticated/erp/marketing/settings'
       path: '/settings'
@@ -2834,6 +2854,7 @@ interface AuthenticatedErpMarketingRouteChildren {
   AuthenticatedErpMarketingProductsRoute: typeof AuthenticatedErpMarketingProductsRoute
   AuthenticatedErpMarketingReportsRoute: typeof AuthenticatedErpMarketingReportsRoute
   AuthenticatedErpMarketingSettingsRoute: typeof AuthenticatedErpMarketingSettingsRoute
+  AuthenticatedErpMarketingTruthRoute: typeof AuthenticatedErpMarketingTruthRoute
   AuthenticatedErpMarketingIndexRoute: typeof AuthenticatedErpMarketingIndexRoute
 }
 
@@ -2858,6 +2879,7 @@ const AuthenticatedErpMarketingRouteChildren: AuthenticatedErpMarketingRouteChil
       AuthenticatedErpMarketingReportsRoute,
     AuthenticatedErpMarketingSettingsRoute:
       AuthenticatedErpMarketingSettingsRoute,
+    AuthenticatedErpMarketingTruthRoute: AuthenticatedErpMarketingTruthRoute,
     AuthenticatedErpMarketingIndexRoute: AuthenticatedErpMarketingIndexRoute,
   }
 
