@@ -8437,6 +8437,44 @@ export type Database = {
           },
         ]
       }
+      mkt_campaign_meta: {
+        Row: {
+          brand_id: string | null
+          campaign_id: string
+          created_at: string
+          note: string | null
+          tags: string[]
+          updated_at: string
+          updated_by: string | null
+        }
+        Insert: {
+          brand_id?: string | null
+          campaign_id: string
+          created_at?: string
+          note?: string | null
+          tags?: string[]
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Update: {
+          brand_id?: string | null
+          campaign_id?: string
+          created_at?: string
+          note?: string | null
+          tags?: string[]
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "mkt_campaign_meta_campaign_id_fkey"
+            columns: ["campaign_id"]
+            isOneToOne: true
+            referencedRelation: "mkt_campaigns"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       mkt_campaign_products: {
         Row: {
           brand_id: string
@@ -12570,6 +12608,10 @@ export type Database = {
         Args: { _brand_ids: string[]; _from: string; _to: string }
         Returns: Json
       }
+      mkt_campaign_cost_split: {
+        Args: { _brand_ids: string[]; _from: string; _to: string }
+        Returns: Json
+      }
       mkt_campaign_product_perf: {
         Args: { _campaign_id: string; _from: string; _to: string }
         Returns: Json
@@ -12580,6 +12622,15 @@ export type Database = {
           p_campaign_id: string
           p_from: string
           p_to: string
+        }
+        Returns: Json
+      }
+      mkt_campaign_trend: {
+        Args: {
+          _brand_ids: string[]
+          _from: string
+          _grain?: string
+          _to: string
         }
         Returns: Json
       }
