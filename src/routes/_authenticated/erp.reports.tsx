@@ -876,6 +876,31 @@ function ProductsTab({ args, enabled, rangeLabel }: { args: RpcArgs; enabled: bo
     },
   });
 
+  // Meta campaign linked ad spend per product (campaign ↔ product links)
+  const adQ = useQuery({
+    queryKey: ["rpt-products-adspend", JSON.stringify(args)],
+    enabled,
+    queryFn: async () => {
+      const { data, error } = await supabase.rpc("mkt_product_perf", {
+        _brand_ids: args._brand_ids, _from: args._from, _to: args._to,
+      } as never);
+      if (error) throw error;
+      const list = (Array.isArray(data) ? data : []) as { product_id: string; ad_spend: number; attributed_orders: number }[];
+      const map = new Map<string, { ad_spend: number; attributed_orders: number }>();
+      for (const r of list) {
+        if (!r?.product_id) continue;
+        const prev = map.get(r.product_id) ?? { ad_spend: 0, attributed_orders: 0 };
+        map.set(r.product_id, {
+          ad_spend: prev.ad_spend + (Number(r.ad_spend) || 0),
+          attributed_orders: prev.attributed_orders + (Number(r.attributed_orders) || 0),
+        });
+      }
+      return map;
+    },
+  });
+
+  const adSpendOf = (productId: string) => adQ.data?.get(productId)?.ad_spend ?? 0;
+
   const rows = useMemo(() => {
     const term = search.trim().toLowerCase();
     const list = (q.data ?? []).filter((r) =>
@@ -887,20 +912,28 @@ function ProductsTab({ args, enabled, rangeLabel }: { args: RpcArgs; enabled: bo
     return [...list].sort((a, b) => Number(b[sort] ?? 0) - Number(a[sort] ?? 0));
   }, [q.data, search, sort]);
 
-  const totals = useMemo(
-    () =>
-      rows.reduce(
-        (acc, r) => ({
+  const totals = useMemo(() => {
+    const seen = new Set<string>();
+    return rows.reduce(
+      (acc, r) => {
+        let spend = 0;
+        if (!seen.has(r.product_id)) {
+          seen.add(r.product_id);
+          spend = adSpendOf(r.product_id);
+        }
+        return {
           units: acc.units + Number(r.units),
           net_revenue: acc.net_revenue + Number(r.net_revenue),
           cogs: acc.cogs + Number(r.cogs),
           gross_profit: acc.gross_profit + Number(r.gross_profit),
           contribution_profit: acc.contribution_profit + Number(r.contribution_profit),
-        }),
-        { units: 0, net_revenue: 0, cogs: 0, gross_profit: 0, contribution_profit: 0 },
-      ),
-    [rows],
-  );
+          ad_spend: acc.ad_spend + spend,
+        };
+      },
+      { units: 0, net_revenue: 0, cogs: 0, gross_profit: 0, contribution_profit: 0, ad_spend: 0 },
+    );
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [rows, adQ.data]);
 
   const chartRows = rows.slice(0, 10).map((r) => ({
     label: (r.variant_label ? `${r.product_name} · ${r.variant_label}` : r.product_name).slice(0, 26),
@@ -943,7 +976,7 @@ function ProductsTab({ args, enabled, rangeLabel }: { args: RpcArgs; enabled: bo
 
       <Panel
         title="Product profitability"
-        subtitle={`${rows.length} rows · net revenue ${fmtBdt(totals.net_revenue)} · gross profit ${fmtBdt(totals.gross_profit)}`}
+        subtitle={`${rows.length} rows · net revenue ${fmtBdt(totals.net_revenue)} · gross profit ${fmtBdt(totals.gross_profit)} · Meta ad spend ${fmtBdt(totals.ad_spend)} (linked campaigns)`}
         action={
           <div className="flex flex-wrap items-center gap-2">
             <div className="flex gap-1">
@@ -965,8 +998,8 @@ function ProductsTab({ args, enabled, rangeLabel }: { args: RpcArgs; enabled: bo
               size="sm"
               onClick={() =>
                 exportAoaXlsx(
-                  [["Product", "Variant", "SKU", "Orders", "Units", "Net revenue", "COGS", "Gross profit", "Margin %", "Courier", "Contribution", "Avg price", "Avg cost", "Returned units", "Return %", "Units missing cost"],
-                   ...rows.map((r) => [r.product_name, r.variant_label ?? "", r.sku ?? "", r.orders, r.units, r.net_revenue, r.cogs, r.gross_profit, r.margin_pct, r.courier_cost, r.contribution_profit, r.avg_price, r.avg_cost, r.returned_units, r.return_rate, r.cost_missing_units])],
+                  [["Product", "Variant", "SKU", "Orders", "Units", "Net revenue", "COGS", "Gross profit", "Margin %", "Courier", "Contribution", "Ad spend (Meta)", "Net after ads", "ROAS", "Avg price", "Avg cost", "Returned units", "Return %", "Units missing cost"],
+                   ...rows.map((r) => { const sp = adSpendOf(r.product_id); return [r.product_name, r.variant_label ?? "", r.sku ?? "", r.orders, r.units, r.net_revenue, r.cogs, r.gross_profit, r.margin_pct, r.courier_cost, r.contribution_profit, sp, Number(r.contribution_profit) - sp, sp > 0 ? Number(r.net_revenue) / sp : "", r.avg_price, r.avg_cost, r.returned_units, r.return_rate, r.cost_missing_units]; })],
                   "Products", `product-profit-${level}`,
                 )
               }
@@ -992,11 +1025,18 @@ function ProductsTab({ args, enabled, rangeLabel }: { args: RpcArgs; enabled: bo
                   <TableHead className="text-right">Gross profit</TableHead>
                   <TableHead className="text-right">Margin</TableHead>
                   <TableHead className="text-right">Contribution</TableHead>
+                  <TableHead className="text-right">Ad spend</TableHead>
+                  <TableHead className="text-right">Net after ads</TableHead>
+                  <TableHead className="text-right">ROAS</TableHead>
                   <TableHead className="text-right">Return %</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {rows.map((r) => (
+                {rows.map((r) => {
+                  const spend = adSpendOf(r.product_id);
+                  const netAfterAds = Number(r.contribution_profit) - spend;
+                  const roas = spend > 0 ? Number(r.net_revenue) / spend : null;
+                  return (
                   <TableRow key={`${r.product_id}-${r.variant_id ?? "all"}`}>
                     <TableCell>
                       <div className="font-medium">{r.product_name}</div>
@@ -1016,9 +1056,13 @@ function ProductsTab({ args, enabled, rangeLabel }: { args: RpcArgs; enabled: bo
                     <TableCell className={`text-right tabular-nums ${Number(r.gross_profit) < 0 ? "text-rose-600 dark:text-rose-400" : ""}`}>{fmtBdt(r.gross_profit)}</TableCell>
                     <TableCell className="text-right tabular-nums">{Number(r.margin_pct).toFixed(1)}%</TableCell>
                     <TableCell className={`text-right font-medium tabular-nums ${Number(r.contribution_profit) < 0 ? "text-rose-600 dark:text-rose-400" : ""}`}>{fmtBdt(r.contribution_profit)}</TableCell>
+                    <TableCell className="text-right tabular-nums text-muted-foreground">{spend > 0 ? fmtBdt(spend) : "—"}</TableCell>
+                    <TableCell className={`text-right tabular-nums ${spend > 0 ? (netAfterAds < 0 ? "text-rose-600 dark:text-rose-400" : "text-emerald-600 dark:text-emerald-400") : "text-muted-foreground"}`}>{spend > 0 ? fmtBdt(netAfterAds) : "—"}</TableCell>
+                    <TableCell className="text-right tabular-nums">{roas == null ? "—" : `${roas.toFixed(2)}x`}</TableCell>
                     <TableCell className={`text-right tabular-nums ${Number(r.return_rate) > 15 ? "text-rose-600 dark:text-rose-400" : ""}`}>{Number(r.return_rate).toFixed(1)}%</TableCell>
                   </TableRow>
-                ))}
+                  );
+                })}
               </TableBody>
               <TableBody>
                 <TableRow className="bg-muted/40 font-semibold">
@@ -1031,6 +1075,9 @@ function ProductsTab({ args, enabled, rangeLabel }: { args: RpcArgs; enabled: bo
                     {totals.net_revenue > 0 ? `${((totals.gross_profit / totals.net_revenue) * 100).toFixed(1)}%` : "—"}
                   </TableCell>
                   <TableCell className="text-right tabular-nums">{fmtBdt(totals.contribution_profit)}</TableCell>
+                  <TableCell className="text-right tabular-nums">{fmtBdt(totals.ad_spend)}</TableCell>
+                  <TableCell className="text-right tabular-nums">{fmtBdt(totals.contribution_profit - totals.ad_spend)}</TableCell>
+                  <TableCell className="text-right tabular-nums">{totals.ad_spend > 0 ? `${(totals.net_revenue / totals.ad_spend).toFixed(2)}x` : "—"}</TableCell>
                   <TableCell />
                 </TableRow>
               </TableBody>
