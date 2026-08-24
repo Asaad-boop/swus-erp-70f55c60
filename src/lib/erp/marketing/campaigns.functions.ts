@@ -669,3 +669,29 @@ export const getCampaignTruth = createServerFn({ method: "POST" })
     if (error) throw error;
     return (Array.isArray(rows) ? rows : []) as CampaignTruthRow[];
   });
+
+export const rerunCampaignMatching = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d: unknown) =>
+    z
+      .object({
+        brandIds: z.array(z.string().uuid()).min(1),
+        from: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
+        to: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
+      })
+      .parse(d),
+  )
+  .handler(async ({ data, context }) => {
+    const { data: res, error } = await context.supabase.rpc("mkt_rerun_campaign_matching", {
+      _brand_ids: data.brandIds,
+      _from: data.from,
+      _to: data.to,
+    } as never);
+    if (error) throw error;
+    return (res ?? { scanned: 0, inserted: 0, updated: 0 }) as {
+      scanned: number;
+      inserted: number;
+      updated: number;
+    };
+  });
+
