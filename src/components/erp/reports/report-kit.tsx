@@ -243,10 +243,11 @@ export function ExportMenu({
 
 export function EmptyState({ text }: { text: string }) {
   return (
-    <div className="flex flex-col items-center justify-center gap-2 rounded-[var(--rpt-radius)] border border-dashed border-[var(--rpt-border-strong)] bg-[var(--rpt-surface-2)] py-12 text-center">
-      <p className="rpt-eyebrow">No data</p>
+    <div className="flex flex-col items-center justify-center gap-2 rounded-[var(--rpt-radius)] border border-dashed border-[var(--rpt-border-strong)] bg-[var(--rpt-surface-2)] py-14 text-center">
+      <span aria-hidden className="rpt-rule mb-1" />
+      <p className="rpt-kicker">Nothing to report</p>
       <p className="rpt-sub max-w-sm">{text}</p>
     </div>
   );
-
 }
+
