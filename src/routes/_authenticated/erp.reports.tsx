@@ -1075,6 +1075,9 @@ function ProductsTab({ args, enabled, rangeLabel }: { args: RpcArgs; enabled: bo
                     {totals.net_revenue > 0 ? `${((totals.gross_profit / totals.net_revenue) * 100).toFixed(1)}%` : "—"}
                   </TableCell>
                   <TableCell className="text-right tabular-nums">{fmtBdt(totals.contribution_profit)}</TableCell>
+                  <TableCell className="text-right tabular-nums">{fmtBdt(totals.ad_spend)}</TableCell>
+                  <TableCell className="text-right tabular-nums">{fmtBdt(totals.contribution_profit - totals.ad_spend)}</TableCell>
+                  <TableCell className="text-right tabular-nums">{totals.ad_spend > 0 ? `${(totals.net_revenue / totals.ad_spend).toFixed(2)}x` : "—"}</TableCell>
                   <TableCell />
                 </TableRow>
               </TableBody>
