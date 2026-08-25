@@ -273,7 +273,7 @@ function ReportsHub() {
                   ["products", "Products"], ["customers", "Customers"], ["inventory", "Inventory"],
                   ["marketing", "Marketing"], ["returns", "Returns"], ["supply", "Supply chain"],
                   ["finance", "Finance"], ["expenses", "Expenses"], ["ops", "Warehouse & team"],
-                  ["advanced", "Advanced"], ["control", "Control"],
+                  ["advanced", "Advanced"], ["scheduled", "Scheduled"], ["control", "Control"],
                 ].map(([v, label]) => (
                   <TabsTrigger
                     key={v}
