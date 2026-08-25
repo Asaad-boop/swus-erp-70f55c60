@@ -100,13 +100,7 @@ export function exportAgedPdf(opts: {
   }).join("");
 
   const html = `
-    <div class="header">
-      <div>
-        <h2>${escape(companyName ?? "")}</h2>
-        <div class="muted">${title}</div>
-      </div>
-      <div class="muted">As of ${escape(asOfDate)}</div>
-    </div>
+
     <table>
       <thead>
         <tr>
