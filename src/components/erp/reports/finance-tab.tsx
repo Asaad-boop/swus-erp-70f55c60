@@ -261,6 +261,7 @@ export function FinanceTab({ args, enabled }: { args: RpcArgs; enabled: boolean 
         )}
       </Panel>
 
+      <UncategorizedPanel args={args} enabled={enabled} />
       <DailyCashPanel args={args} enabled={enabled} />
       <WalletAccountsPanel args={args} enabled={enabled} />
       <ArApPanel args={args} enabled={enabled} />
