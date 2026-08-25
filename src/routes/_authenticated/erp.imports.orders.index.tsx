@@ -368,13 +368,18 @@ function PoListPage() {
                           {p.po_number}
                         </Link>
                       </TableCell>
-                      <TableCell>
+                      <TableCell className="max-w-[280px]">
                         <div className="flex items-center gap-2 min-w-0">
                           <ProductThumbStack items={p.items ?? []} max={3} size="sm" />
-                          <div className="text-[11px] text-muted-foreground tabular-nums whitespace-nowrap">
-                            {(p.items ?? []).length > 0
-                              ? <>{(p.items ?? []).length} item{(p.items ?? []).length > 1 ? "s" : ""}<span className="mx-1">·</span>{units.toLocaleString()} pcs</>
-                              : "—"}
+                          <div className="min-w-0">
+                            <div className="text-xs font-medium truncate" title={itemNames}>
+                              {itemNames || "—"}
+                            </div>
+                            <div className="text-[11px] text-muted-foreground tabular-nums whitespace-nowrap">
+                              {(p.items ?? []).length > 0
+                                ? <>{(p.items ?? []).length} item{(p.items ?? []).length > 1 ? "s" : ""}<span className="mx-1">·</span>{units.toLocaleString()} pcs</>
+                                : "—"}
+                            </div>
                           </div>
                         </div>
                       </TableCell>
