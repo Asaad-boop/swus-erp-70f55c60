@@ -1346,6 +1346,13 @@ export const releasePoQuantity = createServerFn({ method: "POST" })
         damaged_qty: z.number().int().nonnegative().default(0),
         missing_qty: z.number().int().nonnegative().default(0),
       })).min(1),
+      // Ei shipment-er nijer freight (CN→BD) — shudhu ei release-er pcs-e bhag hobe
+      shipping: z.object({
+        weight_kg: z.number().nonnegative().default(0),
+        rate_per_kg: z.number().nonnegative().default(0),
+        amount_bdt: z.number().nonnegative(),
+        note: z.string().optional(),
+      }).optional(),
       // Local delivery (BD warehouse theke amader kache ana) charge
       local_delivery: z.object({
         amount_bdt: z.number().nonnegative(),
