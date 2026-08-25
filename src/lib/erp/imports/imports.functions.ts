@@ -153,6 +153,7 @@ export const getPurchaseOrderDetail = createServerFn({ method: "POST" })
         id, carton_number, barcode, expected_quantity,
         supplier_cost_bdt, shipping_charge_bdt, local_courier_bdt, total_landed_bdt, paid_bdt,
         weight_kg, cost_share_bdt, status, warehouse_id, received_at, released_at, qc_at, posted_at, notes,
+        shipping_rate_per_kg, shipping_freight_bdt, shipping_billed_at, shipping_note,
         items:imp_carton_items ( id, po_item_id, product_id, variant_id, sku_snapshot,
           quantity_expected, quantity_ok, quantity_damaged, quantity_missing,
           received_qty, damaged_qty, usable_qty,
