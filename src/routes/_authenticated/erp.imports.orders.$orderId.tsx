@@ -323,7 +323,7 @@ function PoDetailPage() {
             poId={po.id}
             items={items.map((it: any) => ({
               id: it.id,
-              name: it.name_snapshot ?? "—",
+              name: it.product?.title ?? it.name_snapshot ?? "—",
               quantity: Number(it.quantity) || 0,
               unit_cost_cny: Number(it.unit_cost_cny ?? it.unit_cost_foreign) || 0,
             }))}
