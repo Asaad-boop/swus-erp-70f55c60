@@ -195,6 +195,11 @@ export function createPathaoClient(creds: PathaoCreds) {
       if (res.status === 429) {
         throw new Error("Pathao rate limit hoyeche. 1-2 minute pore abar try koro.");
       }
+      if (res.status === 412 && /criminal activity/i.test(msg)) {
+        throw new Error(
+          "[PATHAO_CUSTOMER_BLOCKED] Pathao এই customer number-এ booking block করেছে (previous criminal activity)। Customer-এর verified অন্য number থাকলে order-এ update করুন, নাহলে অন্য courier ব্যবহার করুন।",
+        );
+      }
       throw new Error(`Pathao ${path} failed (${res.status}): ${msg.slice(0, 480)}`);
     }
     return (json?.data ?? json) as T;
