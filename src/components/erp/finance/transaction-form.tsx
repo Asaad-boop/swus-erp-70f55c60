@@ -104,6 +104,9 @@ export function TransactionForm({ open, onClose, brandId, accounts, categories, 
       const amt = Number(amount);
       if (!amt || amt <= 0) throw new Error("Amount must be > 0");
       if (type !== "transfer" && !accountId) throw new Error("Account is required");
+      if ((type === "expense" || type === "income") && !categoryId) {
+        throw new Error(`Category is required for ${type}`);
+      }
       if (type === "transfer" && (!accountId || !toAccountId || accountId === toAccountId)) {
         throw new Error("Pick two different accounts for transfer");
       }
@@ -297,6 +300,11 @@ export function TransactionForm({ open, onClose, brandId, accounts, categories, 
               qc={qc}
             />
           )}
+          {(type === "income" || type === "expense") && !categoryId && (
+            <p className="-mt-2 text-xs text-amber-700 dark:text-amber-400">
+              Category is required so this transaction is classified correctly in P&amp;L.
+            </p>
+          )}
 
           {/* Description */}
           <div className="space-y-1.5">
@@ -319,7 +327,11 @@ export function TransactionForm({ open, onClose, brandId, accounts, categories, 
 
         <DialogFooter className="border-t bg-muted/30 px-5 py-3">
           <Button variant="ghost" onClick={onClose}>Cancel</Button>
-          <Button onClick={handleSave} disabled={mut.isPending || !amount || !!insufficient} className="min-w-[140px]">
+          <Button
+            onClick={handleSave}
+            disabled={mut.isPending || !amount || !!insufficient || ((type === "income" || type === "expense") && !categoryId)}
+            className="min-w-[140px]"
+          >
             {mut.isPending ? "Saving…" : meta.verb}
           </Button>
         </DialogFooter>
