@@ -158,14 +158,15 @@ export function QuantityReleaseCard({
   const commissionPerUnit = Number(po?.agent_commission_per_unit_bdt ?? 0);
   const poOverheadTotal =
     Number(po?.local_courier_total_bdt ?? 0) +
-    Number(po?.freight_cost_bdt ?? 0) +
     Number(po?.customs_duty_bdt ?? 0) +
     Number(po?.other_charges_bdt ?? 0) +
     (shipmentWiseMode
       ? 0
-      : Number(po?.shipping_total_bdt ?? po?.shipping_cost_bdt ?? 0) +
+      : Number(po?.freight_cost_bdt ?? 0) +
+        Number(po?.shipping_total_bdt ?? po?.shipping_cost_bdt ?? 0) +
         Number(po?.local_delivery_total_bdt ?? 0) +
         localDelivery);
+
   const poOverheadPerUnit = totalOrdered > 0 ? poOverheadTotal / totalOrdered : 0;
   const releaseOverhead = releaseFreight + (shipmentWiseMode ? localDelivery : 0);
   const releaseOverheadPerUnit = releaseUnits > 0 ? releaseOverhead / releaseUnits : 0;

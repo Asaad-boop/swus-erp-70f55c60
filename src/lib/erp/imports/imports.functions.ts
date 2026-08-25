@@ -1463,14 +1463,15 @@ export const releasePoQuantity = createServerFn({ method: "POST" })
     // PO-level overhead (customs, duty, other) — shob ordered pcs-e bhag
     const poOverhead =
       Number((po as any).local_courier_total_bdt ?? 0) +
-      Number((po as any).freight_cost_bdt ?? 0) +
       Number((po as any).customs_duty_bdt ?? 0) +
       Number((po as any).other_charges_bdt ?? 0) +
-      // Shipment-wise mode chalu na hole legacy PO-level shipping/delivery-i bhag hoy
+      // Shipment-wise mode chalu hole PO-level planned freight/shipping bad — actual release freight-i dhora hoy
       (shipmentWiseMode
         ? 0
-        : Number((po as any).shipping_total_bdt ?? (po as any).shipping_cost_bdt ?? 0) +
+        : Number((po as any).freight_cost_bdt ?? 0) +
+          Number((po as any).shipping_total_bdt ?? (po as any).shipping_cost_bdt ?? 0) +
           Number((po as any).local_delivery_total_bdt ?? 0));
+
     const poOverheadPerUnit = totalOrdered > 0 ? poOverhead / totalOrdered : 0;
 
     // Ei release-er nijer khoroch — shudhu ei shipment-er pcs-e bhag
