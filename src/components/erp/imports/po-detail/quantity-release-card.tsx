@@ -271,6 +271,14 @@ export function QuantityReleaseCard({
               missing_qty: getDraft(i.id).missing,
             }))
             .filter((l) => l.quantity > 0 || l.damaged_qty > 0 || l.missing_qty > 0),
+          shipping: releaseFreight > 0
+            ? {
+                weight_kg: shipWeightNum,
+                rate_per_kg: shipRateNum,
+                amount_bdt: +releaseFreight.toFixed(2),
+                note: shipNote || undefined,
+              }
+            : undefined,
           local_delivery: localDelivery > 0
             ? {
                 amount_bdt: +localDelivery.toFixed(2),
