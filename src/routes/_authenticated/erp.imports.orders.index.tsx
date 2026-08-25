@@ -17,7 +17,7 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { cn } from "@/lib/utils";
 import { listPurchaseOrders, deleteImportPo } from "@/lib/erp/imports/imports.functions";
 import { PO_STATUS_LABEL, fmtBdt, netDue, type ImpPoStatus } from "@/lib/erp/imports/types";
-import { ProductThumbStack } from "./erp.imports.index";
+import { ProductThumbStack, poItemName } from "./erp.imports.index";
 
 export const Route = createFileRoute("/_authenticated/erp/imports/orders/")({
   head: () => ({ meta: [{ title: "Purchase Orders — Imports" }] }),
@@ -120,7 +120,7 @@ function PoListPage() {
           p.agent?.name,
           p.brand?.name,
           PO_STATUS_LABEL[p.status as ImpPoStatus]?.label ?? p.status,
-          ...(p.items ?? []).map((i: any) => i.name_snapshot ?? ""),
+          ...(p.items ?? []).map((i: any) => poItemName(i)),
         ].join(" ").toLowerCase();
         if (!hay.includes(needle)) return false;
       }
@@ -358,6 +358,7 @@ function PoListPage() {
                   const initials = (p.agent?.name ?? (p.supplier?.name ?? "")).split(" ").filter(Boolean).slice(0, 2).map((w: string) => w[0]).join("").toUpperCase() || "?";
                   const isSel = selected.has(p.id);
                   const units = (p.items ?? []).reduce((s: number, i: any) => s + Number(i.quantity || 0), 0);
+                  const itemNames = (p.items ?? []).map((i: any) => poItemName(i)).join(", ");
                   return (
                     <TableRow key={p.id} className={cn("group transition-colors hover:bg-accent/40", isSel && "bg-primary/5 hover:bg-primary/10")}>
                       <TableCell onClick={(e) => e.stopPropagation()}>
@@ -368,13 +369,18 @@ function PoListPage() {
                           {p.po_number}
                         </Link>
                       </TableCell>
-                      <TableCell>
+                      <TableCell className="max-w-[280px]">
                         <div className="flex items-center gap-2 min-w-0">
                           <ProductThumbStack items={p.items ?? []} max={3} size="sm" />
-                          <div className="text-[11px] text-muted-foreground tabular-nums whitespace-nowrap">
-                            {(p.items ?? []).length > 0
-                              ? <>{(p.items ?? []).length} item{(p.items ?? []).length > 1 ? "s" : ""}<span className="mx-1">·</span>{units.toLocaleString()} pcs</>
-                              : "—"}
+                          <div className="min-w-0">
+                            <div className="text-xs font-medium truncate" title={itemNames}>
+                              {itemNames || "—"}
+                            </div>
+                            <div className="text-[11px] text-muted-foreground tabular-nums whitespace-nowrap">
+                              {(p.items ?? []).length > 0
+                                ? <>{(p.items ?? []).length} item{(p.items ?? []).length > 1 ? "s" : ""}<span className="mx-1">·</span>{units.toLocaleString()} pcs</>
+                                : "—"}
+                            </div>
                           </div>
                         </div>
                       </TableCell>

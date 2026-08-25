@@ -105,6 +105,7 @@ export const listPurchaseOrders = createServerFn({ method: "POST" })
         product_subtotal_bdt, shipping_total_bdt, local_courier_total_bdt,
         grand_total_bdt, paid_bdt, due_bdt, status, notes, created_at,
         supplier:supplier_id ( id, name ),
+        agent:cargo_agent_id ( id, name ),
         brand:brand_id ( id, name, slug ),
         items:imp_po_items ( id, name_snapshot, image_snapshot, quantity, product:product_id ( title, image ) )
       `)
