@@ -10816,6 +10816,90 @@ export type Database = {
         }
         Relationships: []
       }
+      rpt_snapshots: {
+        Row: {
+          brand_ids: string[]
+          brand_key: string
+          created_at: string
+          generated_at: string
+          id: string
+          payload: Json
+          period_end: string
+          period_start: string
+          period_type: string
+          updated_at: string
+        }
+        Insert: {
+          brand_ids?: string[]
+          brand_key: string
+          created_at?: string
+          generated_at?: string
+          id?: string
+          payload?: Json
+          period_end: string
+          period_start: string
+          period_type: string
+          updated_at?: string
+        }
+        Update: {
+          brand_ids?: string[]
+          brand_key?: string
+          created_at?: string
+          generated_at?: string
+          id?: string
+          payload?: Json
+          period_end?: string
+          period_start?: string
+          period_type?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      rpt_subscriptions: {
+        Row: {
+          brand_ids: string[]
+          channel: string
+          created_at: string
+          created_by: string | null
+          enabled: boolean
+          frequency: string
+          id: string
+          last_result: string | null
+          last_sent_at: string | null
+          name: string
+          recipients: string[]
+          updated_at: string
+        }
+        Insert: {
+          brand_ids?: string[]
+          channel?: string
+          created_at?: string
+          created_by?: string | null
+          enabled?: boolean
+          frequency?: string
+          id?: string
+          last_result?: string | null
+          last_sent_at?: string | null
+          name?: string
+          recipients?: string[]
+          updated_at?: string
+        }
+        Update: {
+          brand_ids?: string[]
+          channel?: string
+          created_at?: string
+          created_by?: string | null
+          enabled?: boolean
+          frequency?: string
+          id?: string
+          last_result?: string | null
+          last_sent_at?: string | null
+          name?: string
+          recipients?: string[]
+          updated_at?: string
+        }
+        Relationships: []
+      }
       site_settings: {
         Row: {
           description: string | null
@@ -13172,6 +13256,31 @@ export type Database = {
       rpt_breakeven: {
         Args: { _brand_ids: string[]; _from: string; _to: string }
         Returns: Json
+      }
+      rpt_build_snapshot: {
+        Args: {
+          _brand_ids: string[]
+          _period_start: string
+          _period_type: string
+        }
+        Returns: {
+          brand_ids: string[]
+          brand_key: string
+          created_at: string
+          generated_at: string
+          id: string
+          payload: Json
+          period_end: string
+          period_start: string
+          period_type: string
+          updated_at: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "rpt_snapshots"
+          isOneToOne: true
+          isSetofReturn: false
+        }
       }
       rpt_cargo_ledger: {
         Args: { _brand_ids: string[]; _from: string; _to: string }

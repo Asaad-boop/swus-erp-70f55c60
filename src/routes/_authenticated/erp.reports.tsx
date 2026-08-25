@@ -37,12 +37,13 @@ import { CashFlowPanel, BrandPnlPanel } from "@/components/erp/reports/cashflow-
 import { ExpensesTab } from "@/components/erp/reports/expenses-tab";
 import { OpsTab } from "@/components/erp/reports/ops-tab";
 import { AdvancedTab } from "@/components/erp/reports/advanced-tab";
+import { ScheduledTab } from "@/components/erp/reports/scheduled-tab";
 
 
 const TAB_VALUES = [
   "overview", "sales", "orders", "products", "customers",
   "inventory", "marketing", "returns", "supply", "finance",
-  "expenses", "ops", "advanced", "control",
+  "expenses", "ops", "advanced", "scheduled", "control",
 ] as const;
 type TabValue = (typeof TAB_VALUES)[number];
 
@@ -273,7 +274,7 @@ function ReportsHub() {
                   ["products", "Products"], ["customers", "Customers"], ["inventory", "Inventory"],
                   ["marketing", "Marketing"], ["returns", "Returns"], ["supply", "Supply chain"],
                   ["finance", "Finance"], ["expenses", "Expenses"], ["ops", "Warehouse & team"],
-                  ["advanced", "Advanced"], ["control", "Control"],
+                  ["advanced", "Advanced"], ["scheduled", "Scheduled"], ["control", "Control"],
                 ].map(([v, label]) => (
                   <TabsTrigger
                     key={v}
@@ -353,6 +354,11 @@ function ReportsHub() {
             <TabsContent value="advanced" className="mt-[var(--rpt-gap)] space-y-[var(--rpt-gap)]">
               <AdvancedTab args={args} enabled={enabled} />
             </TabsContent>
+
+            <TabsContent value="scheduled" className="mt-[var(--rpt-gap)] space-y-[var(--rpt-gap)]">
+              <ScheduledTab brandIds={brandIds} enabled={enabled} />
+            </TabsContent>
+
 
 
             <TabsContent value="control" className="mt-[var(--rpt-gap)] space-y-[var(--rpt-gap)]">
