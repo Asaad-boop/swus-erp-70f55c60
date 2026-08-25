@@ -83,7 +83,11 @@ export const REPORT_REGISTRY: ReportEntry[] = [
   // Control layer
   r({ id: "control.chain", name: "Sales → Cash reconciliation chain", category: "Control", tab: "control", source: "rpt_reconcile_chain", formula: "revenue vs finance vs cash vs courier charge, with status per check", basis: "delivered", status: "live" }),
   r({ id: "control.close", name: "Period close", category: "Control", tab: "control", source: "rpt_period_close", formula: "frozen monthly revenue / cost / profit / cash snapshot", basis: "transaction_date", status: "live" }),
-  r({ id: "control.archive", name: "Monthly business report (PDF)", category: "Control", tab: "control", source: "rpt_period_close.snapshot", formula: "printed from the closed-month snapshot", basis: "transaction_date", status: "planned" }),
+  // Scheduled reports
+  r({ id: "sched.daily", name: "Daily business summary", category: "Control", tab: "scheduled", source: "rpt_sales_summary + rpt_cash_flow", formula: "single Dhaka day snapshot: revenue, profit, orders, cash in/out", basis: "delivered", status: "live" }),
+  r({ id: "sched.monthly", name: "Monthly business report (PDF)", category: "Control", tab: "scheduled", source: "rpt_build_snapshot", formula: "closed-month archive printed from the stored snapshot", basis: "delivered", status: "live" }),
+  r({ id: "sched.archive", name: "Snapshot archive", category: "Control", tab: "scheduled", source: "rpt_snapshots", formula: "locked-in period snapshots created manually or by the scheduler", basis: "transaction_date", status: "live" }),
+  r({ id: "sched.delivery", name: "Auto SMS digest", category: "Control", tab: "scheduled", source: "rpt_subscriptions + /api/public/cron/business-summary", formula: "enabled subscriptions receive the digest each morning (Dhaka)", basis: "n/a", status: "live" }),
 ];
 
 export const REPORT_CATEGORIES = Array.from(new Set(REPORT_REGISTRY.map((x) => x.category)));

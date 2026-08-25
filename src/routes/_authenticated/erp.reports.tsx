@@ -43,7 +43,7 @@ import { ScheduledTab } from "@/components/erp/reports/scheduled-tab";
 const TAB_VALUES = [
   "overview", "sales", "orders", "products", "customers",
   "inventory", "marketing", "returns", "supply", "finance",
-  "expenses", "ops", "advanced", "control",
+  "expenses", "ops", "advanced", "scheduled", "control",
 ] as const;
 type TabValue = (typeof TAB_VALUES)[number];
 
