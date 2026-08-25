@@ -248,7 +248,23 @@ function KpiCard({ label, value, icon: Icon, tone, delta, deltaInverse }: { labe
   );
 }
 
-export function ProductThumbStack({ items, max = 4, size = "md" }: { items: Array<{ image_snapshot?: string | null; name_snapshot?: string | null; quantity?: number | null }>; max?: number; size?: "sm" | "md" }) {
+export type PoThumbItem = {
+  image_snapshot?: string | null;
+  name_snapshot?: string | null;
+  quantity?: number | null;
+  /** Live catalog row — snapshot purono hoye gele ekhan theke fresh image/title newa hoy */
+  product?: { title?: string | null; image?: string | null } | null;
+};
+
+/** Product-er current image/title ke priority dey, na thakle PO-er snapshot. */
+export function poItemImage(it: PoThumbItem): string | null {
+  return it.product?.image || it.image_snapshot || null;
+}
+export function poItemName(it: PoThumbItem): string {
+  return it.product?.title || it.name_snapshot || "Unnamed item";
+}
+
+export function ProductThumbStack({ items, max = 4, size = "md" }: { items: PoThumbItem[]; max?: number; size?: "sm" | "md" }) {
   if (!items || items.length === 0) {
     return (
       <div className={`${size === "sm" ? "h-8 w-8" : "h-10 w-10"} rounded-md bg-muted border border-dashed border-border flex items-center justify-center flex-shrink-0`}>
