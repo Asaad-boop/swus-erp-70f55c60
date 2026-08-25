@@ -172,6 +172,7 @@ export const getPurchaseOrderDetail = createServerFn({ method: "POST" })
       context.supabase.from("imp_po_releases").select(`
         id, release_number, warehouse_id, released_at, notes, created_at,
         local_delivery_bdt, delivery_note,
+        shipping_weight_kg, shipping_rate_per_kg, shipping_charge_bdt, shipping_note, shipping_payment_id,
         qc_status, qc_at, qc_notes,
         items:imp_po_release_items ( id, po_item_id, product_id, variant_id, sku_snapshot,
           quantity, damaged_qty, missing_qty, unit_landed_cost_bdt,
