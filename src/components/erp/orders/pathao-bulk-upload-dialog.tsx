@@ -105,9 +105,20 @@ export function PathaoBulkUploadDialog({ open, onOpenChange, orders }: Props) {
           consignment?: string | null;
           tracking?: string | null;
           skipped?: boolean;
+          blocked?: boolean;
+          code?: string;
           message?: string;
         };
         const ms = Date.now() - t0;
+        if (res.blocked || res.code === "PATHAO_CUSTOMER_BLOCKED") {
+          patchRow(i, {
+            status: "blocked",
+            tracking: null,
+            message: res.message ?? "Pathao এই customer number-এ booking block করেছে।",
+            ms,
+          });
+          return;
+        }
         const tracking = res.tracking || res.consignment || null;
         patchRow(i, {
           status: res.skipped ? "skipped" : "success",

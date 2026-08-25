@@ -349,6 +349,9 @@ export function useDispatch() {
       let consignment = "";
       if (prov === "pathao") {
         const res: any = await bookPathao({ data: { orderId: order.id } });
+        if (res?.blocked || res?.code === "PATHAO_CUSTOMER_BLOCKED") {
+          throw new Error(res?.message || "Pathao এই customer number-এ booking block করেছে। অন্য courier ব্যবহার করুন।");
+        }
         consignment = String(res?.consignment ?? res?.consignment_id ?? res?.tracking ?? "");
       } else if (prov === "steadfast") {
         const res: any = await bookSteadfast({

@@ -749,20 +749,35 @@ export const pathaoBookOrderAutoFn = createServerFn({ method: "POST" })
       .slice(0, 480) || "Order items";
 
     const merchantId = order.invoice_no || order.id.slice(0, 8).toUpperCase();
-    const result: any = await client.createOrder({
-      store_id: client.storeId,
-      merchant_order_id: merchantId,
-      recipient_name: name,
-      recipient_phone: phone,
-      recipient_address: address,
-      ...(locationPayload ? locationPayload : {}),
-      delivery_type: data.delivery_type,
-      item_type: data.item_type,
-      item_quantity: totalQty,
-      item_weight: data.item_weight,
-      amount_to_collect: Math.round(Number(order.total) || 0),
-      item_description: desc,
-    });
+    let result: any;
+    try {
+      result = await client.createOrder({
+        store_id: client.storeId,
+        merchant_order_id: merchantId,
+        recipient_name: name,
+        recipient_phone: phone,
+        recipient_address: address,
+        ...(locationPayload ? locationPayload : {}),
+        delivery_type: data.delivery_type,
+        item_type: data.item_type,
+        item_quantity: totalQty,
+        item_weight: data.item_weight,
+        amount_to_collect: Math.round(Number(order.total) || 0),
+        item_description: desc,
+      });
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error || "Pathao booking failed");
+      if (message.includes("[PATHAO_CUSTOMER_BLOCKED]")) {
+        return {
+          blocked: true,
+          code: "PATHAO_CUSTOMER_BLOCKED" as const,
+          consignment: null,
+          tracking: null,
+          message: message.replace("[PATHAO_CUSTOMER_BLOCKED]", "").trim(),
+        };
+      }
+      throw error;
+    }
 
     const consignment = result?.consignment_id || result?.data?.consignment_id || null;
     const tracking = result?.tracking_code || result?.data?.tracking_code || null;
