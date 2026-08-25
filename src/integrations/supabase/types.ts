@@ -6898,6 +6898,11 @@ export type Database = {
           qc_status: string
           release_number: number
           released_at: string
+          shipping_charge_bdt: number
+          shipping_note: string | null
+          shipping_payment_id: string | null
+          shipping_rate_per_kg: number
+          shipping_weight_kg: number
           warehouse_id: string | null
         }
         Insert: {
@@ -6916,6 +6921,11 @@ export type Database = {
           qc_status?: string
           release_number: number
           released_at?: string
+          shipping_charge_bdt?: number
+          shipping_note?: string | null
+          shipping_payment_id?: string | null
+          shipping_rate_per_kg?: number
+          shipping_weight_kg?: number
           warehouse_id?: string | null
         }
         Update: {
@@ -6934,6 +6944,11 @@ export type Database = {
           qc_status?: string
           release_number?: number
           released_at?: string
+          shipping_charge_bdt?: number
+          shipping_note?: string | null
+          shipping_payment_id?: string | null
+          shipping_rate_per_kg?: number
+          shipping_weight_kg?: number
           warehouse_id?: string | null
         }
         Relationships: [
@@ -6942,6 +6957,13 @@ export type Database = {
             columns: ["po_id"]
             isOneToOne: false
             referencedRelation: "imp_purchase_orders"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "imp_po_releases_shipping_payment_id_fkey"
+            columns: ["shipping_payment_id"]
+            isOneToOne: false
+            referencedRelation: "imp_payments"
             referencedColumns: ["id"]
           },
         ]

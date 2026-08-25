@@ -172,6 +172,7 @@ export const getPurchaseOrderDetail = createServerFn({ method: "POST" })
       context.supabase.from("imp_po_releases").select(`
         id, release_number, warehouse_id, released_at, notes, created_at,
         local_delivery_bdt, delivery_note,
+        shipping_weight_kg, shipping_rate_per_kg, shipping_charge_bdt, shipping_note, shipping_payment_id,
         qc_status, qc_at, qc_notes,
         items:imp_po_release_items ( id, po_item_id, product_id, variant_id, sku_snapshot,
           quantity, damaged_qty, missing_qty, unit_landed_cost_bdt,
@@ -1346,6 +1347,13 @@ export const releasePoQuantity = createServerFn({ method: "POST" })
         damaged_qty: z.number().int().nonnegative().default(0),
         missing_qty: z.number().int().nonnegative().default(0),
       })).min(1),
+      // Ei shipment-er nijer freight (CN→BD) — shudhu ei release-er pcs-e bhag hobe
+      shipping: z.object({
+        weight_kg: z.number().nonnegative().default(0),
+        rate_per_kg: z.number().nonnegative().default(0),
+        amount_bdt: z.number().nonnegative(),
+        note: z.string().optional(),
+      }).optional(),
       // Local delivery (BD warehouse theke amader kache ana) charge
       local_delivery: z.object({
         amount_bdt: z.number().nonnegative(),
@@ -1414,7 +1422,7 @@ export const releasePoQuantity = createServerFn({ method: "POST" })
       }
     }
 
-    // Local delivery charge — PO-r moddhe jog hoy, tai landed cost e o dhora pore
+    // Local delivery charge — ei shipment-er sathe jog hoy
     const localDelivery = Math.max(0, Number(data.local_delivery?.amount_bdt ?? 0));
     if (localDelivery > 0) {
       const { error: ldErr } = await context.supabase
@@ -1428,19 +1436,52 @@ export const releasePoQuantity = createServerFn({ method: "POST" })
       if (ldErr) throw ldErr;
     }
 
+    // Ei shipment-er freight
+    const shipWeight = Math.max(0, Number(data.shipping?.weight_kg ?? 0));
+    const shipRate = Math.max(0, Number(data.shipping?.rate_per_kg ?? 0));
+    const releaseFreight = +Math.max(
+      0,
+      Number(data.shipping?.amount_bdt ?? shipWeight * shipRate),
+    ).toFixed(4);
+
+    // Age-r kono release-e shipment-wise freight deya hoyeche kina
+    const { data: priorShip } = await context.supabase
+      .from("imp_po_releases")
+      .select("shipping_charge_bdt")
+      .eq("po_id", data.po_id);
+    const priorFreight = (priorShip ?? []).reduce(
+      (s: number, r: any) => s + Number(r.shipping_charge_bdt ?? 0),
+      0,
+    );
+    const shipmentWiseMode = releaseFreight > 0 || priorFreight > 0;
+
     // Landed cost per unit
     const fx = Number((po as any).fx_rate_cny_bdt ?? (po as any).fx_rate ?? 0);
     const commissionPerUnit = Number((po as any).agent_commission_per_unit_bdt ?? 0);
-    const overheadTotal =
-      Number((po as any).shipping_total_bdt ?? (po as any).shipping_cost_bdt ?? 0) +
+    const totalOrdered = (poItems ?? []).reduce((s: number, r: any) => s + Number(r.quantity ?? 0), 0);
+
+    // PO-level overhead (customs, duty, other) — shob ordered pcs-e bhag
+    const poOverhead =
       Number((po as any).local_courier_total_bdt ?? 0) +
-      Number((po as any).local_delivery_total_bdt ?? 0) +
-      localDelivery +
       Number((po as any).freight_cost_bdt ?? 0) +
       Number((po as any).customs_duty_bdt ?? 0) +
-      Number((po as any).other_charges_bdt ?? 0);
-    const totalOrdered = (poItems ?? []).reduce((s: number, r: any) => s + Number(r.quantity ?? 0), 0);
-    const overheadPerUnit = totalOrdered > 0 ? overheadTotal / totalOrdered : 0;
+      Number((po as any).other_charges_bdt ?? 0) +
+      // Shipment-wise mode chalu na hole legacy PO-level shipping/delivery-i bhag hoy
+      (shipmentWiseMode
+        ? 0
+        : Number((po as any).shipping_total_bdt ?? (po as any).shipping_cost_bdt ?? 0) +
+          Number((po as any).local_delivery_total_bdt ?? 0));
+    const poOverheadPerUnit = totalOrdered > 0 ? poOverhead / totalOrdered : 0;
+
+    // Ei release-er nijer khoroch — shudhu ei shipment-er pcs-e bhag
+    const releaseUnits = lines.reduce(
+      (s, l) => s + Number(l.quantity ?? 0) + Number(l.damaged_qty ?? 0),
+      0,
+    );
+    const releaseOverhead = releaseFreight + (shipmentWiseMode ? localDelivery : 0);
+    const releasePerUnit = releaseUnits > 0 ? releaseOverhead / releaseUnits : 0;
+
+    const overheadPerUnit = poOverheadPerUnit + releasePerUnit;
 
     // Next release number
     const { data: lastRel } = await context.supabase
@@ -1453,6 +1494,7 @@ export const releasePoQuantity = createServerFn({ method: "POST" })
 
     // --- Optional: ei release-er pro-rata due ekhoni pay ---
     const paymentsDone: Array<{ type: string; amount: number }> = [];
+    let shippingPaymentId: string | null = null;
     if (data.payment) {
       const payDate = data.payment.payment_date ?? new Date().toISOString().slice(0, 10);
       const parts: Array<{ type: "supplier_payment" | "shipping"; amount: number; suffix: string }> = [
@@ -1461,7 +1503,7 @@ export const releasePoQuantity = createServerFn({ method: "POST" })
       ];
       for (const p of parts) {
         if (p.amount <= 0) continue;
-        const { error: payErr } = await context.supabase.rpc("imp_record_payment_rpc", {
+        const { data: payOut, error: payErr } = await context.supabase.rpc("imp_record_payment_rpc", {
           _payload: {
             brand_id: (po as any).brand_id,
             po_id: data.po_id,
@@ -1475,6 +1517,9 @@ export const releasePoQuantity = createServerFn({ method: "POST" })
           },
         });
         if (payErr) throw payErr;
+        if (p.suffix === "ship") {
+          shippingPaymentId = (payOut as any)?.payment_id ?? (typeof payOut === "string" ? payOut : null);
+        }
         paymentsDone.push({ type: p.type, amount: p.amount });
       }
     }
@@ -1512,6 +1557,11 @@ export const releasePoQuantity = createServerFn({ method: "POST" })
         local_delivery_bdt: localDelivery,
         delivery_note: data.local_delivery?.note ?? null,
         delivery_payment_id: localDeliveryPaymentId,
+        shipping_weight_kg: shipWeight,
+        shipping_rate_per_kg: shipRate,
+        shipping_charge_bdt: releaseFreight,
+        shipping_payment_id: shippingPaymentId,
+        shipping_note: data.shipping?.note ?? null,
         created_by: context.userId,
       } as any)
       .select("id, release_number")
@@ -1601,6 +1651,8 @@ export const releasePoQuantity = createServerFn({ method: "POST" })
       payments: paymentsDone,
       local_delivery_bdt: localDelivery,
       landed_per_unit_overhead: +overheadPerUnit.toFixed(4),
+      shipping_charge_bdt: releaseFreight,
+      release_units: releaseUnits,
       status: nextStatus,
       total_released: totalReleased,
       total_ordered: totalOrdered,

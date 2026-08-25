@@ -75,6 +75,11 @@ export function QuantityReleaseCard({
   const [ldAmount, setLdAmount] = useState("");
   const [ldNote, setLdNote] = useState("");
   const [ldWallet, setLdWallet] = useState("");
+  // Ei shipment-er nijer freight (CN→BD)
+  const [shipWeight, setShipWeight] = useState("");
+  const [shipRate, setShipRate] = useState("");
+  const [shipAmountOverride, setShipAmountOverride] = useState<string | null>(null);
+  const [shipNote, setShipNote] = useState("");
   const [payNow, setPayNow] = useState(true);
   const [payWallet, setPayWallet] = useState("");
   const [payOverride, setPayOverride] = useState<string | null>(null);
@@ -134,18 +139,38 @@ export function QuantityReleaseCard({
   const remainingFor = (i: any) => Math.max(0, Number(i.quantity ?? 0) - (releasedByItem.get(i.id) ?? 0));
   const hasOverRelease = items.some((i) => lineTotal(i) > remainingFor(i));
 
+  // ---- Ei shipment-er nijer freight ----
+  const priorFreight = releases.reduce((s, r: any) => s + Number(r.shipping_charge_bdt ?? 0), 0);
+  const shipWeightNum = Math.max(0, Number(shipWeight) || 0);
+  const shipRateNum = Math.max(0, Number(shipRate) || 0);
+  const releaseFreight = Math.max(
+    0,
+    shipAmountOverride !== null && shipAmountOverride !== ""
+      ? Number(shipAmountOverride) || 0
+      : shipWeightNum * shipRateNum,
+  );
+  const shipmentWiseMode = releaseFreight > 0 || priorFreight > 0;
+  // Server-er moto: ei release-e receive howa pcs (missing bad)
+  const releaseUnits = items.reduce((s, i) => s + getDraft(i.id).qty + getDraft(i.id).damaged, 0);
+
   // Landed cost preview — mirrors the server formula in releasePoQuantity()
   const fx = Number(po?.fx_rate_cny_bdt ?? po?.fx_rate ?? 0);
   const commissionPerUnit = Number(po?.agent_commission_per_unit_bdt ?? 0);
-  const overheadTotal =
-    Number(po?.shipping_total_bdt ?? po?.shipping_cost_bdt ?? 0) +
+  const poOverheadTotal =
     Number(po?.local_courier_total_bdt ?? 0) +
-    Number(po?.local_delivery_total_bdt ?? 0) +
-    localDelivery +
     Number(po?.freight_cost_bdt ?? 0) +
     Number(po?.customs_duty_bdt ?? 0) +
-    Number(po?.other_charges_bdt ?? 0);
-  const overheadPerUnit = totalOrdered > 0 ? overheadTotal / totalOrdered : 0;
+    Number(po?.other_charges_bdt ?? 0) +
+    (shipmentWiseMode
+      ? 0
+      : Number(po?.shipping_total_bdt ?? po?.shipping_cost_bdt ?? 0) +
+        Number(po?.local_delivery_total_bdt ?? 0) +
+        localDelivery);
+  const poOverheadPerUnit = totalOrdered > 0 ? poOverheadTotal / totalOrdered : 0;
+  const releaseOverhead = releaseFreight + (shipmentWiseMode ? localDelivery : 0);
+  const releaseOverheadPerUnit = releaseUnits > 0 ? releaseOverhead / releaseUnits : 0;
+  const overheadPerUnit = poOverheadPerUnit + releaseOverheadPerUnit;
+  const overheadTotal = poOverheadTotal;
 
   // Paid ta age goods (purchase) er against dhora hoy, tarpor shipping/overhead
   const paidSoFar = Number(po?.paid_bdt ?? 0);
@@ -196,7 +221,10 @@ export function QuantityReleaseCard({
   const previewValue = previewLines.reduce((s, l) => s + l.value, 0);
   const previewDamagedValue = previewLines.reduce((s, l) => s + l.damagedValue, 0);
   const previewGoodsDue = previewLines.reduce((s, l) => s + l.goodsDue, 0);
-  const previewShipDue = previewLines.reduce((s, l) => s + l.shipDue, 0);
+  // Shipment-wise mode-e ei release-er freight-i shipping due (PO-level pro-rata na)
+  const previewShipDue = shipmentWiseMode
+    ? releaseFreight
+    : previewLines.reduce((s, l) => s + l.shipDue, 0);
   const previewTotalDue = previewGoodsDue + previewShipDue;
   const previewPcs = previewLines.reduce((s, l) => s + l.qty + l.damaged + l.missing, 0);
   // Weighted (line-wise) effective rate for ei release
@@ -243,6 +271,14 @@ export function QuantityReleaseCard({
               missing_qty: getDraft(i.id).missing,
             }))
             .filter((l) => l.quantity > 0 || l.damaged_qty > 0 || l.missing_qty > 0),
+          shipping: releaseFreight > 0
+            ? {
+                weight_kg: shipWeightNum,
+                rate_per_kg: shipRateNum,
+                amount_bdt: +releaseFreight.toFixed(2),
+                note: shipNote || undefined,
+              }
+            : undefined,
           local_delivery: localDelivery > 0
             ? {
                 amount_bdt: +localDelivery.toFixed(2),
@@ -273,6 +309,10 @@ export function QuantityReleaseCard({
       setNotes("");
       setLdAmount("");
       setLdNote("");
+      setShipWeight("");
+      setShipRate("");
+      setShipAmountOverride(null);
+      setShipNote("");
       setPayOverride(null);
       setConfirmOpen(false);
       qc.invalidateQueries({ queryKey: ["imp-po", poId] });
