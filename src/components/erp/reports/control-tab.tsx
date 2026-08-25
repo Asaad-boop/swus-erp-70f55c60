@@ -77,11 +77,11 @@ export function ControlTab({ args, enabled }: { args: RpcArgs; enabled: boolean 
   });
 
   const taxQ = useQuery({
-    queryKey: ["rpt-taxonomy", JSON.stringify(base)],
+    queryKey: ["rpt-taxonomy", JSON.stringify(base), args._basis],
     enabled,
     ...REPORT_QUERY_OPTS,
     queryFn: async () => {
-      const { data, error } = await supabase.rpc("rpt_return_taxonomy", { ...base, _basis: "created" } as never);
+      const { data, error } = await supabase.rpc("rpt_return_taxonomy", { ...base, _basis: args._basis } as never);
       if (error) throw error;
       return data as unknown as Taxonomy;
     },
