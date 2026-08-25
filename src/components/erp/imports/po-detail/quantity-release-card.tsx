@@ -75,6 +75,11 @@ export function QuantityReleaseCard({
   const [ldAmount, setLdAmount] = useState("");
   const [ldNote, setLdNote] = useState("");
   const [ldWallet, setLdWallet] = useState("");
+  // Ei shipment-er nijer freight (CN→BD)
+  const [shipWeight, setShipWeight] = useState("");
+  const [shipRate, setShipRate] = useState("");
+  const [shipAmountOverride, setShipAmountOverride] = useState<string | null>(null);
+  const [shipNote, setShipNote] = useState("");
   const [payNow, setPayNow] = useState(true);
   const [payWallet, setPayWallet] = useState("");
   const [payOverride, setPayOverride] = useState<string | null>(null);
