@@ -120,7 +120,7 @@ function PoListPage() {
           p.agent?.name,
           p.brand?.name,
           PO_STATUS_LABEL[p.status as ImpPoStatus]?.label ?? p.status,
-          ...(p.items ?? []).map((i: any) => i.name_snapshot ?? ""),
+          ...(p.items ?? []).map((i: any) => poItemName(i)),
         ].join(" ").toLowerCase();
         if (!hay.includes(needle)) return false;
       }
