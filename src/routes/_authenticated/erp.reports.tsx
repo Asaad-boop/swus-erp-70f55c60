@@ -33,6 +33,10 @@ import { AdsPanel } from "@/components/erp/reports/marketing-extras";
 import { CourierPerformancePanel, DeliveryAreaPanel } from "@/components/erp/reports/delivery-extras";
 import { ReportIndexDrawer } from "@/components/erp/reports/report-index-drawer";
 import { Product360Panel } from "@/components/erp/reports/product-360";
+import { CashFlowPanel, BrandPnlPanel } from "@/components/erp/reports/cashflow-panel";
+import { ExpensesTab } from "@/components/erp/reports/expenses-tab";
+import { OpsTab } from "@/components/erp/reports/ops-tab";
+import { AdvancedTab } from "@/components/erp/reports/advanced-tab";
 
 
 const TAB_VALUES = [
