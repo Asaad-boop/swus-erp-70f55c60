@@ -1556,6 +1556,11 @@ export const releasePoQuantity = createServerFn({ method: "POST" })
         local_delivery_bdt: localDelivery,
         delivery_note: data.local_delivery?.note ?? null,
         delivery_payment_id: localDeliveryPaymentId,
+        shipping_weight_kg: shipWeight,
+        shipping_rate_per_kg: shipRate,
+        shipping_charge_bdt: releaseFreight,
+        shipping_payment_id: shippingPaymentId,
+        shipping_note: data.shipping?.note ?? null,
         created_by: context.userId,
       } as any)
       .select("id, release_number")
