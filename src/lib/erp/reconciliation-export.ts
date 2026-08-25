@@ -111,21 +111,44 @@ export function exportReconciliationCsv(run: ExportRun, rows: ExportRow[]) {
 export function exportReconciliationPdf(run: ExportRun, rows: ExportRow[]) {
   const doc = new jsPDF({ orientation: "landscape", unit: "pt", format: "a4" });
   const margin = 32;
+  const brand = getDocBranding();
   let y = margin;
 
-  doc.setFontSize(16);
+  // Branded masthead
+  doc.setFontSize(13);
   doc.setFont("helvetica", "bold");
+  doc.setTextColor(30, 27, 75);
+  doc.text(brand.company || "Synq With Us", margin, y);
+  const contact = [brand.address, brand.phone, brand.email, brand.website].filter(Boolean).join(" · ");
+  if (contact) {
+    doc.setFontSize(8);
+    doc.setFont("helvetica", "normal");
+    doc.setTextColor(120);
+    doc.text(contact, margin, y + 12);
+  }
+  doc.setDrawColor(30, 27, 75);
+  doc.setLineWidth(1.5);
+  y += contact ? 22 : 12;
+  doc.line(margin, y, doc.internal.pageSize.getWidth() - margin, y);
+  y += 20;
+
+  doc.setFontSize(15);
+  doc.setFont("helvetica", "bold");
+  doc.setTextColor(15, 23, 42);
   doc.text("Pathao Reconciliation Report", margin, y);
-  y += 18;
+  y += 16;
 
   doc.setFontSize(9);
   doc.setFont("helvetica", "normal");
+  doc.setTextColor(90);
   doc.text(
     `File: ${run.source_filename ?? "—"}    Run: ${run.id.slice(0, 8)}    Status: ${run.status}    Created: ${new Date(run.created_at).toLocaleString()}`,
     margin,
     y,
   );
+  doc.setTextColor(0);
   y += 16;
+
 
   // Summary block
   autoTable(doc, {
