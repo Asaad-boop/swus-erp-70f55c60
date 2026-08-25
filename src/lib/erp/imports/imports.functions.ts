@@ -931,27 +931,48 @@ async function recomputeCartonCostSharesInternal(supabase: any, po_id: string) {
 
   const { data: cartons, error: cErr } = await supabase
     .from("imp_cartons")
-    .select("id, weight_kg")
+    .select("id, weight_kg, shipping_freight_bdt")
     .eq("po_id", po_id);
   if (cErr) throw cErr;
   const list = cartons ?? [];
   if (list.length === 0) return { updated: 0, shipping_total: shippingTotal };
 
-  const totalWeight = list.reduce((s: number, c: any) => s + Number(c.weight_kg || 0), 0);
-  const useWeight = totalWeight > 0;
+  // Cartons with their own actual freight bill (carton-wise / lot-wise shipping)
+  // keep that exact amount. Only the remaining planned PO shipping is spread
+  // across the cartons that have not been billed yet.
+  const isBilled = (c: any) => c.shipping_freight_bdt !== null && c.shipping_freight_bdt !== undefined;
+  const billed = list.filter(isBilled);
+  const unbilled = list.filter((c: any) => !isBilled(c));
+  const billedTotal = billed.reduce((s: number, c: any) => s + Number(c.shipping_freight_bdt || 0), 0);
+  const remaining = Math.max(0, shippingTotal - billedTotal);
+
+  const unbilledWeight = unbilled.reduce((s: number, c: any) => s + Number(c.weight_kg || 0), 0);
+  const useWeight = unbilledWeight > 0;
 
   for (const c of list) {
-    const share = useWeight
-      ? (Number(c.weight_kg || 0) / totalWeight) * shippingTotal
-      : shippingTotal / list.length;
+    const share = isBilled(c)
+      ? Number(c.shipping_freight_bdt || 0)
+      : unbilled.length === 0
+        ? 0
+        : useWeight
+          ? (Number(c.weight_kg || 0) / unbilledWeight) * remaining
+          : remaining / unbilled.length;
+    const val = +share.toFixed(4);
     const { error: uErr } = await supabase
       .from("imp_cartons")
-      .update({ cost_share_bdt: +share.toFixed(4) })
+      .update({ cost_share_bdt: val, shipping_charge_bdt: val })
       .eq("id", c.id);
     if (uErr) throw uErr;
   }
-  return { updated: list.length, shipping_total: shippingTotal };
+  return {
+    updated: list.length,
+    shipping_total: shippingTotal,
+    billed_total: +billedTotal.toFixed(2),
+    unbilled_total: +remaining.toFixed(2),
+    billed_cartons: billed.length,
+  };
 }
+
 
 export const saveShippingCost = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
