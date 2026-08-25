@@ -13,6 +13,8 @@ import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import { Toaster } from "@/components/ui/sonner";
 import { GlobalNewOrderNotifier } from "@/components/erp/global-new-order-notifier";
 import { UpdateNotice } from "@/components/erp/update-notice";
+import { DocBrandingSync } from "@/components/erp/doc-branding-sync";
+
 
 export const Route = createFileRoute("/_authenticated/erp")({
   component: ErpLayout,
