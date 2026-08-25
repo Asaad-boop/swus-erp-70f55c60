@@ -354,6 +354,11 @@ function ReportsHub() {
               <AdvancedTab args={args} enabled={enabled} />
             </TabsContent>
 
+            <TabsContent value="scheduled" className="mt-[var(--rpt-gap)] space-y-[var(--rpt-gap)]">
+              <ScheduledTab brandIds={brandIds} enabled={enabled} />
+            </TabsContent>
+
+
 
             <TabsContent value="control" className="mt-[var(--rpt-gap)] space-y-[var(--rpt-gap)]">
               <ControlTab args={args} enabled={enabled} />
