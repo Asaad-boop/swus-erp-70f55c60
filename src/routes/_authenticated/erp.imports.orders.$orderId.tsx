@@ -28,6 +28,7 @@ import { KpiTile, Mini, SummaryBox } from "@/components/erp/imports/po-detail/at
 import { PIPELINE_STAGES, PipelineStrip } from "@/components/erp/imports/po-detail/pipeline-strip";
 import { CartonRow } from "@/components/erp/imports/po-detail/carton-row";
 import { CartonsHeader } from "@/components/erp/imports/po-detail/cartons-header";
+import { CartonFreightCard } from "@/components/erp/imports/po-detail/carton-freight-card";
 import { ArrivedDialog, PaymentDialog, BulkReleaseDialog, QtyArrivedDialog, EditPaymentDialog } from "@/components/erp/imports/po-detail/dialogs";
 import { QuantityReleaseCard } from "@/components/erp/imports/po-detail/quantity-release-card";
 import { EditPoDialog } from "@/components/erp/imports/po-detail/edit-po-dialog";
@@ -413,6 +414,17 @@ function PoDetailPage() {
 
       {isQtyMode && (
         <QuantityReleaseCard poId={po.id} brandId={brandId} po={po as any} items={items} releases={releases as any} onPayDue={() => setPaymentOpen(true)} />
+      )}
+
+      {/* Carton-wise shipping bill */}
+      {!isQtyMode && cartons.length > 0 && (
+        <CartonFreightCard
+          poId={po.id}
+          poNumber={po.po_number}
+          cartons={cartons}
+          plannedShipping={Number(po.shipping_total_bdt ?? po.shipping_cost_bdt) || 0}
+          defaultRate={Number(po.shipping_rate_per_kg) || 0}
+        />
       )}
 
       {/* Cartons */}

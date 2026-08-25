@@ -153,6 +153,7 @@ export const getPurchaseOrderDetail = createServerFn({ method: "POST" })
         id, carton_number, barcode, expected_quantity,
         supplier_cost_bdt, shipping_charge_bdt, local_courier_bdt, total_landed_bdt, paid_bdt,
         weight_kg, cost_share_bdt, status, warehouse_id, received_at, released_at, qc_at, posted_at, notes,
+        shipping_rate_per_kg, shipping_freight_bdt, shipping_billed_at, shipping_note,
         items:imp_carton_items ( id, po_item_id, product_id, variant_id, sku_snapshot,
           quantity_expected, quantity_ok, quantity_damaged, quantity_missing,
           received_qty, damaged_qty, usable_qty,
@@ -930,27 +931,48 @@ async function recomputeCartonCostSharesInternal(supabase: any, po_id: string) {
 
   const { data: cartons, error: cErr } = await supabase
     .from("imp_cartons")
-    .select("id, weight_kg")
+    .select("id, weight_kg, shipping_freight_bdt")
     .eq("po_id", po_id);
   if (cErr) throw cErr;
   const list = cartons ?? [];
   if (list.length === 0) return { updated: 0, shipping_total: shippingTotal };
 
-  const totalWeight = list.reduce((s: number, c: any) => s + Number(c.weight_kg || 0), 0);
-  const useWeight = totalWeight > 0;
+  // Cartons with their own actual freight bill (carton-wise / lot-wise shipping)
+  // keep that exact amount. Only the remaining planned PO shipping is spread
+  // across the cartons that have not been billed yet.
+  const isBilled = (c: any) => c.shipping_freight_bdt !== null && c.shipping_freight_bdt !== undefined;
+  const billed = list.filter(isBilled);
+  const unbilled = list.filter((c: any) => !isBilled(c));
+  const billedTotal = billed.reduce((s: number, c: any) => s + Number(c.shipping_freight_bdt || 0), 0);
+  const remaining = Math.max(0, shippingTotal - billedTotal);
+
+  const unbilledWeight = unbilled.reduce((s: number, c: any) => s + Number(c.weight_kg || 0), 0);
+  const useWeight = unbilledWeight > 0;
 
   for (const c of list) {
-    const share = useWeight
-      ? (Number(c.weight_kg || 0) / totalWeight) * shippingTotal
-      : shippingTotal / list.length;
+    const share = isBilled(c)
+      ? Number(c.shipping_freight_bdt || 0)
+      : unbilled.length === 0
+        ? 0
+        : useWeight
+          ? (Number(c.weight_kg || 0) / unbilledWeight) * remaining
+          : remaining / unbilled.length;
+    const val = +share.toFixed(4);
     const { error: uErr } = await supabase
       .from("imp_cartons")
-      .update({ cost_share_bdt: +share.toFixed(4) })
+      .update({ cost_share_bdt: val, shipping_charge_bdt: val })
       .eq("id", c.id);
     if (uErr) throw uErr;
   }
-  return { updated: list.length, shipping_total: shippingTotal };
+  return {
+    updated: list.length,
+    shipping_total: shippingTotal,
+    billed_total: +billedTotal.toFixed(2),
+    unbilled_total: +remaining.toFixed(2),
+    billed_cartons: billed.length,
+  };
 }
+
 
 export const saveShippingCost = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
@@ -978,6 +1000,66 @@ export const saveShippingCost = createServerFn({ method: "POST" })
     const recompute = await recomputeCartonCostSharesInternal(context.supabase, data.po_id);
     return { ok: true, shipping_cost_bdt, ...recompute };
   });
+
+/**
+ * Carton-wise (lot-wise) shipping bill.
+ * Ekta shipment e jei carton gulo eshechhe shudhu shei carton gulor upor
+ * Weight x Rate/kg freight boshbe. Baki carton pore ashle tokhon alada bill.
+ * clear = true dile oi carton abar PO-level planned shipping share e fire jabe.
+ */
+export const saveCartonFreight = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d: any) =>
+    z.object({
+      po_id: z.string().uuid(),
+      clear: z.boolean().default(false),
+      note: z.string().max(300).optional(),
+      cartons: z.array(z.object({
+        carton_id: z.string().uuid(),
+        weight_kg: z.number().nonnegative().default(0),
+        rate_per_kg: z.number().nonnegative().default(0),
+        freight_bdt: z.number().nonnegative().optional(),
+      })).min(1),
+    }).parse(d),
+  )
+  .handler(async ({ data, context }) => {
+    await assertAnyRole(context.supabase, context.userId, ["admin", "operations", "accountant", "warehouse_staff"]);
+
+    let total = 0;
+    for (const c of data.cartons) {
+      const patch: any = data.clear
+        ? {
+            shipping_freight_bdt: null,
+            shipping_billed_at: null,
+            shipping_rate_per_kg: 0,
+            shipping_note: null,
+            weight_kg: c.weight_kg,
+          }
+        : {
+            weight_kg: c.weight_kg,
+            shipping_rate_per_kg: c.rate_per_kg,
+            shipping_freight_bdt: +(
+              c.freight_bdt !== undefined && c.freight_bdt !== null
+                ? c.freight_bdt
+                : c.weight_kg * c.rate_per_kg
+            ).toFixed(4),
+            shipping_billed_at: new Date().toISOString(),
+            shipping_note: data.note ?? null,
+          };
+      if (!data.clear) total += Number(patch.shipping_freight_bdt || 0);
+
+      const { error } = await context.supabase
+        .from("imp_cartons")
+        .update(patch)
+        .eq("id", c.carton_id)
+        .eq("po_id", data.po_id);
+      if (error) throw error;
+    }
+
+    const recompute = await recomputeCartonCostSharesInternal(context.supabase, data.po_id);
+    return { ok: true, cartons: data.cartons.length, freight_total: +total.toFixed(2), ...recompute };
+  });
+
 
 export const saveCartonWeight = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])

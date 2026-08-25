@@ -6555,7 +6555,11 @@ export type Database = {
           qc_at: string | null
           received_at: string | null
           released_at: string | null
+          shipping_billed_at: string | null
           shipping_charge_bdt: number
+          shipping_freight_bdt: number | null
+          shipping_note: string | null
+          shipping_rate_per_kg: number
           status: Database["public"]["Enums"]["imp_carton_status"]
           supplier_cost_bdt: number
           total_landed_bdt: number
@@ -6578,7 +6582,11 @@ export type Database = {
           qc_at?: string | null
           received_at?: string | null
           released_at?: string | null
+          shipping_billed_at?: string | null
           shipping_charge_bdt?: number
+          shipping_freight_bdt?: number | null
+          shipping_note?: string | null
+          shipping_rate_per_kg?: number
           status?: Database["public"]["Enums"]["imp_carton_status"]
           supplier_cost_bdt?: number
           total_landed_bdt?: number
@@ -6601,7 +6609,11 @@ export type Database = {
           qc_at?: string | null
           received_at?: string | null
           released_at?: string | null
+          shipping_billed_at?: string | null
           shipping_charge_bdt?: number
+          shipping_freight_bdt?: number | null
+          shipping_note?: string | null
+          shipping_rate_per_kg?: number
           status?: Database["public"]["Enums"]["imp_carton_status"]
           supplier_cost_bdt?: number
           total_landed_bdt?: number
