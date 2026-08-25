@@ -13150,7 +13150,26 @@ export type Database = {
         Returns: undefined
       }
       resolve_login_email: { Args: { p_identifier: string }; Returns: string }
+      rpt_abc_analysis: {
+        Args: { _brand_ids: string[]; _from: string; _to: string }
+        Returns: {
+          abc_class: string
+          cum_share: number
+          gross_profit: number
+          margin_pct: number
+          net_revenue: number
+          product_id: string
+          product_name: string
+          revenue_share: number
+          sku: string
+          units: number
+        }[]
+      }
       rpt_ar_ap: {
+        Args: { _brand_ids: string[]; _from: string; _to: string }
+        Returns: Json
+      }
+      rpt_breakeven: {
         Args: { _brand_ids: string[]; _from: string; _to: string }
         Returns: Json
       }
@@ -13193,6 +13212,10 @@ export type Database = {
           txns: number
         }[]
       }
+      rpt_cash_flow: {
+        Args: { _brand_ids: string[]; _from: string; _to: string }
+        Returns: Json
+      }
       rpt_close_period: {
         Args: { _brand_id: string; _month: string; _notes?: string }
         Returns: Json
@@ -13200,6 +13223,16 @@ export type Database = {
       rpt_courier_performance: {
         Args: { _brand_ids: string[]; _from: string; _to: string }
         Returns: Json
+      }
+      rpt_customer_cohort: {
+        Args: { _brand_ids: string[]; _months?: number }
+        Returns: {
+          cohort_month: string
+          customers: number
+          month_index: number
+          orders: number
+          revenue: number
+        }[]
       }
       rpt_customer_segments: {
         Args: { _brand_ids: string[]; _to?: string }
@@ -13265,6 +13298,43 @@ export type Database = {
           _to: string
         }
         Returns: Json
+      }
+      rpt_expense_breakdown: {
+        Args: {
+          _brand_ids: string[]
+          _dim?: string
+          _from: string
+          _to: string
+        }
+        Returns: {
+          amount: number
+          budget: number
+          in_pnl: boolean
+          label: string
+          txns: number
+          variance: number
+        }[]
+      }
+      rpt_forecast: {
+        Args: {
+          _brand_ids: string[]
+          _from: string
+          _horizon?: number
+          _to: string
+        }
+        Returns: {
+          cash_required: number
+          daily_run_rate: number
+          days_of_cover: number
+          forecast_revenue: number
+          forecast_units: number
+          product_id: string
+          product_name: string
+          reorder_units: number
+          sku: string
+          stock: number
+          stockout_date: string
+        }[]
       }
       rpt_inventory_rows: {
         Args: {
@@ -13490,6 +13560,14 @@ export type Database = {
         Args: { _brand_ids: string[]; _month: string }
         Returns: Json
       }
+      rpt_pnl_by_brand: {
+        Args: { _brand_ids: string[]; _from: string; _to: string }
+        Returns: {
+          brand: string
+          brand_id: string
+          pnl: Json
+        }[]
+      }
       rpt_pnl_v2: {
         Args: { _brand_ids: string[]; _from: string; _to: string }
         Returns: Json
@@ -13502,6 +13580,21 @@ export type Database = {
           _to: string
         }
         Returns: Json
+      }
+      rpt_product_cost_history: {
+        Args: { _brand_ids: string[]; _product_id?: string }
+        Returns: {
+          d: string
+          landed_cost: number
+          product_id: string
+          product_name: string
+          qty: number
+          reference: string
+          sku: string
+          source: string
+          supplier: string
+          unit_cost: number
+        }[]
       }
       rpt_product_performance: {
         Args: {
@@ -13770,7 +13863,36 @@ export type Database = {
         Args: { _brand_ids: string[]; _from: string; _to: string }
         Returns: Json
       }
+      rpt_team_performance: {
+        Args: { _brand_ids: string[]; _from: string; _to: string }
+        Returns: {
+          avg_pack_minutes: number
+          cancelled: number
+          confirmed: number
+          delivered: number
+          packed: number
+          person: string
+          shipped: number
+          total_actions: number
+          user_id: string
+        }[]
+      }
       rpt_usd_bdt_rate: { Args: never; Returns: number }
+      rpt_warehouse_summary: {
+        Args: { _brand_ids: string[]; _from: string; _to: string }
+        Returns: {
+          adjust_qty: number
+          code: string
+          damaged_qty: number
+          qty_in: number
+          qty_out: number
+          skus: number
+          stock_qty: number
+          stock_value: number
+          warehouse: string
+          warehouse_id: string
+        }[]
+      }
       run_recurring_rules: { Args: { _brand_id?: string }; Returns: Json }
       seed_default_coa: { Args: { _brand_id: string }; Returns: number }
       set_product_stock: {

@@ -65,6 +65,21 @@ export const REPORT_REGISTRY: ReportEntry[] = [
   r({ id: "finance.wallets", name: "Bank & MFS account report", category: "Finance", tab: "finance", source: "rpt_cash_accounts", formula: "in, out, transfers and live balance per account", basis: "transaction_date", status: "live" }),
   r({ id: "finance.arap", name: "Receivables & payables (AR/AP)", category: "Finance", tab: "finance", source: "rpt_ar_ap", formula: "courier COD + unpaid delivered vs PO due, cargo balance and unpaid bills", basis: "transaction_date", status: "live" }),
 
+  r({ id: "finance.cashflow", name: "Cash flow statement", category: "Finance", tab: "finance", source: "rpt_cash_flow", formula: "opening + cash in − cash out = closing (transfers excluded)", basis: "transaction_date", status: "live" }),
+  r({ id: "finance.brand_pnl", name: "Brand-wise P&L", category: "Finance", tab: "finance", source: "rpt_pnl_by_brand", formula: "rpt_pnl_v2 computed per brand + company total", basis: "delivered", status: "live" }),
+  r({ id: "finance.expenses", name: "Expense breakdown", category: "Finance", tab: "expenses", source: "rpt_expense_breakdown", formula: "expenses grouped by category / month / brand / account, vs budget", basis: "transaction_date", status: "live" }),
+
+  // Warehouse & team
+  r({ id: "ops.warehouse", name: "Warehouse stock summary", category: "Inventory", tab: "ops", source: "rpt_warehouse_summary", formula: "on-hand qty × cost, plus period in / out / damage / adjustment", basis: "transaction_date", status: "live" }),
+  r({ id: "ops.team", name: "Team performance", category: "Orders", tab: "ops", source: "rpt_team_performance", formula: "confirmed / packed / shipped / cancelled actions per user from status history", basis: "created", status: "live" }),
+  r({ id: "ops.cost_history", name: "Product cost history", category: "Products", tab: "ops", source: "rpt_product_cost_history", formula: "unit cost and landed cost per purchase receipt", basis: "transaction_date", status: "live" }),
+
+  // Advanced analytics
+  r({ id: "adv.abc", name: "ABC analysis", category: "Products", tab: "advanced", source: "rpt_abc_analysis", formula: "products ranked by revenue share; A = first 80%, B = next 15%, C = rest", basis: "delivered", status: "live" }),
+  r({ id: "adv.cohort", name: "Customer cohort retention", category: "Customers", tab: "advanced", source: "rpt_customer_cohort", formula: "repeat customers per first-purchase month", basis: "delivered", status: "live" }),
+  r({ id: "adv.breakeven", name: "Break-even analysis", category: "Finance", tab: "advanced", source: "rpt_breakeven", formula: "fixed cost ÷ contribution per order", basis: "delivered", status: "live" }),
+  r({ id: "adv.forecast", name: "Stock & cash forecast", category: "Inventory", tab: "advanced", source: "rpt_forecast", formula: "daily velocity → stock-out date, reorder qty and cash required", basis: "delivered", status: "live" }),
+
   // Control layer
   r({ id: "control.chain", name: "Sales → Cash reconciliation chain", category: "Control", tab: "control", source: "rpt_reconcile_chain", formula: "revenue vs finance vs cash vs courier charge, with status per check", basis: "delivered", status: "live" }),
   r({ id: "control.close", name: "Period close", category: "Control", tab: "control", source: "rpt_period_close", formula: "frozen monthly revenue / cost / profit / cash snapshot", basis: "transaction_date", status: "live" }),

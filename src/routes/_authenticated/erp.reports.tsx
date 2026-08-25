@@ -33,11 +33,16 @@ import { AdsPanel } from "@/components/erp/reports/marketing-extras";
 import { CourierPerformancePanel, DeliveryAreaPanel } from "@/components/erp/reports/delivery-extras";
 import { ReportIndexDrawer } from "@/components/erp/reports/report-index-drawer";
 import { Product360Panel } from "@/components/erp/reports/product-360";
+import { CashFlowPanel, BrandPnlPanel } from "@/components/erp/reports/cashflow-panel";
+import { ExpensesTab } from "@/components/erp/reports/expenses-tab";
+import { OpsTab } from "@/components/erp/reports/ops-tab";
+import { AdvancedTab } from "@/components/erp/reports/advanced-tab";
 
 
 const TAB_VALUES = [
   "overview", "sales", "orders", "products", "customers",
-  "inventory", "marketing", "returns", "supply", "finance", "control",
+  "inventory", "marketing", "returns", "supply", "finance",
+  "expenses", "ops", "advanced", "control",
 ] as const;
 type TabValue = (typeof TAB_VALUES)[number];
 
@@ -267,7 +272,8 @@ function ReportsHub() {
                   ["overview", "Overview"], ["sales", "Sales"], ["orders", "Orders"],
                   ["products", "Products"], ["customers", "Customers"], ["inventory", "Inventory"],
                   ["marketing", "Marketing"], ["returns", "Returns"], ["supply", "Supply chain"],
-                  ["finance", "Finance"], ["control", "Control"],
+                  ["finance", "Finance"], ["expenses", "Expenses"], ["ops", "Warehouse & team"],
+                  ["advanced", "Advanced"], ["control", "Control"],
                 ].map(([v, label]) => (
                   <TabsTrigger
                     key={v}
@@ -332,7 +338,22 @@ function ReportsHub() {
 
             <TabsContent value="finance" className="mt-[var(--rpt-gap)] space-y-[var(--rpt-gap)]">
               <FinanceTab args={args} enabled={enabled} />
+              <CashFlowPanel args={args} enabled={enabled} />
+              <BrandPnlPanel args={args} enabled={enabled} />
             </TabsContent>
+
+            <TabsContent value="expenses" className="mt-[var(--rpt-gap)] space-y-[var(--rpt-gap)]">
+              <ExpensesTab args={args} enabled={enabled} />
+            </TabsContent>
+
+            <TabsContent value="ops" className="mt-[var(--rpt-gap)] space-y-[var(--rpt-gap)]">
+              <OpsTab args={args} enabled={enabled} />
+            </TabsContent>
+
+            <TabsContent value="advanced" className="mt-[var(--rpt-gap)] space-y-[var(--rpt-gap)]">
+              <AdvancedTab args={args} enabled={enabled} />
+            </TabsContent>
+
 
             <TabsContent value="control" className="mt-[var(--rpt-gap)] space-y-[var(--rpt-gap)]">
               <ControlTab args={args} enabled={enabled} />
