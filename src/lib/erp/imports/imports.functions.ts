@@ -1001,6 +1001,66 @@ export const saveShippingCost = createServerFn({ method: "POST" })
     return { ok: true, shipping_cost_bdt, ...recompute };
   });
 
+/**
+ * Carton-wise (lot-wise) shipping bill.
+ * Ekta shipment e jei carton gulo eshechhe shudhu shei carton gulor upor
+ * Weight x Rate/kg freight boshbe. Baki carton pore ashle tokhon alada bill.
+ * clear = true dile oi carton abar PO-level planned shipping share e fire jabe.
+ */
+export const saveCartonFreight = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d: any) =>
+    z.object({
+      po_id: z.string().uuid(),
+      clear: z.boolean().default(false),
+      note: z.string().max(300).optional(),
+      cartons: z.array(z.object({
+        carton_id: z.string().uuid(),
+        weight_kg: z.number().nonnegative().default(0),
+        rate_per_kg: z.number().nonnegative().default(0),
+        freight_bdt: z.number().nonnegative().optional(),
+      })).min(1),
+    }).parse(d),
+  )
+  .handler(async ({ data, context }) => {
+    await assertAnyRole(context.supabase, context.userId, ["admin", "operations", "accountant", "warehouse_staff"]);
+
+    let total = 0;
+    for (const c of data.cartons) {
+      const patch: Record<string, any> = data.clear
+        ? {
+            shipping_freight_bdt: null,
+            shipping_billed_at: null,
+            shipping_rate_per_kg: 0,
+            shipping_note: null,
+            weight_kg: c.weight_kg,
+          }
+        : {
+            weight_kg: c.weight_kg,
+            shipping_rate_per_kg: c.rate_per_kg,
+            shipping_freight_bdt: +(
+              c.freight_bdt !== undefined && c.freight_bdt !== null
+                ? c.freight_bdt
+                : c.weight_kg * c.rate_per_kg
+            ).toFixed(4),
+            shipping_billed_at: new Date().toISOString(),
+            shipping_note: data.note ?? null,
+          };
+      if (!data.clear) total += Number(patch.shipping_freight_bdt || 0);
+
+      const { error } = await context.supabase
+        .from("imp_cartons")
+        .update(patch)
+        .eq("id", c.carton_id)
+        .eq("po_id", data.po_id);
+      if (error) throw error;
+    }
+
+    const recompute = await recomputeCartonCostSharesInternal(context.supabase, data.po_id);
+    return { ok: true, cartons: data.cartons.length, freight_total: +total.toFixed(2), ...recompute };
+  });
+
+
 export const saveCartonWeight = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((d: any) =>
