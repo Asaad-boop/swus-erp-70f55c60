@@ -19,7 +19,8 @@ import { cn } from "@/lib/utils";
 import { pathaoBookOrderAutoFn } from "@/lib/erp/pathao.functions";
 import { invoiceDisplay, type OrderRow } from "@/lib/erp/orders";
 
-type RowStatus = "pending" | "uploading" | "success" | "failed" | "skipped";
+type RowStatus = "pending" | "uploading" | "success" | "failed" | "blocked" | "skipped";
+type RowFilter = "all" | "errors" | RowStatus;
 
 type Row = {
   orderId: string;
@@ -41,13 +42,24 @@ const ROW_HEIGHT = 40;
 const VIEWPORT_H = 380;
 const OVERSCAN = 6;
 
+function normalizeBookingError(error: unknown): { status: "failed" | "blocked"; message: string } {
+  const raw = error instanceof Error ? error.message : String(error || "Failed");
+  if (raw.includes("[PATHAO_CUSTOMER_BLOCKED]")) {
+    return {
+      status: "blocked",
+      message: raw.replace("[PATHAO_CUSTOMER_BLOCKED]", "").trim(),
+    };
+  }
+  return { status: "failed", message: raw };
+}
+
 export function PathaoBulkUploadDialog({ open, onOpenChange, orders }: Props) {
   const bookFn = useServerFn(pathaoBookOrderAutoFn);
   const qc = useQueryClient();
   const [rows, setRows] = useState<Row[]>([]);
   const [running, setRunning] = useState(false);
   const [done, setDone] = useState(false);
-  const [filter, setFilter] = useState<"all" | RowStatus>("all");
+  const [filter, setFilter] = useState<RowFilter>("all");
   const [query, setQuery] = useState("");
   const [scrollTop, setScrollTop] = useState(0);
   const [startedAt, setStartedAt] = useState<number>(0);
@@ -105,7 +117,8 @@ export function PathaoBulkUploadDialog({ open, onOpenChange, orders }: Props) {
         });
       } catch (e) {
         const ms = Date.now() - t0;
-        patchRow(i, { status: "failed", message: (e as Error).message || "Failed", ms });
+        const failure = normalizeBookingError(e);
+        patchRow(i, { status: failure.status, message: failure.message, ms });
       }
     };
     const worker = async () => {
@@ -161,11 +174,11 @@ export function PathaoBulkUploadDialog({ open, onOpenChange, orders }: Props) {
 
   const total = rows.length;
   const counts = useMemo(() => {
-    const c = { pending: 0, uploading: 0, success: 0, failed: 0, skipped: 0 };
+    const c = { pending: 0, uploading: 0, success: 0, failed: 0, blocked: 0, skipped: 0 };
     for (const r of rows) c[r.status]++;
     return c;
   }, [rows]);
-  const completed = counts.success + counts.failed + counts.skipped;
+  const completed = counts.success + counts.failed + counts.blocked + counts.skipped;
   const pct = total === 0 ? 0 : Math.round((completed / total) * 100);
   const elapsedSec = running || startedAt === 0 ? (Date.now() - startedAt) / 1000 : 0;
   const rate = elapsedSec > 0 && completed > 0 ? completed / elapsedSec : 0;
@@ -175,7 +188,8 @@ export function PathaoBulkUploadDialog({ open, onOpenChange, orders }: Props) {
     const q = query.trim().toLowerCase();
     if (filter === "all" && !q) return rows;
     return rows.filter((r) => {
-      if (filter !== "all" && r.status !== filter) return false;
+      if (filter === "errors" && r.status !== "failed" && r.status !== "blocked") return false;
+      if (filter !== "all" && filter !== "errors" && r.status !== filter) return false;
       if (q && !(r.display.toLowerCase().includes(q) || (r.tracking ?? "").toLowerCase().includes(q))) return false;
       return true;
     });
@@ -224,12 +238,12 @@ export function PathaoBulkUploadDialog({ open, onOpenChange, orders }: Props) {
         {/* HERO HEADER with gradient + ring progress */}
         <DialogHeader className="px-6 py-5 border-b bg-gradient-to-br from-emerald-500/10 via-card to-card relative">
           <div className="flex items-center gap-4">
-            <RingProgress pct={pct} running={running} done={done} failed={counts.failed} />
+            <RingProgress pct={pct} running={running} done={done} failed={counts.failed + counts.blocked} />
             <div className="flex-1 min-w-0">
               <DialogTitle className="flex items-center gap-2 text-base font-bold">
                 <Truck className="h-4 w-4 text-emerald-600" />
                 Pathao Bulk Upload
-                <StatusPill done={done} running={running} failed={counts.failed} />
+                <StatusPill done={done} running={running} failed={counts.failed + counts.blocked} />
               </DialogTitle>
               <div className="mt-1 text-xs text-muted-foreground">
                 <span className="font-semibold text-foreground tabular-nums">{completed}</span>
@@ -251,7 +265,7 @@ export function PathaoBulkUploadDialog({ open, onOpenChange, orders }: Props) {
             <StatChip tone="emerald" label="Success" value={counts.success} active={filter === "success"} onClick={() => setFilter(filter === "success" ? "all" : "success")} />
             <StatChip tone="sky" label="Skipped" value={counts.skipped} active={filter === "skipped"} onClick={() => setFilter(filter === "skipped" ? "all" : "skipped")} />
             <StatChip tone="amber" label="In Queue" value={counts.pending + counts.uploading} active={filter === "pending" || filter === "uploading"} onClick={() => setFilter(filter === "pending" ? "all" : "pending")} />
-            <StatChip tone="red" label="Failed" value={counts.failed} active={filter === "failed"} onClick={() => setFilter(filter === "failed" ? "all" : "failed")} />
+            <StatChip tone="red" label={counts.blocked ? "Failed / Blocked" : "Failed"} value={counts.failed + counts.blocked} active={filter === "errors"} onClick={() => setFilter(filter === "errors" ? "all" : "errors")} />
           </div>
 
           {/* Animated progress bar */}
@@ -321,13 +335,13 @@ export function PathaoBulkUploadDialog({ open, onOpenChange, orders }: Props) {
         </div>
 
         {/* FAILED DETAILS — full error messages, always visible & copyable */}
-        {counts.failed > 0 && (
+        {counts.failed + counts.blocked > 0 && (
           <div className="border-b bg-red-50/60 dark:bg-red-500/5 max-h-40 overflow-y-auto">
             <div className="px-3 py-1.5 text-[10px] uppercase tracking-wider font-bold text-red-700 dark:text-red-300 sticky top-0 bg-red-50/90 dark:bg-red-500/10 backdrop-blur border-b border-red-200/60 dark:border-red-500/20">
-              Failed details ({counts.failed})
+              Failed details ({counts.failed + counts.blocked})
             </div>
             <div className="divide-y divide-red-200/50 dark:divide-red-500/10">
-              {rows.filter((r) => r.status === "failed").map((r) => (
+              {rows.filter((r) => r.status === "failed" || r.status === "blocked").map((r) => (
                 <div key={r.orderId} className="px-3 py-2 text-[11px] flex gap-3 items-start">
                   <span className="font-mono font-bold text-red-800 dark:text-red-200 shrink-0 min-w-[80px]">
                     {r.display}
@@ -492,7 +506,7 @@ function StatusPill({ done, running, failed }: { done: boolean; running: boolean
 }
 
 function RowItem({ row }: { row: Row }) {
-  const failed = row.status === "failed";
+  const failed = row.status === "failed" || row.status === "blocked";
   return (
     <div
       className="grid grid-cols-[1.1fr_0.9fr_1.1fr_1.4fr_0.5fr] items-center px-3 text-xs border-b last:border-b-0 hover:bg-muted/30"
@@ -542,6 +556,11 @@ function StatusBadge({ status }: { status: RowStatus }) {
     skipped: {
       label: "SKIPPED",
       cls: "bg-sky-100 dark:bg-sky-500/15 text-sky-700 dark:text-sky-300",
+    },
+    blocked: {
+      label: "BLOCKED",
+      cls: "bg-red-100 dark:bg-red-500/15 text-red-700 dark:text-red-300",
+      icon: <XIcon className="h-2.5 w-2.5" />,
     },
     failed: {
       label: "FAILED",
