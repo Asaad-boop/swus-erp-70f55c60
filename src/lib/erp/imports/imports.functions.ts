@@ -1027,7 +1027,7 @@ export const saveCartonFreight = createServerFn({ method: "POST" })
 
     let total = 0;
     for (const c of data.cartons) {
-      const patch: Record<string, any> = data.clear
+      const patch: any = data.clear
         ? {
             shipping_freight_bdt: null,
             shipping_billed_at: null,
