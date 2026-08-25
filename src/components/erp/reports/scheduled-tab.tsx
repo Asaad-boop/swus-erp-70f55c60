@@ -1,10 +1,12 @@
 import { useMemo, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { CalendarClock, Plus, RefreshCw, Send, Trash2 } from "lucide-react";
+import { CalendarClock, Eye, Plus, RefreshCw, Send, Trash2, Zap } from "lucide-react";
 import { toast } from "sonner";
 
 import { supabase } from "@/integrations/supabase/client";
 import { fmtBdt } from "@/lib/erp/finance";
+import { sendCustomSms } from "@/lib/erp/sms/sms.functions";
+import { normalizeBdPhone, smsSegments } from "@/lib/erp/sms/templates";
 import { exportReportPdf, type Aoa } from "@/lib/erp/reports/export";
 import { Panel, KpiStrip, EmptyState, ExportMenu, REPORT_QUERY_OPTS, type Kpi } from "@/components/erp/reports/report-kit";
 import { Button } from "@/components/ui/button";
@@ -14,6 +16,7 @@ import { Switch } from "@/components/ui/switch";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+
 
 type Summary = Record<string, number>;
 type CashFlow = { opening: number; cash_in: number; cash_out: number; closing: number };
