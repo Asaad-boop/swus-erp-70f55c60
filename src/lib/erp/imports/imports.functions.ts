@@ -1650,6 +1650,8 @@ export const releasePoQuantity = createServerFn({ method: "POST" })
       payments: paymentsDone,
       local_delivery_bdt: localDelivery,
       landed_per_unit_overhead: +overheadPerUnit.toFixed(4),
+      shipping_charge_bdt: releaseFreight,
+      release_units: releaseUnits,
       status: nextStatus,
       total_released: totalReleased,
       total_ordered: totalOrdered,
