@@ -1,4 +1,5 @@
 import jsPDF from "jspdf";
+import { getDocBranding } from "@/lib/erp/utils/doc-branding";
 import autoTable from "jspdf-autotable";
 import { fmtBdt } from "@/lib/erp/finance";
 
