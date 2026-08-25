@@ -28,6 +28,7 @@ import { KpiTile, Mini, SummaryBox } from "@/components/erp/imports/po-detail/at
 import { PIPELINE_STAGES, PipelineStrip } from "@/components/erp/imports/po-detail/pipeline-strip";
 import { CartonRow } from "@/components/erp/imports/po-detail/carton-row";
 import { CartonsHeader } from "@/components/erp/imports/po-detail/cartons-header";
+import { CartonFreightCard } from "@/components/erp/imports/po-detail/carton-freight-card";
 import { ArrivedDialog, PaymentDialog, BulkReleaseDialog, QtyArrivedDialog, EditPaymentDialog } from "@/components/erp/imports/po-detail/dialogs";
 import { QuantityReleaseCard } from "@/components/erp/imports/po-detail/quantity-release-card";
 import { EditPoDialog } from "@/components/erp/imports/po-detail/edit-po-dialog";
