@@ -37,6 +37,7 @@ import { CashFlowPanel, BrandPnlPanel } from "@/components/erp/reports/cashflow-
 import { ExpensesTab } from "@/components/erp/reports/expenses-tab";
 import { OpsTab } from "@/components/erp/reports/ops-tab";
 import { AdvancedTab } from "@/components/erp/reports/advanced-tab";
+import { ScheduledTab } from "@/components/erp/reports/scheduled-tab";
 
 
 const TAB_VALUES = [
