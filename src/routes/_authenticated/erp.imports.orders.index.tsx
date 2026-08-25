@@ -17,7 +17,7 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { cn } from "@/lib/utils";
 import { listPurchaseOrders, deleteImportPo } from "@/lib/erp/imports/imports.functions";
 import { PO_STATUS_LABEL, fmtBdt, netDue, type ImpPoStatus } from "@/lib/erp/imports/types";
-import { ProductThumbStack } from "./erp.imports.index";
+import { ProductThumbStack, poItemName } from "./erp.imports.index";
 
 export const Route = createFileRoute("/_authenticated/erp/imports/orders/")({
   head: () => ({ meta: [{ title: "Purchase Orders — Imports" }] }),
