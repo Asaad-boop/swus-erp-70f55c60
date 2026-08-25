@@ -221,7 +221,10 @@ export function QuantityReleaseCard({
   const previewValue = previewLines.reduce((s, l) => s + l.value, 0);
   const previewDamagedValue = previewLines.reduce((s, l) => s + l.damagedValue, 0);
   const previewGoodsDue = previewLines.reduce((s, l) => s + l.goodsDue, 0);
-  const previewShipDue = previewLines.reduce((s, l) => s + l.shipDue, 0);
+  // Shipment-wise mode-e ei release-er freight-i shipping due (PO-level pro-rata na)
+  const previewShipDue = shipmentWiseMode
+    ? releaseFreight
+    : previewLines.reduce((s, l) => s + l.shipDue, 0);
   const previewTotalDue = previewGoodsDue + previewShipDue;
   const previewPcs = previewLines.reduce((s, l) => s + l.qty + l.damaged + l.missing, 0);
   // Weighted (line-wise) effective rate for ei release
