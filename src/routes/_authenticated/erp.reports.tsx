@@ -37,7 +37,8 @@ import { Product360Panel } from "@/components/erp/reports/product-360";
 
 const TAB_VALUES = [
   "overview", "sales", "orders", "products", "customers",
-  "inventory", "marketing", "returns", "supply", "finance", "control",
+  "inventory", "marketing", "returns", "supply", "finance",
+  "expenses", "ops", "advanced", "control",
 ] as const;
 type TabValue = (typeof TAB_VALUES)[number];
 
