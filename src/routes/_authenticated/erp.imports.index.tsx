@@ -282,11 +282,11 @@ export function ProductThumbStack({ items, max = 4, size = "md" }: { items: PoTh
         <div
           key={idx}
           className={`${dim} ${idx === 0 ? "" : offset} rounded-md border-2 border-background bg-muted overflow-hidden ring-1 ring-border`}
-          title={`${it.name_snapshot ?? ""}${it.quantity ? ` × ${it.quantity}` : ""}`}
+          title={`${poItemName(it)}${it.quantity ? ` × ${it.quantity}` : ""}`}
           style={{ zIndex: shown.length - idx }}
         >
-          {it.image_snapshot ? (
-            <img src={it.image_snapshot} alt="" className="h-full w-full object-cover" />
+          {poItemImage(it) ? (
+            <img src={poItemImage(it)!} alt={poItemName(it)} loading="lazy" className="h-full w-full object-cover" />
           ) : (
             <div className="h-full w-full flex items-center justify-center">
               <Package className={size === "sm" ? "h-3.5 w-3.5 text-muted-foreground/60" : "h-4 w-4 text-muted-foreground/60"} />
