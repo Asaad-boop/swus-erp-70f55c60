@@ -309,7 +309,10 @@ export function QuantityReleaseCard({
       setNotes("");
       setLdAmount("");
       setLdNote("");
-      setPayOverride(null);
+      setShipWeight("");
+      setShipRate("");
+      setShipAmountOverride(null);
+      setShipNote("");
       setConfirmOpen(false);
       qc.invalidateQueries({ queryKey: ["imp-po", poId] });
 
