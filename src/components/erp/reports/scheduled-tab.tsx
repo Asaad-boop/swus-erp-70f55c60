@@ -1,10 +1,12 @@
 import { useMemo, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { CalendarClock, Plus, RefreshCw, Send, Trash2 } from "lucide-react";
+import { CalendarClock, Eye, Plus, RefreshCw, Send, Trash2, Zap } from "lucide-react";
 import { toast } from "sonner";
 
 import { supabase } from "@/integrations/supabase/client";
 import { fmtBdt } from "@/lib/erp/finance";
+import { sendCustomSms } from "@/lib/erp/sms/sms.functions";
+import { normalizeBdPhone, smsSegments } from "@/lib/erp/sms/templates";
 import { exportReportPdf, type Aoa } from "@/lib/erp/reports/export";
 import { Panel, KpiStrip, EmptyState, ExportMenu, REPORT_QUERY_OPTS, type Kpi } from "@/components/erp/reports/report-kit";
 import { Button } from "@/components/ui/button";
@@ -14,6 +16,7 @@ import { Switch } from "@/components/ui/switch";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+
 
 type Summary = Record<string, number>;
 type CashFlow = { opening: number; cash_in: number; cash_out: number; closing: number };
@@ -88,6 +91,170 @@ function digestText(label: string, s: Summary, cash?: CashFlow) {
     .filter(Boolean)
     .join("\n");
 }
+
+/** Exact digest the scheduler (cron) builds — keep in sync with cron.business-summary.ts */
+const bdtPlain = (v: unknown) => Math.round(n(v)).toLocaleString("en-BD");
+function cronDigest(label: string, s: Summary, cash?: CashFlow) {
+  return [
+    `${label} summary`,
+    `Revenue ${bdtPlain(s.total_revenue ?? s.net_revenue)} | Delivered ${n(s.delivered_orders)}`,
+    `Orders ${n(s.orders_placed)} | Units ${n(s.units_sold)}`,
+    `Profit ${bdtPlain(s.contribution_profit)} | Return ${n(s.returned_orders)}`,
+    `Cash in ${bdtPlain(cash?.cash_in)} | out ${bdtPlain(cash?.cash_out)}`,
+  ].join("\n");
+}
+
+function PreviewTestPanel({
+  brandIds,
+  day,
+  month,
+  daily,
+  monthly,
+  subs,
+}: {
+  brandIds: string[];
+  day: string;
+  month: string;
+  daily?: { delivered: Summary; cash: CashFlow };
+  monthly?: { delivered: Summary; cash: CashFlow };
+  subs: Subscription[];
+}) {
+  const [mode, setMode] = useState<"daily" | "monthly">("daily");
+  const [subId, setSubId] = useState<string>("manual");
+  const [numbers, setNumbers] = useState("");
+
+  const src = mode === "daily" ? daily : monthly;
+  const label = mode === "daily" ? day : month.slice(0, 7);
+  const message = src ? cronDigest(label, src.delivered, src.cash) : "";
+  const segs = message ? smsSegments(message) : 0;
+
+  const targets = useMemo(() => {
+    const raw = subId === "manual" ? numbers.split(/[,\s]+/) : (subs.find((s) => s.id === subId)?.recipients ?? []);
+    const ok: string[] = [];
+    const bad: string[] = [];
+    for (const r of raw.map((x) => x.trim()).filter(Boolean)) {
+      const p = normalizeBdPhone(r);
+      if (p) { if (!ok.includes(p)) ok.push(p); } else bad.push(r);
+    }
+    return { ok, bad };
+  }, [subId, numbers, subs]);
+
+  const testSend = useMutation({
+    mutationFn: async () => {
+      if (!brandIds[0]) throw new Error("Brand select korun");
+      if (!message) throw new Error("Ei period er kono data nei");
+      if (targets.ok.length === 0) throw new Error("Kono valid BD number nei");
+      return await sendCustomSms({
+        data: { brandId: brandIds[0], numbers: targets.ok, message: `[TEST] ${message}` },
+      });
+    },
+    onSuccess: (r) => (r.ok ? toast.success(`Test SMS gelo — ${r.sent} number`) : toast.error(r.message)),
+    onError: (e: Error) => toast.error(e.message),
+  });
+
+  const dryRun = useMutation({
+    mutationFn: async () => {
+      const res = await fetch("/api/public/cron/business-summary", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", apikey: import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY as string },
+        body: JSON.stringify({ day, monthly: mode === "monthly", dryRun: true }),
+      });
+      const j = await res.json();
+      if (!res.ok) throw new Error(j?.error ?? "Dry run fail");
+      return j as { jobs: number; results: unknown[] };
+    },
+    onSuccess: (j) => toast.success(`Dry run OK — ${j.jobs} job simulate holo (kichu pathano hoyni)`),
+    onError: (e: Error) => toast.error(e.message),
+  });
+
+  return (
+    <Panel
+      title="Preview & test send"
+      subtitle="Auto delivery cholar age ekhane exact digest dekhun, dry-run korun, ar nijer number e test SMS pathan."
+      action={
+        <div className="flex flex-wrap items-center gap-2">
+          <Select value={mode} onValueChange={(v) => setMode(v as "daily" | "monthly")}>
+            <SelectTrigger className="h-7 w-[130px] text-xs"><SelectValue /></SelectTrigger>
+            <SelectContent>
+              <SelectItem value="daily">Daily digest</SelectItem>
+              <SelectItem value="monthly">Monthly digest</SelectItem>
+            </SelectContent>
+          </Select>
+          <Button
+            size="sm"
+            variant="outline"
+            className="h-7 px-2.5 text-xs"
+            disabled={dryRun.isPending}
+            onClick={() => dryRun.mutate()}
+          >
+            <Zap className="mr-1.5 h-3.5 w-3.5" /> Dry run scheduler
+          </Button>
+        </div>
+      }
+    >
+      <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_minmax(0,320px)]">
+        <div>
+          <div className="mb-2 flex items-center gap-2 text-xs text-muted-foreground">
+            <Eye className="h-3.5 w-3.5" />
+            <span>{mode === "daily" ? `Period ${day}` : `Period ${month.slice(0, 7)}`}</span>
+            {message && (
+              <Badge variant="outline" className="text-[10px]">
+                {message.length} chars · {segs} SMS part{segs > 1 ? "s" : ""}
+              </Badge>
+            )}
+          </div>
+          {message ? (
+            <pre className="whitespace-pre-wrap rounded-lg border border-border/60 bg-muted/40 p-3 text-xs leading-relaxed">
+              {message}
+            </pre>
+          ) : (
+            <EmptyState text="Ei period er data nei — upore date change korun." />
+          )}
+        </div>
+
+        <div className="space-y-2">
+          <Select value={subId} onValueChange={setSubId}>
+            <SelectTrigger className="h-8 text-xs"><SelectValue placeholder="Recipient" /></SelectTrigger>
+            <SelectContent>
+              <SelectItem value="manual">Manual number</SelectItem>
+              {subs.map((s) => (
+                <SelectItem key={s.id} value={s.id}>
+                  {s.name} ({s.recipients.length})
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          {subId === "manual" && (
+            <Input
+              placeholder="01XXXXXXXXX, 01XXXXXXXXX"
+              value={numbers}
+              onChange={(e) => setNumbers(e.target.value)}
+              className="h-8 text-xs"
+            />
+          )}
+          <p className="text-xs text-muted-foreground">
+            {targets.ok.length} valid number{targets.ok.length === 1 ? "" : "s"}
+            {targets.bad.length ? ` · ${targets.bad.length} invalid` : ""}
+          </p>
+          <Button
+            size="sm"
+            className="h-8 w-full px-3 text-xs"
+            disabled={testSend.isPending || !message || targets.ok.length === 0}
+            onClick={() => testSend.mutate()}
+          >
+            <Send className="mr-1.5 h-3.5 w-3.5" /> Send test SMS
+          </Button>
+          <p className="text-[11px] leading-relaxed text-muted-foreground">
+            Test message-e <span className="font-medium">[TEST]</span> prefix thake ebong subscription-er last-sent
+            record change hoy na.
+          </p>
+        </div>
+      </div>
+    </Panel>
+  );
+}
+
+
 
 export function ScheduledTab({ brandIds, enabled }: { brandIds: string[]; enabled: boolean }) {
   const qc = useQueryClient();
@@ -309,6 +476,18 @@ export function ScheduledTab({ brandIds, enabled }: { brandIds: string[]; enable
           <EmptyState text="No data for this month." />
         )}
       </Panel>
+
+      {/* Preview & test send */}
+      <PreviewTestPanel
+        brandIds={brandIds}
+        day={day}
+        month={month}
+        daily={dailyQ.data ? { delivered: dailyQ.data.delivered, cash: dailyQ.data.cash } : undefined}
+        monthly={monthQ.data ? { delivered: monthQ.data.delivered, cash: monthQ.data.cash } : undefined}
+        subs={subsQ.data ?? []}
+      />
+
+
 
       {/* Archive */}
       <Panel title="Snapshot archive" subtitle="Locked-in period snapshots generated manually or by the scheduler." flush>
