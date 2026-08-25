@@ -564,7 +564,63 @@ export function QuantityReleaseCard({
           </div>
         </div>
 
+        <div className="p-4 border-t border-border bg-violet-500/5 space-y-3">
+          <div className="text-sm font-medium inline-flex items-center gap-2">
+            <Truck className="h-4 w-4 text-violet-600" />
+            Ei shipment-er shipping / freight (China → BD)
+          </div>
+          <div className="grid md:grid-cols-4 gap-3">
+            <div>
+              <Label className="text-xs">Weight (kg)</Label>
+              <Input
+                type="number" min={0} className="h-9 tabular-nums"
+                value={shipWeight} placeholder="0"
+                onChange={(e) => { setShipWeight(e.target.value); setShipAmountOverride(null); }}
+              />
+            </div>
+            <div>
+              <Label className="text-xs">Rate / kg (BDT)</Label>
+              <Input
+                type="number" min={0} className="h-9 tabular-nums"
+                value={shipRate} placeholder="0"
+                onChange={(e) => { setShipRate(e.target.value); setShipAmountOverride(null); }}
+              />
+            </div>
+            <div>
+              <Label className="text-xs">Freight amount (BDT)</Label>
+              <Input
+                type="number" min={0} className="h-9 tabular-nums"
+                value={shipAmountOverride ?? (releaseFreight ? releaseFreight.toFixed(2) : "")}
+                placeholder="0"
+                onChange={(e) => setShipAmountOverride(e.target.value)}
+              />
+            </div>
+            <div>
+              <Label className="text-xs">Note</Label>
+              <Input
+                className="h-9" value={shipNote} placeholder="e.g. 2nd lot, 12kg"
+                onChange={(e) => setShipNote(e.target.value)}
+              />
+            </div>
+          </div>
+          {releaseFreight > 0 ? (
+            <p className="text-[11px] text-muted-foreground tabular-nums">
+              {fmtBdt(releaseFreight)} freight sudhu ei {releaseUnits || 0} pcs-er upor bosbe
+              {releaseUnits > 0 && <> — per piece +{fmtBdt(releaseFreight / releaseUnits)}</>}. Baki pcs pore ashle tokhon tader freight alada dite parben.
+            </p>
+          ) : priorFreight > 0 ? (
+            <p className="text-[11px] text-orange-700 dark:text-orange-300">
+              Ei PO shipment-wise freight mode-e ache (age {fmtBdt(priorFreight)} deya hoyeche) — ei lot-er freight ekhane din.
+            </p>
+          ) : (
+            <p className="text-[11px] text-muted-foreground">
+              Khali rakhle PO-level shipping total sob pcs-er upor pro-rata bosbe (purono niyom).
+            </p>
+          )}
+        </div>
+
         <div className="p-4 border-t border-border bg-sky-500/5 space-y-3">
+
           <div className="text-sm font-medium inline-flex items-center gap-2">
             <Truck className="h-4 w-4 text-sky-600" />
             Local delivery charge (BD warehouse → amader kache)
