@@ -11,6 +11,7 @@ import { exportAoaXlsx } from "@/lib/erp/utils/excel";
 import { Panel, KpiStrip, EmptyState, type Kpi , REPORT_QUERY_OPTS } from "@/components/erp/reports/report-kit";
 import type { RpcArgs } from "@/components/erp/reports/customers-tab";
 import { DailyCashPanel, WalletAccountsPanel, ArApPanel } from "@/components/erp/reports/finance-extras";
+import { UncategorizedPanel } from "@/components/erp/reports/uncategorized-panel";
 
 export type PnlV2 = {
   gross_sales: number; discounts: number; net_revenue: number; shipping_income: number;
