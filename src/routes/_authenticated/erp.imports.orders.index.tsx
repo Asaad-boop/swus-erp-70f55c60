@@ -358,6 +358,7 @@ function PoListPage() {
                   const initials = (p.agent?.name ?? (p.supplier?.name ?? "")).split(" ").filter(Boolean).slice(0, 2).map((w: string) => w[0]).join("").toUpperCase() || "?";
                   const isSel = selected.has(p.id);
                   const units = (p.items ?? []).reduce((s: number, i: any) => s + Number(i.quantity || 0), 0);
+                  const itemNames = (p.items ?? []).map((i: any) => poItemName(i)).join(", ");
                   return (
                     <TableRow key={p.id} className={cn("group transition-colors hover:bg-accent/40", isSel && "bg-primary/5 hover:bg-primary/10")}>
                       <TableCell onClick={(e) => e.stopPropagation()}>
