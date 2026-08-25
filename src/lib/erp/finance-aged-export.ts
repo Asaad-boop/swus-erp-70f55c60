@@ -100,13 +100,7 @@ export function exportAgedPdf(opts: {
   }).join("");
 
   const html = `
-    <div class="header">
-      <div>
-        <h2>${escape(companyName ?? "")}</h2>
-        <div class="muted">${title}</div>
-      </div>
-      <div class="muted">As of ${escape(asOfDate)}</div>
-    </div>
+
     <table>
       <thead>
         <tr>
@@ -138,7 +132,14 @@ export function exportAgedPdf(opts: {
     </table>
   `;
 
-  printHtml(html, { title: `${title} — ${asOfDate}` });
+  printHtml(html, {
+    title: `${title} — ${asOfDate}`,
+    docTitle: title,
+    subtitle: `As of ${asOfDate}`,
+    meta: [companyName || null, `${rows.length} rows`],
+    landscape: true,
+  });
+
 }
 
 function escape(s: string | null | undefined): string {
