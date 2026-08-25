@@ -1421,7 +1421,7 @@ export const releasePoQuantity = createServerFn({ method: "POST" })
       }
     }
 
-    // Local delivery charge — PO-r moddhe jog hoy, tai landed cost e o dhora pore
+    // Local delivery charge — ei shipment-er sathe jog hoy
     const localDelivery = Math.max(0, Number(data.local_delivery?.amount_bdt ?? 0));
     if (localDelivery > 0) {
       const { error: ldErr } = await context.supabase
@@ -1435,19 +1435,52 @@ export const releasePoQuantity = createServerFn({ method: "POST" })
       if (ldErr) throw ldErr;
     }
 
+    // Ei shipment-er freight
+    const shipWeight = Math.max(0, Number(data.shipping?.weight_kg ?? 0));
+    const shipRate = Math.max(0, Number(data.shipping?.rate_per_kg ?? 0));
+    const releaseFreight = +Math.max(
+      0,
+      Number(data.shipping?.amount_bdt ?? shipWeight * shipRate),
+    ).toFixed(4);
+
+    // Age-r kono release-e shipment-wise freight deya hoyeche kina
+    const { data: priorShip } = await context.supabase
+      .from("imp_po_releases")
+      .select("shipping_charge_bdt")
+      .eq("po_id", data.po_id);
+    const priorFreight = (priorShip ?? []).reduce(
+      (s: number, r: any) => s + Number(r.shipping_charge_bdt ?? 0),
+      0,
+    );
+    const shipmentWiseMode = releaseFreight > 0 || priorFreight > 0;
+
     // Landed cost per unit
     const fx = Number((po as any).fx_rate_cny_bdt ?? (po as any).fx_rate ?? 0);
     const commissionPerUnit = Number((po as any).agent_commission_per_unit_bdt ?? 0);
-    const overheadTotal =
-      Number((po as any).shipping_total_bdt ?? (po as any).shipping_cost_bdt ?? 0) +
+    const totalOrdered = (poItems ?? []).reduce((s: number, r: any) => s + Number(r.quantity ?? 0), 0);
+
+    // PO-level overhead (customs, duty, other) — shob ordered pcs-e bhag
+    const poOverhead =
       Number((po as any).local_courier_total_bdt ?? 0) +
-      Number((po as any).local_delivery_total_bdt ?? 0) +
-      localDelivery +
       Number((po as any).freight_cost_bdt ?? 0) +
       Number((po as any).customs_duty_bdt ?? 0) +
-      Number((po as any).other_charges_bdt ?? 0);
-    const totalOrdered = (poItems ?? []).reduce((s: number, r: any) => s + Number(r.quantity ?? 0), 0);
-    const overheadPerUnit = totalOrdered > 0 ? overheadTotal / totalOrdered : 0;
+      Number((po as any).other_charges_bdt ?? 0) +
+      // Shipment-wise mode chalu na hole legacy PO-level shipping/delivery-i bhag hoy
+      (shipmentWiseMode
+        ? 0
+        : Number((po as any).shipping_total_bdt ?? (po as any).shipping_cost_bdt ?? 0) +
+          Number((po as any).local_delivery_total_bdt ?? 0));
+    const poOverheadPerUnit = totalOrdered > 0 ? poOverhead / totalOrdered : 0;
+
+    // Ei release-er nijer khoroch — shudhu ei shipment-er pcs-e bhag
+    const releaseUnits = lines.reduce(
+      (s, l) => s + Number(l.quantity ?? 0) + Number(l.damaged_qty ?? 0),
+      0,
+    );
+    const releaseOverhead = releaseFreight + (shipmentWiseMode ? localDelivery : 0);
+    const releasePerUnit = releaseUnits > 0 ? releaseOverhead / releaseUnits : 0;
+
+    const overheadPerUnit = poOverheadPerUnit + releasePerUnit;
 
     // Next release number
     const { data: lastRel } = await context.supabase
