@@ -1493,6 +1493,7 @@ export const releasePoQuantity = createServerFn({ method: "POST" })
 
     // --- Optional: ei release-er pro-rata due ekhoni pay ---
     const paymentsDone: Array<{ type: string; amount: number }> = [];
+    let shippingPaymentId: string | null = null;
     if (data.payment) {
       const payDate = data.payment.payment_date ?? new Date().toISOString().slice(0, 10);
       const parts: Array<{ type: "supplier_payment" | "shipping"; amount: number; suffix: string }> = [
@@ -1501,7 +1502,7 @@ export const releasePoQuantity = createServerFn({ method: "POST" })
       ];
       for (const p of parts) {
         if (p.amount <= 0) continue;
-        const { error: payErr } = await context.supabase.rpc("imp_record_payment_rpc", {
+        const { data: payOut, error: payErr } = await context.supabase.rpc("imp_record_payment_rpc", {
           _payload: {
             brand_id: (po as any).brand_id,
             po_id: data.po_id,
@@ -1515,6 +1516,9 @@ export const releasePoQuantity = createServerFn({ method: "POST" })
           },
         });
         if (payErr) throw payErr;
+        if (p.suffix === "ship") {
+          shippingPaymentId = (payOut as any)?.payment_id ?? (typeof payOut === "string" ? payOut : null);
+        }
         paymentsDone.push({ type: p.type, amount: p.amount });
       }
     }
