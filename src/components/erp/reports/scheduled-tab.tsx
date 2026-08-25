@@ -477,6 +477,18 @@ export function ScheduledTab({ brandIds, enabled }: { brandIds: string[]; enable
         )}
       </Panel>
 
+      {/* Preview & test send */}
+      <PreviewTestPanel
+        brandIds={brandIds}
+        day={day}
+        month={month}
+        daily={dailyQ.data ? { delivered: dailyQ.data.delivered, cash: dailyQ.data.cash } : undefined}
+        monthly={monthQ.data ? { delivered: monthQ.data.delivered, cash: monthQ.data.cash } : undefined}
+        subs={subsQ.data ?? []}
+      />
+
+
+
       {/* Archive */}
       <Panel title="Snapshot archive" subtitle="Locked-in period snapshots generated manually or by the scheduler." flush>
         {snapsQ.isLoading ? (
