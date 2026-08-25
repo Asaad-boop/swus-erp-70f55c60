@@ -338,7 +338,22 @@ function ReportsHub() {
 
             <TabsContent value="finance" className="mt-[var(--rpt-gap)] space-y-[var(--rpt-gap)]">
               <FinanceTab args={args} enabled={enabled} />
+              <CashFlowPanel args={args} enabled={enabled} />
+              <BrandPnlPanel args={args} enabled={enabled} />
             </TabsContent>
+
+            <TabsContent value="expenses" className="mt-[var(--rpt-gap)] space-y-[var(--rpt-gap)]">
+              <ExpensesTab args={args} enabled={enabled} />
+            </TabsContent>
+
+            <TabsContent value="ops" className="mt-[var(--rpt-gap)] space-y-[var(--rpt-gap)]">
+              <OpsTab args={args} enabled={enabled} />
+            </TabsContent>
+
+            <TabsContent value="advanced" className="mt-[var(--rpt-gap)] space-y-[var(--rpt-gap)]">
+              <AdvancedTab args={args} enabled={enabled} />
+            </TabsContent>
+
 
             <TabsContent value="control" className="mt-[var(--rpt-gap)] space-y-[var(--rpt-gap)]">
               <ControlTab args={args} enabled={enabled} />
