@@ -1,62 +1,68 @@
-# Dispatch Center — Full Rebuild
+# Partial Shipment Shipping Charge (Release-wise Freight)
 
-Daily packing floor-এর জন্য একটা fast, mobile-first, bug-free dispatch workspace। Pending → Packed → Ready to Ship → Shipped — এই চারটা ধাপ যেন packer/dispatcher ভুল ছাড়াই, দ্রুত, sound feedback সহ চালাতে পারে।
+## Somossa ta ki
 
-## 1. Two surfaces, one engine
+100 pcs purchase → seller 80 pcs age pathalo, 20 pcs pore. Kintu ekhon system-e shipping charge **PO level e ekta total** (weight × rate) — sheta shob 100 pcs-er upor bhag hoy. Tai:
 
-**A. Packer Mode (mobile-first, fullscreen)**
-- বড় scan box + সবসময় sticky camera scan button (phone দিয়ে barcode/QR)।
-- Stage selector: বড় তিনটা টাইল — PACK / READY / SHIP। কোন stage-এ আছে সবসময় স্ক্রিনে বড় করে দেখা যাবে।
-- Scan করার সাথে সাথে: sound (success / error / ship আলাদা টোন), vibration (mobile), full-width color flash (সবুজ = হলো, লাল = হয়নি), আর বড় করে order card — invoice, customer, item list, COD amount।
-- ভুল scan হলে পরিষ্কার বাংলা/ইংলিশ বার্তা: "এই order আগেই packed", "আগে pack করতে হবে", "order পাওয়া যায়নি"।
-- শেষ 10টা scan-এর log + one-tap Undo (প্রতিটা লাইনে আলাদা undo, শুধু শেষেরটা নয়)।
-- Live counter: আজ আমি কয়টা packed/shipped করেছি।
+- 80 pcs receive korar shomoy shudhu oi shipment-er freight bill dite pari na
+- Landed cost per unit bhul hoy (2nd shipment-er rate/weight alada hote pare)
+- "Ei release-e koto shipping due" — eta hishab hoy na
 
-**B. Console Mode (desktop)**
-- 4-column pipeline থাকবে, কিন্তু প্রতিটা কলামে: search, courier/brand/COD filter, sort (oldest first default), select-all, virtualized scroll যাতে ৫০০+ order-এও smooth থাকে।
-- প্রতিটা order row-তে hover action: Advance, Print label, Open order, Hold, Cancel booking।
-- Board ⇄ Table toggle — table view-এ sortable columns আর bulk select।
+## Solution: shipping ke release (shipment) level e nia jawa
 
-## 2. Ship step — hassle-free courier
+Ekta PO-er niche onek **Release** thake (already ache). Proti release e nijer weight, rate, freight ebong payment thakbe. PO-level shipping hobe shudhu **planned/estimate**, actual freight ashbe release theke.
 
-- Ship করার সময় courier picker: **Pathao / Steadfast / Manual (নিজের courier + tracking no.)**। Default courier settings থেকে আসবে, per-order override করা যাবে।
-- Booking-এর আগে pre-flight check: phone valid কিনা, address আছে কিনা, COD amount, আগে থেকে consignment আছে কিনা (duplicate booking hard-block, যেটা এখন আছে সেটা রাখা হবে)।
-- Booking fail হলে order stage বদলাবে না — inline error + Retry button, আর একটা "Failed bookings" tray যেখান থেকে সব fail একসাথে retry করা যাবে।
-- Booking সফল হলে consignment/tracking সাথে সাথে row-তে দেখাবে + courier status badge live sync।
+### Calculation model
 
-## 3. Fix / edit — কোনো কিছু আটকে থাকবে না
+Prottek release-er jonno:
 
-প্রতিটা order-এ একটা **Fix menu**:
-- Move to any stage (forward বা backward, note সহ) — audit log-এ যাবে।
-- Cancel courier booking / re-book.
-- Put on hold + hold reason, আর hold list আলাদা দেখা যাবে।
-- Edit shipping phone/address inline (courier booking fail হলে সবচেয়ে বেশি দরকার হয়)।
-- Order detail page-এ jump।
+```text
+Release freight  = release_weight_kg × release_rate_per_kg   (ba manual amount)
+Goods due        = Σ (released_qty × unit_cost_bdt)  −  oi qty-r advance share
+Advance share    = paid_advance × (release goods cost ÷ PO goods total)
+Release e pay    = Goods due + Release freight + Local delivery
+```
 
-## 4. Speed & reliability
+Landed cost per unit (oi release-er pcs-er jonno):
 
-- এক query-তে চার stage আনা হবে (count আলাদা), payload ছোট, item list শুধু দরকার হলে lazy load।
-- Optimistic update: scan করার সাথে সাথে card এক column থেকে আরেক column-এ চলে যাবে; server fail করলে rollback + error sound।
-- Scan de-dupe: একই invoice ২ সেকেন্ডের মধ্যে দুইবার scan হলে ignore (double-beep bug বন্ধ)।
-- Realtime subscription থাকবে কিন্তু throttled invalidate, যাতে scan-এর সময় list jump না করে।
-- Offline/slow network guard: request timeout + retry, আর scan queue যাতে দ্রুত পরপর scan হারিয়ে না যায়।
+```text
+unit_landed = unit_cost_bdt
+            + (release_freight ÷ release_units)
+            + (release_local_delivery ÷ release_units)
+            + PO-level other charges share (customs/duty/other ÷ total ordered)
+```
 
-## 5. Sound & notification
+Mane: **freight ar delivery shudhu oi shipment-er pcs-er upor bhag hobe** — puro PO-r upor na. Egulai ekhon-kar bug.
 
-- আলাদা টোন: pack success, ready success, ship success (বেশি জোরালো), error, duplicate warning।
-- Volume/mute toggle header-এ, choice localStorage-এ সেভ থাকবে।
-- Mobile-এ haptic vibration। Ship হলে toast + consignment number।
+PO summary te dekhabo: Planned shipping (estimate) vs Actual shipping (Σ release freight), ar Remaining pcs-er estimated freight.
 
-## 6. Print & handover
+## Ki ki build hobe
 
-- Print flow যেমন আছে রাখব, কিন্তু: printed badge order card-এ দেখাবে, re-print আলাদা mark হবে, আর courier-wise handover manifest এক ক্লিকে (rider signature line সহ)।
-- Day-end summary sheet: কয়টা packed, shipped, courier-wise breakdown, COD total — CSV + print।
+### 1. Database
+- `imp_po_releases` e notun column: `shipping_weight_kg`, `shipping_rate_per_kg`, `shipping_charge_bdt`, `shipping_payment_id`
+- `imp_purchase_orders.shipping_total_bdt` ke "actual" hishebe recompute kora hobe = Σ release shipping (trigger diye), ar `shipping_cost_bdt` thakbe planned estimate
+- Purono PO gulor data intact rakha hobe: jodi kono release-e shipping na thake, agerkar PO-level bhag-i chalu thakbe (backward safe)
 
-## Technical notes
+### 2. Release dialog (Receive at BD / Quantity release)
+- Notun "Shipping / Freight" section: Weight (kg) + Rate per kg → auto amount, ba manual override
+- Default weight = release units × PO-r average per-unit weight (edit kora jabe)
+- Wallet select kore ekhoni pay kora jabe (already goods payment-er pashe)
+- Live summary card: Goods due · Advance share · Freight · Local delivery · **Total to pay now**
 
-- `src/routes/_authenticated/erp.dispatch.tsx` কে thin route বানিয়ে UI ভেঙে দেব: `dispatch-shell.tsx`, `packer-mode.tsx`, `pipeline-board.tsx`, `dispatch-table.tsx`, `order-card.tsx`, `ship-dialog.tsx`, `fix-menu.tsx`।
-- Data + mutation logic একটা hook-এ: `src/hooks/erp/use-dispatch.ts` (query, optimistic transitions, scan queue, undo stack)।
-- Courier booking: বিদ্যমান `pathaoBookOrderAutoFn` + `steadfastBookOrderFn` ব্যবহার করব, একটা `bookCourier()` wrapper দিয়ে।
-- Sound: `src/lib/erp/audio-feedback.ts` এ নতুন tone + mute setting যোগ হবে।
-- Stage transition আগের মতোই `transition_order_status` RPC দিয়ে — কোনো নতুন DB migration লাগবে না।
-- Realtime, keyboard shortcut, print job history আগের মতোই থাকবে।
+### 3. Landed cost fix
+`qtyPoRelease` e overhead per unit hishab bodle — release-er nijer freight/delivery oi release-er units diye bhag hobe, PO-level bakigulo (customs, duty, other) totalOrdered diye bhag hobe.
+
+### 4. PO detail UI
+- Shipping card e: Planned vs Actual vs Remaining estimate
+- Releases table e notun column: Units · Weight · Rate · Freight · Landed/unit
+- Prottek release-er "shipping paid / due" badge
+
+### 5. Payment adjust
+Release-er shipping payment bhul hole edit/reverse kora jabe (existing reversal flow-i use hobe), ar release row-er amount update hobe.
+
+## Technical details
+
+- File: `src/lib/erp/imports/imports.functions.ts` → `qtyPoRelease` (overhead per unit + shipping payment part), `getPurchaseOrder` (release select e notun column)
+- Dialog: `src/components/erp/imports/` er release/receive dialog e shipping section
+- Migration: `imp_po_releases` alter + PO shipping recompute trigger
+- Idempotency key: `${key}:ship` already ache — release-wise freight-eo eki pattern
