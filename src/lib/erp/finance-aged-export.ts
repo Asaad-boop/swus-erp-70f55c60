@@ -132,7 +132,14 @@ export function exportAgedPdf(opts: {
     </table>
   `;
 
-  printHtml(html, { title: `${title} — ${asOfDate}` });
+  printHtml(html, {
+    title: `${title} — ${asOfDate}`,
+    docTitle: title,
+    subtitle: `As of ${asOfDate}`,
+    meta: [companyName || null, `${rows.length} rows`],
+    landscape: true,
+  });
+
 }
 
 function escape(s: string | null | undefined): string {
