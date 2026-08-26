@@ -60,7 +60,14 @@ export function CartonPlanDialog({
 
   const totalOrdered = items.reduce((s, it) => s + Number(it.quantity || 0), 0);
   const totalPlanned = Object.values(perItemPlanned).reduce((s, v) => s + v, 0);
-  const balanced = items.every((it) => (perItemPlanned[it.id] ?? 0) === Number(it.quantity || 0));
+  const offItems = items
+    .map((it) => ({
+      it,
+      ordered: Number(it.quantity || 0),
+      planned: perItemPlanned[it.id] ?? 0,
+    }))
+    .filter((x) => x.planned !== x.ordered);
+  const balanced = offItems.length === 0;
 
   const setAlloc = (key: string, itemId: string, qty: number) =>
     setDrafts((ds) => ds.map((d) => (d.key === key ? { ...d, alloc: { ...d.alloc, [itemId]: Math.max(0, qty || 0) } } : d)));
@@ -148,6 +155,28 @@ export function CartonPlanDialog({
             </Button>
           </div>
         </div>
+
+        {!balanced && (
+          <div className="rounded-lg border border-destructive/40 bg-destructive/5 p-3 text-xs space-y-1.5">
+            <div className="font-semibold text-destructive">
+              Save kora jabe na — prottek item er planned qty ordered qty er soman hote hobe.
+            </div>
+            {offItems.map(({ it, ordered, planned }) => (
+              <div key={it.id} className="flex items-center justify-between gap-2">
+                <span className="truncate">
+                  {it.name_snapshot}
+                  {it.variant?.color_name ? ` · ${it.variant.color_name}` : ""}
+                </span>
+                <span className="tabular-nums shrink-0">
+                  planned {planned} / {ordered}{" "}
+                  <span className="font-semibold text-destructive">
+                    ({planned > ordered ? `+${planned - ordered} beshi` : `${ordered - planned} baki`})
+                  </span>
+                </span>
+              </div>
+            ))}
+          </div>
+        )}
 
         <ScrollArea className="max-h-[55vh] pr-3">
           <div className="space-y-3">
