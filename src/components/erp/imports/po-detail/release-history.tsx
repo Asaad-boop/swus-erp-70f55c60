@@ -3,7 +3,7 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { toast } from "sonner";
 import {
-  AlertTriangle, ChevronDown, ChevronRight, ClipboardCheck, Loader2, PackageCheck, Truck,
+  AlertTriangle, ChevronDown, ChevronRight, ClipboardCheck, Loader2, PackageCheck, Printer, Truck,
 } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -13,8 +13,11 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { AccountCombobox } from "@/components/erp/finance/account-combobox";
+import { useAccounts } from "@/hooks/erp/use-finance-query";
 import { qcPoRelease } from "@/lib/erp/imports/imports.functions";
 import { fmtBdt } from "@/lib/erp/imports/types";
+import { printReleaseSlip, printQcReport } from "@/lib/erp/imports/print";
 
 export type ReleaseItem = {
   id: string;
@@ -23,10 +26,14 @@ export type ReleaseItem = {
   damaged_qty: number;
   missing_qty?: number;
   unit_landed_cost_bdt: number;
+  final_unit_cost_bdt?: number | null;
+  reserved_qty?: number | null;
   sku_snapshot: string | null;
   qc_good_qty?: number | null;
   qc_damaged_qty?: number | null;
   qc_extra_qty?: number | null;
+  variant?: { id: string; sku: string | null; color_name: string | null; color_hex: string | null; image: string | null } | null;
+  product?: { id: string; title: string | null; image: string | null; sku: string | null } | null;
 };
 
 export type ReleaseRow = {
@@ -37,6 +44,12 @@ export type ReleaseRow = {
   items: ReleaseItem[];
   local_delivery_bdt?: number | null;
   delivery_note?: string | null;
+  local_courier_bdt?: number | null;
+  local_courier_source?: string | null;
+  qc_local_courier_note?: string | null;
+  shipping_charge_bdt?: number | null;
+  shipping_weight_kg?: number | null;
+  shipping_rate_per_kg?: number | null;
   qc_status?: string | null;
   qc_at?: string | null;
   qc_notes?: string | null;
@@ -45,18 +58,24 @@ export type ReleaseRow = {
 type Draft = Record<string, { good: number; damaged: number; extra: number }>;
 
 export function ReleaseHistory({
-  poId, releases, items,
+  poId, brandId, po, releases, items,
 }: {
   poId: string;
+  brandId?: string | null;
+  po?: any;
   releases: ReleaseRow[];
   items: any[];
 }) {
   const qc = useQueryClient();
   const qcFn = useServerFn(qcPoRelease);
+  const { data: wallets = [] } = useAccounts(brandId ? [brandId] : []);
   const [open, setOpen] = useState<Record<string, boolean>>({});
   const [qcFor, setQcFor] = useState<ReleaseRow | null>(null);
   const [draft, setDraft] = useState<Draft>({});
   const [qcNote, setQcNote] = useState("");
+  const [lcAmount, setLcAmount] = useState("");
+  const [lcWallet, setLcWallet] = useState("");
+  const [lcRef, setLcRef] = useState("");
 
   const itemMap = useMemo(() => {
     const m = new Map<string, any>();
@@ -64,15 +83,19 @@ export function ReleaseHistory({
     return m;
   }, [items]);
 
-  const titleFor = (ri: ReleaseItem) => {
-    const it = itemMap.get(ri.po_item_id);
-    return it?.product?.title ?? it?.name_snapshot ?? "Item";
-  };
+  const titleFor = (ri: ReleaseItem) =>
+    ri.product?.title ?? itemMap.get(ri.po_item_id)?.product?.title ?? itemMap.get(ri.po_item_id)?.name_snapshot ?? "Item";
   const skuFor = (ri: ReleaseItem) =>
-    ri.sku_snapshot ?? itemMap.get(ri.po_item_id)?.product?.sku ?? "—";
+    ri.variant?.sku ?? ri.sku_snapshot ?? ri.product?.sku ?? itemMap.get(ri.po_item_id)?.product?.sku ?? "—";
   const imgFor = (ri: ReleaseItem) => {
     const it = itemMap.get(ri.po_item_id);
-    return it?.variant?.image ?? it?.product?.image ?? it?.image_snapshot ?? null;
+    return ri.variant?.image ?? ri.product?.image ?? it?.variant?.image ?? it?.product?.image ?? it?.image_snapshot ?? null;
+  };
+  const colorFor = (ri: ReleaseItem) => {
+    const it = itemMap.get(ri.po_item_id);
+    const v = ri.variant ?? it?.variant;
+    if (!v?.color_name && !v?.color_hex) return null;
+    return { name: v?.color_name ?? "Color", hex: v?.color_hex ?? "#999" };
   };
 
   const startQc = (r: ReleaseRow) => {
@@ -86,8 +109,20 @@ export function ReleaseHistory({
     }
     setDraft(d);
     setQcNote(r.qc_notes ?? "");
+    setLcAmount(Number(r.local_courier_bdt ?? 0) > 0 ? String(r.local_courier_bdt) : "");
+    setLcWallet("");
+    setLcRef("");
     setQcFor(r);
   };
+
+  const qcModeCourier = ((qcFor?.local_courier_source ?? "release") === "qc");
+  const lcNum = Math.max(0, Number(lcAmount) || 0);
+  const draftGood = (qcFor?.items ?? []).reduce((s, ri) => s + (draft[ri.id]?.good ?? 0), 0);
+  const draftReleaseCost = (qcFor?.items ?? []).reduce(
+    (s, ri) => s + Number(ri.unit_landed_cost_bdt ?? 0) * (Number(ri.quantity ?? 0) + Number(ri.damaged_qty ?? 0)),
+    0,
+  );
+  const finalPerPc = draftGood > 0 ? (draftReleaseCost + (qcModeCourier ? lcNum : 0)) / draftGood : 0;
 
   const mut = useMutation({
     mutationFn: () =>
@@ -101,12 +136,22 @@ export function ReleaseHistory({
             damaged_qty: draft[ri.id]?.damaged ?? 0,
             extra_qty: draft[ri.id]?.extra ?? 0,
           })),
+          local_courier: qcModeCourier && lcNum > 0
+            ? {
+                amount_bdt: +lcNum.toFixed(2),
+                wallet_id: lcWallet || undefined,
+                payment_date: new Date().toISOString().slice(0, 10),
+                reference: lcRef || undefined,
+                note: lcRef || undefined,
+              }
+            : undefined,
         },
       }),
     onSuccess: () => {
-      toast.success("Warehouse QC confirm holo — stock adjust hoye gelo");
+      toast.success("Warehouse QC confirm holo — stock sellable, final cost boshe gelo");
       setQcFor(null);
       qc.invalidateQueries({ queryKey: ["imp-po", poId] });
+      qc.invalidateQueries({ queryKey: ["inventory"] });
     },
     onError: (e: any) => toast.error(e?.message ?? "QC failed"),
   });
@@ -119,7 +164,7 @@ export function ReleaseHistory({
         <div>
           <h3 className="font-semibold">Release history & warehouse QC</h3>
           <p className="text-xs text-muted-foreground mt-0.5">
-            Release warehouse e pouchale — koto pcs bhalo, koto damaged, extra koto — ekhane confirm korun.
+            Release-er pcs QC na howa porjonto <b>reserved</b> — sellable na. QC confirm korle sellable hobe ar final cost boshbe.
           </p>
         </div>
         <Badge variant="outline" className="text-[11px]">{releases.length}</Badge>
@@ -131,7 +176,7 @@ export function ReleaseHistory({
           const qty = list.reduce((s, i) => s + Number(i.quantity ?? 0), 0);
           const dmg = list.reduce((s, i) => s + Number(i.damaged_qty ?? 0), 0);
           const miss = list.reduce((s, i) => s + Number(i.missing_qty ?? 0), 0);
-          const ld = Number(r.local_delivery_bdt ?? 0);
+          const ld = Number(r.local_delivery_bdt ?? 0) + Number(r.local_courier_bdt ?? 0);
           const value = list.reduce((s, i) => s + Number(i.quantity ?? 0) * Number(i.unit_landed_cost_bdt ?? 0), 0);
           const totalPcs = list.reduce(
             (s, i) => s + Number(i.quantity ?? 0) + Number(i.damaged_qty ?? 0) + Number(i.missing_qty ?? 0), 0,
@@ -141,6 +186,11 @@ export function ReleaseHistory({
           const qcGood = list.reduce((s, i) => s + Number(i.qc_good_qty ?? 0), 0);
           const qcDmg = list.reduce((s, i) => s + Number(i.qc_damaged_qty ?? 0), 0);
           const qcExtra = list.reduce((s, i) => s + Number(i.qc_extra_qty ?? 0), 0);
+          const finalAvg = (() => {
+            const g = list.reduce((s, i) => s + Number(i.qc_good_qty ?? 0), 0);
+            const t = list.reduce((s, i) => s + Number(i.final_unit_cost_bdt ?? 0) * Number(i.qc_good_qty ?? 0), 0);
+            return g > 0 ? t / g : 0;
+          })();
           const isOpen = !!open[r.id];
 
           return (
@@ -164,7 +214,7 @@ export function ReleaseHistory({
                   </span>
                 )}
                 <span className="text-xs text-muted-foreground tabular-nums">
-                  avg landed {fmtBdt(avgLanded)}/pc
+                  {done && finalAvg > 0 ? <>final {fmtBdt(finalAvg)}/pc</> : <>avg landed {fmtBdt(avgLanded)}/pc</>}
                 </span>
 
                 {done ? (
@@ -173,11 +223,23 @@ export function ReleaseHistory({
                   </Badge>
                 ) : (
                   <Badge variant="outline" className="text-[10px] border-orange-400 text-orange-600">
-                    QC pending
+                    QC pending · {qty} pcs reserved
                   </Badge>
                 )}
 
                 <span className="ml-auto tabular-nums font-semibold">{fmtBdt(value)}</span>
+                <Button
+                  size="sm"
+                  variant="ghost"
+                  title={done ? "QC report print" : "Release slip print"}
+                  onClick={() =>
+                    done
+                      ? printQcReport({ po, release: r, titleFor, skuFor, colorFor })
+                      : printReleaseSlip({ po, release: r, titleFor, skuFor, colorFor })
+                  }
+                >
+                  <Printer className="h-3.5 w-3.5" />
+                </Button>
                 <Button size="sm" variant={done ? "outline" : "default"} onClick={() => startQc(r)}>
                   <ClipboardCheck className="h-3.5 w-3.5 mr-1" />
                   {done ? "QC edit" : "Warehouse QC"}
@@ -200,61 +262,71 @@ export function ReleaseHistory({
                           <TableHead className="text-right">Damaged</TableHead>
                           <TableHead className="text-right">Missing</TableHead>
                           <TableHead className="text-right">Landed / pc</TableHead>
-                          <TableHead className="text-right">Line value</TableHead>
+                          <TableHead className="text-right">Final / pc</TableHead>
                           <TableHead className="text-right">QC (good / bad / extra)</TableHead>
                         </TableRow>
                       </TableHeader>
                       <TableBody>
-                        {list.map((ri) => (
-                          <TableRow key={ri.id}>
-                            <TableCell>
-                              <div className="flex items-center gap-2 min-w-0">
-                                {imgFor(ri) ? (
-                                  <img src={imgFor(ri)!} alt="" className="h-8 w-8 rounded object-cover border border-border" />
-                                ) : (
-                                  <div className="h-8 w-8 rounded bg-muted border border-dashed border-border" />
-                                )}
-                                <div className="min-w-0">
-                                  <div className="truncate text-sm font-medium">{titleFor(ri)}</div>
-                                  <div className="text-[10px] font-mono text-muted-foreground truncate">{skuFor(ri)}</div>
+                        {list.map((ri) => {
+                          const col = colorFor(ri);
+                          return (
+                            <TableRow key={ri.id}>
+                              <TableCell>
+                                <div className="flex items-center gap-2 min-w-0">
+                                  {imgFor(ri) ? (
+                                    <img src={imgFor(ri)!} alt="" className="h-8 w-8 rounded object-cover border border-border" />
+                                  ) : (
+                                    <div className="h-8 w-8 rounded bg-muted border border-dashed border-border" />
+                                  )}
+                                  <div className="min-w-0">
+                                    <div className="truncate text-sm font-medium">{titleFor(ri)}</div>
+                                    <div className="flex items-center gap-1.5">
+                                      <span className="text-[10px] font-mono text-muted-foreground truncate">{skuFor(ri)}</span>
+                                      {col && <ColorChip name={col.name} hex={col.hex} />}
+                                    </div>
+                                  </div>
                                 </div>
-                              </div>
-                            </TableCell>
-                            <TableCell className="text-right tabular-nums font-semibold">{ri.quantity}</TableCell>
-                            <TableCell className="text-right tabular-nums">
-                              {Number(ri.damaged_qty ?? 0) > 0 ? <span className="text-orange-600">{ri.damaged_qty}</span> : "—"}
-                            </TableCell>
-                            <TableCell className="text-right tabular-nums">
-                              {Number(ri.missing_qty ?? 0) > 0 ? <span className="text-red-600">{ri.missing_qty}</span> : "—"}
-                            </TableCell>
-                            <TableCell className="text-right tabular-nums">{fmtBdt(ri.unit_landed_cost_bdt)}</TableCell>
-                            <TableCell className="text-right tabular-nums font-medium">
-                              {fmtBdt(Number(ri.quantity ?? 0) * Number(ri.unit_landed_cost_bdt ?? 0))}
-                            </TableCell>
-                            <TableCell className="text-right tabular-nums text-xs">
-                              {ri.qc_good_qty === null || ri.qc_good_qty === undefined ? (
-                                <span className="text-muted-foreground">pending</span>
-                              ) : (
-                                <>
-                                  <span className="text-emerald-600 font-semibold">{ri.qc_good_qty}</span>
-                                  {" / "}
-                                  <span className="text-orange-600">{ri.qc_damaged_qty ?? 0}</span>
-                                  {" / "}
-                                  <span className="text-sky-600">+{ri.qc_extra_qty ?? 0}</span>
-                                </>
-                              )}
-                            </TableCell>
-                          </TableRow>
-                        ))}
+                              </TableCell>
+                              <TableCell className="text-right tabular-nums font-semibold">{ri.quantity}</TableCell>
+                              <TableCell className="text-right tabular-nums">
+                                {Number(ri.damaged_qty ?? 0) > 0 ? <span className="text-orange-600">{ri.damaged_qty}</span> : "—"}
+                              </TableCell>
+                              <TableCell className="text-right tabular-nums">
+                                {Number(ri.missing_qty ?? 0) > 0 ? <span className="text-red-600">{ri.missing_qty}</span> : "—"}
+                              </TableCell>
+                              <TableCell className="text-right tabular-nums">{fmtBdt(ri.unit_landed_cost_bdt)}</TableCell>
+                              <TableCell className="text-right tabular-nums font-semibold">
+                                {ri.final_unit_cost_bdt ? fmtBdt(ri.final_unit_cost_bdt) : <span className="text-muted-foreground">—</span>}
+                              </TableCell>
+                              <TableCell className="text-right tabular-nums text-xs">
+                                {ri.qc_good_qty === null || ri.qc_good_qty === undefined ? (
+                                  <span className="text-muted-foreground">pending</span>
+                                ) : (
+                                  <>
+                                    <span className="text-emerald-600 font-semibold">{ri.qc_good_qty}</span>
+                                    {" / "}
+                                    <span className="text-orange-600">{ri.qc_damaged_qty ?? 0}</span>
+                                    {" / "}
+                                    <span className="text-sky-600">+{ri.qc_extra_qty ?? 0}</span>
+                                  </>
+                                )}
+                              </TableCell>
+                            </TableRow>
+                          );
+                        })}
                       </TableBody>
                     </Table>
                   </div>
 
                   <div className="grid sm:grid-cols-4 gap-3 text-sm mt-3">
                     <Tile label="Total pcs (ei release)" value={`${totalPcs} pcs`} />
-                    <Tile label="Stock e gieche" value={`${qty} pcs`} />
-                    <Tile label="Avg landed / pc" value={fmtBdt(avgLanded)} />
-                    <Tile label="Inventory value" value={fmtBdt(value)} className="text-emerald-600" />
+                    <Tile label={done ? "Sellable stock" : "Reserved (QC pending)"} value={`${done ? qcGood + qcExtra : qty} pcs`} />
+                    <Tile label="Local courier" value={fmtBdt(ld)} />
+                    <Tile
+                      label={done ? "Final cost / pc" : "Avg landed / pc"}
+                      value={fmtBdt(done && finalAvg > 0 ? finalAvg : avgLanded)}
+                      className="text-emerald-600"
+                    />
                   </div>
                 </div>
               )}
@@ -271,8 +343,8 @@ export function ReleaseHistory({
               Warehouse QC — Release #{qcFor?.release_number}
             </DialogTitle>
             <DialogDescription>
-              Warehouse e maal esheche — koto pcs bhalo, koto kharap, extra koto pele boshan. Confirm korle stock
-              ei number onushare adjust hobe.
+              Maal hate esheche — koto pcs bhalo, koto damaged/missing, extra koto. Local courier charge o ekhane din.
+              Confirm korle stock sellable hobe ar final per-piece cost boshe jabe.
             </DialogDescription>
           </DialogHeader>
 
@@ -281,6 +353,7 @@ export function ReleaseHistory({
               const d = draft[ri.id] ?? { good: 0, damaged: 0, extra: 0 };
               const stocked = d.good + d.extra;
               const landed = Number(ri.unit_landed_cost_bdt ?? 0);
+              const col = colorFor(ri);
               return (
                 <div key={ri.id} className="rounded-md border border-border p-3 space-y-2">
                   <div className="flex items-center gap-2">
@@ -291,7 +364,10 @@ export function ReleaseHistory({
                     )}
                     <div className="min-w-0">
                       <div className="truncate text-sm font-medium">{titleFor(ri)}</div>
-                      <div className="text-[10px] font-mono text-muted-foreground">{skuFor(ri)}</div>
+                      <div className="flex items-center gap-1.5">
+                        <span className="text-[10px] font-mono text-muted-foreground">{skuFor(ri)}</span>
+                        {col && <ColorChip name={col.name} hex={col.hex} />}
+                      </div>
                     </div>
                     <div className="ml-auto text-right text-xs text-muted-foreground tabular-nums">
                       Released {ri.quantity} pcs · landed {fmtBdt(landed)}/pc
@@ -343,6 +419,63 @@ export function ReleaseHistory({
               );
             })}
 
+            {qcModeCourier ? (
+              <div className="rounded-md border border-sky-200 dark:border-sky-900/40 bg-sky-50/60 dark:bg-sky-950/20 p-3 space-y-3">
+                <div className="text-sm font-medium inline-flex items-center gap-2">
+                  <Truck className="h-4 w-4 text-sky-600" />
+                  Local courier charge (cargo → amader warehouse)
+                </div>
+                <div className="grid md:grid-cols-3 gap-3">
+                  <div>
+                    <Label className="text-xs">Charge (BDT)</Label>
+                    <Input
+                      type="number" min={0} className="h-9 tabular-nums" placeholder="0"
+                      value={lcAmount} onChange={(e) => setLcAmount(e.target.value)}
+                    />
+                  </div>
+                  <div>
+                    <Label className="text-xs">Kon account theke</Label>
+                    <AccountCombobox
+                      accounts={(wallets as any[]).filter((w) => w.is_active)}
+                      value={lcWallet}
+                      onChange={setLcWallet}
+                      requiredAmount={lcNum}
+                      placeholder="Record only (pay later)"
+                    />
+                  </div>
+                  <div>
+                    <Label className="text-xs">Reference / note</Label>
+                    <Input
+                      className="h-9" placeholder="e.g. Sundarban, 3 bosta"
+                      value={lcRef} onChange={(e) => setLcRef(e.target.value)}
+                    />
+                  </div>
+                </div>
+              </div>
+            ) : (
+              Number(qcFor?.local_delivery_bdt ?? 0) > 0 && (
+                <div className="text-[11px] text-muted-foreground">
+                  Ei purono release-e local delivery {fmtBdt(Number(qcFor?.local_delivery_bdt ?? 0))} release-er
+                  shomoy-i neya hoyechilo — ekhane abar nite hobe na.
+                </div>
+              )
+            )}
+
+            <div className="rounded-md border border-emerald-200 dark:border-emerald-900/40 bg-emerald-50/60 dark:bg-emerald-950/20 p-3">
+              <div className="text-[11px] uppercase tracking-wider text-emerald-800 dark:text-emerald-300 font-semibold mb-1.5">
+                Final cost of goods
+              </div>
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 text-xs">
+                <Tile label="Goods + freight" value={fmtBdt(draftReleaseCost)} />
+                <Tile label="Local courier" value={fmtBdt(qcModeCourier ? lcNum : 0)} />
+                <Tile label="Good pcs" value={`${draftGood} pcs`} />
+                <Tile label="Final / pc" value={fmtBdt(finalPerPc)} className="text-emerald-700 dark:text-emerald-300" />
+              </div>
+              <p className="text-[11px] text-muted-foreground mt-2">
+                Damage/missing pcs-er khoroch bhalo pcs-er upor bhag hoy — alada write-off entry hobe na (double count edabar jonno).
+              </p>
+            </div>
+
             <div>
               <Label className="text-xs">QC note (optional)</Label>
               <Textarea rows={2} value={qcNote} onChange={(e) => setQcNote(e.target.value)} placeholder="e.g. 2 pcs box fata chilo" />
@@ -350,7 +483,7 @@ export function ReleaseHistory({
 
             <div className="text-[11px] text-muted-foreground inline-flex items-start gap-1.5">
               <AlertTriangle className="h-3.5 w-3.5 mt-0.5 shrink-0 text-orange-500" />
-              Damaged pcs stock e jabe na, extra pcs stock e jog hobe. Ager QC edit korle purono number theke
+              Damaged pcs stock e jabe na, extra pcs 0 cost e stock e jog hobe. Ager QC edit korle purono number theke
               shudhu difference tuku adjust hobe.
             </div>
           </div>
@@ -369,9 +502,18 @@ export function ReleaseHistory({
   );
 }
 
+function ColorChip({ name, hex }: { name: string; hex: string }) {
+  return (
+    <span className="inline-flex items-center gap-1 rounded-full border border-border px-1.5 py-px text-[10px]">
+      <span className="h-2 w-2 rounded-full border border-border" style={{ background: hex }} />
+      {name}
+    </span>
+  );
+}
+
 function Tile({ label, value, className }: { label: string; value: string; className?: string }) {
   return (
-    <div className="rounded-md border border-border p-2.5">
+    <div className="rounded-md border border-border p-2.5 bg-background/60">
       <div className="text-[11px] text-muted-foreground">{label}</div>
       <div className={`font-semibold tabular-nums ${className ?? ""}`}>{value}</div>
     </div>
