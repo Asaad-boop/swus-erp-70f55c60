@@ -200,12 +200,15 @@ export function ErpSidebar({
     [toggleGroup],
   );
 
-  const renderRow = (item: NavItem, opts?: { indented?: boolean; pinnable?: boolean }) => (
+  const renderRow = (
+    item: NavItem,
+    opts?: { indented?: boolean; pinnable?: boolean; expanded?: boolean },
+  ) => (
     <NavLinkRow
       key={favKey(item)}
       item={item}
       active={isActive(item)}
-      mini={mini && !opts?.indented}
+      mini={mini && !opts?.indented && !opts?.expanded}
       indented={opts?.indented}
       pinned={favs.includes(favKey(item))}
       onPin={opts?.pinnable === false ? undefined : togglePin}
@@ -377,7 +380,7 @@ export function ErpSidebar({
                           hasActive={hasActive}
                           onClick={() => expandRail(s.key)}
                         >
-                          {s.items.map((i) => renderRow(i, { indented: false, pinnable: false }))}
+                          {s.items.map((i) => renderRow(i, { expanded: true, pinnable: false }))}
                         </RailSection>
                       );
                     }
