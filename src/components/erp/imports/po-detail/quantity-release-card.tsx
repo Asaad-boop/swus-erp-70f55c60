@@ -799,7 +799,7 @@ export function QuantityReleaseCard({
         </Card>
       )}
 
-      <ReleaseHistory poId={poId} releases={releases as any} items={items} />
+      <ReleaseHistory poId={poId} brandId={brandId} po={po} releases={releases as any} items={items} />
 
 
       <Dialog open={confirmOpen} onOpenChange={(v) => !mut.isPending && setConfirmOpen(v)}>
