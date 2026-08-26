@@ -112,8 +112,7 @@ export function CartonPlanDialog({
     },
     onSuccess: () => {
       toast.success("Carton plan save hoyeche");
-      qc.invalidateQueries({ queryKey: ["imp-po-detail", poId] });
-      qc.invalidateQueries({ queryKey: ["imp-po-detail"] });
+      qc.invalidateQueries({ queryKey: ["imp-po", poId] });
       onOpenChange(false);
     },
     onError: (e: any) => toast.error(e?.message ?? "Save failed"),
