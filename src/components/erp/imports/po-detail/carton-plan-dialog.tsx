@@ -156,6 +156,28 @@ export function CartonPlanDialog({
           </div>
         </div>
 
+        {!balanced && (
+          <div className="rounded-lg border border-destructive/40 bg-destructive/5 p-3 text-xs space-y-1.5">
+            <div className="font-semibold text-destructive">
+              Save kora jabe na — prottek item er planned qty ordered qty er soman hote hobe.
+            </div>
+            {offItems.map(({ it, ordered, planned }) => (
+              <div key={it.id} className="flex items-center justify-between gap-2">
+                <span className="truncate">
+                  {it.name_snapshot}
+                  {it.variant?.color_name ? ` · ${it.variant.color_name}` : ""}
+                </span>
+                <span className="tabular-nums shrink-0">
+                  planned {planned} / {ordered}{" "}
+                  <span className="font-semibold text-destructive">
+                    ({planned > ordered ? `+${planned - ordered} beshi` : `${ordered - planned} baki`})
+                  </span>
+                </span>
+              </div>
+            ))}
+          </div>
+        )}
+
         <ScrollArea className="max-h-[55vh] pr-3">
           <div className="space-y-3">
             {drafts.length === 0 && (
