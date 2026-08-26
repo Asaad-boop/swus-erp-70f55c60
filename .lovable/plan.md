@@ -1,50 +1,67 @@
-# ERP UI/UX v2 — "Quiet Precision" Massive Upgrade
+# Supply Chain PO Flow v2 — Order → Freight → Partial Release → Warehouse QC → Final COGS
 
-লক্ষ্য: পুরো ERP এক visual language-এ আনা — আরও minimal, আরও smooth, আরও premium। Business logic, route, permission, query — কিছুই বদলাবে না। শুধু presentation layer + shared primitives।
+## Ekhon ki ache (thik ache, rakhbo)
 
-## Design direction (v2)
+1. PO create → agent/supplier ke advance pay
+2. Receive at BD → weight × rate/kg diye shipping bosano
+3. Quantity release (partial, pro-rata goods due + release-wise freight, wallet theke pay)
+4. Warehouse QC (good / damaged / extra) → stock adjust
+5. Landed cost per unit release-wise hisab hoy
 
-- **Surface**: এক ধরনের card/panel — soft border, খুব হালকা shadow, কম gradient। বর্তমান `--workspace-bg` এর ভারী radial glow কমিয়ে একটা শান্ত neutral canvas।
-- **Density**: 3 ধাপের spacing scale (compact / default / relaxed), সব table ও list একই row rhythm মানবে।
-- **Type**: Sora (display) + Manrope (body) থাকবে, কিন্তু size/weight scale ঠিক করে দেওয়া হবে — 5টা heading step, tabular numerals সব amount-এ।
-- **Color**: primary indigo থাকবে; status colors (success / warning / danger / info / neutral) একটাই semantic scale-এ আসবে, প্রতিটার solid + soft + border variant।
-- **Motion**: 120–180ms ease-out, শুধু hover/press/enter — কোনো bouncy animation নয়। `prefers-reduced-motion` respect।
-- **Radius/elevation**: 3 level elevation (flat, raised, overlay) — এর বাইরে কিছু নয়।
+## Ki missing / kothay flow bhenge jay
 
-## Phase 1 — Foundation (tokens + primitives)
+| Gap | Ekhon | Ki hobe |
+|---|---|---|
+| Local courier charge | Release dialog-e (mal ashar **age**) | QC step-e nite hobe — mal hate ashar por, wallet select shoho |
+| Final COGS | Release-er shomoy fix hoye jay | QC-r por **recompute** — damage/missing/local courier dhore final per-pc cost |
+| Color/variant | Data ache kintu UI-te alada kore dekhay na | Release + QC + history shob jaygay color chip + variant-wise remaining |
+| Print | Shudhu reports page-e | Release Slip, QC Report, PO Statement — branded PDF |
+| Remaining visibility | Ek jaygay ekta number | Per-item per-color: Ordered / Released / QC-passed / Remaining |
 
-- `src/styles.css`: status scale, elevation scale, density variables, focus-ring token, calmer workspace background, dark mode parity audit।
-- Shared primitives `src/components/erp/ui/`-তে: `PageHeader` (refresh), `DataPanel` (refresh), `StatCard`, `StatusBadge`, `DataTable` shell (sticky head, zebra-free, hover row actions), `EmptyState`, `SkeletonBlock`, `Toolbar` (filter chips + search + density toggle)।
-- shadcn base overrides: Button, Input, Select, Tabs, Dialog, Sheet, Dropdown, Tooltip — একই radius/height/focus।
-- Deliverable: `/uipreview` route-এ পুরো kit একসাথে দেখা যাবে।
+## Notun flow (step by step)
 
-## Phase 2 — Shell
+```text
+1. PO create        →  goods bill ৳1000, 10 pcs, advance ৳500
+2. Receive at BD    →  freight ৳1000 (weight × rate)  →  total due ৳1500
+3. Release 2 pcs    →  goods due share + oi 2 pcs-er freight share dekhabe
+                       → pay → stock e "unconfirmed" hoye jog hobe
+4. Warehouse QC     →  good / damaged / missing bosabe
+                       + local courier charge + kon account theke
+                       → stock final adjust → FINAL per-pc COGS dekhabe
+5. Baki 8 pcs       →  ek i cycle, nijer freight + nijer courier charge
+```
 
-Sidebar (v2 polish), topbar, mobile drawer, breadcrumb, global search, brand switcher, page transitions, toast placement। Responsive audit: 360px থেকে ultrawide।
+## Ki ki build hobe
 
-## Phase 3 — Orders + Dispatch + Returns
+### 1. Database (migration)
+- `imp_po_releases`: `local_courier_bdt`, `local_courier_wallet_id`, `local_courier_payment_id`, `qc_local_courier_note`
+- `imp_po_release_items`: `final_unit_cost_bdt` (QC-r por computed final COGS)
+- QC-r por release-er unit cost recompute kore stock movement cost update
 
-Order list, order detail, create order, pre-order, dispatch board, packer mode, returns/exchange — সব নতুন table shell + status badge + toolbar-এ port। Print/waybill sheet একই branded shell মানবে।
+### 2. QC dialog upgrade (`release-history.tsx`)
+- Item row-e color swatch + SKU + image
+- Good / Damaged / Missing / Extra — clean grid, keyboard-friendly
+- **Local courier section**: amount + wallet picker (AccountCombobox) + reference
+- **Live "Final cost" card**: Goods + Freight + Local courier ÷ good pcs = final ৳/pc
+- Confirm korle: stock adjust + courier payment post + final_unit_cost save + product cost update
 
-## Phase 4 — Inventory, Products, Supply Chain
+### 3. Release card upgrade (`quantity-release-card.tsx`)
+- Local courier field ekhan theke sore jabe (QC-te)
+- Per-item variant/color wise remaining chart: Ordered · Released · Remaining
+- Payment summary card porishkar: Goods due · Advance share · Freight (ei shipment) · Total to pay now
 
-Catalog, variants, stock views, purchase orders, releases/QC, sourcing desk। বড় form গুলোতে এক form layout pattern (label উপরে, helper text, inline error)।
+### 4. Printable documents (branded shell use kore)
+- **Release Slip** — kon pcs, kon color, koto qty, freight, expected delivery
+- **QC Report** — released vs received, damage/missing, local courier, final ৳/pc, signature line
+- **PO Statement** — full PO: items, payments, releases, QC, landed cost summary
+- Reports page-e month-wise: "ei mash e koto order / koto release / koto QC pending"
 
-## Phase 5 — Finance, Reconciliation, Marketing, Growth
+### 5. PO detail summary strip
+Ordered · Released · QC done · QC pending · Remaining — ek nojore, color-wise breakdown drawer shoho
 
-Wallets, journal, AR/AP, reconciliation, campaign workspace, budget pacing, growth studio। Chart theme unify (এক color set, এক tooltip, এক axis style)।
+## Technical details
 
-## Phase 6 — Reports, HR, Settings + polish pass
-
-Reports hub-কে (বর্তমান Midnight Indigo editorial) v2 language-এ align, HR module, settings pages। শেষে: dark mode audit, keyboard/a11y pass, contrast check, bundle/render performance pass (memoization, virtualized long tables)।
-
-## Guardrails
-
-- কোনো query, RPC, mutation, RLS, route path বদলাবে না।
-- হার্ডকোডেড color class নয় — সব semantic token।
-- প্রতি phase শেষে screenshot দিয়ে verify, তারপর পরেরটা।
-- ডাটা না থাকলে card/section hide (empty placeholder নয়)।
-
-## এখন শুরু
-
-Approve করলে Phase 1 (tokens + primitives + `/uipreview` kit) দিয়ে শুরু করব — এটাই পরের সব phase-কে দ্রুত করবে।
+- Server: `src/lib/erp/imports/imports.functions.ts` → `qcPoRelease` e local courier payment + final cost recompute; `qtyPoRelease` theke local_delivery sorano (backward-compatible rakhbo, purono data intact)
+- New: `src/lib/erp/imports/print.ts` — release slip / QC report / PO statement HTML, `printHtml` branded shell diye
+- UI: `release-history.tsx`, `quantity-release-card.tsx`, `erp.imports.orders.$orderId.tsx`, `erp.imports.reports.tsx`
+- Purono release (jekhane local delivery already release-e dewa) — sheta oi bhabei dekhabe, double count hobe na
