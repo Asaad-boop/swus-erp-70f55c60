@@ -1676,6 +1676,8 @@ export const releasePoQuantity = createServerFn({ method: "POST" })
           damaged_qty: l.damaged_qty ?? 0,
           missing_qty: l.missing_qty ?? 0,
           unit_landed_cost_bdt: landed,
+          // QC na howa porjonto ei pcs reserved — sellable na
+          reserved_qty: Math.max(0, l.quantity ?? 0),
         } as any)
         .select("id")
         .single();
