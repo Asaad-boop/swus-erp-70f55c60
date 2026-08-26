@@ -23,6 +23,8 @@ export const Route = createFileRoute("/_authenticated/erp")({
 function ErpLayout() {
   const navigate = useNavigate();
   const [email, setEmail] = useState<string | null>(null);
+  const [mobileNav, setMobileNav] = useState(false);
+
 
   useEffect(() => {
     supabase.auth.getUser().then(({ data }) => setEmail(data.user?.email ?? null));
