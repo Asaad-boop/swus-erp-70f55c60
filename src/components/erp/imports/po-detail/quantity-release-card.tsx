@@ -295,7 +295,7 @@ export function QuantityReleaseCard({
     onSuccess: (res: any) => {
       const paid = (res.payments ?? []).reduce((s: number, p: any) => s + Number(p.amount ?? 0), 0);
       toast.success(
-        `Release #${res.release_number} stock e gelo${paid > 0 ? ` — ${fmtBdt(paid)} paid` : ""}`,
+        `Release #${res.release_number} reserved holo — warehouse QC korle sellable hobe${paid > 0 ? ` · ${fmtBdt(paid)} paid` : ""}`,
       );
       setDraft({});
       setNotes("");
