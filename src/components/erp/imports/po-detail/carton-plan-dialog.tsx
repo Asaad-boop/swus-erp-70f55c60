@@ -60,7 +60,14 @@ export function CartonPlanDialog({
 
   const totalOrdered = items.reduce((s, it) => s + Number(it.quantity || 0), 0);
   const totalPlanned = Object.values(perItemPlanned).reduce((s, v) => s + v, 0);
-  const balanced = items.every((it) => (perItemPlanned[it.id] ?? 0) === Number(it.quantity || 0));
+  const offItems = items
+    .map((it) => ({
+      it,
+      ordered: Number(it.quantity || 0),
+      planned: perItemPlanned[it.id] ?? 0,
+    }))
+    .filter((x) => x.planned !== x.ordered);
+  const balanced = offItems.length === 0;
 
   const setAlloc = (key: string, itemId: string, qty: number) =>
     setDrafts((ds) => ds.map((d) => (d.key === key ? { ...d, alloc: { ...d.alloc, [itemId]: Math.max(0, qty || 0) } } : d)));
