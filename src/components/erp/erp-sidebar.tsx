@@ -1,76 +1,6 @@
-import { useEffect, useMemo, useState } from "react";
-import { Link, useLocation } from "@tanstack/react-router";
-import {
-  LayoutDashboard,
-  Globe,
-  PlusCircle,
-  Boxes,
-  Wallet,
-  Truck,
-  Settings,
-  Users,
-  UserCog,
-  Radio,
-  Fingerprint,
-  Package,
-  TrendingDown,
-  TrendingUp,
-  PackagePlus,
-  Megaphone,
-  Container,
-  Heart,
-  Image as ImageIcon,
-  GitBranch,
-  Plug,
-  ChevronsLeft,
-  ChevronRight,
-  Sparkles,
-  ClipboardList,
-  ClipboardCheck,
-  PackageSearch,
-  Activity,
-  BarChart3,
-  RotateCcw,
-  FileSpreadsheet,
-  Zap,
-  Briefcase,
-  Stethoscope,
-  ChevronDown,
-  Star,
-  Filter,
-  X,
-  Receipt,
-  BookOpen,
-  Landmark,
-  Coins,
-  ArrowDownCircle,
-  ArrowUpCircle,
-  HandCoins,
-  Scale,
-  FileBarChart,
-  Target,
-  Banknote,
-  Building2,
-  Search,
-  PackageCheck,
-  ShieldCheck,
-  CheckCircle2,
-  Clock,
-  LayoutGrid,
-  CalendarClock,
-  BellRing,
-  Compass,
-  ListChecks,
-  Lightbulb,
-  Clapperboard,
-  Repeat,
-  Swords,
-  Chrome,
-  CalendarCheck,
-  Palmtree,
-  Trophy,
-  Settings2,
-} from "lucide-react";
+import { useCallback, useEffect, useMemo, useState } from "react";
+import { useRouterState } from "@tanstack/react-router";
+import { ChevronsLeft, ChevronRight, Search, Star, Filter, X, Sparkles } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useGlobalSearch } from "@/components/erp/global-search";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
@@ -78,32 +8,64 @@ import { useCurrentRole } from "@/hooks/use-current-role";
 import { resolveAccess } from "@/lib/erp/access";
 import { NAV_GROUPS as groups, type Group, type NavItem } from "@/lib/erp/nav";
 import { useMyAllowedPages } from "@/hooks/use-my-allowed-pages";
+import {
+  NavLinkRow,
+  SectionHeader,
+  GroupLabel,
+  favKey,
+} from "@/components/erp/sidebar/nav-primitives";
+import { SidebarUser } from "@/components/erp/sidebar/sidebar-user";
 
 const ACTIVE_GROUP_KEY = "sidebar_active_group";
 const FAV_KEY = "erp.sidebar.favs";
+const COLLAPSE_KEY = "erp.sidebar.collapsed";
 
-export function ErpSidebar({ mobile = false }: { mobile?: boolean } = {}) {
-  const location = useLocation();
+function matchPath(pathname: string, to: string, exact?: boolean) {
+  return exact ? pathname === to : pathname === to || pathname.startsWith(to + "/");
+}
+
+export function ErpSidebar({
+  mobile = false,
+  onNavigate,
+}: { mobile?: boolean; onNavigate?: () => void } = {}) {
+  const pathname = useRouterState({ select: (s) => s.location.pathname });
+  const searchParams = useRouterState({ select: (s) => s.location.search as Record<string, unknown> });
   const { openSearch } = useGlobalSearch();
-  const [collapsed, setCollapsed] = useState<boolean>(false);
+  const [collapsed, setCollapsed] = useState(false);
   const [activeGroup, setActiveGroup] = useState<string | null>(null);
   const [filter, setFilter] = useState("");
   const [favs, setFavs] = useState<string[]>([]);
   const { roles, isAdmin } = useCurrentRole();
   const { allowedPages, pageMode } = useMyAllowedPages();
 
+  const mini = collapsed && !mobile;
+
+  const isActive = useCallback(
+    (item: NavItem) => {
+      if (!matchPath(pathname, item.to, item.exact)) return false;
+      if (item.search) {
+        return Object.entries(item.search).every(
+          ([k, v]) => String(searchParams?.[k] ?? "") === v,
+        );
+      }
+      return true;
+    },
+    [pathname, searchParams],
+  );
+
+  /* ── permissions ───────────────────────────────────────────── */
   const visibleGroups = useMemo<Group[]>(() => {
     const bypass = isAdmin && pageMode !== "custom";
-    const filterItems = (items: NavItem[]) =>
+    const keep = (items: NavItem[]) =>
       items.filter((i) => (bypass ? true : resolveAccess(roles, allowedPages, i.to, pageMode)));
     const out: Group[] = [];
     for (const g of groups) {
       if (g.kind === "flat") {
-        const items = filterItems(g.items);
+        const items = keep(g.items);
         if (items.length) out.push({ ...g, items });
       } else {
         const sections = g.sections
-          .map((s) => ({ ...s, items: filterItems(s.items) }))
+          .map((s) => ({ ...s, items: keep(s.items) }))
           .filter((s) => s.items.length);
         if (sections.length) out.push({ ...g, sections });
       }
@@ -111,28 +73,24 @@ export function ErpSidebar({ mobile = false }: { mobile?: boolean } = {}) {
     return out;
   }, [roles, isAdmin, allowedPages, pageMode]);
 
+  /* ── menu filter ───────────────────────────────────────────── */
   const q = filter.trim().toLowerCase();
-  const matches = (label: string) => !q || label.toLowerCase().includes(q);
-
   const searchedGroups = useMemo<Group[]>(() => {
     if (!q) return visibleGroups;
+    const hit = (label: string) => label.toLowerCase().includes(q);
     const out: Group[] = [];
     for (const g of visibleGroups) {
       if (g.kind === "flat") {
-        const items = g.items.filter((i) => matches(i.label));
+        const items = g.items.filter((i) => hit(i.label));
         if (items.length) out.push({ ...g, items });
       } else {
         const sections = g.sections
-          .map((s) => ({
-            ...s,
-            items: matches(s.label) ? s.items : s.items.filter((i) => matches(i.label)),
-          }))
+          .map((s) => ({ ...s, items: hit(s.label) ? s.items : s.items.filter((i) => hit(i.label)) }))
           .filter((s) => s.items.length);
         if (sections.length) out.push({ ...g, sections });
       }
     }
     return out;
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [visibleGroups, q]);
 
   const allItems = useMemo(() => {
@@ -149,35 +107,20 @@ export function ErpSidebar({ mobile = false }: { mobile?: boolean } = {}) {
     [favs, allItems],
   );
 
-  const isActive = (to: string, exact?: boolean, search?: Record<string, string>) => {
-    const pathMatch = exact
-      ? location.pathname === to
-      : location.pathname === to || location.pathname.startsWith(to + "/");
-    if (!pathMatch) return false;
-    if (search) {
-      const cur = location.search as Record<string, unknown>;
-      return Object.entries(search).every(([k, v]) => String(cur?.[k] ?? "") === v);
-    }
-    return true;
-  };
-
+  /* ── auto-expand the section owning the current route ──────── */
   const autoSection = useMemo(() => {
     for (const g of groups) {
       if (g.kind !== "accordion") continue;
-      for (const s of g.sections) {
-        if (s.items.some((i) => isActive(i.to, i.exact, i.search))) return s.key;
-      }
+      for (const s of g.sections) if (s.items.some((i) => isActive(i))) return s.key;
     }
     return null;
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [location.pathname]);
+  }, [isActive]);
 
+  /* ── persisted prefs ───────────────────────────────────────── */
   useEffect(() => {
-    const v = typeof window !== "undefined" ? localStorage.getItem("erp.sidebar.collapsed") : null;
-    if (v === "1") setCollapsed(true);
-    const saved = typeof window !== "undefined" ? localStorage.getItem(ACTIVE_GROUP_KEY) : null;
-    setActiveGroup(saved ?? null);
     try {
+      if (localStorage.getItem(COLLAPSE_KEY) === "1") setCollapsed(true);
+      setActiveGroup(localStorage.getItem(ACTIVE_GROUP_KEY));
       const f = JSON.parse(localStorage.getItem(FAV_KEY) || "[]");
       if (Array.isArray(f)) setFavs(f.filter((x) => typeof x === "string"));
     } catch {
@@ -186,29 +129,27 @@ export function ErpSidebar({ mobile = false }: { mobile?: boolean } = {}) {
   }, []);
 
   useEffect(() => {
-    if (autoSection) {
-      setActiveGroup(autoSection);
-      try {
-        localStorage.setItem(ACTIVE_GROUP_KEY, autoSection);
-      } catch {
-        /* ignore */
-      }
+    if (!autoSection) return;
+    setActiveGroup(autoSection);
+    try {
+      localStorage.setItem(ACTIVE_GROUP_KEY, autoSection);
+    } catch {
+      /* ignore */
     }
   }, [autoSection]);
 
-  const toggleCollapsed = () => {
+  const toggleCollapsed = useCallback(() => {
     setCollapsed((c) => {
       const next = !c;
       try {
-        localStorage.setItem("erp.sidebar.collapsed", next ? "1" : "0");
+        localStorage.setItem(COLLAPSE_KEY, next ? "1" : "0");
       } catch {
         /* ignore */
       }
       return next;
     });
-  };
+  }, []);
 
-  // ⌘B / Ctrl+B toggles the rail
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === "b") {
@@ -218,10 +159,9 @@ export function ErpSidebar({ mobile = false }: { mobile?: boolean } = {}) {
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [toggleCollapsed]);
 
-  const toggleGroup = (key: string) => {
+  const toggleGroup = useCallback((key: string) => {
     setActiveGroup((prev) => {
       const next = prev === key ? null : key;
       try {
@@ -232,9 +172,9 @@ export function ErpSidebar({ mobile = false }: { mobile?: boolean } = {}) {
       }
       return next;
     });
-  };
+  }, []);
 
-  const toggleFav = (item: NavItem) => {
+  const togglePin = useCallback((item: NavItem) => {
     const key = favKey(item);
     setFavs((prev) => {
       const next = prev.includes(key) ? prev.filter((k) => k !== key) : [...prev, key].slice(0, 6);
@@ -245,309 +185,147 @@ export function ErpSidebar({ mobile = false }: { mobile?: boolean } = {}) {
       }
       return next;
     });
-  };
+  }, []);
 
-  const NavLinkItem = ({
-    to,
-    label,
-    icon: Icon,
-    exact,
-    search,
-    indented,
-    forceExpanded,
-    pinnable = true,
-  }: NavItem & { indented?: boolean; forceExpanded?: boolean; pinnable?: boolean }) => {
-    const active = isActive(to, exact, search);
-    const mini = collapsed && !forceExpanded;
-    const pinned = favs.includes(favKey({ to, label, icon: Icon, search }));
-    const content = (
-      <div className="relative group/row">
-        <Link
-          to={to as never}
-          search={search as never}
-          className={cn(
-            "group/link relative flex items-center gap-3 rounded-lg tracking-tight overflow-hidden",
-            "transition-[background-color,color,transform] duration-200 ease-out active:scale-[0.98]",
-            mini
-              ? "justify-center px-2 py-2.5 mx-auto w-10"
-              : indented
-                ? "pl-8 pr-8 py-1.5 text-[13px] font-medium"
-                : "px-3 py-2 pr-8 text-sm font-semibold",
-            active
-              ? "bg-primary/10 text-foreground font-semibold shadow-[inset_0_1px_0_0_hsl(var(--background)/0.4)]"
-              : "text-muted-foreground hover:bg-accent/70 hover:text-foreground",
-          )}
-        >
-          <span
-            aria-hidden
-            className={cn(
-              "absolute left-0 top-1/2 -translate-y-1/2 w-[3px] rounded-r-full bg-primary transition-all duration-300 ease-out",
-              active ? "opacity-100 h-5" : "opacity-0 h-1.5",
-            )}
-          />
-          <Icon
-            className={cn(
-              "h-4 w-4 shrink-0 transition-transform duration-200 group-hover/link:scale-110",
-              active && "text-primary",
-            )}
-          />
-          {!mini && <span className="truncate">{label}</span>}
-        </Link>
-        {!mini && pinnable && (
-          <button
-            type="button"
-            aria-label={pinned ? "Unpin" : "Pin"}
-            onClick={(e) => {
-              e.preventDefault();
-              e.stopPropagation();
-              toggleFav({ to, label, icon: Icon, search });
-            }}
-            className={cn(
-              "absolute right-1.5 top-1/2 -translate-y-1/2 h-6 w-6 inline-flex items-center justify-center rounded-md",
-              "text-muted-foreground/60 hover:text-primary hover:bg-accent transition-opacity duration-150",
-              pinned ? "opacity-100 text-primary" : "opacity-0 group-hover/row:opacity-100",
-            )}
-          >
-            <Star className={cn("h-3.5 w-3.5", pinned && "fill-current")} />
-          </button>
-        )}
-      </div>
-    );
-    if (!mini) return content;
-    return (
-      <Tooltip delayDuration={80}>
-        <TooltipTrigger asChild>{content}</TooltipTrigger>
-        <TooltipContent side="right" className="font-medium">
-          {label}
-        </TooltipContent>
-      </Tooltip>
-    );
-  };
+  const expandRail = useCallback(
+    (key: string) => {
+      setCollapsed(false);
+      try {
+        localStorage.setItem(COLLAPSE_KEY, "0");
+      } catch {
+        /* ignore */
+      }
+      toggleGroup(key);
+    },
+    [toggleGroup],
+  );
 
-  const AccordionSection = ({
-    sectionKey,
-    label,
-    icon: Icon,
-    items,
-  }: {
-    sectionKey: string;
-    label: string;
-    icon: typeof LayoutDashboard;
-    items: NavItem[];
-  }) => {
-    const isOpen = q ? true : activeGroup === sectionKey;
-    const hasActive = items.some((i) => isActive(i.to, i.exact, i.search));
-
-    if (collapsed) {
-      // Icon rail: one icon per section with a hover flyout listing its pages
-      return (
-        <div className="relative group/fly">
-          <button
-            type="button"
-            onClick={() => {
-              setCollapsed(false);
-              try {
-                localStorage.setItem("erp.sidebar.collapsed", "0");
-              } catch {
-                /* ignore */
-              }
-              toggleGroup(sectionKey);
-            }}
-            className={cn(
-              "relative mx-auto flex h-10 w-10 items-center justify-center rounded-lg transition-colors duration-200",
-              hasActive
-                ? "bg-primary/10 text-primary"
-                : "text-muted-foreground hover:bg-accent/70 hover:text-foreground",
-            )}
-            aria-label={label}
-          >
-            <span
-              aria-hidden
-              className={cn(
-                "absolute left-0 top-1/2 -translate-y-1/2 w-[3px] rounded-r-full bg-primary transition-all duration-300",
-                hasActive ? "opacity-100 h-5" : "opacity-0 h-1.5",
-              )}
-            />
-            <Icon className="h-4 w-4" />
-          </button>
-          <div
-            className={cn(
-              "pointer-events-none absolute left-full top-0 z-50 pl-2 opacity-0 translate-x-1",
-              "transition-all duration-200 ease-out group-hover/fly:opacity-100 group-hover/fly:translate-x-0 group-hover/fly:pointer-events-auto",
-            )}
-          >
-            <div className="min-w-[190px] rounded-xl border border-border/70 bg-popover/95 backdrop-blur-xl p-1.5 shadow-xl">
-              <div className="px-2 py-1 text-[10px] uppercase tracking-[0.12em] text-muted-foreground/80 font-semibold">
-                {label}
-              </div>
-              <div className="space-y-0.5">
-                {items.map((it) => (
-                  <NavLinkItem key={favKey(it)} {...it} forceExpanded pinnable={false} />
-                ))}
-              </div>
-            </div>
-          </div>
-        </div>
-      );
-    }
-
-    return (
-      <div>
-        <button
-          type="button"
-          onClick={() => toggleGroup(sectionKey)}
-          className={cn(
-            "w-full flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-semibold tracking-tight transition-colors duration-200 hover:bg-accent/60",
-            hasActive ? "text-foreground" : "text-muted-foreground hover:text-foreground",
-          )}
-          aria-expanded={isOpen}
-        >
-          <Icon className={cn("h-4 w-4 shrink-0 transition-colors", hasActive && "text-primary")} />
-          <span className="truncate flex-1 text-left">{label}</span>
-          {!isOpen && hasActive && <span className="h-1.5 w-1.5 rounded-full bg-primary" />}
-          <ChevronDown
-            className={cn(
-              "h-4 w-4 shrink-0 transition-transform duration-300 ease-out",
-              isOpen && "rotate-180",
-            )}
-          />
-        </button>
-        <div
-          className={cn(
-            "grid transition-[grid-template-rows,opacity] duration-300 ease-out",
-            isOpen ? "grid-rows-[1fr] opacity-100" : "grid-rows-[0fr] opacity-0",
-          )}
-        >
-          <div className="overflow-hidden">
-            <div className="relative pt-1 space-y-0.5">
-              <span aria-hidden className="absolute left-[19px] top-1 bottom-1 w-px bg-border/70" />
-              {items.map((it) => (
-                <NavLinkItem key={favKey(it)} {...it} indented />
-              ))}
-            </div>
-          </div>
-        </div>
-      </div>
-    );
-  };
+  const renderRow = (
+    item: NavItem,
+    opts?: { indented?: boolean; pinnable?: boolean; expanded?: boolean },
+  ) => (
+    <NavLinkRow
+      key={favKey(item)}
+      item={item}
+      active={isActive(item)}
+      mini={mini && !opts?.indented && !opts?.expanded}
+      indented={opts?.indented}
+      pinned={favs.includes(favKey(item))}
+      onPin={opts?.pinnable === false ? undefined : togglePin}
+      onNavigate={onNavigate}
+    />
+  );
 
   return (
     <TooltipProvider>
       <aside
-        data-collapsed={collapsed}
+        data-collapsed={mini}
         className={cn(
-          "flex-col border-r border-border/70 bg-sidebar/95 backdrop-blur-xl h-screen sticky top-0 shrink-0",
+          "flex-col h-screen sticky top-0 shrink-0 border-r border-sidebar-border bg-sidebar",
           mobile ? "flex w-full border-r-0" : "hidden md:flex",
-          "transition-[width] duration-300 ease-[cubic-bezier(0.32,0.72,0,1)]",
-          mobile ? "" : collapsed ? "w-[64px]" : "w-60",
+          "transition-[width] duration-200 ease-out",
+          mobile ? "" : mini ? "w-[60px]" : "w-[248px]",
         )}
       >
-        {/* Brand header */}
+        {/* Brand */}
         <div
           className={cn(
-            "flex items-center border-b border-border/60 h-14 px-3",
-            collapsed ? "justify-center" : "justify-between",
+            "flex h-14 shrink-0 items-center border-b border-sidebar-border px-3",
+            mini ? "justify-center" : "justify-between gap-2",
           )}
         >
-          {!collapsed ? (
-            <div className="flex items-center gap-2.5 min-w-0">
-              <div className="h-8 w-8 rounded-lg bg-gradient-to-br from-primary to-primary/60 flex items-center justify-center shrink-0 shadow-sm">
-                <Sparkles className="h-4 w-4 text-primary-foreground" />
-              </div>
+          <div className="flex min-w-0 items-center gap-2.5">
+            <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-md bg-primary">
+              <Sparkles className="h-3.5 w-3.5 text-primary-foreground" />
+            </div>
+            {!mini && (
               <div className="min-w-0">
-                <div className="font-display text-[15px] font-semibold tracking-tight leading-none truncate">
+                <div className="truncate font-display text-[14px] font-semibold leading-tight tracking-tight">
                   SyncWithUs
                 </div>
-                <div className="text-[10px] text-muted-foreground tracking-[0.14em] uppercase mt-1">
+                <div className="text-[9.5px] uppercase tracking-[0.16em] text-muted-foreground">
                   ERP Suite
                 </div>
               </div>
-            </div>
-          ) : (
-            <div className="h-8 w-8 rounded-lg bg-gradient-to-br from-primary to-primary/60 flex items-center justify-center shadow-sm">
-              <Sparkles className="h-4 w-4 text-primary-foreground" />
-            </div>
-          )}
-          {!collapsed && (
+            )}
+          </div>
+          {!mini && !mobile && (
             <Tooltip delayDuration={200}>
               <TooltipTrigger asChild>
                 <button
                   onClick={toggleCollapsed}
-                  className="h-7 w-7 inline-flex items-center justify-center rounded-md text-muted-foreground hover:bg-accent hover:text-foreground transition-colors"
+                  aria-label="Collapse sidebar"
+                  className="inline-flex h-7 w-7 items-center justify-center rounded-md text-muted-foreground outline-none transition-colors hover:bg-sidebar-accent hover:text-foreground focus-visible:ring-2 focus-visible:ring-sidebar-ring"
                 >
                   <ChevronsLeft className="h-4 w-4" />
                 </button>
               </TooltipTrigger>
-              <TooltipContent side="right" className="font-medium">
-                Collapse (⌘B)
-              </TooltipContent>
+              <TooltipContent side="right">Collapse (⌘B)</TooltipContent>
             </Tooltip>
           )}
         </div>
 
-        {collapsed && (
+        {mini && (
           <Tooltip delayDuration={200}>
             <TooltipTrigger asChild>
               <button
                 onClick={toggleCollapsed}
-                className="mx-auto mt-2 h-7 w-7 inline-flex items-center justify-center rounded-md text-muted-foreground hover:bg-accent hover:text-foreground transition-colors"
+                aria-label="Expand sidebar"
+                className="mx-auto mt-2 inline-flex h-7 w-7 items-center justify-center rounded-md text-muted-foreground outline-none transition-colors hover:bg-sidebar-accent hover:text-foreground focus-visible:ring-2 focus-visible:ring-sidebar-ring"
               >
                 <ChevronRight className="h-4 w-4" />
               </button>
             </TooltipTrigger>
-            <TooltipContent side="right" className="font-medium">
-              Expand (⌘B)
-            </TooltipContent>
+            <TooltipContent side="right">Expand (⌘B)</TooltipContent>
           </Tooltip>
         )}
 
-        {/* Search / filter */}
+        {/* Search */}
         <div
           className={cn(
-            "border-b border-border/60",
-            collapsed ? "px-2 py-2 flex justify-center" : "px-3 py-2.5 space-y-2",
+            "shrink-0 border-b border-sidebar-border",
+            mini ? "flex justify-center px-2 py-2" : "space-y-1.5 px-3 py-2.5",
           )}
         >
-          {collapsed ? (
-            <Tooltip delayDuration={100}>
+          {mini ? (
+            <Tooltip delayDuration={60}>
               <TooltipTrigger asChild>
                 <button
                   onClick={openSearch}
-                  className="h-9 w-9 inline-flex items-center justify-center rounded-md text-muted-foreground hover:bg-accent hover:text-foreground transition-colors"
                   aria-label="Search"
+                  className="inline-flex h-9 w-9 items-center justify-center rounded-md text-muted-foreground outline-none transition-colors hover:bg-sidebar-accent hover:text-foreground focus-visible:ring-2 focus-visible:ring-sidebar-ring"
                 >
                   <Search className="h-4 w-4" />
                 </button>
               </TooltipTrigger>
-              <TooltipContent side="right" className="font-medium">
-                Search (⌘K)
-              </TooltipContent>
+              <TooltipContent side="right">Search (⌘K)</TooltipContent>
             </Tooltip>
           ) : (
             <>
               <button
                 onClick={openSearch}
-                className="w-full flex items-center gap-2 rounded-md border border-border/70 bg-background/60 px-2.5 py-1.5 text-xs text-muted-foreground hover:bg-accent hover:text-foreground transition-colors"
+                className="flex w-full items-center gap-2 rounded-md border border-sidebar-border bg-background/60 px-2.5 py-1.5 text-xs text-muted-foreground outline-none transition-colors hover:bg-sidebar-accent hover:text-foreground focus-visible:ring-2 focus-visible:ring-sidebar-ring"
               >
                 <Search className="h-3.5 w-3.5" />
-                <span className="flex-1 text-left">Search anything...</span>
-                <kbd className="hidden sm:inline-flex items-center gap-0.5 rounded border border-border/70 bg-muted px-1.5 py-0.5 text-[10px] font-mono">
+                <span className="flex-1 text-left">Search anything…</span>
+                <kbd className="hidden rounded border border-sidebar-border bg-muted px-1.5 py-0.5 font-mono text-[10px] sm:inline-flex">
                   ⌘K
                 </kbd>
               </button>
               <div className="relative">
-                <Filter className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground/70" />
+                <Filter className="pointer-events-none absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-muted-foreground/60" />
                 <input
                   value={filter}
                   onChange={(e) => setFilter(e.target.value)}
                   placeholder="Filter menu"
-                  className="w-full rounded-md border border-border/60 bg-background/40 pl-8 pr-7 py-1.5 text-xs outline-none transition-colors placeholder:text-muted-foreground/60 focus:border-primary/50 focus:bg-background"
+                  aria-label="Filter menu"
+                  className="w-full rounded-md border border-sidebar-border bg-transparent py-1.5 pl-8 pr-7 text-xs outline-none transition-colors placeholder:text-muted-foreground/60 focus:border-primary/50 focus:bg-background"
                 />
                 {filter && (
                   <button
                     onClick={() => setFilter("")}
-                    className="absolute right-1.5 top-1/2 -translate-y-1/2 h-5 w-5 inline-flex items-center justify-center rounded text-muted-foreground hover:text-foreground"
-                    aria-label="Clear"
+                    aria-label="Clear filter"
+                    className="absolute right-1.5 top-1/2 inline-flex h-5 w-5 -translate-y-1/2 items-center justify-center rounded text-muted-foreground hover:text-foreground"
                   >
                     <X className="h-3.5 w-3.5" />
                   </button>
@@ -557,23 +335,21 @@ export function ErpSidebar({ mobile = false }: { mobile?: boolean } = {}) {
           )}
         </div>
 
+        {/* Navigation */}
         <nav
           className={cn(
             "erp-sidebar-scroll flex-1 py-3",
-            collapsed ? "px-2 overflow-visible" : "px-3 overflow-y-auto overflow-x-hidden",
+            mini ? "overflow-visible px-2" : "overflow-y-auto overflow-x-hidden px-2.5",
           )}
         >
-          {/* Pinned */}
-          {!collapsed && !q && favItems.length > 0 && (
+          {!mini && !q && favItems.length > 0 && (
             <div className="mb-4">
-              <div className="px-3 mb-1 flex items-center gap-1.5 text-[10px] uppercase tracking-[0.1em] text-muted-foreground/70 font-semibold">
-                <Star className="h-3 w-3" /> Pinned
-              </div>
-              <div className="space-y-0.5">
-                {favItems.map((item) => (
-                  <NavLinkItem key={"fav-" + favKey(item)} {...item} />
-                ))}
-              </div>
+              <GroupLabel>
+                <span className="inline-flex items-center gap-1.5">
+                  <Star className="h-3 w-3" /> Pinned
+                </span>
+              </GroupLabel>
+              <div className="space-y-0.5">{favItems.map((i) => renderRow(i))}</div>
             </div>
           )}
 
@@ -586,58 +362,109 @@ export function ErpSidebar({ mobile = false }: { mobile?: boolean } = {}) {
           {searchedGroups.map((group, gi) => (
             <div
               key={group.label}
-              className={cn(gi > 0 && (collapsed ? "mt-3 pt-3 border-t border-border/60" : "mt-4"))}
+              className={cn(gi > 0 && (mini ? "mt-3 border-t border-sidebar-border pt-3" : "mt-4"))}
             >
-              {!collapsed && (
-                <div className="px-3 mb-1 text-[10px] uppercase tracking-[0.1em] text-muted-foreground/70 font-semibold">
-                  {group.label}
-                </div>
-              )}
+              {!mini && <GroupLabel>{group.label}</GroupLabel>}
               {group.kind === "flat" ? (
-                <div className="space-y-0.5">
-                  {group.items.map((item) => (
-                    <NavLinkItem key={favKey(item)} {...item} />
-                  ))}
-                </div>
+                <div className="space-y-0.5">{group.items.map((i) => renderRow(i))}</div>
               ) : (
-                <div className="space-y-1">
-                  {group.sections.map((s) => (
-                    <AccordionSection
-                      key={s.key}
-                      sectionKey={s.key}
-                      label={s.label}
-                      icon={s.icon}
-                      items={s.items}
-                    />
-                  ))}
+                <div className="space-y-0.5">
+                  {group.sections.map((s) => {
+                    const hasActive = s.items.some((i) => isActive(i));
+                    if (mini) {
+                      return (
+                        <RailSection
+                          key={s.key}
+                          label={s.label}
+                          icon={s.icon}
+                          hasActive={hasActive}
+                          onClick={() => expandRail(s.key)}
+                        >
+                          {s.items.map((i) => renderRow(i, { expanded: true, pinnable: false }))}
+                        </RailSection>
+                      );
+                    }
+                    const open = q ? true : activeGroup === s.key;
+                    return (
+                      <div key={s.key}>
+                        <SectionHeader
+                          label={s.label}
+                          icon={s.icon}
+                          open={open}
+                          hasActive={hasActive}
+                          onToggle={() => toggleGroup(s.key)}
+                        />
+                        {open && (
+                          <div className="relative space-y-0.5 pt-0.5">
+                            <span
+                              aria-hidden
+                              className="absolute bottom-1 left-[18px] top-1 w-px bg-sidebar-border"
+                            />
+                            {s.items.map((i) => renderRow(i, { indented: true }))}
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })}
                 </div>
               )}
             </div>
           ))}
         </nav>
 
-        <div
-          className={cn(
-            "border-t border-border/60 text-[10px] uppercase tracking-[0.14em] text-muted-foreground/80",
-            collapsed ? "py-2 text-center" : "px-4 py-3 flex items-center justify-between",
-          )}
-        >
-          {collapsed ? (
-            "v0.1"
-          ) : (
-            <>
-              <span>v0.1 — Phase 0</span>
-              <kbd className="rounded border border-border/60 bg-muted px-1.5 py-0.5 font-mono text-[9px] tracking-normal">
-                ⌘B
-              </kbd>
-            </>
-          )}
+        {/* User */}
+        <div className={cn("shrink-0 border-t border-sidebar-border", mini ? "p-2" : "p-2")}>
+          <SidebarUser collapsed={mini} onNavigate={onNavigate} />
         </div>
       </aside>
     </TooltipProvider>
   );
 }
 
-function favKey(i: { to: string; label: string; search?: Record<string, string>; icon?: unknown }) {
-  return i.to + "|" + (i.search ? JSON.stringify(i.search) : "") + "|" + i.label;
+/** Collapsed rail entry: icon button + hover flyout with the section's pages. */
+function RailSection({
+  label,
+  icon: Icon,
+  hasActive,
+  onClick,
+  children,
+}: {
+  label: string;
+  icon: NavItem["icon"];
+  hasActive: boolean;
+  onClick: () => void;
+  children: React.ReactNode;
+}) {
+  return (
+    <div className="group/fly relative">
+      <button
+        type="button"
+        onClick={onClick}
+        aria-label={label}
+        className={cn(
+          "relative mx-auto flex h-9 w-9 items-center justify-center rounded-md outline-none transition-colors duration-150 focus-visible:ring-2 focus-visible:ring-sidebar-ring",
+          hasActive
+            ? "bg-sidebar-accent text-primary"
+            : "text-muted-foreground hover:bg-sidebar-accent/60 hover:text-foreground",
+        )}
+      >
+        <span
+          aria-hidden
+          className={cn(
+            "absolute left-0 top-1/2 h-4 w-[2px] -translate-y-1/2 rounded-r-full bg-primary",
+            hasActive ? "opacity-100" : "opacity-0",
+          )}
+        />
+        <Icon className="h-4 w-4" />
+      </button>
+      <div className="pointer-events-none absolute left-full top-0 z-50 pl-2 opacity-0 transition-opacity duration-150 group-hover/fly:pointer-events-auto group-hover/fly:opacity-100">
+        <div className="min-w-[196px] rounded-lg border border-border bg-popover p-1.5 shadow-lg">
+          <div className="px-2 py-1 text-[10px] font-semibold uppercase tracking-[0.12em] text-muted-foreground/70">
+            {label}
+          </div>
+          <div className="space-y-0.5">{children}</div>
+        </div>
+      </div>
+    </div>
+  );
 }

@@ -23,6 +23,8 @@ export const Route = createFileRoute("/_authenticated/erp")({
 function ErpLayout() {
   const navigate = useNavigate();
   const [email, setEmail] = useState<string | null>(null);
+  const [mobileNav, setMobileNav] = useState(false);
+
 
   useEffect(() => {
     supabase.auth.getUser().then(({ data }) => setEmail(data.user?.email ?? null));
@@ -45,14 +47,17 @@ function ErpLayout() {
         <div className="flex-1 flex flex-col min-w-0 h-screen">
           <header className="h-14 shrink-0 border-b border-border/70 bg-background/80 backdrop-blur-md flex items-center justify-between px-4 md:px-8 gap-3">
             <div className="flex items-center gap-2 md:hidden">
-              <Sheet>
+              <Sheet open={mobileNav} onOpenChange={setMobileNav}>
                 <SheetTrigger asChild>
                   <Button variant="ghost" size="icon"><MenuIcon className="h-5 w-5" /></Button>
                 </SheetTrigger>
-                <SheetContent side="left" className="p-0 w-60 overflow-y-auto"><ErpSidebar mobile /></SheetContent>
+                <SheetContent side="left" className="p-0 w-64 overflow-y-auto">
+                  <ErpSidebar mobile onNavigate={() => setMobileNav(false)} />
+                </SheetContent>
               </Sheet>
               <span className="font-display font-semibold tracking-tight">ERP</span>
             </div>
+
             <div className="flex-1" />
             <div className="flex items-center gap-2">
               <HeaderQuickActions />
