@@ -10,6 +10,7 @@ import {
 
   PackagePlus,
   CalendarClock,
+  CalendarDays,
   BellRing,
   BarChart3,
   Plug,
