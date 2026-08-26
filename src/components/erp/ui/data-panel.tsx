@@ -1,9 +1,11 @@
 import type { ReactNode } from "react";
 import { cn } from "@/lib/utils";
 
+export { EmptyState } from "./empty-state";
+
 /**
- * Elevated content surface shared by every ERP module. Optional header strip
- * keeps table/section chrome consistent across pages.
+ * The single card/panel surface for every ERP module.
+ * Soft border + `--elevation-raised`, no gradients. Optional header/footer rows.
  */
 export function DataPanel({
   children,
@@ -13,6 +15,7 @@ export function DataPanel({
   description,
   actions,
   icon,
+  footer,
   flush = false,
 }: {
   children: ReactNode;
@@ -22,29 +25,38 @@ export function DataPanel({
   description?: ReactNode;
   actions?: ReactNode;
   icon?: ReactNode;
+  /** Optional footer row (totals, pagination…). */
+  footer?: ReactNode;
   /** Remove body padding (tables). */
   flush?: boolean;
 }) {
   return (
     <section
       className={cn(
-        "overflow-hidden rounded-2xl border bg-[var(--panel-bg)] border-[var(--panel-border)]",
-        "shadow-[var(--shadow-panel)] transition-shadow duration-200 hover:shadow-[var(--shadow-panel-lg)]",
+        "overflow-hidden rounded-xl border border-border bg-card elevation-raised",
+        "transition-shadow duration-[var(--motion-base)] ease-out",
         className,
       )}
     >
       {(title != null || actions != null) && (
-        <div className="flex flex-wrap items-center gap-3 border-b border-[var(--panel-border)] bg-[var(--panel-head)] px-4 py-2.5">
+        <div className="flex flex-wrap items-center gap-3 border-b border-border px-4 py-2.5">
           {icon != null && <span className="text-muted-foreground">{icon}</span>}
           <div className="min-w-0">
-            {title != null && <div className="truncate text-sm font-semibold">{title}</div>}
-            {description != null && <div className="truncate text-[11px] text-muted-foreground">{description}</div>}
+            {title != null && <div className="truncate text-h4">{title}</div>}
+            {description != null && (
+              <div className="truncate text-caption-v2 text-muted-foreground">{description}</div>
+            )}
           </div>
           <div className="flex-1" />
           {actions}
         </div>
       )}
       <div className={cn(flush ? "" : "p-4", bodyClassName)}>{children}</div>
+      {footer != null && (
+        <div className="flex flex-wrap items-center gap-3 border-t border-border bg-muted/30 px-4 py-2.5 text-small-v2">
+          {footer}
+        </div>
+      )}
     </section>
   );
 }
@@ -66,55 +78,27 @@ export function StatPill({
   className?: string;
 }) {
   const ring: Record<string, string> = {
-    neutral: "before:bg-muted-foreground/40",
+    neutral: "before:bg-[var(--neutral-border)]",
     primary: "before:bg-primary",
-    success: "before:bg-emerald-500",
-    warning: "before:bg-amber-500",
-    danger: "before:bg-destructive",
+    success: "before:bg-[var(--success-solid)]",
+    warning: "before:bg-[var(--warning-solid)]",
+    danger: "before:bg-[var(--danger-solid)]",
   };
   return (
     <div
       className={cn(
-        "relative overflow-hidden rounded-xl border bg-[var(--panel-bg)] border-[var(--panel-border)] px-3 py-2.5",
+        "relative overflow-hidden rounded-xl border border-border bg-card px-3 py-2.5 elevation-raised",
         "before:absolute before:inset-y-2 before:left-0 before:w-[3px] before:rounded-r-full",
         ring[tone],
         className,
       )}
     >
-      <div className="flex items-center gap-1.5 pl-2 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
+      <div className="flex items-center gap-1.5 pl-2 text-caption-v2 font-semibold uppercase tracking-wider text-muted-foreground">
         {icon}
         <span className="truncate">{label}</span>
       </div>
-      <div className="pl-2 text-lg font-bold tabular-nums leading-tight">{value}</div>
-      {hint != null && <div className="pl-2 text-[11px] text-muted-foreground">{hint}</div>}
-    </div>
-  );
-}
-
-/** Consistent empty state for lists and boards. */
-export function EmptyState({
-  icon,
-  title,
-  description,
-  action,
-  className,
-}: {
-  icon?: ReactNode;
-  title: ReactNode;
-  description?: ReactNode;
-  action?: ReactNode;
-  className?: string;
-}) {
-  return (
-    <div className={cn("flex flex-col items-center justify-center gap-3 py-16 text-center", className)}>
-      {icon != null && (
-        <div className="grid h-14 w-14 place-items-center rounded-full bg-muted text-muted-foreground">{icon}</div>
-      )}
-      <div>
-        <div className="font-semibold">{title}</div>
-        {description != null && <div className="mt-0.5 text-sm text-muted-foreground">{description}</div>}
-      </div>
-      {action}
+      <div className="pl-2 text-h3 tabular-nums">{value}</div>
+      {hint != null && <div className="pl-2 text-caption-v2 text-muted-foreground">{hint}</div>}
     </div>
   );
 }
