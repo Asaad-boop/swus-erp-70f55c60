@@ -173,11 +173,15 @@ export const getPurchaseOrderDetail = createServerFn({ method: "POST" })
       context.supabase.from("imp_po_releases").select(`
         id, release_number, warehouse_id, released_at, notes, created_at,
         local_delivery_bdt, delivery_note,
+        local_courier_bdt, local_courier_wallet_id, local_courier_payment_id,
+        qc_local_courier_note, local_courier_source,
         shipping_weight_kg, shipping_rate_per_kg, shipping_charge_bdt, shipping_note, shipping_payment_id,
         qc_status, qc_at, qc_notes,
         items:imp_po_release_items ( id, po_item_id, product_id, variant_id, sku_snapshot,
-          quantity, damaged_qty, missing_qty, unit_landed_cost_bdt,
-          qc_good_qty, qc_damaged_qty, qc_extra_qty )
+          quantity, damaged_qty, missing_qty, unit_landed_cost_bdt, final_unit_cost_bdt, reserved_qty,
+          qc_good_qty, qc_damaged_qty, qc_extra_qty,
+          product:product_id ( id, title, image, sku ),
+          variant:variant_id ( id, sku, color_name, color_hex, image ) )
       `).eq("po_id", data.poId).order("release_number"),
     ]);
     if (poRes.error) throw poRes.error;
