@@ -280,15 +280,8 @@ export function QuantityReleaseCard({
                 note: shipNote || undefined,
               }
             : undefined,
-          local_delivery: localDelivery > 0
-            ? {
-                amount_bdt: +localDelivery.toFixed(2),
-                note: ldNote || undefined,
-                wallet_id: ldWallet || undefined,
-                payment_date: new Date().toISOString().slice(0, 10),
-                idempotency_key: `qtyrelld:${poId}:${Date.now()}`,
-              }
-            : undefined,
+          // Local courier ekhon QC step-e neya hoy (notun flow)
+          local_delivery: undefined,
           payment: payNow && payWallet && amt > 0
             ? {
                 wallet_id: payWallet,
