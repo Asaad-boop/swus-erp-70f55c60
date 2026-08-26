@@ -394,11 +394,21 @@ export function CartonFreightCard({
               </div>
               <div className="text-xs tabular-nums font-semibold w-24 text-right">{fmtBdt(value)}</div>
               {billed ? (
-                <Badge variant="secondary" className="bg-blue-100 text-blue-700 border-blue-300 dark:bg-blue-950/40 dark:text-blue-300 text-[10px]">
-                  Billed {fmtBdt(c.shipping_freight_bdt)}
-                </Badge>
+                <div className="flex items-center gap-1.5 flex-wrap">
+                  <Badge variant="secondary" className="bg-blue-100 text-blue-700 border-blue-300 dark:bg-blue-950/40 dark:text-blue-300 text-[10px]">
+                    Billed {fmtBdt(c.shipping_freight_bdt)}
+                  </Badge>
+                  {billNoOf[c.id] && (
+                    <Badge className="bg-blue-600 text-white hover:bg-blue-600 text-[10px] px-1.5">Bill #{billNoOf[c.id]}</Badge>
+                  )}
+                  {c.shipping_note && (
+                    <span className="text-[10px] text-muted-foreground truncate max-w-[160px]">“{c.shipping_note}”</span>
+                  )}
+                </div>
               ) : (
-                <Badge variant="outline" className="text-[10px]">Pending · planned {fmtBdt(c.cost_share_bdt ?? 0)}</Badge>
+                <Badge variant="outline" className="text-[10px] border-amber-300 text-amber-700 dark:text-amber-300">
+                  Pending · planned {fmtBdt(c.cost_share_bdt ?? 0)}
+                </Badge>
               )}
             </div>
           );
