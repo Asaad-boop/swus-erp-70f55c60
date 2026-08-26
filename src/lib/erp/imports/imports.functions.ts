@@ -1776,6 +1776,14 @@ export const qcPoRelease = createServerFn({ method: "POST" })
         damaged_qty: z.number().int().nonnegative().default(0),
         extra_qty: z.number().int().nonnegative().default(0),
       })).min(1),
+      // Notun flow — local courier charge QC-r shomoy
+      local_courier: z.object({
+        amount_bdt: z.number().nonnegative(),
+        wallet_id: z.string().uuid().optional(),
+        payment_date: z.string().optional(),
+        reference: z.string().optional(),
+        note: z.string().optional(),
+      }).optional(),
     }).parse(d),
   )
   .handler(async ({ data, context }) => {
@@ -1783,18 +1791,51 @@ export const qcPoRelease = createServerFn({ method: "POST" })
 
     const { data: rel, error: rErr } = await context.supabase
       .from("imp_po_releases")
-      .select("id, po_id, release_number, qc_status")
+      .select("id, po_id, brand_id, release_number, qc_status, local_courier_source, local_courier_bdt, local_courier_payment_id")
       .eq("id", data.release_id)
       .maybeSingle();
     if (rErr) throw rErr;
     if (!rel) throw new Error("Release not found");
 
+    const qcMode = ((rel as any).local_courier_source ?? "release") === "qc";
+
     const { data: relItems, error: iErr } = await context.supabase
       .from("imp_po_release_items")
-      .select("id, product_id, variant_id, quantity, damaged_qty, missing_qty, unit_landed_cost_bdt, qc_good_qty, qc_extra_qty")
+      .select("id, product_id, variant_id, quantity, damaged_qty, missing_qty, unit_landed_cost_bdt, qc_good_qty, qc_extra_qty, reserved_qty")
       .eq("release_id", data.release_id);
     if (iErr) throw iErr;
     const map = new Map<string, any>((relItems ?? []).map((r: any) => [r.id, r]));
+
+    /* ---- Local courier charge (shudhu notun 'qc' flow-e) ---- */
+    let courierAmount = Number((rel as any).local_courier_bdt ?? 0);
+    let courierPaymentId: string | null = (rel as any).local_courier_payment_id ?? null;
+    if (qcMode && data.local_courier) {
+      courierAmount = +Math.max(0, Number(data.local_courier.amount_bdt ?? 0)).toFixed(2);
+      // Idempotent: ekbar-i payment post hobe. Amount bodlale purono payment reverse
+      // kore notun kore dite hobe — silently double post korbo na.
+      if (courierAmount > 0 && data.local_courier.wallet_id && !courierPaymentId) {
+        const { data: lcPay, error: lcErr } = await context.supabase.rpc("imp_record_payment_rpc", {
+          _payload: {
+            brand_id: (rel as any).brand_id,
+            po_id: (rel as any).po_id,
+            payment_type: "local_courier",
+            amount_bdt: courierAmount,
+            wallet_id: data.local_courier.wallet_id,
+            payment_date: data.local_courier.payment_date ?? new Date().toISOString().slice(0, 10),
+            reference: data.local_courier.reference ?? undefined,
+            notes: `Release #${(rel as any).release_number} — local courier (QC)`,
+            idempotency_key: `imp_qc_lc:${data.release_id}`,
+          },
+        });
+        if (lcErr) throw lcErr;
+        courierPaymentId = (lcPay as any)?.payment_id ?? (typeof lcPay === "string" ? lcPay : null);
+      }
+    }
+
+    /* ---- Final per-pc COGS: (goods + freight share + local courier) ÷ good pcs ---- */
+    const goodByItem = new Map<string, number>();
+    for (const l of data.items) goodByItem.set(l.release_item_id, l.good_qty);
+    const totalGood = data.items.reduce((s, l) => s + l.good_qty, 0);
 
     const applied: any[] = [];
     for (const l of data.items) {
@@ -1808,6 +1849,13 @@ export const qcPoRelease = createServerFn({ method: "POST" })
       const nextStocked = l.good_qty + l.extra_qty;
       const delta = nextStocked - currentStocked;
 
+      // Ei line-er final cost: release cost (goods + freight share) + courier share ÷ good pcs
+      const baseUnit = Number(ri.unit_landed_cost_bdt ?? 0);
+      const releasedUnits = Number(ri.quantity ?? 0) + Number(ri.damaged_qty ?? 0);
+      const lineCost = baseUnit * releasedUnits;
+      const courierShare = totalGood > 0 ? (courierAmount * l.good_qty) / totalGood : 0;
+      const finalUnit = l.good_qty > 0 ? +((lineCost + courierShare) / l.good_qty).toFixed(4) : baseUnit;
+
       if (delta !== 0 && ri.product_id) {
         const { error: aErr } = await context.supabase.rpc("adjust_stock_v2", {
           _product_id: ri.product_id as string,
@@ -1815,7 +1863,7 @@ export const qcPoRelease = createServerFn({ method: "POST" })
           _delta: delta,
           _reason: delta > 0 ? "import_receive" : "damage",
           _source: "import",
-          _unit_cost: Number(ri.unit_landed_cost_bdt ?? 0),
+          _unit_cost: finalUnit,
           _reference_type: "imp_po_release_qc",
           _reference_id: data.release_id,
           // Key must be unique per applied correction, not per resulting total —
@@ -1826,18 +1874,58 @@ export const qcPoRelease = createServerFn({ method: "POST" })
         if (aErr) throw aErr;
       }
 
+      // Reservation chere dao — ei pcs ekhon sellable
+      const outstandingReserved = Number(ri.reserved_qty ?? 0);
+      if (outstandingReserved > 0 && ri.product_id) {
+        const { error: resErr } = await context.supabase.rpc("imp_adjust_reserved" as any, {
+          _product_id: ri.product_id as string,
+          _variant_id: (ri.variant_id ?? null) as any,
+          _delta: -outstandingReserved,
+        });
+        if (resErr) throw resErr;
+      }
+
       const { error: uErr } = await context.supabase
         .from("imp_po_release_items")
         .update({
           qc_good_qty: l.good_qty,
           qc_damaged_qty: l.damaged_qty,
           qc_extra_qty: l.extra_qty,
+          final_unit_cost_bdt: finalUnit,
+          reserved_qty: 0,
         } as any)
         .eq("id", l.release_item_id);
       if (uErr) throw uErr;
 
-      applied.push({ release_item_id: l.release_item_id, delta, stocked: nextStocked });
+      // Product-er cost final value-te update
+      if (ri.product_id && l.good_qty > 0) {
+        await context.supabase
+          .from("products")
+          .update({ cost_price: +finalUnit.toFixed(2) } as any)
+          .eq("id", ri.product_id as string);
+      }
+
+      applied.push({
+        release_item_id: l.release_item_id,
+        delta,
+        stocked: nextStocked,
+        final_unit_cost_bdt: finalUnit,
+      });
     }
+
+    if (qcMode) {
+      const { error: lcuErr } = await context.supabase
+        .from("imp_po_releases")
+        .update({
+          local_courier_bdt: courierAmount,
+          local_courier_wallet_id: data.local_courier?.wallet_id ?? null,
+          local_courier_payment_id: courierPaymentId,
+          qc_local_courier_note: data.local_courier?.note ?? null,
+        } as any)
+        .eq("id", data.release_id);
+      if (lcuErr) throw lcuErr;
+    }
+
 
     const { error: relUErr } = await context.supabase
       .from("imp_po_releases")
