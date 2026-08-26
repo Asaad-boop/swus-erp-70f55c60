@@ -51,10 +51,19 @@ export function CartonsHeader({
           )}
         </div>
         {selected.size === 0 && eligible.length > 0 && (
-          <div className="text-xs text-muted-foreground">
-            Select cartons to bulk update stage or release
-          </div>
-        )}
+        <div className="flex items-center gap-2">
+          {selected.size === 0 && eligible.length > 0 && (
+            <div className="text-xs text-muted-foreground hidden md:block">
+              Select cartons to bulk update stage or release
+            </div>
+          )}
+          {onEditPlan && (
+            <Button size="sm" variant="outline" onClick={onEditPlan}>
+              <Pencil className="h-4 w-4 mr-1" />
+              {cartons.length === 0 ? "Create cartons" : "Edit carton plan"}
+            </Button>
+          )}
+        </div>
       </div>
 
       {selected.size > 0 && (
