@@ -127,7 +127,7 @@ export function QuantityReleaseCard({
     return Math.min(Math.max(0, remaining - others), Math.max(0, raw));
   };
 
-  const localDelivery = Math.max(0, Number(ldAmount) || 0);
+  const localDelivery = 0;
 
   const totalOrdered = items.reduce((s, i) => s + Number(i.quantity ?? 0), 0);
   const totalReleased = Array.from(releasedByItem.values()).reduce((s, n) => s + n, 0);
@@ -299,8 +299,6 @@ export function QuantityReleaseCard({
       );
       setDraft({});
       setNotes("");
-      setLdAmount("");
-      setLdNote("");
       setShipWeight("");
       setShipRate("");
       setShipAmountOverride(null);
