@@ -66,9 +66,15 @@ export const MARKETING_NAV: MarketingNavItem[] = [
   { to: "/erp/marketing/products", label: "Product & LTV", short: "Products", icon: PackagePlus },
   {
     to: "/erp/marketing/planning",
-    label: "Budgets & Calendar",
-    short: "Planning",
+    label: "Budget Pacing",
+    short: "Pacing",
     icon: CalendarClock,
+  },
+  {
+    to: "/erp/marketing/calendar",
+    label: "Calendar & Experiments",
+    short: "Calendar",
+    icon: CalendarDays,
   },
   { to: "/erp/marketing/alerts", label: "Alerts & Intelligence", short: "Alerts", icon: BellRing },
   { to: "/erp/marketing/channels", label: "Ad Channels", short: "Channels", icon: Plug },
