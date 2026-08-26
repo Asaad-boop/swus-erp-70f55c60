@@ -77,6 +77,7 @@ function PoDetailPage() {
   const [paymentOpen, setPaymentOpen] = useState(false);
   const [editPayment, setEditPayment] = useState<any | null>(null);
   const [editOpen, setEditOpen] = useState(false);
+  const [cartonPlanOpen, setCartonPlanOpen] = useState(false);
 
   const stageMut = useMutation({
     mutationFn: (vars: { carton_id: string; new_stage: ImpCartonStatus }) =>
