@@ -114,7 +114,7 @@ export function CartonFreightCard({
     for (const c of billedCartons) {
       const at = c.shipping_billed_at ? String(c.shipping_billed_at).slice(0, 16) : "";
       const key = `${c.shipping_note ?? ""}|${at}`;
-      const g = groups.get(key) ?? { key, note: c.shipping_note ?? null, at: c.shipping_billed_at ?? null, nums: [], total: 0, kg: 0 };
+      const g = groups.get(key) ?? { key, note: c.shipping_note ?? null, at: c.shipping_billed_at ?? null, nums: [] as number[], total: 0, kg: 0 };
       g.nums.push(Number(c.carton_number));
       g.total += Number(c.shipping_freight_bdt || 0);
       g.kg += Number(c.weight_kg || 0);
