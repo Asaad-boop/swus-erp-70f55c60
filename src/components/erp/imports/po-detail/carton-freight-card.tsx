@@ -2,7 +2,7 @@ import { useMemo, useState } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { toast } from "sonner";
-import { Loader2, Save, Scale, Undo2 } from "lucide-react";
+import { Loader2, Save, Scale, Undo2, Receipt, Clock3, CheckCircle2 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -15,6 +15,21 @@ import { CARTON_STATUS_LABEL, fmtBdt, type ImpCartonStatus } from "@/lib/erp/imp
 import { BillTile } from "./atoms";
 
 type Draft = { weight: string; freight: string };
+type Mode = "rate" | "total";
+
+/** Group carton numbers into a compact range string: 1,2,3,7 -> "1–3, 7" */
+function rangeLabel(nums: number[]) {
+  const s = [...nums].sort((a, b) => a - b);
+  const out: string[] = [];
+  let i = 0;
+  while (i < s.length) {
+    let j = i;
+    while (j + 1 < s.length && s[j + 1] === s[j] + 1) j++;
+    out.push(i === j ? `${s[i]}` : `${s[i]}–${s[j]}`);
+    i = j + 1;
+  }
+  return out.join(", ");
+}
 
 export function CartonFreightCard({
   poId,
@@ -32,12 +47,15 @@ export function CartonFreightCard({
   const qc = useQueryClient();
   const fn = useServerFn(saveCartonFreight);
 
+  const [mode, setMode] = useState<Mode>("rate");
   const [rate, setRate] = useState<string>(defaultRate ? String(defaultRate) : "");
+  const [lump, setLump] = useState<string>("");
   const [note, setNote] = useState("");
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [drafts, setDrafts] = useState<Record<string, Draft>>({});
 
   const rateNum = Number(rate) || 0;
+  const lumpNum = Number(lump) || 0;
 
   const isBilled = (c: any) => c.shipping_freight_bdt !== null && c.shipping_freight_bdt !== undefined;
 
@@ -50,24 +68,6 @@ export function CartonFreightCard({
   const setDraft = (id: string, patch: Partial<Draft>) =>
     setDrafts((d) => ({ ...d, [id]: { ...(d[id] ?? { weight: "", freight: "" }), ...patch } }));
 
-  const computed = (c: any) => {
-    const d = draftOf(c);
-    if (d.freight.trim() !== "") return Number(d.freight) || 0;
-    return +((Number(d.weight) || 0) * rateNum).toFixed(2);
-  };
-
-  const billedTotal = useMemo(
-    () => cartons.filter(isBilled).reduce((s, c) => s + Number(c.shipping_freight_bdt || 0), 0),
-    [cartons],
-  );
-  const billedCount = cartons.filter(isBilled).length;
-  const pendingCount = cartons.length - billedCount;
-  const remainingPlanned = Math.max(0, plannedShipping - billedTotal);
-
-  const selCartons = cartons.filter((c) => selected.has(c.id));
-  const selTotal = selCartons.reduce((s, c) => s + computed(c), 0);
-  const selWeight = selCartons.reduce((s, c) => s + (Number(draftOf(c).weight) || 0), 0);
-
   const toggle = (id: string) =>
     setSelected((s) => {
       const n = new Set(s);
@@ -75,6 +75,57 @@ export function CartonFreightCard({
       else n.add(id);
       return n;
     });
+
+  const selCartons = useMemo(() => cartons.filter((c) => selected.has(c.id)), [cartons, selected]);
+
+  /** In total-mode, distribute the lump amount across selected cartons by weight (fallback: equal). */
+  const lumpShares = useMemo(() => {
+    const map: Record<string, number> = {};
+    if (mode !== "total" || selCartons.length === 0 || lumpNum <= 0) return map;
+    const weights = selCartons.map((c) => Number(draftOf(c).weight) || 0);
+    const wSum = weights.reduce((s, w) => s + w, 0);
+    let acc = 0;
+    selCartons.forEach((c, i) => {
+      const share =
+        wSum > 0 ? (lumpNum * weights[i]) / wSum : lumpNum / selCartons.length;
+      const v = i === selCartons.length - 1 ? +(lumpNum - acc).toFixed(2) : +share.toFixed(2);
+      acc += v;
+      map[c.id] = v;
+    });
+    return map;
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [mode, lumpNum, selCartons, drafts]);
+
+  const computed = (c: any) => {
+    const d = draftOf(c);
+    if (mode === "total" && selected.has(c.id)) return lumpShares[c.id] ?? 0;
+    if (d.freight.trim() !== "") return Number(d.freight) || 0;
+    return +((Number(d.weight) || 0) * rateNum).toFixed(2);
+  };
+
+  const billedCartons = useMemo(() => cartons.filter(isBilled), [cartons]);
+  const pendingCartons = useMemo(() => cartons.filter((c) => !isBilled(c)), [cartons]);
+  const billedTotal = billedCartons.reduce((s, c) => s + Number(c.shipping_freight_bdt || 0), 0);
+  const remainingPlanned = Math.max(0, plannedShipping - billedTotal);
+
+  /** Bill batches = group billed cartons by (note + billed date-time to the minute). */
+  const bills = useMemo(() => {
+    const groups = new Map<string, { key: string; note: string | null; at: string | null; nums: number[]; total: number; kg: number }>();
+    for (const c of billedCartons) {
+      const at = c.shipping_billed_at ? String(c.shipping_billed_at).slice(0, 16) : "";
+      const key = `${c.shipping_note ?? ""}|${at}`;
+      const g = groups.get(key) ?? { key, note: c.shipping_note ?? null, at: c.shipping_billed_at ?? null, nums: [], total: 0, kg: 0 };
+      g.nums.push(Number(c.carton_number));
+      g.total += Number(c.shipping_freight_bdt || 0);
+      g.kg += Number(c.weight_kg || 0);
+      groups.set(key, g);
+    }
+    return [...groups.values()].sort((a, b) => String(b.at ?? "").localeCompare(String(a.at ?? "")));
+  }, [billedCartons]);
+
+  const selTotal = selCartons.reduce((s, c) => s + computed(c), 0);
+  const selWeight = selCartons.reduce((s, c) => s + (Number(draftOf(c).weight) || 0), 0);
+  const selNums = selCartons.map((c) => Number(c.carton_number));
 
   const mut = useMutation({
     mutationFn: async (clear: boolean) => {
@@ -86,26 +137,38 @@ export function CartonFreightCard({
           note: note || undefined,
           cartons: selCartons.map((c) => {
             const d = draftOf(c);
+            const w = Number(d.weight) || 0;
+            const explicit =
+              mode === "total"
+                ? lumpShares[c.id] ?? 0
+                : d.freight.trim() !== ""
+                  ? Number(d.freight) || 0
+                  : undefined;
             return {
               carton_id: c.id,
-              weight_kg: Number(d.weight) || 0,
-              rate_per_kg: rateNum,
-              ...(d.freight.trim() !== "" ? { freight_bdt: Number(d.freight) || 0 } : {}),
+              weight_kg: w,
+              rate_per_kg: mode === "total" ? (w > 0 ? +((explicit ?? 0) / w).toFixed(4) : 0) : rateNum,
+              ...(explicit !== undefined ? { freight_bdt: explicit } : {}),
             };
           }),
         },
       });
     },
     onSuccess: (_r, clear) => {
-      toast.success(clear ? "Shipping bill sorano hoyeche" : `${selCartons.length} carton-er shipping bill save holo`);
+      toast.success(
+        clear
+          ? `${selCartons.length} carton-er shipping bill sorano hoyeche`
+          : `CTN ${rangeLabel(selNums)} — ${selCartons.length} carton · ${fmtBdt(selTotal)} bill save holo`,
+      );
       setSelected(new Set());
       setDrafts({});
+      setLump("");
       qc.invalidateQueries({ queryKey: ["imp-po", poId] });
     },
     onError: (e: any) => toast.error(e?.message ?? "Failed"),
   });
 
-  const unbilledIds = cartons.filter((c) => !isBilled(c)).map((c) => c.id);
+  const unbilledIds = pendingCartons.map((c) => c.id);
   const arrivedIds = cartons
     .filter((c) => ["arrived_bd", "released", "in_stock"].includes(c.status))
     .map((c) => c.id);
@@ -118,36 +181,109 @@ export function CartonFreightCard({
           <h3 className="font-semibold text-sm">Carton-wise Shipping Bill (CN→BD)</h3>
         </div>
         <p className="text-xs text-muted-foreground mt-1">
-          Jei carton gulo eshechhe shudhu shei gulo select kore Weight × Rate/kg bill din — landed cost e shudhu oi lot-e boshbe.
-          Baki carton pore ashle tokhon alada bill deben.
+          Jei carton gulo eshechhe shudhu shei gulo select korun — total shipping charge othoba rate/kg diye bill hobe.
+          Baki carton pore ashle tokhon alada bill deben; ekhane pending list-e thakbe.
         </p>
         <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mt-3">
           <BillTile label="PO planned shipping" value={fmtBdt(plannedShipping)} />
           <BillTile
-            label={`Billed (${billedCount} carton)`}
+            label={`Billed — ${billedCartons.length} carton`}
             value={fmtBdt(billedTotal)}
             valueClass="text-blue-700 dark:text-blue-300"
           />
-          <BillTile label={`Pending carton`} value={`${pendingCount}`} />
+          <BillTile
+            label="Pending carton (pore bill hobe)"
+            value={pendingCartons.length ? `${pendingCartons.length} — CTN ${rangeLabel(pendingCartons.map((c) => Number(c.carton_number)))}` : "0"}
+          />
           <BillTile label="Planned baki (unbilled share)" value={fmtBdt(remainingPlanned)} />
         </div>
       </div>
 
-      <div className="p-4 border-b border-border grid gap-3 md:grid-cols-4">
-        <div>
-          <Label className="text-xs">Rate (৳/KG)</Label>
-          <Input type="number" step="0.01" value={rate} onChange={(e) => setRate(e.target.value)} placeholder="e.g. 750" />
+      {/* Bill history */}
+      {bills.length > 0 && (
+        <div className="px-4 py-3 border-b border-border bg-muted/20 space-y-1.5">
+          <div className="flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
+            <Receipt className="h-3.5 w-3.5" /> Shipping bills ({bills.length})
+          </div>
+          {bills.map((b) => (
+            <div key={b.key} className="flex flex-wrap items-center gap-2 rounded-md border bg-background/70 px-2.5 py-1.5 text-xs">
+              <CheckCircle2 className="h-3.5 w-3.5 text-blue-600 shrink-0" />
+              <span className="font-semibold tabular-nums">{fmtBdt(b.total)}</span>
+              <span className="text-muted-foreground">·</span>
+              <span className="font-medium">{b.nums.length} carton</span>
+              <Badge variant="outline" className="font-mono text-[10px]">CTN {rangeLabel(b.nums)}</Badge>
+              {b.kg > 0 && <span className="text-muted-foreground tabular-nums">{b.kg.toFixed(2)} kg</span>}
+              {b.note && <span className="truncate text-muted-foreground">“{b.note}”</span>}
+              {b.at && (
+                <span className="ml-auto text-[10px] text-muted-foreground">
+                  {new Date(b.at).toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "numeric" })}
+                </span>
+              )}
+            </div>
+          ))}
         </div>
-        <div className="md:col-span-2">
-          <Label className="text-xs">Bill note (optional)</Label>
-          <Input value={note} onChange={(e) => setNote(e.target.value)} placeholder="e.g. 17 carton shipment — bill #1" />
+      )}
+
+      {/* Charge input */}
+      <div className="p-4 border-b border-border space-y-3">
+        <div className="flex flex-wrap items-center gap-2">
+          <span className="text-xs font-medium text-muted-foreground">Charge type:</span>
+          {([
+            { v: "total" as const, label: "Total shipping amount" },
+            { v: "rate" as const, label: "Rate per KG" },
+          ]).map((o) => (
+            <button
+              key={o.v}
+              type="button"
+              onClick={() => setMode(o.v)}
+              className={cn(
+                "rounded-full border px-3 py-1 text-xs font-medium transition",
+                mode === o.v ? "border-primary bg-primary/10 text-primary" : "border-border text-muted-foreground hover:border-primary/40",
+              )}
+            >
+              {o.label}
+            </button>
+          ))}
         </div>
-        <div className="flex items-end gap-1 flex-wrap">
-          <Button size="sm" variant="outline" onClick={() => setSelected(new Set(unbilledIds))}>Unbilled</Button>
-          <Button size="sm" variant="outline" onClick={() => setSelected(new Set(arrivedIds))}>Arrived</Button>
-          <Button size="sm" variant="ghost" onClick={() => setSelected(new Set())}>Clear</Button>
+        <div className="grid gap-3 md:grid-cols-4">
+          {mode === "total" ? (
+            <div>
+              <Label className="text-xs">Total shipping charge (৳)</Label>
+              <Input
+                type="number"
+                step="0.01"
+                value={lump}
+                onChange={(e) => setLump(e.target.value)}
+                placeholder="e.g. 125000"
+              />
+              <p className="mt-1 text-[10px] text-muted-foreground">
+                Selected carton-e weight onujayi bhag hobe (weight na thakle shoman bhag).
+              </p>
+            </div>
+          ) : (
+            <div>
+              <Label className="text-xs">Rate (৳/KG)</Label>
+              <Input type="number" step="0.01" value={rate} onChange={(e) => setRate(e.target.value)} placeholder="e.g. 750" />
+            </div>
+          )}
+          <div className="md:col-span-2">
+            <Label className="text-xs">Bill note (optional)</Label>
+            <Input value={note} onChange={(e) => setNote(e.target.value)} placeholder="e.g. 1st shipment — 10 carton" />
+          </div>
+          <div className="flex items-end gap-1 flex-wrap">
+            <Button size="sm" variant="outline" onClick={() => setSelected(new Set(unbilledIds))}>Unbilled</Button>
+            <Button size="sm" variant="outline" onClick={() => setSelected(new Set(arrivedIds))}>Arrived</Button>
+            <Button size="sm" variant="ghost" onClick={() => setSelected(new Set())}>Clear</Button>
+          </div>
         </div>
       </div>
+
+      {pendingCartons.length > 0 && (
+        <div className="px-4 py-2 border-b border-border flex items-center gap-2 text-[11px] text-amber-700 dark:text-amber-300 bg-amber-50/60 dark:bg-amber-950/20">
+          <Clock3 className="h-3.5 w-3.5" />
+          {pendingCartons.length} carton ekhono bill kora hoy nai (CTN {rangeLabel(pendingCartons.map((c) => Number(c.carton_number)))}) — pore alada bill dite parben.
+        </div>
+      )}
 
       <div className="divide-y divide-border max-h-[420px] overflow-auto">
         {cartons.map((c) => {
@@ -181,7 +317,8 @@ export function CartonFreightCard({
                   className="h-8 text-xs"
                   type="number"
                   step="0.01"
-                  value={d.freight}
+                  value={mode === "total" && sel ? String(lumpShares[c.id] ?? 0) : d.freight}
+                  disabled={mode === "total" && sel}
                   onChange={(e) => setDraft(c.id, { freight: e.target.value })}
                   placeholder="freight ৳ (auto)"
                 />
@@ -192,7 +329,7 @@ export function CartonFreightCard({
                   Billed {fmtBdt(c.shipping_freight_bdt)}
                 </Badge>
               ) : (
-                <Badge variant="outline" className="text-[10px]">Planned share {fmtBdt(c.cost_share_bdt ?? 0)}</Badge>
+                <Badge variant="outline" className="text-[10px]">Pending · planned {fmtBdt(c.cost_share_bdt ?? 0)}</Badge>
               )}
             </div>
           );
@@ -204,7 +341,8 @@ export function CartonFreightCard({
 
       <div className="p-4 border-t border-border flex items-center justify-between gap-3 flex-wrap bg-muted/20">
         <div className="text-xs text-muted-foreground">
-          Selected: <span className="font-semibold text-foreground">{selCartons.length}</span> carton ·{" "}
+          Selected: <span className="font-semibold text-foreground">{selCartons.length}</span> carton
+          {selNums.length > 0 && <> (<span className="font-mono text-foreground">CTN {rangeLabel(selNums)}</span>)</>} ·{" "}
           {selWeight.toFixed(2)} kg · Freight{" "}
           <span className="font-semibold tabular-nums text-foreground">{fmtBdt(selTotal)}</span>
         </div>
@@ -219,7 +357,7 @@ export function CartonFreightCard({
           </Button>
           <Button size="sm" disabled={mut.isPending || selCartons.length === 0} onClick={() => mut.mutate(false)}>
             {mut.isPending ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Save className="h-4 w-4 mr-2" />}
-            Save bill {selTotal > 0 ? `— ${fmtBdt(selTotal)}` : ""}
+            Save bill {selTotal > 0 ? `— ${fmtBdt(selTotal)} / ${selCartons.length} ctn` : ""}
           </Button>
         </div>
       </div>
