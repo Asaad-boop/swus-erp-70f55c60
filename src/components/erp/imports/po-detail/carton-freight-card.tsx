@@ -226,6 +226,7 @@ export function CartonFreightCard({
           {bills.map((b) => (
             <div key={b.key} className="flex flex-wrap items-center gap-2 rounded-md border bg-background/70 px-2.5 py-1.5 text-xs">
               <CheckCircle2 className="h-3.5 w-3.5 text-blue-600 shrink-0" />
+              <Badge className="bg-blue-600 text-white hover:bg-blue-600 text-[10px] px-1.5">Bill #{b.no}</Badge>
               <span className="font-semibold tabular-nums">{fmtBdt(b.total)}</span>
               <span className="text-muted-foreground">·</span>
               <span className="font-medium">{b.nums.length} carton</span>
