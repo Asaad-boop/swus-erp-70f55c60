@@ -6,7 +6,7 @@ import { fmtBdt, type ImpCartonStatus } from "@/lib/erp/imports/types";
 import { BillTile } from "./atoms";
 
 export function CartonsHeader({
-  cartons, selected, setSelected, onBulkStage, onBulkRelease, poPaid, poSupplierTotal,
+  cartons, selected, setSelected, onBulkStage, onBulkRelease, poPaid, poSupplierTotal, onEditPlan,
 }: {
   cartons: any[];
   selected: Set<string>;
@@ -15,6 +15,7 @@ export function CartonsHeader({
   onBulkRelease: () => void;
   poPaid: number;
   poSupplierTotal: number;
+  onEditPlan?: () => void;
 }) {
   const SELECTABLE = ["ordered", "at_china_warehouse", "in_transit", "arrived_bd"];
   const eligible = cartons.filter((c) => SELECTABLE.includes(c.status));
