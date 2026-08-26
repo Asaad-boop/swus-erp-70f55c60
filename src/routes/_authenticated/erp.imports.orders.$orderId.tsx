@@ -441,6 +441,18 @@ function PoDetailPage() {
           poPaid={poPaidForRelease}
           poSupplierTotal={poSupplierTotal}
         />
+          onEditPlan={() => setCartonPlanOpen(true)}
+        />
+        {cartons.length === 0 ? (
+          <div className="p-8 text-center space-y-3">
+            <p className="text-sm text-muted-foreground">
+              Ei PO te ekhono kono carton nei. Carton plan baniye nin — kon carton e kon item koto piece ache.
+            </p>
+            <Button onClick={() => setCartonPlanOpen(true)}>
+              <Pencil className="h-4 w-4 mr-1" /> Carton plan banao
+            </Button>
+          </div>
+        ) : (
         <div className="divide-y divide-border">
           {cartons.map((c) => (
             <CartonRow
@@ -465,7 +477,18 @@ function PoDetailPage() {
             />
           ))}
         </div>
+        )}
       </Card>
+      )}
+
+      <CartonPlanDialog
+        open={cartonPlanOpen}
+        onOpenChange={setCartonPlanOpen}
+        poId={po.id}
+        poNumber={po.po_number}
+        items={items}
+        cartons={cartons}
+      />
       )}
 
       {/* Payments history */}
