@@ -37,22 +37,26 @@ export function CartonFreightCard({
   cartons,
   plannedShipping,
   defaultRate,
+  poWeightKg = 0,
 }: {
   poId: string;
   poNumber: string;
   cartons: any[];
   plannedShipping: number;
   defaultRate: number;
+  poWeightKg?: number;
 }) {
   const qc = useQueryClient();
   const fn = useServerFn(saveCartonFreight);
 
-  const [mode, setMode] = useState<Mode>("rate");
+  // PO-te already rate boshano thakle rate mode, shudhu total amount thakle total mode.
+  const [mode, setMode] = useState<Mode>(defaultRate > 0 ? "rate" : plannedShipping > 0 ? "total" : "rate");
   const [rate, setRate] = useState<string>(defaultRate ? String(defaultRate) : "");
   const [lump, setLump] = useState<string>("");
   const [note, setNote] = useState("");
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [drafts, setDrafts] = useState<Record<string, Draft>>({});
+
 
   const rateNum = Number(rate) || 0;
   const lumpNum = Number(lump) || 0;
