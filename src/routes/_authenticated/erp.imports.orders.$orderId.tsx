@@ -32,6 +32,7 @@ import { CartonFreightCard } from "@/components/erp/imports/po-detail/carton-fre
 import { ArrivedDialog, PaymentDialog, BulkReleaseDialog, QtyArrivedDialog, EditPaymentDialog } from "@/components/erp/imports/po-detail/dialogs";
 import { QuantityReleaseCard } from "@/components/erp/imports/po-detail/quantity-release-card";
 import { EditPoDialog } from "@/components/erp/imports/po-detail/edit-po-dialog";
+import { CartonPlanDialog } from "@/components/erp/imports/po-detail/carton-plan-dialog";
 
 export const Route = createFileRoute("/_authenticated/erp/imports/orders/$orderId")({
   head: () => ({ meta: [{ title: "Purchase Order — Imports" }] }),
