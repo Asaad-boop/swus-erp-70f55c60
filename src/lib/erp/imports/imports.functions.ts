@@ -1649,6 +1649,9 @@ export const releasePoQuantity = createServerFn({ method: "POST" })
         shipping_charge_bdt: releaseFreight,
         shipping_payment_id: shippingPaymentId,
         shipping_note: data.shipping?.note ?? null,
+        // Purono flow: local delivery release-er shomoy neya hoyeche → 'release'
+        // Notun flow: local courier charge QC-r shomoy nebo → 'qc'
+        local_courier_source: localDelivery > 0 ? "release" : "qc",
         created_by: context.userId,
       } as any)
       .select("id, release_number")
