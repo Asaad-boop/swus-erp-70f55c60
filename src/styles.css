@@ -134,10 +134,9 @@
   --shadow-panel: 0 1px 2px oklch(0.2 0.04 265 / 0.05), 0 8px 20px -18px oklch(0.2 0.04 265 / 0.35);
   --shadow-panel-lg: 0 2px 4px oklch(0.2 0.04 265 / 0.05), 0 18px 40px -24px oklch(0.2 0.04 265 / 0.38);
   --glass-bg: oklch(1 0 0 / 0.72);
-  --workspace-bg: radial-gradient(1400px 580px at 10% -12%, oklch(0.95 0.05 268 / 0.85), transparent 58%),
-                  radial-gradient(1000px 480px at 90% -8%, oklch(0.95 0.06 205 / 0.72), transparent 60%),
-                  radial-gradient(800px 400px at 50% -10%, oklch(0.98 0.02 250 / 0.55), transparent 55%),
-                  oklch(0.985 0.004 258);
+  /* v2 "Quiet Precision": flat neutral canvas + one soft top-edge wash */
+  --workspace-bg: linear-gradient(180deg, oklch(0.975 0.008 258) 0%, oklch(0.985 0.003 250) 220px),
+                  oklch(0.985 0.003 250);
   /* Aurora Ops — shared header + table chrome */
   --aurora-header: linear-gradient(120deg, oklch(0.98 0.025 268) 0%, oklch(0.995 0.008 258) 45%, oklch(0.98 0.03 200) 100%);
   --table-head-bg: oklch(0.982 0.006 258);
@@ -239,9 +238,7 @@
   --shadow-panel: 0 1px 2px oklch(0 0 0 / 0.35), 0 10px 26px -20px oklch(0 0 0 / 0.7);
   --shadow-panel-lg: 0 2px 6px oklch(0 0 0 / 0.4), 0 22px 46px -26px oklch(0 0 0 / 0.75);
   --glass-bg: oklch(0.18 0.05 282 / 0.7);
-  --workspace-bg: radial-gradient(1400px 580px at 10% -12%, oklch(0.34 0.11 275 / 0.65), transparent 58%),
-                  radial-gradient(1000px 480px at 90% -8%, oklch(0.32 0.1 205 / 0.55), transparent 60%),
-                  radial-gradient(800px 400px at 50% -10%, oklch(0.4 0.06 250 / 0.35), transparent 55%),
+  --workspace-bg: linear-gradient(180deg, oklch(0.16 0.045 280) 0%, oklch(0.13 0.04 280) 220px),
                   oklch(0.13 0.04 280);
   --aurora-header: linear-gradient(120deg, oklch(0.24 0.07 275) 0%, oklch(0.19 0.045 282) 50%, oklch(0.22 0.06 205) 100%);
   --table-head-bg: oklch(0.21 0.05 282);
@@ -589,3 +586,201 @@
   padding-bottom: 0.6rem;
 }
 
+
+/* ══════════════════════════════════════════════════════════════
+   UI v2 — "Quiet Precision" foundation
+   Tokens only. Consumed by src/components/erp/ui/* primitives.
+   ══════════════════════════════════════════════════════════════ */
+
+:root {
+  /* ── Elevation (exactly 3 levels) ───────────────────────────── */
+  --elevation-flat: none;
+  --elevation-raised: 0 1px 2px oklch(0.18 0.03 260 / 0.04), 0 1px 1px oklch(0.18 0.03 260 / 0.03);
+  --elevation-overlay: 0 8px 24px oklch(0.18 0.03 260 / 0.10), 0 2px 6px oklch(0.18 0.03 260 / 0.06);
+  --elevation-ring: transparent;
+
+  /* ── Status scale — single source of truth ──────────────────── */
+  --success-h: 152; --success-s: 58%; --success-l: 38%;
+  --warning-h: 38;  --warning-s: 88%; --warning-l: 45%;
+  --danger-h: 2;    --danger-s: 72%;  --danger-l: 50%;
+  --info-h: 214;    --info-s: 84%;    --info-l: 48%;
+  --neutral-h: 240; --neutral-s: 6%;  --neutral-l: 46%;
+
+  --success-solid: hsl(var(--success-h) var(--success-s) var(--success-l));
+  --success-soft:  hsl(var(--success-h) var(--success-s) 95%);
+  --success-border:hsl(var(--success-h) var(--success-s) 85%);
+  --success-text:  hsl(var(--success-h) var(--success-s) 30%);
+
+  --warning-solid: hsl(var(--warning-h) var(--warning-s) var(--warning-l));
+  --warning-soft:  hsl(var(--warning-h) var(--warning-s) 95%);
+  --warning-border:hsl(var(--warning-h) var(--warning-s) 85%);
+  --warning-text:  hsl(var(--warning-h) var(--warning-s) 30%);
+
+  --danger-solid:  hsl(var(--danger-h) var(--danger-s) var(--danger-l));
+  --danger-soft:   hsl(var(--danger-h) var(--danger-s) 95%);
+  --danger-border: hsl(var(--danger-h) var(--danger-s) 85%);
+  --danger-text:   hsl(var(--danger-h) var(--danger-s) 30%);
+
+  --info-solid:    hsl(var(--info-h) var(--info-s) var(--info-l));
+  --info-soft:     hsl(var(--info-h) var(--info-s) 95%);
+  --info-border:   hsl(var(--info-h) var(--info-s) 85%);
+  --info-text:     hsl(var(--info-h) var(--info-s) 30%);
+
+  --neutral-solid: hsl(var(--neutral-h) var(--neutral-s) var(--neutral-l));
+  --neutral-soft:  hsl(var(--neutral-h) var(--neutral-s) 95%);
+  --neutral-border:hsl(var(--neutral-h) var(--neutral-s) 85%);
+  --neutral-text:  hsl(var(--neutral-h) var(--neutral-s) 30%);
+  --status-on-solid: oklch(0.99 0 0);
+
+  /* ── Density scale ──────────────────────────────────────────── */
+  --space-unit: 4px;
+  --density: 1;
+  --row-height: calc(var(--space-unit) * 11 * var(--density)); /* 44px @ default */
+  --cell-px: calc(var(--space-unit) * 3 * var(--density));
+  --cell-py: calc(var(--space-unit) * 2.5 * var(--density));
+  --control-h-sm: calc(var(--space-unit) * 7 * var(--density));
+  --control-h-md: calc(var(--space-unit) * 9 * var(--density));
+  --control-h-lg: calc(var(--space-unit) * 10 * var(--density));
+
+  /* ── Focus ring ─────────────────────────────────────────────── */
+  --ring-width: 2px;
+  --ring-offset: 2px;
+  --ring-color: var(--primary);
+
+  /* ── Typography scale ───────────────────────────────────────── */
+  --text-h1: 1.75rem;   --leading-h1: 2.125rem;
+  --text-h2: 1.375rem;  --leading-h2: 1.75rem;
+  --text-h3: 1.125rem;  --leading-h3: 1.5rem;
+  --text-h4: 0.9375rem; --leading-h4: 1.375rem;
+  --text-h5: 0.8125rem; --leading-h5: 1.125rem;
+  --text-body: 0.875rem;    --leading-body: 1.375rem;
+  --text-small: 0.8125rem;  --leading-small: 1.125rem;
+  --text-caption: 0.6875rem;--leading-caption: 1rem;
+
+  /* ── Motion ─────────────────────────────────────────────────── */
+  --motion-fast: 120ms;
+  --motion-base: 160ms;
+  --motion-slow: 180ms;
+  --motion-ease: cubic-bezier(0.22, 0.61, 0.36, 1); /* ease-out */
+}
+
+.dark {
+  --elevation-flat: none;
+  --elevation-raised: 0 0 0 1px oklch(1 0 0 / 0.07), 0 1px 2px oklch(0 0 0 / 0.35);
+  --elevation-overlay: 0 0 0 1px oklch(1 0 0 / 0.09), 0 10px 30px oklch(0 0 0 / 0.55);
+
+  /* Inverted lightness direction: bright text, deep tinted surfaces. */
+  --success-l: 62%; --warning-l: 66%; --danger-l: 62%; --info-l: 64%; --neutral-l: 68%;
+
+  --success-soft:  hsl(var(--success-h) 40% 16%);
+  --success-border:hsl(var(--success-h) 34% 30%);
+  --success-text:  hsl(var(--success-h) 62% 74%);
+
+  --warning-soft:  hsl(var(--warning-h) 42% 16%);
+  --warning-border:hsl(var(--warning-h) 36% 30%);
+  --warning-text:  hsl(var(--warning-h) 74% 74%);
+
+  --danger-soft:   hsl(var(--danger-h) 42% 17%);
+  --danger-border: hsl(var(--danger-h) 36% 32%);
+  --danger-text:   hsl(var(--danger-h) 74% 76%);
+
+  --info-soft:     hsl(var(--info-h) 44% 17%);
+  --info-border:   hsl(var(--info-h) 38% 32%);
+  --info-text:     hsl(var(--info-h) 78% 76%);
+
+  --neutral-soft:  hsl(var(--neutral-h) 10% 20%);
+  --neutral-border:hsl(var(--neutral-h) 8% 32%);
+  --neutral-text:  hsl(var(--neutral-h) 12% 78%);
+  --status-on-solid: oklch(0.14 0.02 280);
+}
+
+/* Density attribute — put data-density on <html> or any wrapper. */
+[data-density="compact"] { --density: 0.75; }
+[data-density="default"] { --density: 1; }
+[data-density="relaxed"] { --density: 1.25; }
+
+@theme inline {
+  --color-success: var(--success-solid);
+  --color-warning: var(--warning-solid);
+  --color-danger: var(--danger-solid);
+  --color-info: var(--info-solid);
+  --shadow-flat: var(--elevation-flat);
+  --shadow-raised: var(--elevation-raised);
+  --shadow-overlay: var(--elevation-overlay);
+}
+
+/* One focus treatment for the whole app. */
+@utility focus-ring {
+  outline: none;
+  &:focus-visible {
+    outline: var(--ring-width) solid var(--ring-color);
+    outline-offset: var(--ring-offset);
+  }
+}
+
+@utility elevation-flat { box-shadow: var(--elevation-flat); }
+@utility elevation-raised { box-shadow: var(--elevation-raised); }
+@utility elevation-overlay { box-shadow: var(--elevation-overlay); }
+
+@utility text-h1 { font-family: var(--font-display); font-size: var(--text-h1); line-height: var(--leading-h1); letter-spacing: -0.022em; font-weight: 600; }
+@utility text-h2 { font-family: var(--font-display); font-size: var(--text-h2); line-height: var(--leading-h2); letter-spacing: -0.02em; font-weight: 600; }
+@utility text-h3 { font-family: var(--font-display); font-size: var(--text-h3); line-height: var(--leading-h3); letter-spacing: -0.015em; font-weight: 600; }
+@utility text-h4 { font-family: var(--font-sans); font-size: var(--text-h4); line-height: var(--leading-h4); font-weight: 600; }
+@utility text-h5 { font-family: var(--font-sans); font-size: var(--text-h5); line-height: var(--leading-h5); font-weight: 600; }
+@utility text-body-v2 { font-size: var(--text-body); line-height: var(--leading-body); }
+@utility text-small-v2 { font-size: var(--text-small); line-height: var(--leading-small); }
+@utility text-caption-v2 { font-size: var(--text-caption); line-height: var(--leading-caption); }
+
+@keyframes v2-shimmer {
+  0% { background-position: -160% 0; }
+  100% { background-position: 260% 0; }
+}
+
+@utility skeleton-shimmer {
+  background-image: linear-gradient(
+    90deg,
+    color-mix(in oklab, var(--muted) 100%, transparent) 0%,
+    color-mix(in oklab, var(--muted-foreground) 12%, var(--muted)) 50%,
+    color-mix(in oklab, var(--muted) 100%, transparent) 100%
+  );
+  background-size: 220% 100%;
+  animation: v2-shimmer 1.4s linear infinite;
+}
+
+@keyframes v2-fade-pulse {
+  0%, 100% { opacity: 0.55; }
+  50% { opacity: 0.85; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .skeleton-shimmer {
+    background-image: none;
+    background-color: var(--muted);
+    animation: v2-fade-pulse 1.6s ease-in-out infinite !important;
+  }
+}
+
+/* Density-aware table shell used by <DataTable>. */
+.v2-table thead th {
+  height: calc(var(--row-height) * 0.86);
+  padding-inline: var(--cell-px);
+  font-size: var(--text-caption);
+  line-height: var(--leading-caption);
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--muted-foreground);
+  text-align: left;
+  white-space: nowrap;
+  background: var(--card);
+}
+.v2-table tbody td {
+  height: var(--row-height);
+  padding-inline: var(--cell-px);
+  padding-block: var(--cell-py);
+  font-size: var(--text-small);
+  line-height: var(--leading-small);
+}
+.v2-table tbody tr { transition: background-color var(--motion-fast) var(--motion-ease); }
+.v2-table tbody tr:hover { background: color-mix(in oklab, var(--muted) 60%, transparent); }
+.v2-table [data-numeric="true"] { text-align: right; font-variant-numeric: tabular-nums; }
