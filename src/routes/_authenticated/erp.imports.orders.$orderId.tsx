@@ -488,7 +488,7 @@ function PoDetailPage() {
         items={items}
         cartons={cartons}
       />
-      )}
+
 
       {/* Payments history */}
       <Card className="overflow-hidden">
