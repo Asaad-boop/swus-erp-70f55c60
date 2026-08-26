@@ -50,8 +50,8 @@ export function CartonsHeader({
             <Badge variant="secondary" className="text-[11px]">{selected.size} selected</Badge>
           )}
         </div>
-        {selected.size === 0 && eligible.length > 0 && (
         <div className="flex items-center gap-2">
+
           {selected.size === 0 && eligible.length > 0 && (
             <div className="text-xs text-muted-foreground hidden md:block">
               Select cartons to bulk update stage or release
