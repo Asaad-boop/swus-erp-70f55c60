@@ -12367,6 +12367,10 @@ export type Database = {
         Args: { _brand_ids?: string[] }
         Returns: number
       }
+      imp_adjust_reserved: {
+        Args: { _delta: number; _product_id: string; _variant_id: string }
+        Returns: undefined
+      }
       imp_create_po: { Args: { _payload: Json }; Returns: Json }
       imp_delete_po: { Args: { _po_id: string }; Returns: Json }
       imp_get_or_create_account: {
