@@ -620,50 +620,17 @@ export function QuantityReleaseCard({
           )}
         </div>
 
-        <div className="p-4 border-t border-border bg-sky-500/5 space-y-3">
-
+        <div className="p-4 border-t border-border bg-sky-500/5">
           <div className="text-sm font-medium inline-flex items-center gap-2">
             <Truck className="h-4 w-4 text-sky-600" />
-            Local delivery charge (BD warehouse → amader kache)
+            Local courier charge — ekhon QC step-e
           </div>
-          <div className="grid md:grid-cols-3 gap-3">
-            <div>
-              <Label className="text-xs">Charge (BDT)</Label>
-              <Input
-                type="number" min={0} className="h-9 tabular-nums"
-                value={ldAmount}
-                placeholder="0"
-                onChange={(e) => setLdAmount(e.target.value)}
-              />
-            </div>
-            <div>
-              <Label className="text-xs">Pay from wallet (optional)</Label>
-              <AccountCombobox
-                accounts={(wallets as any[]).filter((w) => w.is_active)}
-                value={ldWallet}
-                onChange={setLdWallet}
-                requiredAmount={localDelivery}
-                placeholder="Record only (pay later)"
-              />
-
-            </div>
-            <div>
-              <Label className="text-xs">Delivery note</Label>
-              <Input
-                className="h-9"
-                value={ldNote}
-                placeholder="e.g. Sundarban courier, 3 bosta"
-                onChange={(e) => setLdNote(e.target.value)}
-              />
-            </div>
-          </div>
-          {localDelivery > 0 && (
-            <p className="text-[11px] text-muted-foreground">
-              {fmtBdt(localDelivery)} PO-r total cost e jog hobe, tai per-piece landed cost o beshi dekhabe
-              {ldWallet ? " — ei wallet theke taka kete jabe." : " — ekhon wallet theke katbe na, due hishebe thakbe."}
-            </p>
-          )}
+          <p className="text-[11px] text-muted-foreground mt-1.5">
+            Maal warehouse e pouchanor por <b>Warehouse QC</b>-te local courier charge + kon wallet theke deya
+            holo boshaben. Tokhon damage/missing dhore <b>final per-piece cost</b> hishab hobe.
+          </p>
         </div>
+
 
 
       </Card>
