@@ -72,9 +72,7 @@ export function QuantityReleaseCard({
   const [warehouseId, setWarehouseId] = useState("");
   const [notes, setNotes] = useState("");
   const [draft, setDraft] = useState<Record<string, { qty: number; damaged: number; missing: number }>>({});
-  const [ldAmount, setLdAmount] = useState("");
-  const [ldNote, setLdNote] = useState("");
-  const [ldWallet, setLdWallet] = useState("");
+  // Local courier charge ekhon QC step-e neya hoy — ei card theke sore geche
   // Ei shipment-er nijer freight (CN→BD)
   const [shipWeight, setShipWeight] = useState("");
   const [shipRate, setShipRate] = useState("");
