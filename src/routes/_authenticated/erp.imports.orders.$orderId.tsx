@@ -440,7 +440,6 @@ function PoDetailPage() {
           onBulkRelease={() => setBulkReleaseOpen(true)}
           poPaid={poPaidForRelease}
           poSupplierTotal={poSupplierTotal}
-        />
           onEditPlan={() => setCartonPlanOpen(true)}
         />
         {cartons.length === 0 ? (
