@@ -97,6 +97,7 @@ import { Route as AuthenticatedErpMarketingDailyRouteImport } from './routes/_au
 import { Route as AuthenticatedErpMarketingCreativesRouteImport } from './routes/_authenticated/erp.marketing.creatives'
 import { Route as AuthenticatedErpMarketingChannelsRouteImport } from './routes/_authenticated/erp.marketing.channels'
 import { Route as AuthenticatedErpMarketingCampaignsRouteImport } from './routes/_authenticated/erp.marketing.campaigns'
+import { Route as AuthenticatedErpMarketingCalendarRouteImport } from './routes/_authenticated/erp.marketing.calendar'
 import { Route as AuthenticatedErpMarketingAuditRouteImport } from './routes/_authenticated/erp.marketing.audit'
 import { Route as AuthenticatedErpMarketingAttributionRouteImport } from './routes/_authenticated/erp.marketing.attribution'
 import { Route as AuthenticatedErpMarketingAlertsRouteImport } from './routes/_authenticated/erp.marketing.alerts'
@@ -650,6 +651,12 @@ const AuthenticatedErpMarketingCampaignsRoute =
     path: '/campaigns',
     getParentRoute: () => AuthenticatedErpMarketingRoute,
   } as any)
+const AuthenticatedErpMarketingCalendarRoute =
+  AuthenticatedErpMarketingCalendarRouteImport.update({
+    id: '/calendar',
+    path: '/calendar',
+    getParentRoute: () => AuthenticatedErpMarketingRoute,
+  } as any)
 const AuthenticatedErpMarketingAuditRoute =
   AuthenticatedErpMarketingAuditRouteImport.update({
     id: '/audit',
@@ -1011,6 +1018,7 @@ export interface FileRoutesByFullPath {
   '/erp/marketing/alerts': typeof AuthenticatedErpMarketingAlertsRoute
   '/erp/marketing/attribution': typeof AuthenticatedErpMarketingAttributionRoute
   '/erp/marketing/audit': typeof AuthenticatedErpMarketingAuditRoute
+  '/erp/marketing/calendar': typeof AuthenticatedErpMarketingCalendarRoute
   '/erp/marketing/campaigns': typeof AuthenticatedErpMarketingCampaignsRoute
   '/erp/marketing/channels': typeof AuthenticatedErpMarketingChannelsRoute
   '/erp/marketing/creatives': typeof AuthenticatedErpMarketingCreativesRoute
@@ -1137,6 +1145,7 @@ export interface FileRoutesByTo {
   '/erp/marketing/alerts': typeof AuthenticatedErpMarketingAlertsRoute
   '/erp/marketing/attribution': typeof AuthenticatedErpMarketingAttributionRoute
   '/erp/marketing/audit': typeof AuthenticatedErpMarketingAuditRoute
+  '/erp/marketing/calendar': typeof AuthenticatedErpMarketingCalendarRoute
   '/erp/marketing/campaigns': typeof AuthenticatedErpMarketingCampaignsRoute
   '/erp/marketing/channels': typeof AuthenticatedErpMarketingChannelsRoute
   '/erp/marketing/creatives': typeof AuthenticatedErpMarketingCreativesRoute
@@ -1275,6 +1284,7 @@ export interface FileRoutesById {
   '/_authenticated/erp/marketing/alerts': typeof AuthenticatedErpMarketingAlertsRoute
   '/_authenticated/erp/marketing/attribution': typeof AuthenticatedErpMarketingAttributionRoute
   '/_authenticated/erp/marketing/audit': typeof AuthenticatedErpMarketingAuditRoute
+  '/_authenticated/erp/marketing/calendar': typeof AuthenticatedErpMarketingCalendarRoute
   '/_authenticated/erp/marketing/campaigns': typeof AuthenticatedErpMarketingCampaignsRoute
   '/_authenticated/erp/marketing/channels': typeof AuthenticatedErpMarketingChannelsRoute
   '/_authenticated/erp/marketing/creatives': typeof AuthenticatedErpMarketingCreativesRoute
@@ -1413,6 +1423,7 @@ export interface FileRouteTypes {
     | '/erp/marketing/alerts'
     | '/erp/marketing/attribution'
     | '/erp/marketing/audit'
+    | '/erp/marketing/calendar'
     | '/erp/marketing/campaigns'
     | '/erp/marketing/channels'
     | '/erp/marketing/creatives'
@@ -1539,6 +1550,7 @@ export interface FileRouteTypes {
     | '/erp/marketing/alerts'
     | '/erp/marketing/attribution'
     | '/erp/marketing/audit'
+    | '/erp/marketing/calendar'
     | '/erp/marketing/campaigns'
     | '/erp/marketing/channels'
     | '/erp/marketing/creatives'
@@ -1676,6 +1688,7 @@ export interface FileRouteTypes {
     | '/_authenticated/erp/marketing/alerts'
     | '/_authenticated/erp/marketing/attribution'
     | '/_authenticated/erp/marketing/audit'
+    | '/_authenticated/erp/marketing/calendar'
     | '/_authenticated/erp/marketing/campaigns'
     | '/_authenticated/erp/marketing/channels'
     | '/_authenticated/erp/marketing/creatives'
@@ -2377,6 +2390,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedErpMarketingCampaignsRouteImport
       parentRoute: typeof AuthenticatedErpMarketingRoute
     }
+    '/_authenticated/erp/marketing/calendar': {
+      id: '/_authenticated/erp/marketing/calendar'
+      path: '/calendar'
+      fullPath: '/erp/marketing/calendar'
+      preLoaderRoute: typeof AuthenticatedErpMarketingCalendarRouteImport
+      parentRoute: typeof AuthenticatedErpMarketingRoute
+    }
     '/_authenticated/erp/marketing/audit': {
       id: '/_authenticated/erp/marketing/audit'
       path: '/audit'
@@ -2867,6 +2887,7 @@ interface AuthenticatedErpMarketingRouteChildren {
   AuthenticatedErpMarketingAlertsRoute: typeof AuthenticatedErpMarketingAlertsRoute
   AuthenticatedErpMarketingAttributionRoute: typeof AuthenticatedErpMarketingAttributionRoute
   AuthenticatedErpMarketingAuditRoute: typeof AuthenticatedErpMarketingAuditRoute
+  AuthenticatedErpMarketingCalendarRoute: typeof AuthenticatedErpMarketingCalendarRoute
   AuthenticatedErpMarketingCampaignsRoute: typeof AuthenticatedErpMarketingCampaignsRoute
   AuthenticatedErpMarketingChannelsRoute: typeof AuthenticatedErpMarketingChannelsRoute
   AuthenticatedErpMarketingCreativesRoute: typeof AuthenticatedErpMarketingCreativesRoute
@@ -2885,6 +2906,8 @@ const AuthenticatedErpMarketingRouteChildren: AuthenticatedErpMarketingRouteChil
     AuthenticatedErpMarketingAttributionRoute:
       AuthenticatedErpMarketingAttributionRoute,
     AuthenticatedErpMarketingAuditRoute: AuthenticatedErpMarketingAuditRoute,
+    AuthenticatedErpMarketingCalendarRoute:
+      AuthenticatedErpMarketingCalendarRoute,
     AuthenticatedErpMarketingCampaignsRoute:
       AuthenticatedErpMarketingCampaignsRoute,
     AuthenticatedErpMarketingChannelsRoute:
