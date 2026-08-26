@@ -37,22 +37,26 @@ export function CartonFreightCard({
   cartons,
   plannedShipping,
   defaultRate,
+  poWeightKg = 0,
 }: {
   poId: string;
   poNumber: string;
   cartons: any[];
   plannedShipping: number;
   defaultRate: number;
+  poWeightKg?: number;
 }) {
   const qc = useQueryClient();
   const fn = useServerFn(saveCartonFreight);
 
-  const [mode, setMode] = useState<Mode>("rate");
+  // PO-te already rate boshano thakle rate mode, shudhu total amount thakle total mode.
+  const [mode, setMode] = useState<Mode>(defaultRate > 0 ? "rate" : plannedShipping > 0 ? "total" : "rate");
   const [rate, setRate] = useState<string>(defaultRate ? String(defaultRate) : "");
   const [lump, setLump] = useState<string>("");
   const [note, setNote] = useState("");
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [drafts, setDrafts] = useState<Record<string, Draft>>({});
+
 
   const rateNum = Number(rate) || 0;
   const lumpNum = Number(lump) || 0;
@@ -245,6 +249,56 @@ export function CartonFreightCard({
             </button>
           ))}
         </div>
+
+        {(plannedShipping > 0 || defaultRate > 0 || poWeightKg > 0) && (
+          <div className="flex flex-wrap items-center gap-2 rounded-md border border-blue-200 bg-blue-50/60 px-3 py-2 text-[11px] dark:border-blue-900/40 dark:bg-blue-950/20">
+            <span className="text-muted-foreground">
+              Ei PO-te already shipping boshano ache
+              {poWeightKg > 0 ? ` — ${poWeightKg} kg` : ""}
+              {defaultRate > 0 ? ` · ${fmtBdt(defaultRate)}/kg` : ""}
+              {plannedShipping > 0 ? ` · total ${fmtBdt(plannedShipping)}` : ""}
+              {billedTotal > 0 ? ` (billed ${fmtBdt(billedTotal)}, baki ${fmtBdt(remainingPlanned)})` : ""}.
+            </span>
+            {remainingPlanned > 0 && (
+              <Button
+                size="sm"
+                variant="outline"
+                className="h-6 px-2 text-[11px]"
+                onClick={() => { setMode("total"); setLump(String(remainingPlanned)); setSelected(new Set(unbilledIds)); }}
+              >
+                Baki {fmtBdt(remainingPlanned)} unbilled carton-e bhag koro
+              </Button>
+            )}
+            {defaultRate > 0 && (
+              <Button
+                size="sm"
+                variant="ghost"
+                className="h-6 px-2 text-[11px]"
+                onClick={() => { setMode("rate"); setRate(String(defaultRate)); }}
+              >
+                PO rate use koro
+              </Button>
+            )}
+            {poWeightKg > 0 && cartons.length > 0 && (
+              <Button
+                size="sm"
+                variant="ghost"
+                className="h-6 px-2 text-[11px]"
+                onClick={() =>
+                  setDrafts((d) => {
+                    const per = +(poWeightKg / cartons.length).toFixed(3);
+                    const n = { ...d };
+                    cartons.forEach((c) => { n[c.id] = { ...(n[c.id] ?? draftOf(c)), weight: String(per) }; });
+                    return n;
+                  })
+                }
+              >
+                Weight shoman bhag ({(poWeightKg / Math.max(1, cartons.length)).toFixed(2)} kg/ctn)
+              </Button>
+            )}
+          </div>
+        )}
+
         <div className="grid gap-3 md:grid-cols-4">
           {mode === "total" ? (
             <div>

@@ -424,8 +424,22 @@ function PoDetailPage() {
           poId={po.id}
           poNumber={po.po_number}
           cartons={cartons}
-          plannedShipping={Number(po.shipping_total_bdt ?? po.shipping_cost_bdt) || 0}
-          defaultRate={Number(po.shipping_rate_per_kg) || 0}
+          plannedShipping={
+            Number(po.shipping_total_bdt) ||
+            Number(po.shipping_cost_bdt) ||
+            Number(po.freight_cost_bdt) ||
+            0
+          }
+          defaultRate={
+            Number(po.shipping_rate_per_kg) ||
+            (Number(po.total_weight_kg) > 0
+              ? +(
+                  (Number(po.shipping_total_bdt) || Number(po.shipping_cost_bdt) || Number(po.freight_cost_bdt) || 0) /
+                  Number(po.total_weight_kg)
+                ).toFixed(2)
+              : 0)
+          }
+          poWeightKg={Number(po.shipping_weight_kg ?? po.total_weight_kg) || 0}
         />
       )}
 
