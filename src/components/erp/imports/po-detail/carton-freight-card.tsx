@@ -124,8 +124,22 @@ export function CartonFreightCard({
       g.kg += Number(c.weight_kg || 0);
       groups.set(key, g);
     }
-    return [...groups.values()].sort((a, b) => String(b.at ?? "").localeCompare(String(a.at ?? "")));
+    return [...groups.values()]
+      .sort((a, b) => String(a.at ?? "").localeCompare(String(b.at ?? "")))
+      .map((g, i) => ({ ...g, no: i + 1 }));
   }, [billedCartons]);
+
+  /** carton id -> bill no (kon bill-e ache) */
+  const billNoOf = useMemo(() => {
+    const map: Record<string, number> = {};
+    for (const c of billedCartons) {
+      const at = c.shipping_billed_at ? String(c.shipping_billed_at).slice(0, 16) : "";
+      const key = `${c.shipping_note ?? ""}|${at}`;
+      const b = bills.find((x) => x.key === key);
+      if (b) map[c.id] = b.no;
+    }
+    return map;
+  }, [billedCartons, bills]);
 
   const selTotal = selCartons.reduce((s, c) => s + computed(c), 0);
   const selWeight = selCartons.reduce((s, c) => s + (Number(draftOf(c).weight) || 0), 0);
