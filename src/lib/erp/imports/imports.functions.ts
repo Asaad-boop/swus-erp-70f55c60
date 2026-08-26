@@ -1989,6 +1989,32 @@ export const updateImportPo = createServerFn({ method: "POST" })
     return out as { ok: boolean; items_updated: boolean; locked: boolean };
   });
 
+/* --- carton mode: create / edit / delete carton plan after PO creation --- */
+
+export const saveCartonPlan = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d: any) =>
+    z.object({
+      po_id: z.string().uuid(),
+      cartons: z.array(z.object({
+        carton_number: z.number().int().positive(),
+        weight_kg: z.number().nonnegative().nullable().optional(),
+        notes: z.string().optional(),
+        allocations: z.array(z.object({
+          po_item_id: z.string().uuid(),
+          quantity: z.number().int().nonnegative(),
+        })).default([]),
+      })).min(1),
+    }).parse(d),
+  )
+  .handler(async ({ data, context }) => {
+    await assertAnyRole(context.supabase, context.userId, ["admin", "operations", "accountant"]);
+    const { data: out, error } = await context.supabase.rpc("imp_save_cartons", { _payload: data });
+    if (error) throw error;
+    return out as { ok: boolean; cartons: number; total_qty: number };
+  });
+
+
 /* --- quantity mode: receive at BD (freight / customs / other) --- */
 
 export const receiveQuantityBd = createServerFn({ method: "POST" })

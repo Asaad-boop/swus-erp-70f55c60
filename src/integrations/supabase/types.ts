@@ -12398,6 +12398,7 @@ export type Database = {
         Args: { _payment_id: string; _reason?: string }
         Returns: Json
       }
+      imp_save_cartons: { Args: { _payload: Json }; Returns: Json }
       imp_update_carton_stage: {
         Args: { _carton: string; _new_stage: string; _notes?: string }
         Returns: undefined

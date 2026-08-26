@@ -1,4 +1,4 @@
-import { Package, Send } from "lucide-react";
+import { Package, Send, Pencil } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -6,7 +6,7 @@ import { fmtBdt, type ImpCartonStatus } from "@/lib/erp/imports/types";
 import { BillTile } from "./atoms";
 
 export function CartonsHeader({
-  cartons, selected, setSelected, onBulkStage, onBulkRelease, poPaid, poSupplierTotal,
+  cartons, selected, setSelected, onBulkStage, onBulkRelease, poPaid, poSupplierTotal, onEditPlan,
 }: {
   cartons: any[];
   selected: Set<string>;
@@ -15,6 +15,7 @@ export function CartonsHeader({
   onBulkRelease: () => void;
   poPaid: number;
   poSupplierTotal: number;
+  onEditPlan?: () => void;
 }) {
   const SELECTABLE = ["ordered", "at_china_warehouse", "in_transit", "arrived_bd"];
   const eligible = cartons.filter((c) => SELECTABLE.includes(c.status));
@@ -49,11 +50,20 @@ export function CartonsHeader({
             <Badge variant="secondary" className="text-[11px]">{selected.size} selected</Badge>
           )}
         </div>
-        {selected.size === 0 && eligible.length > 0 && (
-          <div className="text-xs text-muted-foreground">
-            Select cartons to bulk update stage or release
-          </div>
-        )}
+        <div className="flex items-center gap-2">
+
+          {selected.size === 0 && eligible.length > 0 && (
+            <div className="text-xs text-muted-foreground hidden md:block">
+              Select cartons to bulk update stage or release
+            </div>
+          )}
+          {onEditPlan && (
+            <Button size="sm" variant="outline" onClick={onEditPlan}>
+              <Pencil className="h-4 w-4 mr-1" />
+              {cartons.length === 0 ? "Create cartons" : "Edit carton plan"}
+            </Button>
+          )}
+        </div>
       </div>
 
       {selected.size > 0 && (

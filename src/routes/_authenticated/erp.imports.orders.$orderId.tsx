@@ -32,6 +32,7 @@ import { CartonFreightCard } from "@/components/erp/imports/po-detail/carton-fre
 import { ArrivedDialog, PaymentDialog, BulkReleaseDialog, QtyArrivedDialog, EditPaymentDialog } from "@/components/erp/imports/po-detail/dialogs";
 import { QuantityReleaseCard } from "@/components/erp/imports/po-detail/quantity-release-card";
 import { EditPoDialog } from "@/components/erp/imports/po-detail/edit-po-dialog";
+import { CartonPlanDialog } from "@/components/erp/imports/po-detail/carton-plan-dialog";
 
 export const Route = createFileRoute("/_authenticated/erp/imports/orders/$orderId")({
   head: () => ({ meta: [{ title: "Purchase Order — Imports" }] }),
@@ -76,6 +77,7 @@ function PoDetailPage() {
   const [paymentOpen, setPaymentOpen] = useState(false);
   const [editPayment, setEditPayment] = useState<any | null>(null);
   const [editOpen, setEditOpen] = useState(false);
+  const [cartonPlanOpen, setCartonPlanOpen] = useState(false);
 
   const stageMut = useMutation({
     mutationFn: (vars: { carton_id: string; new_stage: ImpCartonStatus }) =>
@@ -438,7 +440,18 @@ function PoDetailPage() {
           onBulkRelease={() => setBulkReleaseOpen(true)}
           poPaid={poPaidForRelease}
           poSupplierTotal={poSupplierTotal}
+          onEditPlan={() => setCartonPlanOpen(true)}
         />
+        {cartons.length === 0 ? (
+          <div className="p-8 text-center space-y-3">
+            <p className="text-sm text-muted-foreground">
+              Ei PO te ekhono kono carton nei. Carton plan baniye nin — kon carton e kon item koto piece ache.
+            </p>
+            <Button onClick={() => setCartonPlanOpen(true)}>
+              <Pencil className="h-4 w-4 mr-1" /> Carton plan banao
+            </Button>
+          </div>
+        ) : (
         <div className="divide-y divide-border">
           {cartons.map((c) => (
             <CartonRow
@@ -463,8 +476,19 @@ function PoDetailPage() {
             />
           ))}
         </div>
+        )}
       </Card>
       )}
+
+      <CartonPlanDialog
+        open={cartonPlanOpen}
+        onOpenChange={setCartonPlanOpen}
+        poId={po.id}
+        poNumber={po.po_number}
+        items={items}
+        cartons={cartons}
+      />
+
 
       {/* Payments history */}
       <Card className="overflow-hidden">
