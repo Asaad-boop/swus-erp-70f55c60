@@ -124,8 +124,22 @@ export function CartonFreightCard({
       g.kg += Number(c.weight_kg || 0);
       groups.set(key, g);
     }
-    return [...groups.values()].sort((a, b) => String(b.at ?? "").localeCompare(String(a.at ?? "")));
+    return [...groups.values()]
+      .sort((a, b) => String(a.at ?? "").localeCompare(String(b.at ?? "")))
+      .map((g, i) => ({ ...g, no: i + 1 }));
   }, [billedCartons]);
+
+  /** carton id -> bill no (kon bill-e ache) */
+  const billNoOf = useMemo(() => {
+    const map: Record<string, number> = {};
+    for (const c of billedCartons) {
+      const at = c.shipping_billed_at ? String(c.shipping_billed_at).slice(0, 16) : "";
+      const key = `${c.shipping_note ?? ""}|${at}`;
+      const b = bills.find((x) => x.key === key);
+      if (b) map[c.id] = b.no;
+    }
+    return map;
+  }, [billedCartons, bills]);
 
   const selTotal = selCartons.reduce((s, c) => s + computed(c), 0);
   const selWeight = selCartons.reduce((s, c) => s + (Number(draftOf(c).weight) || 0), 0);
@@ -212,6 +226,7 @@ export function CartonFreightCard({
           {bills.map((b) => (
             <div key={b.key} className="flex flex-wrap items-center gap-2 rounded-md border bg-background/70 px-2.5 py-1.5 text-xs">
               <CheckCircle2 className="h-3.5 w-3.5 text-blue-600 shrink-0" />
+              <Badge className="bg-blue-600 text-white hover:bg-blue-600 text-[10px] px-1.5">Bill #{b.no}</Badge>
               <span className="font-semibold tabular-nums">{fmtBdt(b.total)}</span>
               <span className="text-muted-foreground">·</span>
               <span className="font-medium">{b.nums.length} carton</span>
@@ -379,11 +394,21 @@ export function CartonFreightCard({
               </div>
               <div className="text-xs tabular-nums font-semibold w-24 text-right">{fmtBdt(value)}</div>
               {billed ? (
-                <Badge variant="secondary" className="bg-blue-100 text-blue-700 border-blue-300 dark:bg-blue-950/40 dark:text-blue-300 text-[10px]">
-                  Billed {fmtBdt(c.shipping_freight_bdt)}
-                </Badge>
+                <div className="flex items-center gap-1.5 flex-wrap">
+                  <Badge variant="secondary" className="bg-blue-100 text-blue-700 border-blue-300 dark:bg-blue-950/40 dark:text-blue-300 text-[10px]">
+                    Billed {fmtBdt(c.shipping_freight_bdt)}
+                  </Badge>
+                  {billNoOf[c.id] && (
+                    <Badge className="bg-blue-600 text-white hover:bg-blue-600 text-[10px] px-1.5">Bill #{billNoOf[c.id]}</Badge>
+                  )}
+                  {c.shipping_note && (
+                    <span className="text-[10px] text-muted-foreground truncate max-w-[160px]">“{c.shipping_note}”</span>
+                  )}
+                </div>
               ) : (
-                <Badge variant="outline" className="text-[10px]">Pending · planned {fmtBdt(c.cost_share_bdt ?? 0)}</Badge>
+                <Badge variant="outline" className="text-[10px] border-amber-300 text-amber-700 dark:text-amber-300">
+                  Pending · planned {fmtBdt(c.cost_share_bdt ?? 0)}
+                </Badge>
               )}
             </div>
           );
