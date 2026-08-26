@@ -1702,6 +1702,15 @@ export const releasePoQuantity = createServerFn({ method: "POST" })
           .update({ stock_movement_id: movId as any })
           .eq("id", (relItem as any).id);
 
+        // QC na howa porjonto ei pcs reserved thakbe (available stock e jabe na)
+        const { error: resErr } = await context.supabase.rpc("imp_adjust_reserved" as any, {
+          _product_id: pi.product_id as string,
+          _variant_id: (pi.variant_id ?? null) as any,
+          _delta: l.quantity,
+        });
+        if (resErr) throw resErr;
+
+
         // Per-pcs landed cost ta product-er cost e boshe jak — inventory value / profit
         // report shob jaygay ei cost dekhabe.
         const { data: prodRow } = await context.supabase
