@@ -6825,6 +6825,7 @@ export type Database = {
         Row: {
           created_at: string
           damaged_qty: number
+          final_unit_cost_bdt: number | null
           id: string
           missing_qty: number
           po_item_id: string
@@ -6835,6 +6836,7 @@ export type Database = {
           qc_movement_id: string | null
           quantity: number
           release_id: string
+          reserved_qty: number
           sku_snapshot: string | null
           stock_movement_id: string | null
           unit_landed_cost_bdt: number
@@ -6843,6 +6845,7 @@ export type Database = {
         Insert: {
           created_at?: string
           damaged_qty?: number
+          final_unit_cost_bdt?: number | null
           id?: string
           missing_qty?: number
           po_item_id: string
@@ -6853,6 +6856,7 @@ export type Database = {
           qc_movement_id?: string | null
           quantity: number
           release_id: string
+          reserved_qty?: number
           sku_snapshot?: string | null
           stock_movement_id?: string | null
           unit_landed_cost_bdt?: number
@@ -6861,6 +6865,7 @@ export type Database = {
         Update: {
           created_at?: string
           damaged_qty?: number
+          final_unit_cost_bdt?: number | null
           id?: string
           missing_qty?: number
           po_item_id?: string
@@ -6871,6 +6876,7 @@ export type Database = {
           qc_movement_id?: string | null
           quantity?: number
           release_id?: string
+          reserved_qty?: number
           sku_snapshot?: string | null
           stock_movement_id?: string | null
           unit_landed_cost_bdt?: number
@@ -6901,11 +6907,16 @@ export type Database = {
           delivery_note: string | null
           delivery_payment_id: string | null
           id: string
+          local_courier_bdt: number
+          local_courier_payment_id: string | null
+          local_courier_source: string
+          local_courier_wallet_id: string | null
           local_delivery_bdt: number
           notes: string | null
           po_id: string
           qc_at: string | null
           qc_by: string | null
+          qc_local_courier_note: string | null
           qc_notes: string | null
           qc_status: string
           release_number: number
@@ -6924,11 +6935,16 @@ export type Database = {
           delivery_note?: string | null
           delivery_payment_id?: string | null
           id?: string
+          local_courier_bdt?: number
+          local_courier_payment_id?: string | null
+          local_courier_source?: string
+          local_courier_wallet_id?: string | null
           local_delivery_bdt?: number
           notes?: string | null
           po_id: string
           qc_at?: string | null
           qc_by?: string | null
+          qc_local_courier_note?: string | null
           qc_notes?: string | null
           qc_status?: string
           release_number: number
@@ -6947,11 +6963,16 @@ export type Database = {
           delivery_note?: string | null
           delivery_payment_id?: string | null
           id?: string
+          local_courier_bdt?: number
+          local_courier_payment_id?: string | null
+          local_courier_source?: string
+          local_courier_wallet_id?: string | null
           local_delivery_bdt?: number
           notes?: string | null
           po_id?: string
           qc_at?: string | null
           qc_by?: string | null
+          qc_local_courier_note?: string | null
           qc_notes?: string | null
           qc_status?: string
           release_number?: number
@@ -12345,6 +12366,10 @@ export type Database = {
       hub_spawn_due_routines: {
         Args: { _brand_ids?: string[] }
         Returns: number
+      }
+      imp_adjust_reserved: {
+        Args: { _delta: number; _product_id: string; _variant_id: string }
+        Returns: undefined
       }
       imp_create_po: { Args: { _payload: Json }; Returns: Json }
       imp_delete_po: { Args: { _po_id: string }; Returns: Json }
