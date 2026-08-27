@@ -181,12 +181,17 @@ export function mapCourierStatus(
  *
  * Key = current order status that is already resolved.
  * Value = the only statuses a courier feed may still move it to.
+ *
+ * Return-family statuses are allowed to move *forward* to delivered/partial
+ * when the courier API later reports a successful delivery, because InstaPay
+ * can misclassify prepaid parcels as "return" and the cron/webhook may need to
+ * correct that.
  */
 const ALLOWED_FROM_RESOLVED: Partial<Record<OrderStatus, OrderStatus[]>> = {
   delivered: ["paid", "completed", "partial_delivered"],
   partial_delivered: ["paid", "completed", "partial_return"],
-  return_in_transit: ["returned", "paid_return", "unpaid_return", "partial_return", "delivered", "partial_delivered", "exchange", "completed"],
-  returned: ["paid_return", "unpaid_return", "partial_return", "completed"],
+  return_in_transit: ["returned", "paid_return", "unpaid_return", "partial_return", "delivered", "partial_delivered", "in_transit", "exchange", "completed"],
+  returned: ["paid_return", "unpaid_return", "partial_return", "delivered", "partial_delivered", "in_transit", "exchange", "completed"],
   paid_return: ["completed"],
   unpaid_return: ["paid_return", "completed"],
   partial_return: ["completed"],
