@@ -12,7 +12,10 @@ import {
 } from "@/hooks/erp/use-orders-query";
 import { useCourierShipments, COURIER_BUCKET_META, type CourierBucket, type CourierShipmentRow } from "@/hooks/erp/use-courier-shipments";
 import { applyBrandScope } from "@/lib/erp/apply-brand-scope";
-import { OrdersStatusTabs } from "@/components/erp/orders/orders-status-tabs";
+import { PipelineFlowBar } from "@/components/erp/orders/pipeline-flow-bar";
+import { OrdersAlertStrip } from "@/components/erp/orders/orders-alert-strip";
+import { OrderInsightDrawer } from "@/components/erp/orders/order-insight-drawer";
+import { useOrderLocksFor } from "@/hooks/erp/use-order-ops";
 import { OrdersToolbar } from "@/components/erp/orders/orders-toolbar";
 import { OrdersBulkActions } from "@/components/erp/orders/orders-bulk-actions";
 import { OrdersTable } from "@/components/erp/orders/orders-table";
@@ -223,6 +226,7 @@ function OrdersPage() {
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [pendingIds, setPendingIds] = useState<Set<string>>(new Set());
   const [openId, setOpenId] = useState<string | null>(null);
+  const [insightId, setInsightId] = useState<string | null>(null);
   const [pathaoBulkOpen, setPathaoBulkOpen] = useState(false);
   const [preorderOpen, setPreorderOpen] = useState(false);
   const [preorderIds, setPreorderIds] = useState<string[]>([]);
@@ -241,6 +245,7 @@ function OrdersPage() {
   // Bulk fetch live courier shipments for the current page
   const pageOrderIds = useMemo(() => rows.map((r) => r.id), [rows]);
   const { data: shipmentsMap = {} } = useCourierShipments(pageOrderIds);
+  const { data: locksMap = {} } = useOrderLocksFor(pageOrderIds);
 
   const visibleRows = rows;
 
@@ -531,6 +536,23 @@ function OrdersPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [visibleRows]);
 
+  // Header snapshot metrics derived from the counts already fetched.
+  const snapshot = useMemo(() => {
+    const c = countsData?.counts ?? {};
+    const awaiting = (c["confirmed"] ?? 0) + (c["packed"] ?? 0) + (c["ready_to_ship"] ?? 0);
+    const delivered = (c["delivered"] ?? 0) + (c["completed"] ?? 0) + (c["paid"] ?? 0);
+    const returned = (c["returned"] ?? 0) + (c["paid_return"] ?? 0) + (c["unpaid_return"] ?? 0);
+    const settled = delivered + returned;
+    const pendingCod = visibleRows
+      .filter((r) => !["delivered", "completed", "paid", "cancelled", "returned"].includes(r.status))
+      .reduce((sum, r) => sum + Number(r.total ?? 0), 0);
+    return {
+      awaiting,
+      pendingCod,
+      deliveryRate: settled > 0 ? Math.round((delivered / settled) * 100) : null,
+    };
+  }, [countsData, visibleRows]);
+
   return (
     <div className="p-4 md:p-6 min-h-screen bg-background">
       <ErpPageHeader
@@ -541,6 +563,11 @@ function OrdersPage() {
         chips={
           <>
             <HeaderChip value={total.toLocaleString()} label="orders" />
+            <HeaderChip value={snapshot.awaiting.toLocaleString()} label="awaiting action" />
+            <HeaderChip value={`৳${Math.round(snapshot.pendingCod).toLocaleString()}`} label="pending COD" />
+            {snapshot.deliveryRate !== null && (
+              <HeaderChip value={`${snapshot.deliveryRate}%`} label="delivery rate" />
+            )}
             {selectedIds.size > 0 && <HeaderChip tone="primary" value={selectedIds.size} label="selected" />}
           </>
         }
@@ -579,7 +606,7 @@ function OrdersPage() {
       />
 
       <div className="space-y-3">
-        <OrdersStatusTabs
+        <PipelineFlowBar
           active={activeTab}
           counts={countsData?.counts ?? {}}
           total={countsData?.total ?? 0}
@@ -610,6 +637,7 @@ function OrdersPage() {
           </>
         ) : (
           <>
+          <OrdersAlertStrip rows={visibleRows} onReview={(ids) => setSelectedIds(new Set(ids))} />
           {stuckIds.length > 0 && !nudgeDismissed && (
             <div className="flex items-center gap-2 rounded-xl border border-amber-300/50 bg-amber-500/[0.07] px-3 py-2 text-[12px] dark:border-amber-900/50">
               <AlertTriangle className="h-3.5 w-3.5 text-amber-600 shrink-0" />
@@ -698,7 +726,8 @@ function OrdersPage() {
             />
           }
         />
-        <div className="overflow-hidden rounded-2xl border border-[var(--panel-border)] bg-card">
+        <div className="flex items-start gap-3">
+        <div className="min-w-0 flex-1 overflow-hidden rounded-2xl border border-[var(--panel-border)] bg-card">
         <OrdersTable
           rows={visibleRows}
           loading={isLoading}
@@ -717,10 +746,14 @@ function OrdersPage() {
           selectedIds={selectedIds}
           onToggleSelect={toggleSelect}
           onToggleAll={toggleAll}
-          onRowClick={setOpenId}
+          onRowClick={(id) => {
+            if (typeof window !== "undefined" && window.innerWidth < 1280) setOpenId(id);
+            else setInsightId(id);
+          }}
           onStatusChange={(id, status) => statusMutation.mutate({ id, status })}
           pendingStatusIds={pendingIds}
           shipmentsByOrderId={shipmentsMap}
+          locksByOrderId={locksMap}
           flashOrderIds={flashIds}
           onSyncRow={(id) => { setSingleSyncId(id); }}
           onPreorder={(id) => { setPreorderIds([id]); setPreorderOpen(true); }}
@@ -751,6 +784,16 @@ function OrdersPage() {
           onPage={(p) => updateFilter({ page: p })}
           onPageSize={(n) => updateFilter({ pageSize: n, page: 0 })}
         />
+        </div>
+        {insightId && (
+          <div className="hidden xl:block">
+            <OrderInsightDrawer
+              order={visibleRows.find((r) => r.id === insightId) ?? null}
+              onClose={() => setInsightId(null)}
+              onOpenFull={(id) => { setInsightId(null); setOpenId(id); }}
+            />
+          </div>
+        )}
         </div>
           </>
         )}

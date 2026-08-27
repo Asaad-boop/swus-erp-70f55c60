@@ -33,10 +33,13 @@ type Props = {
   onBookCourier: () => void;
   onAddTag: (tag: string) => void;
   onPreorder: () => void;
+  /** Staff that selected orders can be assigned to. */
+  agents?: { id: string; name: string }[];
+  onAssign?: (userId: string | null) => void;
   isPending?: boolean;
 };
 
-export function WebBulkActionBar({ count, onClear, onStatus, onPrintInvoices, onBookCourier, onAddTag, onPreorder, isPending }: Props) {
+export function WebBulkActionBar({ count, onClear, onStatus, onPrintInvoices, onBookCourier, onAddTag, onPreorder, agents = [], onAssign, isPending }: Props) {
   const [tagInput, setTagInput] = useState("");
   const [tagOpen, setTagOpen] = useState(false);
   if (count === 0) return null;
@@ -49,6 +52,24 @@ export function WebBulkActionBar({ count, onClear, onStatus, onPrintInvoices, on
           <span className="tabular-nums">{count}</span> selected
         </div>
         <span className="h-5 w-px bg-border" />
+
+        {onAssign && (
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button size="sm" variant="ghost" className="h-8 gap-1.5 text-xs" disabled={isPending}>
+                Assign to…
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="center" className="max-h-72 overflow-y-auto">
+              <DropdownMenuItem onClick={() => onAssign(null)}>Unassign</DropdownMenuItem>
+              {agents.map((a) => (
+                <DropdownMenuItem key={a.id} onClick={() => onAssign(a.id)}>
+                  {a.name}
+                </DropdownMenuItem>
+              ))}
+            </DropdownMenuContent>
+          </DropdownMenu>
+        )}
 
         {/* Change status */}
         <DropdownMenu>

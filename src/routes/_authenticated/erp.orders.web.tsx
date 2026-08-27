@@ -27,6 +27,10 @@ import { computeAutoTags, topTag, type AutoTagKey } from "@/lib/erp/order-tags";
 import { AutoTagChips } from "@/components/erp/orders/auto-tag-chips";
 import { CopyIconBtn, PhoneActions } from "@/components/erp/orders/contact-actions";
 import { AdvanceBadge } from "@/components/erp/orders/advance-badge";
+import { CallStatusChip } from "@/components/erp/orders/call-status-chip";
+import { useLogCallAttempt, useAssignOrders } from "@/hooks/erp/use-order-ops";
+import { useStaffList } from "@/hooks/erp/use-orders-query";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { TagFilterBar, buildFilterOptions } from "@/components/erp/orders/tag-filter-bar";
 import { fireOrderSmsMany } from "@/lib/erp/sms/notify";
 import { IncompleteOrdersTable } from "@/components/erp/orders/incomplete-orders-table";
@@ -126,6 +130,8 @@ type WebOrderRow = {
   payment_method: string | null;
   call_attempt_count: number | null;
   call_status: string | null;
+  last_call_at: string | null;
+  assigned_to: string | null;
   brand_id: string | null;
   is_preorder: boolean | null;
   preorder_expected_date: string | null;
@@ -599,6 +605,9 @@ function _WebOrdersPageBody() {
   }, []);
   const queryClient = useQueryClient();
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const logCall = useLogCallAttempt();
+  const assignOrders = useAssignOrders();
+  const { data: staff = [] } = useStaffList();
   const [preorderOpen, setPreorderOpen] = useState(false);
   const [preorderIds, setPreorderIds] = useState<string[]>([]);
   const [printOpen, setPrintOpen] = useState(false);
@@ -671,7 +680,7 @@ function _WebOrdersPageBody() {
         supabase
           .from("orders")
           .select(
-            "id,created_at,shipping_name,shipping_phone,shipping_address,shipping_city,shipping_district,guest_name,guest_phone,latest_note,customer_note,notes,tags,source_website,status,web_status,total,advance_amount,advance_txn_id,verified_at,payment_method,call_attempt_count,call_status,brand_id,is_preorder,preorder_expected_date,updated_at",
+            "id,created_at,shipping_name,shipping_phone,shipping_address,shipping_city,shipping_district,guest_name,guest_phone,latest_note,customer_note,notes,tags,source_website,status,web_status,total,advance_amount,advance_txn_id,verified_at,payment_method,call_attempt_count,call_status,last_call_at,assigned_to,brand_id,is_preorder,preorder_expected_date,updated_at",
             { count: "exact" },
           ),
         brandIds,
@@ -971,6 +980,39 @@ function _WebOrdersPageBody() {
     ? taggedRows
     : taggedRows.filter(({ tags }) => tags.some((t) => tagFilter.has(t.key)));
 
+  // Stale = created 3h+ ago with no call attempt logged yet.
+  const STALE_MS = 3 * 60 * 60 * 1000;
+  const isStale = (r: WebOrderRow) =>
+    !r.last_call_at &&
+    (r.call_attempt_count ?? 0) === 0 &&
+    Date.now() - new Date(r.created_at).getTime() > STALE_MS;
+
+  // Duplicate = same normalized phone appears more than once on this page.
+  const duplicatePhones = useMemo(() => {
+    const seen = new Map<string, number>();
+    for (const { row } of filteredRows) {
+      const ph = normalizePhone(row.shipping_phone ?? row.guest_phone ?? "");
+      if (!ph) continue;
+      seen.set(ph, (seen.get(ph) ?? 0) + 1);
+    }
+    return new Set([...seen.entries()].filter(([, n]) => n > 1).map(([ph]) => ph));
+  }, [filteredRows]);
+
+  const isDuplicate = (r: WebOrderRow) => {
+    const ph = normalizePhone(r.shipping_phone ?? r.guest_phone ?? "");
+    return !!ph && duplicatePhones.has(ph);
+  };
+
+  // Urgent rows float to the top of the list.
+  const pinnedRows = useMemo(() => {
+    const score = (r: WebOrderRow) => (isStale(r) ? 2 : 0) + (isDuplicate(r) ? 1 : 0);
+    return [...filteredRows].sort((a, b) => score(b.row) - score(a.row));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [filteredRows, duplicatePhones]);
+
+  const staleCount = filteredRows.filter(({ row }) => isStale(row)).length;
+  const dupCount = filteredRows.filter(({ row }) => isDuplicate(row)).length;
+
   const toggleTagFilter = (k: AutoTagKey) => {
     setTagFilter((prev) => {
       const next = new Set(prev);
@@ -1207,6 +1249,25 @@ function _WebOrdersPageBody() {
           />
         </div>
       ) : (
+      <>
+      {(staleCount > 0 || dupCount > 0) && (
+        <div
+          role="status"
+          className="mb-3 flex flex-wrap items-center gap-2 rounded-[var(--radius-card)] border border-[var(--danger-border)] bg-[var(--danger-soft)] px-3.5 py-2.5 text-[12.5px] text-[var(--danger-text)]"
+        >
+          <AlertTriangle className="h-4 w-4 shrink-0" />
+          <span>
+            {staleCount > 0 && (
+              <>
+                <span className="num font-semibold">{staleCount}</span> order 3 ঘণ্টার বেশি সময় ধরে call করা হয়নি, উপরে pin করা আছে.
+              </>
+            )}
+            {dupCount > 0 && (
+              <> <span className="num font-semibold">{dupCount}</span> possible duplicate detected.</>
+            )}
+          </span>
+        </div>
+      )}
       <div className="rounded-xl border border-border/60 bg-card overflow-x-auto shadow-[0_1px_2px_rgba(0,0,0,0.02)]">
         <Table>
           <TableHeader>
@@ -1220,9 +1281,10 @@ function _WebOrdersPageBody() {
               </TableHead>
               <TableHead className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground w-[120px]">Created</TableHead>
               <TableHead className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground min-w-[220px]">Customer</TableHead>
-              <TableHead className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground w-[180px]">Note</TableHead>
+              <TableHead className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground w-[190px]">Call</TableHead>
               <TableHead className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground min-w-[240px]">Order Items</TableHead>
               <TableHead className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground w-[160px]">Success Rate</TableHead>
+              <TableHead className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground w-[140px]">Assigned</TableHead>
               <TableHead className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground w-[180px]">Tags</TableHead>
               <TableHead className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground w-[120px]">Site</TableHead>
               <TableHead className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground w-[130px]">Source</TableHead>
@@ -1233,19 +1295,19 @@ function _WebOrdersPageBody() {
             {isLoading ? (
               Array.from({ length: 6 }).map((_, i) => (
                 <TableRow key={i}>
-                  {Array.from({ length: 10 }).map((_, j) => (
+                  {Array.from({ length: 11 }).map((_, j) => (
                     <TableCell key={j} className="py-2"><Skeleton className="h-10 w-full" /></TableCell>
                   ))}
                 </TableRow>
               ))
             ) : filteredRows.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={10} className="h-32 text-center text-muted-foreground">
+                <TableCell colSpan={11} className="h-32 text-center text-muted-foreground">
                   {tagFilter.size > 0 ? "No orders match the selected tags" : "No web orders in this status"}
                 </TableCell>
               </TableRow>
             ) : (
-              filteredRows.map(({ row: r, tags: autoTags }) => {
+              pinnedRows.map(({ row: r, tags: autoTags }) => {
                 const name = r.shipping_name ?? r.guest_name ?? "—";
                 const phone = r.shipping_phone ?? r.guest_phone ?? "";
                 // Only real customer/staff notes — skip r.notes (auto-populated with items summary)
@@ -1271,6 +1333,7 @@ function _WebOrdersPageBody() {
                       isSelected && "bg-primary/[0.04] hover:bg-primary/[0.06] dark:bg-primary/10",
                       flash && "animate-in slide-in-from-top-2 bg-emerald-50/70 dark:bg-emerald-950/30",
                       lock && "ring-1 ring-inset ring-amber-500/30 bg-amber-50/40 dark:bg-amber-950/15",
+                      (isStale(r) || isDuplicate(r)) && "bg-[var(--danger-soft)]/60",
                     )}
                     onClick={() => setOpenId(r.id)}
                   >
@@ -1351,17 +1414,30 @@ function _WebOrdersPageBody() {
                       </div>
                     </TableCell>
 
-                    {/* Note */}
-                    <TableCell className="py-3">
-                      {note ? (
-                        <div className="w-[210px] pl-2.5 border-l-2 border-amber-400/60 dark:border-amber-500/50">
-                          <p className="text-[11.5px] leading-snug text-foreground/85 line-clamp-3" title={note}>
+                    {/* Call */}
+                    <TableCell className="py-3" onClick={(e) => e.stopPropagation()}>
+                      <div className="flex w-[180px] flex-col items-start gap-1.5">
+                        <CallStatusChip status={r.call_status} attempts={r.call_attempt_count} />
+                        <button
+                          type="button"
+                          onClick={() =>
+                            logCall.mutate({
+                              orderId: r.id,
+                              attempts: r.call_attempt_count ?? 0,
+                              currentStatus: r.call_status ?? null,
+                            })
+                          }
+                          disabled={logCall.isPending}
+                          className="focus-ring inline-flex items-center gap-1 rounded-[var(--radius-chip)] border border-border px-1.5 py-0.5 text-[11px] font-medium text-muted-foreground hover:bg-muted hover:text-foreground disabled:opacity-50"
+                        >
+                          <PhoneIcon className="h-3 w-3" /> Call now
+                        </button>
+                        {note && (
+                          <p className="line-clamp-2 border-l-2 border-amber-400/60 pl-2 text-[11px] leading-snug text-foreground/80" title={note}>
                             {note}
                           </p>
-                        </div>
-                      ) : (
-                        <span className="text-xs text-muted-foreground/60">—</span>
-                      )}
+                        )}
+                      </div>
                     </TableCell>
 
                     {/* Order Items */}
@@ -1457,6 +1533,41 @@ function _WebOrdersPageBody() {
                         success={courier.all.success || b.confirmed}
                         providers={courier.providers}
                       />
+                    </TableCell>
+
+                    {/* Assigned */}
+                    <TableCell className="py-3" onClick={(e) => e.stopPropagation()}>
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                          <button
+                            type="button"
+                            className="focus-ring inline-flex max-w-[130px] items-center gap-1.5 rounded-[var(--radius-chip)] px-1 py-0.5 text-left hover:bg-muted"
+                          >
+                            {(() => {
+                              const agent = staff.find((x) => x.id === r.assigned_to);
+                              if (!agent) return <span className="text-[11.5px] italic text-muted-foreground/70">Unassigned</span>;
+                              return (
+                                <>
+                                  <span className="grid h-5 w-5 shrink-0 place-items-center rounded-full bg-primary/10 text-[9px] font-bold uppercase text-primary">
+                                    {initials(agent.display_name ?? "?")}
+                                  </span>
+                                  <span className="truncate text-[11.5px] font-medium text-foreground">{agent.display_name ?? "Staff"}</span>
+                                </>
+                              );
+                            })()}
+                          </button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="start" className="max-h-72 overflow-y-auto">
+                          <DropdownMenuItem onClick={() => assignOrders.mutate({ orderIds: [r.id], userId: null })}>
+                            Unassign
+                          </DropdownMenuItem>
+                          {staff.map((sm) => (
+                            <DropdownMenuItem key={sm.id} onClick={() => assignOrders.mutate({ orderIds: [r.id], userId: sm.id })}>
+                              {sm.display_name ?? "Staff"}
+                            </DropdownMenuItem>
+                          ))}
+                        </DropdownMenuContent>
+                      </DropdownMenu>
                     </TableCell>
 
                     {/* Tags */}
@@ -1582,6 +1693,7 @@ function _WebOrdersPageBody() {
           </div>
         )}
       </div>
+      </>
       )}
       </div>
 
@@ -1595,6 +1707,11 @@ function _WebOrdersPageBody() {
         onBookCourier={() => { if (selectedIds.size > 0) setPathaoBulkOpen(true); }}
         onAddTag={(tag) => bulkAddTag.mutate(tag)}
         onPreorder={() => { if (selectedIds.size > 0) { setPreorderIds(Array.from(selectedIds)); setPreorderOpen(true); } }}
+        agents={staff.map((sm) => ({ id: sm.id, name: sm.display_name ?? "Staff" }))}
+        onAssign={(userId) => {
+          if (selectedIds.size === 0) return;
+          assignOrders.mutate({ orderIds: Array.from(selectedIds), userId });
+        }}
         isPending={bulkStatus.isPending || bulkAddTag.isPending}
       />
 
