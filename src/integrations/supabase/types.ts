@@ -11907,6 +11907,7 @@ export type Database = {
       }
       check_reorder_triggers: { Args: { _brand_id: string }; Returns: number }
       check_reorder_triggers_all_brands: { Args: never; Returns: number }
+      claim_my_guest_orders: { Args: never; Returns: number }
       combo_derived_stock: { Args: { _combo_id: string }; Returns: number }
       confirm_meta_dollar_purchase: {
         Args: { _purchase_id: string }
@@ -12214,6 +12215,7 @@ export type Database = {
         }[]
       }
       get_my_access_profile: { Args: never; Returns: Json }
+      get_my_orders: { Args: never; Returns: Json[] }
       get_order_courier_cost: { Args: { _order_id: string }; Returns: number }
       get_product_campaign_report: {
         Args: { p_brand_id: string; p_from: string; p_to: string }
@@ -13109,6 +13111,7 @@ export type Database = {
       }
       next_invoice_no: { Args: { _brand_id: string }; Returns: string }
       normalize_mobile_bd: { Args: { p_phone: string }; Returns: string }
+      normalize_phone_tail: { Args: { _phone: string }; Returns: string }
       order_stock_is_deducted_status: {
         Args: { p_status: Database["public"]["Enums"]["order_status"] }
         Returns: boolean
