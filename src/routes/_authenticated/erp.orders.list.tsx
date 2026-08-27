@@ -1,6 +1,6 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { Plus, Download, RefreshCw, Inbox } from "lucide-react";
+import { Plus, Download, RefreshCw, Inbox, ScanLine } from "lucide-react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
@@ -29,6 +29,7 @@ import { PreorderConvertDialog } from "@/components/erp/orders/preorder-convert-
 import { BulkPrintDialog, type PrintMode } from "@/components/erp/orders/bulk-print-dialog";
 import { CourierStatusSyncDialog } from "@/components/erp/orders/courier-status-sync-dialog";
 import { PhoneHistorySyncDialog } from "@/components/erp/orders/phone-history-sync-dialog";
+import { ScanToDispatchDialog } from "@/components/erp/orders/scan-to-dispatch-dialog";
 import { downloadCsv, exportOrdersCsv, statusAge, statusSinceTs, tabForStatuses, STATUS_TABS, type OrderRow, type OrderStatus } from "@/lib/erp/orders";
 import { AlertTriangle, RefreshCcw } from "lucide-react";
 
@@ -227,9 +228,11 @@ function OrdersPage() {
   const [preorderOpen, setPreorderOpen] = useState(false);
   const [preorderIds, setPreorderIds] = useState<string[]>([]);
   const [printMode, setPrintMode] = useState<PrintMode | null>(null);
+  const [singlePrintOrderId, setSinglePrintOrderId] = useState<string | null>(null);
   const [syncOpen, setSyncOpen] = useState(false);
   const [singleSyncId, setSingleSyncId] = useState<string | null>(null);
   const [phoneHistOpen, setPhoneHistOpen] = useState(false);
+  const [scanOpen, setScanOpen] = useState(false);
   // Live courier bucket is resolved server-side (see useOrdersQuery) so counts
   // and pagination stay correct instead of filtering only the current page.
   const courierStatusFilter: CourierBucket | "all" = filter.courierBucket ?? "all";
@@ -666,36 +669,51 @@ function OrdersPage() {
           onApplyView={(v) => applyView(v.search)}
           onDeleteView={savedViews.remove}
           rightSlot={
-            <OrdersBulkActions
-              selectedCount={selectedIds.size}
-              totalCount={rows.length}
-              onSelectAll={() => setSelectedIds(new Set(rows.map((r) => r.id)))}
-              onClear={() => setSelectedIds(new Set())}
-              onStatus={(s) => bulkStatus.mutate(s)}
-              onExport={handleExport}
-              onSendToPathao={() => {
-                if (selectedIds.size === 0) return;
-                setPathaoBulkOpen(true);
-              }}
-              onSyncCourier={() => {
-                if (selectedIds.size === 0) return;
-                setSyncOpen(true);
-              }}
-              onPhoneHistory={() => {
-                if (selectedIds.size === 0) return;
-                setPhoneHistOpen(true);
-              }}
-              onPreorder={() => {
-                if (selectedIds.size === 0) return;
-                setPreorderIds(Array.from(selectedIds));
-                setPreorderOpen(true);
-              }}
-              onPrint={(mode) => {
-                if (selectedIds.size === 0) return;
-                setPrintMode(mode);
-              }}
-              isPending={bulkStatus.isPending}
-            />
+            <div className="flex items-center gap-2">
+              <Button
+                variant="outline"
+                size="sm"
+                className="h-9 gap-2 rounded-xl px-3 text-[13px] font-medium"
+                onClick={() => setScanOpen(true)}
+                title="Scan to dispatch"
+              >
+                <ScanLine className="h-4 w-4" /> Scan
+              </Button>
+              <OrdersBulkActions
+                selectedCount={selectedIds.size}
+                totalCount={rows.length}
+                onSelectAll={() => setSelectedIds(new Set(rows.map((r) => r.id)))}
+                onClear={() => setSelectedIds(new Set())}
+                onStatus={(s) => bulkStatus.mutate(s)}
+                onExport={handleExport}
+                onSendToPathao={() => {
+                  if (selectedIds.size === 0) return;
+                  setPathaoBulkOpen(true);
+                }}
+                onSyncCourier={() => {
+                  if (selectedIds.size === 0) return;
+                  setSyncOpen(true);
+                }}
+                onPhoneHistory={() => {
+                  if (selectedIds.size === 0) return;
+                  setPhoneHistOpen(true);
+                }}
+                onPreorder={() => {
+                  if (selectedIds.size === 0) return;
+                  setPreorderIds(Array.from(selectedIds));
+                  setPreorderOpen(true);
+                }}
+                onPrint={(mode) => {
+                  if (selectedIds.size === 0) return;
+                  setPrintMode(mode);
+                }}
+                onDispatchPack={() => bulkStatus.mutate("packed")}
+                onDispatchReady={() => bulkStatus.mutate("ready_to_ship")}
+                onDispatchShip={() => bulkStatus.mutate("shipped")}
+                onOpenScanner={() => setScanOpen(true)}
+                isPending={bulkStatus.isPending}
+              />
+            </div>
           }
         />
         <div className="overflow-hidden rounded-2xl border border-[var(--panel-border)] bg-card">
@@ -724,6 +742,7 @@ function OrdersPage() {
           flashOrderIds={flashIds}
           onSyncRow={(id) => { setSingleSyncId(id); }}
           onPreorder={(id) => { setPreorderIds([id]); setPreorderOpen(true); }}
+          onDispatchPrint={(id) => { setSinglePrintOrderId(id); }}
         />
         {!isLoading && visibleRows.length === 0 && (
           <EmptyState
@@ -796,6 +815,21 @@ function OrdersPage() {
         onOpenChange={(o) => { if (!o) setPrintMode(null); }}
         mode={printMode ?? "invoice"}
         orderIds={Array.from(selectedIds)}
+      />
+
+      <BulkPrintDialog
+        open={singlePrintOrderId !== null}
+        onOpenChange={(o) => { if (!o) setSinglePrintOrderId(null); }}
+        mode="invoice"
+        orderIds={singlePrintOrderId ? [singlePrintOrderId] : []}
+      />
+
+      <ScanToDispatchDialog
+        open={scanOpen}
+        onClose={() => setScanOpen(false)}
+        onStatusChange={async (id, status) => {
+          await statusMutation.mutateAsync({ id, status });
+        }}
       />
 
       <CourierStatusSyncDialog
