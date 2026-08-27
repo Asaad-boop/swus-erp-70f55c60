@@ -10,3 +10,5 @@ export { EmptyState } from "./empty-state";
 export { SkeletonBlock, SkeletonLines } from "./skeleton-block";
 export { Toolbar } from "./toolbar";
 export type { Density, FilterChip, ToolbarProps } from "./toolbar";
+export { ThemeToggle } from "./theme-toggle";
+
