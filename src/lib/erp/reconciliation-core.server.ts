@@ -567,6 +567,8 @@ export async function applyReconRunCore(
           if (!isReturned) {
             if (isPartial) effectiveMatchType = "partial";
             else if (isDelivered) effectiveMatchType = "paid";
+            // Courier still moving the parcel → money side only, keep status.
+            else effectiveMatchType = "unknown";
           }
         }
 
@@ -584,11 +586,12 @@ export async function applyReconRunCore(
           orderUpdate.payment_status = "partial";
           orderUpdate.partial_amount = partialAmount > 0 ? partialAmount : Number(r.collected ?? 0);
           orderUpdate.delivered_at = new Date(txnDate).toISOString();
-        } else {
+        } else if (effectiveMatchType !== "unknown") {
           orderUpdate.status = "paid";
           orderUpdate.payment_status = "paid";
           orderUpdate.delivered_at = new Date(txnDate).toISOString();
         }
+
 
         const { error: oErr } = await supabase
           .from("orders")
@@ -619,16 +622,25 @@ export async function applyReconRunCore(
           }
         }
 
-        // Update shipment delivery fee if linked
+        // Update shipment delivery fee if linked. Only stamp a status the
+        // invoice actually proves (effective type), never the raw guess.
         if (r.consignment_id) {
-          const shipStatus = matchType === "return" ? "Returned" : matchType === "partial" ? "Partial Delivered" : "Delivered";
+          const shipStatus =
+            effectiveMatchType === "return"
+              ? "Returned"
+              : effectiveMatchType === "partial"
+                ? "Partial Delivered"
+                : effectiveMatchType === "unknown"
+                  ? null
+                  : "Delivered";
           let sq = supabase
             .from("courier_shipments")
-            .update({ delivery_fee: r.total_fee, status: shipStatus })
+            .update(shipStatus ? { delivery_fee: r.total_fee, status: shipStatus } : { delivery_fee: r.total_fee })
             .eq("consignment_id", r.consignment_id);
           if (rowBrand) sq = sq.eq("brand_id", rowBrand);
           await sq;
         }
+
 
         // Mark row applied
         await supabase
