@@ -129,8 +129,10 @@ function OrdersTableImpl({ rows, loading, selectedIds, onToggleSelect, onToggleA
       cell: ({ row }) => {
         const o = row.original;
         return (
-          <div className="flex min-w-[124px] flex-col items-start gap-1">
-            <CallStatusChip status={o.call_status} attempts={o.call_attempt_count} />
+          <div className="flex min-w-[104px] flex-col items-start gap-1">
+            {o.call_status && o.call_status !== "not_called" ? (
+              <CallStatusChip status={o.call_status} attempts={o.call_attempt_count} />
+            ) : null}
             <button
               type="button"
               onClick={(e) => {
