@@ -980,13 +980,6 @@ function _WebOrdersPageBody() {
     ? taggedRows
     : taggedRows.filter(({ tags }) => tags.some((t) => tagFilter.has(t.key)));
 
-  // Stale = created 3h+ ago with no call attempt logged yet.
-  const STALE_MS = 3 * 60 * 60 * 1000;
-  const isStale = (r: WebOrderRow) =>
-    !r.last_call_at &&
-    (r.call_attempt_count ?? 0) === 0 &&
-    Date.now() - new Date(r.created_at).getTime() > STALE_MS;
-
   // Duplicate = same normalized phone appears more than once on this page.
   const duplicatePhones = useMemo(() => {
     const seen = new Map<string, number>();
@@ -1003,14 +996,9 @@ function _WebOrdersPageBody() {
     return !!ph && duplicatePhones.has(ph);
   };
 
-  // Urgent rows float to the top of the list.
-  const pinnedRows = useMemo(() => {
-    const score = (r: WebOrderRow) => (isStale(r) ? 2 : 0) + (isDuplicate(r) ? 1 : 0);
-    return [...filteredRows].sort((a, b) => score(b.row) - score(a.row));
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [filteredRows, duplicatePhones]);
+  // Render in the order returned by the server (newest first by default).
+  const displayRows = filteredRows;
 
-  const staleCount = filteredRows.filter(({ row }) => isStale(row)).length;
   const dupCount = filteredRows.filter(({ row }) => isDuplicate(row)).length;
 
   const toggleTagFilter = (k: AutoTagKey) => {
