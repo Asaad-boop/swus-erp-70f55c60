@@ -7,7 +7,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
-import { Camera, Keyboard, ScanLine, X, CheckCircle2, AlertCircle, Package, CheckCheck, Send, Loader2 } from "lucide-react";
+import { Camera, Keyboard, ScanLine, CheckCircle2, AlertCircle, Package, CheckCheck, Send, Loader2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { supabase } from "@/integrations/supabase/client";
 import { statusBadge, type OrderRow, type OrderStatus } from "@/lib/erp/orders";
