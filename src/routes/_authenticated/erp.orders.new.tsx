@@ -337,11 +337,22 @@ function NewOrderPage() {
   const [items, setItems] = useState<LineItem[]>([]);
   const [productSearch, setProductSearch] = useState("");
   const [featuredOnly, setFeaturedOnly] = useState(false);
+  const searchRef = useRef<HTMLInputElement | null>(null);
 
+  // Debounce so we don't hit Supabase on every keystroke — big speed win when
+  // an operator types a full product name.
+  const [debouncedSearch, setDebouncedSearch] = useState("");
+  useEffect(() => {
+    const t = setTimeout(() => setDebouncedSearch(productSearch.trim()), 260);
+    return () => clearTimeout(t);
+  }, [productSearch]);
 
   const { data: products = [], isFetching: searching } = useQuery({
-    queryKey: ["new-order-products", effectiveBrandId, productSearch, featuredOnly],
+    queryKey: ["new-order-products", effectiveBrandId, debouncedSearch, featuredOnly],
     enabled: !!effectiveBrandId,
+    staleTime: 60_000,
+    gcTime: 10 * 60_000,
+    placeholderData: keepPreviousData,
 
     queryFn: async () => {
       // Cross-brand catalog: shob brand er product dekhabo, chhoto brand tag shoho.
