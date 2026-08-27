@@ -502,12 +502,16 @@ async function applyInstapayRow(
   }
 
   if (p.consignmentId) {
-    const shipStatus = p.matchType === "return" ? "Returned" : p.matchType === "partial" ? "Partial Delivered" : "Delivered";
+    // Only stamp a fulfilment status the invoice actually proves; never
+    // overwrite the courier's own live status with a guessed one.
+    const shipStatus =
+      matchType === "return" ? "Returned" : matchType === "partial" ? "Partial Delivered" : matchType === "paid" ? "Delivered" : null;
     await supabase
       .from("courier_shipments")
-      .update({ delivery_fee: p.totalFee, status: shipStatus })
+      .update(shipStatus ? { delivery_fee: p.totalFee, status: shipStatus } : { delivery_fee: p.totalFee })
       .eq("consignment_id", p.consignmentId);
   }
+
 
   await supabase
     .from("erp_reconciliation_rows")
