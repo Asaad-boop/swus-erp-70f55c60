@@ -1,4 +1,4 @@
-import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 
@@ -93,5 +93,27 @@ export function useBulkOrderPatch() {
       invalidateOrders(qc);
     },
     onError: (e) => toast.error(e instanceof Error ? e.message : "Bulk update failed"),
+  });
+}
+
+/** Live edit locks for the visible page, so rows can show "open by <name>". */
+export function useOrderLocksFor(orderIds: string[]) {
+  const key = [...orderIds].sort().join(",");
+  return useQuery({
+    queryKey: ["order-locks-map", key],
+    enabled: orderIds.length > 0,
+    refetchInterval: 30_000,
+    queryFn: async () => {
+      const since = new Date(Date.now() - 2 * 60_000).toISOString();
+      const { data, error } = await supabase
+        .from("order_locks")
+        .select("order_id,user_name,last_heartbeat_at")
+        .in("order_id", orderIds)
+        .gte("last_heartbeat_at", since);
+      if (error) throw error;
+      const map: Record<string, { user_name: string | null }> = {};
+      for (const r of data ?? []) map[r.order_id] = { user_name: r.user_name };
+      return map;
+    },
   });
 }
