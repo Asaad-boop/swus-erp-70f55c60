@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { CheckCheck, Printer, Sticker, ClipboardList, FileSpreadsheet, Truck, RefreshCw, Download, Copy, X, Loader2, ChevronDown, Phone, Zap, Search, PackageCheck, CalendarClock, History, CornerDownLeft } from "lucide-react";
+import { CheckCheck, Printer, Sticker, ClipboardList, FileSpreadsheet, Truck, RefreshCw, Download, Copy, X, Loader2, ChevronDown, Phone, Zap, Search, PackageCheck, CalendarClock, History, CornerDownLeft, Package, ScanLine } from "lucide-react";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -17,6 +17,10 @@ type Props = {
   onPhoneHistory: () => void;
   onPreorder: () => void;
   onPrint: (mode: "invoice" | "sticker" | "picking" | "sheet") => void;
+  onDispatchPack?: () => void;
+  onDispatchReady?: () => void;
+  onDispatchShip?: () => void;
+  onOpenScanner?: () => void;
   isPending: boolean;
 };
 
