@@ -50,6 +50,12 @@ export function NewReturnDialog({ open, onOpenChange }: { open: boolean; onOpenC
 
   const selectedItem = useMemo(() => (itemsQ.data ?? []).find((i: any) => i.id === itemId), [itemsQ.data, itemId]);
 
+  // Single-item order hole auto-select — na hole item link chhara case toiri hoye jay.
+  useEffect(() => {
+    const items = itemsQ.data ?? [];
+    if (!itemId && items.length === 1) setItemId(items[0].id);
+  }, [itemsQ.data, itemId]);
+
   useEffect(() => {
     if (selectedItem) {
       setQty(Number(selectedItem.quantity ?? 1));

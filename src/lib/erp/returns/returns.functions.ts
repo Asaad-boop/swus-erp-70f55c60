@@ -235,6 +235,9 @@ export const completeQC = createServerFn({ method: "POST" })
       if (c.stock_updated || c.stock_restored) {
         throw new Error("Already restocked");
       }
+      if (!c.product_id) {
+        throw new Error("This case has no product linked — open the case and link the order item before restocking.");
+      }
       const wac = Number(c.product?.weighted_avg_cost ?? 0);
       const { error: rpcErr } = await sb.rpc("adjust_stock_v2", {
         _product_id: c.product_id,
