@@ -42,6 +42,9 @@ const theme = (t: "return" | "exchange") => (t === "return" ? RETURN : EXCHANGE)
 
 type Tab = "all" | "returns" | "exchanges" | "pending_qc" | "restocked" | "closed";
 
+/** Returns waiting on warehouse QC action (received = just arrived, qc_pending = QC started). */
+const PENDING_QC = new Set(["received", "qc_pending"]);
+
 type Row = {
   id: string;
   type: "return" | "exchange";
@@ -84,19 +87,22 @@ function ReturnsListPage() {
   const rows = useMemo(() => {
     const rets: Row[] = (retQ.data ?? []).map((r: any) => ({
       id: r.id, type: "return" as const, caseNumber: r.case_number ?? r.id.slice(0, 8),
-      orderNumber: r.order_id ? String(r.order_id).slice(0, 8) : null,
+      orderNumber: r.order?.invoice_no ?? (r.order_id ? String(r.order_id).slice(0, 8) : null),
       customer: r.order?.shipping_name ?? "—",
-      productTitle: r.product?.title ?? "—", productSku: r.product?.sku,
-      productImage: r.product?.image ?? null,
-      status: r.return_status, qc: r.qc_condition, amount: Number(r.refund_amount ?? 0),
+      productTitle: r.product?.title ?? r.item?.name ?? "Item not linked",
+      productSku: r.product?.sku ?? r.sku ?? null,
+      productImage: r.product?.image ?? r.item?.image ?? null,
+      status: r.return_status, qc: r.qc_condition,
+      amount: Number(r.refund_amount ?? 0) || Number(r.item?.line_total ?? 0),
       createdAt: r.created_at,
     }));
     const excs: Row[] = (excQ.data ?? []).map((r: any) => ({
       id: r.id, type: "exchange" as const, caseNumber: r.case_number ?? r.id.slice(0, 8),
-      orderNumber: r.original_order_id ? String(r.original_order_id).slice(0, 8) : null,
+      orderNumber: r.order?.invoice_no ?? (r.original_order_id ? String(r.original_order_id).slice(0, 8) : null),
       customer: r.order?.shipping_name ?? "—",
-      productTitle: r.product?.title ?? "—", productSku: r.product?.sku,
-      productImage: r.product?.image ?? null,
+      productTitle: r.product?.title ?? r.item?.name ?? "Item not linked",
+      productSku: r.product?.sku ?? null,
+      productImage: r.product?.image ?? r.item?.image ?? null,
       status: r.exchange_status, qc: null,
       amount: Number(r.exchange_charge_collected ?? r.refund_amount ?? 0),
       createdAt: r.created_at,
@@ -104,7 +110,7 @@ function ReturnsListPage() {
     let all: Row[] = [...rets, ...excs];
     if (tab === "returns") all = rets;
     else if (tab === "exchanges") all = excs;
-    else if (tab === "pending_qc") all = rets.filter((r) => r.status === "received");
+    else if (tab === "pending_qc") all = rets.filter((r) => PENDING_QC.has(r.status));
     else if (tab === "restocked") all = rets.filter((r) => r.status === "restocked");
     else if (tab === "closed") all = all.filter((r) => r.status === "closed" || r.status === "completed");
     if (q.trim()) {
@@ -113,6 +119,7 @@ function ReturnsListPage() {
         r.caseNumber?.toString().toLowerCase().includes(needle) ||
         r.orderNumber?.toString().toLowerCase().includes(needle) ||
         r.customer?.toLowerCase().includes(needle) ||
+        r.productSku?.toLowerCase().includes(needle) ||
         r.productTitle?.toLowerCase().includes(needle),
       );
     }
@@ -123,10 +130,10 @@ function ReturnsListPage() {
     all: (retQ.data?.length ?? 0) + (excQ.data?.length ?? 0),
     returns: retQ.data?.length ?? 0,
     exchanges: excQ.data?.length ?? 0,
-    pending_qc: (retQ.data ?? []).filter((r: any) => r.return_status === "received").length,
+    pending_qc: (retQ.data ?? []).filter((r: any) => PENDING_QC.has(r.return_status)).length,
     restocked: (retQ.data ?? []).filter((r: any) => r.return_status === "restocked").length,
     closed: (retQ.data ?? []).filter((r: any) => r.return_status === "closed").length
-      + (excQ.data ?? []).filter((r: any) => r.exchange_status === "completed").length,
+      + (excQ.data ?? []).filter((r: any) => r.exchange_status === "completed" || r.exchange_status === "closed").length,
   };
 
   const totalRefunds = (retQ.data ?? []).reduce((s: number, r: any) => s + Number(r.refund_amount ?? 0), 0);
@@ -247,7 +254,14 @@ function ReturnsListPage() {
               <ul className="space-y-1.5 max-h-[calc(100vh-340px)] overflow-y-auto pr-1 -mr-1">
                 {rows.map((r, i) => (
                   <CaseRow key={r.id} r={r} index={i} selected={selectedId === r.id}
-                    onOpen={() => setSelectedId(r.id)} />
+                    onOpen={() => {
+                      // Preview pane only exists on lg+; on smaller screens open the full case.
+                      if (typeof window !== "undefined" && window.matchMedia("(max-width: 1023px)").matches) {
+                        navigate({ to: "/erp/returns/$caseId", params: { caseId: r.id } });
+                      } else {
+                        setSelectedId((prev) => (prev === r.id ? null : r.id));
+                      }
+                    }} />
                 ))}
               </ul>
             )}

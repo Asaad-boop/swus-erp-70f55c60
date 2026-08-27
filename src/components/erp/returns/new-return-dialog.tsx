@@ -50,6 +50,12 @@ export function NewReturnDialog({ open, onOpenChange }: { open: boolean; onOpenC
 
   const selectedItem = useMemo(() => (itemsQ.data ?? []).find((i: any) => i.id === itemId), [itemsQ.data, itemId]);
 
+  // Single-item order hole auto-select — na hole item link chhara case toiri hoye jay.
+  useEffect(() => {
+    const items = itemsQ.data ?? [];
+    if (!itemId && items.length === 1) setItemId(items[0].id);
+  }, [itemsQ.data, itemId]);
+
   useEffect(() => {
     if (selectedItem) {
       setQty(Number(selectedItem.quantity ?? 1));
@@ -79,7 +85,8 @@ export function NewReturnDialog({ open, onOpenChange }: { open: boolean; onOpenC
     onError: (e: Error) => toast.error(e.message),
   });
 
-  const canSubmit = orderId && qty > 0;
+  const canSubmit = !!orderId && !!itemId && qty > 0;
+  const selectedOrder = (ordersQ.data ?? []).find((o: any) => o.id === orderId);
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -99,7 +106,7 @@ export function NewReturnDialog({ open, onOpenChange }: { open: boolean; onOpenC
                 {(ordersQ.data ?? []).map((o: any) => (
                   <button key={o.id} type="button" onClick={() => { setOrderId(o.id); setOrderBrandId(o.brand_id); setItemId(null); }}
                     className="w-full text-left px-3 py-2 text-xs hover:bg-muted/50 border-b last:border-b-0">
-                    <div className="font-mono">#{String(o.id).slice(0, 8)} · {o.shipping_name ?? "—"}</div>
+                    <div className="font-mono">{o.invoice_no ?? `#${String(o.id).slice(0, 8)}`} · {o.shipping_name ?? "—"}</div>
                     <div className="text-muted-foreground">{o.shipping_phone ?? "—"} · ৳{Number(o.total ?? 0).toLocaleString("en-IN")} · {o.status}</div>
                   </button>
                 ))}
@@ -107,16 +114,19 @@ export function NewReturnDialog({ open, onOpenChange }: { open: boolean; onOpenC
             )}
             {orderId && (
               <div className="mt-2 flex items-center justify-between rounded-md border bg-muted/30 px-3 py-2 text-xs">
-                <span className="font-mono">Order #{String(orderId).slice(0, 8)}</span>
+                <span className="font-mono">{selectedOrder?.invoice_no ?? `Order #${String(orderId).slice(0, 8)}`}</span>
                 <button type="button" onClick={() => { setOrderId(null); setItemId(null); }} className="text-sky-600 hover:underline">Change</button>
               </div>
             )}
           </Field>
 
           {orderId && (
-            <Field label="Order Item">
+            <Field label="Order Item (required)">
               <div className="max-h-40 overflow-y-auto rounded-md border bg-card">
                 {itemsQ.isLoading && <div className="p-3 text-xs text-muted-foreground"><Loader2 className="h-3 w-3 animate-spin inline mr-1" />Loading items…</div>}
+                {!itemsQ.isLoading && (itemsQ.data ?? []).length === 0 && (
+                  <div className="p-3 text-xs text-muted-foreground">This order has no items — return case toiri kora jabe na.</div>
+                )}
                 {(itemsQ.data ?? []).map((i: any) => (
                   <button key={i.id} type="button" onClick={() => setItemId(i.id)}
                     className={"w-full text-left px-3 py-2 text-xs border-b last:border-b-0 " + (itemId === i.id ? "bg-emerald-50" : "hover:bg-muted/50")}>
@@ -125,6 +135,9 @@ export function NewReturnDialog({ open, onOpenChange }: { open: boolean; onOpenC
                   </button>
                 ))}
               </div>
+              {!itemId && (itemsQ.data ?? []).length > 0 && (
+                <div className="mt-1 text-[11px] text-amber-600">Ekta item select korun — product link chhara QC/restock kaj korbe na.</div>
+              )}
             </Field>
           )}
 

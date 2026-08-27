@@ -1,6 +1,7 @@
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
+import { dayStart, dayEnd } from "@/lib/erp/returns/range";
 
 /* ============================================================
    Returns & Exchanges — server functions
@@ -111,16 +112,17 @@ export const listReturnCases = createServerFn({ method: "POST" })
   )
   .handler(async ({ data, context }) => {
     let q = (context.supabase as any).from("erp_return_cases")
-      .select(`id, case_number, brand_id, order_id, product_id, sku, return_type, item_condition, qty,
+      .select(`id, case_number, brand_id, order_id, order_item_id, product_id, variant_id, sku, return_type, item_condition, qty,
                refund_amount, return_status, qc_condition, stock_updated, courier_tracking_id, courier_name,
                created_at, created_by,
-               order:order_id ( id, shipping_name, shipping_phone ),
+               order:order_id ( id, invoice_no, shipping_name, shipping_phone ),
+               item:order_item_id ( id, name, variant_label, quantity, unit_price, line_total, image ),
                product:product_id ( id, title, sku, image )`)
       .order("created_at", { ascending: false }).limit(500);
     if (data.brandIds?.length) q = q.in("brand_id", data.brandIds);
     if (data.status && data.status !== "all") q = q.eq("return_status", data.status);
-    if (data.from) q = q.gte("created_at", data.from);
-    if (data.to) q = q.lte("created_at", data.to);
+    if (data.from) q = q.gte("created_at", dayStart(data.from));
+    if (data.to) q = q.lte("created_at", dayEnd(data.to));
     const { data: rows, error } = await q;
     if (error) throw error;
     return rows ?? [];
@@ -138,17 +140,18 @@ export const listExchangeCases = createServerFn({ method: "POST" })
   )
   .handler(async ({ data, context }) => {
     let q = (context.supabase as any).from("erp_exchange_cases")
-      .select(`id, case_number, brand_id, original_order_id, original_product_id, exchange_type,
+      .select(`id, case_number, brand_id, original_order_id, original_order_item_id, original_product_id, exchange_type,
                exchange_type_detail, exchange_status, replacement_product_id, replacement_qty,
                new_order_id, refund_amount, exchange_charge_collected, created_at, created_by,
-               order:original_order_id ( id, shipping_name, shipping_phone ),
+               order:original_order_id ( id, invoice_no, shipping_name, shipping_phone ),
+               item:original_order_item_id ( id, name, variant_label, quantity, unit_price, line_total, image ),
                product:original_product_id ( id, title, sku, image ),
                replacement:replacement_product_id ( id, title, sku )`)
       .order("created_at", { ascending: false }).limit(500);
     if (data.brandIds?.length) q = q.in("brand_id", data.brandIds);
     if (data.status && data.status !== "all") q = q.eq("exchange_status", data.status);
-    if (data.from) q = q.gte("created_at", data.from);
-    if (data.to) q = q.lte("created_at", data.to);
+    if (data.from) q = q.gte("created_at", dayStart(data.from));
+    if (data.to) q = q.lte("created_at", dayEnd(data.to));
     const { data: rows, error } = await q;
     if (error) throw error;
     return rows ?? [];
@@ -231,6 +234,9 @@ export const completeQC = createServerFn({ method: "POST" })
     if (data.condition === "sellable") {
       if (c.stock_updated || c.stock_restored) {
         throw new Error("Already restocked");
+      }
+      if (!c.product_id) {
+        throw new Error("This case has no product linked — open the case and link the order item before restocking.");
       }
       const wac = Number(c.product?.weighted_avg_cost ?? 0);
       const { error: rpcErr } = await sb.rpc("adjust_stock_v2", {
@@ -372,14 +378,14 @@ export const searchOrdersForCase = createServerFn({ method: "POST" })
   .handler(async ({ data, context }) => {
     const sb = context.supabase as any;
     let q = sb.from("orders")
-      .select("id, shipping_name, shipping_phone, shipping_address, total, status, created_at, brand_id")
+      .select("id, invoice_no, shipping_name, shipping_phone, shipping_address, total, status, created_at, brand_id")
       .order("created_at", { ascending: false })
       .limit(25);
     if (data.brandIds?.length) q = q.in("brand_id", data.brandIds);
     const needle = (data.q ?? "").trim();
     if (needle) {
       const like = `%${needle}%`;
-      q = q.or(`shipping_name.ilike.${like},shipping_phone.ilike.${like}`);
+      q = q.or(`invoice_no.ilike.${like},shipping_name.ilike.${like},shipping_phone.ilike.${like}`);
     }
     const { data: rows, error } = await q;
     if (error) throw error;
