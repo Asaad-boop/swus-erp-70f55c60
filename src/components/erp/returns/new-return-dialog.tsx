@@ -85,7 +85,8 @@ export function NewReturnDialog({ open, onOpenChange }: { open: boolean; onOpenC
     onError: (e: Error) => toast.error(e.message),
   });
 
-  const canSubmit = orderId && qty > 0;
+  const canSubmit = !!orderId && !!itemId && qty > 0;
+  const selectedOrder = (ordersQ.data ?? []).find((o: any) => o.id === orderId);
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
