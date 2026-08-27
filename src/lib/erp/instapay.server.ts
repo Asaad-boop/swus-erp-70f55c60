@@ -436,25 +436,55 @@ async function applyInstapayRow(
   const incomeId: string | null = null;
   const expenseId: string | null = null;
 
+  // Courier API truth-check: Pathao lists prepaid / zero-COD parcels under
+  // "return"-shaped invoice lines (collected = 0), which used to flip real
+  // delivered / in-transit parcels into the return family. Never downgrade a
+  // parcel unless the courier itself reports a return.
+  let matchType = p.matchType;
+  if (matchType === "return") {
+    const { data: ship } = await supabase
+      .from("courier_shipments")
+      .select("status, response_payload")
+      .eq("order_id", p.orderId)
+      .order("updated_at", { ascending: false })
+      .limit(1)
+      .maybeSingle();
+    const payloadStatus = String((ship?.response_payload as AnyRec | null)?.order_status ?? "").toLowerCase();
+    const colStatus = String(ship?.status ?? "").toLowerCase();
+    const signals = [colStatus, payloadStatus].filter(Boolean);
+    const isReturned = signals.some((s) => s.includes("return"));
+    const isPartial = signals.some((s) => s.includes("partial"));
+    const isDelivered = signals.some((s) => s.includes("deliver") && !s.includes("partial"));
+    if (!isReturned) {
+      if (isPartial) matchType = "partial";
+      else if (isDelivered) matchType = "paid";
+      else {
+        // Courier still moving the parcel (in transit / assigned for delivery).
+        // Record the money side but leave the fulfilment status untouched.
+        matchType = "unknown" as never;
+      }
+    }
+  }
 
   const orderUpdate: AnyRec = {
     reconciliation_status: "reconciled",
     courier_fee: p.totalFee,
     net_collected: p.payout,
   };
-  if (p.matchType === "return") {
+  if (matchType === "return") {
     orderUpdate.status = "returned";
-  } else if (p.matchType === "partial") {
+  } else if (matchType === "partial") {
     orderUpdate.status = "partial_delivered";
     orderUpdate.payment_status = "partial";
     orderUpdate.partial_amount = p.collected;
     orderUpdate.delivered_at = new Date(p.txnDate).toISOString();
-  } else {
+  } else if (matchType === "paid") {
     orderUpdate.status = "paid";
     orderUpdate.payment_status = "paid";
     orderUpdate.delivered_at = new Date(p.txnDate).toISOString();
   }
   await supabase.from("orders").update(orderUpdate).eq("id", p.orderId);
+
 
   // Per-SKU courier cost allocation
   if (p.totalFee > 0) {
