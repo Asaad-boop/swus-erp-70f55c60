@@ -1031,7 +1031,122 @@ function NewOrderPage() {
           </div>
 
           {/* RIGHT: Quick add + Delivery + Extras */}
-          <div className="space-y-6 lg:col-span-4">
+          <div className="space-y-4 lg:col-span-4">
+            {/* Quick add products — sticky so it stays reachable while scrolling */}
+            <Card className="overflow-hidden shadow-sm lg:sticky lg:top-[72px] lg:z-[5]">
+              <CardContent className="space-y-3 p-4">
+                <div className="flex items-center justify-between gap-2">
+                  <div>
+                    <div className="text-sm font-semibold">Quick Add Products</div>
+                    <div className="text-[11px] text-muted-foreground">
+                      {searching ? "Searching…" : `${products.length} product${products.length === 1 ? "" : "s"}`}
+                      {" · "}
+                      <kbd className="rounded border bg-muted px-1 text-[9px] font-semibold">/</kbd> search ·{" "}
+                      <kbd className="rounded border bg-muted px-1 text-[9px] font-semibold">Enter</kbd> add
+                    </div>
+                  </div>
+                  <Button
+                    size="icon"
+                    variant={featuredOnly ? "default" : "outline"}
+                    className="h-8 w-8 shrink-0 rounded-lg"
+                    onClick={() => setFeaturedOnly((v) => !v)}
+                    title="Featured only"
+                  >
+                    <Star className={cn("h-4 w-4", featuredOnly && "fill-current")} />
+                  </Button>
+                </div>
+                <div className="relative">
+                  <Search className="absolute left-3 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-muted-foreground" />
+                  <Input
+                    ref={searchRef}
+                    className="h-9 pl-9 pr-8"
+                    placeholder="Name, SKU or code…  (press / )"
+                    value={productSearch}
+                    onChange={(e) => setProductSearch(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter" && products[0]) {
+                        e.preventDefault();
+                        addItem(products[0]);
+                        setProductSearch("");
+                      }
+                      if (e.key === "Escape") setProductSearch("");
+                    }}
+                  />
+                  {productSearch && (
+                    <button
+                      type="button"
+                      onClick={() => { setProductSearch(""); searchRef.current?.focus(); }}
+                      className="absolute right-2 top-1/2 -translate-y-1/2 rounded p-0.5 text-muted-foreground hover:bg-muted hover:text-foreground"
+                    >
+                      <X className="h-3.5 w-3.5" />
+                    </button>
+                  )}
+                </div>
+
+                <div className="max-h-[calc(100vh-320px)] min-h-[220px] space-y-1 overflow-y-auto rounded-xl border bg-muted/20 p-1.5">
+                  {searching && products.length === 0 && (
+                    <div className="flex items-center gap-2 p-3 text-xs text-muted-foreground">
+                      <Loader2 className="h-3.5 w-3.5 animate-spin" /> Searching…
+                    </div>
+                  )}
+                  {!searching && products.length === 0 && (
+                    <div className="p-6 text-center text-xs text-muted-foreground">No products found</div>
+                  )}
+                  {products.map((p, i) => {
+                    const inCart = items.filter((x) => x.product_id === p.id).reduce((s, x) => s + x.quantity, 0);
+                    return (
+                      <button
+                        key={p.id}
+                        onClick={() => addItem(p)}
+                        className={cn(
+                          "group flex w-full items-center gap-2.5 rounded-lg border border-transparent bg-background p-1.5 text-left transition-colors hover:border-indigo-200 hover:bg-indigo-50/40 dark:hover:bg-indigo-950/20",
+                          i === 0 && productSearch && "border-indigo-300/70 ring-1 ring-indigo-200/60",
+                        )}
+                      >
+                        <div className="relative h-10 w-10 shrink-0 overflow-hidden rounded-lg border bg-muted">
+                          {p.image ? (
+                            <img src={p.image} alt="" className="h-full w-full object-cover" loading="lazy" decoding="async" />
+                          ) : (
+                            <div className="flex h-full w-full items-center justify-center text-muted-foreground">
+                              <ImageIcon className="h-4 w-4" />
+                            </div>
+                          )}
+                          {inCart > 0 && (
+                            <span className="absolute -right-0.5 -top-0.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-indigo-600 px-1 text-[9px] font-bold text-white tabular-nums">
+                              {inCart}
+                            </span>
+                          )}
+                        </div>
+                        <div className="min-w-0 flex-1 leading-tight">
+                          <div className="flex items-start gap-1">
+                            <div className="line-clamp-1 flex-1 text-[12px] font-semibold">{p.title}</div>
+                            {p.is_featured && <Star className="mt-0.5 h-3 w-3 shrink-0 fill-amber-400 text-amber-400" />}
+                          </div>
+                          <div className="mt-0.5 flex items-center gap-1.5 text-[10px] tabular-nums">
+                            <span className="font-bold text-primary">৳{Number(p.price).toLocaleString()}</span>
+                            <span className={cn("font-semibold", p.stock <= 0 ? "text-rose-600" : "text-emerald-700 dark:text-emerald-400")}>
+                              {p.stock} in stock
+                            </span>
+                            {p.brand_name && (
+                              <span className={cn(
+                                "ml-auto truncate rounded px-1 py-px text-[9px] font-semibold uppercase tracking-wide",
+                                p.own_brand ? "bg-indigo-100 text-indigo-700 dark:bg-indigo-950/50 dark:text-indigo-300" : "bg-muted text-muted-foreground",
+                              )}>
+                                {p.brand_name}
+                              </span>
+                            )}
+                          </div>
+                        </div>
+                        <div className="rounded-md bg-muted p-1 text-muted-foreground transition-colors group-hover:bg-indigo-600 group-hover:text-white">
+                          <Plus className="h-3.5 w-3.5" />
+                        </div>
+                      </button>
+                    );
+                  })}
+                </div>
+              </CardContent>
+            </Card>
+
             {/* Delivery method */}
             <Card className="shadow-sm">
               <CardContent className="space-y-4 p-5">
