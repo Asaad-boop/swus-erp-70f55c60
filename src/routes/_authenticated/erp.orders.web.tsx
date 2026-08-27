@@ -1430,7 +1430,7 @@ function _WebOrdersPageBody() {
                           disabled={logCall.isPending}
                           className="focus-ring inline-flex items-center gap-1 rounded-[var(--radius-chip)] border border-border px-1.5 py-0.5 text-[11px] font-medium text-muted-foreground hover:bg-muted hover:text-foreground disabled:opacity-50"
                         >
-                          <Phone className="h-3 w-3" /> Call now
+                          <PhoneIcon className="h-3 w-3" /> Call now
                         </button>
                         {note && (
                           <p className="line-clamp-2 border-l-2 border-amber-400/60 pl-2 text-[11px] leading-snug text-foreground/80" title={note}>
