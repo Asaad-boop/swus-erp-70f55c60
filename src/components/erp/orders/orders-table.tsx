@@ -10,7 +10,7 @@ import { HoverCard, HoverCardContent, HoverCardTrigger } from "@/components/ui/h
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { customerName, customerPhone, invoiceDisplay, reconcileBadge, settlementBadge, statusAccent, statusAge, statusBadge, statusSinceTs, STATUS_GROUPS, type OrderRow, type OrderStatus } from "@/lib/erp/orders";
 import { useCustomerHistory, useCourierHistory, type CourierProviderStat } from "@/hooks/erp/use-orders-query";
-import { useState } from "react";
+import { memo, useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { RefreshCw } from "lucide-react";
 import { cn } from "@/lib/utils";

@@ -660,7 +660,7 @@ function OrdersPage() {
         </div>
       </div>
 
-      <div className="space-y-3 px-4 pt-3 md:px-6">
+      <div className="space-y-3 px-4 pt-3 md:px-6 [--thead-top:0px] md:[--thead-top:128px]">
         <OrdersMetricStrip metrics={metrics} />
 
         <PipelineFlowBar
