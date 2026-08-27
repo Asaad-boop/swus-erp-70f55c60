@@ -1280,44 +1280,59 @@ function NewOrderPage() {
 
       {/* Sleek sticky bottom bar */}
       <div className="fixed inset-x-0 bottom-0 z-20 border-t border-border/60 bg-background/85 shadow-[0_-10px_30px_-15px_rgba(0,0,0,0.1)] backdrop-blur-xl">
-        <div className="mx-auto flex max-w-6xl items-center justify-between gap-3 px-4 py-3 md:px-6">
-          <div className="hidden items-center gap-6 md:flex">
-            <div className="flex items-center gap-2.5">
-              <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-muted text-muted-foreground">
+        <div className="mx-auto flex max-w-6xl items-center justify-between gap-3 px-4 py-2.5 md:px-6">
+          <div className="hidden items-center gap-5 md:flex">
+            <div className="flex items-center gap-2">
+              <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-muted text-muted-foreground">
                 <Truck className="h-4 w-4" />
               </div>
-              <div>
+              <div className="leading-tight">
                 <div className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Courier</div>
-                <div className="text-sm font-semibold capitalize">{deliveryMethod}</div>
+                <div className="text-[13px] font-semibold capitalize">{deliveryMethod}</div>
               </div>
             </div>
-            <div className="h-8 w-px bg-border" />
-            <div>
+            <div className="h-7 w-px bg-border" />
+            <div className="leading-tight">
               <div className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Items</div>
-              <div className="text-sm font-bold tabular-nums">{totalQty} pcs</div>
+              <div className="text-[13px] font-bold tabular-nums">{totalQty} pcs</div>
             </div>
-            <div className="h-8 w-px bg-border" />
-            <div>
+            <div className="h-7 w-px bg-border" />
+            <div className="leading-tight">
               <div className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Subtotal</div>
-              <div className="text-sm font-bold tabular-nums">৳ {subtotal.toLocaleString()}</div>
+              <div className="text-[13px] font-bold tabular-nums">৳ {subtotal.toLocaleString()}</div>
             </div>
+            {missing.length > 0 && (
+              <>
+                <div className="h-7 w-px bg-border" />
+                <div className="flex max-w-[340px] flex-wrap items-center gap-1">
+                  <span className="text-[10px] font-bold uppercase tracking-wider text-amber-600">Missing</span>
+                  {missing.map((m) => (
+                    <span key={m} className="rounded-md bg-amber-100 px-1.5 py-0.5 text-[10px] font-semibold text-amber-800 dark:bg-amber-950/40 dark:text-amber-300">
+                      {m}
+                    </span>
+                  ))}
+                </div>
+              </>
+            )}
           </div>
           <div className="ml-auto flex items-center gap-4">
-            <div className="hidden text-right md:block">
+            <div className="hidden text-right leading-tight md:block">
               <div className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Payable</div>
               <div className="text-lg font-black tabular-nums text-indigo-600">৳ {payable.toLocaleString()}</div>
             </div>
             <Button
               size="lg"
-              className="group h-12 gap-2 rounded-xl bg-emerald-600 px-6 text-base font-bold text-white shadow-lg shadow-emerald-200/60 hover:bg-emerald-700 dark:shadow-emerald-950/30"
-              disabled={create.isPending || items.length === 0}
-              onClick={() => create.mutate()}
+              title={missing.length ? `Missing: ${missing.join(", ")}` : "Ctrl + Enter"}
+              className="group h-11 gap-2 rounded-xl bg-emerald-600 px-5 text-[15px] font-bold text-white shadow-lg shadow-emerald-200/60 hover:bg-emerald-700 disabled:opacity-60 dark:shadow-emerald-950/30"
+              disabled={create.isPending || missing.length > 0}
+              onClick={submit}
             >
               {create.isPending ? (
                 <><Loader2 className="h-4 w-4 animate-spin" /> Creating…</>
               ) : (
                 <>
                   <span>Create Order</span>
+                  <kbd className="hidden rounded border border-white/30 bg-white/15 px-1 text-[10px] font-semibold md:inline">⌘↵</kbd>
                   <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-0.5" />
                 </>
               )}
