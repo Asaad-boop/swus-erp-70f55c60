@@ -67,7 +67,7 @@ type Props = {
 };
 
 
-export function OrdersTable({ rows, loading, selectedIds, onToggleSelect, onToggleAll, onRowClick, onStatusChange, pendingStatusIds, shipmentsByOrderId, flashOrderIds, onSyncRow, onPreorder, locksByOrderId = {}, density = "comfortable", hiddenColumns = [], sortKey, sortDir, onSortChange }: Props) {
+function OrdersTableImpl({ rows, loading, selectedIds, onToggleSelect, onToggleAll, onRowClick, onStatusChange, pendingStatusIds, shipmentsByOrderId, flashOrderIds, onSyncRow, onPreorder, locksByOrderId = {}, density = "comfortable", hiddenColumns = [], sortKey, sortDir, onSortChange }: Props) {
   const logCall = useLogCallAttempt();
   const copyText = (text: string, label: string) => {
     navigator.clipboard?.writeText(text).then(() => toast.success(`${label} copied`));
@@ -570,7 +570,7 @@ export function OrdersTable({ rows, loading, selectedIds, onToggleSelect, onTogg
   return (
     <div className="overflow-x-auto bg-card [scrollbar-width:thin]">
       <Table>
-        <TableHeader className="sticky top-0 z-20 bg-card/95 backdrop-blur supports-[backdrop-filter]:bg-card/80 shadow-[0_1px_0_0_var(--panel-border)]">
+        <TableHeader className="sticky top-[var(--thead-top,0px)] z-20 bg-card/95 backdrop-blur supports-[backdrop-filter]:bg-card/80 shadow-[0_1px_0_0_var(--panel-border)]">
           {table.getHeaderGroups().map((hg) => (
             <TableRow key={hg.id} className="hover:bg-transparent border-b border-[var(--panel-border)]">
               {hg.headers.map((h) => {
@@ -646,6 +646,9 @@ export function OrdersTable({ rows, loading, selectedIds, onToggleSelect, onTogg
     </div>
   );
 }
+
+/** Heavy grid — only re-render when its inputs actually change. */
+export const OrdersTable = memo(OrdersTableImpl);
 
 function avatarInitials(name: string | null | undefined): string {
   const n = (name ?? "").trim();
