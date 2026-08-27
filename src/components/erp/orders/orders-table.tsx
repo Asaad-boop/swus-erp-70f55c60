@@ -20,6 +20,7 @@ import { CopyIconBtn, PhoneActions } from "@/components/erp/orders/contact-actio
 import { AdvanceBadge } from "@/components/erp/orders/advance-badge";
 import { BrandBadge } from "@/components/erp/brand-badge";
 import { CourierStatusBadge } from "@/components/erp/orders/courier-status-badge";
+import { DispatchActionsCell } from "@/components/erp/orders/dispatch-actions-cell";
 import type { CourierShipmentRow } from "@/hooks/erp/use-courier-shipments";
 
 const NEXT_STATUS: Partial<Record<OrderStatus, OrderStatus>> = {
