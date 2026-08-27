@@ -239,3 +239,70 @@ export function resolveCourierTransition(
   if (allow && !allow.includes(mapped)) return null;
   return mapped;
 }
+
+export type InvoiceMatchType = "paid" | "return" | "partial" | "unknown";
+
+/**
+ * Resolve what an invoice row's match_type should really be, using the courier
+ * API response as the source of truth. Pathao's invoice CSV often labels
+ * prepaid/zero-COD parcels as "return" (collected = 0) even when the courier
+ * is still delivering or has delivered them. The raw `response_payload` is
+ * more trustworthy than the normalized `status` column, which may have been
+ * stamped by earlier buggy code.
+ *
+ * Returns the effective match type and, when the normalized `status` column is
+ * stale, the corrected shipment status to write back.
+ */
+export function resolveInvoiceMatchTypeFromCourier(
+  provider: CourierProvider,
+  invoiceMatchType: "paid" | "return" | "partial",
+  ship: { status: string | null; response_payload?: unknown } | null,
+): {
+  effectiveMatchType: InvoiceMatchType;
+  correctedShipmentStatus: string | null;
+} {
+  if (invoiceMatchType !== "return") {
+    return {
+      effectiveMatchType: invoiceMatchType,
+      correctedShipmentStatus:
+        invoiceMatchType === "paid"
+          ? "Delivered"
+          : invoiceMatchType === "partial"
+          ? "Partial Delivered"
+          : null,
+    };
+  }
+
+  const payloadStatus = String(
+    (ship?.response_payload as { order_status?: string } | null)?.order_status ?? "",
+  ).toLowerCase();
+  const colStatus = String(ship?.status ?? "").toLowerCase();
+
+  // Prefer raw payload; fall back to normalized column only when payload absent.
+  let raw = payloadStatus;
+  if (!raw) raw = colStatus;
+  if (!raw) return { effectiveMatchType: "unknown", correctedShipmentStatus: null };
+
+  const norm = normalizeCourierStatus(raw);
+  const mapped = mapCourierStatus(provider, norm);
+
+  const isReturned =
+    norm.includes("return") || mapped === "return_in_transit" || mapped === "returned";
+  const isPartial =
+    norm.includes("partial") || mapped === "partial_delivered";
+  const isDelivered = mapped === "delivered";
+
+  if (isReturned) {
+    return { effectiveMatchType: "return", correctedShipmentStatus: "Returned" };
+  }
+  if (isPartial) {
+    return { effectiveMatchType: "partial", correctedShipmentStatus: "Partial Delivered" };
+  }
+  if (isDelivered) {
+    return { effectiveMatchType: "paid", correctedShipmentStatus: "Delivered" };
+  }
+
+  // Courier still moving the parcel. Don't change order status, but DO update
+  // the shipment normalized status so future checks see the truth.
+  return { effectiveMatchType: "unknown", correctedShipmentStatus: norm };
+}
