@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { CheckCheck, Printer, Sticker, ClipboardList, FileSpreadsheet, Truck, RefreshCw, Download, Copy, X, Loader2, ChevronDown, Phone, Zap, Search, PackageCheck, CalendarClock, History, CornerDownLeft } from "lucide-react";
+import { CheckCheck, Printer, Sticker, ClipboardList, FileSpreadsheet, Truck, RefreshCw, Download, Copy, X, Loader2, ChevronDown, Phone, Zap, Search, PackageCheck, CalendarClock, History, CornerDownLeft, Package, ScanLine } from "lucide-react";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -17,12 +17,16 @@ type Props = {
   onPhoneHistory: () => void;
   onPreorder: () => void;
   onPrint: (mode: "invoice" | "sticker" | "picking" | "sheet") => void;
+  onDispatchPack?: () => void;
+  onDispatchReady?: () => void;
+  onDispatchShip?: () => void;
+  onOpenScanner?: () => void;
   isPending: boolean;
 };
 
 const RECENT_KEY = "erp.orders.bulk.recent";
 
-export function OrdersBulkActions({ selectedCount, totalCount, onSelectAll, onClear, onStatus, onExport, onSendToPathao, onSyncCourier, onPhoneHistory, onPreorder, onPrint, isPending }: Props) {
+export function OrdersBulkActions({ selectedCount, totalCount, onSelectAll, onClear, onStatus, onExport, onSendToPathao, onSyncCourier, onPhoneHistory, onPreorder, onPrint, onDispatchPack, onDispatchReady, onDispatchShip, onOpenScanner, isPending }: Props) {
   const disabled = selectedCount === 0;
   const [open, setOpen] = useState(false);
   const [q, setQ] = useState("");
@@ -75,13 +79,17 @@ export function OrdersBulkActions({ selectedCount, totalCount, onSelectAll, onCl
       { id: "picking", label: "Print Picking", icon: ClipboardList, tone: "amber" as const, run: () => onPrint("picking") },
       { id: "sheet", label: "Print Sheet", icon: FileSpreadsheet, tone: "emerald" as const, run: () => onPrint("sheet") },
       { id: "export", label: "Export Excel", icon: Download, tone: "emerald" as const, run: onExport },
+      { id: "dispatch_pack", label: "Mark Packed", icon: Package, tone: "amber" as const, run: onDispatchPack },
+      { id: "dispatch_ready", label: "Mark Ready to Ship", icon: CheckCheck, tone: "violet" as const, run: onDispatchReady },
+      { id: "dispatch_ship", label: "Mark Shipped", icon: Truck, tone: "emerald" as const, run: onDispatchShip },
+      { id: "dispatch_scan", label: "Scan to Dispatch", icon: ScanLine, tone: "blue" as const, run: onOpenScanner },
     ];
     return new Map(list.map((a) => [a.id, a]));
-  }, [onStatus, onSendToPathao, onSyncCourier, onPhoneHistory, onPreorder, onPrint, onExport]);
+  }, [onStatus, onSendToPathao, onSyncCourier, onPhoneHistory, onPreorder, onPrint, onExport, onDispatchPack, onDispatchReady, onDispatchShip, onOpenScanner]);
 
   const fire = useCallback((id: string) => {
     const a = actions.get(id);
-    if (!a) return;
+    if (!a?.run) return;
     remember(id);
     a.run();
   }, [actions, remember]);
@@ -255,7 +263,17 @@ export function OrdersBulkActions({ selectedCount, totalCount, onSelectAll, onCl
                 </div>
               </Section>
 
-              {/* 2. Courier — happens right after RTS */}
+              {/* 2. Dispatch — pack/ready/ship pipeline */}
+              <Section label="Dispatch" hint="Pack → Ready → Ship">
+                <div className="grid grid-cols-3 gap-1 mb-1">
+                  <IconTile icon={Package} label="Mark Packed" tone="amber" onClick={() => fire("dispatch_pack")} disabled={disabled || !onDispatchPack} />
+                  <IconTile icon={CheckCheck} label="Mark Ready" tone="violet" onClick={() => fire("dispatch_ready")} disabled={disabled || !onDispatchReady} />
+                  <IconTile icon={Truck} label="Mark Shipped" tone="emerald" onClick={() => fire("dispatch_ship")} disabled={disabled || !onDispatchShip} />
+                </div>
+                <ActionRow icon={ScanLine} label="Scan to Dispatch" onClick={() => { fire("dispatch_scan"); }} disabled={!onOpenScanner} />
+              </Section>
+
+              {/* 3. Courier — happens right after RTS */}
               <Section label="Courier">
                 <div className="grid grid-cols-2 gap-1 mb-1">
                   <IconTile icon={Truck} label="Send Pathao" tone="rose" onClick={() => fire("pathao")} disabled={disabled} />

@@ -20,6 +20,7 @@ import { CopyIconBtn, PhoneActions } from "@/components/erp/orders/contact-actio
 import { AdvanceBadge } from "@/components/erp/orders/advance-badge";
 import { BrandBadge } from "@/components/erp/brand-badge";
 import { CourierStatusBadge } from "@/components/erp/orders/courier-status-badge";
+import { DispatchActionsCell } from "@/components/erp/orders/dispatch-actions-cell";
 import type { CourierShipmentRow } from "@/hooks/erp/use-courier-shipments";
 
 const NEXT_STATUS: Partial<Record<OrderStatus, OrderStatus>> = {
@@ -53,6 +54,7 @@ type Props = {
   flashOrderIds?: Set<string>;
   onSyncRow?: (orderId: string) => void;
   onPreorder?: (orderId: string) => void;
+  onDispatchPrint?: (orderId: string) => void;
   /** Row height preset. */
   density?: "comfortable" | "compact";
   /** Column ids hidden by the user. */
@@ -63,7 +65,7 @@ type Props = {
 };
 
 
-export function OrdersTable({ rows, loading, selectedIds, onToggleSelect, onToggleAll, onRowClick, onStatusChange, pendingStatusIds, shipmentsByOrderId, flashOrderIds, onSyncRow, onPreorder, density = "comfortable", hiddenColumns = [], sortKey, sortDir, onSortChange }: Props) {
+export function OrdersTable({ rows, loading, selectedIds, onToggleSelect, onToggleAll, onRowClick, onStatusChange, pendingStatusIds, shipmentsByOrderId, flashOrderIds, onSyncRow, onPreorder, onDispatchPrint, density = "comfortable", hiddenColumns = [], sortKey, sortDir, onSortChange }: Props) {
   const copyText = (text: string, label: string) => {
     navigator.clipboard?.writeText(text).then(() => toast.success(`${label} copied`));
   };
@@ -392,6 +394,24 @@ export function OrdersTable({ rows, loading, selectedIds, onToggleSelect, onTogg
           </div>
         );
       },
+    },
+    {
+      header: "Dispatch",
+      id: "dispatch",
+      cell: ({ row }) => {
+        const o = row.original;
+        const busy = pendingStatusIds?.has(o.id) ?? false;
+        if (!onDispatchPrint) return null;
+        return (
+          <DispatchActionsCell
+            order={o}
+            onStatusChange={onStatusChange}
+            onPrint={onDispatchPrint}
+            busy={busy}
+          />
+        );
+      },
+      size: 96,
     },
     {
       header: "",
