@@ -1,3 +1,5 @@
+import { resolveInvoiceMatchTypeFromCourier } from "./courier-status-mapping";
+
 /**
  * Shared reconciliation core.
  * Extracted from reconciliation.functions.ts so both the authenticated
