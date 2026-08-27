@@ -273,11 +273,12 @@ function StatsStrip({
   return (
     <div className="rounded-2xl border bg-card overflow-hidden shadow-[0_1px_2px_rgba(0,0,0,0.04),0_8px_24px_-12px_rgba(0,0,0,0.08)]">
       {/* Header: single hero ring + compact per-source pills + refresh */}
-      <div className="flex flex-wrap items-center gap-x-5 gap-y-3 px-4 py-3.5">
+      <div className="flex flex-wrap items-center gap-x-4 gap-y-2 px-3.5 py-2.5">
         {hero && (
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-2.5">
             <div className="relative shrink-0">
-              <svg viewBox="0 0 36 36" className="h-14 w-14 -rotate-90">
+              <svg viewBox="0 0 36 36" className="h-11 w-11 -rotate-90">
+
                 <circle cx="18" cy="18" r={R} className="fill-none stroke-muted/60" strokeWidth="3" />
                 <circle cx="18" cy="18" r={R}
                   className={cn("fill-none transition-all duration-700 ease-out", heroTone.ring)}
