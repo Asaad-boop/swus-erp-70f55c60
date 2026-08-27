@@ -617,14 +617,10 @@ export async function applyReconRunCore(
         // Update shipment delivery fee if linked. Only stamp a status the
         // invoice actually proves (effective type), never the raw guess.
         if (r.consignment_id) {
-          const shipStatus =
-            effectiveMatchType === "return"
-              ? "Returned"
-              : effectiveMatchType === "partial"
-                ? "Partial Delivered"
-                : effectiveMatchType === "unknown"
-                  ? null
-                  : "Delivered";
+          // Only stamp a status the invoice actually proves (effective type),
+          // never the raw guess. If the normalized status column was stale,
+          // write back the corrected value.
+          const shipStatus = correctedShipmentStatus;
           let sq = supabase
             .from("courier_shipments")
             .update(shipStatus ? { delivery_fee: r.total_fee, status: shipStatus } : { delivery_fee: r.total_fee })
