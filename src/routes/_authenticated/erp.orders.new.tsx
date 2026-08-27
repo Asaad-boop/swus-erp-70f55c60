@@ -617,6 +617,47 @@ function NewOrderPage() {
     onError: (e: Error) => toast.error(e.message),
   });
 
+  // ── what is still missing before we can save ──────────────────────────
+  const missing = useMemo(() => {
+    const m: string[] = [];
+    if (!effectiveBrandId) m.push("Brand");
+    if (!name.trim()) m.push("Name");
+    if (bdPhoneError(phone)) m.push("Phone");
+    if (!address.trim()) m.push("Address");
+    if (items.length === 0) m.push("Product");
+    if (items.some((i) => i.needsVariant && !i.variant_id)) m.push("Color");
+    if (Number(advance) > 0 && !advanceSource) m.push("Advance source");
+    if (Number(advance) > 0 && advanceNumber.length < 4) m.push("Advance number");
+    return m;
+  }, [effectiveBrandId, name, phone, address, items, advance, advanceSource, advanceNumber]);
+
+  const submit = useCallback(() => {
+    if (create.isPending) return;
+    create.mutate();
+  }, [create]);
+
+  // ── keyboard shortcuts: "/" focus search, Ctrl/Cmd+Enter save ─────────
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      const t = e.target as HTMLElement | null;
+      const typing = !!t && (t.tagName === "INPUT" || t.tagName === "TEXTAREA" || t.isContentEditable);
+      if ((e.metaKey || e.ctrlKey) && e.key === "Enter") {
+        e.preventDefault();
+        submit();
+        return;
+      }
+      if (!typing && (e.key === "/" || ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === "k"))) {
+        e.preventDefault();
+        searchRef.current?.focus();
+        searchRef.current?.select();
+      }
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [submit]);
+
+
+
   return (
     <div className="min-h-screen workspace-bg pb-32">
       {/* Top bar */}
