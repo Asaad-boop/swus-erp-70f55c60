@@ -1603,7 +1603,8 @@ function splitCourierProviders(providers?: HistProvider[] | null) {
               </div>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-x-3 gap-y-2.5">
+
               <div className="space-y-1">
                 <div className="flex items-center justify-between">
                   <label className="text-[11px] font-medium text-muted-foreground">City</label>
