@@ -1,11 +1,11 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   Plus, Trash2, Search, ArrowLeft, Loader2, Sparkles, Truck, Package,
   Star, MinusCircle, PlusCircle, ImageIcon, Info, Wand2, History,
   CheckCircle2, XCircle, AlertCircle, MapPin, User2, Receipt, ArrowRight, ChevronsUpDown, Check, X,
 } from "lucide-react";
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { keepPreviousData, useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
@@ -358,7 +358,7 @@ function NewOrderPage() {
       // Cross-brand catalog: shob brand er product dekhabo, chhoto brand tag shoho.
       // Current brand er listing thakle price/title override apply hobe.
       // Single search box: name, SKU, barcode, slug, and variant SKUs all match.
-      const term = productSearch.trim();
+      const term = debouncedSearch;
       const clean = term.replace(/[,&()]/g, " ");
       type Row = {
         id: string; title: string; price: number; image: string | null; stock: number;
