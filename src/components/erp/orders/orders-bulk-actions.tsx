@@ -1,5 +1,5 @@
-import { useEffect, useRef, useState } from "react";
-import { CheckCheck, Printer, Sticker, ClipboardList, FileSpreadsheet, Truck, RefreshCw, Download, Copy, X, Loader2, ChevronDown, Phone, Zap, Search, PackageCheck, CalendarClock } from "lucide-react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { CheckCheck, Printer, Sticker, ClipboardList, FileSpreadsheet, Truck, RefreshCw, Download, Copy, X, Loader2, ChevronDown, Phone, Zap, Search, PackageCheck, CalendarClock, History, CornerDownLeft } from "lucide-react";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -20,15 +20,24 @@ type Props = {
   isPending: boolean;
 };
 
+const RECENT_KEY = "erp.orders.bulk.recent";
+
 export function OrdersBulkActions({ selectedCount, totalCount, onSelectAll, onClear, onStatus, onExport, onSendToPathao, onSyncCourier, onPhoneHistory, onPreorder, onPrint, isPending }: Props) {
   const disabled = selectedCount === 0;
   const [open, setOpen] = useState(false);
   const [q, setQ] = useState("");
+  const [recent, setRecent] = useState<string[]>([]);
   const prevCountRef = useRef(0);
+  const searchRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    try {
+      const raw = localStorage.getItem(RECENT_KEY);
+      if (raw) setRecent(JSON.parse(raw) as string[]);
+    } catch { /* ignore */ }
+  }, []);
 
   // Auto-open only on the 0 -> >0 transition (first selection).
-  // Auto-close only on >0 -> 0 transition (all cleared).
-  // Otherwise respect user's manual open/close.
   useEffect(() => {
     const prev = prevCountRef.current;
     if (prev === 0 && selectedCount > 0) setOpen(true);
@@ -36,15 +45,60 @@ export function OrdersBulkActions({ selectedCount, totalCount, onSelectAll, onCl
     prevCountRef.current = selectedCount;
   }, [selectedCount]);
 
+  useEffect(() => {
+    if (!open) setQ("");
+  }, [open]);
+
+  const remember = useCallback((id: string) => {
+    setRecent((prev) => {
+      const next = [id, ...prev.filter((x) => x !== id)].slice(0, 4);
+      try { localStorage.setItem(RECENT_KEY, JSON.stringify(next)); } catch { /* ignore */ }
+      return next;
+    });
+  }, []);
+
   const query = q.trim().toLowerCase();
   const matchStatus = (label: string) => !query || label.toLowerCase().includes(query);
+
+  /** Every non-status action, registered once so search + recents can reuse them. */
+  const actions = useMemo(() => {
+    const list = [
+      { id: "rts", label: "Ready to ship", icon: CheckCheck, tone: "emerald" as const, run: () => onStatus("ready_to_ship") },
+      { id: "shipped", label: "Shipped", icon: Truck, tone: "blue" as const, run: () => onStatus("shipped") },
+      { id: "cancel", label: "Cancel", icon: X, tone: "rose" as const, run: () => onStatus("cancelled") },
+      { id: "pathao", label: "Send Pathao", icon: Truck, tone: "rose" as const, run: onSendToPathao },
+      { id: "sync", label: "Sync Status", icon: RefreshCw, tone: "blue" as const, run: onSyncCourier },
+      { id: "phone", label: "Match by Phone (History)", icon: Phone, tone: "slate" as const, run: onPhoneHistory },
+      { id: "preorder", label: "Move to Pre-order", icon: CalendarClock, tone: "amber" as const, run: onPreorder },
+      { id: "invoice", label: "Print Invoice", icon: Printer, tone: "blue" as const, run: () => onPrint("invoice") },
+      { id: "sticker", label: "Print Sticker", icon: Sticker, tone: "violet" as const, run: () => onPrint("sticker") },
+      { id: "picking", label: "Print Picking", icon: ClipboardList, tone: "amber" as const, run: () => onPrint("picking") },
+      { id: "sheet", label: "Print Sheet", icon: FileSpreadsheet, tone: "emerald" as const, run: () => onPrint("sheet") },
+      { id: "export", label: "Export Excel", icon: Download, tone: "emerald" as const, run: onExport },
+    ];
+    return new Map(list.map((a) => [a.id, a]));
+  }, [onStatus, onSendToPathao, onSyncCourier, onPhoneHistory, onPreorder, onPrint, onExport]);
+
+  const fire = useCallback((id: string) => {
+    const a = actions.get(id);
+    if (!a) return;
+    remember(id);
+    a.run();
+  }, [actions, remember]);
+
+  const searchHits = useMemo(() => {
+    if (!query) return [];
+    return [...actions.values()].filter((a) => a.label.toLowerCase().includes(query));
+  }, [actions, query]);
+
+  const recentActions = recent.map((id) => actions.get(id)).filter(Boolean) as Array<{ id: string; label: string; icon: React.ElementType }>;
 
   return (
     <div className="flex items-center gap-1">
       <InlineQuickBtn icon={PackageCheck} label="Delivered" color="#059669" onClick={() => onStatus("delivered")} disabled={disabled} />
-      <InlineQuickBtn icon={CheckCheck} label="RTS" color="#16a34a" onClick={() => onStatus("ready_to_ship")} disabled={disabled} />
-      <InlineQuickBtn icon={X} label="Cancel" color="#dc2626" onClick={() => onStatus("cancelled")} disabled={disabled} />
-      <InlineQuickBtn icon={RefreshCw} label="Sync" color="#0284c7" onClick={onSyncCourier} disabled={disabled} />
+      <InlineQuickBtn icon={CheckCheck} label="RTS" color="#16a34a" onClick={() => fire("rts")} disabled={disabled} />
+      <InlineQuickBtn icon={X} label="Cancel" color="#dc2626" onClick={() => fire("cancel")} disabled={disabled} />
+      <InlineQuickBtn icon={RefreshCw} label="Sync" color="#0284c7" onClick={() => fire("sync")} disabled={disabled} />
       <Popover open={open} onOpenChange={setOpen}>
       <PopoverTrigger asChild>
         <Button variant="outline" size="sm" className="h-9 gap-1.5">
@@ -60,8 +114,8 @@ export function OrdersBulkActions({ selectedCount, totalCount, onSelectAll, onCl
       <PopoverContent
         align="end"
         sideOffset={6}
-        className="w-[340px] p-0 overflow-hidden rounded-xl shadow-2xl border-border/60 max-h-[min(85vh,680px)] flex flex-col"
-        onOpenAutoFocus={(e) => e.preventDefault()}
+        className="w-[352px] p-0 overflow-hidden rounded-xl shadow-2xl border-border/60 max-h-[min(85vh,680px)] flex flex-col"
+        onOpenAutoFocus={(e) => { e.preventDefault(); searchRef.current?.focus(); }}
       >
         {/* Header */}
         <div className="relative px-3.5 py-2.5 border-b bg-gradient-to-r from-primary/10 via-primary/5 to-transparent">
@@ -79,16 +133,31 @@ export function OrdersBulkActions({ selectedCount, totalCount, onSelectAll, onCl
                 </div>
               </div>
             </div>
-            {selectedCount > 0 ? (
-              <button type="button" onClick={() => { onClear(); setOpen(false); }} className="inline-flex items-center gap-1 h-6 px-2 rounded-md text-[11px] font-medium text-muted-foreground hover:text-foreground hover:bg-muted transition-colors">
-                <X className="h-3 w-3" /> Clear
-              </button>
-            ) : (
-              <button type="button" onClick={onSelectAll} className="inline-flex items-center gap-1 h-6 px-2 rounded-md text-[11px] font-medium text-primary hover:bg-primary/10 disabled:opacity-50 transition-colors" disabled={!totalCount}>
+            <div className="flex items-center gap-1 shrink-0">
+              <button
+                type="button"
+                onClick={onSelectAll}
+                disabled={!totalCount || selectedCount === totalCount}
+                className="inline-flex items-center gap-1 h-6 px-2 rounded-md text-[11px] font-medium text-primary hover:bg-primary/10 disabled:opacity-40 transition-colors"
+              >
                 <CheckCheck className="h-3 w-3" /> All
               </button>
-            )}
+              {selectedCount > 0 && (
+                <button type="button" onClick={() => { onClear(); setOpen(false); }} className="inline-flex items-center gap-1 h-6 px-2 rounded-md text-[11px] font-medium text-muted-foreground hover:text-foreground hover:bg-muted transition-colors">
+                  <X className="h-3 w-3" /> Clear
+                </button>
+              )}
+            </div>
           </div>
+          {/* selection progress */}
+          {totalCount > 0 && (
+            <div className="mt-2 h-1 w-full rounded-full bg-foreground/10 overflow-hidden">
+              <div
+                className="h-full rounded-full bg-primary transition-[width] duration-300"
+                style={{ width: `${Math.min(100, (selectedCount / totalCount) * 100)}%` }}
+              />
+            </div>
+          )}
         </div>
 
         {isPending && (
@@ -98,51 +167,117 @@ export function OrdersBulkActions({ selectedCount, totalCount, onSelectAll, onCl
         )}
 
         {/* Search */}
-        <div className="px-3 pt-2.5 pb-1.5 border-b">
+        <div className="px-3 pt-2.5 pb-2 border-b">
           <div className="relative">
             <Search className="absolute left-2 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
             <Input
+              ref={searchRef}
               value={q}
               onChange={(e) => setQ(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === "Enter" && searchHits.length > 0 && !disabled) {
+                  e.preventDefault();
+                  fire(searchHits[0]!.id);
+                  setOpen(false);
+                } else if (e.key === "Escape" && q) {
+                  e.preventDefault();
+                  setQ("");
+                }
+              }}
               placeholder="Search action or status…"
-              className="h-8 pl-7 text-xs"
+              className="h-8 pl-7 pr-14 text-xs"
             />
+            {q ? (
+              <button
+                type="button"
+                onClick={() => setQ("")}
+                className="absolute right-1.5 top-1/2 -translate-y-1/2 h-5 w-5 grid place-items-center rounded text-muted-foreground hover:bg-muted"
+              >
+                <X className="h-3 w-3" />
+              </button>
+            ) : (
+              <kbd className="absolute right-2 top-1/2 -translate-y-1/2 rounded border bg-muted px-1 text-[9px] font-medium text-muted-foreground">↵</kbd>
+            )}
           </div>
         </div>
 
         <div className="flex-1 overflow-y-auto scrollbar-thin">
-          {/* 1. Quick Status — daily-flow, most frequent */}
-          <Section label="Quick Status" hint="One-tap common transitions">
-            <div className="grid grid-cols-3 gap-1">
-              <QuickStatusTile color="#16a34a" icon={CheckCheck} label="RTS" onClick={() => onStatus("ready_to_ship")} disabled={disabled} />
-              <QuickStatusTile color="#0284c7" icon={Truck} label="Shipped" onClick={() => onStatus("shipped")} disabled={disabled} />
-              <QuickStatusTile color="#dc2626" icon={X} label="Cancel" onClick={() => onStatus("cancelled")} disabled={disabled} />
-            </div>
-          </Section>
+          {/* Search results across all actions */}
+          {query && (
+            <Section label="Matching actions" hint={`${searchHits.length} found`}>
+              {searchHits.length === 0 ? (
+                <div className="px-2 py-2 text-[12px] text-muted-foreground">No action matches “{q}”.</div>
+              ) : (
+                searchHits.map((a, i) => (
+                  <ActionRow
+                    key={a.id}
+                    icon={a.icon}
+                    label={a.label}
+                    trailing={i === 0 ? <CornerDownLeft className="h-3 w-3 text-muted-foreground/70" /> : undefined}
+                    onClick={() => { fire(a.id); setOpen(false); }}
+                    disabled={disabled}
+                  />
+                ))
+              )}
+            </Section>
+          )}
 
-          {/* 2. Courier — happens right after RTS */}
-          <Section label="Courier">
-            <div className="grid grid-cols-2 gap-1 mb-1">
-              <IconTile icon={Truck} label="Send Pathao" tone="rose" onClick={onSendToPathao} disabled={disabled} />
-              <IconTile icon={RefreshCw} label="Sync Status" tone="blue" onClick={onSyncCourier} disabled={disabled} />
-            </div>
-            <ActionRow icon={Phone} label="Match by Phone (History)" onClick={onPhoneHistory} disabled={disabled} />
-          </Section>
+          {/* Recently used */}
+          {!query && recentActions.length > 0 && (
+            <Section label="Recent" hint="Your last used">
+              <div className="flex flex-wrap gap-1">
+                {recentActions.map((a) => (
+                  <button
+                    key={a.id}
+                    type="button"
+                    onClick={() => fire(a.id)}
+                    disabled={disabled}
+                    className="inline-flex items-center gap-1.5 h-7 px-2 rounded-full border bg-card text-[11px] font-medium hover:border-primary/40 hover:shadow-sm transition-all disabled:opacity-40 disabled:cursor-not-allowed"
+                  >
+                    <History className="h-3 w-3 text-muted-foreground" />
+                    {a.label}
+                  </button>
+                ))}
+              </div>
+            </Section>
+          )}
 
-          {/* Pre-order */}
-          <Section label="Pre-order" hint="Stock nei — promise date diye rakho">
-            <ActionRow icon={CalendarClock} label="Move to Pre-order" onClick={onPreorder} disabled={disabled} />
-          </Section>
+          {!query && (
+            <>
+              {/* 1. Quick Status — daily-flow, most frequent */}
+              <Section label="Quick Status" hint="One-tap common transitions">
+                <div className="grid grid-cols-3 gap-1">
+                  <QuickStatusTile color="#16a34a" icon={CheckCheck} label="RTS" onClick={() => fire("rts")} disabled={disabled} />
+                  <QuickStatusTile color="#0284c7" icon={Truck} label="Shipped" onClick={() => fire("shipped")} disabled={disabled} />
+                  <QuickStatusTile color="#dc2626" icon={X} label="Cancel" onClick={() => fire("cancel")} disabled={disabled} />
+                </div>
+              </Section>
 
-          {/* 3. Print — after courier booked */}
-          <Section label="Print">
-            <div className="grid grid-cols-4 gap-1">
-              <IconTile icon={Printer} label="Invoice" tone="blue" onClick={() => onPrint("invoice")} disabled={disabled} />
-              <IconTile icon={Sticker} label="Sticker" tone="violet" onClick={() => onPrint("sticker")} disabled={disabled} />
-              <IconTile icon={ClipboardList} label="Picking" tone="amber" onClick={() => onPrint("picking")} disabled={disabled} />
-              <IconTile icon={FileSpreadsheet} label="Sheet" tone="emerald" onClick={() => onPrint("sheet")} disabled={disabled} />
-            </div>
-          </Section>
+              {/* 2. Courier — happens right after RTS */}
+              <Section label="Courier">
+                <div className="grid grid-cols-2 gap-1 mb-1">
+                  <IconTile icon={Truck} label="Send Pathao" tone="rose" onClick={() => fire("pathao")} disabled={disabled} />
+                  <IconTile icon={RefreshCw} label="Sync Status" tone="blue" onClick={() => fire("sync")} disabled={disabled} />
+                </div>
+                <ActionRow icon={Phone} label="Match by Phone (History)" onClick={() => fire("phone")} disabled={disabled} />
+              </Section>
+
+              {/* Pre-order */}
+              <Section label="Pre-order" hint="Stock nei — promise date diye rakho">
+                <ActionRow icon={CalendarClock} label="Move to Pre-order" onClick={() => fire("preorder")} disabled={disabled} />
+              </Section>
+
+              {/* 3. Print — after courier booked */}
+              <Section label="Print">
+                <div className="grid grid-cols-4 gap-1">
+                  <IconTile icon={Printer} label="Invoice" tone="blue" onClick={() => fire("invoice")} disabled={disabled} />
+                  <IconTile icon={Sticker} label="Sticker" tone="violet" onClick={() => fire("sticker")} disabled={disabled} />
+                  <IconTile icon={ClipboardList} label="Picking" tone="amber" onClick={() => fire("picking")} disabled={disabled} />
+                  <IconTile icon={FileSpreadsheet} label="Sheet" tone="emerald" onClick={() => fire("sheet")} disabled={disabled} />
+                </div>
+              </Section>
+            </>
+          )}
 
           {/* 4. Detailed status — less frequent, collapsible */}
           <Section label="More Status Options">
@@ -160,12 +295,20 @@ export function OrdersBulkActions({ selectedCount, totalCount, onSelectAll, onCl
           </Section>
 
           {/* 5. Export — rarely used */}
-          <Section label="Export">
-            <div className="grid grid-cols-2 gap-1">
-              <IconTile icon={Download} label="Excel" tone="emerald" onClick={onExport} />
-              <IconTile icon={Copy} label="Duplicates" tone="slate" disabled />
-            </div>
-          </Section>
+          {!query && (
+            <Section label="Export">
+              <div className="grid grid-cols-2 gap-1">
+                <IconTile icon={Download} label="Excel" tone="emerald" onClick={() => fire("export")} />
+                <IconTile icon={Copy} label="Duplicates" tone="slate" disabled />
+              </div>
+            </Section>
+          )}
+        </div>
+
+        {/* Footer */}
+        <div className="flex items-center justify-between gap-2 border-t bg-muted/40 px-3 py-1.5 text-[10px] text-muted-foreground">
+          <span>{disabled ? "Select at least one order" : `${selectedCount} selected`}</span>
+          <span className="hidden sm:inline">Enter = top match · Esc = clear</span>
         </div>
       </PopoverContent>
       </Popover>
@@ -203,7 +346,7 @@ function InlineQuickBtn({
   );
 }
 
-function ActionRow({ icon: Icon, label, onClick, disabled, tone }: { icon: React.ElementType; label: string; onClick?: () => void; disabled?: boolean; tone?: "destructive" }) {
+function ActionRow({ icon: Icon, label, onClick, disabled, tone, trailing }: { icon: React.ElementType; label: string; onClick?: () => void; disabled?: boolean; tone?: "destructive"; trailing?: React.ReactNode }) {
   return (
     <button
       type="button"
@@ -215,6 +358,7 @@ function ActionRow({ icon: Icon, label, onClick, disabled, tone }: { icon: React
     >
       <Icon className="h-3.5 w-3.5 text-muted-foreground" />
       <span className="flex-1 text-left">{label}</span>
+      {trailing}
     </button>
   );
 }
@@ -234,7 +378,7 @@ function IconTile({ icon: Icon, label, onClick, disabled, tone = "slate" }: { ic
       type="button"
       onClick={onClick}
       disabled={disabled}
-      className="group flex flex-col items-center justify-center gap-1 py-2 rounded-lg border bg-card hover:border-primary/40 hover:shadow-sm transition-all disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:border-border disabled:hover:shadow-none"
+      className="group flex flex-col items-center justify-center gap-1 py-2 rounded-lg border bg-card hover:border-primary/40 hover:shadow-sm active:scale-[0.97] transition-all disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:border-border disabled:hover:shadow-none"
     >
       <span className={`h-7 w-7 rounded-md grid place-items-center transition-colors ${TONE_MAP[tone]}`}>
         <Icon className="h-3.5 w-3.5" />
@@ -250,7 +394,7 @@ function QuickStatusTile({ icon: Icon, label, onClick, disabled, color }: { icon
       type="button"
       onClick={onClick}
       disabled={disabled}
-      className="flex items-center gap-2 px-2.5 h-9 rounded-md border bg-card text-[12px] font-semibold hover:shadow-sm transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+      className="flex items-center gap-2 px-2.5 h-9 rounded-md border bg-card text-[12px] font-semibold hover:shadow-sm active:scale-[0.97] transition-all disabled:opacity-50 disabled:cursor-not-allowed"
       style={{ borderColor: `${color}33` }}
     >
       <span className="h-6 w-6 rounded-md grid place-items-center" style={{ backgroundColor: `${color}1a`, color }}>
