@@ -556,9 +556,18 @@ function OrdersPage() {
   }, [visibleRows, total, updateFilter]);
 
   // Paging should feel like a fresh screen, not a jump mid-table.
+  const didMountRef = useRef(false);
   useEffect(() => {
+    if (!didMountRef.current) { didMountRef.current = true; return; }
     document.querySelector("main")?.scrollTo({ top: 0, behavior: "smooth" });
   }, [filter.page]);
+
+  // If filters shrink the result set, never strand the user on an empty page.
+  useEffect(() => {
+    if (isFetching || total === 0) return;
+    const maxPage = Math.max(0, Math.ceil(total / filter.pageSize) - 1);
+    if (filter.page > maxPage) updateFilter({ page: maxPage });
+  }, [total, filter.page, filter.pageSize, isFetching, updateFilter]);
 
   // Header snapshot metrics derived from the counts already fetched.
   const snapshot = useMemo(() => {
