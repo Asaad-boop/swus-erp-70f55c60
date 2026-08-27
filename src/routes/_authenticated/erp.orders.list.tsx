@@ -1,6 +1,6 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { Plus, Download, RefreshCw, Inbox } from "lucide-react";
+import { Plus, Download, RefreshCw, Inbox, Clock, Wallet, TrendingUp } from "lucide-react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
@@ -14,6 +14,7 @@ import { useCourierShipments, COURIER_BUCKET_META, type CourierBucket, type Cour
 import { applyBrandScope } from "@/lib/erp/apply-brand-scope";
 import { PipelineFlowBar } from "@/components/erp/orders/pipeline-flow-bar";
 import { OrdersAlertStrip } from "@/components/erp/orders/orders-alert-strip";
+import { OrdersMetricStrip, type Metric } from "@/components/erp/orders/orders-metric-strip";
 import { OrderInsightDrawer } from "@/components/erp/orders/order-insight-drawer";
 import { useOrderLocksFor } from "@/hooks/erp/use-order-ops";
 import { OrdersToolbar } from "@/components/erp/orders/orders-toolbar";
@@ -21,7 +22,6 @@ import { OrdersBulkActions } from "@/components/erp/orders/orders-bulk-actions";
 import { OrdersTable } from "@/components/erp/orders/orders-table";
 import { OrdersSelectionBar } from "@/components/erp/orders/orders-selection-bar";
 import { OrdersPagination } from "@/components/erp/orders/orders-pagination";
-import { ErpPageHeader, HeaderChip } from "@/components/erp/ui/page-header";
 import { EmptyState } from "@/components/erp/ui/data-panel";
 import { useOrdersPrefs, useSavedViews } from "@/hooks/erp/use-orders-prefs";
 import { OrderDrawer } from "@/components/erp/orders/order-drawer";
@@ -352,15 +352,23 @@ function OrdersPage() {
     view,
   ]);
 
-  const toggleSelect = (id: string) => {
-    const next = new Set(selectedIds);
-    if (next.has(id)) next.delete(id); else next.add(id);
-    setSelectedIds(next);
-  };
-  const toggleAll = (checked: boolean) => {
-    if (checked) setSelectedIds(new Set(visibleRows.map((r) => r.id)));
-    else setSelectedIds(new Set());
-  };
+  // Stable identities keep the (heavy) table from re-rendering on every keystroke.
+  const toggleSelect = useCallback((id: string) => {
+    setSelectedIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id); else next.add(id);
+      return next;
+    });
+  }, []);
+  const rowIdsRef = useRef<string[]>([]);
+  rowIdsRef.current = visibleRows.map((r) => r.id);
+  const toggleAll = useCallback((checked: boolean) => {
+    setSelectedIds(checked ? new Set(rowIdsRef.current) : new Set());
+  }, []);
+  const handleRowClick = useCallback((id: string) => {
+    if (typeof window !== "undefined" && window.innerWidth < 1280) setOpenId(id);
+    else setInsightId(id);
+  }, []);
 
   /** Select every order matching the current filter, not just this page. */
   const selectAllMatching = async () => {
@@ -529,12 +537,23 @@ function OrdersPage() {
       } else if (e.key === "r") {
         e.preventDefault();
         handleRefresh();
+      } else if (e.key === "ArrowRight" && filterRef.current.page + 1 < Math.ceil(total / filterRef.current.pageSize)) {
+        e.preventDefault();
+        updateFilter({ page: filterRef.current.page + 1 });
+      } else if (e.key === "ArrowLeft" && filterRef.current.page > 0) {
+        e.preventDefault();
+        updateFilter({ page: filterRef.current.page - 1 });
       }
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [visibleRows]);
+  }, [visibleRows, total, updateFilter]);
+
+  // Paging should feel like a fresh screen, not a jump mid-table.
+  useEffect(() => {
+    document.querySelector("main")?.scrollTo({ top: 0, behavior: "smooth" });
+  }, [filter.page]);
 
   // Header snapshot metrics derived from the counts already fetched.
   const snapshot = useMemo(() => {
@@ -553,59 +572,108 @@ function OrdersPage() {
     };
   }, [countsData, visibleRows]);
 
-  return (
-    <div className="p-4 md:p-6 min-h-screen bg-background">
-      <ErpPageHeader
-        live
-        eyebrow={activeBrand?.name ?? "All brands"}
-        title="Orders"
-        subtitle="Manage and track all your orders in one place"
-        chips={
-          <>
-            <HeaderChip value={total.toLocaleString()} label="orders" />
-            <HeaderChip value={snapshot.awaiting.toLocaleString()} label="awaiting action" />
-            <HeaderChip value={`৳${Math.round(snapshot.pendingCod).toLocaleString()}`} label="pending COD" />
-            {snapshot.deliveryRate !== null && (
-              <HeaderChip value={`${snapshot.deliveryRate}%`} label="delivery rate" />
-            )}
-            {selectedIds.size > 0 && <HeaderChip tone="primary" value={selectedIds.size} label="selected" />}
-          </>
-        }
-        actions={
-          <>
-          {lastSyncedAt && (
-            <span className="text-[10px] text-muted-foreground/70 hidden md:inline">
-              Synced {relTimeShort(lastSyncedAt)}
-            </span>
-          )}
-          <Button
-            variant="ghost"
-            size="sm"
-            className="h-9 gap-2 rounded-xl border border-[var(--panel-border)] bg-card px-3 text-[13px] font-medium text-foreground/80 hover:text-foreground"
-            onClick={handleRefresh}
-            title="Refresh (r)"
-          >
-            <RefreshCw className={`h-4 w-4 ${isFetching ? "animate-spin" : ""}`} /> Sync
-          </Button>
-          <Button
-            variant="ghost"
-            size="sm"
-            className="h-9 gap-2 rounded-xl border border-[var(--panel-border)] bg-card px-3 text-[13px] font-medium text-foreground/80 hover:text-foreground"
-            onClick={handleExport}
-            disabled={exporting}
-          >
-            <Download className={`h-3.5 w-3.5 ${exporting ? "animate-pulse" : ""}`} /> {exporting ? "Exporting…" : "Export"}
-          </Button>
-          <Link to="/erp/orders/new">
-            <Button size="sm" className="h-9 gap-2 rounded-xl px-3.5 text-[13px] shadow-sm">
-              <Plus className="h-4 w-4" />Create Order
-            </Button>
-          </Link>
-          </>
-        }
-      />
+  const metrics = useMemo(() => {
+    const list: Metric[] = [
+      {
+        key: "total",
+        label: "In this view",
+        value: total.toLocaleString(),
+        hint: total > 0 ? `Page ${filter.page + 1} of ${totalPages}` : undefined,
+        icon: <Inbox className="h-4 w-4" />,
+      },
+      {
+        key: "awaiting",
+        label: "Awaiting action",
+        value: snapshot.awaiting.toLocaleString(),
+        hint: "Confirmed · packed · ready",
+        tone: snapshot.awaiting > 0 ? "warning" : "neutral",
+        icon: <Clock className="h-4 w-4" />,
+        onClick: () => navigate({ replace: true, search: { ...sp, tab: "pending", view: undefined, page: 0 } }),
+      },
+      {
+        key: "cod",
+        label: "Pending COD",
+        value: `৳${Math.round(snapshot.pendingCod).toLocaleString()}`,
+        hint: "Unsettled on this page",
+        icon: <Wallet className="h-4 w-4" />,
+      },
+    ];
+    if (snapshot.deliveryRate !== null) {
+      list.push({
+        key: "rate",
+        label: "Delivery rate",
+        value: `${snapshot.deliveryRate}%`,
+        hint: "Delivered vs settled",
+        tone: snapshot.deliveryRate >= 80 ? "success" : snapshot.deliveryRate >= 60 ? "warning" : "danger",
+        icon: <TrendingUp className="h-4 w-4" />,
+      });
+    }
+    return list;
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [total, totalPages, filter.page, snapshot, spKey]);
 
-      <div className="space-y-3">
+  return (
+    <div className="min-h-screen bg-background pb-24">
+      {/* ── Sticky command bar ─────────────────────────────────────────── */}
+      <div className="sticky top-0 z-30 border-b border-[var(--panel-border)] bg-background/85 px-4 pt-3 backdrop-blur-xl md:px-6">
+        <div className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-3 pb-3">
+          <div className="min-w-0">
+            <div className="flex items-center gap-1.5 text-[10.5px] font-medium uppercase tracking-[0.14em] text-muted-foreground/80">
+              <span className="relative inline-flex h-1.5 w-1.5 shrink-0">
+                <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-[var(--success-solid)] opacity-60 motion-reduce:hidden" />
+                <span className="relative inline-flex h-1.5 w-1.5 rounded-full bg-[var(--success-solid)]" />
+              </span>
+              <span className="truncate">{activeBrand?.name ?? "All brands"}</span>
+              {isFetching && <span className="text-muted-foreground/60">· syncing</span>}
+              {!isFetching && lastSyncedAt && (
+                <span className="hidden text-muted-foreground/60 md:inline">· synced {relTimeShort(lastSyncedAt)}</span>
+              )}
+            </div>
+            <div className="mt-0.5 flex flex-wrap items-baseline gap-x-2.5">
+              <h1 className="truncate text-[22px] font-semibold leading-tight tracking-[-0.02em] md:text-[26px]">Orders</h1>
+              {selectedIds.size > 0 && (
+                <span className="num rounded-full bg-primary/10 px-2 py-0.5 text-[11.5px] font-semibold text-primary">
+                  {selectedIds.size} selected
+                </span>
+              )}
+            </div>
+          </div>
+
+          <div className="flex shrink-0 items-center gap-1.5">
+            <Button
+              variant="ghost"
+              size="sm"
+              className="h-9 w-9 gap-2 rounded-xl border border-[var(--panel-border)] bg-card px-0 text-foreground/80 hover:text-foreground sm:w-auto sm:px-3 sm:text-[13px]"
+              onClick={handleRefresh}
+              title="Refresh (r)"
+            >
+              <RefreshCw className={`h-4 w-4 ${isFetching ? "animate-spin" : ""}`} />
+              <span className="hidden sm:inline">Sync</span>
+            </Button>
+            <Button
+              variant="ghost"
+              size="sm"
+              className="h-9 w-9 gap-2 rounded-xl border border-[var(--panel-border)] bg-card px-0 text-foreground/80 hover:text-foreground sm:w-auto sm:px-3 sm:text-[13px]"
+              onClick={handleExport}
+              disabled={exporting}
+              title="Export filtered orders to CSV"
+            >
+              <Download className={`h-4 w-4 ${exporting ? "animate-pulse" : ""}`} />
+              <span className="hidden sm:inline">{exporting ? "Exporting…" : "Export"}</span>
+            </Button>
+            <Link to="/erp/orders/new">
+              <Button size="sm" className="h-9 gap-1.5 rounded-xl px-3 text-[13px] shadow-sm">
+                <Plus className="h-4 w-4" />
+                <span className="hidden sm:inline">Create Order</span>
+              </Button>
+            </Link>
+          </div>
+        </div>
+      </div>
+
+      <div className="space-y-3 px-4 pt-3 md:px-6 [--thead-top:0px] md:[--thead-top:128px]">
+        <OrdersMetricStrip metrics={metrics} />
+
         <PipelineFlowBar
           active={activeTab}
           counts={countsData?.counts ?? {}}
@@ -620,181 +688,186 @@ function OrdersPage() {
             }
           }}
         />
+
         {view === "incomplete" ? (
           <>
-            <OrdersToolbar filter={effective} onChange={updateFilter} />
+            <div className="sticky top-[72px] z-20 -mx-1 rounded-[18px] bg-background/80 px-1 py-1 backdrop-blur-xl">
+              <OrdersToolbar filter={effective} onChange={updateFilter} />
+            </div>
             <div className="overflow-hidden rounded-2xl border border-[var(--panel-border)] bg-card">
-            <IncompleteOrdersTable
-              brandId={effective.brandId}
-              brandIds={effective.brandIds}
-              search={effective.search}
-              page={incompletePage}
-              pageSize={50}
-              onPageChange={setIncompletePage}
-              onOpenOrder={setOpenId}
-            />
+              <IncompleteOrdersTable
+                brandId={effective.brandId}
+                brandIds={effective.brandIds}
+                search={effective.search}
+                page={incompletePage}
+                pageSize={50}
+                onPageChange={setIncompletePage}
+                onOpenOrder={setOpenId}
+              />
             </div>
           </>
         ) : (
           <>
-          <OrdersAlertStrip rows={visibleRows} onReview={(ids) => setSelectedIds(new Set(ids))} />
-          {stuckIds.length > 0 && !nudgeDismissed && (
-            <div className="flex items-center gap-2 rounded-xl border border-amber-300/50 bg-amber-500/[0.07] px-3 py-2 text-[12px] dark:border-amber-900/50">
-              <AlertTriangle className="h-3.5 w-3.5 text-amber-600 shrink-0" />
-              <span className="text-foreground/90">
-                <span className="tabular-nums font-semibold">{stuckIds.length}</span> order{stuckIds.length > 1 ? "s" : ""} stuck 3+ days
-              </span>
-              <div className="flex-1" />
-              <Button
-                size="sm"
-                variant="ghost"
-                className="h-7 gap-1.5 text-[11px] font-normal"
-                onClick={() => setSelectedIds(new Set(stuckIds))}
-              >
-                Select {stuckIds.length}
-              </Button>
-              <Button
-                size="sm"
-                variant="outline"
-                className="h-7 gap-1.5 text-[11px] font-normal"
-                onClick={() => { setSelectedIds(new Set(stuckIds)); setSyncOpen(true); }}
-              >
-                <RefreshCcw className="h-3 w-3" /> Sync
-              </Button>
-              <button
-                type="button"
-                onClick={() => setNudgeDismissed(true)}
-                className="ml-0.5 h-6 w-6 grid place-items-center rounded text-muted-foreground hover:text-foreground"
-                title="Dismiss"
-              >
-                ×
-              </button>
+            {/* Attention rail — risk strip and the stuck nudge share one row. */}
+            {(visibleRows.some((r) => r.risk_flag || r.duplicate_flag || (r.hold_reason ?? "").trim()) ||
+              (stuckIds.length > 0 && !nudgeDismissed)) && (
+              <div className="grid gap-2 lg:grid-cols-2">
+                <OrdersAlertStrip rows={visibleRows} onReview={(ids) => setSelectedIds(new Set(ids))} />
+                {stuckIds.length > 0 && !nudgeDismissed && (
+                  <div className="flex items-center gap-2 rounded-[var(--radius-card)] border border-amber-300/50 bg-amber-500/[0.07] px-3.5 py-2.5 text-[12.5px] dark:border-amber-900/50">
+                    <AlertTriangle className="h-4 w-4 shrink-0 text-amber-600" />
+                    <span className="min-w-0 truncate text-foreground/90">
+                      <span className="num font-semibold">{stuckIds.length}</span> order{stuckIds.length > 1 ? "s" : ""} stuck 3+ days
+                    </span>
+                    <div className="flex-1" />
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      className="h-7 gap-1.5 text-[11.5px] font-medium"
+                      onClick={() => setSelectedIds(new Set(stuckIds))}
+                    >
+                      Select
+                    </Button>
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      className="h-7 gap-1.5 text-[11.5px] font-medium"
+                      onClick={() => { setSelectedIds(new Set(stuckIds)); setSyncOpen(true); }}
+                    >
+                      <RefreshCcw className="h-3 w-3" /> Sync
+                    </Button>
+                    <button
+                      type="button"
+                      onClick={() => setNudgeDismissed(true)}
+                      className="ml-0.5 grid h-6 w-6 shrink-0 place-items-center rounded text-muted-foreground hover:text-foreground"
+                      title="Dismiss"
+                    >
+                      ×
+                    </button>
+                  </div>
+                )}
+              </div>
+            )}
+
+            <div className="sticky top-[72px] z-20 -mx-1 rounded-[18px] bg-background/80 px-1 py-1 backdrop-blur-xl">
+              <OrdersToolbar
+                filter={effective}
+                onChange={updateFilter}
+                density={prefs.density}
+                onDensityChange={prefs.setDensity}
+                hiddenColumns={prefs.hiddenColumns}
+                onToggleColumn={prefs.toggleColumn}
+                onResetColumns={prefs.resetColumns}
+                savedViews={savedViews.views}
+                onSaveView={(name) =>
+                  savedViews.save(name, {
+                    search: filter.search, source: filter.source, courier: filter.courier,
+                    courierBucket: filter.courierBucket ?? null, paymentMethod: filter.paymentMethod ?? null,
+                    paymentStatus: filter.paymentStatus ?? null, city: filter.city ?? null,
+                    assignee: filter.assignee ?? null, amountMin: filter.amountMin ?? null,
+                    amountMax: filter.amountMax ?? null, advanceFilter: filter.advanceFilter ?? "any",
+                    printedFilter: filter.printedFilter ?? "all", dateFrom: filter.dateFrom, dateTo: filter.dateTo,
+                    statuses: filter.statuses, sortKey: filter.sortKey, sortDir: filter.sortDir,
+                  })
+                }
+                onApplyView={(v) => applyView(v.search)}
+                onDeleteView={savedViews.remove}
+                rightSlot={
+                  <OrdersBulkActions
+                    selectedCount={selectedIds.size}
+                    totalCount={rows.length}
+                    onSelectAll={() => setSelectedIds(new Set(rows.map((r) => r.id)))}
+                    onClear={() => setSelectedIds(new Set())}
+                    onStatus={(s) => bulkStatus.mutate(s)}
+                    onExport={handleExport}
+                    onSendToPathao={() => { if (selectedIds.size > 0) setPathaoBulkOpen(true); }}
+                    onSyncCourier={() => { if (selectedIds.size > 0) setSyncOpen(true); }}
+                    onPhoneHistory={() => { if (selectedIds.size > 0) setPhoneHistOpen(true); }}
+                    onPreorder={() => {
+                      if (selectedIds.size === 0) return;
+                      setPreorderIds(Array.from(selectedIds));
+                      setPreorderOpen(true);
+                    }}
+                    onPrint={(mode) => { if (selectedIds.size > 0) setPrintMode(mode); }}
+                    isPending={bulkStatus.isPending}
+                  />
+                }
+              />
             </div>
-          )}
-          <OrdersToolbar
-          filter={effective}
-          onChange={updateFilter}
-          density={prefs.density}
-          onDensityChange={prefs.setDensity}
-          hiddenColumns={prefs.hiddenColumns}
-          onToggleColumn={prefs.toggleColumn}
-          onResetColumns={prefs.resetColumns}
-          savedViews={savedViews.views}
-          onSaveView={(name) =>
-            savedViews.save(name, {
-              search: filter.search, source: filter.source, courier: filter.courier,
-              courierBucket: filter.courierBucket ?? null, paymentMethod: filter.paymentMethod ?? null,
-              paymentStatus: filter.paymentStatus ?? null, city: filter.city ?? null,
-              assignee: filter.assignee ?? null, amountMin: filter.amountMin ?? null,
-              amountMax: filter.amountMax ?? null, advanceFilter: filter.advanceFilter ?? "any",
-              printedFilter: filter.printedFilter ?? "all", dateFrom: filter.dateFrom, dateTo: filter.dateTo,
-              statuses: filter.statuses, sortKey: filter.sortKey, sortDir: filter.sortDir,
-            })
-          }
-          onApplyView={(v) => applyView(v.search)}
-          onDeleteView={savedViews.remove}
-          rightSlot={
-            <OrdersBulkActions
-              selectedCount={selectedIds.size}
-              totalCount={rows.length}
-              onSelectAll={() => setSelectedIds(new Set(rows.map((r) => r.id)))}
-              onClear={() => setSelectedIds(new Set())}
-              onStatus={(s) => bulkStatus.mutate(s)}
-              onExport={handleExport}
-              onSendToPathao={() => {
-                if (selectedIds.size === 0) return;
-                setPathaoBulkOpen(true);
-              }}
-              onSyncCourier={() => {
-                if (selectedIds.size === 0) return;
-                setSyncOpen(true);
-              }}
-              onPhoneHistory={() => {
-                if (selectedIds.size === 0) return;
-                setPhoneHistOpen(true);
-              }}
-              onPreorder={() => {
-                if (selectedIds.size === 0) return;
-                setPreorderIds(Array.from(selectedIds));
-                setPreorderOpen(true);
-              }}
-              onPrint={(mode) => {
-                if (selectedIds.size === 0) return;
-                setPrintMode(mode);
-              }}
-              isPending={bulkStatus.isPending}
-            />
-          }
-        />
-        <div className="flex items-start gap-3">
-        <div className="min-w-0 flex-1 overflow-hidden rounded-2xl border border-[var(--panel-border)] bg-card">
-        <OrdersTable
-          rows={visibleRows}
-          loading={isLoading}
-          density={prefs.density}
-          hiddenColumns={prefs.hiddenColumns}
-          sortKey={filter.sortKey ?? "created_at"}
-          sortDir={filter.sortDir ?? "desc"}
-          onSortChange={(key) =>
-            updateFilter((f) => ({
-              ...f,
-              sortKey: key,
-              sortDir: f.sortKey === key ? ((f.sortDir ?? "desc") === "desc" ? "asc" : "desc") : "desc",
-              page: 0,
-            }))
-          }
-          selectedIds={selectedIds}
-          onToggleSelect={toggleSelect}
-          onToggleAll={toggleAll}
-          onRowClick={(id) => {
-            if (typeof window !== "undefined" && window.innerWidth < 1280) setOpenId(id);
-            else setInsightId(id);
-          }}
-          onStatusChange={(id, status) => statusMutation.mutate({ id, status })}
-          pendingStatusIds={pendingIds}
-          shipmentsByOrderId={shipmentsMap}
-          locksByOrderId={locksMap}
-          flashOrderIds={flashIds}
-          onSyncRow={(id) => { setSingleSyncId(id); }}
-          onPreorder={(id) => { setPreorderIds([id]); setPreorderOpen(true); }}
-        />
-        {!isLoading && visibleRows.length === 0 && (
-          <EmptyState
-            icon={<Inbox className="h-7 w-7" />}
-            title="No orders found"
-            description={
-              courierFilterActive
-                ? `No orders with courier status "${COURIER_BUCKET_META[courierStatusFilter as CourierBucket].label}" on this page.`
-                : "Try adjusting your filters or date range."
-            }
-            action={
-              (hasActiveFilters || courierFilterActive) ? (
-                <Button variant="outline" size="sm" onClick={() => { clearAllFilters(); setCourierStatusFilter("all"); }}>
-                  Clear filters
-                </Button>
-              ) : undefined
-            }
-          />
-        )}
-        <OrdersPagination
-          page={filter.page}
-          pageSize={filter.pageSize}
-          total={total}
-          rowsOnPage={visibleRows.length}
-          onPage={(p) => updateFilter({ page: p })}
-          onPageSize={(n) => updateFilter({ pageSize: n, page: 0 })}
-        />
-        </div>
-        {insightId && (
-          <div className="hidden xl:block">
-            <OrderInsightDrawer
-              order={visibleRows.find((r) => r.id === insightId) ?? null}
-              onClose={() => setInsightId(null)}
-              onOpenFull={(id) => { setInsightId(null); setOpenId(id); }}
-            />
-          </div>
-        )}
-        </div>
+
+            <div className="flex items-start gap-3">
+              <div className="min-w-0 flex-1 overflow-hidden rounded-2xl border border-[var(--panel-border)] bg-card shadow-[0_1px_2px_rgba(0,0,0,0.03)]">
+                <div className={isFetching && !isLoading ? "opacity-70 transition-opacity duration-200" : "transition-opacity duration-200"}>
+                  <OrdersTable
+                    rows={visibleRows}
+                    loading={isLoading}
+                    density={prefs.density}
+                    hiddenColumns={prefs.hiddenColumns}
+                    sortKey={filter.sortKey ?? "created_at"}
+                    sortDir={filter.sortDir ?? "desc"}
+                    onSortChange={(key) =>
+                      updateFilter((f) => ({
+                        ...f,
+                        sortKey: key,
+                        sortDir: f.sortKey === key ? ((f.sortDir ?? "desc") === "desc" ? "asc" : "desc") : "desc",
+                        page: 0,
+                      }))
+                    }
+                    selectedIds={selectedIds}
+                    onToggleSelect={toggleSelect}
+                    onToggleAll={toggleAll}
+                    onRowClick={handleRowClick}
+                    onStatusChange={(id, status) => statusMutation.mutate({ id, status })}
+                    pendingStatusIds={pendingIds}
+                    shipmentsByOrderId={shipmentsMap}
+                    locksByOrderId={locksMap}
+                    flashOrderIds={flashIds}
+                    onSyncRow={(id) => { setSingleSyncId(id); }}
+                    onPreorder={(id) => { setPreorderIds([id]); setPreorderOpen(true); }}
+                  />
+                </div>
+                {!isLoading && visibleRows.length === 0 && (
+                  <EmptyState
+                    icon={<Inbox className="h-7 w-7" />}
+                    title="No orders found"
+                    description={
+                      courierFilterActive
+                        ? `No orders with courier status "${COURIER_BUCKET_META[courierStatusFilter as CourierBucket].label}" on this page.`
+                        : "Try adjusting your filters or date range."
+                    }
+                    action={
+                      (hasActiveFilters || courierFilterActive) ? (
+                        <Button variant="outline" size="sm" onClick={() => { clearAllFilters(); setCourierStatusFilter("all"); }}>
+                          Clear filters
+                        </Button>
+                      ) : undefined
+                    }
+                  />
+                )}
+                <div className="sticky bottom-0 z-10 bg-card/95 backdrop-blur">
+                  <OrdersPagination
+                    page={filter.page}
+                    pageSize={filter.pageSize}
+                    total={total}
+                    rowsOnPage={visibleRows.length}
+                    onPage={(p) => updateFilter({ page: p })}
+                    onPageSize={(n) => updateFilter({ pageSize: n, page: 0 })}
+                  />
+                </div>
+              </div>
+
+              {insightId && (
+                <div className="hidden xl:block">
+                  <div className="sticky top-[150px]">
+                    <OrderInsightDrawer
+                      order={visibleRows.find((r) => r.id === insightId) ?? null}
+                      onClose={() => setInsightId(null)}
+                      onOpenFull={(id) => { setInsightId(null); setOpenId(id); }}
+                    />
+                  </div>
+                </div>
+              )}
+            </div>
           </>
         )}
       </div>
