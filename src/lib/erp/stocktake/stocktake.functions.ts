@@ -58,7 +58,7 @@ export const getStocktakeDetail = createServerFn({ method: "POST" })
           system_qty, counted_qty, variance, unit_cost, variance_value,
           notes, counted_by, counted_at,
           product:product_id ( id, title, sku, image ),
-          variant:variant_id ( id, sku, title )
+          variant:variant_id ( id, sku, color_name )
         `)
         .eq("session_id", data.sessionId)
         .limit(5000),
