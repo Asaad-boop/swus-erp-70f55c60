@@ -631,6 +631,21 @@ function NewOrderPage() {
     return m;
   }, [effectiveBrandId, name, phone, address, items, advance, advanceSource, advanceNumber]);
 
+  // Reset in-place instead of a full page reload — next order starts instantly.
+  const resetForm = useCallback(() => {
+    setPhone(""); setName(""); setAddress("");
+    setPasteText(""); setItems([]); setProductSearch("");
+    setDiscount(0); setAdvance(0); setShippingFee(0);
+    setAdvanceSource(""); setAdvanceNumber(""); setAdvanceTxnId("");
+    setPaymentMethod("COD"); setOrderSource("");
+    setIsPreorder(false); setPreorderNote(""); setIsCrossSale(false);
+    setCityId(null); setCityName(""); setZoneId(null); setZoneName("");
+    setAreaId(null); setAreaName(""); setPathaoAddressResult(null);
+    setPhoneLookup(null); setDismissedAutofillPhone("");
+    window.scrollTo({ top: 0, behavior: "smooth" });
+    setTimeout(() => searchRef.current?.focus(), 100);
+  }, []);
+
   const submit = useCallback(() => {
     if (create.isPending) return;
     create.mutate();
