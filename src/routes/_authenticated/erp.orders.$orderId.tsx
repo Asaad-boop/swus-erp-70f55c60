@@ -1438,9 +1438,10 @@ function splitCourierProviders(providers?: HistProvider[] | null) {
         </div>
       </header>
 
-      <div className="max-w-[1600px] mx-auto p-3 sm:p-4 md:p-6 grid grid-cols-1 xl:grid-cols-[minmax(0,1fr)_minmax(320px,380px)] gap-3 sm:gap-4 items-start">
+      <div className="max-w-[1600px] mx-auto p-3 md:px-4 md:py-3 grid grid-cols-1 xl:grid-cols-[minmax(0,1fr)_minmax(320px,360px)] gap-3 items-start">
         {/* MAIN */}
-        <div className="space-y-4 min-w-0">
+        <div className="space-y-3 min-w-0">
+
           {/* Stats strip */}
           <StatsStrip
             stats={stats}
