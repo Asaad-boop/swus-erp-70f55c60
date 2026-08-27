@@ -54,6 +54,7 @@ type Props = {
   flashOrderIds?: Set<string>;
   onSyncRow?: (orderId: string) => void;
   onPreorder?: (orderId: string) => void;
+  onDispatchPrint?: (orderId: string) => void;
   /** Row height preset. */
   density?: "comfortable" | "compact";
   /** Column ids hidden by the user. */
@@ -64,7 +65,7 @@ type Props = {
 };
 
 
-export function OrdersTable({ rows, loading, selectedIds, onToggleSelect, onToggleAll, onRowClick, onStatusChange, pendingStatusIds, shipmentsByOrderId, flashOrderIds, onSyncRow, onPreorder, density = "comfortable", hiddenColumns = [], sortKey, sortDir, onSortChange }: Props) {
+export function OrdersTable({ rows, loading, selectedIds, onToggleSelect, onToggleAll, onRowClick, onStatusChange, pendingStatusIds, shipmentsByOrderId, flashOrderIds, onSyncRow, onPreorder, onDispatchPrint, density = "comfortable", hiddenColumns = [], sortKey, sortDir, onSortChange }: Props) {
   const copyText = (text: string, label: string) => {
     navigator.clipboard?.writeText(text).then(() => toast.success(`${label} copied`));
   };
