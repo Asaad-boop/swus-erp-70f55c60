@@ -494,9 +494,9 @@ async function applyInstapayRow(
 
   if (p.consignmentId) {
     // Only stamp a fulfilment status the invoice actually proves; never
-    // overwrite the courier's own live status with a guessed one.
-    const shipStatus =
-      matchType === "return" ? "Returned" : matchType === "partial" ? "Partial Delivered" : matchType === "paid" ? "Delivered" : null;
+    // overwrite the courier's own live status with a guessed one. If the
+    // normalized status column was stale, write back the corrected value.
+    const shipStatus = correctedShipmentStatus;
     await supabase
       .from("courier_shipments")
       .update(shipStatus ? { delivery_fee: p.totalFee, status: shipStatus } : { delivery_fee: p.totalFee })
