@@ -1872,9 +1872,10 @@ function splitCourierProviders(providers?: HistProvider[] | null) {
             title="Order Summary"
             accent="bg-emerald-500"
             right={<span className="text-[10px] font-mono text-gray-500">#{invoiceDisplay(order)}</span>}
-            bodyClassName="p-4"
+            bodyClassName="p-3"
           >
-            <div className="space-y-2 text-xs">
+            <div className="space-y-1 text-xs">
+
               <Row label="Date" value={format(new Date(order.created_at), "dd MMM yyyy, hh:mm a")} />
               <Row label="Status" value={
                 <div className="flex items-center gap-1.5">
