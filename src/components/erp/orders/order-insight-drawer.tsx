@@ -93,11 +93,9 @@ export function OrderInsightDrawer({ order, onClose, onOpenFull }: Props) {
           <div className="truncate text-[12px] text-muted-foreground">
             {customerName(order)} · <span className="num">{customerPhone(order)}</span>
           </div>
-          {order.call_status && order.call_status !== "not_called" ? (
-            <div className="mt-1.5">
-              <CallStatusChip status={order.call_status} attempts={order.call_attempt_count} />
-            </div>
-          ) : null}
+          <div className="mt-1.5">
+            <CallStatusChip status={order.call_status} attempts={order.call_attempt_count} />
+          </div>
         </div>
         <div className="flex items-center gap-1">
           {onOpenFull && (
