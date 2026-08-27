@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { CheckCheck, Printer, Sticker, ClipboardList, FileSpreadsheet, Truck, RefreshCw, Download, Copy, X, Loader2, ChevronDown, Phone, Zap, Search, PackageCheck, CalendarClock, History, CornerDownLeft } from "lucide-react";
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Dialog, DialogContent } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { STATUS_GROUPS, statusAccent, statusBadge, type OrderStatus } from "@/lib/erp/orders";
@@ -94,27 +94,29 @@ export function OrdersBulkActions({ selectedCount, totalCount, onSelectAll, onCl
   const recentActions = recent.map((id) => actions.get(id)).filter(Boolean) as Array<{ id: string; label: string; icon: React.ElementType }>;
 
   return (
-    <div className="flex items-center gap-1">
+    <div className="flex items-center gap-1.5">
       <InlineQuickBtn icon={PackageCheck} label="Delivered" color="#059669" onClick={() => onStatus("delivered")} disabled={disabled} />
       <InlineQuickBtn icon={CheckCheck} label="RTS" color="#16a34a" onClick={() => fire("rts")} disabled={disabled} />
       <InlineQuickBtn icon={X} label="Cancel" color="#dc2626" onClick={() => fire("cancel")} disabled={disabled} />
       <InlineQuickBtn icon={RefreshCw} label="Sync" color="#0284c7" onClick={() => fire("sync")} disabled={disabled} />
-      <Popover open={open} onOpenChange={setOpen}>
-      <PopoverTrigger asChild>
-        <Button variant="outline" size="sm" className="h-9 gap-1.5">
-          <Zap className="h-3.5 w-3.5" />
-          <span className="font-semibold">More</span>
-          {selectedCount > 0 && (
-            <span className="ml-0.5 inline-flex items-center justify-center h-5 min-w-[20px] px-1.5 rounded-full bg-primary text-primary-foreground text-[10px] font-bold tabular-nums">
-              {selectedCount}
-            </span>
-          )}
-        </Button>
-      </PopoverTrigger>
-      <PopoverContent
-        align="end"
-        sideOffset={6}
-        className="w-[352px] p-0 overflow-hidden rounded-xl shadow-2xl border-border/60 max-h-[min(85vh,680px)] flex flex-col"
+      <Button
+        type="button"
+        variant={selectedCount > 0 ? "default" : "outline"}
+        size="sm"
+        onClick={() => setOpen(true)}
+        className="h-9 gap-1.5"
+      >
+        <Zap className="h-3.5 w-3.5" />
+        <span className="font-semibold">Bulk Actions</span>
+        {selectedCount > 0 && (
+          <span className="ml-0.5 inline-flex items-center justify-center h-5 min-w-[20px] px-1.5 rounded-full bg-background/20 text-[10px] font-bold tabular-nums">
+            {selectedCount}
+          </span>
+        )}
+      </Button>
+      <Dialog open={open} onOpenChange={setOpen}>
+      <DialogContent
+        className="w-[min(420px,calc(100vw-1.5rem))] p-0 overflow-hidden rounded-xl shadow-2xl border-border/60 max-h-[min(85vh,680px)] flex flex-col gap-0 [&>button]:hidden"
         onOpenAutoFocus={(e) => { e.preventDefault(); searchRef.current?.focus(); }}
       >
         {/* Header */}
@@ -310,8 +312,8 @@ export function OrdersBulkActions({ selectedCount, totalCount, onSelectAll, onCl
           <span>{disabled ? "Select at least one order" : `${selectedCount} selected`}</span>
           <span className="hidden sm:inline">Enter = top match · Esc = clear</span>
         </div>
-      </PopoverContent>
-      </Popover>
+      </DialogContent>
+      </Dialog>
     </div>
   );
 }
