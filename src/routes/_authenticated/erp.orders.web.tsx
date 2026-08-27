@@ -1238,21 +1238,14 @@ function _WebOrdersPageBody() {
         </div>
       ) : (
       <>
-      {(staleCount > 0 || dupCount > 0) && (
+      {dupCount > 0 && (
         <div
           role="status"
           className="mb-3 flex flex-wrap items-center gap-2 rounded-[var(--radius-card)] border border-[var(--danger-border)] bg-[var(--danger-soft)] px-3.5 py-2.5 text-[12.5px] text-[var(--danger-text)]"
         >
           <AlertTriangle className="h-4 w-4 shrink-0" />
           <span>
-            {staleCount > 0 && (
-              <>
-                <span className="num font-semibold">{staleCount}</span> order 3 ঘণ্টার বেশি সময় ধরে call করা হয়নি, উপরে pin করা আছে.
-              </>
-            )}
-            {dupCount > 0 && (
-              <> <span className="num font-semibold">{dupCount}</span> possible duplicate detected.</>
-            )}
+            <span className="num font-semibold">{dupCount}</span> possible duplicate detected.
           </span>
         </div>
       )}
