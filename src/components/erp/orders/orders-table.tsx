@@ -396,6 +396,24 @@ export function OrdersTable({ rows, loading, selectedIds, onToggleSelect, onTogg
       },
     },
     {
+      header: "Dispatch",
+      id: "dispatch",
+      cell: ({ row }) => {
+        const o = row.original;
+        const busy = pendingStatusIds?.has(o.id) ?? false;
+        if (!onDispatchPrint) return null;
+        return (
+          <DispatchActionsCell
+            order={o}
+            onStatusChange={onStatusChange}
+            onPrint={onDispatchPrint}
+            busy={busy}
+          />
+        );
+      },
+      size: 96,
+    },
+    {
       header: "",
       id: "actions",
       cell: ({ row }) => {
