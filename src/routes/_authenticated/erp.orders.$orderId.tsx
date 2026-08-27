@@ -1644,28 +1644,6 @@ function splitCourierProviders(providers?: HistProvider[] | null) {
                 </Select>
               </FieldShell>
             </div>
-            {(() => {
-              const customerKeys = ["mobile","name","delivery_method","address","shipping_note","city_id","zone_id","area_id","source_platform","is_preorder","is_cross_sale"] as const;
-              const dirty = !!baseline && customerKeys.some((k) => (form as any)[k] !== (baseline as any)[k]);
-              return (
-                <div className="flex items-center justify-end gap-2 pt-3 border-t border-gray-100 dark:border-border">
-                  {dirty && (
-                    <span className="mr-auto inline-flex items-center gap-1.5 text-[11px] text-amber-600">
-                      <span className="h-1.5 w-1.5 rounded-full bg-amber-500 animate-pulse" />Unsaved changes
-                    </span>
-                  )}
-                  <Button size="sm" variant="ghost" disabled={!dirty || saveCustomer.isPending}
-                    onClick={() => baseline && setForm({ ...form, ...baseline })}>
-                    <Undo2 className="h-3.5 w-3.5 mr-1" />Discard
-                  </Button>
-                  <Button size="sm" disabled={!dirty || saveCustomer.isPending}
-                    onClick={() => saveCustomer.mutate()} className="bg-indigo-600 hover:bg-indigo-700 text-white">
-                    {saveCustomer.isPending ? <Loader2 className="h-3.5 w-3.5 mr-1 animate-spin" /> : <Save className="h-3.5 w-3.5 mr-1" />}
-                    Save Customer
-                  </Button>
-                </div>
-              );
-            })()}
             </div>
           </Panel>
 
