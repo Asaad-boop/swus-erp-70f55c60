@@ -744,7 +744,10 @@ function OrdersPage() {
           selectedIds={selectedIds}
           onToggleSelect={toggleSelect}
           onToggleAll={toggleAll}
-          onRowClick={setInsightId}
+          onRowClick={(id) => {
+            if (typeof window !== "undefined" && window.innerWidth < 1280) setOpenId(id);
+            else setInsightId(id);
+          }}
           onStatusChange={(id, status) => statusMutation.mutate({ id, status })}
           pendingStatusIds={pendingIds}
           shipmentsByOrderId={shipmentsMap}
