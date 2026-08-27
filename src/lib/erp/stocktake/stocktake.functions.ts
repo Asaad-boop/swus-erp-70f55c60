@@ -57,7 +57,7 @@ export const getStocktakeDetail = createServerFn({ method: "POST" })
           id, session_id, product_id, variant_id,
           system_qty, counted_qty, variance, unit_cost, variance_value,
           notes, counted_by, counted_at,
-          product:product_id ( id, title, sku, image_url ),
+          product:product_id ( id, title, sku, image ),
           variant:variant_id ( id, sku, title )
         `)
         .eq("session_id", data.sessionId)
