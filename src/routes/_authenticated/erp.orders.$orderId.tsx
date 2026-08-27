@@ -357,7 +357,7 @@ function StatsStrip({
                 const pct = denom > 0 ? Math.round((c.success / denom) * 100) : 0;
                 const t = toneFor(pct, denom === 0);
                 return (
-                  <li key={c.name} className="flex items-center gap-3 px-4 py-2 transition-colors hover:bg-muted/30">
+                  <li key={c.name} className="flex items-center gap-3 px-3.5 py-1 transition-colors hover:bg-muted/30">
                     <span className="w-24 shrink-0 truncate text-[11px] font-medium text-foreground">{c.label}</span>
                     <div className="h-1 flex-1 overflow-hidden rounded-full bg-muted">
                       <div className={cn("h-full rounded-full transition-all duration-700", t.bar)} style={{ width: `${denom === 0 ? 0 : pct}%` }} />
