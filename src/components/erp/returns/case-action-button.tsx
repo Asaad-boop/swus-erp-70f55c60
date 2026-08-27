@@ -68,17 +68,19 @@ export function CaseActionButton({ caseId, type, status, size = "sm", variant = 
   const flow = type === "return" ? RETURN_FLOW : EXCHANGE_FLOW;
   const step = flow[status];
 
-  // QC pending — only available on detail page (link there)
-  if (type === "return" && status === "qc_pending") {
+  // Return QC — available as soon as the parcel is received.
+  if (type === "return" && (status === "qc_pending" || status === "received")) {
     return (
-      <Button size={size} variant={variant} onClick={(e) => { e.stopPropagation(); setQcOpen(true); }}>
-        <ClipboardCheck className="h-3.5 w-3.5 mr-1" />{compact ? "QC" : "Do QC"}
+      <>
+        <Button size={size} variant={variant} onClick={(e) => { e.stopPropagation(); setQcOpen(true); }}>
+          <ClipboardCheck className="h-3.5 w-3.5 mr-1" />{compact ? "QC" : "Do QC"}
+        </Button>
         <QcDialog open={qcOpen} onOpenChange={setQcOpen} onDone={(c, n) => {
           completeQc({ data: { caseId, condition: c, notes: n || undefined } })
             .then((r: any) => { toast.success(r?.restocked ? "Restocked" : "QC done"); invalidate(); setQcOpen(false); })
             .catch((e) => toast.error(e.message));
         }} />
-      </Button>
+      </>
     );
   }
 

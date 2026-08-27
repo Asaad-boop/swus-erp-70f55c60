@@ -254,7 +254,14 @@ function ReturnsListPage() {
               <ul className="space-y-1.5 max-h-[calc(100vh-340px)] overflow-y-auto pr-1 -mr-1">
                 {rows.map((r, i) => (
                   <CaseRow key={r.id} r={r} index={i} selected={selectedId === r.id}
-                    onOpen={() => setSelectedId(r.id)} />
+                    onOpen={() => {
+                      // Preview pane only exists on lg+; on smaller screens open the full case.
+                      if (typeof window !== "undefined" && window.matchMedia("(max-width: 1023px)").matches) {
+                        navigate({ to: "/erp/returns/$caseId", params: { caseId: r.id } });
+                      } else {
+                        setSelectedId((prev) => (prev === r.id ? null : r.id));
+                      }
+                    }} />
                 ))}
               </ul>
             )}
