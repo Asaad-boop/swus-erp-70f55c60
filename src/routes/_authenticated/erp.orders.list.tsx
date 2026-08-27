@@ -15,6 +15,7 @@ import { applyBrandScope } from "@/lib/erp/apply-brand-scope";
 import { PipelineFlowBar } from "@/components/erp/orders/pipeline-flow-bar";
 import { OrdersAlertStrip } from "@/components/erp/orders/orders-alert-strip";
 import { OrderInsightDrawer } from "@/components/erp/orders/order-insight-drawer";
+import { useOrderLocksFor } from "@/hooks/erp/use-order-ops";
 import { OrdersToolbar } from "@/components/erp/orders/orders-toolbar";
 import { OrdersBulkActions } from "@/components/erp/orders/orders-bulk-actions";
 import { OrdersTable } from "@/components/erp/orders/orders-table";
@@ -244,6 +245,7 @@ function OrdersPage() {
   // Bulk fetch live courier shipments for the current page
   const pageOrderIds = useMemo(() => rows.map((r) => r.id), [rows]);
   const { data: shipmentsMap = {} } = useCourierShipments(pageOrderIds);
+  const { data: locksMap = {} } = useOrderLocksFor(pageOrderIds);
 
   const visibleRows = rows;
 
@@ -751,6 +753,7 @@ function OrdersPage() {
           onStatusChange={(id, status) => statusMutation.mutate({ id, status })}
           pendingStatusIds={pendingIds}
           shipmentsByOrderId={shipmentsMap}
+          locksByOrderId={locksMap}
           flashOrderIds={flashIds}
           onSyncRow={(id) => { setSingleSyncId(id); }}
           onPreorder={(id) => { setPreorderIds([id]); setPreorderOpen(true); }}
