@@ -1512,10 +1512,11 @@ function splitCourierProviders(providers?: HistProvider[] | null) {
               </FieldShell>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-x-3 gap-y-2.5">
               <FieldShell label="Address">
                 <Textarea
-                  rows={3}
+                  rows={2}
+
                   value={form.address}
                   onChange={(e) => setForm({ ...form, address: e.target.value })}
                   className="resize-none"
