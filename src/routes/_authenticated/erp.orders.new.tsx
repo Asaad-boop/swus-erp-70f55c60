@@ -693,7 +693,7 @@ function NewOrderPage() {
         </div>
       </div>
 
-      <div className="mx-auto max-w-6xl space-y-6 p-4 md:p-6">
+      <div className="mx-auto max-w-6xl space-y-4 p-4 md:p-6">
         {/* AI Smart Paste */}
         <Card className="overflow-hidden border-indigo-200/70 shadow-sm dark:border-indigo-900/40">
           <div className="bg-gradient-to-br from-indigo-50/80 via-indigo-50/40 to-fuchsia-50/40 p-4 dark:from-indigo-950/30 dark:via-indigo-950/10 dark:to-fuchsia-950/10">
@@ -741,12 +741,12 @@ function NewOrderPage() {
         )}
 
         {/* Main grid: Customer + Courier (left)  |  Quick add + Extras (right) */}
-        <div className="grid gap-6 lg:grid-cols-12">
+        <div className="grid gap-4 lg:grid-cols-12">
           {/* LEFT: Customer + Courier + Items + Totals */}
-          <div className="space-y-6 lg:col-span-8">
+          <div className="space-y-4 lg:col-span-8">
             {/* Customer card */}
             <Card className="overflow-hidden shadow-sm">
-              <CardContent className="space-y-5 p-5">
+              <CardContent className="space-y-4 p-4">
                 <SectionHeader icon={<User2 className="h-3.5 w-3.5" />} accent="bg-indigo-600" title="Customer Details" sub="গ্রাহকের বিবরণ" />
                 {autofillSuggestion && dismissedAutofillPhone !== debouncedPhone && (
                   <div className="flex flex-wrap items-center gap-3 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2.5 text-[13px] dark:border-amber-900/40 dark:bg-amber-950/20">
@@ -896,7 +896,7 @@ function NewOrderPage() {
 
             {/* Ordered Products */}
             <Card className="overflow-hidden shadow-sm">
-              <CardContent className="space-y-4 p-5">
+              <CardContent className="space-y-3.5 p-4">
                 <div className="flex items-center justify-between">
                   <SectionHeader icon={<Package className="h-3.5 w-3.5" />} accent="bg-orange-500" title="Ordered Products" sub="অর্ডারকৃত পণ্য" />
                   <span className="rounded-full bg-muted/60 px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-widest text-muted-foreground tabular-nums">
@@ -984,7 +984,7 @@ function NewOrderPage() {
 
             {/* Totals */}
             <Card className="shadow-sm">
-              <CardContent className="space-y-4 p-5">
+              <CardContent className="space-y-3.5 p-4">
                 <SectionHeader icon={<Receipt className="h-3.5 w-3.5" />} accent="bg-rose-500" title="Financial Summary" sub="হিসাব" />
                 <div className="grid gap-3 md:grid-cols-5">
                   <MoneyField label="Discount">
@@ -1028,7 +1028,7 @@ function NewOrderPage() {
             {/* Advance details */}
             {Number(advance) > 0 && (
               <Card className="border-amber-300/60 bg-amber-50/40 shadow-sm dark:bg-amber-950/10">
-                <CardContent className="space-y-4 p-5">
+                <CardContent className="space-y-3.5 p-4">
                   <SectionHeader icon={<Sparkles className="h-3.5 w-3.5" />} accent="bg-amber-500" title="Advance Payment Details" sub="অগ্রিম পেমেন্টের তথ্য" />
                   <div className="grid gap-3 md:grid-cols-4">
                     <Field label="Payment Method">
@@ -1190,7 +1190,7 @@ function NewOrderPage() {
 
             {/* Delivery method */}
             <Card className="shadow-sm">
-              <CardContent className="space-y-4 p-5">
+              <CardContent className="space-y-3.5 p-4">
                 <Field label="Order Source" bn="অর্ডার সোর্স">
                   <Select value={orderSource} onValueChange={setOrderSource}>
                     <SelectTrigger className="h-10">
@@ -1351,7 +1351,7 @@ function NewOrderPage() {
         }}
         onNew={() => {
           setSuccessInfo(null);
-          window.location.reload();
+          resetForm();
         }}
       />
     </div>
