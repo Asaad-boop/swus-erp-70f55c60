@@ -191,6 +191,10 @@
   --foreground: oklch(0.9461 0 89.88);         /* #EDEDED */
   --card: oklch(0.1917 0.0020 286.21);         /* #141415 */
   --card-foreground: oklch(0.9461 0 89.88);
+  --surface-alt: oklch(0.2140 0.0025 286.2);
+  --border-soft: oklch(0.2260 0.0040 286.1);
+  --text-faint: oklch(0.5300 0.0050 286.2);
+
   --popover: oklch(0.1917 0.0020 286.21);
   --popover-foreground: oklch(0.9461 0 89.88);
   --primary: oklch(0.5674 0.1585 275.21);      /* #5E6AD2 */
