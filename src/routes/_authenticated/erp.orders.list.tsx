@@ -352,15 +352,23 @@ function OrdersPage() {
     view,
   ]);
 
-  const toggleSelect = (id: string) => {
-    const next = new Set(selectedIds);
-    if (next.has(id)) next.delete(id); else next.add(id);
-    setSelectedIds(next);
-  };
-  const toggleAll = (checked: boolean) => {
-    if (checked) setSelectedIds(new Set(visibleRows.map((r) => r.id)));
-    else setSelectedIds(new Set());
-  };
+  // Stable identities keep the (heavy) table from re-rendering on every keystroke.
+  const toggleSelect = useCallback((id: string) => {
+    setSelectedIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id); else next.add(id);
+      return next;
+    });
+  }, []);
+  const rowIdsRef = useRef<string[]>([]);
+  rowIdsRef.current = visibleRows.map((r) => r.id);
+  const toggleAll = useCallback((checked: boolean) => {
+    setSelectedIds(checked ? new Set(rowIdsRef.current) : new Set());
+  }, []);
+  const handleRowClick = useCallback((id: string) => {
+    if (typeof window !== "undefined" && window.innerWidth < 1280) setOpenId(id);
+    else setInsightId(id);
+  }, []);
 
   /** Select every order matching the current filter, not just this page. */
   const selectAllMatching = async () => {
