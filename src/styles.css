@@ -784,3 +784,37 @@
 .v2-table tbody tr { transition: background-color var(--motion-fast) var(--motion-ease); }
 .v2-table tbody tr:hover { background: color-mix(in oklab, var(--muted) 60%, transparent); }
 .v2-table [data-numeric="true"] { text-align: right; font-variant-numeric: tabular-nums; }
+
+/* ── Auth page motion (login screen) ───────────────────────────── */
+@keyframes auth-aurora {
+  0%   { transform: translate3d(-6%, -4%, 0) scale(1.05); }
+  50%  { transform: translate3d(6%, 5%, 0) scale(1.18); }
+  100% { transform: translate3d(-6%, -4%, 0) scale(1.05); }
+}
+@keyframes auth-float {
+  0%, 100% { transform: translateY(0) }
+  50%      { transform: translateY(-14px) }
+}
+@keyframes auth-rise {
+  from { opacity: 0; transform: translateY(14px) }
+  to   { opacity: 1; transform: translateY(0) }
+}
+@keyframes auth-sheen {
+  0%   { transform: translateX(-120%) }
+  100% { transform: translateX(220%) }
+}
+.auth-aurora { animation: auth-aurora 18s ease-in-out infinite; will-change: transform; }
+.auth-aurora-slow { animation: auth-aurora 26s ease-in-out infinite reverse; will-change: transform; }
+.auth-float { animation: auth-float 7s ease-in-out infinite; }
+.auth-rise { opacity: 0; animation: auth-rise 0.6s cubic-bezier(0.22, 1, 0.36, 1) forwards; }
+.auth-sheen::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(100deg, transparent 30%, oklch(1 0 0 / 0.28) 50%, transparent 70%);
+  transform: translateX(-120%);
+}
+.auth-sheen:hover::after { animation: auth-sheen 0.9s ease forwards; }
+@media (prefers-reduced-motion: reduce) {
+  .auth-aurora, .auth-aurora-slow, .auth-float, .auth-rise, .auth-sheen::after { animation: none !important; opacity: 1; transform: none; }
+}
