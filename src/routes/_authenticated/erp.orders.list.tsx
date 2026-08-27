@@ -526,8 +526,13 @@ function OrdersPage() {
     const onKey = (e: KeyboardEvent) => {
       const t = e.target as HTMLElement | null;
       const typing = !!t && (t.tagName === "INPUT" || t.tagName === "TEXTAREA" || t.isContentEditable);
-      if (e.key === "Escape") { setSelectedIds(new Set()); return; }
-      if (typing || e.metaKey || e.ctrlKey || e.altKey) return;
+      // Don't hijack keys while a dialog / sheet / popover owns the screen.
+      const overlayOpen = !!document.querySelector('[role="dialog"],[role="alertdialog"],[data-state="open"][role="listbox"]');
+      if (e.key === "Escape") {
+        if (!typing && !overlayOpen) setSelectedIds(new Set());
+        return;
+      }
+      if (typing || overlayOpen || e.metaKey || e.ctrlKey || e.altKey) return;
       if (e.key === "/") {
         e.preventDefault();
         document.querySelector<HTMLInputElement>("input[data-orders-search]")?.focus();
@@ -551,9 +556,18 @@ function OrdersPage() {
   }, [visibleRows, total, updateFilter]);
 
   // Paging should feel like a fresh screen, not a jump mid-table.
+  const didMountRef = useRef(false);
   useEffect(() => {
+    if (!didMountRef.current) { didMountRef.current = true; return; }
     document.querySelector("main")?.scrollTo({ top: 0, behavior: "smooth" });
   }, [filter.page]);
+
+  // If filters shrink the result set, never strand the user on an empty page.
+  useEffect(() => {
+    if (isFetching || total === 0) return;
+    const maxPage = Math.max(0, Math.ceil(total / filter.pageSize) - 1);
+    if (filter.page > maxPage) updateFilter({ page: maxPage });
+  }, [total, filter.page, filter.pageSize, isFetching, updateFilter]);
 
   // Header snapshot metrics derived from the counts already fetched.
   const snapshot = useMemo(() => {
