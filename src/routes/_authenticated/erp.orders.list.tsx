@@ -680,7 +680,7 @@ function OrdersPage() {
 
         {view === "incomplete" ? (
           <>
-            <div className="sticky top-[72px] z-20">
+            <div className="sticky top-[72px] z-20 -mx-1 rounded-[18px] bg-background/80 px-1 py-1 backdrop-blur-xl">
               <OrdersToolbar filter={effective} onChange={updateFilter} />
             </div>
             <div className="overflow-hidden rounded-2xl border border-[var(--panel-border)] bg-card">
@@ -738,7 +738,7 @@ function OrdersPage() {
               </div>
             )}
 
-            <div className="sticky top-[72px] z-20">
+            <div className="sticky top-[72px] z-20 -mx-1 rounded-[18px] bg-background/80 px-1 py-1 backdrop-blur-xl">
               <OrdersToolbar
                 filter={effective}
                 onChange={updateFilter}
