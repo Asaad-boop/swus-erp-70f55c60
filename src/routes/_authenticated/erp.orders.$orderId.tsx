@@ -1454,9 +1454,36 @@ function splitCourierProviders(providers?: HistProvider[] | null) {
           />
 
           {/* Customer row */}
-          <Panel title="Customer & Delivery" accent="bg-indigo-500" bodyClassName="p-5">
-            <div className="space-y-4">
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <Panel
+            title="Customer & Delivery"
+            accent="bg-indigo-500"
+            bodyClassName="p-3.5"
+            right={(() => {
+              const customerKeys = ["mobile","name","delivery_method","address","shipping_note","city_id","zone_id","area_id","source_platform","is_preorder","is_cross_sale"] as const;
+              const dirty = !!baseline && customerKeys.some((k) => (form as any)[k] !== (baseline as any)[k]);
+              return (
+                <div className="flex items-center gap-2">
+                  {dirty && (
+                    <span className="hidden sm:inline-flex items-center gap-1.5 text-[10px] font-medium text-amber-600">
+                      <span className="h-1.5 w-1.5 rounded-full bg-amber-500 animate-pulse" />Unsaved
+                    </span>
+                  )}
+                  <Button size="sm" variant="ghost" className="h-7 px-2 text-[11px]" disabled={!dirty || saveCustomer.isPending}
+                    onClick={() => baseline && setForm({ ...form, ...baseline })}>
+                    <Undo2 className="h-3.5 w-3.5 mr-1" />Discard
+                  </Button>
+                  <Button size="sm" className="h-7 px-3 text-[11px] bg-indigo-600 hover:bg-indigo-700 text-white" disabled={!dirty || saveCustomer.isPending}
+                    onClick={() => saveCustomer.mutate()}>
+                    {saveCustomer.isPending ? <Loader2 className="h-3.5 w-3.5 mr-1 animate-spin" /> : <Save className="h-3.5 w-3.5 mr-1" />}
+                    Save Customer
+                  </Button>
+                </div>
+              );
+            })()}
+          >
+            <div className="space-y-2.5">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-x-3 gap-y-2.5">
+
               <FieldShell label="Mobile Number">
                 <div className="relative">
                   <Input value={form.mobile} onChange={(e) => setForm({ ...form, mobile: e.target.value })} className="h-9 pr-16 font-mono" />
