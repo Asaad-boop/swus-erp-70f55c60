@@ -537,12 +537,18 @@ function OrdersPage() {
       } else if (e.key === "r") {
         e.preventDefault();
         handleRefresh();
+      } else if (e.key === "ArrowRight" && filterRef.current.page + 1 < Math.ceil(total / filterRef.current.pageSize)) {
+        e.preventDefault();
+        updateFilter({ page: filterRef.current.page + 1 });
+      } else if (e.key === "ArrowLeft" && filterRef.current.page > 0) {
+        e.preventDefault();
+        updateFilter({ page: filterRef.current.page - 1 });
       }
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [visibleRows]);
+  }, [visibleRows, total, updateFilter]);
 
   // Header snapshot metrics derived from the counts already fetched.
   const snapshot = useMemo(() => {
@@ -833,7 +839,7 @@ function OrdersPage() {
                     }
                   />
                 )}
-                <div className="sticky bottom-0 z-10 border-t border-[var(--panel-border)] bg-card/95 backdrop-blur">
+                <div className="sticky bottom-0 z-10 bg-card/95 backdrop-blur">
                   <OrdersPagination
                     page={filter.page}
                     pageSize={filter.pageSize}
