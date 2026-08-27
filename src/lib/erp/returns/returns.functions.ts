@@ -1,6 +1,7 @@
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
+import { dayStart, dayEnd } from "@/lib/erp/returns/range";
 
 /* ============================================================
    Returns & Exchanges — server functions
