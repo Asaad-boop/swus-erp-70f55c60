@@ -611,38 +611,39 @@
   --elevation-ring: transparent;
 
   /* ── Status scale — single source of truth ──────────────────── */
-  --success-h: 152; --success-s: 42%; --success-l: 51%;  /* #4CB782 */
-  --warning-h: 48;  --warning-s: 66%; --warning-l: 50%;  /* #D4A72C */
-  --danger-h: 358;  --danger-s: 75%;  --danger-l: 59%;   /* #E5484D */
-  --info-h: 234;    --info-s: 56%;    --info-l: 60%;     /* #5E6AD2 */
+  --success-h: 157; --success-s: 43%; --success-l: 43%;  /* #3E9C74 */
+  --warning-h: 39;  --warning-s: 57%; --warning-l: 48%;  /* #C08A35 */
+  --danger-h: 2;    --danger-s: 62%;  --danger-l: 57%;   /* #D6534F */
+  --info-h: 214;    --info-s: 37%;    --info-l: 47%;     /* #4A6FA5 */
   --neutral-h: 40;  --neutral-s: 4%;  --neutral-l: 45%;  /* warm gray */
 
 
   --success-solid: hsl(var(--success-h) var(--success-s) var(--success-l));
-  --success-soft:  hsl(var(--success-h) var(--success-s) 95%);
-  --success-border:hsl(var(--success-h) var(--success-s) 85%);
-  --success-text:  hsl(var(--success-h) var(--success-s) 30%);
+  --success-soft:  hsl(154 43% 94%);                     /* #EAF6F0 */
+  --success-border:hsl(154 36% 84%);
+  --success-text:  hsl(var(--success-h) 46% 29%);
 
   --warning-solid: hsl(var(--warning-h) var(--warning-s) var(--warning-l));
-  --warning-soft:  hsl(var(--warning-h) var(--warning-s) 95%);
-  --warning-border:hsl(var(--warning-h) var(--warning-s) 85%);
-  --warning-text:  hsl(var(--warning-h) var(--warning-s) 30%);
+  --warning-soft:  hsl(39 70% 94%);                      /* #FBF2E4 */
+  --warning-border:hsl(39 52% 82%);
+  --warning-text:  hsl(var(--warning-h) 58% 30%);
 
   --danger-solid:  hsl(var(--danger-h) var(--danger-s) var(--danger-l));
-  --danger-soft:   hsl(var(--danger-h) var(--danger-s) 95%);
-  --danger-border: hsl(var(--danger-h) var(--danger-s) 85%);
-  --danger-text:   hsl(var(--danger-h) var(--danger-s) 30%);
+  --danger-soft:   hsl(0 70% 95%);                       /* #FCEBEB */
+  --danger-border: hsl(2 60% 86%);
+  --danger-text:   hsl(var(--danger-h) 58% 38%);
 
   --info-solid:    hsl(var(--info-h) var(--info-s) var(--info-l));
-  --info-soft:     hsl(var(--info-h) var(--info-s) 95%);
-  --info-border:   hsl(var(--info-h) var(--info-s) 85%);
-  --info-text:     hsl(var(--info-h) var(--info-s) 30%);
+  --info-soft:     hsl(214 45% 95%);
+  --info-border:   hsl(214 36% 84%);
+  --info-text:     hsl(var(--info-h) 42% 32%);
 
   --neutral-solid: hsl(var(--neutral-h) var(--neutral-s) var(--neutral-l));
-  --neutral-soft:  hsl(var(--neutral-h) var(--neutral-s) 95%);
-  --neutral-border:hsl(var(--neutral-h) var(--neutral-s) 85%);
+  --neutral-soft:  hsl(var(--neutral-h) 10% 95%);
+  --neutral-border:hsl(var(--neutral-h) 8% 86%);
   --neutral-text:  hsl(var(--neutral-h) var(--neutral-s) 30%);
   --status-on-solid: oklch(0.99 0 0);
+
 
   /* ── Density scale ──────────────────────────────────────────── */
   --space-unit: 4px;
