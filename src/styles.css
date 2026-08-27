@@ -740,6 +740,11 @@
   --radius-input: 9px;
   --radius-control: 8px;
   --radius-chip: 6px;
+  --radius-badge: 6px;
+  --color-surface-alt: var(--surface-alt);
+  --color-border-soft: var(--border-soft);
+  --color-text-faint: var(--text-faint);
+
 }
 
 
