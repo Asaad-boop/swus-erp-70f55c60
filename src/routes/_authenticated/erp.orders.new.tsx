@@ -1,11 +1,11 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   Plus, Trash2, Search, ArrowLeft, Loader2, Sparkles, Truck, Package,
   Star, MinusCircle, PlusCircle, ImageIcon, Info, Wand2, History,
   CheckCircle2, XCircle, AlertCircle, MapPin, User2, Receipt, ArrowRight, ChevronsUpDown, Check, X,
 } from "lucide-react";
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { keepPreviousData, useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
@@ -337,17 +337,28 @@ function NewOrderPage() {
   const [items, setItems] = useState<LineItem[]>([]);
   const [productSearch, setProductSearch] = useState("");
   const [featuredOnly, setFeaturedOnly] = useState(false);
+  const searchRef = useRef<HTMLInputElement | null>(null);
 
+  // Debounce so we don't hit Supabase on every keystroke — big speed win when
+  // an operator types a full product name.
+  const [debouncedSearch, setDebouncedSearch] = useState("");
+  useEffect(() => {
+    const t = setTimeout(() => setDebouncedSearch(productSearch.trim()), 260);
+    return () => clearTimeout(t);
+  }, [productSearch]);
 
   const { data: products = [], isFetching: searching } = useQuery({
-    queryKey: ["new-order-products", effectiveBrandId, productSearch, featuredOnly],
+    queryKey: ["new-order-products", effectiveBrandId, debouncedSearch, featuredOnly],
     enabled: !!effectiveBrandId,
+    staleTime: 60_000,
+    gcTime: 10 * 60_000,
+    placeholderData: keepPreviousData,
 
     queryFn: async () => {
       // Cross-brand catalog: shob brand er product dekhabo, chhoto brand tag shoho.
       // Current brand er listing thakle price/title override apply hobe.
       // Single search box: name, SKU, barcode, slug, and variant SKUs all match.
-      const term = productSearch.trim();
+      const term = debouncedSearch;
       const clean = term.replace(/[,&()]/g, " ");
       type Row = {
         id: string; title: string; price: number; image: string | null; stock: number;
@@ -606,6 +617,62 @@ function NewOrderPage() {
     onError: (e: Error) => toast.error(e.message),
   });
 
+  // ── what is still missing before we can save ──────────────────────────
+  const missing = useMemo(() => {
+    const m: string[] = [];
+    if (!effectiveBrandId) m.push("Brand");
+    if (!name.trim()) m.push("Name");
+    if (bdPhoneError(phone)) m.push("Phone");
+    if (!address.trim()) m.push("Address");
+    if (items.length === 0) m.push("Product");
+    if (items.some((i) => i.needsVariant && !i.variant_id)) m.push("Color");
+    if (Number(advance) > 0 && !advanceSource) m.push("Advance source");
+    if (Number(advance) > 0 && advanceNumber.length < 4) m.push("Advance number");
+    return m;
+  }, [effectiveBrandId, name, phone, address, items, advance, advanceSource, advanceNumber]);
+
+  // Reset in-place instead of a full page reload — next order starts instantly.
+  const resetForm = useCallback(() => {
+    setPhone(""); setName(""); setAddress("");
+    setPasteText(""); setItems([]); setProductSearch("");
+    setDiscount(0); setAdvance(0); setShippingFee(0);
+    setAdvanceSource(""); setAdvanceNumber(""); setAdvanceTxnId("");
+    setPaymentMethod("COD"); setOrderSource("");
+    setIsPreorder(false); setPreorderNote(""); setIsCrossSale(false);
+    setCityId(null); setCityName(""); setZoneId(null); setZoneName("");
+    setAreaId(null); setAreaName(""); setPathaoAddressResult(null);
+    setPhoneLookup(null); setDismissedAutofillPhone("");
+    window.scrollTo({ top: 0, behavior: "smooth" });
+    setTimeout(() => searchRef.current?.focus(), 100);
+  }, []);
+
+  const submit = useCallback(() => {
+    if (create.isPending) return;
+    create.mutate();
+  }, [create]);
+
+  // ── keyboard shortcuts: "/" focus search, Ctrl/Cmd+Enter save ─────────
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      const t = e.target as HTMLElement | null;
+      const typing = !!t && (t.tagName === "INPUT" || t.tagName === "TEXTAREA" || t.isContentEditable);
+      if ((e.metaKey || e.ctrlKey) && e.key === "Enter") {
+        e.preventDefault();
+        submit();
+        return;
+      }
+      if (!typing && (e.key === "/" || ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === "k"))) {
+        e.preventDefault();
+        searchRef.current?.focus();
+        searchRef.current?.select();
+      }
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [submit]);
+
+
+
   return (
     <div className="min-h-screen workspace-bg pb-32">
       {/* Top bar */}
@@ -641,7 +708,7 @@ function NewOrderPage() {
         </div>
       </div>
 
-      <div className="mx-auto max-w-6xl space-y-6 p-4 md:p-6">
+      <div className="mx-auto max-w-6xl space-y-4 p-4 md:p-6">
         {/* AI Smart Paste */}
         <Card className="overflow-hidden border-indigo-200/70 shadow-sm dark:border-indigo-900/40">
           <div className="bg-gradient-to-br from-indigo-50/80 via-indigo-50/40 to-fuchsia-50/40 p-4 dark:from-indigo-950/30 dark:via-indigo-950/10 dark:to-fuchsia-950/10">
@@ -689,12 +756,12 @@ function NewOrderPage() {
         )}
 
         {/* Main grid: Customer + Courier (left)  |  Quick add + Extras (right) */}
-        <div className="grid gap-6 lg:grid-cols-12">
+        <div className="grid gap-4 lg:grid-cols-12">
           {/* LEFT: Customer + Courier + Items + Totals */}
-          <div className="space-y-6 lg:col-span-8">
+          <div className="space-y-4 lg:col-span-8">
             {/* Customer card */}
             <Card className="overflow-hidden shadow-sm">
-              <CardContent className="space-y-5 p-5">
+              <CardContent className="space-y-4 p-4">
                 <SectionHeader icon={<User2 className="h-3.5 w-3.5" />} accent="bg-indigo-600" title="Customer Details" sub="গ্রাহকের বিবরণ" />
                 {autofillSuggestion && dismissedAutofillPhone !== debouncedPhone && (
                   <div className="flex flex-wrap items-center gap-3 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2.5 text-[13px] dark:border-amber-900/40 dark:bg-amber-950/20">
@@ -844,7 +911,7 @@ function NewOrderPage() {
 
             {/* Ordered Products */}
             <Card className="overflow-hidden shadow-sm">
-              <CardContent className="space-y-4 p-5">
+              <CardContent className="space-y-3.5 p-4">
                 <div className="flex items-center justify-between">
                   <SectionHeader icon={<Package className="h-3.5 w-3.5" />} accent="bg-orange-500" title="Ordered Products" sub="অর্ডারকৃত পণ্য" />
                   <span className="rounded-full bg-muted/60 px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-widest text-muted-foreground tabular-nums">
@@ -932,7 +999,7 @@ function NewOrderPage() {
 
             {/* Totals */}
             <Card className="shadow-sm">
-              <CardContent className="space-y-4 p-5">
+              <CardContent className="space-y-3.5 p-4">
                 <SectionHeader icon={<Receipt className="h-3.5 w-3.5" />} accent="bg-rose-500" title="Financial Summary" sub="হিসাব" />
                 <div className="grid gap-3 md:grid-cols-5">
                   <MoneyField label="Discount">
@@ -976,7 +1043,7 @@ function NewOrderPage() {
             {/* Advance details */}
             {Number(advance) > 0 && (
               <Card className="border-amber-300/60 bg-amber-50/40 shadow-sm dark:bg-amber-950/10">
-                <CardContent className="space-y-4 p-5">
+                <CardContent className="space-y-3.5 p-4">
                   <SectionHeader icon={<Sparkles className="h-3.5 w-3.5" />} accent="bg-amber-500" title="Advance Payment Details" sub="অগ্রিম পেমেন্টের তথ্য" />
                   <div className="grid gap-3 md:grid-cols-4">
                     <Field label="Payment Method">
@@ -1020,10 +1087,125 @@ function NewOrderPage() {
           </div>
 
           {/* RIGHT: Quick add + Delivery + Extras */}
-          <div className="space-y-6 lg:col-span-4">
+          <div className="space-y-4 lg:col-span-4">
+            {/* Quick add products — sticky so it stays reachable while scrolling */}
+            <Card className="overflow-hidden shadow-sm lg:sticky lg:top-[72px] lg:z-[5]">
+              <CardContent className="space-y-3 p-4">
+                <div className="flex items-center justify-between gap-2">
+                  <div>
+                    <div className="text-sm font-semibold">Quick Add Products</div>
+                    <div className="text-[11px] text-muted-foreground">
+                      {searching ? "Searching…" : `${products.length} product${products.length === 1 ? "" : "s"}`}
+                      {" · "}
+                      <kbd className="rounded border bg-muted px-1 text-[9px] font-semibold">/</kbd> search ·{" "}
+                      <kbd className="rounded border bg-muted px-1 text-[9px] font-semibold">Enter</kbd> add
+                    </div>
+                  </div>
+                  <Button
+                    size="icon"
+                    variant={featuredOnly ? "default" : "outline"}
+                    className="h-8 w-8 shrink-0 rounded-lg"
+                    onClick={() => setFeaturedOnly((v) => !v)}
+                    title="Featured only"
+                  >
+                    <Star className={cn("h-4 w-4", featuredOnly && "fill-current")} />
+                  </Button>
+                </div>
+                <div className="relative">
+                  <Search className="absolute left-3 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-muted-foreground" />
+                  <Input
+                    ref={searchRef}
+                    className="h-9 pl-9 pr-8"
+                    placeholder="Name, SKU or code…  (press / )"
+                    value={productSearch}
+                    onChange={(e) => setProductSearch(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter" && products[0]) {
+                        e.preventDefault();
+                        addItem(products[0]);
+                        setProductSearch("");
+                      }
+                      if (e.key === "Escape") setProductSearch("");
+                    }}
+                  />
+                  {productSearch && (
+                    <button
+                      type="button"
+                      onClick={() => { setProductSearch(""); searchRef.current?.focus(); }}
+                      className="absolute right-2 top-1/2 -translate-y-1/2 rounded p-0.5 text-muted-foreground hover:bg-muted hover:text-foreground"
+                    >
+                      <X className="h-3.5 w-3.5" />
+                    </button>
+                  )}
+                </div>
+
+                <div className="max-h-[calc(100vh-320px)] min-h-[220px] space-y-1 overflow-y-auto rounded-xl border bg-muted/20 p-1.5">
+                  {searching && products.length === 0 && (
+                    <div className="flex items-center gap-2 p-3 text-xs text-muted-foreground">
+                      <Loader2 className="h-3.5 w-3.5 animate-spin" /> Searching…
+                    </div>
+                  )}
+                  {!searching && products.length === 0 && (
+                    <div className="p-6 text-center text-xs text-muted-foreground">No products found</div>
+                  )}
+                  {products.map((p, i) => {
+                    const inCart = items.filter((x) => x.product_id === p.id).reduce((s, x) => s + x.quantity, 0);
+                    return (
+                      <button
+                        key={p.id}
+                        onClick={() => addItem(p)}
+                        className={cn(
+                          "group flex w-full items-center gap-2.5 rounded-lg border border-transparent bg-background p-1.5 text-left transition-colors hover:border-indigo-200 hover:bg-indigo-50/40 dark:hover:bg-indigo-950/20",
+                          i === 0 && productSearch && "border-indigo-300/70 ring-1 ring-indigo-200/60",
+                        )}
+                      >
+                        <div className="relative h-10 w-10 shrink-0 overflow-hidden rounded-lg border bg-muted">
+                          {p.image ? (
+                            <img src={p.image} alt="" className="h-full w-full object-cover" loading="lazy" decoding="async" />
+                          ) : (
+                            <div className="flex h-full w-full items-center justify-center text-muted-foreground">
+                              <ImageIcon className="h-4 w-4" />
+                            </div>
+                          )}
+                          {inCart > 0 && (
+                            <span className="absolute -right-0.5 -top-0.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-indigo-600 px-1 text-[9px] font-bold text-white tabular-nums">
+                              {inCart}
+                            </span>
+                          )}
+                        </div>
+                        <div className="min-w-0 flex-1 leading-tight">
+                          <div className="flex items-start gap-1">
+                            <div className="line-clamp-1 flex-1 text-[12px] font-semibold">{p.title}</div>
+                            {p.is_featured && <Star className="mt-0.5 h-3 w-3 shrink-0 fill-amber-400 text-amber-400" />}
+                          </div>
+                          <div className="mt-0.5 flex items-center gap-1.5 text-[10px] tabular-nums">
+                            <span className="font-bold text-primary">৳{Number(p.price).toLocaleString()}</span>
+                            <span className={cn("font-semibold", p.stock <= 0 ? "text-rose-600" : "text-emerald-700 dark:text-emerald-400")}>
+                              {p.stock} in stock
+                            </span>
+                            {p.brand_name && (
+                              <span className={cn(
+                                "ml-auto truncate rounded px-1 py-px text-[9px] font-semibold uppercase tracking-wide",
+                                p.own_brand ? "bg-indigo-100 text-indigo-700 dark:bg-indigo-950/50 dark:text-indigo-300" : "bg-muted text-muted-foreground",
+                              )}>
+                                {p.brand_name}
+                              </span>
+                            )}
+                          </div>
+                        </div>
+                        <div className="rounded-md bg-muted p-1 text-muted-foreground transition-colors group-hover:bg-indigo-600 group-hover:text-white">
+                          <Plus className="h-3.5 w-3.5" />
+                        </div>
+                      </button>
+                    );
+                  })}
+                </div>
+              </CardContent>
+            </Card>
+
             {/* Delivery method */}
             <Card className="shadow-sm">
-              <CardContent className="space-y-4 p-5">
+              <CardContent className="space-y-3.5 p-4">
                 <Field label="Order Source" bn="অর্ডার সোর্স">
                   <Select value={orderSource} onValueChange={setOrderSource}>
                     <SelectTrigger className="h-10">
@@ -1107,135 +1289,65 @@ function NewOrderPage() {
                 </div>
               </CardContent>
             </Card>
-
-            {/* Quick add products */}
-            <Card className="shadow-sm">
-              <CardContent className="space-y-4 p-5">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <div className="text-sm font-semibold">Quick Add Products</div>
-                    <div className="text-[11px] text-muted-foreground">পণ্য যোগ করুন</div>
-                  </div>
-                  <Button
-                    size="icon"
-                    variant={featuredOnly ? "default" : "outline"}
-                    className="h-8 w-8 rounded-lg"
-                    onClick={() => setFeaturedOnly((v) => !v)}
-                    title="Featured only"
-                  >
-                    <Star className={cn("h-4 w-4", featuredOnly && "fill-current")} />
-                  </Button>
-                </div>
-                <div className="relative">
-                  <Search className="absolute left-3 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-muted-foreground" />
-                  <Input
-                    className="h-9 pl-9"
-                    placeholder="Search by name, SKU or code…"
-                    value={productSearch}
-                    onChange={(e) => setProductSearch(e.target.value)}
-                  />
-                </div>
-
-                <div className="max-h-[520px] space-y-1.5 overflow-y-auto rounded-xl border bg-muted/20 p-2">
-                  {searching && (
-                    <div className="flex items-center gap-2 p-3 text-xs text-muted-foreground">
-                      <Loader2 className="h-3.5 w-3.5 animate-spin" /> Searching…
-                    </div>
-                  )}
-                  {!searching && products.length === 0 && (
-                    <div className="p-6 text-center text-xs text-muted-foreground">No products found</div>
-                  )}
-                  {products.map((p) => (
-                    <button
-                      key={p.id}
-                      onClick={() => addItem(p)}
-                      className="group flex w-full items-center gap-3 rounded-lg border border-transparent bg-background p-2 text-left transition-all hover:border-indigo-200 hover:shadow-sm"
-                    >
-                      <div className="h-11 w-11 shrink-0 overflow-hidden rounded-lg border bg-muted">
-                        {p.image ? (
-                          <img src={p.image} alt="" className="h-full w-full object-cover" loading="lazy" />
-                        ) : (
-                          <div className="flex h-full w-full items-center justify-center text-muted-foreground">
-                            <ImageIcon className="h-4 w-4" />
-                          </div>
-                        )}
-                      </div>
-                      <div className="min-w-0 flex-1">
-                        <div className="flex items-start justify-between gap-1">
-                          <div className="line-clamp-2 text-[12px] font-semibold leading-tight">{p.title}</div>
-                          {p.is_featured && <Star className="h-3 w-3 shrink-0 fill-amber-400 text-amber-400" />}
-                        </div>
-                        {p.brand_name && (
-                          <span
-                            className={cn(
-                              "mt-1 inline-flex max-w-full truncate rounded px-1.5 py-[1px] text-[9px] font-semibold uppercase tracking-wide",
-                              p.own_brand
-                                ? "bg-indigo-100 text-indigo-700"
-                                : "bg-muted text-muted-foreground",
-                            )}
-                          >
-                            {p.brand_name}
-                          </span>
-                        )}
-                        <div className="mt-1 flex items-center justify-between text-[10px] tabular-nums">
-                          <span className="font-bold text-primary">৳{Number(p.price).toLocaleString()}</span>
-                          <span className={cn("font-semibold", p.stock <= 0 ? "text-rose-600" : "text-emerald-700")}>
-                            stock {p.stock}
-                          </span>
-                        </div>
-                      </div>
-                      <div className="rounded-md bg-muted p-1 text-muted-foreground transition-colors group-hover:bg-indigo-600 group-hover:text-white">
-                        <Plus className="h-3.5 w-3.5" />
-                      </div>
-                    </button>
-                  ))}
-                </div>
-              </CardContent>
-            </Card>
           </div>
         </div>
       </div>
 
       {/* Sleek sticky bottom bar */}
       <div className="fixed inset-x-0 bottom-0 z-20 border-t border-border/60 bg-background/85 shadow-[0_-10px_30px_-15px_rgba(0,0,0,0.1)] backdrop-blur-xl">
-        <div className="mx-auto flex max-w-6xl items-center justify-between gap-3 px-4 py-3 md:px-6">
-          <div className="hidden items-center gap-6 md:flex">
-            <div className="flex items-center gap-2.5">
-              <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-muted text-muted-foreground">
+        <div className="mx-auto flex max-w-6xl items-center justify-between gap-3 px-4 py-2.5 md:px-6">
+          <div className="hidden items-center gap-5 md:flex">
+            <div className="flex items-center gap-2">
+              <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-muted text-muted-foreground">
                 <Truck className="h-4 w-4" />
               </div>
-              <div>
+              <div className="leading-tight">
                 <div className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Courier</div>
-                <div className="text-sm font-semibold capitalize">{deliveryMethod}</div>
+                <div className="text-[13px] font-semibold capitalize">{deliveryMethod}</div>
               </div>
             </div>
-            <div className="h-8 w-px bg-border" />
-            <div>
+            <div className="h-7 w-px bg-border" />
+            <div className="leading-tight">
               <div className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Items</div>
-              <div className="text-sm font-bold tabular-nums">{totalQty} pcs</div>
+              <div className="text-[13px] font-bold tabular-nums">{totalQty} pcs</div>
             </div>
-            <div className="h-8 w-px bg-border" />
-            <div>
+            <div className="h-7 w-px bg-border" />
+            <div className="leading-tight">
               <div className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Subtotal</div>
-              <div className="text-sm font-bold tabular-nums">৳ {subtotal.toLocaleString()}</div>
+              <div className="text-[13px] font-bold tabular-nums">৳ {subtotal.toLocaleString()}</div>
             </div>
+            {missing.length > 0 && (
+              <>
+                <div className="h-7 w-px bg-border" />
+                <div className="flex max-w-[340px] flex-wrap items-center gap-1">
+                  <span className="text-[10px] font-bold uppercase tracking-wider text-amber-600">Missing</span>
+                  {missing.map((m) => (
+                    <span key={m} className="rounded-md bg-amber-100 px-1.5 py-0.5 text-[10px] font-semibold text-amber-800 dark:bg-amber-950/40 dark:text-amber-300">
+                      {m}
+                    </span>
+                  ))}
+                </div>
+              </>
+            )}
           </div>
           <div className="ml-auto flex items-center gap-4">
-            <div className="hidden text-right md:block">
+            <div className="hidden text-right leading-tight md:block">
               <div className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Payable</div>
               <div className="text-lg font-black tabular-nums text-indigo-600">৳ {payable.toLocaleString()}</div>
             </div>
             <Button
               size="lg"
-              className="group h-12 gap-2 rounded-xl bg-emerald-600 px-6 text-base font-bold text-white shadow-lg shadow-emerald-200/60 hover:bg-emerald-700 dark:shadow-emerald-950/30"
-              disabled={create.isPending || items.length === 0}
-              onClick={() => create.mutate()}
+              title={missing.length ? `Missing: ${missing.join(", ")}` : "Ctrl + Enter"}
+              className="group h-11 gap-2 rounded-xl bg-emerald-600 px-5 text-[15px] font-bold text-white shadow-lg shadow-emerald-200/60 hover:bg-emerald-700 disabled:opacity-60 dark:shadow-emerald-950/30"
+              disabled={create.isPending || missing.length > 0}
+              onClick={submit}
             >
               {create.isPending ? (
                 <><Loader2 className="h-4 w-4 animate-spin" /> Creating…</>
               ) : (
                 <>
                   <span>Create Order</span>
+                  <kbd className="hidden rounded border border-white/30 bg-white/15 px-1 text-[10px] font-semibold md:inline">⌘↵</kbd>
                   <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-0.5" />
                 </>
               )}
@@ -1254,7 +1366,7 @@ function NewOrderPage() {
         }}
         onNew={() => {
           setSuccessInfo(null);
-          window.location.reload();
+          resetForm();
         }}
       />
     </div>
