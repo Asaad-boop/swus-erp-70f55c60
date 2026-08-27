@@ -185,7 +185,7 @@ export function DispatchActionsCell({ order, onStatusChange, onPrint, busy }: Di
                 </Button>
               </TooltipTrigger>
               <TooltipContent side="top" className="text-xs">
-                {isShip ? `Book ${provider} & mark shipped` : `Mark as ${statusBadge(next!).label}`}
+                {isShip ? `Book ${provider} & mark shipped` : `Mark as ${statusBadge(NEXT_STATUS[order.status] ?? order.status).label}`}
               </TooltipContent>
             </Tooltip>
 
