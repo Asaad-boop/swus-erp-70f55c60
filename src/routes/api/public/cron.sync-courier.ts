@@ -51,7 +51,20 @@ export const Route = createFileRoute("/api/public/cron/sync-courier")({
         const targetStatuses =
           Array.isArray(body.statuses) && body.statuses.length > 0
             ? body.statuses
-            : ["ready_to_ship", "shipped", "in_transit", "on_hold"];
+            : [
+                "ready_to_ship",
+                "shipped",
+                "in_transit",
+                "on_hold",
+                // Allow the cron to correct InstaPay misclassifications where a
+                // prepaid parcel was stamped as returned but the courier is still
+                // delivering or has delivered it.
+                "returned",
+                "return_in_transit",
+                "paid_return",
+                "unpaid_return",
+                "partial_return",
+              ];
         let q = supabaseAdmin
           .from("orders")
           .select("id,invoice_no,status,courier_name,tracking_number,brand_id,shipped_at")
