@@ -894,3 +894,33 @@
   .auth-card-in { animation-duration: 0.01ms !important; opacity: 1; }
   .auth-error-in { animation: none !important; }
 }
+
+/* ── Numeric / technical values: JetBrains Mono, tabular ───────── */
+@utility num {
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
+  font-feature-settings: "tnum" 1, "zero" 1;
+  letter-spacing: -0.01em;
+}
+
+/* Dense hairline list rows (orders list). */
+.v2-rows tbody tr { border-bottom: 1px solid var(--border-soft); }
+.v2-rows tbody tr:last-child { border-bottom: 0; }
+.v2-rows tbody tr:hover { background: var(--surface-alt); }
+.v2-rows tbody td { padding-block: 0.5rem; }
+
+@keyframes v2-slide-up {
+  from { opacity: 0; transform: translate(-50%, 14px); }
+  to   { opacity: 1; transform: translate(-50%, 0); }
+}
+.v2-slide-up { animation: v2-slide-up 220ms var(--motion-ease) both; }
+
+@keyframes v2-drawer-in {
+  from { opacity: 0; transform: translateX(24px); }
+  to   { opacity: 1; transform: translateX(0); }
+}
+.v2-drawer-in { animation: v2-drawer-in 240ms var(--motion-ease) both; }
+
+@media (prefers-reduced-motion: reduce) {
+  .v2-slide-up, .v2-drawer-in { animation: none !important; }
+}
