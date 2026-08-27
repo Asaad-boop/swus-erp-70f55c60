@@ -73,28 +73,32 @@
 
 :root {
   /* Quiet Precision — warm neutrals + one indigo accent (#5E6AD2) */
-  --radius: 0.5rem; /* 8px cards/inputs; buttons/badges use 6px, chips 4px */
-  --background: oklch(0.9911 0 89.88);        /* #FCFCFC */
-  --foreground: oklch(0.2002 0 89.88);        /* #161616 */
+  --radius: 0.5rem; /* intent tokens below: card 14 / input 9 / control 8 / chip 6 */
+  --background: oklch(0.9912 0.0013 106.4);   /* #FCFCFB */
+  --foreground: oklch(0.1875 0.0033 92);      /* #171614 */
   --card: oklch(1 0 89.88);                   /* #FFFFFF */
-  --card-foreground: oklch(0.2002 0 89.88);
+  --card-foreground: oklch(0.1875 0.0033 92);
+  --surface-alt: oklch(0.9723 0.0032 92);     /* #F7F6F4 */
+  --border-soft: oklch(0.9532 0.0035 92);     /* #F1F0ED */
+  --text-faint: oklch(0.7050 0.0069 88);      /* #A6A39C */
   --popover: oklch(1 0 89.88);
-  --popover-foreground: oklch(0.2002 0 89.88);
+  --popover-foreground: oklch(0.1875 0.0033 92);
   --primary: oklch(0.5674 0.1585 275.21);     /* #5E6AD2 */
   --primary-hover: oklch(0.4984 0.1531 275.01); /* #4C56B8 */
-  --primary-subtle: oklch(0.5674 0.1585 275.21 / 0.1);
+  --primary-subtle: oklch(0.5674 0.1585 275.21 / 0.08);
   --primary-foreground: oklch(1 0 89.88);
-  --secondary: oklch(0.9640 0.0016 106.42);
-  --secondary-foreground: oklch(0.2002 0 89.88);
-  --muted: oklch(0.9640 0.0016 106.42);
-  --muted-foreground: oklch(0.5187 0.0073 75.36); /* #6B6864 */
-  --accent: oklch(0.9550 0.0020 106.42);
-  --accent-foreground: oklch(0.2002 0 89.88);
-  --destructive: oklch(0.6256 0.1933 23.03);  /* #E5484D */
+  --secondary: oklch(0.9723 0.0032 92);
+  --secondary-foreground: oklch(0.1875 0.0033 92);
+  --muted: oklch(0.9723 0.0032 92);
+  --muted-foreground: oklch(0.5410 0.0055 84); /* #75726C */
+  --accent: oklch(0.9532 0.0035 92);
+  --accent-foreground: oklch(0.1875 0.0033 92);
+  --destructive: oklch(0.5920 0.1740 22);      /* #D6534F */
   --destructive-foreground: oklch(1 0 89.88);
-  --border: oklch(0.9398 0.0013 106.42);      /* #EBEBEA */
-  --input: oklch(0.9398 0.0013 106.42);
+  --border: oklch(0.9295 0.0045 92);           /* #EAE8E4 */
+  --input: oklch(0.9295 0.0045 92);
   --ring: oklch(0.5674 0.1585 275.21);
+
   --chart-1: oklch(0.5674 0.1585 275.21);
   --chart-2: oklch(0.7029 0.1267 158.89);
   --chart-3: oklch(0.7498 0.1407 87.06);
