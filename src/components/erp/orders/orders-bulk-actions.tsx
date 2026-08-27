@@ -263,7 +263,17 @@ export function OrdersBulkActions({ selectedCount, totalCount, onSelectAll, onCl
                 </div>
               </Section>
 
-              {/* 2. Courier — happens right after RTS */}
+              {/* 2. Dispatch — pack/ready/ship pipeline */}
+              <Section label="Dispatch" hint="Pack → Ready → Ship">
+                <div className="grid grid-cols-3 gap-1 mb-1">
+                  <IconTile icon={Package} label="Mark Packed" tone="amber" onClick={() => fire("dispatch_pack")} disabled={disabled || !onDispatchPack} />
+                  <IconTile icon={CheckCheck} label="Mark Ready" tone="violet" onClick={() => fire("dispatch_ready")} disabled={disabled || !onDispatchReady} />
+                  <IconTile icon={Truck} label="Mark Shipped" tone="emerald" onClick={() => fire("dispatch_ship")} disabled={disabled || !onDispatchShip} />
+                </div>
+                <ActionRow icon={ScanLine} label="Scan to Dispatch" onClick={() => { fire("dispatch_scan"); }} disabled={!onOpenScanner} />
+              </Section>
+
+              {/* 3. Courier — happens right after RTS */}
               <Section label="Courier">
                 <div className="grid grid-cols-2 gap-1 mb-1">
                   <IconTile icon={Truck} label="Send Pathao" tone="rose" onClick={() => fire("pathao")} disabled={disabled} />
