@@ -21,6 +21,8 @@ import { AdvanceBadge } from "@/components/erp/orders/advance-badge";
 import { BrandBadge } from "@/components/erp/brand-badge";
 import { CourierStatusBadge } from "@/components/erp/orders/courier-status-badge";
 import type { CourierShipmentRow } from "@/hooks/erp/use-courier-shipments";
+import { CallStatusChip } from "@/components/erp/orders/call-status-chip";
+import { useLogCallAttempt } from "@/hooks/erp/use-order-ops";
 
 const NEXT_STATUS: Partial<Record<OrderStatus, OrderStatus>> = {
   confirmed: "ready_to_pack",
@@ -57,13 +59,16 @@ type Props = {
   density?: "comfortable" | "compact";
   /** Column ids hidden by the user. */
   hiddenColumns?: string[];
+  /** order_id -> teammate currently editing the order. */
+  locksByOrderId?: Record<string, { user_name: string | null }>;
   sortKey?: string;
   sortDir?: "asc" | "desc";
   onSortChange?: (key: "created_at" | "total" | "invoice_no" | "updated_at") => void;
 };
 
 
-export function OrdersTable({ rows, loading, selectedIds, onToggleSelect, onToggleAll, onRowClick, onStatusChange, pendingStatusIds, shipmentsByOrderId, flashOrderIds, onSyncRow, onPreorder, density = "comfortable", hiddenColumns = [], sortKey, sortDir, onSortChange }: Props) {
+export function OrdersTable({ rows, loading, selectedIds, onToggleSelect, onToggleAll, onRowClick, onStatusChange, pendingStatusIds, shipmentsByOrderId, flashOrderIds, onSyncRow, onPreorder, locksByOrderId = {}, density = "comfortable", hiddenColumns = [], sortKey, sortDir, onSortChange }: Props) {
+  const logCall = useLogCallAttempt();
   const copyText = (text: string, label: string) => {
     navigator.clipboard?.writeText(text).then(() => toast.success(`${label} copied`));
   };
@@ -96,6 +101,50 @@ export function OrdersTable({ rows, loading, selectedIds, onToggleSelect, onTogg
         </div>
       ),
       size: 40,
+    },
+    {
+      id: "flags",
+      header: "",
+      cell: ({ row }) => {
+        const o = row.original;
+        const flags: { title: string; color: string }[] = [];
+        if (o.risk_flag) flags.push({ title: "Risk flagged", color: "var(--danger-solid)" });
+        if (o.duplicate_flag) flags.push({ title: "Possible duplicate", color: "var(--warning-solid)" });
+        if ((o.hold_reason ?? "").trim()) flags.push({ title: `On hold — ${o.hold_reason}`, color: "var(--status-on-hold)" });
+        if (o.priority && o.priority !== "normal") flags.push({ title: `Priority: ${o.priority}`, color: "var(--info-solid)" });
+        if (flags.length === 0) return <span className="block w-2" />;
+        return (
+          <div className="flex w-3 flex-col gap-0.5">
+            {flags.map((f) => (
+              <span key={f.title} title={f.title} aria-label={f.title} className="h-1.5 w-3 rounded-[2px]" style={{ background: f.color }} />
+            ))}
+          </div>
+        );
+      },
+      size: 20,
+    },
+    {
+      id: "call",
+      header: "Call",
+      cell: ({ row }) => {
+        const o = row.original;
+        return (
+          <div className="flex min-w-[124px] flex-col items-start gap-1">
+            <CallStatusChip status={o.call_status} attempts={o.call_attempt_count} />
+            <button
+              type="button"
+              onClick={(e) => {
+                e.stopPropagation();
+                logCall.mutate({ orderId: o.id, attempts: o.call_attempt_count ?? 0, currentStatus: o.call_status ?? null });
+              }}
+              disabled={logCall.isPending}
+              className="focus-ring inline-flex items-center gap-1 rounded-[var(--radius-chip)] border border-border px-1.5 py-0.5 text-[10.5px] font-medium text-muted-foreground hover:bg-muted hover:text-foreground disabled:opacity-50"
+            >
+              <Phone className="h-2.5 w-2.5" /> Call now
+            </button>
+          </div>
+        );
+      },
     },
     {
       header: "Order",
@@ -134,7 +183,20 @@ export function OrdersTable({ rows, loading, selectedIds, onToggleSelect, onTogg
               <span className="capitalize">{o.source ?? "manual"}</span>
               <span className="text-muted-foreground/40">•</span>
               <BrandBadge brandId={o.brand_id} variant="text" className="text-[11px]" />
+              {(o.fb_campaign_id || o.utm_source) && (
+                <span
+                  title={`Attributed: ${o.utm_source ?? "meta"}${o.utm_campaign ? ` / ${o.utm_campaign}` : ""}`}
+                  className="ml-0.5 inline-flex items-center rounded-[4px] bg-[var(--info-soft)] px-1 text-[9.5px] font-semibold uppercase tracking-wide text-[var(--info-text)]"
+                >
+                  ads
+                </span>
+              )}
             </div>
+            {locksByOrderId[o.id] && (
+              <div className="mt-0.5 inline-flex items-center gap-1 rounded-[4px] bg-[var(--warning-soft)] px-1 py-px text-[10px] font-medium text-[var(--warning-text)]">
+                Open by {locksByOrderId[o.id]?.user_name ?? "teammate"}
+              </div>
+            )}
           </div>
         );
       },
