@@ -1281,14 +1281,14 @@ function _WebOrdersPageBody() {
                   ))}
                 </TableRow>
               ))
-            ) : filteredRows.length === 0 ? (
+            ) : displayRows.length === 0 ? (
               <TableRow>
                 <TableCell colSpan={11} className="h-32 text-center text-muted-foreground">
                   {tagFilter.size > 0 ? "No orders match the selected tags" : "No web orders in this status"}
                 </TableCell>
               </TableRow>
             ) : (
-              pinnedRows.map(({ row: r, tags: autoTags }) => {
+              displayRows.map(({ row: r, tags: autoTags }) => {
                 const name = r.shipping_name ?? r.guest_name ?? "—";
                 const phone = r.shipping_phone ?? r.guest_phone ?? "";
                 // Only real customer/staff notes — skip r.notes (auto-populated with items summary)
@@ -1314,7 +1314,7 @@ function _WebOrdersPageBody() {
                       isSelected && "bg-primary/[0.04] hover:bg-primary/[0.06] dark:bg-primary/10",
                       flash && "animate-in slide-in-from-top-2 bg-emerald-50/70 dark:bg-emerald-950/30",
                       lock && "ring-1 ring-inset ring-amber-500/30 bg-amber-50/40 dark:bg-amber-950/15",
-                      (isStale(r) || isDuplicate(r)) && "bg-[var(--danger-soft)]/60",
+                      isDuplicate(r) && "bg-[var(--danger-soft)]/60",
                     )}
                     onClick={() => setOpenId(r.id)}
                   >
