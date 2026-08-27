@@ -155,15 +155,15 @@ function Panel({
   return (
     <section className={cn("surface-panel rise-in group/panel relative rounded-2xl overflow-hidden", lazy && "lazy-panel", className)}>
       <span className="pointer-events-none absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-white/60 to-transparent dark:via-white/10" />
-      <header className="surface-head px-4 py-3 sm:px-5 grid grid-cols-[minmax(0,1fr)_auto] items-center gap-3">
+      <header className="surface-head px-3.5 py-2 sm:px-4 grid grid-cols-[minmax(0,1fr)_auto] items-center gap-3">
         <button
           type="button"
           disabled={!collapsible}
           onClick={() => setOpen((v) => !v)}
           className={cn("flex min-w-0 items-center gap-2.5 text-left", collapsible && "group cursor-pointer")}
         >
-          <span className={cn("h-5 w-1.5 shrink-0 rounded-full transition-transform duration-300 group-hover/panel:scale-y-110", accent)} />
-          <h3 className="font-display truncate text-[13px] font-semibold tracking-tight text-gray-900 dark:text-foreground">{title}</h3>
+          <span className={cn("h-4 w-1 shrink-0 rounded-full transition-transform duration-300 group-hover/panel:scale-y-110", accent)} />
+          <h3 className="font-display truncate text-[12px] font-semibold uppercase tracking-[0.08em] text-gray-600 dark:text-muted-foreground">{title}</h3>
           {collapsible && (
             <ChevronDown className={cn("h-3.5 w-3.5 shrink-0 text-muted-foreground transition-transform duration-300", isOpen && "rotate-180")} />
           )}
@@ -171,7 +171,8 @@ function Panel({
         {right ? <div className="shrink-0">{right}</div> : null}
       </header>
       {isOpen && (
-        <div className={cn("border-t border-gray-100 dark:border-border", bodyClassName ?? "p-4 sm:p-5")}>{children}</div>
+        <div className={cn("border-t border-gray-100 dark:border-border", bodyClassName ?? "p-3.5")}>{children}</div>
+
       )}
     </section>
   );
@@ -272,11 +273,12 @@ function StatsStrip({
   return (
     <div className="rounded-2xl border bg-card overflow-hidden shadow-[0_1px_2px_rgba(0,0,0,0.04),0_8px_24px_-12px_rgba(0,0,0,0.08)]">
       {/* Header: single hero ring + compact per-source pills + refresh */}
-      <div className="flex flex-wrap items-center gap-x-5 gap-y-3 px-4 py-3.5">
+      <div className="flex flex-wrap items-center gap-x-4 gap-y-2 px-3.5 py-2.5">
         {hero && (
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-2.5">
             <div className="relative shrink-0">
-              <svg viewBox="0 0 36 36" className="h-14 w-14 -rotate-90">
+              <svg viewBox="0 0 36 36" className="h-11 w-11 -rotate-90">
+
                 <circle cx="18" cy="18" r={R} className="fill-none stroke-muted/60" strokeWidth="3" />
                 <circle cx="18" cy="18" r={R}
                   className={cn("fill-none transition-all duration-700 ease-out", heroTone.ring)}
@@ -284,10 +286,11 @@ function StatsStrip({
                   strokeDashoffset={heroDenom === 0 ? C : C * (1 - heroPct / 100)} />
               </svg>
               <div className="absolute inset-0 flex items-center justify-center">
-                <span className={cn("text-sm font-bold tabular-nums", heroTone.text)}>
+                <span className={cn("text-[11px] font-bold tabular-nums", heroTone.text)}>
                   {heroDenom === 0 ? "—" : `${heroPct}%`}
                 </span>
               </div>
+
             </div>
             <div className="leading-tight">
               <div className="flex items-center gap-2">
@@ -354,7 +357,7 @@ function StatsStrip({
                 const pct = denom > 0 ? Math.round((c.success / denom) * 100) : 0;
                 const t = toneFor(pct, denom === 0);
                 return (
-                  <li key={c.name} className="flex items-center gap-3 px-4 py-2 transition-colors hover:bg-muted/30">
+                  <li key={c.name} className="flex items-center gap-3 px-3.5 py-1 transition-colors hover:bg-muted/30">
                     <span className="w-24 shrink-0 truncate text-[11px] font-medium text-foreground">{c.label}</span>
                     <div className="h-1 flex-1 overflow-hidden rounded-full bg-muted">
                       <div className={cn("h-full rounded-full transition-all duration-700", t.bar)} style={{ width: `${denom === 0 ? 0 : pct}%` }} />
@@ -1435,9 +1438,10 @@ function splitCourierProviders(providers?: HistProvider[] | null) {
         </div>
       </header>
 
-      <div className="max-w-[1600px] mx-auto p-3 sm:p-4 md:p-6 grid grid-cols-1 xl:grid-cols-[minmax(0,1fr)_minmax(320px,380px)] gap-3 sm:gap-4 items-start">
+      <div className="max-w-[1600px] mx-auto p-3 md:px-4 md:py-3 grid grid-cols-1 xl:grid-cols-[minmax(0,1fr)_minmax(320px,360px)] gap-3 items-start">
         {/* MAIN */}
-        <div className="space-y-4 min-w-0">
+        <div className="space-y-3 min-w-0">
+
           {/* Stats strip */}
           <StatsStrip
             stats={stats}
@@ -1450,9 +1454,36 @@ function splitCourierProviders(providers?: HistProvider[] | null) {
           />
 
           {/* Customer row */}
-          <Panel title="Customer & Delivery" accent="bg-indigo-500" bodyClassName="p-5">
-            <div className="space-y-4">
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <Panel
+            title="Customer & Delivery"
+            accent="bg-indigo-500"
+            bodyClassName="p-3.5"
+            right={(() => {
+              const customerKeys = ["mobile","name","delivery_method","address","shipping_note","city_id","zone_id","area_id","source_platform","is_preorder","is_cross_sale"] as const;
+              const dirty = !!baseline && customerKeys.some((k) => (form as any)[k] !== (baseline as any)[k]);
+              return (
+                <div className="flex items-center gap-2">
+                  {dirty && (
+                    <span className="hidden sm:inline-flex items-center gap-1.5 text-[10px] font-medium text-amber-600">
+                      <span className="h-1.5 w-1.5 rounded-full bg-amber-500 animate-pulse" />Unsaved
+                    </span>
+                  )}
+                  <Button size="sm" variant="ghost" className="h-7 px-2 text-[11px]" disabled={!dirty || saveCustomer.isPending}
+                    onClick={() => baseline && setForm({ ...form, ...baseline })}>
+                    <Undo2 className="h-3.5 w-3.5 mr-1" />Discard
+                  </Button>
+                  <Button size="sm" className="h-7 px-3 text-[11px] bg-indigo-600 hover:bg-indigo-700 text-white" disabled={!dirty || saveCustomer.isPending}
+                    onClick={() => saveCustomer.mutate()}>
+                    {saveCustomer.isPending ? <Loader2 className="h-3.5 w-3.5 mr-1 animate-spin" /> : <Save className="h-3.5 w-3.5 mr-1" />}
+                    Save Customer
+                  </Button>
+                </div>
+              );
+            })()}
+          >
+            <div className="space-y-2.5">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-x-3 gap-y-2.5">
+
               <FieldShell label="Mobile Number">
                 <div className="relative">
                   <Input value={form.mobile} onChange={(e) => setForm({ ...form, mobile: e.target.value })} className="h-9 pr-16 font-mono" />
@@ -1481,10 +1512,11 @@ function splitCourierProviders(providers?: HistProvider[] | null) {
               </FieldShell>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-x-3 gap-y-2.5">
               <FieldShell label="Address">
                 <Textarea
-                  rows={3}
+                  rows={2}
+
                   value={form.address}
                   onChange={(e) => setForm({ ...form, address: e.target.value })}
                   className="resize-none"
@@ -1572,7 +1604,8 @@ function splitCourierProviders(providers?: HistProvider[] | null) {
               </div>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-x-3 gap-y-2.5">
+
               <div className="space-y-1">
                 <div className="flex items-center justify-between">
                   <label className="text-[11px] font-medium text-muted-foreground">City</label>
@@ -1613,28 +1646,6 @@ function splitCourierProviders(providers?: HistProvider[] | null) {
                 </Select>
               </FieldShell>
             </div>
-            {(() => {
-              const customerKeys = ["mobile","name","delivery_method","address","shipping_note","city_id","zone_id","area_id","source_platform","is_preorder","is_cross_sale"] as const;
-              const dirty = !!baseline && customerKeys.some((k) => (form as any)[k] !== (baseline as any)[k]);
-              return (
-                <div className="flex items-center justify-end gap-2 pt-3 border-t border-gray-100 dark:border-border">
-                  {dirty && (
-                    <span className="mr-auto inline-flex items-center gap-1.5 text-[11px] text-amber-600">
-                      <span className="h-1.5 w-1.5 rounded-full bg-amber-500 animate-pulse" />Unsaved changes
-                    </span>
-                  )}
-                  <Button size="sm" variant="ghost" disabled={!dirty || saveCustomer.isPending}
-                    onClick={() => baseline && setForm({ ...form, ...baseline })}>
-                    <Undo2 className="h-3.5 w-3.5 mr-1" />Discard
-                  </Button>
-                  <Button size="sm" disabled={!dirty || saveCustomer.isPending}
-                    onClick={() => saveCustomer.mutate()} className="bg-indigo-600 hover:bg-indigo-700 text-white">
-                    {saveCustomer.isPending ? <Loader2 className="h-3.5 w-3.5 mr-1 animate-spin" /> : <Save className="h-3.5 w-3.5 mr-1" />}
-                    Save Customer
-                  </Button>
-                </div>
-              );
-            })()}
             </div>
           </Panel>
 
@@ -1742,7 +1753,7 @@ function splitCourierProviders(providers?: HistProvider[] | null) {
           </Panel>
 
           {/* Totals row */}
-          <Panel title="Pricing & Totals" accent="bg-amber-500" bodyClassName="p-5">
+          <Panel title="Pricing & Totals" accent="bg-amber-500" bodyClassName="p-3.5">
             <div>
             <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
               <FieldShell label="Discount">
@@ -1856,14 +1867,15 @@ function splitCourierProviders(providers?: HistProvider[] | null) {
         </div>
 
         {/* RIGHT SIDEBAR */}
-        <aside className="space-y-3 sm:space-y-4 xl:sticky xl:top-[64px] xl:max-h-[calc(100vh-80px)] xl:overflow-y-auto xl:overscroll-contain xl:pr-1 xl:-mr-1 [scrollbar-width:thin]">
+        <aside className="space-y-3 xl:sticky xl:top-[64px] xl:max-h-[calc(100vh-80px)] xl:overflow-y-auto xl:overscroll-contain xl:pr-1 xl:-mr-1 [scrollbar-width:thin]">
           <Panel
             title="Order Summary"
             accent="bg-emerald-500"
             right={<span className="text-[10px] font-mono text-gray-500">#{invoiceDisplay(order)}</span>}
-            bodyClassName="p-4"
+            bodyClassName="p-3"
           >
-            <div className="space-y-2 text-xs">
+            <div className="space-y-1 text-xs">
+
               <Row label="Date" value={format(new Date(order.created_at), "dd MMM yyyy, hh:mm a")} />
               <Row label="Status" value={
                 <div className="flex items-center gap-1.5">
@@ -2009,7 +2021,7 @@ function splitCourierProviders(providers?: HistProvider[] | null) {
             accent="bg-amber-500"
             collapsible
             defaultOpen={tags.length > 0}
-            bodyClassName="p-4"
+            bodyClassName="p-3"
             lazy
             right={tags.length > 0 ? <span className="text-[10px] text-gray-500 tabular-nums">{tags.length}</span> : null}
           >
@@ -2037,7 +2049,7 @@ function splitCourierProviders(providers?: HistProvider[] | null) {
             </div>
           </Panel>
 
-          <Panel title="Actions & Notes" accent="bg-indigo-500" bodyClassName="p-4">
+          <Panel title="Actions & Notes" accent="bg-indigo-500" bodyClassName="p-3">
             <div className="space-y-3">
               <Select
                 value={draftWebStatus}
