@@ -980,13 +980,6 @@ function _WebOrdersPageBody() {
     ? taggedRows
     : taggedRows.filter(({ tags }) => tags.some((t) => tagFilter.has(t.key)));
 
-  // Stale = created 3h+ ago with no call attempt logged yet.
-  const STALE_MS = 3 * 60 * 60 * 1000;
-  const isStale = (r: WebOrderRow) =>
-    !r.last_call_at &&
-    (r.call_attempt_count ?? 0) === 0 &&
-    Date.now() - new Date(r.created_at).getTime() > STALE_MS;
-
   // Duplicate = same normalized phone appears more than once on this page.
   const duplicatePhones = useMemo(() => {
     const seen = new Map<string, number>();
@@ -1003,14 +996,9 @@ function _WebOrdersPageBody() {
     return !!ph && duplicatePhones.has(ph);
   };
 
-  // Urgent rows float to the top of the list.
-  const pinnedRows = useMemo(() => {
-    const score = (r: WebOrderRow) => (isStale(r) ? 2 : 0) + (isDuplicate(r) ? 1 : 0);
-    return [...filteredRows].sort((a, b) => score(b.row) - score(a.row));
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [filteredRows, duplicatePhones]);
+  // Render in the order returned by the server (newest first by default).
+  const displayRows = filteredRows;
 
-  const staleCount = filteredRows.filter(({ row }) => isStale(row)).length;
   const dupCount = filteredRows.filter(({ row }) => isDuplicate(row)).length;
 
   const toggleTagFilter = (k: AutoTagKey) => {
@@ -1250,21 +1238,14 @@ function _WebOrdersPageBody() {
         </div>
       ) : (
       <>
-      {(staleCount > 0 || dupCount > 0) && (
+      {dupCount > 0 && (
         <div
           role="status"
           className="mb-3 flex flex-wrap items-center gap-2 rounded-[var(--radius-card)] border border-[var(--danger-border)] bg-[var(--danger-soft)] px-3.5 py-2.5 text-[12.5px] text-[var(--danger-text)]"
         >
           <AlertTriangle className="h-4 w-4 shrink-0" />
           <span>
-            {staleCount > 0 && (
-              <>
-                <span className="num font-semibold">{staleCount}</span> order 3 ঘণ্টার বেশি সময় ধরে call করা হয়নি, উপরে pin করা আছে.
-              </>
-            )}
-            {dupCount > 0 && (
-              <> <span className="num font-semibold">{dupCount}</span> possible duplicate detected.</>
-            )}
+            <span className="num font-semibold">{dupCount}</span> possible duplicate detected.
           </span>
         </div>
       )}
@@ -1300,14 +1281,14 @@ function _WebOrdersPageBody() {
                   ))}
                 </TableRow>
               ))
-            ) : filteredRows.length === 0 ? (
+            ) : displayRows.length === 0 ? (
               <TableRow>
                 <TableCell colSpan={11} className="h-32 text-center text-muted-foreground">
                   {tagFilter.size > 0 ? "No orders match the selected tags" : "No web orders in this status"}
                 </TableCell>
               </TableRow>
             ) : (
-              pinnedRows.map(({ row: r, tags: autoTags }) => {
+              displayRows.map(({ row: r, tags: autoTags }) => {
                 const name = r.shipping_name ?? r.guest_name ?? "—";
                 const phone = r.shipping_phone ?? r.guest_phone ?? "";
                 // Only real customer/staff notes — skip r.notes (auto-populated with items summary)
@@ -1333,7 +1314,7 @@ function _WebOrdersPageBody() {
                       isSelected && "bg-primary/[0.04] hover:bg-primary/[0.06] dark:bg-primary/10",
                       flash && "animate-in slide-in-from-top-2 bg-emerald-50/70 dark:bg-emerald-950/30",
                       lock && "ring-1 ring-inset ring-amber-500/30 bg-amber-50/40 dark:bg-amber-950/15",
-                      (isStale(r) || isDuplicate(r)) && "bg-[var(--danger-soft)]/60",
+                      isDuplicate(r) && "bg-[var(--danger-soft)]/60",
                     )}
                     onClick={() => setOpenId(r.id)}
                   >
