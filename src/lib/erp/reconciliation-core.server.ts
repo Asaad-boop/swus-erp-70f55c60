@@ -567,6 +567,8 @@ export async function applyReconRunCore(
           if (!isReturned) {
             if (isPartial) effectiveMatchType = "partial";
             else if (isDelivered) effectiveMatchType = "paid";
+            // Courier still moving the parcel → money side only, keep status.
+            else effectiveMatchType = "unknown";
           }
         }
 
@@ -584,11 +586,12 @@ export async function applyReconRunCore(
           orderUpdate.payment_status = "partial";
           orderUpdate.partial_amount = partialAmount > 0 ? partialAmount : Number(r.collected ?? 0);
           orderUpdate.delivered_at = new Date(txnDate).toISOString();
-        } else {
+        } else if (effectiveMatchType !== "unknown") {
           orderUpdate.status = "paid";
           orderUpdate.payment_status = "paid";
           orderUpdate.delivered_at = new Date(txnDate).toISOString();
         }
+
 
         const { error: oErr } = await supabase
           .from("orders")
