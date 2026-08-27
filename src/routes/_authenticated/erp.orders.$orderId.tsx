@@ -286,10 +286,11 @@ function StatsStrip({
                   strokeDashoffset={heroDenom === 0 ? C : C * (1 - heroPct / 100)} />
               </svg>
               <div className="absolute inset-0 flex items-center justify-center">
-                <span className={cn("text-sm font-bold tabular-nums", heroTone.text)}>
+                <span className={cn("text-[11px] font-bold tabular-nums", heroTone.text)}>
                   {heroDenom === 0 ? "—" : `${heroPct}%`}
                 </span>
               </div>
+
             </div>
             <div className="leading-tight">
               <div className="flex items-center gap-2">
