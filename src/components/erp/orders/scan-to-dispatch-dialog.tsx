@@ -268,24 +268,22 @@ export function ScanToDispatchDialog({ open, onClose, onStatusChange }: ScanToDi
             <Button
               size="icon"
               variant={camera ? "default" : "outline"}
-              onClick={() => setCamera((v) => !v)}
-              title={camera ? "Close camera" : "Open camera"}
+              onClick={() => setCamera(true)}
+              title="Open camera"
             >
-              {camera ? <X className="h-4 w-4" /> : <Camera className="h-4 w-4" />}
+              <Camera className="h-4 w-4" />
             </Button>
           </div>
 
-          {camera && (
-            <div className="rounded-xl overflow-hidden border bg-black">
-              <CameraScanner
-                onScan={(code) => {
-                  setInput(code);
-                  process(code);
-                }}
-                onError={(msg) => toast.error(msg)}
-              />
-            </div>
-          )}
+          <CameraScanner
+            open={camera}
+            onClose={() => setCamera(false)}
+            onDetect={(code: string) => {
+              setInput(code);
+              setCamera(false);
+              process(code);
+            }}
+          />
 
           {/* Last result */}
           {last && (
