@@ -312,8 +312,8 @@ export function OrdersBulkActions({ selectedCount, totalCount, onSelectAll, onCl
           <span>{disabled ? "Select at least one order" : `${selectedCount} selected`}</span>
           <span className="hidden sm:inline">Enter = top match · Esc = clear</span>
         </div>
-      </PopoverContent>
-      </Popover>
+      </DialogContent>
+      </Dialog>
     </div>
   );
 }
