@@ -194,6 +194,22 @@ export type OrderRow = {
   reconciliation_status?: string | null;
   net_collected?: number | null;
   printed_at?: string | null;
+  risk_flag?: boolean | null;
+  duplicate_flag?: boolean | null;
+  hold_reason?: string | null;
+  is_preorder?: boolean | null;
+  priority?: string | null;
+  payment_status?: string | null;
+  courier_fee?: number | null;
+  refund_amount?: number | null;
+  last_call_at?: string | null;
+  utm_source?: string | null;
+  utm_medium?: string | null;
+  utm_campaign?: string | null;
+  fb_campaign_id?: string | null;
+  fb_adset_id?: string | null;
+  fb_ad_id?: string | null;
+  attribution_landing_page?: string | null;
 };
 
 export type OrderItemMini = {
