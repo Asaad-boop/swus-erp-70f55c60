@@ -17,6 +17,7 @@ import { statusBadge, type OrderRow, type OrderStatus } from "@/lib/erp/orders";
 import { pathaoBookOrderAutoFn } from "@/lib/erp/pathao.functions";
 import { steadfastBookOrderFn } from "@/lib/erp/steadfast.functions";
 import { supabase } from "@/integrations/supabase/client";
+import { dispatchFeedback, primeAudio } from "@/lib/erp/dispatch/feedback";
 
 export type DispatchMode = "pack" | "ready" | "ship";
 
@@ -88,10 +89,15 @@ export function DispatchActionsCell({ order, onStatusChange, onPrint, busy }: Di
 
   const runAdvance = async () => {
     if (!mode) return;
+    primeAudio();
     if (isShip) {
       setWorking("ship");
       try {
         await shipOrder(order, provider);
+        dispatchFeedback("ship");
+      } catch (e: any) {
+        dispatchFeedback("error");
+        toast.error(e?.message ?? "Ship failed");
       } finally {
         setWorking(null);
       }
@@ -102,6 +108,10 @@ export function DispatchActionsCell({ order, onStatusChange, onPrint, busy }: Di
     setWorking(mode);
     try {
       await onStatusChange(order.id, next);
+      dispatchFeedback(mode === "pack" ? "pack" : "ready");
+    } catch (e: any) {
+      dispatchFeedback("error");
+      toast.error(e?.message ?? "Update failed");
     } finally {
       setWorking(null);
     }
@@ -110,6 +120,7 @@ export function DispatchActionsCell({ order, onStatusChange, onPrint, busy }: Di
   const shipOrder = async (o: OrderRow, prov: Provider) => {
     const dup = await existingShipment(o.id);
     if (dup?.consignment_id) {
+      dispatchFeedback("duplicate");
       toast.warning(`Already booked · ${dup.consignment_id}`);
       // still move to shipped if somehow not yet
       await onStatusChange(o.id, "shipped");

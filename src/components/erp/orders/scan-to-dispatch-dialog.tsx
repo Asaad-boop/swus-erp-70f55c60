@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useServerFn } from "@tanstack/react-start";
 import { toast } from "sonner";
 import {
@@ -7,13 +7,17 @@ import {
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
-import { Camera, Keyboard, ScanLine, CheckCircle2, AlertCircle, Package, CheckCheck, Send, Loader2 } from "lucide-react";
+import {
+  Camera, Keyboard, ScanLine, CheckCircle2, AlertCircle, Package, CheckCheck, Send,
+  Loader2, Volume2, VolumeX, Zap, ZapOff,
+} from "lucide-react";
 import { cn } from "@/lib/utils";
 import { supabase } from "@/integrations/supabase/client";
 import { statusBadge, type OrderRow, type OrderStatus } from "@/lib/erp/orders";
 import { pathaoBookOrderAutoFn } from "@/lib/erp/pathao.functions";
 import { steadfastBookOrderFn } from "@/lib/erp/steadfast.functions";
 import { CameraScanner } from "@/components/erp/dispatch/camera-scanner";
+import { dispatchFeedback, isDispatchMuted, setDispatchMuted, primeAudio } from "@/lib/erp/dispatch/feedback";
 
 type ScanMode = "pack" | "ready" | "ship";
 type Provider = "pathao" | "steadfast" | "manual";
@@ -32,17 +36,23 @@ const NEXT_STATUS: Partial<Record<OrderStatus, OrderStatus>> = {
   ready_to_ship: "shipped",
 };
 
+const PACKABLE = ["confirmed", "ready_to_pack", "packaging"];
+
 const PROVIDERS: { key: Provider; label: string }[] = [
   { key: "pathao", label: "Pathao" },
   { key: "steadfast", label: "Steadfast" },
   { key: "manual", label: "Manual" },
 ];
 
+const SELECT_COLS =
+  "id, invoice_no, status, total, payment_method, courier_name, tracking_number, shipping_name, guest_name, shipping_phone, guest_phone, shipping_address, shipping_thana, shipping_city, shipping_district, brand_id, source, created_at";
+
 type ScanResult = {
   ok: boolean;
   msg: string;
   order?: OrderRow;
   toStatus?: OrderStatus;
+  at: number;
 };
 
 export type ScanToDispatchDialogProps = {
@@ -57,30 +67,36 @@ export function ScanToDispatchDialog({ open, onClose, onStatusChange }: ScanToDi
   const [input, setInput] = useState("");
   const [camera, setCamera] = useState(false);
   const [busy, setBusy] = useState(false);
-  const [last, setLast] = useState<ScanResult | null>(null);
+  const [auto, setAuto] = useState(true);
+  const [muted, setMuted] = useState(false);
+  const [log, setLog] = useState<ScanResult[]>([]);
   const inputRef = useRef<HTMLInputElement>(null);
+  const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const lastTermRef = useRef<{ term: string; at: number }>({ term: "", at: 0 });
   const bookPathao = useServerFn(pathaoBookOrderAutoFn);
   const bookSteadfast = useServerFn(steadfastBookOrderFn);
 
+  const last = log[0] ?? null;
+  const okCount = useMemo(() => log.filter((l) => l.ok).length, [log]);
+
   useEffect(() => {
     if (open) {
-      setTimeout(() => inputRef.current?.focus(), 100);
-      setLast(null);
+      setMuted(isDispatchMuted());
+      primeAudio();
+      setTimeout(() => inputRef.current?.focus(), 60);
       setInput("");
+    } else {
+      setLog([]);
     }
+    return () => { if (timerRef.current) clearTimeout(timerRef.current); };
   }, [open]);
+
+  const push = (r: Omit<ScanResult, "at">) => setLog((prev) => [{ ...r, at: Date.now() }, ...prev].slice(0, 6));
 
   const lookup = async (term: string) => {
     const clean = term.trim();
     if (!clean) return null;
-    // Try invoice number first, then id prefix, then phone
-    let q = supabase
-      .from("orders")
-      .select(
-        "id, invoice_no, status, total, payment_method, courier_name, tracking_number, shipping_name, guest_name, shipping_phone, guest_phone, shipping_address, shipping_thana, shipping_city, shipping_district, brand_id, source"
-      )
-      .order("created_at", { ascending: false })
-      .limit(1);
+    let q = supabase.from("orders").select(SELECT_COLS).order("created_at", { ascending: false }).limit(6);
     if (/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(clean)) {
       q = q.eq("id", clean);
     } else if (/^\d+$/.test(clean)) {
@@ -90,7 +106,11 @@ export function ScanToDispatchDialog({ open, onClose, onStatusChange }: ScanToDi
     }
     const { data, error } = await q;
     if (error) throw error;
-    return (data?.[0] ?? null) as OrderRow | null;
+    const rows = (data ?? []) as unknown as OrderRow[];
+    if (!rows.length) return null;
+    // Prefer the row that is actionable for the current mode
+    const wanted = mode === "ship" ? ["ready_to_ship", "packed"] : mode === "ready" ? ["packed"] : PACKABLE;
+    return rows.find((r) => wanted.includes(r.status)) ?? rows[0];
   };
 
   const isCod = (o: OrderRow) => {
@@ -107,6 +127,7 @@ export function ScanToDispatchDialog({ open, onClose, onStatusChange }: ScanToDi
     const existing = await existingShipment(o.id);
     if (existing?.consignment_id) {
       await onStatusChange(o.id, "shipped");
+      dispatchFeedback("duplicate");
       return { ok: true, msg: `Already booked · ${existing.consignment_id}`, order: o, toStatus: "shipped" as OrderStatus };
     }
 
@@ -134,51 +155,75 @@ export function ScanToDispatchDialog({ open, onClose, onStatusChange }: ScanToDi
     return { ok: true, msg: `Booked ${provider}${consignment ? ` · ${consignment}` : ""} · ${o.invoice_no ?? o.id.slice(0, 8)}`, order: o, toStatus: "shipped" as OrderStatus };
   };
 
+  const fail = (msg: string, order?: OrderRow) => {
+    dispatchFeedback("error");
+    push({ ok: false, msg, order });
+    toast.error(msg);
+  };
+
   const process = async (term: string) => {
-    if (!term.trim() || busy) return;
+    const clean = term.trim();
+    if (!clean || busy) return;
+    if (timerRef.current) clearTimeout(timerRef.current);
+
+    const now = Date.now();
+    if (lastTermRef.current.term === clean && now - lastTermRef.current.at < 2500) {
+      dispatchFeedback("duplicate");
+      toast.warning("Duplicate scan skipped");
+      setInput("");
+      return;
+    }
+    lastTermRef.current = { term: clean, at: now };
+
     setBusy(true);
     try {
-      const order = await lookup(term);
-      if (!order) {
-        setLast({ ok: false, msg: `Order not found: ${term}` });
-        toast.error(`Order not found: ${term}`);
-        return;
-      }
+      const order = await lookup(clean);
+      if (!order) return fail(`Order not found: ${clean}`);
 
       if (mode === "ship") {
         const res = await shipOrder(order);
-        setLast(res);
+        dispatchFeedback("ship");
+        push(res);
         toast.success(res.msg);
       } else {
         const next = NEXT_STATUS[order.status];
-        if (!next) {
-          setLast({ ok: false, msg: `${statusBadge(order.status).label} → no next step`, order });
-          toast.error(`No next step for ${statusBadge(order.status).label}`);
-          return;
-        }
-        if (mode === "pack" && !["confirmed", "ready_to_pack", "packaging"].includes(order.status)) {
-          setLast({ ok: false, msg: `Not packable · ${statusBadge(order.status).label}`, order });
-          toast.error(`Not packable: ${statusBadge(order.status).label}`);
-          return;
+        if (!next) return fail(`${statusBadge(order.status).label} → no next step`, order);
+        if (mode === "pack" && !PACKABLE.includes(order.status)) {
+          return fail(`Not packable · ${statusBadge(order.status).label}`, order);
         }
         if (mode === "ready" && order.status !== "packed") {
-          setLast({ ok: false, msg: `Must be Packed first · current ${statusBadge(order.status).label}`, order });
-          toast.error(`Must be Packed first`);
-          return;
+          return fail(`Must be Packed first · now ${statusBadge(order.status).label}`, order);
         }
         await onStatusChange(order.id, next);
-        setLast({ ok: true, msg: `${statusBadge(order.status).label} → ${statusBadge(next).label} · ${order.invoice_no ?? order.id.slice(0, 8)}`, order, toStatus: next });
+        dispatchFeedback(mode);
+        push({
+          ok: true,
+          msg: `${statusBadge(order.status).label} → ${statusBadge(next).label} · ${order.invoice_no ?? order.id.slice(0, 8)}`,
+          order,
+          toStatus: next,
+        });
         toast.success(`Updated to ${statusBadge(next).label}`);
       }
       setInput("");
-      setTimeout(() => inputRef.current?.focus(), 50);
     } catch (e: any) {
-      const msg = e?.message ?? "Scan failed";
-      setLast({ ok: false, msg });
-      toast.error(msg);
+      fail(e?.message ?? "Scan failed");
     } finally {
       setBusy(false);
+      setTimeout(() => inputRef.current?.focus(), 30);
     }
+  };
+
+  const onChange = (v: string) => {
+    setInput(v);
+    if (timerRef.current) clearTimeout(timerRef.current);
+    if (!auto) return;
+    const clean = v.trim();
+    // Auto-fire when it looks complete: 11-digit phone, UUID, or >= 4 chars idle
+    const complete =
+      /^01\d{9}$/.test(clean) ||
+      /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(clean);
+    if (clean.length < 3) return;
+    timerRef.current = setTimeout(() => process(clean), complete ? 80 : 550);
   };
 
   const onKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
@@ -187,22 +232,46 @@ export function ScanToDispatchDialog({ open, onClose, onStatusChange }: ScanToDi
       process(input);
     }
     if (e.key === "Escape") {
+      if (timerRef.current) clearTimeout(timerRef.current);
       setInput("");
-      setLast(null);
     }
+  };
+
+  const toggleMute = () => {
+    const v = !muted;
+    setMuted(v);
+    setDispatchMuted(v);
+    if (!v) dispatchFeedback("undo");
   };
 
   return (
     <Dialog open={open} onOpenChange={(v) => !v && onClose()}>
       <DialogContent className="max-w-lg p-0 overflow-hidden">
         <DialogHeader className="px-4 pt-4 pb-2">
-          <DialogTitle className="flex items-center gap-2 text-base">
-            <ScanLine className="h-5 w-5 text-primary" />
-            Scan to Dispatch
+          <DialogTitle className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-2 text-base">
+            <span className="flex min-w-0 items-center gap-2">
+              <ScanLine className="h-5 w-5 shrink-0 text-primary" />
+              <span className="truncate">Scan to Dispatch</span>
+              {okCount > 0 && (
+                <Badge variant="secondary" className="shrink-0 text-[10px]">{okCount} done</Badge>
+              )}
+            </span>
+            <span className="flex shrink-0 items-center gap-1">
+              <Button
+                size="icon" variant="ghost" className="h-7 w-7"
+                onClick={() => setAuto((a) => !a)}
+                title={auto ? "Auto-submit on" : "Auto-submit off"}
+              >
+                {auto ? <Zap className="h-4 w-4 text-amber-500" /> : <ZapOff className="h-4 w-4 text-muted-foreground" />}
+              </Button>
+              <Button size="icon" variant="ghost" className="h-7 w-7" onClick={toggleMute} title={muted ? "Sound off" : "Sound on"}>
+                {muted ? <VolumeX className="h-4 w-4 text-muted-foreground" /> : <Volume2 className="h-4 w-4 text-emerald-500" />}
+              </Button>
+            </span>
           </DialogTitle>
         </DialogHeader>
 
-        <div className="px-4 pb-4 space-y-4">
+        <div className="px-4 pb-4 space-y-3">
           {/* Mode selector */}
           <div className="grid grid-cols-3 gap-2">
             {MODES.map((m) => {
@@ -212,7 +281,7 @@ export function ScanToDispatchDialog({ open, onClose, onStatusChange }: ScanToDi
                 <button
                   key={m.key}
                   type="button"
-                  onClick={() => { setMode(m.key); setLast(null); setTimeout(() => inputRef.current?.focus(), 50); }}
+                  onClick={() => { setMode(m.key); setTimeout(() => inputRef.current?.focus(), 30); }}
                   className={cn(
                     "rounded-xl border px-2 py-2 text-center transition-all active:scale-[0.97]",
                     on ? cn(m.tone, "text-white border-transparent shadow-md") : "bg-card hover:border-foreground/40",
@@ -256,21 +325,24 @@ export function ScanToDispatchDialog({ open, onClose, onStatusChange }: ScanToDi
               <Input
                 ref={inputRef}
                 value={input}
-                onChange={(e) => setInput(e.target.value)}
+                onChange={(e) => onChange(e.target.value)}
                 onKeyDown={onKeyDown}
                 placeholder="Invoice, phone, or scan barcode…"
-                className="pr-10"
-                disabled={busy}
+                className={cn(
+                  "pr-10 h-11 text-base font-semibold tracking-tight transition-shadow",
+                  busy && "opacity-70",
+                )}
+                inputMode="text"
+                autoComplete="off"
                 autoFocus
               />
-              <Keyboard className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground/50" />
+              {busy ? (
+                <Loader2 className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 animate-spin text-primary" />
+              ) : (
+                <Keyboard className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground/50" />
+              )}
             </div>
-            <Button
-              size="icon"
-              variant={camera ? "default" : "outline"}
-              onClick={() => setCamera(true)}
-              title="Open camera"
-            >
+            <Button size="icon" className="h-11 w-11" variant={camera ? "default" : "outline"} onClick={() => { primeAudio(); setCamera(true); }} title="Open camera">
               <Camera className="h-4 w-4" />
             </Button>
           </div>
@@ -285,11 +357,11 @@ export function ScanToDispatchDialog({ open, onClose, onStatusChange }: ScanToDi
             }}
           />
 
-          {/* Last result */}
+          {/* Result feed */}
           {last && (
             <div
               className={cn(
-                "rounded-xl border-2 p-3 flex items-start gap-3",
+                "rounded-xl border-2 p-3 flex items-start gap-3 animate-in fade-in slide-in-from-top-1 duration-200",
                 last.ok
                   ? "border-emerald-400 bg-emerald-50/60 dark:bg-emerald-950/20"
                   : "border-rose-400 bg-rose-50/60 dark:bg-rose-950/20",
@@ -301,28 +373,35 @@ export function ScanToDispatchDialog({ open, onClose, onStatusChange }: ScanToDi
                 <AlertCircle className="h-5 w-5 text-rose-600 shrink-0 mt-0.5" />
               )}
               <div className="flex-1 min-w-0">
-                <p className="text-sm font-semibold">{last.msg}</p>
+                <p className="text-sm font-semibold break-words">{last.msg}</p>
                 {last.order && (
-                  <div className="mt-1 text-xs text-muted-foreground">
+                  <div className="mt-1 text-xs text-muted-foreground truncate">
                     {last.order.shipping_name || last.order.guest_name || "—"} · ৳{Number(last.order.total ?? 0).toLocaleString()}
                   </div>
                 )}
               </div>
               {last.toStatus && (
-                <Badge className={statusBadge(last.toStatus).className}>{statusBadge(last.toStatus).label}</Badge>
+                <Badge className={cn("shrink-0", statusBadge(last.toStatus).className)}>{statusBadge(last.toStatus).label}</Badge>
               )}
             </div>
           )}
 
-          {busy && (
-            <div className="flex items-center justify-center gap-2 text-sm text-muted-foreground">
-              <Loader2 className="h-4 w-4 animate-spin" /> Processing…
+          {log.length > 1 && (
+            <div className="rounded-xl border bg-muted/30 divide-y max-h-36 overflow-y-auto">
+              {log.slice(1).map((r, i) => (
+                <div key={`${r.at}-${i}`} className="flex items-center gap-2 px-2.5 py-1.5 text-[11px]">
+                  <span className={cn("h-1.5 w-1.5 rounded-full shrink-0", r.ok ? "bg-emerald-500" : "bg-rose-500")} />
+                  <span className="truncate flex-1 text-muted-foreground">{r.msg}</span>
+                </div>
+              ))}
             </div>
           )}
 
           <div className="text-[10px] text-muted-foreground flex items-start gap-1.5">
             <ScanLine className="h-3 w-3 mt-0.5 shrink-0" />
-            Tip: Type invoice/phone and press Enter. In ship mode, choose Pathao/Steadfast/Manual before scanning.
+            {auto
+              ? "Auto mode on — invoice/phone টাইপ বা scan করলেই সাথে সাথে entry হবে (Enter লাগবে না)।"
+              : "Auto off — invoice/phone দিয়ে Enter চাপো।"}
           </div>
         </div>
       </DialogContent>
