@@ -606,11 +606,12 @@
   --elevation-ring: transparent;
 
   /* ── Status scale — single source of truth ──────────────────── */
-  --success-h: 152; --success-s: 58%; --success-l: 38%;
-  --warning-h: 38;  --warning-s: 88%; --warning-l: 45%;
-  --danger-h: 2;    --danger-s: 72%;  --danger-l: 50%;
-  --info-h: 214;    --info-s: 84%;    --info-l: 48%;
-  --neutral-h: 240; --neutral-s: 6%;  --neutral-l: 46%;
+  --success-h: 152; --success-s: 42%; --success-l: 51%;  /* #4CB782 */
+  --warning-h: 48;  --warning-s: 66%; --warning-l: 50%;  /* #D4A72C */
+  --danger-h: 358;  --danger-s: 75%;  --danger-l: 59%;   /* #E5484D */
+  --info-h: 234;    --info-s: 56%;    --info-l: 60%;     /* #5E6AD2 */
+  --neutral-h: 40;  --neutral-s: 4%;  --neutral-l: 45%;  /* warm gray */
+
 
   --success-solid: hsl(var(--success-h) var(--success-s) var(--success-l));
   --success-soft:  hsl(var(--success-h) var(--success-s) 95%);
