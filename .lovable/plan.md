@@ -1,67 +1,41 @@
-# Supply Chain PO Flow v2 — Order → Freight → Partial Release → Warehouse QC → Final COGS
+# SWUS ERP — Presentation Layer Update (Tokens · Login · Orders List · Web Orders)
 
-## Ekhon ki ache (thik ache, rakhbo)
+## What already exists (no rebuild needed)
 
-1. PO create → agent/supplier ke advance pay
-2. Receive at BD → weight × rate/kg diye shipping bosano
-3. Quantity release (partial, pro-rata goods due + release-wise freight, wallet theke pay)
-4. Warehouse QC (good / damaged / extra) → stock adjust
-5. Landed cost per unit release-wise hisab hoy
+- Design tokens + light/dark theme provider + `/uipreview` — already shipped; only the new palette values need updating.
+- Login split-screen with Sync Pulse — already shipped; needs the remaining spec details.
+- Backend fields are all present on `orders`: `call_status`, `call_attempt_count`, `last_call_at`, `last_called_by`, `assigned_to`, `risk_flag`, `duplicate_flag`, `hold_reason`, `reconciliation_status`, `net_collected`, plus `order_notes`, `order_locks`, `order_status_history` and utm/fb attribution columns. So call logging, assignment and bulk actions wire to existing columns — no new tables.
 
-## Ki missing / kothay flow bhenge jay
+## Part 1 — Token refresh
 
-| Gap | Ekhon | Ki hobe |
-|---|---|---|
-| Local courier charge | Release dialog-e (mal ashar **age**) | QC step-e nite hobe — mal hate ashar por, wallet select shoho |
-| Final COGS | Release-er shomoy fix hoye jay | QC-r por **recompute** — damage/missing/local courier dhore final per-pc cost |
-| Color/variant | Data ache kintu UI-te alada kore dekhay na | Release + QC + history shob jaygay color chip + variant-wise remaining |
-| Print | Shudhu reports page-e | Release Slip, QC Report, PO Statement — branded PDF |
-| Remaining visibility | Ek jaygay ekta number | Per-item per-color: Ordered / Released / QC-passed / Remaining |
+Update `src/styles.css` to the new warm-neutral values (bg `#FCFCFB`, surface-alt `#F7F6F4`, border `#EAE8E4`/`#F1F0ED`, text `#171614`/`#75726C`/`#A6A39C`, success `#3E9C74` on `#EAF6F0`, warning `#C08A35` on `#FBF2E4`, danger `#D6534F` on `#FCEBEB`, info `#4A6FA5`), keep dark mode hues and lift semantic opacity. Add a `.num` / mono utility for IDs, phones, money, %, timestamps. Radii: card 13–14, input 8–9, button/chip 7–8, badge 5–6. Extend `/uipreview` with a Checkbox + Table + Tabs section in both themes.
 
-## Notun flow (step by step)
+## Part 2 — Login page completion
 
-```text
-1. PO create        →  goods bill ৳1000, 10 pcs, advance ৳500
-2. Receive at BD    →  freight ৳1000 (weight × rate)  →  total due ৳1500
-3. Release 2 pcs    →  goods due share + oi 2 pcs-er freight share dekhabe
-                       → pay → stock e "unconfirmed" hoye jog hobe
-4. Warehouse QC     →  good / damaged / missing bosabe
-                       + local courier charge + kon account theke
-                       → stock final adjust → FINAL per-pc COGS dekhabe
-5. Baki 8 pcs       →  ek i cycle, nijer freight + nijer courier charge
-```
+Left panel: top bar (brand mark + wordmark, pulsing "All systems synced" chip), Sync Pulse caption "Two brands · one data layer", mono eyebrow, gradient last-three-words headline, numbered 01/02/03 terminal feature rows with right-aligned status chips, footer with © line + mono `v2.0.4`. Staggered fade-up 0.05s→0.9s. Right panel: remember-me + forgot-password row, error clears on typing, arrow nudge on hover, divider "New here?" + "Create an account" secondary button. Reduced-motion respected. Auth logic untouched.
 
-## Ki ki build hobe
+## Part 3 — Orders List (`erp.orders.list.tsx`)
 
-### 1. Database (migration)
-- `imp_po_releases`: `local_courier_bdt`, `local_courier_wallet_id`, `local_courier_payment_id`, `qc_local_courier_note`
-- `imp_po_release_items`: `final_unit_cost_bdt` (QC-r por computed final COGS)
-- QC-r por release-er unit cost recompute kore stock movement cost update
+- Header: "ALL BRANDS" eyebrow with live dot, title + count, mono snapshot metrics (awaiting action, pending COD value, delivery rate), Sync / Export / Create Order actions.
+- Alert strip: renders only when `risk_flag` / `duplicate_flag` / `hold_reason` counts > 0, with "Review now" applying the matching filter.
+- New **pipeline flow bar** component: proportional segmented bar for active statuses, clickable segments filter the table, legend row with counts (active underlined); settled statuses in a separate muted row below.
+- Toolbar stays (search + filter chips + Columns + Sort), restyled to tokens.
+- `orders-table.tsx` → dense hairline rows: checkbox, flag squares, Order (id + relative time), Customer (avatar, name, confidence, phone, truncated address), Call status chip, COD badge, Status (dot + relative time + lock badge from `order_locks`), Reconciliation chip, mono bold Total, attribution icon when utm/fb present, hover kebab.
+- Row click → 420px right slide-in drawer with 4 tabs: Timeline (stepper from `order_status_history`), Attribution, Notes (`order_notes`, internal = amber), Payment key-value grid. Reuses the existing `order-drawer.tsx` shell.
 
-### 2. QC dialog upgrade (`release-history.tsx`)
-- Item row-e color swatch + SKU + image
-- Good / Damaged / Missing / Extra — clean grid, keyboard-friendly
-- **Local courier section**: amount + wallet picker (AccountCombobox) + reference
-- **Live "Final cost" card**: Goods + Freight + Local courier ÷ good pcs = final ৳/pc
-- Confirm korle: stock adjust + courier payment post + final_unit_cost save + product cost update
+## Part 4 — Web Orders (`erp.orders.web.tsx`)
 
-### 3. Release card upgrade (`quantity-release-card.tsx`)
-- Local courier field ekhan theke sore jabe (QC-te)
-- Per-item variant/color wise remaining chart: Ordered · Released · Remaining
-- Payment summary card porishkar: Goods due · Advance share · Freight (ei shipment) · Total to pay now
+Same layout, upgraded:
+- Header/subtext/search restyle; status tabs with mono count badges, solid dark active tab, red-tinted counts for "No Response" and "On Hold".
+- Tag filter row unchanged in position, restyled chips.
+- Pin/alert banner: orders with no call attempt in 3+ hours or a phone-duplicate get a red banner and are pinned to the top with a red-tinted row.
+- Columns: Created (stale >3h in red/bold), Customer (+ amber "Dup of HS-XXXX" badge, copy/call icons), new **Call** column (chip + "Call now" → increments `call_attempt_count`, sets `last_call_at`/`last_called_by`, optimistic then reconciled), Order Items (thumb stack + Pre-order badge), Success Rate ring recolored to tokens, new **Assigned** column (avatar + name, click to pick agent → `assigned_to`), Site & Source, Actions.
+- Floating bulk bar on selection: "N orders selected" + Mark confirmed / Move to On Hold / Assign to… / clear, batched update over selected IDs.
 
-### 4. Printable documents (branded shell use kore)
-- **Release Slip** — kon pcs, kon color, koto qty, freight, expected delivery
-- **QC Report** — released vs received, damage/missing, local courier, final ৳/pc, signature line
-- **PO Statement** — full PO: items, payments, releases, QC, landed cost summary
-- Reports page-e month-wise: "ei mash e koto order / koto release / koto QC pending"
+## Technical notes
 
-### 5. PO detail summary strip
-Ordered · Released · QC done · QC pending · Remaining — ek nojore, color-wise breakdown drawer shoho
+Presentation-layer only: no route paths, RLS or query shapes change. Call logging, assignment and bulk actions use batched Supabase updates on existing columns via new mutation hooks with optimistic cache updates and toast feedback. All new controls are keyboard reachable and honour `prefers-reduced-motion`.
 
-## Technical details
+## Delivery order
 
-- Server: `src/lib/erp/imports/imports.functions.ts` → `qcPoRelease` e local courier payment + final cost recompute; `qtyPoRelease` theke local_delivery sorano (backward-compatible rakhbo, purono data intact)
-- New: `src/lib/erp/imports/print.ts` — release slip / QC report / PO statement HTML, `printHtml` branded shell diye
-- UI: `release-history.tsx`, `quantity-release-card.tsx`, `erp.imports.orders.$orderId.tsx`, `erp.imports.reports.tsx`
-- Purono release (jekhane local delivery already release-e dewa) — sheta oi bhabei dekhabe, double count hobe na
+1. Tokens + `/uipreview` 2. Login 3. Orders List (flow bar, table, drawer) 4. Web Orders (banner, Call, Assigned, bulk bar)
