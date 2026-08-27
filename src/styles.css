@@ -105,12 +105,12 @@
   --chart-4: oklch(0.6256 0.1933 23.03);
   --chart-5: oklch(0.6182 0.1531 275.92);
   --sidebar: oklch(1 0 89.88);
-  --sidebar-foreground: oklch(0.2002 0 89.88);
+  --sidebar-foreground: oklch(0.1875 0.0033 92);
   --sidebar-primary: oklch(0.5674 0.1585 275.21);
   --sidebar-primary-foreground: oklch(1 0 89.88);
-  --sidebar-accent: oklch(0.9550 0.0020 106.42);
-  --sidebar-accent-foreground: oklch(0.2002 0 89.88);
-  --sidebar-border: oklch(0.9398 0.0013 106.42);
+  --sidebar-accent: oklch(0.9532 0.0035 92);
+  --sidebar-accent-foreground: oklch(0.1875 0.0033 92);
+  --sidebar-border: oklch(0.9295 0.0045 92);
   --sidebar-ring: oklch(0.5674 0.1585 275.21);
 
   /* HR semantic palette — works on light surfaces */
