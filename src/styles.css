@@ -711,10 +711,26 @@
   --color-warning: var(--warning-solid);
   --color-danger: var(--danger-solid);
   --color-info: var(--info-solid);
+  --color-primary-hover: var(--primary-hover);
+  --color-primary-subtle: var(--primary-subtle);
   --shadow-flat: var(--elevation-flat);
   --shadow-raised: var(--elevation-raised);
   --shadow-overlay: var(--elevation-overlay);
+  /* 4px base spacing scale */
+  --spacing-1: 4px;
+  --spacing-2: 8px;
+  --spacing-3: 12px;
+  --spacing-4: 16px;
+  --spacing-6: 24px;
+  --spacing-8: 32px;
+  --spacing-12: 48px;
+  --spacing-16: 64px;
+  /* Radius intent tokens */
+  --radius-card: 8px;
+  --radius-control: 6px;
+  --radius-chip: 4px;
 }
+
 
 /* One focus treatment for the whole app. */
 @utility focus-ring {
