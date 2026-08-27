@@ -155,7 +155,7 @@ function Panel({
   return (
     <section className={cn("surface-panel rise-in group/panel relative rounded-2xl overflow-hidden", lazy && "lazy-panel", className)}>
       <span className="pointer-events-none absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-white/60 to-transparent dark:via-white/10" />
-      <header className="surface-head px-4 py-3 sm:px-5 grid grid-cols-[minmax(0,1fr)_auto] items-center gap-3">
+      <header className="surface-head px-3.5 py-2 sm:px-4 grid grid-cols-[minmax(0,1fr)_auto] items-center gap-3">
         <button
           type="button"
           disabled={!collapsible}
