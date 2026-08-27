@@ -86,55 +86,45 @@ export function PipelineFlowBar({ active, counts, total, incompleteCount = 0, on
   }));
 
   return (
-    <section
-      className={cn("rounded-[var(--radius-card)] border border-[var(--panel-border)] bg-card px-3.5 py-3 md:px-4", className)}
-      aria-label="Order pipeline"
-    >
+    <section className={cn("rounded-[var(--radius-card)] border border-border bg-card px-4 py-3.5", className)} aria-label="Order pipeline">
       <div className="flex items-baseline justify-between gap-3">
         <span className="font-mono text-[10px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">
           Active pipeline
         </span>
         <span className="num text-[11px] text-muted-foreground">
-          <span className="font-semibold text-foreground">{flowTotal.toLocaleString()}</span> in flight
+          {flowTotal.toLocaleString()} in flight
         </span>
       </div>
 
-      {/* proportional rail — rounded segments with a hairline gap */}
-      <div className="mt-2.5 flex h-2.5 w-full gap-[3px] overflow-hidden rounded-full" role="group">
+      {/* proportional rail */}
+      <div className="mt-2.5 flex h-2.5 w-full overflow-hidden rounded-full bg-[var(--surface-alt)]" role="group">
         {flowTotal === 0 ? (
-          <div className="h-full w-full rounded-full bg-[var(--surface-alt)]" />
+          <div className="h-full w-full bg-[var(--border)]" />
         ) : (
           flow
             .filter((f) => f.count > 0)
-            .map((f) => {
-              const on = active === f.key;
-              return (
-                <button
-                  key={f.key}
-                  type="button"
-                  onClick={() => onChange(f.statuses, f.key)}
-                  title={`${f.label} — ${f.count.toLocaleString()}`}
-                  aria-label={`${f.label}, ${f.count} orders`}
-                  aria-pressed={on}
-                  className={cn(
-                    "focus-ring h-full rounded-full transition-all duration-300 ease-out",
-                    "hover:brightness-110 motion-reduce:transition-none",
-                  )}
-                  style={{
-                    width: `${(f.count / flowTotal) * 100}%`,
-                    minWidth: 8,
-                    background: f.accent,
-                    opacity: on || active === "all" ? 1 : 0.45,
-                    transform: on ? "scaleY(1.35)" : undefined,
-                  }}
-                />
-              );
-            })
+            .map((f) => (
+              <button
+                key={f.key}
+                type="button"
+                onClick={() => onChange(f.statuses, f.key)}
+                title={`${f.label} — ${f.count.toLocaleString()}`}
+                aria-label={`${f.label}, ${f.count} orders`}
+                aria-pressed={active === f.key}
+                className="focus-ring h-full border-r border-card/70 transition-opacity duration-[var(--motion-fast)] last:border-r-0 hover:opacity-80"
+                style={{
+                  width: `${(f.count / flowTotal) * 100}%`,
+                  minWidth: 6,
+                  background: f.accent,
+                  opacity: active === f.key || active === "all" ? 1 : 0.72,
+                }}
+              />
+            ))
         )}
       </div>
 
-      {/* legend — real pill targets, horizontally scrollable on mobile */}
-      <div className="-mx-1 mt-2.5 flex gap-1.5 overflow-x-auto px-1 pb-0.5 [scrollbar-width:none] md:flex-wrap md:overflow-visible [&::-webkit-scrollbar]:hidden">
+      {/* legend */}
+      <div className="mt-3 flex flex-wrap items-center gap-x-4 gap-y-2">
         {flow.map((f) => {
           const on = active === f.key;
           return (
@@ -144,27 +134,20 @@ export function PipelineFlowBar({ active, counts, total, incompleteCount = 0, on
               onClick={() => onChange(f.statuses, f.key)}
               aria-pressed={on}
               className={cn(
-                "focus-ring inline-flex shrink-0 items-center gap-1.5 rounded-full border px-2.5 py-1 text-[12px] transition-colors duration-150",
-                on
-                  ? "border-transparent bg-foreground text-background"
-                  : "border-[var(--panel-border)] bg-card text-muted-foreground hover:bg-foreground/[0.04] hover:text-foreground",
+                "focus-ring group inline-flex items-center gap-1.5 rounded-[var(--radius-chip)] py-0.5 text-[12px]",
+                on ? "text-foreground" : "text-muted-foreground hover:text-foreground",
               )}
             >
-              <span
-                className="h-1.5 w-1.5 shrink-0 rounded-full"
-                style={{ background: f.accent, opacity: on ? 1 : 0.9 }}
-              />
-              <span className="font-medium">{f.label}</span>
-              <span className={cn("num font-semibold tabular-nums", on ? "" : "text-foreground")}>
-                {f.count.toLocaleString()}
-              </span>
+              <span className="h-2 w-2 shrink-0 rounded-[3px]" style={{ background: f.accent }} />
+              <span className={cn("font-medium", on && "underline decoration-2 underline-offset-4")}>{f.label}</span>
+              <span className="num text-[12px] font-semibold text-foreground">{f.count.toLocaleString()}</span>
             </button>
           );
         })}
       </div>
 
       {/* settled buckets */}
-      <div className="-mx-1 mt-2.5 flex gap-x-3 gap-y-1.5 overflow-x-auto border-t border-[var(--border-soft)] px-1 pt-2.5 [scrollbar-width:none] md:flex-wrap md:overflow-visible [&::-webkit-scrollbar]:hidden">
+      <div className="mt-3 flex flex-wrap items-center gap-x-3.5 gap-y-1.5 border-t border-[var(--border-soft)] pt-2.5">
         {settled.map((s) => {
           const on = active === s.key;
           return (
@@ -174,13 +157,13 @@ export function PipelineFlowBar({ active, counts, total, incompleteCount = 0, on
               onClick={() => onChange(s.statuses, s.key)}
               aria-pressed={on}
               className={cn(
-                "focus-ring inline-flex shrink-0 items-center gap-1.5 rounded-[var(--radius-chip)] text-[11.5px] transition-colors",
-                on ? "font-medium text-foreground" : "text-muted-foreground/80 hover:text-foreground",
+                "focus-ring inline-flex items-center gap-1.5 rounded-[var(--radius-chip)] text-[11.5px]",
+                on ? "text-foreground" : "text-muted-foreground/80 hover:text-foreground",
               )}
             >
               <span className="h-1.5 w-1.5 shrink-0 rounded-full" style={{ background: s.accent, opacity: 0.75 }} />
               <span className={cn(on && "underline decoration-2 underline-offset-4")}>{s.label}</span>
-              <span className="num font-semibold tabular-nums">{s.count.toLocaleString()}</span>
+              <span className="num font-semibold">{s.count.toLocaleString()}</span>
             </button>
           );
         })}
