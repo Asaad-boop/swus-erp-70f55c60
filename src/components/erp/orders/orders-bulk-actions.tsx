@@ -79,9 +79,13 @@ export function OrdersBulkActions({ selectedCount, totalCount, onSelectAll, onCl
       { id: "picking", label: "Print Picking", icon: ClipboardList, tone: "amber" as const, run: () => onPrint("picking") },
       { id: "sheet", label: "Print Sheet", icon: FileSpreadsheet, tone: "emerald" as const, run: () => onPrint("sheet") },
       { id: "export", label: "Export Excel", icon: Download, tone: "emerald" as const, run: onExport },
+      { id: "dispatch_pack", label: "Mark Packed", icon: Package, tone: "amber" as const, run: onDispatchPack },
+      { id: "dispatch_ready", label: "Mark Ready to Ship", icon: CheckCheck, tone: "violet" as const, run: onDispatchReady },
+      { id: "dispatch_ship", label: "Mark Shipped", icon: Truck, tone: "emerald" as const, run: onDispatchShip },
+      { id: "dispatch_scan", label: "Scan to Dispatch", icon: ScanLine, tone: "blue" as const, run: onOpenScanner },
     ];
     return new Map(list.map((a) => [a.id, a]));
-  }, [onStatus, onSendToPathao, onSyncCourier, onPhoneHistory, onPreorder, onPrint, onExport]);
+  }, [onStatus, onSendToPathao, onSyncCourier, onPhoneHistory, onPreorder, onPrint, onExport, onDispatchPack, onDispatchReady, onDispatchShip, onOpenScanner]);
 
   const fire = useCallback((id: string) => {
     const a = actions.get(id);
