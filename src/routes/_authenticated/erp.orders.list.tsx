@@ -526,8 +526,13 @@ function OrdersPage() {
     const onKey = (e: KeyboardEvent) => {
       const t = e.target as HTMLElement | null;
       const typing = !!t && (t.tagName === "INPUT" || t.tagName === "TEXTAREA" || t.isContentEditable);
-      if (e.key === "Escape") { setSelectedIds(new Set()); return; }
-      if (typing || e.metaKey || e.ctrlKey || e.altKey) return;
+      // Don't hijack keys while a dialog / sheet / popover owns the screen.
+      const overlayOpen = !!document.querySelector('[role="dialog"],[role="alertdialog"],[data-state="open"][role="listbox"]');
+      if (e.key === "Escape") {
+        if (!typing && !overlayOpen) setSelectedIds(new Set());
+        return;
+      }
+      if (typing || overlayOpen || e.metaKey || e.ctrlKey || e.altKey) return;
       if (e.key === "/") {
         e.preventDefault();
         document.querySelector<HTMLInputElement>("input[data-orders-search]")?.focus();
