@@ -162,8 +162,8 @@ function Panel({
           onClick={() => setOpen((v) => !v)}
           className={cn("flex min-w-0 items-center gap-2.5 text-left", collapsible && "group cursor-pointer")}
         >
-          <span className={cn("h-5 w-1.5 shrink-0 rounded-full transition-transform duration-300 group-hover/panel:scale-y-110", accent)} />
-          <h3 className="font-display truncate text-[13px] font-semibold tracking-tight text-gray-900 dark:text-foreground">{title}</h3>
+          <span className={cn("h-4 w-1 shrink-0 rounded-full transition-transform duration-300 group-hover/panel:scale-y-110", accent)} />
+          <h3 className="font-display truncate text-[12px] font-semibold uppercase tracking-[0.08em] text-gray-600 dark:text-muted-foreground">{title}</h3>
           {collapsible && (
             <ChevronDown className={cn("h-3.5 w-3.5 shrink-0 text-muted-foreground transition-transform duration-300", isOpen && "rotate-180")} />
           )}
@@ -171,7 +171,8 @@ function Panel({
         {right ? <div className="shrink-0">{right}</div> : null}
       </header>
       {isOpen && (
-        <div className={cn("border-t border-gray-100 dark:border-border", bodyClassName ?? "p-4 sm:p-5")}>{children}</div>
+        <div className={cn("border-t border-gray-100 dark:border-border", bodyClassName ?? "p-3.5")}>{children}</div>
+
       )}
     </section>
   );
