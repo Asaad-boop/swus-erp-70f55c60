@@ -1,3 +1,5 @@
+import { resolveInvoiceMatchTypeFromCourier } from "./courier-status-mapping";
+
 /**
  * Shared reconciliation core.
  * Extracted from reconciliation.functions.ts so both the authenticated
@@ -543,34 +545,24 @@ export async function applyReconRunCore(
         // Courier API truth-check: Pathao lists prepaid / zero-COD parcels
         // under "return"-shaped invoice lines even when the parcel was actually
         // delivered. Never downgrade a parcel the courier API reports as
-        // delivered just because the invoice line looks like a return.
-        let effectiveMatchType = matchType;
-        if (matchType === "return") {
-          const { data: ship } = await supabase
-            .from("courier_shipments")
-            .select("status, response_payload")
-            .eq("order_id", orderId)
-            .order("updated_at", { ascending: false })
-            .limit(1)
-            .maybeSingle();
-          // `status` is the normalized column kept fresh by the webhook/sync;
-          // response_payload can be a stale snapshot from booking time, so
-          // consider both and let the strongest signal win.
-          const payloadStatus = String(
-            (ship?.response_payload as { order_status?: string } | null)?.order_status ?? "",
-          ).toLowerCase();
-          const colStatus = String(ship?.status ?? "").toLowerCase();
-          const signals = [colStatus, payloadStatus].filter(Boolean);
-          const isReturned = signals.some((s) => s.includes("return"));
-          const isPartial = signals.some((s) => s.includes("partial"));
-          const isDelivered = signals.some((s) => s.includes("deliver") && !s.includes("partial"));
-          if (!isReturned) {
-            if (isPartial) effectiveMatchType = "partial";
-            else if (isDelivered) effectiveMatchType = "paid";
-            // Courier still moving the parcel → money side only, keep status.
-            else effectiveMatchType = "unknown";
-          }
-        }
+        // delivered just because the invoice line looks like a return. The raw
+        // `response_payload.order_status` is the source of truth; the normalized
+        // `status` column may be stale from earlier buggy code.
+        const { data: ship } = await supabase
+          .from("courier_shipments")
+          .select("status, response_payload")
+          .eq("order_id", orderId)
+          .order("updated_at", { ascending: false })
+          .limit(1)
+          .maybeSingle();
+        const {
+          effectiveMatchType,
+          correctedShipmentStatus,
+        } = resolveInvoiceMatchTypeFromCourier(
+          "pathao",
+          matchType as "paid" | "return" | "partial",
+          ship as { status: string | null; response_payload?: unknown } | null,
+        );
 
 
         // Update order — branch by match_type
@@ -625,14 +617,10 @@ export async function applyReconRunCore(
         // Update shipment delivery fee if linked. Only stamp a status the
         // invoice actually proves (effective type), never the raw guess.
         if (r.consignment_id) {
-          const shipStatus =
-            effectiveMatchType === "return"
-              ? "Returned"
-              : effectiveMatchType === "partial"
-                ? "Partial Delivered"
-                : effectiveMatchType === "unknown"
-                  ? null
-                  : "Delivered";
+          // Only stamp a status the invoice actually proves (effective type),
+          // never the raw guess. If the normalized status column was stale,
+          // write back the corrected value.
+          const shipStatus = correctedShipmentStatus;
           let sq = supabase
             .from("courier_shipments")
             .update(shipStatus ? { delivery_fee: r.total_fee, status: shipStatus } : { delivery_fee: r.total_fee })
