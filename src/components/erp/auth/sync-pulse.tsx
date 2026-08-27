@@ -22,17 +22,16 @@ export function SyncPulse() {
             <span
               key={i}
               aria-hidden
-              className="sync-packet absolute top-1/2 left-0 h-1.5 w-1.5 -translate-y-1/2 rounded-full"
+              className="sync-packet absolute top-1/2 h-1.5 w-1.5 -translate-x-1/2 -translate-y-1/2 rounded-full"
               style={{
-                // travel distance is resolved by the parent's width
-                ["--sync-distance" as string]: "calc(100cqw)",
+                left: 0,
                 animationDelay: `${i * 0.9}s`,
                 background: "oklch(0.85 0.09 290)",
                 boxShadow: "0 0 10px 2px oklch(0.70 0.15 285 / 0.65)",
               }}
             />
           ))}
-          <div className="absolute inset-0" style={{ containerType: "inline-size" }} />
+
         </div>
 
         <BrandNode label="Toyora Kids" sub="Fulfillment" ring="oklch(0.66 0.17 305)" align="right" />
