@@ -126,6 +126,8 @@ type WebOrderRow = {
   payment_method: string | null;
   call_attempt_count: number | null;
   call_status: string | null;
+  last_call_at: string | null;
+  assigned_to: string | null;
   brand_id: string | null;
   is_preorder: boolean | null;
   preorder_expected_date: string | null;
@@ -671,7 +673,7 @@ function _WebOrdersPageBody() {
         supabase
           .from("orders")
           .select(
-            "id,created_at,shipping_name,shipping_phone,shipping_address,shipping_city,shipping_district,guest_name,guest_phone,latest_note,customer_note,notes,tags,source_website,status,web_status,total,advance_amount,advance_txn_id,verified_at,payment_method,call_attempt_count,call_status,brand_id,is_preorder,preorder_expected_date,updated_at",
+            "id,created_at,shipping_name,shipping_phone,shipping_address,shipping_city,shipping_district,guest_name,guest_phone,latest_note,customer_note,notes,tags,source_website,status,web_status,total,advance_amount,advance_txn_id,verified_at,payment_method,call_attempt_count,call_status,last_call_at,assigned_to,brand_id,is_preorder,preorder_expected_date,updated_at",
             { count: "exact" },
           ),
         brandIds,
@@ -971,6 +973,39 @@ function _WebOrdersPageBody() {
     ? taggedRows
     : taggedRows.filter(({ tags }) => tags.some((t) => tagFilter.has(t.key)));
 
+  // Stale = created 3h+ ago with no call attempt logged yet.
+  const STALE_MS = 3 * 60 * 60 * 1000;
+  const isStale = (r: WebOrderRow) =>
+    !r.last_call_at &&
+    (r.call_attempt_count ?? 0) === 0 &&
+    Date.now() - new Date(r.created_at).getTime() > STALE_MS;
+
+  // Duplicate = same normalized phone appears more than once on this page.
+  const duplicatePhones = useMemo(() => {
+    const seen = new Map<string, number>();
+    for (const { row } of filteredRows) {
+      const ph = normalizePhone(row.shipping_phone ?? row.guest_phone ?? "");
+      if (!ph) continue;
+      seen.set(ph, (seen.get(ph) ?? 0) + 1);
+    }
+    return new Set([...seen.entries()].filter(([, n]) => n > 1).map(([ph]) => ph));
+  }, [filteredRows]);
+
+  const isDuplicate = (r: WebOrderRow) => {
+    const ph = normalizePhone(r.shipping_phone ?? r.guest_phone ?? "");
+    return !!ph && duplicatePhones.has(ph);
+  };
+
+  // Urgent rows float to the top of the list.
+  const pinnedRows = useMemo(() => {
+    const score = (r: WebOrderRow) => (isStale(r) ? 2 : 0) + (isDuplicate(r) ? 1 : 0);
+    return [...filteredRows].sort((a, b) => score(b.row) - score(a.row));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [filteredRows, duplicatePhones]);
+
+  const staleCount = filteredRows.filter(({ row }) => isStale(row)).length;
+  const dupCount = filteredRows.filter(({ row }) => isDuplicate(row)).length;
+
   const toggleTagFilter = (k: AutoTagKey) => {
     setTagFilter((prev) => {
       const next = new Set(prev);
@@ -1207,6 +1242,25 @@ function _WebOrdersPageBody() {
           />
         </div>
       ) : (
+      <>
+      {(staleCount > 0 || dupCount > 0) && (
+        <div
+          role="status"
+          className="mb-3 flex flex-wrap items-center gap-2 rounded-[var(--radius-card)] border border-[var(--danger-border)] bg-[var(--danger-soft)] px-3.5 py-2.5 text-[12.5px] text-[var(--danger-text)]"
+        >
+          <AlertTriangle className="h-4 w-4 shrink-0" />
+          <span>
+            {staleCount > 0 && (
+              <>
+                <span className="num font-semibold">{staleCount}</span> order 3 ঘণ্টার বেশি সময় ধরে call করা হয়নি, উপরে pin করা আছে.
+              </>
+            )}
+            {dupCount > 0 && (
+              <> <span className="num font-semibold">{dupCount}</span> possible duplicate detected.</>
+            )}
+          </span>
+        </div>
+      )}
       <div className="rounded-xl border border-border/60 bg-card overflow-x-auto shadow-[0_1px_2px_rgba(0,0,0,0.02)]">
         <Table>
           <TableHeader>
@@ -1245,7 +1299,7 @@ function _WebOrdersPageBody() {
                 </TableCell>
               </TableRow>
             ) : (
-              filteredRows.map(({ row: r, tags: autoTags }) => {
+              pinnedRows.map(({ row: r, tags: autoTags }) => {
                 const name = r.shipping_name ?? r.guest_name ?? "—";
                 const phone = r.shipping_phone ?? r.guest_phone ?? "";
                 // Only real customer/staff notes — skip r.notes (auto-populated with items summary)
