@@ -1,6 +1,6 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { Plus, Download, RefreshCw, Inbox } from "lucide-react";
+import { Plus, Download, RefreshCw, Inbox, Clock, Wallet, TrendingUp } from "lucide-react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
@@ -14,6 +14,7 @@ import { useCourierShipments, COURIER_BUCKET_META, type CourierBucket, type Cour
 import { applyBrandScope } from "@/lib/erp/apply-brand-scope";
 import { PipelineFlowBar } from "@/components/erp/orders/pipeline-flow-bar";
 import { OrdersAlertStrip } from "@/components/erp/orders/orders-alert-strip";
+import { OrdersMetricStrip, type Metric } from "@/components/erp/orders/orders-metric-strip";
 import { OrderInsightDrawer } from "@/components/erp/orders/order-insight-drawer";
 import { useOrderLocksFor } from "@/hooks/erp/use-order-ops";
 import { OrdersToolbar } from "@/components/erp/orders/orders-toolbar";
@@ -21,7 +22,6 @@ import { OrdersBulkActions } from "@/components/erp/orders/orders-bulk-actions";
 import { OrdersTable } from "@/components/erp/orders/orders-table";
 import { OrdersSelectionBar } from "@/components/erp/orders/orders-selection-bar";
 import { OrdersPagination } from "@/components/erp/orders/orders-pagination";
-import { ErpPageHeader, HeaderChip } from "@/components/erp/ui/page-header";
 import { EmptyState } from "@/components/erp/ui/data-panel";
 import { useOrdersPrefs, useSavedViews } from "@/hooks/erp/use-orders-prefs";
 import { OrderDrawer } from "@/components/erp/orders/order-drawer";
