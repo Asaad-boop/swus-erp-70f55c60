@@ -55,12 +55,13 @@ const bdt = (n: number) => `৳${n.toLocaleString("en-BD")}`;
 
 function UiPreview() {
   const { isAdmin } = useCurrentRole();
+  const { theme, toggleTheme } = useTheme();
   const [density, setDensity] = useState<Density>("default");
   const [search, setSearch] = useState("");
   const [chips, setChips] = useState<string[]>(["active"]);
-  const [dark, setDark] = useState(false);
   const [showEmpty, setShowEmpty] = useState(false);
   const [loading, setLoading] = useState(false);
+  const dark = theme === "dark";
 
   if (!isAdmin && !import.meta.env.DEV) {
     return (
@@ -73,12 +74,6 @@ function UiPreview() {
       </main>
     );
   }
-
-  const toggleDark = () => {
-    const next = !dark;
-    setDark(next);
-    document.documentElement.classList.toggle("dark", next);
-  };
 
   const columns: DataTableColumn<Row>[] = [
     { key: "sku", header: "SKU", cell: (r) => <span className="font-mono text-caption-v2">{r.sku}</span>, width: "180px" },
@@ -101,16 +96,111 @@ function UiPreview() {
           subtitle="Every style used in Phases 2–6 must appear on this page first."
           actions={
             <>
-              <Button variant="outline" size="sm" onClick={toggleDark}>
+              <Button variant="outline" size="sm" onClick={toggleTheme}>
                 {dark ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
                 {dark ? "Light" : "Dark"}
               </Button>
+              <ThemeToggle />
               <Button size="sm">
                 <Plus className="h-4 w-4" /> Primary action
               </Button>
             </>
           }
         />
+
+        {/* Colour tokens */}
+        <DataPanel title="Colour tokens" description="One accent (#5E6AD2) + warm neutrals. Muted semantic colours.">
+          <div className="grid gap-3 sm:grid-cols-3 lg:grid-cols-5">
+            {[
+              { name: "background", cls: "bg-background" },
+              { name: "card / surface", cls: "bg-card" },
+              { name: "border", cls: "bg-border" },
+              { name: "foreground", cls: "bg-foreground" },
+              { name: "muted-foreground", cls: "bg-muted-foreground" },
+              { name: "primary", cls: "bg-primary" },
+              { name: "primary-hover", cls: "bg-[var(--primary-hover)]" },
+              { name: "primary-subtle", cls: "bg-[var(--primary-subtle)]" },
+              { name: "success", cls: "bg-[var(--success-solid)]" },
+              { name: "warning", cls: "bg-[var(--warning-solid)]" },
+              { name: "danger", cls: "bg-[var(--danger-solid)]" },
+              { name: "info", cls: "bg-[var(--info-solid)]" },
+            ].map((t) => (
+              <div key={t.name} className="rounded-[var(--radius-card)] border border-border p-2">
+                <div className={`h-10 w-full rounded-[var(--radius-chip)] border border-border ${t.cls}`} />
+                <div className="mt-1.5 text-caption-v2 text-muted-foreground">{t.name}</div>
+              </div>
+            ))}
+          </div>
+        </DataPanel>
+
+        {/* Buttons */}
+        <DataPanel title="Button" description="primary · secondary · ghost · outline · danger · subtle">
+          <div className="flex flex-wrap items-center gap-2">
+            <Button>Primary</Button>
+            <Button variant="secondary">Secondary</Button>
+            <Button variant="ghost">Ghost</Button>
+            <Button variant="outline">Outline</Button>
+            <Button variant="danger">Danger</Button>
+            <Button variant="subtle">Subtle</Button>
+            <Button variant="link">Link</Button>
+            <Button disabled>Disabled</Button>
+          </div>
+          <div className="mt-3 flex flex-wrap items-center gap-2">
+            <Button size="sm">Small</Button>
+            <Button>Default</Button>
+            <Button size="lg">Large</Button>
+            <Button size="icon" aria-label="Add"><Plus className="h-4 w-4" /></Button>
+          </div>
+        </DataPanel>
+
+        {/* Form controls */}
+        <DataPanel title="Input & Select" description="8px radius, hairline border, single focus ring.">
+          <div className="grid gap-4 sm:grid-cols-3">
+            <div className="space-y-1.5">
+              <Label className="text-caption-v2 uppercase tracking-wider text-muted-foreground">Input</Label>
+              <Input placeholder="Search SKU…" />
+            </div>
+            <div className="space-y-1.5">
+              <Label className="text-caption-v2 uppercase tracking-wider text-muted-foreground">Disabled</Label>
+              <Input placeholder="Read only" disabled />
+            </div>
+            <div className="space-y-1.5">
+              <Label className="text-caption-v2 uppercase tracking-wider text-muted-foreground">Select</Label>
+              <Select defaultValue="all">
+                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All brands</SelectItem>
+                  <SelectItem value="hobby">Hobby Shop</SelectItem>
+                  <SelectItem value="toyora">Toyora</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+        </DataPanel>
+
+        {/* Tabs + Card */}
+        <DataPanel title="Tabs & Card" description="Neutral chrome; the accent marks the active state only.">
+          <Tabs defaultValue="overview">
+            <TabsList>
+              <TabsTrigger value="overview">Overview</TabsTrigger>
+              <TabsTrigger value="orders">Orders</TabsTrigger>
+              <TabsTrigger value="finance">Finance</TabsTrigger>
+            </TabsList>
+            <TabsContent value="overview" className="pt-3">
+              <Card>
+                <CardHeader>
+                  <CardTitle className="text-h4">Card surface</CardTitle>
+                </CardHeader>
+                <CardContent className="text-small-v2 text-muted-foreground">
+                  Cards stay flat; only modals and dropdowns get elevation.
+                </CardContent>
+              </Card>
+            </TabsContent>
+            <TabsContent value="orders" className="pt-3 text-small-v2 text-muted-foreground">Orders panel.</TabsContent>
+            <TabsContent value="finance" className="pt-3 text-small-v2 text-muted-foreground">Finance panel.</TabsContent>
+          </Tabs>
+        </DataPanel>
+
 
         {/* Status scale */}
         <DataPanel title="Status scale" description="5 tones × 3 visuals — the only status colours in the app.">
