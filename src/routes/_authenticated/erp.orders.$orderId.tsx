@@ -1753,7 +1753,7 @@ function splitCourierProviders(providers?: HistProvider[] | null) {
           </Panel>
 
           {/* Totals row */}
-          <Panel title="Pricing & Totals" accent="bg-amber-500" bodyClassName="p-5">
+          <Panel title="Pricing & Totals" accent="bg-amber-500" bodyClassName="p-3.5">
             <div>
             <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
               <FieldShell label="Discount">
@@ -2021,7 +2021,7 @@ function splitCourierProviders(providers?: HistProvider[] | null) {
             accent="bg-amber-500"
             collapsible
             defaultOpen={tags.length > 0}
-            bodyClassName="p-4"
+            bodyClassName="p-3"
             lazy
             right={tags.length > 0 ? <span className="text-[10px] text-gray-500 tabular-nums">{tags.length}</span> : null}
           >
@@ -2049,7 +2049,7 @@ function splitCourierProviders(providers?: HistProvider[] | null) {
             </div>
           </Panel>
 
-          <Panel title="Actions & Notes" accent="bg-indigo-500" bodyClassName="p-4">
+          <Panel title="Actions & Notes" accent="bg-indigo-500" bodyClassName="p-3">
             <div className="space-y-3">
               <Select
                 value={draftWebStatus}
