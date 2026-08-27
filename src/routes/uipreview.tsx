@@ -20,6 +20,8 @@ import {
   StatPill,
   StatusBadge,
   Toolbar,
+  ThemeToggle,
+
   type Density,
   type DataTableColumn,
   type StatusVariant,
