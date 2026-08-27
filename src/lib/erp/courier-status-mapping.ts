@@ -199,6 +199,24 @@ const ALLOWED_FROM_RESOLVED: Partial<Record<OrderStatus, OrderStatus[]>> = {
 };
 
 /**
+ * Forward-only ranking for the pre-delivery fulfillment pipeline.
+ * A courier feed must never pull an order *backwards* here — e.g. Pathao keeps
+ * emitting `Pickup_Requested` / `Pending` (→ ready_to_ship) for a few seconds
+ * after booking, which used to flip a freshly shipped order back to RTS.
+ * Statuses outside this map (on_hold, cancelled, return family, delivered…)
+ * are unaffected and still governed by ALLOWED_FROM_RESOLVED.
+ */
+const PIPELINE_RANK: Partial<Record<OrderStatus, number>> = {
+  confirmed: 1,
+  ready_to_pack: 2,
+  packaging: 2,
+  packed: 3,
+  ready_to_ship: 4,
+  shipped: 5,
+  in_transit: 6,
+};
+
+/**
  * Returns the status to apply, or `null` when the courier update must be
  * ignored (no change / illegal downgrade).
  */
@@ -209,6 +227,9 @@ export function resolveCourierTransition(
   if (!mapped) return null;
   if (!current) return mapped;
   if (mapped === current) return null;
+  const curRank = PIPELINE_RANK[current as OrderStatus];
+  const nextRank = PIPELINE_RANK[mapped];
+  if (curRank != null && nextRank != null && nextRank < curRank) return null;
   const allow = ALLOWED_FROM_RESOLVED[current as OrderStatus];
   if (allow && !allow.includes(mapped)) return null;
   return mapped;
