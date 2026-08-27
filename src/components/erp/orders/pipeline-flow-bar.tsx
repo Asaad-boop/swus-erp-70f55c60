@@ -22,6 +22,7 @@ const SETTLED_KEYS: StatusTabKey[] = [
   "exchange",
   "on_hold",
   "cancelled",
+  "incomplete",
   "all",
 ];
 
@@ -78,7 +79,7 @@ export function PipelineFlowBar({ active, counts, total, incompleteCount = 0, on
   const flowTotal = flow.reduce((s, f) => s + f.count, 0);
   const settled = SETTLED_KEYS.map((key) => ({
     key,
-    label: tabByKey.get(key)?.label ?? key,
+    label: tabByKey.get(key)?.label ?? (key === "incomplete" ? "Incomplete" : key),
     statuses: tabByKey.get(key)?.statuses ?? [],
     count: countFor(key),
     accent: ACCENT[key] ?? "var(--status-all)",
