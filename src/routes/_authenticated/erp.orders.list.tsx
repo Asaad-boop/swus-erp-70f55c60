@@ -550,6 +550,11 @@ function OrdersPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [visibleRows, total, updateFilter]);
 
+  // Paging should feel like a fresh screen, not a jump mid-table.
+  useEffect(() => {
+    document.querySelector("main")?.scrollTo({ top: 0, behavior: "smooth" });
+  }, [filter.page]);
+
   // Header snapshot metrics derived from the counts already fetched.
   const snapshot = useMemo(() => {
     const c = countsData?.counts ?? {};
