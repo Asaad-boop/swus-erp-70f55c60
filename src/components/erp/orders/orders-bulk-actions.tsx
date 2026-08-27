@@ -89,7 +89,7 @@ export function OrdersBulkActions({ selectedCount, totalCount, onSelectAll, onCl
 
   const fire = useCallback((id: string) => {
     const a = actions.get(id);
-    if (!a) return;
+    if (!a?.run) return;
     remember(id);
     a.run();
   }, [actions, remember]);
