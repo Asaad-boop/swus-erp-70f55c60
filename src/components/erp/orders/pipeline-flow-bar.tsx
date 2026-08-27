@@ -22,7 +22,6 @@ const SETTLED_KEYS: StatusTabKey[] = [
   "exchange",
   "on_hold",
   "cancelled",
-  "incomplete",
   "all",
 ];
 
