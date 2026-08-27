@@ -726,9 +726,10 @@
   --spacing-12: 48px;
   --spacing-16: 64px;
   /* Radius intent tokens */
-  --radius-card: 8px;
-  --radius-control: 6px;
-  --radius-chip: 4px;
+  --radius-card: 14px;
+  --radius-input: 9px;
+  --radius-control: 8px;
+  --radius-chip: 6px;
 }
 
 
