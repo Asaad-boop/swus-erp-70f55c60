@@ -26,7 +26,7 @@ type Props = {
 
 const RECENT_KEY = "erp.orders.bulk.recent";
 
-export function OrdersBulkActions({ selectedCount, totalCount, onSelectAll, onClear, onStatus, onExport, onSendToPathao, onSyncCourier, onPhoneHistory, onPreorder, onPrint, isPending }: Props) {
+export function OrdersBulkActions({ selectedCount, totalCount, onSelectAll, onClear, onStatus, onExport, onSendToPathao, onSyncCourier, onPhoneHistory, onPreorder, onPrint, onDispatchPack, onDispatchReady, onDispatchShip, onOpenScanner, isPending }: Props) {
   const disabled = selectedCount === 0;
   const [open, setOpen] = useState(false);
   const [q, setQ] = useState("");
