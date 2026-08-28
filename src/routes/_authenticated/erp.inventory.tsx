@@ -4,7 +4,7 @@ import {
   Download, Search, ArrowUp, ArrowDown, History, Check, Package, Boxes,
   AlertTriangle, Wallet, ChevronRight, ChevronDown, BarChart3, MoreVertical,
   ScanLine, Plus, Settings, Lock, TrendingUp, TrendingDown, Layers, Clock,
-  Edit3, AlertCircle, X, Trash2, Tag, DollarSign,
+  Edit3, AlertCircle, X, Trash2, Tag, DollarSign, ClipboardCheck,
 } from "lucide-react";
 import { useQueryClient, useMutation } from "@tanstack/react-query";
 import { toast } from "sonner";
@@ -48,6 +48,7 @@ import {
 } from "@/lib/erp/inventory";
 import { downloadCsv } from "@/lib/erp/orders";
 import { StockAdjustDialog } from "@/components/erp/inventory/stock-adjust-dialog";
+import { PhysicalCountDialog } from "@/components/erp/inventory/physical-count-dialog";
 import { BulkStockDialog } from "@/components/erp/inventory/bulk-stock-dialog";
 import { BulkReorderDialog } from "@/components/erp/inventory/bulk-reorder-dialog";
 import { ProductEditDialog } from "@/components/erp/inventory/product-edit-dialog";
@@ -144,6 +145,7 @@ function InventoryPage() {
   }, [brands]);
 
   const [adjust, setAdjust] = useState<{ product: ProductRow; mode: "in" | "out" } | null>(null);
+  const [countProduct, setCountProduct] = useState<ProductRow | null>(null);
   const [historyProduct, setHistoryProduct] = useState<ProductRow | null>(null);
   const [editProduct, setEditProduct] = useState<ProductRow | null>(null);
   const [addOpen, setAddOpen] = useState(false);
@@ -254,7 +256,7 @@ function InventoryPage() {
     onError: (e: Error) => toast.error(e.message),
   });
 
-  const summary = summaryQuery.data ?? { products: 0, units: 0, value: 0, reserved: 0, low: 0, out: 0 };
+  const summary = summaryQuery.data ?? { products: 0, units: 0, value: 0, reserved: 0, available: 0, low: 0, out: 0, oversold: 0, shortfall: 0, noCost: 0 };
 
   const lowOrOut = summary.low + summary.out;
   const syncedAt = dataUpdatedAt ? new Date(dataUpdatedAt) : null;
@@ -265,6 +267,8 @@ function InventoryPage() {
     { k: "low", label: "Low Stock" },
     { k: "out", label: "Out of Stock" },
     { k: "reserved", label: "Reserved" },
+    { k: "oversold", label: "Oversold" },
+    { k: "nocost", label: "Missing cost" },
   ];
 
   return (
@@ -313,7 +317,7 @@ function InventoryPage() {
       </header>
 
       {/* KPI CARDS */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-px rounded-2xl border border-border/70 bg-border/60 overflow-hidden">
+      <div className="grid grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-px rounded-2xl border border-border/70 bg-border/60 overflow-hidden">
         <KpiCard
           accent="blue"
           icon={<Package className="h-5 w-5" />}
@@ -342,6 +346,27 @@ function InventoryPage() {
           value={`${summary.low} / ${summary.out}`}
           hint={lowQuery.data?.length ? `${lowQuery.data.length} active alerts` : "All healthy"}
           emphasize={lowOrOut > 0}
+          onClick={() => setFilter({ ...filter, stockState: filter.stockState === "low" ? "all" : "low", page: 0 })}
+          active={filter.stockState === "low"}
+        />
+        <KpiCard
+          accent="amber"
+          icon={<Lock className="h-5 w-5" />}
+          label="Reserved / Available"
+          value={`${summary.reserved.toLocaleString()} / ${summary.available.toLocaleString()}`}
+          hint="Confirmed orders এর জন্য আটকে থাকা units"
+          onClick={() => setFilter({ ...filter, stockState: filter.stockState === "reserved" ? "all" : "reserved", page: 0 })}
+          active={filter.stockState === "reserved"}
+        />
+        <KpiCard
+          accent="red"
+          icon={<AlertCircle className="h-5 w-5" />}
+          label="Oversold SKUs"
+          value={summary.oversold.toLocaleString()}
+          hint={summary.oversold > 0 ? `${summary.shortfall.toLocaleString()} pcs shortfall · physical count দরকার` : "Reserved সব cover করা আছে"}
+          emphasize={summary.oversold > 0}
+          onClick={() => setFilter({ ...filter, stockState: filter.stockState === "oversold" ? "all" : "oversold", page: 0 })}
+          active={filter.stockState === "oversold"}
         />
       </div>
 
@@ -683,7 +708,9 @@ function InventoryPage() {
                         {cols.wac && <TableCell className="text-right tabular-nums text-xs text-muted-foreground">
                           <span className="text-muted-foreground/50 mr-0.5">৳</span>{wac.toLocaleString(undefined, { maximumFractionDigits: 2 })}
                         </TableCell>}
-                        <TableCell className="text-right tabular-nums text-sm text-foreground/80">{r.stock}</TableCell>
+                        <TableCell className="text-right">
+                          <StockLadder physical={Number(r.stock)} reserved={reserved} available={available} />
+                        </TableCell>
                         {cols.reserved && <TableCell className="text-right">
                           {reserved > 0 ? (
                             <span className="inline-flex items-center gap-1 tabular-nums text-sm text-amber-600 dark:text-amber-400 font-medium">
@@ -740,6 +767,9 @@ function InventoryPage() {
                               </DropdownMenuItem>
                               <DropdownMenuItem onClick={() => setAdjust({ product: r, mode: "out" })}>
                                 <ArrowDown className="h-4 w-4 mr-2 text-red-600" />Stock Out
+                              </DropdownMenuItem>
+                              <DropdownMenuItem onClick={() => setCountProduct(r)}>
+                                <ClipboardCheck className="h-4 w-4 mr-2 text-violet-600" />Physical Count
                               </DropdownMenuItem>
                               <DropdownMenuSeparator />
                               <DropdownMenuItem onClick={() => setHistoryProduct(r)}>
@@ -967,6 +997,8 @@ function InventoryPage() {
           </div>
         </TabsContent>
       </Tabs>
+
+      <PhysicalCountDialog product={countProduct} onClose={() => setCountProduct(null)} />
 
       <StockAdjustDialog
         product={adjust?.product ?? null}
