@@ -298,11 +298,11 @@ export const getFinanceOverview = createServerFn({ method: "POST" })
       dailyMap.set(d.toISOString().slice(0, 10), { revenue: 0, expense: 0 });
     }
     for (const o of (dailyOrdRes.data ?? []) as { total: number; created_at: string }[]) {
-      const k = o.created_at.slice(0, 10);
+      const k = dhakaDay(o.created_at);
       const cur = dailyMap.get(k); if (cur) cur.revenue += num(o.total);
     }
-    for (const t of (dailyTxnRes.data ?? []) as { amount: number; transaction_date: string; txn_type: string }[]) {
-      if (t.txn_type !== "expense") continue;
+    for (const t of (dailyTxnRes.data ?? []) as { amount: number; transaction_date: string; txn_type: string; reference_type: string | null }[]) {
+      if (t.txn_type !== "expense" || isCapitalOutflow(t.reference_type)) continue;
       const cur = dailyMap.get(t.transaction_date); if (cur) cur.expense += num(t.amount);
     }
     const dailySeries = Array.from(dailyMap.entries()).map(([date, v]) => ({ date, revenue: v.revenue, expense: v.expense, net: v.revenue - v.expense }));
