@@ -12137,6 +12137,10 @@ export type Database = {
         Args: { _brand_id: string; _from: string; _to: string }
         Returns: Json
       }
+      erp_sync_return_cases_for_order: {
+        Args: { _order_id: string }
+        Returns: number
+      }
       finalize_order_on_confirm: {
         Args: { _order_id: string }
         Returns: undefined
