@@ -515,6 +515,7 @@ function NewOrderPage() {
       const phoneError = bdPhoneError(phone);
       if (phoneError) throw new Error(phoneError);
       if (!address.trim()) throw new Error("Address lagbe");
+      if (!orderSource) throw new Error("Order source select korun");
       if (items.length === 0) throw new Error("At least 1 product add korun");
       if (items.some((i) => i.needsVariant && !i.variant_id)) {
         throw new Error("Product er color select korun");
@@ -624,12 +625,13 @@ function NewOrderPage() {
     if (!name.trim()) m.push("Name");
     if (bdPhoneError(phone)) m.push("Phone");
     if (!address.trim()) m.push("Address");
+    if (!orderSource) m.push("Order source");
     if (items.length === 0) m.push("Product");
     if (items.some((i) => i.needsVariant && !i.variant_id)) m.push("Color");
     if (Number(advance) > 0 && !advanceSource) m.push("Advance source");
     if (Number(advance) > 0 && advanceNumber.length < 4) m.push("Advance number");
     return m;
-  }, [effectiveBrandId, name, phone, address, items, advance, advanceSource, advanceNumber]);
+  }, [effectiveBrandId, name, phone, address, orderSource, items, advance, advanceSource, advanceNumber]);
 
   // Reset in-place instead of a full page reload — next order starts instantly.
   const resetForm = useCallback(() => {
@@ -1213,7 +1215,7 @@ function NewOrderPage() {
           <div className="order-3 space-y-3 md:space-y-4 lg:col-span-4">
             <Card className="shadow-sm">
               <CardContent className="space-y-3.5 p-4">
-                <Field label="Order Source" bn="অর্ডার সোর্স">
+                <Field label="Order Source" bn="অর্ডার সোর্স" required>
                   <Select value={orderSource} onValueChange={setOrderSource}>
                     <SelectTrigger className="h-10">
                       <SelectValue placeholder="Where did this order come from?" />
