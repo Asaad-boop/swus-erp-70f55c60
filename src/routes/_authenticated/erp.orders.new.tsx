@@ -3,7 +3,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   Plus, Trash2, Search, ArrowLeft, Loader2, Sparkles, Truck, Package,
   Star, MinusCircle, PlusCircle, ImageIcon, Info, Wand2, History,
-  CheckCircle2, XCircle, AlertCircle, MapPin, User2, Receipt, ArrowRight, ChevronsUpDown, Check, X,
+  CheckCircle2, AlertCircle, MapPin, User2, Receipt, ArrowRight, ChevronsUpDown, Check, X,
   Phone, MessageCircle,
 } from "lucide-react";
 
