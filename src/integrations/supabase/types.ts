@@ -7531,6 +7531,93 @@ export type Database = {
           },
         ]
       }
+      marketing_reels: {
+        Row: {
+          brand_id: string
+          caption: string | null
+          created_at: string
+          facebook_url: string | null
+          id: string
+          is_active: boolean
+          poster: string | null
+          product_slug: string | null
+          provider: string
+          sort_order: number
+          updated_at: string
+          video_url: string | null
+          youtube_id: string | null
+        }
+        Insert: {
+          brand_id: string
+          caption?: string | null
+          created_at?: string
+          facebook_url?: string | null
+          id?: string
+          is_active?: boolean
+          poster?: string | null
+          product_slug?: string | null
+          provider?: string
+          sort_order?: number
+          updated_at?: string
+          video_url?: string | null
+          youtube_id?: string | null
+        }
+        Update: {
+          brand_id?: string
+          caption?: string | null
+          created_at?: string
+          facebook_url?: string | null
+          id?: string
+          is_active?: boolean
+          poster?: string | null
+          product_slug?: string | null
+          provider?: string
+          sort_order?: number
+          updated_at?: string
+          video_url?: string | null
+          youtube_id?: string | null
+        }
+        Relationships: []
+      }
+      marketing_slides: {
+        Row: {
+          alt: string
+          brand_id: string
+          created_at: string
+          id: string
+          image_url: string
+          image_url_sm: string | null
+          is_active: boolean
+          link_url: string | null
+          sort_order: number
+          updated_at: string
+        }
+        Insert: {
+          alt?: string
+          brand_id: string
+          created_at?: string
+          id?: string
+          image_url: string
+          image_url_sm?: string | null
+          is_active?: boolean
+          link_url?: string | null
+          sort_order?: number
+          updated_at?: string
+        }
+        Update: {
+          alt?: string
+          brand_id?: string
+          created_at?: string
+          id?: string
+          image_url?: string
+          image_url_sm?: string | null
+          is_active?: boolean
+          link_url?: string | null
+          sort_order?: number
+          updated_at?: string
+        }
+        Relationships: []
+      }
       meta_ad_wallet_ledger: {
         Row: {
           ad_account_id: string
