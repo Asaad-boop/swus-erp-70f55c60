@@ -159,7 +159,7 @@ export const sendOrderSms = createServerFn({ method: "POST" })
       tracking: order.tracking_number ?? "",
       date: new Date().toISOString().slice(0, 10),
     }).trim();
-    if (!message) return { ok: false, skipped: "empty_template" as const };
+    if (!message) return skip("empty_template");
 
     const res = await sendBulkSms({ apiKey: cfg.api_key, senderId: cfg.sender_id, numbers: [phone], message });
 
