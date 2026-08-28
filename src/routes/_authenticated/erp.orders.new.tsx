@@ -925,7 +925,7 @@ function NewOrderPage() {
                       <Package className="h-6 w-6 text-muted-foreground/40" />
                     </div>
                     <p className="text-xs font-bold uppercase tracking-widest text-muted-foreground">No products added</p>
-                    <p className="text-[11px] text-muted-foreground/80">ডান পাশ থেকে product add করুন</p>
+                    <p className="text-[11px] text-muted-foreground/80">উপরের “Quick Add Products” থেকে product add করুন</p>
                   </div>
                 ) : (
                   <div className="space-y-2">
