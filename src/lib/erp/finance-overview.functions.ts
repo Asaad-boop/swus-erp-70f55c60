@@ -48,6 +48,9 @@ export type FinanceOverview = {
     importsDueTop: { po: string; supplier: string; due: number; status: string }[];
     upcomingRecurring: { id: string; name: string; amount: number; next_run: string }[];
     topExpenseCats: { name: string; amount: number }[];
+    /** Full operating-expense breakdown (capital outflows excluded). */
+    expenseCats: { name: string; amount: number }[];
+
     overdueBills: number;
   };
   monthlySeries: { month: string; revenue: number; expense: number; net: number }[];
@@ -219,10 +222,11 @@ export const getFinanceOverview = createServerFn({ method: "POST" })
       const name = (t.category_id && catMap.get(t.category_id)) || refLabel(t.reference_type);
       expByCat.set(name, (expByCat.get(name) ?? 0) + num(t.amount));
     }
-    const topExpenseCats = Array.from(expByCat.entries())
+    const expenseCats = Array.from(expByCat.entries())
       .map(([name, amount]) => ({ name, amount }))
-      .sort((a, b) => b.amount - a.amount)
-      .slice(0, 5);
+      .sort((a, b) => b.amount - a.amount);
+    const topExpenseCats = expenseCats.slice(0, 5);
+
 
     // Supplier payable from bills
     const supMap = new Map((supplierRes.data ?? []).map((s) => [s.id as string, s.name as string]));
@@ -373,7 +377,7 @@ export const getFinanceOverview = createServerFn({ method: "POST" })
       accounts,
       inventoryByBrand: inventoryByBrandArr,
       receivables: { codByCourier: codByCourierArr, arTop, importsAdvanceTop },
-      payables: { supplierTop, importsDueTop, upcomingRecurring, topExpenseCats, overdueBills },
+      payables: { supplierTop, importsDueTop, upcomingRecurring, topExpenseCats, expenseCats, overdueBills },
       monthlySeries: months,
       recentTxns,
     };

@@ -15,7 +15,7 @@ import { Table, TableHeader, TableHead, TableBody, TableRow, TableCell } from "@
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
 import { fmtBdt } from "@/lib/erp/finance";
-import { getCashflowStatement, type CashflowStatement } from "@/lib/erp/finance-overview.functions";
+import { getCashflowStatement, getFinanceOverview, type CashflowStatement, type FinanceOverview } from "@/lib/erp/finance-overview.functions";
 import { exportAoaXlsx } from "@/lib/erp/utils/excel";
 
 export const Route = createFileRoute("/_authenticated/erp/finance/reports")({
@@ -69,45 +69,97 @@ function ReportsPage() {
           <TabsTrigger value="gl">General Ledger</TabsTrigger>
         </TabsList>
         <TabsContent value="pl" className="mt-3"><PLReport brandId={brandId} from={from} to={to} /></TabsContent>
-        <TabsContent value="bs" className="mt-3"><BalanceSheetReport brandId={brandId} asOf={to} /></TabsContent>
+        <TabsContent value="bs" className="mt-3 space-y-3">
+          <JournalCoverageNotice brandId={brandId} from={from} to={to} />
+          <BalanceSheetReport brandId={brandId} asOf={to} />
+        </TabsContent>
         <TabsContent value="cf" className="mt-3"><CashflowReport brandId={brandId} from={from} to={to} /></TabsContent>
         <TabsContent value="bva" className="mt-3"><BudgetVsActualReport brandId={brandId} asOf={to} /></TabsContent>
-        <TabsContent value="tb" className="mt-3"><TrialBalanceReport brandId={brandId} asOf={to} /></TabsContent>
-        <TabsContent value="gl" className="mt-3"><GeneralLedgerReport brandId={brandId} from={from} to={to} /></TabsContent>
+        <TabsContent value="tb" className="mt-3 space-y-3">
+          <JournalCoverageNotice brandId={brandId} from={from} to={to} />
+          <TrialBalanceReport brandId={brandId} asOf={to} />
+        </TabsContent>
+        <TabsContent value="gl" className="mt-3 space-y-3">
+          <JournalCoverageNotice brandId={brandId} from={from} to={to} />
+          <GeneralLedgerReport brandId={brandId} from={from} to={to} />
+        </TabsContent>
+
       </Tabs>
     </div>
   );
 }
 
-function PLReport({ brandId, from, to }: { brandId: string; from: string; to: string }) {
-  type PL = { income_accounts: Array<{ code: string; name: string; amount: number }>; expense_accounts: Array<{ code: string; name: string; amount: number }>; total_income: number; total_expense: number; net_profit: number };
-  function adaptPl(raw: unknown): PL {
-    const d = (raw ?? {}) as {
-      revenue?: number;
-      cogs?: number;
-      opex_total?: number;
-      other_income?: number;
-      expense_by_category?: Record<string, number>;
-      net_profit?: number;
-    };
-    const revenue = Number(d.revenue ?? 0);
-    const cogs = Number(d.cogs ?? 0);
-    const other = Number(d.other_income ?? 0);
-    const income_accounts: PL["income_accounts"] = [
-      { code: "4000", name: "Sales Revenue", amount: revenue },
-    ];
-    if (other) income_accounts.push({ code: "4100", name: "Other Income", amount: other });
-    const expense_accounts: PL["expense_accounts"] = [];
-    if (cogs) expense_accounts.push({ code: "5000", name: "Cost of Goods Sold", amount: cogs });
-    const byCat = d.expense_by_category ?? {};
-    Object.entries(byCat).forEach(([name, amount], i) =>
-      expense_accounts.push({ code: `6${String(i + 1).padStart(3, "0")}`, name, amount: Number(amount) || 0 }),
-    );
-    const total_income = income_accounts.reduce((s, r) => s + r.amount, 0);
-    const total_expense = expense_accounts.reduce((s, r) => s + r.amount, 0);
-    return { income_accounts, expense_accounts, total_income, total_expense, net_profit: Number(d.net_profit ?? total_income - total_expense) };
-  }
+/** Balance Sheet / Trial Balance / GL read the double-entry journal only.
+ *  Most day-to-day money movement is recorded as cash transactions, so we warn
+ *  when journal coverage is thin instead of silently showing wrong totals. */
+function JournalCoverageNotice({ brandId, from, to }: { brandId: string; from: string; to: string }) {
+  const q = useQuery({
+    queryKey: ["journal_coverage", brandId, from, to],
+    enabled: !!brandId,
+    queryFn: async () => {
+      const [je, tx] = await Promise.all([
+        supabase.from("erp_journal_entries").select("id", { count: "exact", head: true })
+          .eq("brand_id", brandId).eq("status", "posted")
+          .gte("entry_date", from).lte("entry_date", to),
+        supabase.from("erp_transactions").select("id", { count: "exact", head: true })
+          .eq("brand_id", brandId)
+          .gte("transaction_date", from).lte("transaction_date", to),
+      ]);
+      return { journal: je.count ?? 0, cash: tx.count ?? 0 };
+    },
+  });
+  if (!q.data) return null;
+  const { journal, cash } = q.data;
+  if (cash === 0 || journal >= cash) return null;
+  return (
+    <div className="rounded-md border border-amber-500/40 bg-amber-500/10 px-3 py-2 text-xs text-amber-700 dark:text-amber-300 print:hidden">
+      <span className="font-semibold">Journal coverage {cash > 0 ? Math.round((journal / cash) * 100) : 0}%</span>
+      {" — "}only {journal} posted journal entr{journal === 1 ? "y" : "ies"} against {cash} cash transactions in this range.
+      Ledger-based statements below cover posted entries only; use the{" "}
+      <Link to="/erp/finance" className="underline underline-offset-2">Finance Overview</Link> or the P&amp;L tab for full figures.
+    </div>
+  );
+}
 
+
+
+type PL = {
+  income_accounts: Array<{ code: string; name: string; amount: number }>;
+  expense_accounts: Array<{ code: string; name: string; amount: number }>;
+  total_income: number;
+  total_expense: number;
+  net_profit: number;
+  capital_outflow: number;
+  cogs_missing_units: number;
+};
+
+/** Canonical P&L — same source as the Finance Overview dashboard:
+ *  delivered revenue, canonical COGS, capital outflows excluded from opex. */
+function toPL(o: FinanceOverview): PL {
+  const { pnl, payables } = o;
+  const income_accounts = [{ code: "4000", name: "Sales Revenue (delivered)", amount: pnl.revenue }];
+  if (pnl.otherIncome) income_accounts.push({ code: "4100", name: "Other Income", amount: pnl.otherIncome });
+
+  const expense_accounts: PL["expense_accounts"] = [];
+  if (pnl.cogs) expense_accounts.push({ code: "5000", name: "Cost of Goods Sold", amount: pnl.cogs });
+  payables.expenseCats.forEach((c, i) =>
+    expense_accounts.push({ code: `6${String(i + 1).padStart(3, "0")}`, name: c.name, amount: c.amount }),
+  );
+  if (pnl.refundLoss) expense_accounts.push({ code: "6900", name: "Refund / return loss", amount: pnl.refundLoss });
+
+  return {
+    income_accounts,
+    expense_accounts,
+    total_income: income_accounts.reduce((s, r) => s + r.amount, 0),
+    total_expense: expense_accounts.reduce((s, r) => s + r.amount, 0),
+    net_profit: pnl.net,
+    capital_outflow: pnl.capitalOutflow,
+    cogs_missing_units: pnl.cogsMissingUnits,
+  };
+}
+
+function PLReport({ brandId, from, to }: { brandId: string; from: string; to: string }) {
+  const fetchOverview = useServerFn(getFinanceOverview);
   const [mode, setMode] = useState<"single" | "compare">("single");
   // Default Period B = previous period of same length
   const defaultB = (() => {
@@ -122,26 +174,21 @@ function PLReport({ brandId, from, to }: { brandId: string; from: string; to: st
   const [bTo, setBTo] = useState(defaultB.to);
 
   const q = useQuery({
-    queryKey: ["pl_v2", brandId, from, to],
-    queryFn: async () => {
-      const { data, error } = await supabase.rpc("erp_profit_loss", { _brand_id: brandId, _from: from, _to: to });
-      if (error) throw error;
-      return adaptPl(data);
-    },
+    queryKey: ["pl_canonical", brandId, from, to],
+    enabled: !!brandId,
+    queryFn: async () => toPL(await fetchOverview({ data: { brandIds: [brandId], from, to } })),
   });
   const qB = useQuery({
-    queryKey: ["pl_v2", brandId, bFrom, bTo],
-    enabled: mode === "compare",
-    queryFn: async () => {
-      const { data, error } = await supabase.rpc("erp_profit_loss", { _brand_id: brandId, _from: bFrom, _to: bTo });
-      if (error) throw error;
-      return adaptPl(data);
-    },
+    queryKey: ["pl_canonical", brandId, bFrom, bTo],
+    enabled: mode === "compare" && !!brandId,
+    queryFn: async () => toPL(await fetchOverview({ data: { brandIds: [brandId], from: bFrom, to: bTo } })),
   });
 
   if (q.isLoading) return <p className="text-sm text-muted-foreground">Calculating…</p>;
+  if (q.error) return <p className="text-sm text-destructive">{(q.error as Error).message}</p>;
   if (!q.data) return null;
   const d = q.data;
+
 
   return (
     <Card>
@@ -172,7 +219,22 @@ function PLReport({ brandId, from, to }: { brandId: string; from: string; to: st
               <span className="text-lg font-bold">Net Profit</span>
               <span className={`text-2xl font-bold font-mono ${d.net_profit >= 0 ? "text-emerald-600" : "text-red-600"}`}>{fmtBdt(d.net_profit)}</span>
             </div>
+            {(d.capital_outflow > 0 || d.cogs_missing_units > 0) && (
+              <div className="mt-3 flex flex-wrap gap-2 text-xs">
+                {d.capital_outflow > 0 && (
+                  <Badge variant="outline" className="font-normal">
+                    Capital out {fmtBdt(d.capital_outflow)} · stock purchase &amp; ad-wallet top-ups (not an expense)
+                  </Badge>
+                )}
+                {d.cogs_missing_units > 0 && (
+                  <Badge variant="outline" className="font-normal text-amber-600 border-amber-500/40">
+                    {d.cogs_missing_units} units without cost — COGS understated
+                  </Badge>
+                )}
+              </div>
+            )}
           </>
+
         ) : qB.isLoading || !qB.data ? (
           <p className="text-sm text-muted-foreground">Loading Period B…</p>
         ) : (
