@@ -89,6 +89,40 @@ function ReportsPage() {
   );
 }
 
+/** Balance Sheet / Trial Balance / GL read the double-entry journal only.
+ *  Most day-to-day money movement is recorded as cash transactions, so we warn
+ *  when journal coverage is thin instead of silently showing wrong totals. */
+function JournalCoverageNotice({ brandId, from, to }: { brandId: string; from: string; to: string }) {
+  const q = useQuery({
+    queryKey: ["journal_coverage", brandId, from, to],
+    enabled: !!brandId,
+    queryFn: async () => {
+      const [je, tx] = await Promise.all([
+        supabase.from("erp_journal_entries").select("id", { count: "exact", head: true })
+          .eq("brand_id", brandId).eq("status", "posted")
+          .gte("entry_date", from).lte("entry_date", to),
+        supabase.from("erp_transactions").select("id", { count: "exact", head: true })
+          .eq("brand_id", brandId)
+          .gte("transaction_date", from).lte("transaction_date", to),
+      ]);
+      return { journal: je.count ?? 0, cash: tx.count ?? 0 };
+    },
+  });
+  if (!q.data) return null;
+  const { journal, cash } = q.data;
+  if (cash === 0 || journal >= cash) return null;
+  return (
+    <div className="rounded-md border border-amber-500/40 bg-amber-500/10 px-3 py-2 text-xs text-amber-700 dark:text-amber-300 print:hidden">
+      <span className="font-semibold">Journal coverage {cash > 0 ? Math.round((journal / cash) * 100) : 0}%</span>
+      {" — "}only {journal} posted journal entr{journal === 1 ? "y" : "ies"} against {cash} cash transactions in this range.
+      Ledger-based statements below cover posted entries only; use the{" "}
+      <Link to="/erp/finance" className="underline underline-offset-2">Finance Overview</Link> or the P&amp;L tab for full figures.
+    </div>
+  );
+}
+
+
+
 type PL = {
   income_accounts: Array<{ code: string; name: string; amount: number }>;
   expense_accounts: Array<{ code: string; name: string; amount: number }>;
