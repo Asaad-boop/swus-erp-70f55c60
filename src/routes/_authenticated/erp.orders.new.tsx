@@ -1301,8 +1301,19 @@ function NewOrderPage() {
       </div>
 
       {/* Sleek sticky bottom bar */}
-      <div className="fixed inset-x-0 bottom-0 z-20 border-t border-border/60 bg-background/85 shadow-[0_-10px_30px_-15px_rgba(0,0,0,0.1)] backdrop-blur-xl">
-        <div className="mx-auto flex max-w-6xl items-center justify-between gap-3 px-4 py-2.5 md:px-6">
+      <div className="fixed inset-x-0 bottom-0 z-20 border-t border-border/60 bg-background/90 pb-[env(safe-area-inset-bottom)] shadow-[0_-10px_30px_-15px_rgba(0,0,0,0.1)] backdrop-blur-xl">
+        <div className="mx-auto max-w-6xl px-3 py-2 md:px-6 md:py-2.5">
+          {missing.length > 0 && (
+            <div className="mb-1.5 flex flex-wrap items-center gap-1 md:hidden">
+              <span className="text-[10px] font-bold uppercase tracking-wider text-amber-600">Missing</span>
+              {missing.map((m) => (
+                <span key={m} className="rounded-md bg-amber-100 px-1.5 py-0.5 text-[10px] font-semibold text-amber-800 dark:bg-amber-950/40 dark:text-amber-300">
+                  {m}
+                </span>
+              ))}
+            </div>
+          )}
+          <div className="flex items-center justify-between gap-3">
           <div className="hidden items-center gap-5 md:flex">
             <div className="flex items-center gap-2">
               <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-muted text-muted-foreground">
