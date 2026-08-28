@@ -677,24 +677,24 @@ function NewOrderPage() {
     <div className="min-h-screen workspace-bg pb-44 md:pb-32">
       {/* Top bar */}
       <div className="sticky top-0 z-10 border-b border-[var(--panel-border)] bg-[var(--aurora-header)] backdrop-blur-xl">
-        <div className="mx-auto flex max-w-6xl items-center justify-between gap-3 px-4 py-3 md:px-6">
-          <div className="flex items-center gap-3">
-            <Button variant="ghost" size="icon" className="rounded-xl" onClick={() => navigate({ to: "/erp/orders" })}>
+        <div className="mx-auto grid max-w-6xl grid-cols-[minmax(0,1fr)_auto] items-center gap-2 px-3 py-2.5 md:flex md:justify-between md:gap-3 md:px-6 md:py-3">
+          <div className="flex min-w-0 items-center gap-2 md:gap-3">
+            <Button variant="ghost" size="icon" className="shrink-0 rounded-xl" onClick={() => navigate({ to: "/erp/orders" })}>
               <ArrowLeft className="h-4 w-4" />
             </Button>
-            <div>
-              <div className="text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground">
+            <div className="min-w-0">
+              <div className="truncate text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground">
                 {effectiveBrand?.name ?? (isAllBrands ? "Pick a brand" : "Select a brand")} · Orders
               </div>
-              <h1 className="font-display text-lg font-bold leading-tight tracking-tight md:text-xl">
-                New Order <span className="ml-1 font-normal text-muted-foreground">— নতুন অর্ডার</span>
+              <h1 className="truncate font-display text-base font-bold leading-tight tracking-tight md:text-xl">
+                New Order <span className="ml-1 hidden font-normal text-muted-foreground sm:inline">— নতুন অর্ডার</span>
               </h1>
             </div>
           </div>
-          <div className="flex items-center gap-2">
+          <div className="flex shrink-0 items-center gap-2">
             {isAllBrands && (
               <Select value={pickedBrandId} onValueChange={setPickedBrandId}>
-                <SelectTrigger className="h-9 w-[180px]"><SelectValue placeholder="Choose brand *" /></SelectTrigger>
+                <SelectTrigger className="h-9 w-[132px] sm:w-[180px]"><SelectValue placeholder="Choose brand *" /></SelectTrigger>
                 <SelectContent>
                   {brands.map((b) => <SelectItem key={b.id} value={b.id}>{b.name}</SelectItem>)}
                 </SelectContent>
