@@ -69,11 +69,21 @@ function ReportsPage() {
           <TabsTrigger value="gl">General Ledger</TabsTrigger>
         </TabsList>
         <TabsContent value="pl" className="mt-3"><PLReport brandId={brandId} from={from} to={to} /></TabsContent>
-        <TabsContent value="bs" className="mt-3"><BalanceSheetReport brandId={brandId} asOf={to} /></TabsContent>
+        <TabsContent value="bs" className="mt-3 space-y-3">
+          <JournalCoverageNotice brandId={brandId} from={from} to={to} />
+          <BalanceSheetReport brandId={brandId} asOf={to} />
+        </TabsContent>
         <TabsContent value="cf" className="mt-3"><CashflowReport brandId={brandId} from={from} to={to} /></TabsContent>
         <TabsContent value="bva" className="mt-3"><BudgetVsActualReport brandId={brandId} asOf={to} /></TabsContent>
-        <TabsContent value="tb" className="mt-3"><TrialBalanceReport brandId={brandId} asOf={to} /></TabsContent>
-        <TabsContent value="gl" className="mt-3"><GeneralLedgerReport brandId={brandId} from={from} to={to} /></TabsContent>
+        <TabsContent value="tb" className="mt-3 space-y-3">
+          <JournalCoverageNotice brandId={brandId} from={from} to={to} />
+          <TrialBalanceReport brandId={brandId} asOf={to} />
+        </TabsContent>
+        <TabsContent value="gl" className="mt-3 space-y-3">
+          <JournalCoverageNotice brandId={brandId} from={from} to={to} />
+          <GeneralLedgerReport brandId={brandId} from={from} to={to} />
+        </TabsContent>
+
       </Tabs>
     </div>
   );
