@@ -27,6 +27,7 @@ import { cn } from "@/lib/utils";
 import { OrderSuccessDialog } from "@/components/erp/orders/order-success-dialog";
 import { DUE_COLLECT_METHODS, moveOrderToPreorder, promiseDateFromDays } from "@/lib/erp/preorders";
 import { bdPhoneError, normalizeBdPhone } from "@/lib/erp/orders";
+import { sendOrderSms } from "@/lib/erp/sms/sms.functions";
 
 export const Route = createFileRoute("/_authenticated/erp/orders/new")({
   head: () => ({ meta: [{ title: "New Order — ERP" }] }),
