@@ -674,7 +674,7 @@ function NewOrderPage() {
 
 
   return (
-    <div className="min-h-screen workspace-bg pb-32">
+    <div className="min-h-screen workspace-bg pb-44 md:pb-32">
       {/* Top bar */}
       <div className="sticky top-0 z-10 border-b border-[var(--panel-border)] bg-[var(--aurora-header)] backdrop-blur-xl">
         <div className="mx-auto flex max-w-6xl items-center justify-between gap-3 px-4 py-3 md:px-6">
