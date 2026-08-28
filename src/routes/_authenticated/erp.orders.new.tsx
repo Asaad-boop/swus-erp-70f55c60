@@ -1337,7 +1337,16 @@ function NewOrderPage() {
               </>
             )}
           </div>
-          <div className="ml-auto flex items-center gap-4">
+
+          {/* Mobile summary */}
+          <div className="min-w-0 leading-tight md:hidden">
+            <div className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
+              {totalQty} pcs · {deliveryMethod}
+            </div>
+            <div className="text-lg font-black tabular-nums text-indigo-600">৳ {payable.toLocaleString()}</div>
+          </div>
+
+          <div className="ml-auto flex shrink-0 items-center gap-4">
             <div className="hidden text-right leading-tight md:block">
               <div className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Payable</div>
               <div className="text-lg font-black tabular-nums text-indigo-600">৳ {payable.toLocaleString()}</div>
@@ -1345,7 +1354,7 @@ function NewOrderPage() {
             <Button
               size="lg"
               title={missing.length ? `Missing: ${missing.join(", ")}` : "Ctrl + Enter"}
-              className="group h-11 gap-2 rounded-xl bg-emerald-600 px-5 text-[15px] font-bold text-white shadow-lg shadow-emerald-200/60 hover:bg-emerald-700 disabled:opacity-60 dark:shadow-emerald-950/30"
+              className="group h-12 gap-2 rounded-xl bg-emerald-600 px-4 text-[15px] font-bold text-white shadow-lg shadow-emerald-200/60 hover:bg-emerald-700 disabled:opacity-60 md:h-11 md:px-5 dark:shadow-emerald-950/30"
               disabled={create.isPending || missing.length > 0}
               onClick={submit}
             >
@@ -1359,6 +1368,7 @@ function NewOrderPage() {
                 </>
               )}
             </Button>
+          </div>
           </div>
         </div>
       </div>
