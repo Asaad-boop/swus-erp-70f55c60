@@ -1207,8 +1207,10 @@ function NewOrderPage() {
                 </div>
               </CardContent>
             </Card>
+          </div>
 
-            {/* Delivery method */}
+          {/* Delivery + extras */}
+          <div className="order-3 space-y-3 md:space-y-4 lg:col-span-4">
             <Card className="shadow-sm">
               <CardContent className="space-y-3.5 p-4">
                 <Field label="Order Source" bn="অর্ডার সোর্স">
