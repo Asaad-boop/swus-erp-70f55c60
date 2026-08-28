@@ -663,7 +663,8 @@ function TrendsRow({ data }: { data: FinanceOverview }) {
         </CardContent>
       </Card>
 
-      <Card className="border-border/60 overflow-hidden p-0">
+      <Card className="lg:col-span-4 min-w-0 border-border/60 overflow-hidden p-0">
+
         <PanelHeader icon={<Receipt className="size-3.5" />} title="Expense breakdown" tone="violet" />
         <CardContent className="p-4">
           {donut.length === 0 ? (
