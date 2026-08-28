@@ -219,6 +219,20 @@ export function CatalogView({ embedded = false }: { embedded?: boolean } = {}) {
         </div>
       </header>)}
 
+      {embedded && (
+        <div className="flex flex-wrap items-center justify-end gap-2">
+          <Button variant="outline" size="sm" className="rounded-xl" onClick={exportCsv}>
+            <Download className="mr-2 h-4 w-4" />Export
+          </Button>
+          <Button variant="outline" size="sm" className="rounded-xl" onClick={() => setSkuTargets(selectedRows.length ? selectedRows : rows)}>
+            <Wand2 className="mr-2 h-4 w-4" />SKU generate
+          </Button>
+          <Button size="sm" className="rounded-xl shadow-sm" onClick={() => setAddOpen(true)}>
+            <Plus className="mr-2 h-4 w-4" />New product
+          </Button>
+        </div>
+      )}
+
       {/* KPI strip — clickable filters */}
       <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-5">
         <Kpi icon={Package} label="Total products" value={String(stats?.total ?? 0)}

@@ -67,8 +67,7 @@ export const NAV_GROUPS: Group[] = [
         label: "Inventory",
         icon: Boxes,
         items: [
-          { to: "/erp/products", label: "Products", icon: Package },
-          { to: "/erp/inventory", label: "Stock", icon: Boxes },
+          { to: "/erp/inventory", label: "Products & Stock", icon: Package },
           { to: "/erp/reorder-queue", label: "Reorder Queue", icon: PackageSearch },
           { to: "/erp/purchase-orders", label: "Purchase Orders", icon: ClipboardList },
           { to: "/erp/stocktake", label: "Stocktake", icon: ClipboardCheck },
