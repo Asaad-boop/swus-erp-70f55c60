@@ -253,10 +253,18 @@ export type InvoiceMatchType = "paid" | "return" | "partial" | "unknown";
  * Returns the effective match type and, when the normalized `status` column is
  * stale, the corrected shipment status to write back.
  */
+export const DELIVERED_FAMILY = new Set([
+  "delivered",
+  "partial_delivered",
+  "paid",
+  "completed",
+]);
+
 export function resolveInvoiceMatchTypeFromCourier(
   provider: CourierProvider,
   invoiceMatchType: "paid" | "return" | "partial",
   ship: { status: string | null; response_payload?: unknown } | null,
+  order?: { status?: string | null; delivered_at?: string | null } | null,
 ): {
   effectiveMatchType: InvoiceMatchType;
   correctedShipmentStatus: string | null;
@@ -278,9 +286,27 @@ export function resolveInvoiceMatchTypeFromCourier(
   ).toLowerCase();
   const colStatus = String(ship?.status ?? "").toLowerCase();
 
+  // Our own code writes the normalized `status` column, so a stale "Returned"
+  // there can never justify a downgrade. Only the courier's raw payload counts.
+  const payloadNorm = payloadStatus ? normalizeCourierStatus(payloadStatus) : "";
+  const payloadMapped = payloadNorm ? mapCourierStatus(provider, payloadNorm) : "";
+  const payloadSaysReturn =
+    !!payloadNorm &&
+    (payloadNorm.includes("return") ||
+      payloadMapped === "return_in_transit" ||
+      payloadMapped === "returned");
+
+  // HARD GUARD: an order the ERP already knows as delivered (delivered_at set
+  // or delivered-family status) is NEVER downgraded to a return by an invoice
+  // line. Pathao bills prepaid / zero-COD parcels on "return"-shaped lines.
+  const orderDelivered =
+    !!order && (!!order.delivered_at || DELIVERED_FAMILY.has(String(order.status ?? "")));
+  if (orderDelivered && !payloadSaysReturn) {
+    return { effectiveMatchType: "unknown", correctedShipmentStatus: null };
+  }
+
   // Prefer raw payload; fall back to normalized column only when payload absent.
-  let raw = payloadStatus;
-  if (!raw) raw = colStatus;
+  const raw = payloadNorm || colStatus;
   if (!raw) return { effectiveMatchType: "unknown", correctedShipmentStatus: null };
 
   const norm = normalizeCourierStatus(raw);
@@ -306,3 +332,4 @@ export function resolveInvoiceMatchTypeFromCourier(
   // the shipment normalized status so future checks see the truth.
   return { effectiveMatchType: "unknown", correctedShipmentStatus: norm };
 }
+
