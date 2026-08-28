@@ -175,7 +175,22 @@ function PLReport({ brandId, from, to }: { brandId: string; from: string; to: st
               <span className="text-lg font-bold">Net Profit</span>
               <span className={`text-2xl font-bold font-mono ${d.net_profit >= 0 ? "text-emerald-600" : "text-red-600"}`}>{fmtBdt(d.net_profit)}</span>
             </div>
+            {(d.capital_outflow > 0 || d.cogs_missing_units > 0) && (
+              <div className="mt-3 flex flex-wrap gap-2 text-xs">
+                {d.capital_outflow > 0 && (
+                  <Badge variant="outline" className="font-normal">
+                    Capital out {fmtBdt(d.capital_outflow)} · stock purchase &amp; ad-wallet top-ups (not an expense)
+                  </Badge>
+                )}
+                {d.cogs_missing_units > 0 && (
+                  <Badge variant="outline" className="font-normal text-amber-600 border-amber-500/40">
+                    {d.cogs_missing_units} units without cost — COGS understated
+                  </Badge>
+                )}
+              </div>
+            )}
           </>
+
         ) : qB.isLoading || !qB.data ? (
           <p className="text-sm text-muted-foreground">Loading Period B…</p>
         ) : (
