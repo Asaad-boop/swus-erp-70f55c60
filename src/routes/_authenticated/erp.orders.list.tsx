@@ -26,11 +26,12 @@ import { IncompleteOrdersTable } from "@/components/erp/orders/incomplete-orders
 import { useAbandonedCartCount } from "@/hooks/erp/use-abandoned-carts-query";
 import { PathaoBulkUploadDialog } from "@/components/erp/orders/pathao-bulk-upload-dialog";
 import { PreorderConvertDialog } from "@/components/erp/orders/preorder-convert-dialog";
+import { ReturnReceiveDialog } from "@/components/erp/orders/return-receive-dialog";
 import { BulkPrintDialog, type PrintMode } from "@/components/erp/orders/bulk-print-dialog";
 import { CourierStatusSyncDialog } from "@/components/erp/orders/courier-status-sync-dialog";
 import { PhoneHistorySyncDialog } from "@/components/erp/orders/phone-history-sync-dialog";
 import { ScanToDispatchDialog } from "@/components/erp/orders/scan-to-dispatch-dialog";
-import { downloadCsv, exportOrdersCsv, statusAge, statusSinceTs, tabForStatuses, STATUS_TABS, type OrderRow, type OrderStatus } from "@/lib/erp/orders";
+import { downloadCsv, exportOrdersCsv, statusAge, statusSinceTs, tabForStatuses, RETURN_PENDING_STATUSES, STATUS_TABS, type OrderRow, type OrderStatus } from "@/lib/erp/orders";
 import { AlertTriangle, RefreshCcw } from "lucide-react";
 
 const WEB_ORDER_SOURCE_FILTER = "source.not.in.(website,pixel,utm)";
@@ -377,6 +378,20 @@ function OrdersPage() {
   const applyView = (searchObj: Record<string, unknown>) => {
     navigate({ replace: true, search: { ...sp, ...filterToSearch(searchObj as Partial<OrdersFilter>), page: 0 } });
   };
+
+  const [returnReceiveOpen, setReturnReceiveOpen] = useState(false);
+  const [returnReceiveIds, setReturnReceiveIds] = useState<string[]>([]);
+  const pendingReturnSelection = useMemo(
+    () => visibleRows.filter((r) => selectedIds.has(r.id) && RETURN_PENDING_STATUSES.includes(r.status) && !r.return_received_at),
+    [visibleRows, selectedIds],
+  );
+  const returnReceiveTargets = useMemo(
+    () => returnReceiveIds
+      .map((id) => visibleRows.find((r) => r.id === id))
+      .filter(Boolean)
+      .map((r) => ({ id: r!.id, invoice_no: r!.invoice_no, shipping_name: r!.shipping_name, total: r!.total, status: r!.status })),
+    [returnReceiveIds, visibleRows],
+  );
 
   const statusMutation = useMutation({
     mutationFn: async ({ id, status }: { id: string; status: OrderStatus }) => {
@@ -743,6 +758,7 @@ function OrdersPage() {
           onSyncRow={(id) => { setSingleSyncId(id); }}
           onPreorder={(id) => { setPreorderIds([id]); setPreorderOpen(true); }}
           onDispatchPrint={(id) => { setSinglePrintOrderId(id); }}
+          onReturnReceive={(id) => { setReturnReceiveIds([id]); setReturnReceiveOpen(true); }}
         />
         {!isLoading && visibleRows.length === 0 && (
           <EmptyState
@@ -787,9 +803,26 @@ function OrdersPage() {
           onPrint={() => setPrintMode("invoice")}
           onBookCourier={() => setPathaoBulkOpen(true)}
           onSyncCourier={() => setSyncOpen(true)}
+          returnReceiveCount={pendingReturnSelection.length}
+          onReturnReceive={() => {
+            if (!pendingReturnSelection.length) return;
+            setReturnReceiveIds(pendingReturnSelection.map((o) => o.id));
+            setReturnReceiveOpen(true);
+          }}
           isPending={bulkStatus.isPending}
         />
       )}
+
+      <ReturnReceiveDialog
+        open={returnReceiveOpen}
+        onOpenChange={setReturnReceiveOpen}
+        orders={returnReceiveTargets}
+        onDone={() => {
+          setSelectedIds(new Set());
+          qc.invalidateQueries({ queryKey: ["orders"] });
+          qc.invalidateQueries({ queryKey: ["orders-status-counts"] });
+        }}
+      />
 
       <OrderDrawer orderId={openId} onClose={() => setOpenId(null)} />
 

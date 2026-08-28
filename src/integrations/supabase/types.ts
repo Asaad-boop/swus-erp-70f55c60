@@ -9743,7 +9743,11 @@ export type Database = {
           reconciliation_status: string | null
           refund_amount: number
           rejection_reason: string | null
+          return_condition: string | null
           return_note: string | null
+          return_received_at: string | null
+          return_received_by: string | null
+          return_received_note: string | null
           return_type: string | null
           risk_flag: boolean
           scheduled_date: string | null
@@ -9863,7 +9867,11 @@ export type Database = {
           reconciliation_status?: string | null
           refund_amount?: number
           rejection_reason?: string | null
+          return_condition?: string | null
           return_note?: string | null
+          return_received_at?: string | null
+          return_received_by?: string | null
+          return_received_note?: string | null
           return_type?: string | null
           risk_flag?: boolean
           scheduled_date?: string | null
@@ -9983,7 +9991,11 @@ export type Database = {
           reconciliation_status?: string | null
           refund_amount?: number
           rejection_reason?: string | null
+          return_condition?: string | null
           return_note?: string | null
+          return_received_at?: string | null
+          return_received_by?: string | null
+          return_received_note?: string | null
           return_type?: string | null
           risk_flag?: boolean
           scheduled_date?: string | null
@@ -12000,6 +12012,15 @@ export type Database = {
         Args: { _purchase_id: string }
         Returns: Json
       }
+      confirm_return_received: {
+        Args: {
+          _condition: string
+          _final_status?: Database["public"]["Enums"]["order_status"]
+          _note?: string
+          _order_id: string
+        }
+        Returns: Json
+      }
       consume_meta_spend_fifo: {
         Args: {
           _ad_account_id: string
@@ -12588,7 +12609,11 @@ export type Database = {
           reconciliation_status: string | null
           refund_amount: number
           rejection_reason: string | null
+          return_condition: string | null
           return_note: string | null
+          return_received_at: string | null
+          return_received_by: string | null
+          return_received_note: string | null
           return_type: string | null
           risk_flag: boolean
           scheduled_date: string | null
@@ -12717,7 +12742,11 @@ export type Database = {
           reconciliation_status: string | null
           refund_amount: number
           rejection_reason: string | null
+          return_condition: string | null
           return_note: string | null
+          return_received_at: string | null
+          return_received_by: string | null
+          return_received_note: string | null
           return_type: string | null
           risk_flag: boolean
           scheduled_date: string | null
@@ -13199,6 +13228,10 @@ export type Database = {
       next_invoice_no: { Args: { _brand_id: string }; Returns: string }
       normalize_mobile_bd: { Args: { p_phone: string }; Returns: string }
       normalize_phone_tail: { Args: { _phone: string }; Returns: string }
+      order_return_is_restockable: {
+        Args: { p_order_id: string }
+        Returns: boolean
+      }
       order_stock_is_deducted_status: {
         Args: { p_status: Database["public"]["Enums"]["order_status"] }
         Returns: boolean

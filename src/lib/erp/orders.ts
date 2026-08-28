@@ -55,6 +55,15 @@ export const STATUS_TABS: { key: StatusTabKey; label: string; statuses: OrderSta
   { key: "all", label: "All", statuses: [] },
 ];
 
+/**
+ * Return-family statuses where the parcel may still be physically in transit
+ * back to us. Stock is only restored after a warehouse "receive" confirmation.
+ */
+export const RETURN_PENDING_STATUSES: OrderStatus[] = [
+  "pending_return", "return_in_transit", "returned",
+  "paid_return", "unpaid_return", "partial_return",
+];
+
 export function tabForStatuses(statuses: OrderStatus[]): StatusTabKey {
   if (!statuses.length) return "all";
   for (const t of STATUS_TABS) {
@@ -210,6 +219,10 @@ export type OrderRow = {
   fb_adset_id?: string | null;
   fb_ad_id?: string | null;
   attribution_landing_page?: string | null;
+  /** Physical return receipt (set when warehouse confirms the parcel arrived). */
+  return_received_at?: string | null;
+  return_condition?: string | null;
+  return_received_note?: string | null;
 };
 
 export type OrderItemMini = {

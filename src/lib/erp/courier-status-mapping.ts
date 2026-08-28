@@ -79,8 +79,10 @@ export const DEFAULT_PATHAO_MAP: Record<string, OrderStatus> = {
   return_to_merchant: "return_in_transit",
   on_the_way_to_return: "return_in_transit",
   return_rescheduled: "return_in_transit",
-  returned: "returned",
-  return_completed: "returned",
+  // Courier "returned" only means the parcel is coming back — stock/return is
+  // finalised only after warehouse confirms physical receipt.
+  returned: "pending_return",
+  return_completed: "pending_return",
   paid_return: "paid_return",
   unpaid_return: "unpaid_return",
   partial_delivered_return: "partial_return",
@@ -134,7 +136,7 @@ export const DEFAULT_STEADFAST_MAP: Record<string, OrderStatus> = {
   returning: "return_in_transit",
   pending_return: "return_in_transit",
   return_in_transit: "return_in_transit",
-  returned: "returned",
+  returned: "pending_return",
   partial_delivered_return: "partial_return",
   partial_return: "partial_return",
   paid_return: "paid_return",
@@ -190,6 +192,7 @@ export function mapCourierStatus(
 const ALLOWED_FROM_RESOLVED: Partial<Record<OrderStatus, OrderStatus[]>> = {
   delivered: ["paid", "completed", "partial_delivered"],
   partial_delivered: ["paid", "completed", "partial_return"],
+  pending_return: ["returned", "paid_return", "unpaid_return", "partial_return", "delivered", "partial_delivered", "in_transit", "exchange", "completed"],
   return_in_transit: ["returned", "paid_return", "unpaid_return", "partial_return", "delivered", "partial_delivered", "in_transit", "exchange", "completed"],
   returned: ["paid_return", "unpaid_return", "partial_return", "delivered", "partial_delivered", "in_transit", "exchange", "completed"],
   paid_return: ["completed"],
