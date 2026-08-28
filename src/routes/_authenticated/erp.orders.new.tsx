@@ -4,7 +4,18 @@ import {
   Plus, Trash2, Search, ArrowLeft, Loader2, Sparkles, Truck, Package,
   Star, MinusCircle, PlusCircle, ImageIcon, Info, Wand2, History,
   CheckCircle2, XCircle, AlertCircle, MapPin, User2, Receipt, ArrowRight, ChevronsUpDown, Check, X,
+  Phone, MessageCircle,
 } from "lucide-react";
+
+/** Normalize BD phone for wa.me — strip non-digits, drop leading 0, add 880 if missing. */
+function waNumber(p: string) {
+  const digits = p.replace(/\D/g, "");
+  if (!digits) return "";
+  if (digits.startsWith("880")) return digits;
+  if (digits.startsWith("0")) return "880" + digits.slice(1);
+  if (digits.length === 10) return "880" + digits;
+  return digits;
+}
 import { keepPreviousData, useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { toast } from "sonner";
