@@ -52,9 +52,21 @@ import { BulkStockDialog } from "@/components/erp/inventory/bulk-stock-dialog";
 import { BulkReorderDialog } from "@/components/erp/inventory/bulk-reorder-dialog";
 import { ProductEditDialog } from "@/components/erp/inventory/product-edit-dialog";
 import { ProductAddDialog } from "@/components/erp/inventory/product-add-dialog";
+import { CatalogView } from "@/components/erp/inventory/catalog-view";
 
 export const Route = createFileRoute("/_authenticated/erp/inventory")({
-  head: () => ({ meta: [{ title: "Inventory — ERP" }] }),
+  validateSearch: (search: Record<string, unknown>): { tab?: string } =>
+    typeof search.tab === "string" ? { tab: search.tab } : {},
+  head: () => ({
+    meta: [
+      { title: "Products & Stock — Synq ERP" },
+      { name: "description", content: "প্রোডাক্ট ক্যাটালগ ও স্টক এক পেজে — SKU, cost, opening stock, low stock ও movements।" },
+      { property: "og:title", content: "Products & Stock — Synq ERP" },
+      { property: "og:description", content: "Catalog + inventory এক জায়গায় — master data, stock health ও ledger।" },
+      { property: "og:type", content: "website" },
+      { name: "twitter:card", content: "summary" },
+    ],
+  }),
   component: InventoryPage,
 });
 
@@ -68,6 +80,7 @@ const COLUMN_LABELS: Array<{ key: ColumnKey; label: string }> = [
 const COLUMNS_STORAGE_KEY = "erp.inventory.columns";
 
 function InventoryPage() {
+  const { tab: tabParam } = Route.useSearch();
   const { activeBrand, brandIds, isAllBrands, brands } = useBrand();
   const qc = useQueryClient();
   const [filter, setFilter] = useState<InventoryFilter>(DEFAULT_INVENTORY_FILTER);
@@ -333,9 +346,10 @@ function InventoryPage() {
       </div>
 
       {/* TABS */}
-      <Tabs defaultValue="products" className="space-y-6">
+      <Tabs defaultValue={tabParam === "catalog" ? "catalog" : "products"} className="space-y-6">
         <TabsList className="bg-transparent border-b border-border/70 rounded-none p-0 h-auto gap-6 w-full justify-start">
-          <PillTab value="products" icon={<Package className="h-3.5 w-3.5" />}>Products</PillTab>
+          <PillTab value="catalog" icon={<Tag className="h-3.5 w-3.5" />}>Catalog</PillTab>
+          <PillTab value="products" icon={<Package className="h-3.5 w-3.5" />}>Stock List</PillTab>
           <PillTab value="opening" icon={<Layers className="h-3.5 w-3.5" />}>Opening Stock</PillTab>
           <PillTab value="cost" icon={<DollarSign className="h-3.5 w-3.5" />}>Cost Price</PillTab>
           <PillTab value="low" icon={<AlertTriangle className="h-3.5 w-3.5" />} badge={lowQuery.data?.length}>
@@ -343,6 +357,10 @@ function InventoryPage() {
           </PillTab>
           <PillTab value="movements" icon={<TrendingUp className="h-3.5 w-3.5" />}>Stock Movements</PillTab>
         </TabsList>
+
+        <TabsContent value="catalog" className="space-y-5 mt-0">
+          <CatalogView embedded />
+        </TabsContent>
 
         {/* PRODUCTS TAB */}
         <TabsContent value="products" className="space-y-5 mt-0">
