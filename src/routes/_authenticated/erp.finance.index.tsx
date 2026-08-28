@@ -126,15 +126,31 @@ function OverviewPage() {
 
         {d && (
           <>
+            {/* nav pills sit right under the command bar */}
+            <QuickLinks />
+
+            {/* headline P&L + capital */}
             <ProfitHero data={d} onDrill={setDrill} />
             <CapitalStrip data={d} onDrill={setDrill} />
-            <BdWalletsWidget />
-            <MoneyMap data={d} />
+
+            {/* trends (8) + expense donut (4) */}
             <TrendsRow data={d} />
-            <QuickLinks />
-            <RecentTxns data={d} />
+
+            {/* three money panels */}
+            <MoneyMap data={d} />
+
+            {/* ledger feed (8) + ad wallets (4) */}
+            <section className="grid grid-cols-1 lg:grid-cols-12 gap-4 items-start">
+              <div className="lg:col-span-8 min-w-0">
+                <RecentTxns data={d} />
+              </div>
+              <div className="lg:col-span-4 min-w-0">
+                <BdWalletsWidget />
+              </div>
+            </section>
           </>
         )}
+
       </div>
 
       <FinanceDrilldownSheet
@@ -411,7 +427,8 @@ function HeroKpi({ icon, label, value, hint, tone, warn, onClick }: {
 /* ---------------- Zone 3: Money Map ---------------- */
 function MoneyMap({ data }: { data: FinanceOverview }) {
   return (
-    <section className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+    <section className="grid grid-cols-1 lg:grid-cols-3 gap-4 items-start">
+
       <WhereMoneyIs data={data} />
       <MoneyComingIn data={data} />
       <MoneyGoingOut data={data} />
@@ -626,8 +643,9 @@ function TrendsRow({ data }: { data: FinanceOverview }) {
   const donutTotal = donut.reduce((s, x) => s + x.value, 0);
 
   return (
-    <section className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-      <Card className="lg:col-span-2 border-border/60 overflow-hidden p-0">
+    <section className="grid grid-cols-1 lg:grid-cols-12 gap-4 items-start">
+      <Card className="lg:col-span-8 min-w-0 border-border/60 overflow-hidden p-0">
+
         <PanelHeader icon={<TrendingUp className="size-3.5" />} title="12 months · Revenue vs Expense vs Net" tone="primary" />
         <CardContent className="h-72 p-4">
           <ResponsiveContainer width="100%" height="100%">
@@ -645,7 +663,8 @@ function TrendsRow({ data }: { data: FinanceOverview }) {
         </CardContent>
       </Card>
 
-      <Card className="border-border/60 overflow-hidden p-0">
+      <Card className="lg:col-span-4 min-w-0 border-border/60 overflow-hidden p-0">
+
         <PanelHeader icon={<Receipt className="size-3.5" />} title="Expense breakdown" tone="violet" />
         <CardContent className="p-4">
           {donut.length === 0 ? (
@@ -694,19 +713,20 @@ function QuickLinks() {
     { to: "/erp/finance/taxes", label: "Taxes", icon: <TrendingDown className="size-3.5" /> },
   ];
   return (
-    <section className="grid grid-cols-3 md:grid-cols-5 lg:grid-cols-7 gap-2">
+    <nav className="-mx-1 flex gap-2 overflow-x-auto px-1 pb-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
       {links.map(l => (
         <Link
           key={l.to}
           to={l.to}
-          className="group rounded-xl border border-border/60 bg-card hover:bg-muted/40 hover:-translate-y-0.5 hover:shadow-sm transition-all px-3 py-2.5 text-[11.5px] flex items-center gap-2"
+          className="group shrink-0 rounded-full border border-border/60 bg-card hover:bg-muted/50 hover:border-foreground/20 transition-all pl-1.5 pr-3 py-1.5 text-[11.5px] flex items-center gap-1.5"
         >
-          <span className="rounded-md p-1.5 bg-muted text-foreground/70 transition group-hover:bg-primary/10 group-hover:text-primary">{l.icon}</span>
-          <span className="font-medium truncate">{l.label}</span>
+          <span className="rounded-full p-1.5 bg-muted text-foreground/70 transition group-hover:bg-primary/10 group-hover:text-primary">{l.icon}</span>
+          <span className="font-medium whitespace-nowrap">{l.label}</span>
         </Link>
       ))}
-    </section>
+    </nav>
   );
+
 }
 
 /* ---------------- Recent Transactions ---------------- */
