@@ -280,7 +280,7 @@ function ReturnsListPage() {
         {/* === Pipeline === */}
         <section className="grid grid-cols-2 gap-2 md:grid-cols-3 xl:grid-cols-6">
           <PipelineCard label="All tickets" value={counts.all} active={stage === "all"} onClick={() => setStage("all")}
-            accent="hsl(var(--foreground))" icon={<Inbox className="h-3.5 w-3.5" />}
+            accent="#0EA5E9" icon={<Inbox className="h-3.5 w-3.5" />}
             sub={`${typeCounts.return}R · ${typeCounts.exchange}E`} loading={loading} />
           <PipelineCard label="Needs action" value={counts.action} active={stage === "action"} onClick={() => setStage("action")}
             accent="#D97706" pulse={counts.action > 0} icon={<AlertCircle className="h-3.5 w-3.5" />} sub="Pickup baki" loading={loading} />
