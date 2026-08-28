@@ -261,16 +261,16 @@ export function useStaffList() {
   return useQuery({
     queryKey: ["erp-staff"],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from("profiles")
-        .select("id,display_name")
-        .order("display_name");
+      // Only real staff (users holding a role) — bypasses profiles RLS via
+      // a security-definer function so owner/accountant/packer also see the list.
+      const { data, error } = await supabase.rpc("list_staff_profiles");
       if (error) throw error;
-      return data ?? [];
+      return (data ?? []) as { id: string; display_name: string | null }[];
     },
     staleTime: 5 * 60 * 1000,
   });
 }
+
 
 // Counts per status for the status-tabs strip. Scoped to brand + global filters
 // (search/date/source/courier) but NOT to the active status filter so all tabs stay accurate.
