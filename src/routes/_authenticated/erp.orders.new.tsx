@@ -4,7 +4,18 @@ import {
   Plus, Trash2, Search, ArrowLeft, Loader2, Sparkles, Truck, Package,
   Star, MinusCircle, PlusCircle, ImageIcon, Info, Wand2, History,
   CheckCircle2, XCircle, AlertCircle, MapPin, User2, Receipt, ArrowRight, ChevronsUpDown, Check, X,
+  Phone, MessageCircle,
 } from "lucide-react";
+
+/** Normalize BD phone for wa.me — strip non-digits, drop leading 0, add 880 if missing. */
+function waNumber(p: string) {
+  const digits = p.replace(/\D/g, "");
+  if (!digits) return "";
+  if (digits.startsWith("880")) return digits;
+  if (digits.startsWith("0")) return "880" + digits.slice(1);
+  if (digits.length === 10) return "880" + digits;
+  return digits;
+}
 import { keepPreviousData, useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { toast } from "sonner";
@@ -800,16 +811,40 @@ function NewOrderPage() {
                 )}
                 <div className="grid gap-4 md:grid-cols-2">
                   <Field label="Mobile Number" bn="মোবাইল নম্বর" required>
-                    <Input
-                      placeholder="01XXXXXXXXX"
-                      inputMode="tel"
-                      value={phone}
-                      onChange={(e) => setPhone(e.target.value)}
-                      className={cn(
-                        "h-10 bg-muted/30 focus-visible:bg-background",
-                        phone.trim() && bdPhoneError(phone) && "border-destructive focus-visible:ring-destructive",
+                    <div className="relative">
+                      <Input
+                        placeholder="01XXXXXXXXX"
+                        inputMode="tel"
+                        value={phone}
+                        onChange={(e) => setPhone(e.target.value)}
+                        className={cn(
+                          "h-10 bg-muted/30 pr-16 focus-visible:bg-background",
+                          phone.trim() && bdPhoneError(phone) && "border-destructive focus-visible:ring-destructive",
+                        )}
+                      />
+                      {phone.trim() && !bdPhoneError(phone) && (
+                        <div className="absolute right-1.5 top-1/2 flex -translate-y-1/2 items-center gap-1">
+                          <a
+                            href={`tel:${phone.trim()}`}
+                            title="Call"
+                            aria-label="Call"
+                            className="inline-flex h-7 w-7 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-emerald-500/15 hover:text-emerald-600"
+                          >
+                            <Phone className="h-3.5 w-3.5" />
+                          </a>
+                          <a
+                            href={`https://wa.me/${waNumber(phone.trim())}`}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            title="WhatsApp"
+                            aria-label="WhatsApp"
+                            className="inline-flex h-7 w-7 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-green-500/15 hover:text-green-600"
+                          >
+                            <MessageCircle className="h-3.5 w-3.5" />
+                          </a>
+                        </div>
                       )}
-                    />
+                    </div>
                     {phone.trim() && bdPhoneError(phone) && (
                       <p className="mt-1 text-[11px] font-medium text-destructive">{bdPhoneError(phone)}</p>
                     )}
