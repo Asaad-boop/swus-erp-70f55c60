@@ -427,7 +427,8 @@ function HeroKpi({ icon, label, value, hint, tone, warn, onClick }: {
 /* ---------------- Zone 3: Money Map ---------------- */
 function MoneyMap({ data }: { data: FinanceOverview }) {
   return (
-    <section className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+    <section className="grid grid-cols-1 lg:grid-cols-3 gap-4 items-start">
+
       <WhereMoneyIs data={data} />
       <MoneyComingIn data={data} />
       <MoneyGoingOut data={data} />
