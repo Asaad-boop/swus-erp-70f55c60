@@ -2,7 +2,7 @@ import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { applyBrandScope } from "@/lib/erp/apply-brand-scope";
-import { isCapitalOutflow, refLabel } from "@/lib/erp/finance-expense-classify";
+import { isCapitalOutflow, refLabel, dhakaDay } from "@/lib/erp/finance-expense-classify";
 
 const Input = z.object({
   brandIds: z.array(z.string().uuid()).min(1),
