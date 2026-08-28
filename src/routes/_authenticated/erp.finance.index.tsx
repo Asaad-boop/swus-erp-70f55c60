@@ -713,19 +713,20 @@ function QuickLinks() {
     { to: "/erp/finance/taxes", label: "Taxes", icon: <TrendingDown className="size-3.5" /> },
   ];
   return (
-    <section className="grid grid-cols-3 md:grid-cols-5 lg:grid-cols-7 gap-2">
+    <nav className="-mx-1 flex gap-2 overflow-x-auto px-1 pb-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
       {links.map(l => (
         <Link
           key={l.to}
           to={l.to}
-          className="group rounded-xl border border-border/60 bg-card hover:bg-muted/40 hover:-translate-y-0.5 hover:shadow-sm transition-all px-3 py-2.5 text-[11.5px] flex items-center gap-2"
+          className="group shrink-0 rounded-full border border-border/60 bg-card hover:bg-muted/50 hover:border-foreground/20 transition-all pl-1.5 pr-3 py-1.5 text-[11.5px] flex items-center gap-1.5"
         >
-          <span className="rounded-md p-1.5 bg-muted text-foreground/70 transition group-hover:bg-primary/10 group-hover:text-primary">{l.icon}</span>
-          <span className="font-medium truncate">{l.label}</span>
+          <span className="rounded-full p-1.5 bg-muted text-foreground/70 transition group-hover:bg-primary/10 group-hover:text-primary">{l.icon}</span>
+          <span className="font-medium whitespace-nowrap">{l.label}</span>
         </Link>
       ))}
-    </section>
+    </nav>
   );
+
 }
 
 /* ---------------- Recent Transactions ---------------- */
