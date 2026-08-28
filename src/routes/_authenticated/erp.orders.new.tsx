@@ -1947,13 +1947,13 @@ function RecentOrderPreview({ order, onOpen }: { order: RecentOrder; onOpen: () 
 }
 
 type CourierVariant = "emerald" | "violet" | "rose" | "sky" | "amber" | "neutral";
-const COURIER_VARIANTS: Record<CourierVariant, { ring: string; tag: string; accent: string; bar: string; surface: string }> = {
-  emerald: { ring: "ring-emerald-200 dark:ring-emerald-900/50", tag: "bg-gradient-to-br from-emerald-500 to-teal-600", accent: "text-emerald-700 dark:text-emerald-300", bar: "bg-emerald-500", surface: "bg-gradient-to-br from-emerald-50 to-white dark:from-emerald-950/30 dark:to-background" },
-  violet:  { ring: "ring-violet-200 dark:ring-violet-900/50",   tag: "bg-gradient-to-br from-violet-500 to-purple-600", accent: "text-violet-700 dark:text-violet-300",   bar: "bg-violet-500",  surface: "bg-gradient-to-br from-violet-50 to-white dark:from-violet-950/30 dark:to-background" },
-  rose:    { ring: "ring-rose-200 dark:ring-rose-900/50",       tag: "bg-gradient-to-br from-rose-500 to-red-600",      accent: "text-rose-700 dark:text-rose-300",       bar: "bg-rose-500",    surface: "bg-gradient-to-br from-rose-50 to-white dark:from-rose-950/30 dark:to-background" },
-  sky:     { ring: "ring-sky-200 dark:ring-sky-900/50",         tag: "bg-gradient-to-br from-sky-500 to-blue-600",      accent: "text-sky-700 dark:text-sky-300",         bar: "bg-sky-500",     surface: "bg-gradient-to-br from-sky-50 to-white dark:from-sky-950/30 dark:to-background" },
-  amber:   { ring: "ring-amber-200 dark:ring-amber-900/50",     tag: "bg-gradient-to-br from-amber-500 to-orange-600",  accent: "text-amber-700 dark:text-amber-300",     bar: "bg-amber-500",   surface: "bg-gradient-to-br from-amber-50 to-white dark:from-amber-950/30 dark:to-background" },
-  neutral: { ring: "ring-slate-200 dark:ring-slate-800",        tag: "bg-gradient-to-br from-slate-600 to-slate-800",   accent: "text-slate-700 dark:text-slate-200",     bar: "bg-slate-600",   surface: "bg-gradient-to-br from-slate-50 to-white dark:from-slate-900/40 dark:to-background" },
+const COURIER_DOT: Record<CourierVariant, string> = {
+  emerald: "bg-emerald-500",
+  violet: "bg-violet-500",
+  rose: "bg-rose-500",
+  sky: "bg-sky-500",
+  amber: "bg-amber-500",
+  neutral: "bg-slate-400",
 };
 const PROVIDER_VARIANT: Record<string, CourierVariant> = {
   pathao: "emerald", steadfast: "violet", redx: "rose", paperfly: "sky", ecourier: "amber",
@@ -1971,46 +1971,21 @@ function CourierStatCard({
   cancelled: number;
 }) {
   const v: CourierVariant = variant ?? (providerKey ? PROVIDER_VARIANT[providerKey] : undefined) ?? "neutral";
-  const t = COURIER_VARIANTS[v];
-  const rateTone =
-    successRate >= 80 ? "text-emerald-600 dark:text-emerald-400"
-    : successRate >= 50 ? "text-amber-600 dark:text-amber-400"
-    : "text-rose-600 dark:text-rose-400";
 
   return (
-    <div className={cn("relative overflow-hidden rounded-xl border p-3 shadow-sm ring-1 ring-inset", t.ring, t.surface)}>
-      {/* Header */}
-      <div className="flex items-center justify-between">
-        <span className={cn("inline-flex items-center gap-1 rounded-md px-1.5 py-0.5 text-[10px] font-extrabold uppercase tracking-wider text-white shadow-sm", t.tag)}>
-          <Truck className="h-3 w-3" /> {label}
+    <div className="space-y-1" title={`${label}: ${success} delivered · ${cancelled} returned / cancelled`}>
+      <div className="flex items-baseline justify-between gap-2">
+        <span className="inline-flex min-w-0 items-center gap-1.5">
+          <span className={cn("h-1.5 w-1.5 shrink-0 rounded-full", COURIER_DOT[v])} />
+          <span className="truncate text-[11px] font-medium capitalize">{label}</span>
         </span>
-        <span className="rounded-full bg-background/70 px-1.5 py-0.5 text-[10px] font-semibold tabular-nums text-muted-foreground ring-1 ring-inset ring-border">
-          {total}
+        <span className="shrink-0 text-[11px] tabular-nums text-muted-foreground">
+          <span className={cn("font-semibold", rateTone(successRate))}>{successRate}%</span>
+          <span className="ml-1">{success}/{total}</span>
         </span>
       </div>
-
-      {/* Big rate */}
-      <div className="mt-2 flex items-baseline gap-1">
-        <span className={cn("text-2xl font-extrabold tabular-nums leading-none", rateTone)}>{successRate}%</span>
-        <span className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Success</span>
-      </div>
-
-      {/* Mini stats */}
-      <div className="mt-1.5 flex items-center justify-between text-[10px]">
-        <span className="flex items-center gap-1 text-emerald-600 dark:text-emerald-400">
-          <CheckCircle2 className="h-3 w-3" />
-          <span className="font-bold tabular-nums">{success}</span>
-        </span>
-        <span className="flex items-center gap-1 text-rose-600 dark:text-rose-400">
-          <XCircle className="h-3 w-3" />
-          <span className="font-bold tabular-nums">{cancelled}</span>
-        </span>
-        <span className="text-[10px] text-muted-foreground tabular-nums">{success}/{total}</span>
-      </div>
-
-      {/* Bottom progress */}
-      <div className="mt-2 h-1.5 overflow-hidden rounded-full bg-muted">
-        <div className={cn("h-full rounded-full transition-all", t.bar)} style={{ width: `${successRate}%` }} />
+      <div className="h-[3px] overflow-hidden rounded-full bg-muted">
+        <div className={cn("h-full rounded-full transition-all", rateBar(successRate))} style={{ width: `${successRate}%` }} />
       </div>
     </div>
   );
