@@ -1006,7 +1006,7 @@ function NewOrderPage() {
             <Card className="shadow-sm">
               <CardContent className="space-y-3.5 p-4">
                 <SectionHeader icon={<Receipt className="h-3.5 w-3.5" />} accent="bg-rose-500" title="Financial Summary" sub="হিসাব" />
-                <div className="grid gap-3 md:grid-cols-5">
+                <div className="grid grid-cols-2 gap-2.5 sm:gap-3 md:grid-cols-5">
                   <MoneyField label="Discount">
                     <Input type="number" min={0} value={discount || ""} onChange={(e) => setDiscount(Number(e.target.value))} placeholder="0"
                       className="h-10 border-0 bg-transparent pl-7 text-sm font-semibold tabular-nums shadow-none focus-visible:ring-0" />
