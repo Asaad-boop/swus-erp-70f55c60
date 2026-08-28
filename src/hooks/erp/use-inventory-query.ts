@@ -3,7 +3,7 @@ import { supabase } from "@/integrations/supabase/client";
 import type { ProductRow, StockMovementRow, VariantRow } from "@/lib/erp/inventory";
 import { applyBrandScope } from "@/lib/erp/apply-brand-scope";
 
-export type StockState = "all" | "in" | "low" | "out" | "reserved";
+export type StockState = "all" | "in" | "low" | "out" | "reserved" | "oversold" | "nocost";
 export type SortBy = "updated" | "title" | "stock" | "price";
 
 export type InventoryFilter = {
@@ -121,6 +121,8 @@ export function useInventoryQuery(filter: InventoryFilter) {
         if (filter.stockState === "out") q = q.lte("stock", 0);
         if (filter.stockState === "in") q = q.gt("stock", 0);
         if (filter.stockState === "reserved") q = q.gt("reserved_stock", 0);
+        if (filter.stockState === "oversold") q = q.lt("available_stock", 0);
+        if (filter.stockState === "nocost") q = q.or("weighted_avg_cost.is.null,weighted_avg_cost.lte.0").gt("stock", 0);
         q = q.order(SORT_COLUMN[filter.sortBy], { ascending: asc }).range(from, to);
         const { data, error, count } = await q;
         if (error) throw error;
@@ -152,8 +154,12 @@ export type InventorySummary = {
   units: number;
   value: number;
   reserved: number;
+  available: number;
   low: number;
   out: number;
+  oversold: number;
+  shortfall: number;
+  noCost: number;
 };
 
 /** Aggregates across the whole filtered set (not just the current page). */
@@ -170,7 +176,7 @@ export function useInventorySummary(filter: InventoryFilter) {
       const q = applyCommon(
         supabase
           .from("products")
-          .select("id,stock,reserved_stock,weighted_avg_cost,cost_price,low_stock_threshold"),
+          .select("id,stock,reserved_stock,available_stock,weighted_avg_cost,cost_price,low_stock_threshold"),
         filter,
       ) as any;
       const { data, error } = await q.limit(20000);
@@ -178,16 +184,26 @@ export function useInventorySummary(filter: InventoryFilter) {
       const rows = (data ?? []) as Array<{
         stock: number | null;
         reserved_stock: number | null;
+        available_stock: number | null;
         weighted_avg_cost: number | null;
         cost_price: number | null;
         low_stock_threshold: number | null;
       }>;
-      const s: InventorySummary = { products: rows.length, units: 0, value: 0, reserved: 0, low: 0, out: 0 };
+      const s: InventorySummary = {
+        products: rows.length, units: 0, value: 0, reserved: 0, available: 0,
+        low: 0, out: 0, oversold: 0, shortfall: 0, noCost: 0,
+      };
       for (const r of rows) {
         const stock = Number(r.stock ?? 0);
+        const reserved = Number(r.reserved_stock ?? 0);
+        const available = r.available_stock == null ? stock - reserved : Number(r.available_stock);
+        const cost = Number(r.weighted_avg_cost ?? r.cost_price ?? 0);
         s.units += stock;
-        s.value += Number(r.weighted_avg_cost ?? r.cost_price ?? 0) * stock;
-        s.reserved += Number(r.reserved_stock ?? 0);
+        s.value += cost * stock;
+        s.reserved += reserved;
+        s.available += available;
+        if (cost <= 0 && stock > 0) s.noCost += 1;
+        if (available < 0) { s.oversold += 1; s.shortfall += Math.abs(available); }
         if (stock <= 0) s.out += 1;
         else if (stock <= Number(r.low_stock_threshold ?? 5)) s.low += 1;
       }
