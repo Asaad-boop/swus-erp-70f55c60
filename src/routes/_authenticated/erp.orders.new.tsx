@@ -708,7 +708,7 @@ function NewOrderPage() {
         </div>
       </div>
 
-      <div className="mx-auto max-w-6xl space-y-4 p-4 md:p-6">
+      <div className="mx-auto max-w-6xl space-y-3 p-3 md:space-y-4 md:p-6">
         {/* AI Smart Paste */}
         <Card className="overflow-hidden border-indigo-200/70 shadow-sm dark:border-indigo-900/40">
           <div className="bg-gradient-to-br from-indigo-50/80 via-indigo-50/40 to-fuchsia-50/40 p-4 dark:from-indigo-950/30 dark:via-indigo-950/10 dark:to-fuchsia-950/10">
