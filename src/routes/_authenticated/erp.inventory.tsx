@@ -1081,20 +1081,55 @@ function PillTab({ value, icon, badge, children }: { value: string; icon: React.
   );
 }
 
-type KpiAccent = "blue" | "purple" | "green" | "red";
+type KpiAccent = "blue" | "purple" | "green" | "red" | "amber";
 const ACCENT_STYLES: Record<KpiAccent, { dot: string; icon: string }> = {
   blue:   { dot: "bg-blue-500",    icon: "text-blue-600 dark:text-blue-400" },
   purple: { dot: "bg-purple-500",  icon: "text-purple-600 dark:text-purple-400" },
   green:  { dot: "bg-emerald-500", icon: "text-emerald-600 dark:text-emerald-400" },
   red:    { dot: "bg-red-500",     icon: "text-red-600 dark:text-red-400" },
+  amber:  { dot: "bg-amber-500",   icon: "text-amber-600 dark:text-amber-400" },
 };
 
-function KpiCard({ icon, label, value, hint, accent, emphasize }: {
-  icon: React.ReactNode; label: string; value: string; hint?: string; accent: KpiAccent; emphasize?: boolean;
+/** Physical → Reserved → Available ladder with a proportional bar. */
+function StockLadder({ physical, reserved, available }: { physical: number; reserved: number; available: number }) {
+  const base = Math.max(physical, reserved, 1);
+  const resPct = Math.min(100, (Math.max(reserved, 0) / base) * 100);
+  const negative = available < 0;
+  return (
+    <div className="ml-auto w-[104px] space-y-1 text-right">
+      <div className="flex items-baseline justify-end gap-1 tabular-nums">
+        <span className="text-sm font-semibold text-foreground">{physical}</span>
+        <span className="text-[10px] uppercase tracking-wide text-muted-foreground">phys</span>
+      </div>
+      <div className="h-1.5 w-full overflow-hidden rounded-full bg-emerald-500/25">
+        <div className={cn("h-full rounded-full", negative ? "bg-red-500" : "bg-amber-500")} style={{ width: `${resPct}%` }} />
+      </div>
+      <div className="flex items-center justify-end gap-1.5 text-[10px] tabular-nums text-muted-foreground">
+        <span className={cn(reserved > 0 && "text-amber-600 dark:text-amber-400")}>{reserved} res</span>
+        <span className="text-border">·</span>
+        <span className={cn(negative ? "font-semibold text-red-600 dark:text-red-400" : "text-emerald-600 dark:text-emerald-400")}>{available} avl</span>
+      </div>
+    </div>
+  );
+}
+
+function KpiCard({ icon, label, value, hint, accent, emphasize, onClick, active }: {
+  icon: React.ReactNode; label: string; value: string; hint?: string; accent: KpiAccent;
+  emphasize?: boolean; onClick?: () => void; active?: boolean;
 }) {
   const s = ACCENT_STYLES[accent];
   return (
-    <div className="group bg-card transition-colors hover:bg-muted/30 p-5">
+    <div
+      role={onClick ? "button" : undefined}
+      tabIndex={onClick ? 0 : undefined}
+      onClick={onClick}
+      onKeyDown={onClick ? (e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); onClick(); } } : undefined}
+      className={cn(
+        "group bg-card transition-colors p-5",
+        onClick && "cursor-pointer hover:bg-muted/40",
+        active && "bg-muted/60 ring-1 ring-inset ring-foreground/15",
+      )}
+    >
       <div className="flex items-start justify-between gap-3">
         <div className="space-y-1">
           <div className="flex items-center gap-2">
