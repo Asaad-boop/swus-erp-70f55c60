@@ -614,6 +614,14 @@ function NewOrderPage() {
       qc.invalidateQueries({ queryKey: ["orders"] });
       qc.invalidateQueries({ queryKey: ["web-orders"] });
       setSuccessInfo(res);
+      // Fire-and-forget customer SMS — never blocks or fails the order flow.
+      sendOrderSms({
+        data: { orderId: res.id, template: isPreorder ? "preorder_placed" : "order_confirm" },
+      })
+        .then((r) => {
+          if (r.ok) toast.success("Customer-ke confirmation SMS pathano hoyeche");
+        })
+        .catch(() => {});
     },
     onError: (e: Error) => toast.error(e.message),
   });
