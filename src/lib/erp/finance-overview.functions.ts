@@ -222,10 +222,11 @@ export const getFinanceOverview = createServerFn({ method: "POST" })
       const name = (t.category_id && catMap.get(t.category_id)) || refLabel(t.reference_type);
       expByCat.set(name, (expByCat.get(name) ?? 0) + num(t.amount));
     }
-    const topExpenseCats = Array.from(expByCat.entries())
+    const expenseCats = Array.from(expByCat.entries())
       .map(([name, amount]) => ({ name, amount }))
-      .sort((a, b) => b.amount - a.amount)
-      .slice(0, 5);
+      .sort((a, b) => b.amount - a.amount);
+    const topExpenseCats = expenseCats.slice(0, 5);
+
 
     // Supplier payable from bills
     const supMap = new Map((supplierRes.data ?? []).map((s) => [s.id as string, s.name as string]));
