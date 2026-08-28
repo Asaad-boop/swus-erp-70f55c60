@@ -12524,6 +12524,13 @@ export type Database = {
       is_marketing_staff: { Args: { _uid: string }; Returns: boolean }
       is_recent_guest_order: { Args: { _order_id: string }; Returns: boolean }
       is_staff: { Args: { _user_id: string }; Returns: boolean }
+      list_staff_profiles: {
+        Args: never
+        Returns: {
+          display_name: string
+          id: string
+        }[]
+      }
       log_order_view: { Args: { p_order_id: string }; Returns: undefined }
       lookup_order_by_id: {
         Args: { _order_id: string }
