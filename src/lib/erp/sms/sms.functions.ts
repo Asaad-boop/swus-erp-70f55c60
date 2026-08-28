@@ -123,18 +123,22 @@ export const sendOrderSms = createServerFn({ method: "POST" })
       .eq("id", data.orderId)
       .maybeSingle();
     if (error) throw error;
-    if (!order?.brand_id) return { ok: false, skipped: "no_brand" as const };
+    const skip = (reason: string) => {
+      console.warn("[sms] skipped", { orderId: data.orderId, template: data.template, reason });
+      return { ok: false, skipped: reason as never };
+    };
+    if (!order?.brand_id) return skip("no_brand");
 
     const cfg = await loadConfig(ctx, order.brand_id);
-    if (!cfg.enabled && !data.force) return { ok: false, skipped: "disabled" as const };
+    if (!cfg.enabled && !data.force) return skip("disabled");
     const autoKey = (
       { order_confirm: "auto_order_confirm", preorder_placed: "auto_preorder_placed", preorder_ready: "auto_preorder_ready", preorder_confirmed: "auto_preorder_confirmed" } as const
     )[data.template as Exclude<SmsTemplateKey, "custom">];
-    if (!data.force && !cfg[autoKey]) return { ok: false, skipped: "auto_off" as const };
-    if (!cfg.api_key || !cfg.sender_id) return { ok: false, skipped: "not_configured" as const };
+    if (!data.force && !cfg[autoKey]) return skip("auto_off");
+    if (!cfg.api_key || !cfg.sender_id) return skip("not_configured");
 
     const phone = normalizeBdPhone(order.shipping_phone || order.guest_phone || "");
-    if (!phone) return { ok: false, skipped: "no_phone" as const };
+    if (!phone) return skip("no_phone");
 
     const { data: brand } = await ctx.supabase.from("brands").select("name").eq("id", order.brand_id).maybeSingle();
     const total = Number(order.total || 0);
