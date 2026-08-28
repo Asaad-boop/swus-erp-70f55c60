@@ -2,6 +2,7 @@ import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { applyBrandScope } from "@/lib/erp/apply-brand-scope";
+import { isCapitalOutflow, refLabel } from "@/lib/erp/finance-expense-classify";
 
 const Input = z.object({
   brandIds: z.array(z.string().uuid()).min(1),
@@ -57,8 +58,10 @@ export const getFinanceOverview = createServerFn({ method: "POST" })
   .handler(async ({ data, context }): Promise<FinanceOverview> => {
     const { supabase } = context;
     const { brandIds, from, to } = data;
-    const fromTs = `${from}T00:00:00`;
-    const toTs = `${to}T23:59:59.999`;
+    // Order timestamps are compared in Asia/Dhaka so the P&L window matches the
+    // canonical COGS RPC (which buckets by Dhaka day).
+    const fromTs = `${from}T00:00:00+06:00`;
+    const toTs = `${to}T23:59:59.999+06:00`;
 
     // 12-month range for monthly series
     const now = new Date();
@@ -86,7 +89,7 @@ export const getFinanceOverview = createServerFn({ method: "POST" })
       applyBrandScope(supabase.from("orders").select("total").in("status", ["returned", "paid_return", "unpaid_return", "partial_return"]), brandIds).gte("created_at", fromTs).lte("created_at", toTs),
       applyBrandScope(supabase.from("orders").select("total,id").in("status", ["shipped", "delivered", "partial_delivered"]), brandIds).limit(2000),
       applyBrandScope(supabase.from("orders").select("id,total,shipping_name,shipping_phone").in("status", ["delivered", "partial_delivered"]).eq("payment_status", "unpaid"), brandIds).limit(1000),
-      applyBrandScope(supabase.from("erp_transactions").select("id,txn_type,amount,category_id,transaction_date,account_id"), brandIds).gte("transaction_date", from).lte("transaction_date", to),
+      applyBrandScope(supabase.from("erp_transactions").select("id,txn_type,amount,category_id,transaction_date,account_id,reference_type"), brandIds).gte("transaction_date", from).lte("transaction_date", to),
       applyBrandScope(supabase.from("erp_transactions").select("id,txn_type,amount,transaction_date,description,category_id,account_id"), brandIds).order("transaction_date", { ascending: false }).order("created_at", { ascending: false }).limit(10),
       applyBrandScope(supabase.from("erp_expense_categories").select("id,name"), brandIds),
       applyBrandScope(supabase.from("erp_bills").select("amount,paid_amount,supplier_id,due_date,status"), brandIds).in("status", ["open", "partial", "overdue"]),
@@ -94,10 +97,10 @@ export const getFinanceOverview = createServerFn({ method: "POST" })
       applyBrandScope(supabase.from("imp_purchase_orders").select("id,po_number,supplier_id,grand_total_bdt,paid_bdt,due_bdt,status"), brandIds),
       applyBrandScope(supabase.from("erp_suppliers").select("id,name"), brandIds),
       applyBrandScope(supabase.from("erp_recurring_rules").select("id,name,amount,next_run_date").eq("is_active", true), brandIds).order("next_run_date", { ascending: true }).limit(20),
-      applyBrandScope(supabase.from("orders").select("total,created_at").in("status", ["delivered", "partial_delivered", "paid"]), brandIds).gte("created_at", `${twelveIso}T00:00:00`),
-      applyBrandScope(supabase.from("erp_transactions").select("amount,transaction_date,txn_type"), brandIds).gte("transaction_date", twelveIso),
-      applyBrandScope(supabase.from("orders").select("total,created_at").in("status", ["delivered", "partial_delivered", "paid"]), brandIds).gte("created_at", `${dailyStart}T00:00:00`).lte("created_at", `${dailyEnd}T23:59:59.999`),
-      applyBrandScope(supabase.from("erp_transactions").select("amount,transaction_date,txn_type"), brandIds).gte("transaction_date", dailyStart).lte("transaction_date", dailyEnd),
+      applyBrandScope(supabase.from("orders").select("total,created_at").in("status", ["delivered", "partial_delivered", "paid"]), brandIds).gte("created_at", `${twelveIso}T00:00:00+06:00`),
+      applyBrandScope(supabase.from("erp_transactions").select("amount,transaction_date,txn_type,reference_type"), brandIds).gte("transaction_date", twelveIso),
+      applyBrandScope(supabase.from("orders").select("total,created_at").in("status", ["delivered", "partial_delivered", "paid"]), brandIds).gte("created_at", `${dailyStart}T00:00:00+06:00`).lte("created_at", `${dailyEnd}T23:59:59.999+06:00`),
+      applyBrandScope(supabase.from("erp_transactions").select("amount,transaction_date,txn_type,reference_type"), brandIds).gte("transaction_date", dailyStart).lte("transaction_date", dailyEnd),
     ]);
 
     // Brand map
@@ -194,16 +197,24 @@ export const getFinanceOverview = createServerFn({ method: "POST" })
     const arTop = Array.from(arMap.values()).sort((a, b) => b.amount - a.amount).slice(0, 5);
 
     // Transactions in range
-    const txns = (txnRes.data ?? []) as { id: string; txn_type: string; amount: number; category_id: string | null; transaction_date: string; account_id: string | null }[];
-    const expense = txns.filter((t) => t.txn_type === "expense").reduce((s, t) => s + num(t.amount), 0);
+    const txns = (txnRes.data ?? []) as { id: string; txn_type: string; amount: number; category_id: string | null; transaction_date: string; account_id: string | null; reference_type: string | null }[];
+    // Capital / asset movements — cash leaves the wallet but it is NOT an
+    // operating expense: stock purchases become COGS when sold, and dollar
+    // top-ups sit in the ad wallet until the spend is actually consumed.
+    const expense = txns
+      .filter((t) => t.txn_type === "expense" && !isCapitalOutflow(t.reference_type))
+      .reduce((s, t) => s + num(t.amount), 0);
+    const capitalOutflow = txns
+      .filter((t) => t.txn_type === "expense" && isCapitalOutflow(t.reference_type))
+      .reduce((s, t) => s + num(t.amount), 0);
     const otherIncome = txns.filter((t) => t.txn_type === "income").reduce((s, t) => s + num(t.amount), 0);
 
-    // Top expense categories
+    // Top expense categories (operating only, reference-aware labels)
     const catMap = new Map((catsRes.data ?? []).map((c) => [c.id as string, c.name as string]));
     const expByCat = new Map<string, number>();
     for (const t of txns) {
-      if (t.txn_type !== "expense") continue;
-      const name = (t.category_id && catMap.get(t.category_id)) || "Uncategorized";
+      if (t.txn_type !== "expense" || isCapitalOutflow(t.reference_type)) continue;
+      const name = (t.category_id && catMap.get(t.category_id)) || refLabel(t.reference_type);
       expByCat.set(name, (expByCat.get(name) ?? 0) + num(t.amount));
     }
     const topExpenseCats = Array.from(expByCat.entries())
