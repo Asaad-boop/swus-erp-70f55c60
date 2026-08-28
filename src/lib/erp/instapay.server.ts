@@ -451,11 +451,18 @@ async function applyInstapayRow(
     .order("updated_at", { ascending: false })
     .limit(1)
     .maybeSingle();
+  const { data: curOrder } = await supabase
+    .from("orders")
+    .select("status, delivered_at")
+    .eq("id", p.orderId)
+    .maybeSingle();
   const { effectiveMatchType: matchType, correctedShipmentStatus } = resolveInvoiceMatchTypeFromCourier(
     "pathao",
     p.matchType,
     ship as { status: string | null; response_payload?: unknown } | null,
+    curOrder as { status?: string | null; delivered_at?: string | null } | null,
   );
+
 
   const orderUpdate: AnyRec = {
     reconciliation_status: "reconciled",

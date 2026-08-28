@@ -555,6 +555,11 @@ export async function applyReconRunCore(
           .order("updated_at", { ascending: false })
           .limit(1)
           .maybeSingle();
+        const { data: curOrder } = await supabase
+          .from("orders")
+          .select("status, delivered_at")
+          .eq("id", orderId)
+          .maybeSingle();
         const {
           effectiveMatchType,
           correctedShipmentStatus,
@@ -562,7 +567,9 @@ export async function applyReconRunCore(
           "pathao",
           matchType as "paid" | "return" | "partial",
           ship as { status: string | null; response_payload?: unknown } | null,
+          curOrder as { status?: string | null; delivered_at?: string | null } | null,
         );
+
 
 
         // Update order — branch by match_type
