@@ -31,3 +31,10 @@ export function refLabel(referenceType: string | null | undefined): string {
   if (!referenceType) return "General / Manual";
   return REF_LABELS[referenceType] ?? "Other";
 }
+
+/** Calendar day (YYYY-MM-DD) of a timestamptz string in Asia/Dhaka (UTC+6). */
+export function dhakaDay(iso: string): string {
+  const t = Date.parse(iso);
+  if (Number.isNaN(t)) return String(iso).slice(0, 10);
+  return new Date(t + 6 * 60 * 60 * 1000).toISOString().slice(0, 10);
+}
