@@ -377,7 +377,7 @@ export const getFinanceOverview = createServerFn({ method: "POST" })
       accounts,
       inventoryByBrand: inventoryByBrandArr,
       receivables: { codByCourier: codByCourierArr, arTop, importsAdvanceTop },
-      payables: { supplierTop, importsDueTop, upcomingRecurring, topExpenseCats, overdueBills },
+      payables: { supplierTop, importsDueTop, upcomingRecurring, topExpenseCats, expenseCats, overdueBills },
       monthlySeries: months,
       recentTxns,
     };
