@@ -79,35 +79,43 @@ function ReportsPage() {
   );
 }
 
-function PLReport({ brandId, from, to }: { brandId: string; from: string; to: string }) {
-  type PL = { income_accounts: Array<{ code: string; name: string; amount: number }>; expense_accounts: Array<{ code: string; name: string; amount: number }>; total_income: number; total_expense: number; net_profit: number };
-  function adaptPl(raw: unknown): PL {
-    const d = (raw ?? {}) as {
-      revenue?: number;
-      cogs?: number;
-      opex_total?: number;
-      other_income?: number;
-      expense_by_category?: Record<string, number>;
-      net_profit?: number;
-    };
-    const revenue = Number(d.revenue ?? 0);
-    const cogs = Number(d.cogs ?? 0);
-    const other = Number(d.other_income ?? 0);
-    const income_accounts: PL["income_accounts"] = [
-      { code: "4000", name: "Sales Revenue", amount: revenue },
-    ];
-    if (other) income_accounts.push({ code: "4100", name: "Other Income", amount: other });
-    const expense_accounts: PL["expense_accounts"] = [];
-    if (cogs) expense_accounts.push({ code: "5000", name: "Cost of Goods Sold", amount: cogs });
-    const byCat = d.expense_by_category ?? {};
-    Object.entries(byCat).forEach(([name, amount], i) =>
-      expense_accounts.push({ code: `6${String(i + 1).padStart(3, "0")}`, name, amount: Number(amount) || 0 }),
-    );
-    const total_income = income_accounts.reduce((s, r) => s + r.amount, 0);
-    const total_expense = expense_accounts.reduce((s, r) => s + r.amount, 0);
-    return { income_accounts, expense_accounts, total_income, total_expense, net_profit: Number(d.net_profit ?? total_income - total_expense) };
-  }
+type PL = {
+  income_accounts: Array<{ code: string; name: string; amount: number }>;
+  expense_accounts: Array<{ code: string; name: string; amount: number }>;
+  total_income: number;
+  total_expense: number;
+  net_profit: number;
+  capital_outflow: number;
+  cogs_missing_units: number;
+};
 
+/** Canonical P&L — same source as the Finance Overview dashboard:
+ *  delivered revenue, canonical COGS, capital outflows excluded from opex. */
+function toPL(o: FinanceOverview): PL {
+  const { pnl, payables } = o;
+  const income_accounts = [{ code: "4000", name: "Sales Revenue (delivered)", amount: pnl.revenue }];
+  if (pnl.otherIncome) income_accounts.push({ code: "4100", name: "Other Income", amount: pnl.otherIncome });
+
+  const expense_accounts: PL["expense_accounts"] = [];
+  if (pnl.cogs) expense_accounts.push({ code: "5000", name: "Cost of Goods Sold", amount: pnl.cogs });
+  payables.expenseCats.forEach((c, i) =>
+    expense_accounts.push({ code: `6${String(i + 1).padStart(3, "0")}`, name: c.name, amount: c.amount }),
+  );
+  if (pnl.refundLoss) expense_accounts.push({ code: "6900", name: "Refund / return loss", amount: pnl.refundLoss });
+
+  return {
+    income_accounts,
+    expense_accounts,
+    total_income: income_accounts.reduce((s, r) => s + r.amount, 0),
+    total_expense: expense_accounts.reduce((s, r) => s + r.amount, 0),
+    net_profit: pnl.net,
+    capital_outflow: pnl.capitalOutflow,
+    cogs_missing_units: pnl.cogsMissingUnits,
+  };
+}
+
+function PLReport({ brandId, from, to }: { brandId: string; from: string; to: string }) {
+  const fetchOverview = useServerFn(getFinanceOverview);
   const [mode, setMode] = useState<"single" | "compare">("single");
   // Default Period B = previous period of same length
   const defaultB = (() => {
@@ -122,26 +130,21 @@ function PLReport({ brandId, from, to }: { brandId: string; from: string; to: st
   const [bTo, setBTo] = useState(defaultB.to);
 
   const q = useQuery({
-    queryKey: ["pl_v2", brandId, from, to],
-    queryFn: async () => {
-      const { data, error } = await supabase.rpc("erp_profit_loss", { _brand_id: brandId, _from: from, _to: to });
-      if (error) throw error;
-      return adaptPl(data);
-    },
+    queryKey: ["pl_canonical", brandId, from, to],
+    enabled: !!brandId,
+    queryFn: async () => toPL(await fetchOverview({ data: { brandIds: [brandId], from, to } })),
   });
   const qB = useQuery({
-    queryKey: ["pl_v2", brandId, bFrom, bTo],
-    enabled: mode === "compare",
-    queryFn: async () => {
-      const { data, error } = await supabase.rpc("erp_profit_loss", { _brand_id: brandId, _from: bFrom, _to: bTo });
-      if (error) throw error;
-      return adaptPl(data);
-    },
+    queryKey: ["pl_canonical", brandId, bFrom, bTo],
+    enabled: mode === "compare" && !!brandId,
+    queryFn: async () => toPL(await fetchOverview({ data: { brandIds: [brandId], from: bFrom, to: bTo } })),
   });
 
   if (q.isLoading) return <p className="text-sm text-muted-foreground">Calculating…</p>;
+  if (q.error) return <p className="text-sm text-destructive">{(q.error as Error).message}</p>;
   if (!q.data) return null;
   const d = q.data;
+
 
   return (
     <Card>
