@@ -367,6 +367,7 @@ export const getFinanceOverview = createServerFn({ method: "POST" })
       },
       pnl: {
         revenue, cogs, gross, expense, otherIncome, net, margin, refundLoss,
+        capitalOutflow, cogsMissingUnits,
         dailySeries,
       },
       accounts,
