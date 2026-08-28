@@ -643,8 +643,9 @@ function TrendsRow({ data }: { data: FinanceOverview }) {
   const donutTotal = donut.reduce((s, x) => s + x.value, 0);
 
   return (
-    <section className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-      <Card className="lg:col-span-2 border-border/60 overflow-hidden p-0">
+    <section className="grid grid-cols-1 lg:grid-cols-12 gap-4 items-start">
+      <Card className="lg:col-span-8 min-w-0 border-border/60 overflow-hidden p-0">
+
         <PanelHeader icon={<TrendingUp className="size-3.5" />} title="12 months · Revenue vs Expense vs Net" tone="primary" />
         <CardContent className="h-72 p-4">
           <ResponsiveContainer width="100%" height="100%">
