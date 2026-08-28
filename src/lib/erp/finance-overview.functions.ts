@@ -32,6 +32,8 @@ export type FinanceOverview = {
     revenue: number; cogs: number; gross: number;
     expense: number; otherIncome: number; net: number; margin: number;
     refundLoss: number;
+    capitalOutflow: number;
+    cogsMissingUnits: number;
     dailySeries: { date: string; revenue: number; expense: number; net: number }[];
   };
   accounts: { id: string; name: string; type: string; balance: number }[];
