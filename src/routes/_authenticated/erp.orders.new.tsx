@@ -1144,7 +1144,7 @@ function NewOrderPage() {
                   )}
                 </div>
 
-                <div className="max-h-[calc(100vh-320px)] min-h-[220px] space-y-1 overflow-y-auto rounded-xl border bg-muted/20 p-1.5">
+                <div className="max-h-[44vh] min-h-[180px] space-y-1 overflow-y-auto overscroll-contain rounded-xl border bg-muted/20 p-1.5 lg:max-h-[calc(100vh-320px)] lg:min-h-[220px]">
                   {searching && products.length === 0 && (
                     <div className="flex items-center gap-2 p-3 text-xs text-muted-foreground">
                       <Loader2 className="h-3.5 w-3.5 animate-spin" /> Searching…
