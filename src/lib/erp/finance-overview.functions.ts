@@ -280,7 +280,7 @@ export const getFinanceOverview = createServerFn({ method: "POST" })
     }
     const monthIdx = new Map(months.map((m, i) => [m.month, i]));
     for (const o of (monthlyOrdRes.data ?? []) as { total: number; created_at: string }[]) {
-      const i = monthIdx.get(o.created_at.slice(0, 7));
+      const i = monthIdx.get(dhakaDay(o.created_at).slice(0, 7));
       if (i != null) months[i].revenue += num(o.total);
     }
     for (const t of (monthlyTxnRes.data ?? []) as { amount: number; transaction_date: string; txn_type: string; reference_type: string | null }[]) {
