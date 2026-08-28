@@ -48,6 +48,9 @@ export type FinanceOverview = {
     importsDueTop: { po: string; supplier: string; due: number; status: string }[];
     upcomingRecurring: { id: string; name: string; amount: number; next_run: string }[];
     topExpenseCats: { name: string; amount: number }[];
+    /** Full operating-expense breakdown (capital outflows excluded). */
+    expenseCats: { name: string; amount: number }[];
+
     overdueBills: number;
   };
   monthlySeries: { month: string; revenue: number; expense: number; net: number }[];
