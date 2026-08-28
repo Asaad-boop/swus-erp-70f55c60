@@ -307,15 +307,22 @@ export const getFinanceOverview = createServerFn({ method: "POST" })
     }
     const dailySeries = Array.from(dailyMap.entries()).map(([date, v]) => ({ date, revenue: v.revenue, expense: v.expense, net: v.revenue - v.expense }));
 
-    // COGS = sum of cost_price * units for delivered range. Approx via revenue * average cost ratio is unreliable; skip if unavailable.
-    // Heuristic: assume COGS = inventory cost / inventory price ratio * revenue (only if products have cost). Otherwise 0.
+    // COGS — canonical source (get_sku_profit): per delivered line, cost chain
+    // unit_cost_snapshot → variant WAC → product WAC → cost_price. Never a
+    // revenue-ratio heuristic, so Finance matches Marketing/Reports exactly.
     let cogs = 0;
-    {
-      const prods = (prodRes.data ?? []) as { cost_price: number | null; price: number | null }[];
-      const totalCost = prods.reduce((s, p) => s + num(p.cost_price), 0);
-      const totalPrice = prods.reduce((s, p) => s + num(p.price), 0);
-      const ratio = totalPrice > 0 ? totalCost / totalPrice : 0;
-      cogs = revenue * ratio;
+    let cogsMissingUnits = 0;
+    try {
+      const { getBrandProfitTotals } = await import("@/lib/erp/marketing/canonical.server");
+      const totals = await Promise.all(
+        brandIds.map((bid) => getBrandProfitTotals(supabase, bid, from, to)),
+      );
+      for (const t of totals) {
+        cogs += t.cogs;
+        cogsMissingUnits += t.cost_missing_units;
+      }
+    } catch {
+      cogs = 0;
     }
     const gross = revenue - cogs;
     // Net Profit = operating result only. "Other income" (capital injections,
