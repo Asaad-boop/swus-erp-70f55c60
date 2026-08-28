@@ -619,7 +619,7 @@ function NewOrderPage() {
       sendOrderSms({
         data: { orderId: res.id, template: isPreorder ? "preorder_placed" : "order_confirm" },
       })
-        .then((r) => {
+        .then((r: { ok: boolean }) => {
           if (r.ok) toast.success("Customer-ke confirmation SMS pathano hoyeche");
         })
         .catch(() => {});
