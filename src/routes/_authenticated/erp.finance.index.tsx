@@ -324,6 +324,8 @@ function PnlStrip({ data, onDrill }: {
             <div className="relative text-[11px] text-muted-foreground mt-1.5 flex items-center gap-2">
               <span>{data.range.from} → {data.range.to}</span>
               {pnl.otherIncome > 0 && <span>· Other income {fmtBdt(pnl.otherIncome)}</span>}
+              {pnl.capitalOutflow > 0 && <span>· Capital out (stock/ads wallet) {fmtBdt(pnl.capitalOutflow)}</span>}
+              {pnl.cogsMissingUnits > 0 && <span className="text-amber-600 dark:text-amber-400">· {pnl.cogsMissingUnits} units without cost</span>}
             </div>
             <div className="relative mt-3 h-16">
               <ResponsiveContainer width="100%" height="100%">

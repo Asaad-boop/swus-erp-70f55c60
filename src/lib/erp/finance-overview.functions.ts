@@ -2,6 +2,7 @@ import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { applyBrandScope } from "@/lib/erp/apply-brand-scope";
+import { isCapitalOutflow, refLabel, dhakaDay } from "@/lib/erp/finance-expense-classify";
 
 const Input = z.object({
   brandIds: z.array(z.string().uuid()).min(1),
@@ -31,6 +32,8 @@ export type FinanceOverview = {
     revenue: number; cogs: number; gross: number;
     expense: number; otherIncome: number; net: number; margin: number;
     refundLoss: number;
+    capitalOutflow: number;
+    cogsMissingUnits: number;
     dailySeries: { date: string; revenue: number; expense: number; net: number }[];
   };
   accounts: { id: string; name: string; type: string; balance: number }[];
@@ -57,8 +60,10 @@ export const getFinanceOverview = createServerFn({ method: "POST" })
   .handler(async ({ data, context }): Promise<FinanceOverview> => {
     const { supabase } = context;
     const { brandIds, from, to } = data;
-    const fromTs = `${from}T00:00:00`;
-    const toTs = `${to}T23:59:59.999`;
+    // Order timestamps are compared in Asia/Dhaka so the P&L window matches the
+    // canonical COGS RPC (which buckets by Dhaka day).
+    const fromTs = `${from}T00:00:00+06:00`;
+    const toTs = `${to}T23:59:59.999+06:00`;
 
     // 12-month range for monthly series
     const now = new Date();
@@ -86,7 +91,7 @@ export const getFinanceOverview = createServerFn({ method: "POST" })
       applyBrandScope(supabase.from("orders").select("total").in("status", ["returned", "paid_return", "unpaid_return", "partial_return"]), brandIds).gte("created_at", fromTs).lte("created_at", toTs),
       applyBrandScope(supabase.from("orders").select("total,id").in("status", ["shipped", "delivered", "partial_delivered"]), brandIds).limit(2000),
       applyBrandScope(supabase.from("orders").select("id,total,shipping_name,shipping_phone").in("status", ["delivered", "partial_delivered"]).eq("payment_status", "unpaid"), brandIds).limit(1000),
-      applyBrandScope(supabase.from("erp_transactions").select("id,txn_type,amount,category_id,transaction_date,account_id"), brandIds).gte("transaction_date", from).lte("transaction_date", to),
+      applyBrandScope(supabase.from("erp_transactions").select("id,txn_type,amount,category_id,transaction_date,account_id,reference_type"), brandIds).gte("transaction_date", from).lte("transaction_date", to),
       applyBrandScope(supabase.from("erp_transactions").select("id,txn_type,amount,transaction_date,description,category_id,account_id"), brandIds).order("transaction_date", { ascending: false }).order("created_at", { ascending: false }).limit(10),
       applyBrandScope(supabase.from("erp_expense_categories").select("id,name"), brandIds),
       applyBrandScope(supabase.from("erp_bills").select("amount,paid_amount,supplier_id,due_date,status"), brandIds).in("status", ["open", "partial", "overdue"]),
@@ -94,10 +99,10 @@ export const getFinanceOverview = createServerFn({ method: "POST" })
       applyBrandScope(supabase.from("imp_purchase_orders").select("id,po_number,supplier_id,grand_total_bdt,paid_bdt,due_bdt,status"), brandIds),
       applyBrandScope(supabase.from("erp_suppliers").select("id,name"), brandIds),
       applyBrandScope(supabase.from("erp_recurring_rules").select("id,name,amount,next_run_date").eq("is_active", true), brandIds).order("next_run_date", { ascending: true }).limit(20),
-      applyBrandScope(supabase.from("orders").select("total,created_at").in("status", ["delivered", "partial_delivered", "paid"]), brandIds).gte("created_at", `${twelveIso}T00:00:00`),
-      applyBrandScope(supabase.from("erp_transactions").select("amount,transaction_date,txn_type"), brandIds).gte("transaction_date", twelveIso),
-      applyBrandScope(supabase.from("orders").select("total,created_at").in("status", ["delivered", "partial_delivered", "paid"]), brandIds).gte("created_at", `${dailyStart}T00:00:00`).lte("created_at", `${dailyEnd}T23:59:59.999`),
-      applyBrandScope(supabase.from("erp_transactions").select("amount,transaction_date,txn_type"), brandIds).gte("transaction_date", dailyStart).lte("transaction_date", dailyEnd),
+      applyBrandScope(supabase.from("orders").select("total,created_at").in("status", ["delivered", "partial_delivered", "paid"]), brandIds).gte("created_at", `${twelveIso}T00:00:00+06:00`),
+      applyBrandScope(supabase.from("erp_transactions").select("amount,transaction_date,txn_type,reference_type"), brandIds).gte("transaction_date", twelveIso),
+      applyBrandScope(supabase.from("orders").select("total,created_at").in("status", ["delivered", "partial_delivered", "paid"]), brandIds).gte("created_at", `${dailyStart}T00:00:00+06:00`).lte("created_at", `${dailyEnd}T23:59:59.999+06:00`),
+      applyBrandScope(supabase.from("erp_transactions").select("amount,transaction_date,txn_type,reference_type"), brandIds).gte("transaction_date", dailyStart).lte("transaction_date", dailyEnd),
     ]);
 
     // Brand map
@@ -194,16 +199,24 @@ export const getFinanceOverview = createServerFn({ method: "POST" })
     const arTop = Array.from(arMap.values()).sort((a, b) => b.amount - a.amount).slice(0, 5);
 
     // Transactions in range
-    const txns = (txnRes.data ?? []) as { id: string; txn_type: string; amount: number; category_id: string | null; transaction_date: string; account_id: string | null }[];
-    const expense = txns.filter((t) => t.txn_type === "expense").reduce((s, t) => s + num(t.amount), 0);
+    const txns = (txnRes.data ?? []) as { id: string; txn_type: string; amount: number; category_id: string | null; transaction_date: string; account_id: string | null; reference_type: string | null }[];
+    // Capital / asset movements — cash leaves the wallet but it is NOT an
+    // operating expense: stock purchases become COGS when sold, and dollar
+    // top-ups sit in the ad wallet until the spend is actually consumed.
+    const expense = txns
+      .filter((t) => t.txn_type === "expense" && !isCapitalOutflow(t.reference_type))
+      .reduce((s, t) => s + num(t.amount), 0);
+    const capitalOutflow = txns
+      .filter((t) => t.txn_type === "expense" && isCapitalOutflow(t.reference_type))
+      .reduce((s, t) => s + num(t.amount), 0);
     const otherIncome = txns.filter((t) => t.txn_type === "income").reduce((s, t) => s + num(t.amount), 0);
 
-    // Top expense categories
+    // Top expense categories (operating only, reference-aware labels)
     const catMap = new Map((catsRes.data ?? []).map((c) => [c.id as string, c.name as string]));
     const expByCat = new Map<string, number>();
     for (const t of txns) {
-      if (t.txn_type !== "expense") continue;
-      const name = (t.category_id && catMap.get(t.category_id)) || "Uncategorized";
+      if (t.txn_type !== "expense" || isCapitalOutflow(t.reference_type)) continue;
+      const name = (t.category_id && catMap.get(t.category_id)) || refLabel(t.reference_type);
       expByCat.set(name, (expByCat.get(name) ?? 0) + num(t.amount));
     }
     const topExpenseCats = Array.from(expByCat.entries())
@@ -269,11 +282,11 @@ export const getFinanceOverview = createServerFn({ method: "POST" })
     }
     const monthIdx = new Map(months.map((m, i) => [m.month, i]));
     for (const o of (monthlyOrdRes.data ?? []) as { total: number; created_at: string }[]) {
-      const i = monthIdx.get(o.created_at.slice(0, 7));
+      const i = monthIdx.get(dhakaDay(o.created_at).slice(0, 7));
       if (i != null) months[i].revenue += num(o.total);
     }
-    for (const t of (monthlyTxnRes.data ?? []) as { amount: number; transaction_date: string; txn_type: string }[]) {
-      if (t.txn_type !== "expense") continue;
+    for (const t of (monthlyTxnRes.data ?? []) as { amount: number; transaction_date: string; txn_type: string; reference_type: string | null }[]) {
+      if (t.txn_type !== "expense" || isCapitalOutflow(t.reference_type)) continue;
       const i = monthIdx.get(t.transaction_date.slice(0, 7));
       if (i != null) months[i].expense += num(t.amount);
     }
@@ -287,24 +300,31 @@ export const getFinanceOverview = createServerFn({ method: "POST" })
       dailyMap.set(d.toISOString().slice(0, 10), { revenue: 0, expense: 0 });
     }
     for (const o of (dailyOrdRes.data ?? []) as { total: number; created_at: string }[]) {
-      const k = o.created_at.slice(0, 10);
+      const k = dhakaDay(o.created_at);
       const cur = dailyMap.get(k); if (cur) cur.revenue += num(o.total);
     }
-    for (const t of (dailyTxnRes.data ?? []) as { amount: number; transaction_date: string; txn_type: string }[]) {
-      if (t.txn_type !== "expense") continue;
+    for (const t of (dailyTxnRes.data ?? []) as { amount: number; transaction_date: string; txn_type: string; reference_type: string | null }[]) {
+      if (t.txn_type !== "expense" || isCapitalOutflow(t.reference_type)) continue;
       const cur = dailyMap.get(t.transaction_date); if (cur) cur.expense += num(t.amount);
     }
     const dailySeries = Array.from(dailyMap.entries()).map(([date, v]) => ({ date, revenue: v.revenue, expense: v.expense, net: v.revenue - v.expense }));
 
-    // COGS = sum of cost_price * units for delivered range. Approx via revenue * average cost ratio is unreliable; skip if unavailable.
-    // Heuristic: assume COGS = inventory cost / inventory price ratio * revenue (only if products have cost). Otherwise 0.
+    // COGS — canonical source (get_sku_profit): per delivered line, cost chain
+    // unit_cost_snapshot → variant WAC → product WAC → cost_price. Never a
+    // revenue-ratio heuristic, so Finance matches Marketing/Reports exactly.
     let cogs = 0;
-    {
-      const prods = (prodRes.data ?? []) as { cost_price: number | null; price: number | null }[];
-      const totalCost = prods.reduce((s, p) => s + num(p.cost_price), 0);
-      const totalPrice = prods.reduce((s, p) => s + num(p.price), 0);
-      const ratio = totalPrice > 0 ? totalCost / totalPrice : 0;
-      cogs = revenue * ratio;
+    let cogsMissingUnits = 0;
+    try {
+      const { getBrandProfitTotals } = await import("@/lib/erp/marketing/canonical.server");
+      const totals = await Promise.all(
+        brandIds.map((bid) => getBrandProfitTotals(supabase, bid, from, to)),
+      );
+      for (const t of totals) {
+        cogs += t.cogs;
+        cogsMissingUnits += t.cost_missing_units;
+      }
+    } catch {
+      cogs = 0;
     }
     const gross = revenue - cogs;
     // Net Profit = operating result only. "Other income" (capital injections,
@@ -347,6 +367,7 @@ export const getFinanceOverview = createServerFn({ method: "POST" })
       },
       pnl: {
         revenue, cogs, gross, expense, otherIncome, net, margin, refundLoss,
+        capitalOutflow, cogsMissingUnits,
         dailySeries,
       },
       accounts,
