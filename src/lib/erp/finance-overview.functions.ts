@@ -283,8 +283,8 @@ export const getFinanceOverview = createServerFn({ method: "POST" })
       const i = monthIdx.get(o.created_at.slice(0, 7));
       if (i != null) months[i].revenue += num(o.total);
     }
-    for (const t of (monthlyTxnRes.data ?? []) as { amount: number; transaction_date: string; txn_type: string }[]) {
-      if (t.txn_type !== "expense") continue;
+    for (const t of (monthlyTxnRes.data ?? []) as { amount: number; transaction_date: string; txn_type: string; reference_type: string | null }[]) {
+      if (t.txn_type !== "expense" || isCapitalOutflow(t.reference_type)) continue;
       const i = monthIdx.get(t.transaction_date.slice(0, 7));
       if (i != null) months[i].expense += num(t.amount);
     }
