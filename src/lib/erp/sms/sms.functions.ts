@@ -5,8 +5,15 @@ import { SMS_DEFAULTS, smsConfigKey, smsSegments, normalizeBdPhone, type SmsConf
 
 type Ctx = { supabase: any; userId: string };
 
-async function loadConfig(ctx: Ctx, brandId: string): Promise<SmsConfig> {
-  const { data } = await ctx.supabase
+/**
+ * SMS config lives in `app_settings`, which is admin-read-only under RLS.
+ * Non-admin staff creating orders would otherwise silently get the empty
+ * default config and every SMS would be skipped as "not_configured".
+ * So always read it with the service-role client (server-only, read-only here).
+ */
+async function loadConfig(_ctx: Ctx, brandId: string): Promise<SmsConfig> {
+  const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+  const { data } = await supabaseAdmin
     .from("app_settings")
     .select("value")
     .eq("key", smsConfigKey(brandId))
@@ -116,18 +123,22 @@ export const sendOrderSms = createServerFn({ method: "POST" })
       .eq("id", data.orderId)
       .maybeSingle();
     if (error) throw error;
-    if (!order?.brand_id) return { ok: false, skipped: "no_brand" as const };
+    const skip = (reason: string) => {
+      console.warn("[sms] skipped", { orderId: data.orderId, template: data.template, reason });
+      return { ok: false, skipped: reason as never };
+    };
+    if (!order?.brand_id) return skip("no_brand");
 
     const cfg = await loadConfig(ctx, order.brand_id);
-    if (!cfg.enabled && !data.force) return { ok: false, skipped: "disabled" as const };
+    if (!cfg.enabled && !data.force) return skip("disabled");
     const autoKey = (
       { order_confirm: "auto_order_confirm", preorder_placed: "auto_preorder_placed", preorder_ready: "auto_preorder_ready", preorder_confirmed: "auto_preorder_confirmed" } as const
     )[data.template as Exclude<SmsTemplateKey, "custom">];
-    if (!data.force && !cfg[autoKey]) return { ok: false, skipped: "auto_off" as const };
-    if (!cfg.api_key || !cfg.sender_id) return { ok: false, skipped: "not_configured" as const };
+    if (!data.force && !cfg[autoKey]) return skip("auto_off");
+    if (!cfg.api_key || !cfg.sender_id) return skip("not_configured");
 
     const phone = normalizeBdPhone(order.shipping_phone || order.guest_phone || "");
-    if (!phone) return { ok: false, skipped: "no_phone" as const };
+    if (!phone) return skip("no_phone");
 
     const { data: brand } = await ctx.supabase.from("brands").select("name").eq("id", order.brand_id).maybeSingle();
     const total = Number(order.total || 0);
@@ -148,7 +159,7 @@ export const sendOrderSms = createServerFn({ method: "POST" })
       tracking: order.tracking_number ?? "",
       date: new Date().toISOString().slice(0, 10),
     }).trim();
-    if (!message) return { ok: false, skipped: "empty_template" as const };
+    if (!message) return skip("empty_template");
 
     const res = await sendBulkSms({ apiKey: cfg.api_key, senderId: cfg.sender_id, numbers: [phone], message });
 

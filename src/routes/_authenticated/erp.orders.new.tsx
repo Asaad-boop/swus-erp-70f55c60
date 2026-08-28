@@ -619,8 +619,9 @@ function NewOrderPage() {
       sendOrderSms({
         data: { orderId: res.id, template: isPreorder ? "preorder_placed" : "order_confirm" },
       })
-        .then((r: { ok: boolean }) => {
+        .then((r: { ok: boolean; skipped?: string; message?: string }) => {
           if (r.ok) toast.success("Customer-ke confirmation SMS pathano hoyeche");
+          else toast.warning(`SMS jayni: ${r.skipped ?? r.message ?? "unknown"}`);
         })
         .catch(() => {});
     },
