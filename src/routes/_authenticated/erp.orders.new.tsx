@@ -1050,7 +1050,7 @@ function NewOrderPage() {
               <Card className="border-amber-300/60 bg-amber-50/40 shadow-sm dark:bg-amber-950/10">
                 <CardContent className="space-y-3.5 p-4">
                   <SectionHeader icon={<Sparkles className="h-3.5 w-3.5" />} accent="bg-amber-500" title="Advance Payment Details" sub="অগ্রিম পেমেন্টের তথ্য" />
-                  <div className="grid gap-3 md:grid-cols-4">
+                  <div className="grid gap-3 sm:grid-cols-2 md:grid-cols-4">
                     <Field label="Payment Method">
                       <Select value={paymentMethod} onValueChange={setPaymentMethod}>
                         <SelectTrigger><SelectValue /></SelectTrigger>
