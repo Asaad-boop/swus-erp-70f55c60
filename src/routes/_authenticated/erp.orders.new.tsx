@@ -1091,8 +1091,8 @@ function NewOrderPage() {
             )}
           </div>
 
-          {/* RIGHT: Quick add + Delivery + Extras */}
-          <div className="space-y-4 lg:col-span-4">
+          {/* Quick add — mobile-e sobar upore, jate product add kora sohoj hoy */}
+          <div className="order-1 lg:order-2 lg:col-span-4">
             {/* Quick add products — sticky so it stays reachable while scrolling */}
             <Card className="overflow-hidden shadow-sm lg:sticky lg:top-[72px] lg:z-[5]">
               <CardContent className="space-y-3 p-4">
