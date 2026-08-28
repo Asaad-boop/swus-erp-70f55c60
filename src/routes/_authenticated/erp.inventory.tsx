@@ -4,7 +4,7 @@ import {
   Download, Search, ArrowUp, ArrowDown, History, Check, Package, Boxes,
   AlertTriangle, Wallet, ChevronRight, ChevronDown, BarChart3, MoreVertical,
   ScanLine, Plus, Settings, Lock, TrendingUp, TrendingDown, Layers, Clock,
-  Edit3, AlertCircle, X, Trash2, Tag, DollarSign,
+  Edit3, AlertCircle, X, Trash2, Tag, DollarSign, ClipboardCheck,
 } from "lucide-react";
 import { useQueryClient, useMutation } from "@tanstack/react-query";
 import { toast } from "sonner";
@@ -48,6 +48,7 @@ import {
 } from "@/lib/erp/inventory";
 import { downloadCsv } from "@/lib/erp/orders";
 import { StockAdjustDialog } from "@/components/erp/inventory/stock-adjust-dialog";
+import { PhysicalCountDialog } from "@/components/erp/inventory/physical-count-dialog";
 import { BulkStockDialog } from "@/components/erp/inventory/bulk-stock-dialog";
 import { BulkReorderDialog } from "@/components/erp/inventory/bulk-reorder-dialog";
 import { ProductEditDialog } from "@/components/erp/inventory/product-edit-dialog";
@@ -144,6 +145,7 @@ function InventoryPage() {
   }, [brands]);
 
   const [adjust, setAdjust] = useState<{ product: ProductRow; mode: "in" | "out" } | null>(null);
+  const [countProduct, setCountProduct] = useState<ProductRow | null>(null);
   const [historyProduct, setHistoryProduct] = useState<ProductRow | null>(null);
   const [editProduct, setEditProduct] = useState<ProductRow | null>(null);
   const [addOpen, setAddOpen] = useState(false);
@@ -254,7 +256,7 @@ function InventoryPage() {
     onError: (e: Error) => toast.error(e.message),
   });
 
-  const summary = summaryQuery.data ?? { products: 0, units: 0, value: 0, reserved: 0, low: 0, out: 0 };
+  const summary = summaryQuery.data ?? { products: 0, units: 0, value: 0, reserved: 0, available: 0, low: 0, out: 0, oversold: 0, shortfall: 0, noCost: 0 };
 
   const lowOrOut = summary.low + summary.out;
   const syncedAt = dataUpdatedAt ? new Date(dataUpdatedAt) : null;
@@ -265,6 +267,8 @@ function InventoryPage() {
     { k: "low", label: "Low Stock" },
     { k: "out", label: "Out of Stock" },
     { k: "reserved", label: "Reserved" },
+    { k: "oversold", label: "Oversold" },
+    { k: "nocost", label: "Missing cost" },
   ];
 
   return (
@@ -313,7 +317,7 @@ function InventoryPage() {
       </header>
 
       {/* KPI CARDS */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-px rounded-2xl border border-border/70 bg-border/60 overflow-hidden">
+      <div className="grid grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-px rounded-2xl border border-border/70 bg-border/60 overflow-hidden">
         <KpiCard
           accent="blue"
           icon={<Package className="h-5 w-5" />}
@@ -342,6 +346,27 @@ function InventoryPage() {
           value={`${summary.low} / ${summary.out}`}
           hint={lowQuery.data?.length ? `${lowQuery.data.length} active alerts` : "All healthy"}
           emphasize={lowOrOut > 0}
+          onClick={() => setFilter({ ...filter, stockState: filter.stockState === "low" ? "all" : "low", page: 0 })}
+          active={filter.stockState === "low"}
+        />
+        <KpiCard
+          accent="amber"
+          icon={<Lock className="h-5 w-5" />}
+          label="Reserved / Available"
+          value={`${summary.reserved.toLocaleString()} / ${summary.available.toLocaleString()}`}
+          hint="Confirmed orders এর জন্য আটকে থাকা units"
+          onClick={() => setFilter({ ...filter, stockState: filter.stockState === "reserved" ? "all" : "reserved", page: 0 })}
+          active={filter.stockState === "reserved"}
+        />
+        <KpiCard
+          accent="red"
+          icon={<AlertCircle className="h-5 w-5" />}
+          label="Oversold SKUs"
+          value={summary.oversold.toLocaleString()}
+          hint={summary.oversold > 0 ? `${summary.shortfall.toLocaleString()} pcs shortfall · physical count দরকার` : "Reserved সব cover করা আছে"}
+          emphasize={summary.oversold > 0}
+          onClick={() => setFilter({ ...filter, stockState: filter.stockState === "oversold" ? "all" : "oversold", page: 0 })}
+          active={filter.stockState === "oversold"}
         />
       </div>
 
@@ -556,7 +581,7 @@ function InventoryPage() {
                   <TableHead className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">SKU</TableHead>
                   <TableHead className="text-right text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Price</TableHead>
                   {cols.wac && <TableHead className="text-right text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">WAC</TableHead>}
-                  <TableHead className="text-right text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">In Stock</TableHead>
+                  <TableHead className="text-right text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Physical · Reserved · Avail</TableHead>
                   {cols.reserved && <TableHead className="text-right text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Reserved</TableHead>}
                   <TableHead className="text-right text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Available</TableHead>
                   {cols.incoming && <TableHead className="text-right text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Incoming</TableHead>}
@@ -683,7 +708,9 @@ function InventoryPage() {
                         {cols.wac && <TableCell className="text-right tabular-nums text-xs text-muted-foreground">
                           <span className="text-muted-foreground/50 mr-0.5">৳</span>{wac.toLocaleString(undefined, { maximumFractionDigits: 2 })}
                         </TableCell>}
-                        <TableCell className="text-right tabular-nums text-sm text-foreground/80">{r.stock}</TableCell>
+                        <TableCell className="text-right">
+                          <StockLadder physical={Number(r.stock)} reserved={reserved} available={available} />
+                        </TableCell>
                         {cols.reserved && <TableCell className="text-right">
                           {reserved > 0 ? (
                             <span className="inline-flex items-center gap-1 tabular-nums text-sm text-amber-600 dark:text-amber-400 font-medium">
@@ -740,6 +767,9 @@ function InventoryPage() {
                               </DropdownMenuItem>
                               <DropdownMenuItem onClick={() => setAdjust({ product: r, mode: "out" })}>
                                 <ArrowDown className="h-4 w-4 mr-2 text-red-600" />Stock Out
+                              </DropdownMenuItem>
+                              <DropdownMenuItem onClick={() => setCountProduct(r)}>
+                                <ClipboardCheck className="h-4 w-4 mr-2 text-violet-600" />Physical Count
                               </DropdownMenuItem>
                               <DropdownMenuSeparator />
                               <DropdownMenuItem onClick={() => setHistoryProduct(r)}>
@@ -968,6 +998,8 @@ function InventoryPage() {
         </TabsContent>
       </Tabs>
 
+      <PhysicalCountDialog product={countProduct} onClose={() => setCountProduct(null)} />
+
       <StockAdjustDialog
         product={adjust?.product ?? null}
         mode={adjust?.mode ?? "in"}
@@ -1049,20 +1081,55 @@ function PillTab({ value, icon, badge, children }: { value: string; icon: React.
   );
 }
 
-type KpiAccent = "blue" | "purple" | "green" | "red";
+type KpiAccent = "blue" | "purple" | "green" | "red" | "amber";
 const ACCENT_STYLES: Record<KpiAccent, { dot: string; icon: string }> = {
   blue:   { dot: "bg-blue-500",    icon: "text-blue-600 dark:text-blue-400" },
   purple: { dot: "bg-purple-500",  icon: "text-purple-600 dark:text-purple-400" },
   green:  { dot: "bg-emerald-500", icon: "text-emerald-600 dark:text-emerald-400" },
   red:    { dot: "bg-red-500",     icon: "text-red-600 dark:text-red-400" },
+  amber:  { dot: "bg-amber-500",   icon: "text-amber-600 dark:text-amber-400" },
 };
 
-function KpiCard({ icon, label, value, hint, accent, emphasize }: {
-  icon: React.ReactNode; label: string; value: string; hint?: string; accent: KpiAccent; emphasize?: boolean;
+/** Physical → Reserved → Available ladder with a proportional bar. */
+function StockLadder({ physical, reserved, available }: { physical: number; reserved: number; available: number }) {
+  const base = Math.max(physical, reserved, 1);
+  const resPct = Math.min(100, (Math.max(reserved, 0) / base) * 100);
+  const negative = available < 0;
+  return (
+    <div className="ml-auto w-[104px] space-y-1 text-right">
+      <div className="flex items-baseline justify-end gap-1 tabular-nums">
+        <span className="text-sm font-semibold text-foreground">{physical}</span>
+        <span className="text-[10px] uppercase tracking-wide text-muted-foreground">phys</span>
+      </div>
+      <div className="h-1.5 w-full overflow-hidden rounded-full bg-emerald-500/25">
+        <div className={cn("h-full rounded-full", negative ? "bg-red-500" : "bg-amber-500")} style={{ width: `${resPct}%` }} />
+      </div>
+      <div className="flex items-center justify-end gap-1.5 text-[10px] tabular-nums text-muted-foreground">
+        <span className={cn(reserved > 0 && "text-amber-600 dark:text-amber-400")}>{reserved} res</span>
+        <span className="text-border">·</span>
+        <span className={cn(negative ? "font-semibold text-red-600 dark:text-red-400" : "text-emerald-600 dark:text-emerald-400")}>{available} avl</span>
+      </div>
+    </div>
+  );
+}
+
+function KpiCard({ icon, label, value, hint, accent, emphasize, onClick, active }: {
+  icon: React.ReactNode; label: string; value: string; hint?: string; accent: KpiAccent;
+  emphasize?: boolean; onClick?: () => void; active?: boolean;
 }) {
   const s = ACCENT_STYLES[accent];
   return (
-    <div className="group bg-card transition-colors hover:bg-muted/30 p-5">
+    <div
+      role={onClick ? "button" : undefined}
+      tabIndex={onClick ? 0 : undefined}
+      onClick={onClick}
+      onKeyDown={onClick ? (e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); onClick(); } } : undefined}
+      className={cn(
+        "group bg-card transition-colors p-5",
+        onClick && "cursor-pointer hover:bg-muted/40",
+        active && "bg-muted/60 ring-1 ring-inset ring-foreground/15",
+      )}
+    >
       <div className="flex items-start justify-between gap-3">
         <div className="space-y-1">
           <div className="flex items-center gap-2">
