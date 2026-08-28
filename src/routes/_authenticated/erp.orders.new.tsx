@@ -756,9 +756,9 @@ function NewOrderPage() {
         )}
 
         {/* Main grid: Customer + Courier (left)  |  Quick add + Extras (right) */}
-        <div className="grid gap-4 lg:grid-cols-12">
+        <div className="grid items-start gap-3 md:gap-4 lg:grid-cols-12">
           {/* LEFT: Customer + Courier + Items + Totals */}
-          <div className="space-y-4 lg:col-span-8">
+          <div className="order-2 space-y-3 md:space-y-4 lg:order-1 lg:col-span-8 lg:row-span-2">
             {/* Customer card */}
             <Card className="overflow-hidden shadow-sm">
               <CardContent className="space-y-4 p-4">
