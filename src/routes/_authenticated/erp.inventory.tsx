@@ -55,9 +55,8 @@ import { ProductAddDialog } from "@/components/erp/inventory/product-add-dialog"
 import { CatalogView } from "@/components/erp/inventory/catalog-view";
 
 export const Route = createFileRoute("/_authenticated/erp/inventory")({
-  validateSearch: (search: Record<string, unknown>) => ({
-    tab: typeof search.tab === "string" ? search.tab : undefined,
-  }),
+  validateSearch: (search: Record<string, unknown>): { tab?: string } =>
+    typeof search.tab === "string" ? { tab: search.tab } : {},
   head: () => ({
     meta: [
       { title: "Products & Stock — Synq ERP" },
