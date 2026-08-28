@@ -126,15 +126,31 @@ function OverviewPage() {
 
         {d && (
           <>
+            {/* nav pills sit right under the command bar */}
+            <QuickLinks />
+
+            {/* headline P&L + capital */}
             <ProfitHero data={d} onDrill={setDrill} />
             <CapitalStrip data={d} onDrill={setDrill} />
-            <BdWalletsWidget />
-            <MoneyMap data={d} />
+
+            {/* trends (8) + expense donut (4) */}
             <TrendsRow data={d} />
-            <QuickLinks />
-            <RecentTxns data={d} />
+
+            {/* three money panels */}
+            <MoneyMap data={d} />
+
+            {/* ledger feed (8) + ad wallets (4) */}
+            <section className="grid grid-cols-1 lg:grid-cols-12 gap-4 items-start">
+              <div className="lg:col-span-8 min-w-0">
+                <RecentTxns data={d} />
+              </div>
+              <div className="lg:col-span-4 min-w-0">
+                <BdWalletsWidget />
+              </div>
+            </section>
           </>
         )}
+
       </div>
 
       <FinanceDrilldownSheet
