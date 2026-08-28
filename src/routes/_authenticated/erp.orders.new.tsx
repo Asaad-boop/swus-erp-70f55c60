@@ -674,27 +674,27 @@ function NewOrderPage() {
 
 
   return (
-    <div className="min-h-screen workspace-bg pb-32">
+    <div className="min-h-screen workspace-bg pb-44 md:pb-32">
       {/* Top bar */}
       <div className="sticky top-0 z-10 border-b border-[var(--panel-border)] bg-[var(--aurora-header)] backdrop-blur-xl">
-        <div className="mx-auto flex max-w-6xl items-center justify-between gap-3 px-4 py-3 md:px-6">
-          <div className="flex items-center gap-3">
-            <Button variant="ghost" size="icon" className="rounded-xl" onClick={() => navigate({ to: "/erp/orders" })}>
+        <div className="mx-auto grid max-w-6xl grid-cols-[minmax(0,1fr)_auto] items-center gap-2 px-3 py-2.5 md:flex md:justify-between md:gap-3 md:px-6 md:py-3">
+          <div className="flex min-w-0 items-center gap-2 md:gap-3">
+            <Button variant="ghost" size="icon" className="shrink-0 rounded-xl" onClick={() => navigate({ to: "/erp/orders" })}>
               <ArrowLeft className="h-4 w-4" />
             </Button>
-            <div>
-              <div className="text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground">
+            <div className="min-w-0">
+              <div className="truncate text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground">
                 {effectiveBrand?.name ?? (isAllBrands ? "Pick a brand" : "Select a brand")} · Orders
               </div>
-              <h1 className="font-display text-lg font-bold leading-tight tracking-tight md:text-xl">
-                New Order <span className="ml-1 font-normal text-muted-foreground">— নতুন অর্ডার</span>
+              <h1 className="truncate font-display text-base font-bold leading-tight tracking-tight md:text-xl">
+                New Order <span className="ml-1 hidden font-normal text-muted-foreground sm:inline">— নতুন অর্ডার</span>
               </h1>
             </div>
           </div>
-          <div className="flex items-center gap-2">
+          <div className="flex shrink-0 items-center gap-2">
             {isAllBrands && (
               <Select value={pickedBrandId} onValueChange={setPickedBrandId}>
-                <SelectTrigger className="h-9 w-[180px]"><SelectValue placeholder="Choose brand *" /></SelectTrigger>
+                <SelectTrigger className="h-9 w-[132px] sm:w-[180px]"><SelectValue placeholder="Choose brand *" /></SelectTrigger>
                 <SelectContent>
                   {brands.map((b) => <SelectItem key={b.id} value={b.id}>{b.name}</SelectItem>)}
                 </SelectContent>
@@ -708,7 +708,7 @@ function NewOrderPage() {
         </div>
       </div>
 
-      <div className="mx-auto max-w-6xl space-y-4 p-4 md:p-6">
+      <div className="mx-auto max-w-6xl space-y-3 p-3 md:space-y-4 md:p-6">
         {/* AI Smart Paste */}
         <Card className="overflow-hidden border-indigo-200/70 shadow-sm dark:border-indigo-900/40">
           <div className="bg-gradient-to-br from-indigo-50/80 via-indigo-50/40 to-fuchsia-50/40 p-4 dark:from-indigo-950/30 dark:via-indigo-950/10 dark:to-fuchsia-950/10">
@@ -756,9 +756,9 @@ function NewOrderPage() {
         )}
 
         {/* Main grid: Customer + Courier (left)  |  Quick add + Extras (right) */}
-        <div className="grid gap-4 lg:grid-cols-12">
+        <div className="grid items-start gap-3 md:gap-4 lg:grid-cols-12">
           {/* LEFT: Customer + Courier + Items + Totals */}
-          <div className="space-y-4 lg:col-span-8">
+          <div className="order-2 space-y-3 md:space-y-4 lg:order-1 lg:col-span-8 lg:row-span-2">
             {/* Customer card */}
             <Card className="overflow-hidden shadow-sm">
               <CardContent className="space-y-4 p-4">
@@ -859,7 +859,7 @@ function NewOrderPage() {
                     </span>
                     <span className="text-[11px] text-emerald-700/80 dark:text-emerald-300/70">— customer address দিলে Pathao portal-এর exact City / Zone / Area আসবে</span>
                   </div>
-                  <div className="grid gap-3 md:grid-cols-3">
+                  <div className="grid gap-3 sm:grid-cols-2 md:grid-cols-3">
                     <Field label="City">
                       <LocationCombobox
                         items={cities.map((c) => ({ id: c.city_id, name: c.city_name }))}
@@ -925,13 +925,13 @@ function NewOrderPage() {
                       <Package className="h-6 w-6 text-muted-foreground/40" />
                     </div>
                     <p className="text-xs font-bold uppercase tracking-widest text-muted-foreground">No products added</p>
-                    <p className="text-[11px] text-muted-foreground/80">ডান পাশ থেকে product add করুন</p>
+                    <p className="text-[11px] text-muted-foreground/80">উপরের “Quick Add Products” থেকে product add করুন</p>
                   </div>
                 ) : (
                   <div className="space-y-2">
                     {items.map((it, idx) => (
                       <div key={idx} className="rounded-xl border bg-background p-2.5 transition-all hover:border-indigo-200 hover:shadow-sm">
-                       <div className="flex items-center gap-3">
+                       <div className="flex items-start gap-3">
                         <div className="h-12 w-12 shrink-0 overflow-hidden rounded-lg border bg-muted">
                           {it.image ? (
                             <img src={it.image} alt="" className="h-full w-full object-cover" />
@@ -942,7 +942,7 @@ function NewOrderPage() {
                           )}
                         </div>
                         <div className="min-w-0 flex-1">
-                          <div className="truncate text-sm font-semibold">{it.name}</div>
+                          <div className="line-clamp-2 text-sm font-semibold leading-snug">{it.name}</div>
                           <div className="text-[11px] text-muted-foreground">
                             ৳{it.unit_price.toLocaleString()} · stock {it.stock ?? "—"}
                           </div>
@@ -950,35 +950,40 @@ function NewOrderPage() {
                             <div className="truncate text-[11px] font-medium text-indigo-600 dark:text-indigo-400">{it.variant_label}</div>
                           )}
                         </div>
+                        <Button size="icon" variant="ghost" className="h-9 w-9 shrink-0 text-rose-600 hover:bg-rose-50 hover:text-rose-700"
+                          onClick={() => removeItem(idx)}>
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                       </div>
+                       <div className="mt-2 flex flex-wrap items-center gap-2">
                         <div className="flex items-center gap-0.5 rounded-lg border bg-muted/30 p-0.5">
-                          <Button size="icon" variant="ghost" className="h-7 w-7 rounded-md"
+                          <Button size="icon" variant="ghost" className="h-8 w-8 rounded-md"
                             onClick={() => updateItem(idx, { quantity: Math.max(1, it.quantity - 1) })}>
                             <MinusCircle className="h-4 w-4" />
                           </Button>
                           <Input
-                            type="number" min={1}
+                            type="number" min={1} inputMode="numeric"
                             value={it.quantity}
                             onChange={(e) => updateItem(idx, { quantity: Math.max(1, Number(e.target.value)) })}
-                            className="h-7 w-12 border-0 bg-transparent text-center font-semibold shadow-none focus-visible:ring-0"
+                            className="h-8 w-12 border-0 bg-transparent p-0 text-center text-sm font-semibold shadow-none focus-visible:ring-0"
                           />
-                          <Button size="icon" variant="ghost" className="h-7 w-7 rounded-md"
+                          <Button size="icon" variant="ghost" className="h-8 w-8 rounded-md"
                             onClick={() => updateItem(idx, { quantity: it.quantity + 1 })}>
                             <PlusCircle className="h-4 w-4" />
                           </Button>
                         </div>
-                        <Input
-                          type="number" min={0}
-                          value={it.unit_price}
-                          onChange={(e) => updateItem(idx, { unit_price: Number(e.target.value) })}
-                          className="h-8 w-24"
-                        />
-                        <div className="w-24 shrink-0 text-right text-sm font-bold tabular-nums">
+                        <div className="relative">
+                          <span className="pointer-events-none absolute left-2 top-1/2 -translate-y-1/2 text-[11px] font-semibold text-muted-foreground">৳</span>
+                          <Input
+                            type="number" min={0} inputMode="decimal"
+                            value={it.unit_price}
+                            onChange={(e) => updateItem(idx, { unit_price: Number(e.target.value) })}
+                            className="h-9 w-24 pl-5 text-sm tabular-nums"
+                          />
+                        </div>
+                        <div className="ml-auto text-right text-sm font-bold tabular-nums">
                           ৳{(it.unit_price * it.quantity).toLocaleString()}
                         </div>
-                        <Button size="icon" variant="ghost" className="h-8 w-8 text-rose-600 hover:bg-rose-50 hover:text-rose-700"
-                          onClick={() => removeItem(idx)}>
-                          <Trash2 className="h-4 w-4" />
-                        </Button>
                        </div>
                        {items.findIndex((x) => x.product_id === it.product_id) === idx && (
                          <ColorSelector
@@ -1001,7 +1006,7 @@ function NewOrderPage() {
             <Card className="shadow-sm">
               <CardContent className="space-y-3.5 p-4">
                 <SectionHeader icon={<Receipt className="h-3.5 w-3.5" />} accent="bg-rose-500" title="Financial Summary" sub="হিসাব" />
-                <div className="grid gap-3 md:grid-cols-5">
+                <div className="grid grid-cols-2 gap-2.5 sm:gap-3 md:grid-cols-5">
                   <MoneyField label="Discount">
                     <Input type="number" min={0} value={discount || ""} onChange={(e) => setDiscount(Number(e.target.value))} placeholder="0"
                       className="h-10 border-0 bg-transparent pl-7 text-sm font-semibold tabular-nums shadow-none focus-visible:ring-0" />
@@ -1045,7 +1050,7 @@ function NewOrderPage() {
               <Card className="border-amber-300/60 bg-amber-50/40 shadow-sm dark:bg-amber-950/10">
                 <CardContent className="space-y-3.5 p-4">
                   <SectionHeader icon={<Sparkles className="h-3.5 w-3.5" />} accent="bg-amber-500" title="Advance Payment Details" sub="অগ্রিম পেমেন্টের তথ্য" />
-                  <div className="grid gap-3 md:grid-cols-4">
+                  <div className="grid gap-3 sm:grid-cols-2 md:grid-cols-4">
                     <Field label="Payment Method">
                       <Select value={paymentMethod} onValueChange={setPaymentMethod}>
                         <SelectTrigger><SelectValue /></SelectTrigger>
@@ -1086,8 +1091,8 @@ function NewOrderPage() {
             )}
           </div>
 
-          {/* RIGHT: Quick add + Delivery + Extras */}
-          <div className="space-y-4 lg:col-span-4">
+          {/* Quick add — mobile-e sobar upore, jate product add kora sohoj hoy */}
+          <div className="order-1 lg:order-2 lg:col-span-4">
             {/* Quick add products — sticky so it stays reachable while scrolling */}
             <Card className="overflow-hidden shadow-sm lg:sticky lg:top-[72px] lg:z-[5]">
               <CardContent className="space-y-3 p-4">
@@ -1139,7 +1144,7 @@ function NewOrderPage() {
                   )}
                 </div>
 
-                <div className="max-h-[calc(100vh-320px)] min-h-[220px] space-y-1 overflow-y-auto rounded-xl border bg-muted/20 p-1.5">
+                <div className="max-h-[44vh] min-h-[180px] space-y-1 overflow-y-auto overscroll-contain rounded-xl border bg-muted/20 p-1.5 lg:max-h-[calc(100vh-320px)] lg:min-h-[220px]">
                   {searching && products.length === 0 && (
                     <div className="flex items-center gap-2 p-3 text-xs text-muted-foreground">
                       <Loader2 className="h-3.5 w-3.5 animate-spin" /> Searching…
@@ -1202,8 +1207,10 @@ function NewOrderPage() {
                 </div>
               </CardContent>
             </Card>
+          </div>
 
-            {/* Delivery method */}
+          {/* Delivery + extras */}
+          <div className="order-3 space-y-3 md:space-y-4 lg:col-span-4">
             <Card className="shadow-sm">
               <CardContent className="space-y-3.5 p-4">
                 <Field label="Order Source" bn="অর্ডার সোর্স">
@@ -1294,8 +1301,19 @@ function NewOrderPage() {
       </div>
 
       {/* Sleek sticky bottom bar */}
-      <div className="fixed inset-x-0 bottom-0 z-20 border-t border-border/60 bg-background/85 shadow-[0_-10px_30px_-15px_rgba(0,0,0,0.1)] backdrop-blur-xl">
-        <div className="mx-auto flex max-w-6xl items-center justify-between gap-3 px-4 py-2.5 md:px-6">
+      <div className="fixed inset-x-0 bottom-0 z-20 border-t border-border/60 bg-background/90 pb-[env(safe-area-inset-bottom)] shadow-[0_-10px_30px_-15px_rgba(0,0,0,0.1)] backdrop-blur-xl">
+        <div className="mx-auto max-w-6xl px-3 py-2 md:px-6 md:py-2.5">
+          {missing.length > 0 && (
+            <div className="mb-1.5 flex flex-wrap items-center gap-1 md:hidden">
+              <span className="text-[10px] font-bold uppercase tracking-wider text-amber-600">Missing</span>
+              {missing.map((m) => (
+                <span key={m} className="rounded-md bg-amber-100 px-1.5 py-0.5 text-[10px] font-semibold text-amber-800 dark:bg-amber-950/40 dark:text-amber-300">
+                  {m}
+                </span>
+              ))}
+            </div>
+          )}
+          <div className="flex items-center justify-between gap-3">
           <div className="hidden items-center gap-5 md:flex">
             <div className="flex items-center gap-2">
               <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-muted text-muted-foreground">
@@ -1330,7 +1348,16 @@ function NewOrderPage() {
               </>
             )}
           </div>
-          <div className="ml-auto flex items-center gap-4">
+
+          {/* Mobile summary */}
+          <div className="min-w-0 leading-tight md:hidden">
+            <div className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
+              {totalQty} pcs · {deliveryMethod}
+            </div>
+            <div className="text-lg font-black tabular-nums text-indigo-600">৳ {payable.toLocaleString()}</div>
+          </div>
+
+          <div className="ml-auto flex shrink-0 items-center gap-4">
             <div className="hidden text-right leading-tight md:block">
               <div className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Payable</div>
               <div className="text-lg font-black tabular-nums text-indigo-600">৳ {payable.toLocaleString()}</div>
@@ -1338,7 +1365,7 @@ function NewOrderPage() {
             <Button
               size="lg"
               title={missing.length ? `Missing: ${missing.join(", ")}` : "Ctrl + Enter"}
-              className="group h-11 gap-2 rounded-xl bg-emerald-600 px-5 text-[15px] font-bold text-white shadow-lg shadow-emerald-200/60 hover:bg-emerald-700 disabled:opacity-60 dark:shadow-emerald-950/30"
+              className="group h-12 gap-2 rounded-xl bg-emerald-600 px-4 text-[15px] font-bold text-white shadow-lg shadow-emerald-200/60 hover:bg-emerald-700 disabled:opacity-60 md:h-11 md:px-5 dark:shadow-emerald-950/30"
               disabled={create.isPending || missing.length > 0}
               onClick={submit}
             >
@@ -1352,6 +1379,7 @@ function NewOrderPage() {
                 </>
               )}
             </Button>
+          </div>
           </div>
         </div>
       </div>
