@@ -1,5 +1,5 @@
 import { flexRender, getCoreRowModel, useReactTable, type ColumnDef } from "@tanstack/react-table";
-import { MoreHorizontal, FileText, Printer, ImageDown, Pencil, Send, X as XIcon, ListPlus, StickyNote, Phone, MapPin, Copy, ImageIcon, MessageSquare, ArrowRight, RefreshCcw, Check, CheckCircle2, Hash, ExternalLink, CalendarClock } from "lucide-react";
+import { PackageCheck, Undo2, MoreHorizontal, FileText, Printer, ImageDown, Pencil, Send, X as XIcon, ListPlus, StickyNote, Phone, MapPin, Copy, ImageIcon, MessageSquare, ArrowRight, RefreshCcw, Check, CheckCircle2, Hash, ExternalLink, CalendarClock } from "lucide-react";
 import { format } from "date-fns";
 import { Link } from "@tanstack/react-router";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
@@ -8,7 +8,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger, DropdownMenuSub, DropdownMenuSubTrigger, DropdownMenuSubContent, DropdownMenuPortal, DropdownMenuLabel } from "@/components/ui/dropdown-menu";
 import { HoverCard, HoverCardContent, HoverCardTrigger } from "@/components/ui/hover-card";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { customerName, customerPhone, invoiceDisplay, reconcileBadge, settlementBadge, statusAccent, statusAge, statusBadge, statusSinceTs, STATUS_GROUPS, type OrderRow, type OrderStatus } from "@/lib/erp/orders";
+import { RETURN_PENDING_STATUSES, customerName, customerPhone, invoiceDisplay, reconcileBadge, settlementBadge, statusAccent, statusAge, statusBadge, statusSinceTs, STATUS_GROUPS, type OrderRow, type OrderStatus } from "@/lib/erp/orders";
 import { useCustomerHistory, useCourierHistory, type CourierProviderStat } from "@/hooks/erp/use-orders-query";
 import { useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
@@ -30,7 +30,6 @@ const NEXT_STATUS: Partial<Record<OrderStatus, OrderStatus>> = {
   ready_to_ship: "shipped",
   shipped: "in_transit",
   in_transit: "delivered",
-  pending_return: "returned",
   exchange: "exchanged",
 };
 
@@ -55,6 +54,8 @@ type Props = {
   onSyncRow?: (orderId: string) => void;
   onPreorder?: (orderId: string) => void;
   onDispatchPrint?: (orderId: string) => void;
+  /** Open the "return parcel received" confirmation for a row. */
+  onReturnReceive?: (orderId: string) => void;
   /** Row height preset. */
   density?: "comfortable" | "compact";
   /** Column ids hidden by the user. */
@@ -65,7 +66,7 @@ type Props = {
 };
 
 
-export function OrdersTable({ rows, loading, selectedIds, onToggleSelect, onToggleAll, onRowClick, onStatusChange, pendingStatusIds, shipmentsByOrderId, flashOrderIds, onSyncRow, onPreorder, onDispatchPrint, density = "comfortable", hiddenColumns = [], sortKey, sortDir, onSortChange }: Props) {
+export function OrdersTable({ rows, loading, selectedIds, onToggleSelect, onToggleAll, onRowClick, onStatusChange, pendingStatusIds, shipmentsByOrderId, flashOrderIds, onSyncRow, onPreorder, onDispatchPrint, onReturnReceive, density = "comfortable", hiddenColumns = [], sortKey, sortDir, onSortChange }: Props) {
   const copyText = (text: string, label: string) => {
     navigator.clipboard?.writeText(text).then(() => toast.success(`${label} copied`));
   };
@@ -285,6 +286,26 @@ export function OrdersTable({ rows, loading, selectedIds, onToggleSelect, onTogg
                 )}
               </div>
             )}
+            {RETURN_PENDING_STATUSES.includes(row.original.status) && (
+              row.original.return_received_at ? (
+                <span
+                  className="inline-flex items-center gap-1 text-[10px] font-semibold uppercase tracking-wide text-emerald-600 dark:text-emerald-400"
+                  title={`Parcel received ${new Date(row.original.return_received_at).toLocaleString()}${row.original.return_condition ? ` — ${row.original.return_condition}` : ""}`}
+                >
+                  <PackageCheck className="h-3 w-3" /> Parcel received
+                </span>
+              ) : onReturnReceive ? (
+                <button
+                  onClick={(e) => { e.stopPropagation(); onReturnReceive(row.original.id); }}
+                  className="inline-flex items-center gap-1 rounded-full border border-amber-500/40 bg-amber-500/10 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-amber-700 dark:text-amber-400 hover:bg-amber-500/20 transition-colors"
+                  title="Parcel এখনো হাতে আসেনি — পাওয়ার পর confirm করো, তখনই stock ফেরত যাবে"
+                >
+                  <Undo2 className="h-3 w-3" /> Receive parcel
+                </button>
+              ) : (
+                <span className="text-[10px] font-semibold uppercase tracking-wide text-amber-700 dark:text-amber-400">Awaiting parcel</span>
+              )
+            )}
           </div>
         );
       },
@@ -486,6 +507,11 @@ export function OrdersTable({ rows, loading, selectedIds, onToggleSelect, onTogg
                 <DropdownMenuItem onClick={() => onStatusChange(o.id, "ready_to_ship")} disabled={o.status === "ready_to_ship"}>
                   <Send className="h-4 w-4" /> Send to RTS
                 </DropdownMenuItem>
+                {onReturnReceive && RETURN_PENDING_STATUSES.includes(o.status) && !o.return_received_at && (
+                  <DropdownMenuItem onClick={() => onReturnReceive(o.id)}>
+                    <PackageCheck className="h-4 w-4" /> Receive return parcel
+                  </DropdownMenuItem>
+                )}
                 {onPreorder && (
                   <DropdownMenuItem onClick={() => onPreorder(o.id)} disabled={o.status === "pre_order"}>
                     <CalendarClock className="h-4 w-4" /> Move to Pre-order

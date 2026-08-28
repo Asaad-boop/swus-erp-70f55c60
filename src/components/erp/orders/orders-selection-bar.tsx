@@ -1,4 +1,4 @@
-import { CheckCircle2, X, Printer, Truck, RefreshCcw, PackageCheck, Loader2, ListChecks } from "lucide-react";
+import { CheckCircle2, X, Printer, Truck, RefreshCcw, PackageCheck, Loader2, ListChecks, Undo2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
 type Props = {
@@ -13,11 +13,15 @@ type Props = {
   onSyncCourier: () => void;
   isPending?: boolean;
   isSelectingAll?: boolean;
+  /** How many of the selected orders are returns awaiting physical receipt. */
+  returnReceiveCount?: number;
+  onReturnReceive?: () => void;
 };
 
 export function OrdersSelectionBar({
   count, totalMatching, allMatchingSelected, onSelectAllMatching, onClear,
   onQuickStatus, onPrint, onBookCourier, onSyncCourier, isPending, isSelectingAll,
+  returnReceiveCount = 0, onReturnReceive,
 }: Props) {
   if (count === 0) return null;
   const canSelectAll = !allMatchingSelected && totalMatching > count;
@@ -51,6 +55,11 @@ export function OrdersSelectionBar({
         <Button size="sm" variant="ghost" className="h-8 gap-1.5 text-xs" onClick={onSyncCourier} disabled={isPending}>
           <RefreshCcw className="h-3.5 w-3.5" /> Sync
         </Button>
+        {returnReceiveCount > 0 && onReturnReceive && (
+          <Button size="sm" variant="ghost" className="h-8 gap-1.5 text-xs text-amber-600" onClick={onReturnReceive} disabled={isPending}>
+            <Undo2 className="h-3.5 w-3.5" /> Receive returns ({returnReceiveCount})
+          </Button>
+        )}
         <Button size="sm" variant="ghost" className="h-8 gap-1.5 text-xs text-destructive" onClick={() => onQuickStatus("cancelled")} disabled={isPending}>
           <X className="h-3.5 w-3.5" /> Cancel
         </Button>
