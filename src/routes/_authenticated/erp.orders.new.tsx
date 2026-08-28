@@ -1944,6 +1944,32 @@ function RecentOrderPreview({ order, onOpen }: { order: RecentOrder; onOpen: () 
 }
 
 type CourierVariant = "emerald" | "violet" | "rose" | "sky" | "amber" | "neutral";
+function CourierDonut({ pct, delivered, total }: { pct: number; delivered: number; total: number }) {
+  const r = 30;
+  const c = 2 * Math.PI * r;
+  const filled = Math.min(100, Math.max(0, pct));
+  const tone = pct >= 80 ? "stroke-emerald-500" : pct >= 50 ? "stroke-amber-500" : "stroke-rose-500";
+  return (
+    <div className="flex shrink-0 flex-col items-center gap-1" title={`${delivered} of ${total} parcels delivered`}>
+      <div className="relative h-[76px] w-[76px]">
+        <svg viewBox="0 0 76 76" className="h-full w-full -rotate-90">
+          <circle cx="38" cy="38" r={r} fill="none" strokeWidth="7" className="stroke-muted" />
+          <circle
+            cx="38" cy="38" r={r} fill="none" strokeWidth="7" strokeLinecap="round"
+            strokeDasharray={c} strokeDashoffset={c - (filled / 100) * c}
+            className={cn("transition-all duration-700", tone)}
+          />
+        </svg>
+        <div className="absolute inset-0 flex flex-col items-center justify-center">
+          <span className={cn("text-[15px] font-extrabold tabular-nums leading-none", rateTone(pct))}>{pct}%</span>
+          <span className="mt-0.5 text-[8px] font-semibold uppercase tracking-wider text-muted-foreground">success</span>
+        </div>
+      </div>
+      <span className="text-[10px] tabular-nums text-muted-foreground">{delivered}/{total} delivered</span>
+    </div>
+  );
+}
+
 const COURIER_DOT: Record<CourierVariant, string> = {
   emerald: "bg-emerald-500",
   violet: "bg-violet-500",
