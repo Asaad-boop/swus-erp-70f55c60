@@ -13394,6 +13394,13 @@ export type Database = {
         Returns: undefined
       }
       resolve_login_email: { Args: { p_identifier: string }; Returns: string }
+      resync_order_stock_for_product: {
+        Args: { p_product_id: string }
+        Returns: {
+          orders_fixed: number
+          total_delta: number
+        }[]
+      }
       rpt_abc_analysis: {
         Args: { _brand_ids: string[]; _from: string; _to: string }
         Returns: {
