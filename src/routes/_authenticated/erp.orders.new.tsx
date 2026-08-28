@@ -1857,7 +1857,7 @@ function RecentOrderPreview({ order, onOpen }: { order: RecentOrder; onOpen: () 
       <PopoverTrigger asChild>
         <button
           type="button"
-          className="flex w-full items-center justify-between gap-2 rounded-md bg-white/95 px-2 py-1 text-left text-[10px] text-slate-900 ring-1 ring-white/20 shadow-sm transition hover:bg-white"
+          className="flex w-full items-center justify-between gap-2 rounded-md border bg-background px-2 py-1 text-left text-[10px] transition hover:bg-muted/60"
         >
           <span className="truncate font-mono font-semibold tabular-nums text-slate-700">#{order.id.slice(0, 8)}</span>
           <span className={cn("rounded-full px-1.5 py-px text-[8px] font-bold uppercase tracking-wider", tone)}>{order.status}</span>
