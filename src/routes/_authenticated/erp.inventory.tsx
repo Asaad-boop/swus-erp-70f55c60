@@ -581,7 +581,7 @@ function InventoryPage() {
                   <TableHead className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">SKU</TableHead>
                   <TableHead className="text-right text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Price</TableHead>
                   {cols.wac && <TableHead className="text-right text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">WAC</TableHead>}
-                  <TableHead className="text-right text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">In Stock</TableHead>
+                  <TableHead className="text-right text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Physical · Reserved · Avail</TableHead>
                   {cols.reserved && <TableHead className="text-right text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Reserved</TableHead>}
                   <TableHead className="text-right text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Available</TableHead>
                   {cols.incoming && <TableHead className="text-right text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Incoming</TableHead>}
