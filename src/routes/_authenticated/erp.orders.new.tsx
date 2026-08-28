@@ -1632,42 +1632,39 @@ function CustomerHistoryStrip({
             <span className="inline-flex items-center gap-1.5 text-[10px] font-semibold uppercase tracking-[0.14em] text-muted-foreground">
               <Truck className="h-3.5 w-3.5" /> Courier record
             </span>
-            {pct != null ? (
-              <span className="text-[11px] text-muted-foreground">
-                <span className={cn("text-sm font-semibold tabular-nums", rateTone(pct))}>{pct}%</span>
-                <span className="ml-1 tabular-nums">· {successCourier}/{totalCourier} delivered</span>
-              </span>
-            ) : loading ? (
+            {loading && pct == null && (
               <span className="inline-flex items-center gap-1.5 text-[11px] text-muted-foreground">
                 <Loader2 className="h-3 w-3 animate-spin" /> checking…
               </span>
-            ) : (
+            )}
+            {!loading && pct == null && (
               <span className="text-[11px] text-muted-foreground">No record</span>
             )}
           </div>
 
-          {pct != null && (
-            <div className="mt-2 h-1 overflow-hidden rounded-full bg-muted">
-              <div className={cn("h-full rounded-full transition-all", rateBar(pct))} style={{ width: `${pct}%` }} />
-            </div>
-          )}
-
           {connectedProviders.length > 0 ? (
-            <div className="mt-3 grid gap-x-5 gap-y-2 sm:grid-cols-2 xl:grid-cols-3">
-              {connectedProviders.map((p) => {
-                const ppct = p.total > 0 ? Math.round((p.success / p.total) * 100) : 0;
-                return (
-                  <CourierStatCard
-                    key={p.name}
-                    label={p.label}
-                    providerKey={p.name.toLowerCase()}
-                    successRate={ppct}
-                    total={p.total}
-                    success={p.success}
-                    cancelled={p.cancelled}
-                  />
-                );
-              })}
+            <div className="mt-3 flex items-start gap-4">
+              <CourierDonut
+                pct={pct ?? 0}
+                delivered={successCourier}
+                total={totalCourier}
+              />
+              <div className="grid min-w-0 flex-1 content-center gap-x-5 gap-y-2.5 sm:grid-cols-2">
+                {connectedProviders.map((p) => {
+                  const ppct = p.total > 0 ? Math.round((p.success / p.total) * 100) : 0;
+                  return (
+                    <CourierStatCard
+                      key={p.name}
+                      label={p.label}
+                      providerKey={p.name.toLowerCase()}
+                      successRate={ppct}
+                      total={p.total}
+                      success={p.success}
+                      cancelled={p.cancelled}
+                    />
+                  );
+                })}
+              </div>
             </div>
           ) : loading ? (
             <div className="mt-3 grid gap-x-5 gap-y-2 sm:grid-cols-2 xl:grid-cols-3">
