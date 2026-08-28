@@ -859,7 +859,7 @@ function NewOrderPage() {
                     </span>
                     <span className="text-[11px] text-emerald-700/80 dark:text-emerald-300/70">— customer address দিলে Pathao portal-এর exact City / Zone / Area আসবে</span>
                   </div>
-                  <div className="grid gap-3 md:grid-cols-3">
+                  <div className="grid gap-3 sm:grid-cols-2 md:grid-cols-3">
                     <Field label="City">
                       <LocationCombobox
                         items={cities.map((c) => ({ id: c.city_id, name: c.city_name }))}
