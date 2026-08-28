@@ -5,8 +5,15 @@ import { SMS_DEFAULTS, smsConfigKey, smsSegments, normalizeBdPhone, type SmsConf
 
 type Ctx = { supabase: any; userId: string };
 
-async function loadConfig(ctx: Ctx, brandId: string): Promise<SmsConfig> {
-  const { data } = await ctx.supabase
+/**
+ * SMS config lives in `app_settings`, which is admin-read-only under RLS.
+ * Non-admin staff creating orders would otherwise silently get the empty
+ * default config and every SMS would be skipped as "not_configured".
+ * So always read it with the service-role client (server-only, read-only here).
+ */
+async function loadConfig(_ctx: Ctx, brandId: string): Promise<SmsConfig> {
+  const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+  const { data } = await supabaseAdmin
     .from("app_settings")
     .select("value")
     .eq("key", smsConfigKey(brandId))
