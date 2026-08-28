@@ -931,7 +931,7 @@ function NewOrderPage() {
                   <div className="space-y-2">
                     {items.map((it, idx) => (
                       <div key={idx} className="rounded-xl border bg-background p-2.5 transition-all hover:border-indigo-200 hover:shadow-sm">
-                       <div className="flex items-center gap-3">
+                       <div className="flex items-start gap-3">
                         <div className="h-12 w-12 shrink-0 overflow-hidden rounded-lg border bg-muted">
                           {it.image ? (
                             <img src={it.image} alt="" className="h-full w-full object-cover" />
@@ -942,7 +942,7 @@ function NewOrderPage() {
                           )}
                         </div>
                         <div className="min-w-0 flex-1">
-                          <div className="truncate text-sm font-semibold">{it.name}</div>
+                          <div className="line-clamp-2 text-sm font-semibold leading-snug">{it.name}</div>
                           <div className="text-[11px] text-muted-foreground">
                             ৳{it.unit_price.toLocaleString()} · stock {it.stock ?? "—"}
                           </div>
@@ -950,35 +950,40 @@ function NewOrderPage() {
                             <div className="truncate text-[11px] font-medium text-indigo-600 dark:text-indigo-400">{it.variant_label}</div>
                           )}
                         </div>
+                        <Button size="icon" variant="ghost" className="h-9 w-9 shrink-0 text-rose-600 hover:bg-rose-50 hover:text-rose-700"
+                          onClick={() => removeItem(idx)}>
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                       </div>
+                       <div className="mt-2 flex flex-wrap items-center gap-2">
                         <div className="flex items-center gap-0.5 rounded-lg border bg-muted/30 p-0.5">
-                          <Button size="icon" variant="ghost" className="h-7 w-7 rounded-md"
+                          <Button size="icon" variant="ghost" className="h-8 w-8 rounded-md"
                             onClick={() => updateItem(idx, { quantity: Math.max(1, it.quantity - 1) })}>
                             <MinusCircle className="h-4 w-4" />
                           </Button>
                           <Input
-                            type="number" min={1}
+                            type="number" min={1} inputMode="numeric"
                             value={it.quantity}
                             onChange={(e) => updateItem(idx, { quantity: Math.max(1, Number(e.target.value)) })}
-                            className="h-7 w-12 border-0 bg-transparent text-center font-semibold shadow-none focus-visible:ring-0"
+                            className="h-8 w-12 border-0 bg-transparent p-0 text-center text-sm font-semibold shadow-none focus-visible:ring-0"
                           />
-                          <Button size="icon" variant="ghost" className="h-7 w-7 rounded-md"
+                          <Button size="icon" variant="ghost" className="h-8 w-8 rounded-md"
                             onClick={() => updateItem(idx, { quantity: it.quantity + 1 })}>
                             <PlusCircle className="h-4 w-4" />
                           </Button>
                         </div>
-                        <Input
-                          type="number" min={0}
-                          value={it.unit_price}
-                          onChange={(e) => updateItem(idx, { unit_price: Number(e.target.value) })}
-                          className="h-8 w-24"
-                        />
-                        <div className="w-24 shrink-0 text-right text-sm font-bold tabular-nums">
+                        <div className="relative">
+                          <span className="pointer-events-none absolute left-2 top-1/2 -translate-y-1/2 text-[11px] font-semibold text-muted-foreground">৳</span>
+                          <Input
+                            type="number" min={0} inputMode="decimal"
+                            value={it.unit_price}
+                            onChange={(e) => updateItem(idx, { unit_price: Number(e.target.value) })}
+                            className="h-9 w-24 pl-5 text-sm tabular-nums"
+                          />
+                        </div>
+                        <div className="ml-auto text-right text-sm font-bold tabular-nums">
                           ৳{(it.unit_price * it.quantity).toLocaleString()}
                         </div>
-                        <Button size="icon" variant="ghost" className="h-8 w-8 text-rose-600 hover:bg-rose-50 hover:text-rose-700"
-                          onClick={() => removeItem(idx)}>
-                          <Trash2 className="h-4 w-4" />
-                        </Button>
                        </div>
                        {items.findIndex((x) => x.product_id === it.product_id) === idx && (
                          <ColorSelector
