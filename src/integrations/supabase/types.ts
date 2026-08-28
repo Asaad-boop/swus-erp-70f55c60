@@ -1555,7 +1555,7 @@ export type Database = {
           discount_amount: number
           id: string
           order_id: string
-          user_id: string
+          user_id: string | null
         }
         Insert: {
           coupon_id: string
@@ -1563,7 +1563,7 @@ export type Database = {
           discount_amount?: number
           id?: string
           order_id: string
-          user_id: string
+          user_id?: string | null
         }
         Update: {
           coupon_id?: string
@@ -1571,7 +1571,7 @@ export type Database = {
           discount_amount?: number
           id?: string
           order_id?: string
-          user_id?: string
+          user_id?: string | null
         }
         Relationships: [
           {
