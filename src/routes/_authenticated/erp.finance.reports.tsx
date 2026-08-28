@@ -15,7 +15,7 @@ import { Table, TableHeader, TableHead, TableBody, TableRow, TableCell } from "@
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
 import { fmtBdt } from "@/lib/erp/finance";
-import { getCashflowStatement, type CashflowStatement } from "@/lib/erp/finance-overview.functions";
+import { getCashflowStatement, getFinanceOverview, type CashflowStatement, type FinanceOverview } from "@/lib/erp/finance-overview.functions";
 import { exportAoaXlsx } from "@/lib/erp/utils/excel";
 
 export const Route = createFileRoute("/_authenticated/erp/finance/reports")({
