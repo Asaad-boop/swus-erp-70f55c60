@@ -541,15 +541,19 @@ function NewOrderPage() {
       const { data: authData } = await supabase.auth.getUser();
       const currentUserId = authData.user?.id ?? null;
 
+      const awaitingConfirm = awaiting && !isPreorder;
+
       const { data: orderData, error: orderErr } = await supabase
         .from("orders")
         .insert({
           brand_id: effectiveBrand.id,
-          status: isPreorder ? "pre_order" : "confirmed",
-          confirmation_status: isPreorder ? "pending" : "confirmed",
-          confirmed_by: currentUserId,
-          confirmed_at: new Date().toISOString(),
+          status: isPreorder ? "pre_order" : awaitingConfirm ? "new" : "confirmed",
+          confirmation_status: isPreorder || awaitingConfirm ? "pending" : "confirmed",
+          ...(awaitingConfirm
+            ? { call_status: "not_called" as const, web_status: "processing", confirmed_by: null, confirmed_at: null }
+            : { confirmed_by: currentUserId, confirmed_at: new Date().toISOString() }),
           source: "manual",
+
           source_platform: orderSource || null,
           is_guest_order: true,
           guest_name: name,
