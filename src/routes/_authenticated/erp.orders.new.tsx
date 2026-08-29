@@ -1471,16 +1471,21 @@ function NewOrderPage() {
         open={!!successInfo}
         invoiceNo={successInfo?.invoice_no ?? null}
         orderId={successInfo?.id ?? null}
+        awaiting={!!successInfo?.awaiting}
         onView={() => {
           const id = successInfo?.id;
+          const wasAwaiting = !!successInfo?.awaiting;
           setSuccessInfo(null);
-          if (id) navigate({ to: "/erp/orders", search: { open: id } as never });
+          if (!id) return;
+          if (wasAwaiting) navigate({ to: "/erp/orders/web", search: { tab: "processing" } as never });
+          else navigate({ to: "/erp/orders", search: { open: id } as never });
         }}
         onNew={() => {
           setSuccessInfo(null);
           resetForm();
         }}
       />
+
     </div>
   );
 }
