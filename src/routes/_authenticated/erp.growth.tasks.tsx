@@ -1,5 +1,4 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { ListChecks, Repeat } from "lucide-react";
 import { GrowthPageTabs, useTabParam, type PageTab } from "@/components/erp/growth/page-tabs";
 import { RoutinesPage } from "./erp.growth.routines";
 import { useMemo, useState } from "react";
