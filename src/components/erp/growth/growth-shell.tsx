@@ -4,14 +4,11 @@ import {
   Compass,
   Target,
   ListChecks,
-  Repeat,
   BarChart3,
   PackageOpen,
   KanbanSquare,
   Megaphone,
   Users,
-  Building2,
-  Network,
   Lightbulb,
   PackageSearch,
   Swords,
@@ -47,7 +44,6 @@ export const GROWTH_NAV: GrowthNavItem[] = [
 
   { to: "/erp/growth/goals", label: "Vision & Goals", short: "Goals", icon: Target, group: "Plan" },
   { to: "/erp/growth/tasks", label: "Task Board", short: "Tasks", icon: ListChecks, group: "Plan" },
-  { to: "/erp/growth/routines", label: "Routines & Calendar", short: "Routines", icon: Repeat, group: "Plan" },
   { to: "/erp/growth/planning", label: "Monthly Projection", short: "Projection", icon: BarChart3, group: "Plan" },
 
   { to: "/erp/growth/intake", label: "Content Intake", short: "Intake", icon: PackageOpen, group: "Create" },
@@ -55,8 +51,6 @@ export const GROWTH_NAV: GrowthNavItem[] = [
   { to: "/erp/growth/media-plans", label: "Media Buying Hub", short: "Media", icon: Megaphone, group: "Create" },
 
   { to: "/erp/growth/creators", label: "Creator CRM", short: "Creators", icon: Users, group: "People & Market" },
-  { to: "/erp/growth/agencies", label: "Agency Partners", short: "Agencies", icon: Building2, group: "People & Market" },
-  { to: "/erp/growth/matching", label: "Product ↔ Creator", short: "Matching", icon: Network, group: "People & Market" },
   { to: "/erp/growth/products", label: "Product Pipeline", short: "Products", icon: Lightbulb, group: "People & Market" },
   { to: "/erp/growth/rivals", label: "Competitors", short: "Rivals", icon: Swords, group: "People & Market" },
 
