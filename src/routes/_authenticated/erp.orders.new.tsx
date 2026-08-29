@@ -625,12 +625,22 @@ function NewOrderPage() {
       // products.stock unlogged and double-counts with the trigger.
 
       // Telegram notification handled by DB webhook on orders insert — avoid double-firing.
-      return { id: orderId, invoice_no: (orderData as { invoice_no?: string | null }).invoice_no ?? null };
+      return {
+        id: orderId,
+        invoice_no: (orderData as { invoice_no?: string | null }).invoice_no ?? null,
+        awaiting: awaitingConfirm,
+      };
     },
     onSuccess: (res) => {
       qc.invalidateQueries({ queryKey: ["orders"] });
       qc.invalidateQueries({ queryKey: ["web-orders"] });
+      qc.invalidateQueries({ queryKey: ["order-status-counts"] });
       setSuccessInfo(res);
+      if (res.awaiting) {
+        // Awaiting confirmation: no customer SMS until the call team confirms.
+        toast.success("Order confirmation queue-te rakha holo (Web Orders → Processing)");
+        return;
+      }
       // Fire-and-forget customer SMS — never blocks or fails the order flow.
       sendOrderSms({
         data: { orderId: res.id, template: isPreorder ? "preorder_placed" : "order_confirm" },
@@ -643,6 +653,7 @@ function NewOrderPage() {
     },
     onError: (e: Error) => toast.error(e.message),
   });
+
 
   // ── what is still missing before we can save ──────────────────────────
   const missing = useMemo(() => {
