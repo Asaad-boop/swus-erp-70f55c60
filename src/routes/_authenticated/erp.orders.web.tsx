@@ -121,6 +121,8 @@ type WebOrderRow = {
   notes: string | null;
   tags: string[] | null;
   source_website: string | null;
+  source: string | null;
+  confirmation_status: string | null;
   status: string | null;
   web_status: WebStatus | null;
   total: number;
@@ -680,7 +682,7 @@ function _WebOrdersPageBody() {
         supabase
           .from("orders")
           .select(
-            "id,created_at,shipping_name,shipping_phone,shipping_address,shipping_city,shipping_district,guest_name,guest_phone,latest_note,customer_note,notes,tags,source_website,status,web_status,total,advance_amount,advance_txn_id,verified_at,payment_method,call_attempt_count,call_status,last_call_at,assigned_to,brand_id,is_preorder,preorder_expected_date,updated_at",
+            "id,created_at,shipping_name,shipping_phone,shipping_address,shipping_city,shipping_district,guest_name,guest_phone,latest_note,customer_note,notes,tags,source_website,source,confirmation_status,status,web_status,total,advance_amount,advance_txn_id,verified_at,payment_method,call_attempt_count,call_status,last_call_at,assigned_to,brand_id,is_preorder,preorder_expected_date,updated_at",
             { count: "exact" },
           ),
         brandIds,
@@ -1586,7 +1588,35 @@ function _WebOrdersPageBody() {
 
                     {/* Source */}
                     <TableCell className="py-3">
-                      <SourcePill attribution={r.attribution} siteLabel={siteLabel} />
+                      {(() => {
+                        const src = (r.source ?? "").toLowerCase();
+                        const isWebSource = WEB_SOURCES.includes(src as never);
+                        const awaitingConfirm = r.status === "new" && r.confirmation_status === "pending";
+                        // Manually-created awaiting-confirmation orders (after-hours
+                        // name/address entries) — flag clearly so agents call to confirm.
+                        if (src === "manual" && awaitingConfirm) {
+                          return (
+                            <span className="inline-flex flex-col items-start gap-0.5">
+                              <span className="inline-flex items-center gap-1 px-2 h-5 rounded-full text-[10px] font-semibold ring-1 ring-inset bg-amber-50 text-amber-700 ring-amber-200 dark:bg-amber-950/40 dark:text-amber-300 dark:ring-amber-900/60">
+                                <span>✋</span>
+                                <span>Manual Entry</span>
+                              </span>
+                              <span className="text-[9.5px] font-medium text-amber-600/90 dark:text-amber-400/80 pl-0.5">Waiting for confirm call</span>
+                            </span>
+                          );
+                        }
+                        // Other non-website sources that landed in the queue.
+                        if (src && !isWebSource) {
+                          const label = src.charAt(0).toUpperCase() + src.slice(1);
+                          return (
+                            <span className="inline-flex items-center gap-1 px-2 h-5 rounded-full text-[10px] font-semibold ring-1 ring-inset bg-slate-50 text-slate-700 ring-slate-200 dark:bg-slate-900/50 dark:text-slate-300 dark:ring-slate-800 max-w-[120px]">
+                              <span>🗂️</span>
+                              <span className="truncate">{label}</span>
+                            </span>
+                          );
+                        }
+                        return <SourcePill attribution={r.attribution} siteLabel={siteLabel} />;
+                      })()}
                     </TableCell>
 
                     {/* Actions */}
