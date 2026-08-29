@@ -234,7 +234,7 @@ export function WeeklyScorecard() {
 
   /* ---------- Content → product attribution ---------- */
   const byProduct = useMemo(() => {
-    const nameOf = new Map((productsQ.data ?? []).map((p) => [p.id, p.name]));
+    const nameOf = new Map((productsQ.data ?? []).map((p) => [p.id, p.title]));
     const map = new Map<string, { name: string; pieces: number; views: number; orders: number; cost: number }>();
     for (const i of m.pubCur) {
       const key = i.product_id ?? "__none__";
@@ -257,20 +257,17 @@ export function WeeklyScorecard() {
   }, [m.pubCur, productsQ.data]);
 
   const exportCsv = () => {
-    downloadCsv(
-      `weekly-scorecard-${cur.from}_${cur.to}.csv`,
-      [
-        { metric: "Orders", current: m.orders[0], previous: m.orders[1] },
-        { metric: "Revenue", current: m.revenue[0], previous: m.revenue[1] },
-        { metric: "Delivered", current: m.delivered[0], previous: m.delivered[1] },
-        { metric: "Content published", current: m.published[0], previous: m.published[1] },
-        { metric: "Views", current: m.views[0], previous: m.views[1] },
-        { metric: "Attributed orders", current: m.attributed[0], previous: m.attributed[1] },
-        { metric: "Content cost", current: m.contentCost[0], previous: m.contentCost[1] },
-        { metric: "Tasks completed", current: m.tasksDone[0], previous: m.tasksDone[1] },
-      ],
+    downloadCsv(`weekly-scorecard-${cur.from}_${cur.to}.csv`, [
       ["metric", "current", "previous"],
-    );
+      ["Orders", m.orders[0], m.orders[1]],
+      ["Revenue", m.revenue[0], m.revenue[1]],
+      ["Delivered", m.delivered[0], m.delivered[1]],
+      ["Content published", m.published[0], m.published[1]],
+      ["Views", m.views[0], m.views[1]],
+      ["Attributed orders", m.attributed[0], m.attributed[1]],
+      ["Content cost", m.contentCost[0], m.contentCost[1]],
+      ["Tasks completed", m.tasksDone[0], m.tasksDone[1]],
+    ]);
   };
 
   if (loading) {
