@@ -4,7 +4,7 @@ import {
   Plus, Trash2, Search, ArrowLeft, Loader2, Sparkles, Truck, Package,
   Star, MinusCircle, PlusCircle, ImageIcon, Info, Wand2, History,
   CheckCircle2, AlertCircle, MapPin, User2, Receipt, ArrowRight, ChevronsUpDown, Check, X,
-  Phone, MessageCircle,
+  Phone, MessageCircle, Clock,
 } from "lucide-react";
 
 /** Normalize BD phone for wa.me — strip non-digits, drop leading 0, add 880 if missing. */
