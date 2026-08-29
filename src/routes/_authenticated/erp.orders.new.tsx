@@ -510,7 +510,7 @@ function NewOrderPage() {
   const [advanceTxnId, setAdvanceTxnId] = useState("");
 
   // Success animation overlay
-  const [successInfo, setSuccessInfo] = useState<{ id: string; invoice_no: string | null } | null>(null);
+  const [successInfo, setSuccessInfo] = useState<{ id: string; invoice_no: string | null; awaiting?: boolean } | null>(null);
 
   const subtotal = useMemo(() => items.reduce((s, i) => s + i.unit_price * i.quantity, 0), [items]);
   // Grand total = items + shipping − discount (advance is NOT subtracted; DB trigger enforces this)
