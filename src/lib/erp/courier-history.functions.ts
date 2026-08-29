@@ -7,7 +7,10 @@ export const fetchCourierHistoryFn = createServerFn({ method: "POST" })
   .inputValidator((d) =>
     z
       .object({
-        phones: z.array(z.string().min(3).max(20)).min(1).max(1000),
+        phones: z
+          .array(z.string().transform((s) => s.trim().slice(0, 40)).pipe(z.string().min(3)))
+          .min(1)
+          .max(1000),
         brandId: z.string().uuid().optional(),
         force: z.boolean().optional(),
       })
