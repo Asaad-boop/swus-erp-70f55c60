@@ -1437,12 +1437,13 @@ function NewOrderPage() {
                 size="lg"
                 variant="outline"
                 title="Customer-er naam/address save thakbe, call kore confirm korar jonno queue-te jabe"
-                className="group hidden h-11 gap-2 rounded-xl border-amber-300 bg-amber-50 px-4 text-[14px] font-bold text-amber-800 hover:bg-amber-100 disabled:opacity-60 sm:inline-flex dark:border-amber-900/60 dark:bg-amber-950/30 dark:text-amber-300"
+                className="group h-12 gap-2 rounded-xl border-amber-300 bg-amber-50 px-3 text-[13px] font-bold text-amber-800 hover:bg-amber-100 disabled:opacity-60 md:h-11 md:px-4 md:text-[14px] dark:border-amber-900/60 dark:bg-amber-950/30 dark:text-amber-300"
                 disabled={create.isPending || missing.length > 0}
                 onClick={submitAwaiting}
               >
                 <Clock className="h-4 w-4" />
-                <span>Save · Awaiting Confirm</span>
+                <span className="hidden md:inline">Save · Awaiting Confirm</span>
+                <span className="md:hidden">Awaiting</span>
               </Button>
             )}
             <Button
