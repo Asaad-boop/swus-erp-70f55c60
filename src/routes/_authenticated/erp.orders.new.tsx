@@ -521,8 +521,9 @@ function NewOrderPage() {
 
   // ── submit ────────────────────────────────────────────────────────────
   const create = useMutation({
-    mutationFn: async () => {
+    mutationFn: async ({ awaiting = false }: { awaiting?: boolean } = {}) => {
       if (!effectiveBrand) throw new Error("Brand select korun");
+
       if (!name.trim()) throw new Error("Customer name lagbe");
       const phoneError = bdPhoneError(phone);
       if (phoneError) throw new Error(phoneError);
