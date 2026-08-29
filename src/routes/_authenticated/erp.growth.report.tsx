@@ -28,9 +28,13 @@ import {
   type ContentPlan,
 } from "@/lib/erp/content/content-data";
 import { exportReportPdf } from "@/lib/erp/reports/export";
+import { WeeklyScorecard } from "@/components/erp/growth/weekly-scorecard";
+import { GrowthPageTabs, useTabParam, type PageTab } from "@/components/erp/growth/page-tabs";
 
 export const Route = createFileRoute("/_authenticated/erp/growth/report")({
-  component: BrandReport,
+  validateSearch: (search: Record<string, unknown>): { tab?: string } =>
+    typeof search['tab'] === "string" ? { tab: search['tab'] as string } : {},
+  component: ReportShell,
   head: () => ({
     meta: [
       { title: "Brand Content Report — Growth Studio" },
@@ -49,6 +53,29 @@ export const Route = createFileRoute("/_authenticated/erp/growth/report")({
     ],
   }),
 });
+
+const REPORT_TABS: PageTab[] = [
+  { key: "scorecard", label: "Weekly Scorecard", icon: BarChart3 },
+  { key: "content", label: "Brand Content Report", icon: Clapperboard },
+];
+
+function ReportShell() {
+  const tab = useTabParam(REPORT_TABS);
+  return (
+    <div>
+      <div className="border-b border-border/50 bg-card/30 px-4 py-2.5 sm:px-6">
+        <GrowthPageTabs base="/erp/growth/report" tabs={REPORT_TABS} active={tab} />
+      </div>
+      {tab === "content" ? (
+        <BrandReport />
+      ) : (
+        <div className="mx-auto max-w-[1500px] p-3 md:p-6">
+          <WeeklyScorecard />
+        </div>
+      )}
+    </div>
+  );
+}
 
 type Row = {
   brandId: string | null;
