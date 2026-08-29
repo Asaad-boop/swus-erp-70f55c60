@@ -1,4 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
+import { ListChecks, Repeat } from "lucide-react";
+import { GrowthPageTabs, useTabParam, type PageTab } from "@/components/erp/growth/page-tabs";
+import { RoutinesPage } from "./erp.growth.routines";
 import { useMemo, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
@@ -53,8 +56,28 @@ export const Route = createFileRoute("/_authenticated/erp/growth/tasks")({
       { name: "twitter:card", content: "summary" },
     ],
   }),
-  component: TasksPage,
+  validateSearch: (search: Record<string, unknown>) => ({
+    tab: typeof search['tab'] === "string" ? (search['tab'] as string) : undefined,
+  }),
+  component: TasksShell,
 });
+
+const TASK_TABS: PageTab[] = [
+  { key: "board", label: "Task Board", icon: ListChecks },
+  { key: "routines", label: "Routines & Calendar", icon: Repeat },
+];
+
+function TasksShell() {
+  const tab = useTabParam(TASK_TABS);
+  return (
+    <div>
+      <div className="border-b border-border/50 bg-card/30 px-4 py-2.5 sm:px-6">
+        <GrowthPageTabs base="/erp/growth/tasks" tabs={TASK_TABS} active={tab} />
+      </div>
+      {tab === "routines" ? <RoutinesPage /> : <TasksPage />}
+    </div>
+  );
+}
 
 type Draft = {
   id?: string;
