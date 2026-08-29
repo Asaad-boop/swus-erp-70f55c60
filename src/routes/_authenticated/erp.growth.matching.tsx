@@ -1,4 +1,4 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, redirect } from "@tanstack/react-router";
 import { useMemo, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
@@ -50,6 +50,9 @@ import {
 } from "@/lib/erp/content/content-data";
 
 export const Route = createFileRoute("/_authenticated/erp/growth/matching")({
+  beforeLoad: () => {
+    throw redirect({ href: "/erp/growth/creators?tab=matching" });
+  },
   head: () => ({
     meta: [
       { title: "Product ↔ Creator — Growth Studio" },
@@ -81,7 +84,7 @@ const empty = {
   status: "pending",
 };
 
-function MatchingPage() {
+export function MatchingPage() {
   const { brandIds, activeBrand } = useBrand();
   const qc = useQueryClient();
   const [creating, setCreating] = useState(false);

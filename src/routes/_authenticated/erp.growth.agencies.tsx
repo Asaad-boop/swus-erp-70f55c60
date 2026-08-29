@@ -1,4 +1,4 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, redirect } from "@tanstack/react-router";
 import { useMemo, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
@@ -36,6 +36,9 @@ import {
 import { bdt, fetchAgencies, fetchItems, type Agency } from "@/lib/erp/content/content-data";
 
 export const Route = createFileRoute("/_authenticated/erp/growth/agencies")({
+  beforeLoad: () => {
+    throw redirect({ href: "/erp/growth/creators?tab=agencies" });
+  },
   head: () => ({
     meta: [
       { title: "Agency Partners — Growth Studio" },
@@ -67,7 +70,7 @@ const empty = {
   notes: "",
 };
 
-function AgenciesPage() {
+export function AgenciesPage() {
   const { brandIds, activeBrand } = useBrand();
   const qc = useQueryClient();
   const [formBrand, setFormBrand] = useState<string | null>(null);

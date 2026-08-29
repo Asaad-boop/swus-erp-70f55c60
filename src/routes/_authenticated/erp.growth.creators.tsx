@@ -70,6 +70,10 @@ import {
   BrandSelect,
 } from "@/components/erp/content/content-ui";
 import { cn } from "@/lib/utils";
+import { Building2, Network } from "lucide-react";
+import { GrowthPageTabs, useTabParam, type PageTab } from "@/components/erp/growth/page-tabs";
+import { AgenciesPage } from "./erp.growth.agencies";
+import { MatchingPage } from "./erp.growth.matching";
 
 export const Route = createFileRoute("/_authenticated/erp/growth/creators")({
   head: () => ({
@@ -89,8 +93,28 @@ export const Route = createFileRoute("/_authenticated/erp/growth/creators")({
       { name: "twitter:card", content: "summary" },
     ],
   }),
-  component: CreatorsPage,
+  validateSearch: (search: Record<string, unknown>): { tab?: string } =>
+    typeof search['tab'] === "string" ? { tab: search['tab'] as string } : {},
+  component: PeopleShell,
 });
+
+const PEOPLE_TABS: PageTab[] = [
+  { key: "creators", label: "Creator CRM", icon: Users },
+  { key: "agencies", label: "Agency Partners", icon: Building2 },
+  { key: "matching", label: "Product \u2194 Creator", icon: Network },
+];
+
+function PeopleShell() {
+  const tab = useTabParam(PEOPLE_TABS);
+  return (
+    <div>
+      <div className="border-b border-border/50 bg-card/30 px-4 py-2.5 sm:px-6">
+        <GrowthPageTabs base="/erp/growth/creators" tabs={PEOPLE_TABS} active={tab} />
+      </div>
+      {tab === "agencies" ? <AgenciesPage /> : tab === "matching" ? <MatchingPage /> : <CreatorsPage />}
+    </div>
+  );
+}
 
 const emptyDraft = {
   name: "",

@@ -1,4 +1,4 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, redirect } from "@tanstack/react-router";
 import { useMemo, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
@@ -49,6 +49,9 @@ import {
 } from "@/lib/erp/hub/hub-research";
 
 export const Route = createFileRoute("/_authenticated/erp/growth/routines")({
+  beforeLoad: () => {
+    throw redirect({ href: "/erp/growth/tasks?tab=routines" });
+  },
   head: () => ({
     meta: [
       { title: "Routines & Calendar — Growth Studio" },
@@ -93,7 +96,7 @@ const emptyDraft = (): Draft => ({
 const iso = (d: Date) =>
   `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
 
-function RoutinesPage() {
+export function RoutinesPage() {
   const { brandIds, activeBrand } = useBrand();
   const qc = useQueryClient();
   const [open, setOpen] = useState(false);
