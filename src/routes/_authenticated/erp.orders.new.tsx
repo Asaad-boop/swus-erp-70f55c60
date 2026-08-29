@@ -687,8 +687,15 @@ function NewOrderPage() {
 
   const submit = useCallback(() => {
     if (create.isPending) return;
-    create.mutate();
+    create.mutate({ awaiting: false });
   }, [create]);
+
+  /** Night-shift entry: save the order but keep it waiting for a confirmation call. */
+  const submitAwaiting = useCallback(() => {
+    if (create.isPending) return;
+    create.mutate({ awaiting: true });
+  }, [create]);
+
 
   // ── keyboard shortcuts: "/" focus search, Ctrl/Cmd+Enter save ─────────
   useEffect(() => {
