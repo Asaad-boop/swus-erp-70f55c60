@@ -70,7 +70,7 @@ import {
   BrandSelect,
 } from "@/components/erp/content/content-ui";
 import { cn } from "@/lib/utils";
-import { Building2, Network, Users } from "lucide-react";
+import { Building2, Network } from "lucide-react";
 import { GrowthPageTabs, useTabParam, type PageTab } from "@/components/erp/growth/page-tabs";
 import { AgenciesPage } from "./erp.growth.agencies";
 import { MatchingPage } from "./erp.growth.matching";
