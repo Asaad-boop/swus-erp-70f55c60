@@ -93,9 +93,8 @@ export const Route = createFileRoute("/_authenticated/erp/growth/creators")({
       { name: "twitter:card", content: "summary" },
     ],
   }),
-  validateSearch: (search: Record<string, unknown>) => ({
-    tab: typeof search['tab'] === "string" ? (search['tab'] as string) : undefined,
-  }),
+  validateSearch: (search: Record<string, unknown>): { tab?: string } =>
+    typeof search['tab'] === "string" ? { tab: search['tab'] as string } : {},
   component: PeopleShell,
 });
 
