@@ -4,7 +4,7 @@ import {
   Plus, Trash2, Search, ArrowLeft, Loader2, Sparkles, Truck, Package,
   Star, MinusCircle, PlusCircle, ImageIcon, Info, Wand2, History,
   CheckCircle2, AlertCircle, MapPin, User2, Receipt, ArrowRight, ChevronsUpDown, Check, X,
-  Phone, MessageCircle,
+  Phone, MessageCircle, Clock,
 } from "lucide-react";
 
 /** Normalize BD phone for wa.me — strip non-digits, drop leading 0, add 880 if missing. */
@@ -510,7 +510,7 @@ function NewOrderPage() {
   const [advanceTxnId, setAdvanceTxnId] = useState("");
 
   // Success animation overlay
-  const [successInfo, setSuccessInfo] = useState<{ id: string; invoice_no: string | null } | null>(null);
+  const [successInfo, setSuccessInfo] = useState<{ id: string; invoice_no: string | null; awaiting?: boolean } | null>(null);
 
   const subtotal = useMemo(() => items.reduce((s, i) => s + i.unit_price * i.quantity, 0), [items]);
   // Grand total = items + shipping − discount (advance is NOT subtracted; DB trigger enforces this)
@@ -521,8 +521,9 @@ function NewOrderPage() {
 
   // ── submit ────────────────────────────────────────────────────────────
   const create = useMutation({
-    mutationFn: async () => {
+    mutationFn: async ({ awaiting = false }: { awaiting?: boolean } = {}) => {
       if (!effectiveBrand) throw new Error("Brand select korun");
+
       if (!name.trim()) throw new Error("Customer name lagbe");
       const phoneError = bdPhoneError(phone);
       if (phoneError) throw new Error(phoneError);
@@ -540,15 +541,19 @@ function NewOrderPage() {
       const { data: authData } = await supabase.auth.getUser();
       const currentUserId = authData.user?.id ?? null;
 
+      const awaitingConfirm = awaiting && !isPreorder;
+
       const { data: orderData, error: orderErr } = await supabase
         .from("orders")
         .insert({
           brand_id: effectiveBrand.id,
-          status: isPreorder ? "pre_order" : "confirmed",
-          confirmation_status: isPreorder ? "pending" : "confirmed",
-          confirmed_by: currentUserId,
-          confirmed_at: new Date().toISOString(),
+          status: isPreorder ? "pre_order" : awaitingConfirm ? "new" : "confirmed",
+          confirmation_status: isPreorder || awaitingConfirm ? "pending" : "confirmed",
+          ...(awaitingConfirm
+            ? { call_status: "not_called" as const, web_status: "processing", confirmed_by: null, confirmed_at: null }
+            : { confirmed_by: currentUserId, confirmed_at: new Date().toISOString() }),
           source: "manual",
+
           source_platform: orderSource || null,
           is_guest_order: true,
           guest_name: name,
@@ -620,12 +625,22 @@ function NewOrderPage() {
       // products.stock unlogged and double-counts with the trigger.
 
       // Telegram notification handled by DB webhook on orders insert — avoid double-firing.
-      return { id: orderId, invoice_no: (orderData as { invoice_no?: string | null }).invoice_no ?? null };
+      return {
+        id: orderId,
+        invoice_no: (orderData as { invoice_no?: string | null }).invoice_no ?? null,
+        awaiting: awaitingConfirm,
+      };
     },
     onSuccess: (res) => {
       qc.invalidateQueries({ queryKey: ["orders"] });
       qc.invalidateQueries({ queryKey: ["web-orders"] });
+      qc.invalidateQueries({ queryKey: ["order-status-counts"] });
       setSuccessInfo(res);
+      if (res.awaiting) {
+        // Awaiting confirmation: no customer SMS until the call team confirms.
+        toast.success("Order confirmation queue-te rakha holo (Web Orders → Processing)");
+        return;
+      }
       // Fire-and-forget customer SMS — never blocks or fails the order flow.
       sendOrderSms({
         data: { orderId: res.id, template: isPreorder ? "preorder_placed" : "order_confirm" },
@@ -638,6 +653,7 @@ function NewOrderPage() {
     },
     onError: (e: Error) => toast.error(e.message),
   });
+
 
   // ── what is still missing before we can save ──────────────────────────
   const missing = useMemo(() => {
@@ -671,8 +687,15 @@ function NewOrderPage() {
 
   const submit = useCallback(() => {
     if (create.isPending) return;
-    create.mutate();
+    create.mutate({ awaiting: false });
   }, [create]);
+
+  /** Night-shift entry: save the order but keep it waiting for a confirmation call. */
+  const submitAwaiting = useCallback(() => {
+    if (create.isPending) return;
+    create.mutate({ awaiting: true });
+  }, [create]);
+
 
   // ── keyboard shortcuts: "/" focus search, Ctrl/Cmd+Enter save ─────────
   useEffect(() => {
@@ -1409,6 +1432,20 @@ function NewOrderPage() {
               <div className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Payable</div>
               <div className="text-lg font-black tabular-nums text-indigo-600">৳ {payable.toLocaleString()}</div>
             </div>
+            {!isPreorder && (
+              <Button
+                size="lg"
+                variant="outline"
+                title="Customer-er naam/address save thakbe, call kore confirm korar jonno queue-te jabe"
+                className="group h-12 gap-2 rounded-xl border-amber-300 bg-amber-50 px-3 text-[13px] font-bold text-amber-800 hover:bg-amber-100 disabled:opacity-60 md:h-11 md:px-4 md:text-[14px] dark:border-amber-900/60 dark:bg-amber-950/30 dark:text-amber-300"
+                disabled={create.isPending || missing.length > 0}
+                onClick={submitAwaiting}
+              >
+                <Clock className="h-4 w-4" />
+                <span className="hidden md:inline">Save · Awaiting Confirm</span>
+                <span className="md:hidden">Awaiting</span>
+              </Button>
+            )}
             <Button
               size="lg"
               title={missing.length ? `Missing: ${missing.join(", ")}` : "Ctrl + Enter"}
@@ -1426,6 +1463,7 @@ function NewOrderPage() {
                 </>
               )}
             </Button>
+
           </div>
           </div>
         </div>
@@ -1434,16 +1472,21 @@ function NewOrderPage() {
         open={!!successInfo}
         invoiceNo={successInfo?.invoice_no ?? null}
         orderId={successInfo?.id ?? null}
+        awaiting={!!successInfo?.awaiting}
         onView={() => {
           const id = successInfo?.id;
+          const wasAwaiting = !!successInfo?.awaiting;
           setSuccessInfo(null);
-          if (id) navigate({ to: "/erp/orders", search: { open: id } as never });
+          if (!id) return;
+          if (wasAwaiting) navigate({ to: "/erp/orders/web", search: { tab: "processing" } as never });
+          else navigate({ to: "/erp/orders", search: { open: id } as never });
         }}
         onNew={() => {
           setSuccessInfo(null);
           resetForm();
         }}
       />
+
     </div>
   );
 }

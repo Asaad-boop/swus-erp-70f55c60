@@ -9,9 +9,11 @@ type Props = {
   orderId?: string | null;
   onView: () => void;
   onNew: () => void;
+  /** Order was saved unconfirmed and waits for the call team. */
+  awaiting?: boolean;
 };
 
-export function OrderSuccessDialog({ open, invoiceNo, orderId, onView, onNew }: Props) {
+export function OrderSuccessDialog({ open, invoiceNo, orderId, onView, onNew, awaiting = false }: Props) {
   // ESC to view order
   useEffect(() => {
     if (!open) return;
@@ -66,11 +68,18 @@ export function OrderSuccessDialog({ open, invoiceNo, orderId, onView, onNew }: 
           </div>
 
           <h2 className="text-xl font-bold tracking-tight text-foreground">
-            Order Created!
+            {awaiting ? "Awaiting Confirmation" : "Order Created!"}
           </h2>
           <p className="mt-1 text-sm text-muted-foreground">
-            অর্ডারটি সফলভাবে তৈরি হয়েছে
+            {awaiting
+              ? "অর্ডারটি সেভ হয়েছে — কল করে confirm করার জন্য অপেক্ষা করছে"
+              : "অর্ডারটি সফলভাবে তৈরি হয়েছে"}
           </p>
+          {awaiting && (
+            <p className="mx-auto mt-3 max-w-xs rounded-lg bg-amber-50 px-3 py-2 text-[12px] font-medium text-amber-800 dark:bg-amber-950/30 dark:text-amber-300">
+              Confirmation queue: Web Orders → Processing. Confirm করার আগে কোনো SMS যাবে না।
+            </p>
+          )}
 
           {invoiceNo && (
             <div className="mt-5 rounded-xl border border-dashed border-emerald-300/60 bg-emerald-50/60 px-4 py-3 dark:border-emerald-900/60 dark:bg-emerald-950/30">
