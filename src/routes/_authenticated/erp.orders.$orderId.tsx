@@ -2438,6 +2438,7 @@ const SHIPPING_PRESETS_KEY = "erp:shipping_note_presets";
 function ShippingNotePresets({ value, onChange }: { value: string; onChange: (v: string) => void }) {
   const [custom, setCustom] = useState<string[]>([]);
   const [newPreset, setNewPreset] = useState("");
+  const [open, setOpen] = useState(false);
 
   useEffect(() => {
     try {
@@ -2471,46 +2472,63 @@ function ShippingNotePresets({ value, onChange }: { value: string; onChange: (v:
         <span>Click preset to append</span>
         <span>{value.length}/150</span>
       </div>
-      <div className="flex flex-wrap gap-1.5">
-        {all.map((p, i) => {
-          const isCustom = i >= DEFAULT_SHIPPING_PRESETS.length;
-          return (
-            <span key={`${p}-${i}`} className="group inline-flex items-center gap-1 rounded-full border bg-muted/40 hover:bg-muted px-2 py-0.5 text-[11px]">
-              <button type="button" onClick={() => apply(p)} className="truncate max-w-[180px]">{p}</button>
-              {isCustom && (
-                <button
-                  type="button"
-                  onClick={() => persist(custom.filter((c) => c !== p))}
-                  className="text-muted-foreground hover:text-destructive"
-                  aria-label="Remove preset"
-                >
-                  <XCircle className="h-3 w-3" />
-                </button>
-              )}
+      <Collapsible open={open} onOpenChange={setOpen}>
+        <CollapsibleTrigger asChild>
+          <button
+            type="button"
+            className="flex w-full items-center justify-between gap-2 rounded-lg border border-border/60 bg-muted/30 px-2.5 py-1.5 text-[11px] font-semibold text-muted-foreground transition-colors hover:bg-muted/60"
+          >
+            <span className="flex items-center gap-1.5">
+              <Plus className="h-3 w-3" />
+              Quick presets
+              <span className="rounded-full bg-background px-1.5 py-px text-[10px] tabular-nums text-foreground">{all.length}</span>
             </span>
-          );
-        })}
-      </div>
-      <div className="flex gap-1.5">
-        <Input
-          value={newPreset}
-          onChange={(e) => setNewPreset(e.target.value)}
-          placeholder="Save new preset..."
-          className="h-7 text-xs"
-        />
-        <Button
-          type="button"
-          size="sm"
-          variant="outline"
-          className="h-7 text-xs"
-          onClick={() => {
-            const t = newPreset.trim();
-            if (!t || custom.includes(t) || DEFAULT_SHIPPING_PRESETS.includes(t)) return;
-            persist([...custom, t]);
-            setNewPreset("");
-          }}
-        >Save</Button>
-      </div>
+            <ChevronDown className={cn("h-3.5 w-3.5 transition-transform duration-200", open && "rotate-180")} />
+          </button>
+        </CollapsibleTrigger>
+        <CollapsibleContent className="space-y-2 overflow-hidden data-[state=closed]:animate-collapsible-up data-[state=open]:animate-collapsible-down">
+          <div className="flex flex-wrap gap-1.5 pt-2">
+            {all.map((p, i) => {
+              const isCustom = i >= DEFAULT_SHIPPING_PRESETS.length;
+              return (
+                <span key={`${p}-${i}`} className="group inline-flex items-center gap-1 rounded-full border bg-muted/40 hover:bg-muted px-2 py-0.5 text-[11px]">
+                  <button type="button" onClick={() => apply(p)} className="truncate max-w-[180px]">{p}</button>
+                  {isCustom && (
+                    <button
+                      type="button"
+                      onClick={() => persist(custom.filter((c) => c !== p))}
+                      className="text-muted-foreground hover:text-destructive"
+                      aria-label="Remove preset"
+                    >
+                      <XCircle className="h-3 w-3" />
+                    </button>
+                  )}
+                </span>
+              );
+            })}
+          </div>
+          <div className="flex gap-1.5">
+            <Input
+              value={newPreset}
+              onChange={(e) => setNewPreset(e.target.value)}
+              placeholder="Save new preset..."
+              className="h-7 text-xs"
+            />
+            <Button
+              type="button"
+              size="sm"
+              variant="outline"
+              className="h-7 text-xs"
+              onClick={() => {
+                const t = newPreset.trim();
+                if (!t || custom.includes(t) || DEFAULT_SHIPPING_PRESETS.includes(t)) return;
+                persist([...custom, t]);
+                setNewPreset("");
+              }}
+            >Save</Button>
+          </div>
+        </CollapsibleContent>
+      </Collapsible>
     </div>
   );
 }
