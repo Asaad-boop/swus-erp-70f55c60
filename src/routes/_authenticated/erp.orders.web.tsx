@@ -302,6 +302,21 @@ function initials(name: string) {
 }
 
 /** Bangla verdict for a success percentage. */
+function callLogHighlight(lastCallAt?: string | null) {
+  if (!lastCallAt) return { text: "এখনো কল লগ হয়নি", tone: "muted" as const };
+  const then = new Date(lastCallAt).getTime();
+  const now = Date.now();
+  const mins = Math.max(0, Math.floor((now - then) / 60000));
+  const hours = Math.floor(mins / 60);
+  const text =
+    mins < 1 ? "এইমাত্র কল হয়েছে" :
+    mins < 60 ? `${mins} মিনিট আগে` :
+    hours < 24 ? `${hours} ঘণ্টা আগে` :
+    formatDistanceToNow(new Date(lastCallAt), { addSuffix: true });
+  const tone = mins < 5 ? "fresh" : mins < 60 ? "warm" : "cold";
+  return { text, tone };
+}
+
 function banglaVerdict(pct: number, empty: boolean) {
   if (empty) return { label: "তথ্য নেই", chip: "bg-muted/50 text-muted-foreground ring-border" };
   if (pct >= 80) return { label: "ভালো", chip: "bg-emerald-500/10 text-emerald-700 dark:text-emerald-300 ring-emerald-500/30" };
