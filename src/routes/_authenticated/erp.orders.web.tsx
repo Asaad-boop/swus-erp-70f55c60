@@ -140,7 +140,7 @@ type WebOrderRow = {
   preorder_expected_date: string | null;
   items_summary?: { name: string; quantity: number; image: string | null; unit_price: number | null }[];
   latest_order_note?: string | null;
-  attribution?: { utm_source: string | null; utm_medium: string | null } | null;
+  attribution?: OrderAttribution | null;
 };
 
 function CallLogPopover({
@@ -522,46 +522,80 @@ function CustomerBadges({ total, confirmRate, delivered }: { total: number; conf
   );
 }
 
-function SourcePill({ attribution, siteLabel }: { attribution: { utm_source: string | null; utm_medium: string | null } | null | undefined; siteLabel: string }) {
-  const raw = (attribution?.utm_source ?? "").toLowerCase();
-  let icon = "🔗";
-  let label = "Direct";
-  let tone = "bg-muted/60 text-muted-foreground ring-border";
-  if (raw.includes("facebook") || raw === "fb" || raw.includes("meta")) {
-    icon = "📘"; label = "Facebook"; tone = "bg-blue-50 text-blue-700 ring-blue-200 dark:bg-blue-950/40 dark:text-blue-300 dark:ring-blue-900/60";
-  } else if (raw.includes("instagram") || raw === "ig") {
-    icon = "📷"; label = "Instagram"; tone = "bg-pink-50 text-pink-700 ring-pink-200 dark:bg-pink-950/40 dark:text-pink-300 dark:ring-pink-900/60";
-  } else if (raw.includes("google")) {
-    icon = "🔍"; label = "Google"; tone = "bg-amber-50 text-amber-700 ring-amber-200 dark:bg-amber-950/40 dark:text-amber-300 dark:ring-amber-900/60";
-  } else if (raw && raw !== "direct" && raw !== "organic") {
-    icon = "🌐"; label = attribution!.utm_source!.slice(0, 16); tone = "bg-violet-50 text-violet-700 ring-violet-200 dark:bg-violet-950/40 dark:text-violet-300 dark:ring-violet-900/60";
-  } else if (!raw && siteLabel) {
-    icon = "🔗"; label = siteLabel;
+type OrderAttribution = {
+  utm_source: string | null;
+  utm_medium: string | null;
+  utm_campaign: string | null;
+  fbclid: string | null;
+};
+
+type ChannelMeta = { icon: string; label: string; tone: string };
+
+const TONES = {
+  fb: "bg-blue-50 text-blue-700 ring-blue-200 dark:bg-blue-950/40 dark:text-blue-300 dark:ring-blue-900/60",
+  ig: "bg-pink-50 text-pink-700 ring-pink-200 dark:bg-pink-950/40 dark:text-pink-300 dark:ring-pink-900/60",
+  google: "bg-amber-50 text-amber-700 ring-amber-200 dark:bg-amber-950/40 dark:text-amber-300 dark:ring-amber-900/60",
+  tiktok: "bg-slate-900 text-slate-100 ring-slate-700 dark:bg-slate-800 dark:text-slate-100 dark:ring-slate-600",
+  wa: "bg-emerald-50 text-emerald-700 ring-emerald-200 dark:bg-emerald-950/40 dark:text-emerald-300 dark:ring-emerald-900/60",
+  messenger: "bg-indigo-50 text-indigo-700 ring-indigo-200 dark:bg-indigo-950/40 dark:text-indigo-300 dark:ring-indigo-900/60",
+  youtube: "bg-rose-50 text-rose-700 ring-rose-200 dark:bg-rose-950/40 dark:text-rose-300 dark:ring-rose-900/60",
+  web: "bg-teal-50 text-teal-700 ring-teal-200 dark:bg-teal-950/40 dark:text-teal-300 dark:ring-teal-900/60",
+  neutral: "bg-slate-50 text-slate-600 ring-slate-200 dark:bg-slate-900/50 dark:text-slate-300 dark:ring-slate-800",
+  violet: "bg-violet-50 text-violet-700 ring-violet-200 dark:bg-violet-950/40 dark:text-violet-300 dark:ring-violet-900/60",
+};
+
+const PAID_MEDIUMS = new Set(["paid", "cpc", "ppc", "ads", "ad", "paidsocial", "paid_social", "paid-social", "sponsored", "display"]);
+
+function resolveChannel(attribution: OrderAttribution | null | undefined): ChannelMeta | null {
+  if (!attribution) return null;
+  const rawSrc = (attribution.utm_source ?? "").trim().toLowerCase();
+  const medium = (attribution.utm_medium ?? "").trim().toLowerCase();
+  // fbclid = click from a Meta paid ad, even when UTM tags are missing.
+  const paid = PAID_MEDIUMS.has(medium) || !!attribution.fbclid;
+
+  if (["fb", "facebook", "meta", "facebook.com", "l.facebook.com", "m.facebook.com"].some((k) => rawSrc === k || rawSrc.startsWith("fb-"))) {
+    return paid
+      ? { icon: "📘", label: "Facebook Ads", tone: TONES.fb }
+      : { icon: "📘", label: "Facebook Organic", tone: TONES.fb };
   }
-  return (
-    <span className={cn("inline-flex items-center gap-1 px-2 h-5 rounded-full text-[10px] font-semibold ring-1 ring-inset max-w-[120px]", tone)}>
-      <span>{icon}</span>
-      <span className="truncate">{label}</span>
-    </span>
-  );
+  if (rawSrc === "ig" || rawSrc.includes("instagram") || rawSrc.startsWith("ig-")) {
+    return paid
+      ? { icon: "📷", label: "Instagram Ads", tone: TONES.ig }
+      : { icon: "📷", label: "Instagram Organic", tone: TONES.ig };
+  }
+  if (rawSrc.includes("whatsapp") || rawSrc === "wa") return { icon: "💬", label: "WhatsApp", tone: TONES.wa };
+  if (rawSrc.includes("messenger")) return { icon: "✉️", label: "Messenger", tone: TONES.messenger };
+  if (rawSrc.includes("google")) {
+    return paid
+      ? { icon: "🔍", label: "Google Ads", tone: TONES.google }
+      : { icon: "🔍", label: "Google Organic", tone: TONES.google };
+  }
+  if (rawSrc.includes("tiktok") || rawSrc === "tt") {
+    return paid
+      ? { icon: "🎵", label: "TikTok Ads", tone: TONES.tiktok }
+      : { icon: "🎵", label: "TikTok", tone: TONES.tiktok };
+  }
+  if (rawSrc.includes("youtube")) return { icon: "▶️", label: "YouTube", tone: TONES.youtube };
+  if (rawSrc === "direct" || rawSrc === "organic") return null;
+  if (rawSrc) {
+    // Any other tagged source — show it as-is (e.g. chatgpt.com, blog, partner).
+    const label = attribution.utm_source!.trim().slice(0, 18);
+    return { icon: "🏷️", label, tone: TONES.violet };
+  }
+  // Attribution row exists (fbclid) but no utm tags at all → Meta paid click.
+  if (attribution.fbclid) return { icon: "📘", label: "Facebook Ads", tone: TONES.fb };
+  return null;
 }
 
-const SOURCE_ROW_META: Record<string, { icon: string; label: string; tone: string }> = {
-  website: { icon: "🌐", label: "Website", tone: "bg-emerald-50 text-emerald-700 ring-emerald-200 dark:bg-emerald-950/40 dark:text-emerald-300 dark:ring-emerald-900/60" },
-  pixel: { icon: "📘", label: "Facebook Ads", tone: "bg-blue-50 text-blue-700 ring-blue-200 dark:bg-blue-950/40 dark:text-blue-300 dark:ring-blue-900/60" },
-  utm: { icon: "🏷️", label: "UTM", tone: "bg-violet-50 text-violet-700 ring-violet-200 dark:bg-violet-950/40 dark:text-violet-300 dark:ring-violet-900/60" },
-  direct: { icon: "🔗", label: "Direct", tone: "bg-muted/60 text-muted-foreground ring-border" },
-  organic: { icon: "🔍", label: "Organic", tone: "bg-amber-50 text-amber-700 ring-amber-200 dark:bg-amber-950/40 dark:text-amber-300 dark:ring-amber-900/60" },
-  facebook: { icon: "📘", label: "Facebook", tone: "bg-blue-50 text-blue-700 ring-blue-200 dark:bg-blue-950/40 dark:text-blue-300 dark:ring-blue-900/60" },
-  fb: { icon: "📘", label: "Facebook", tone: "bg-blue-50 text-blue-700 ring-blue-200 dark:bg-blue-950/40 dark:text-blue-300 dark:ring-blue-900/60" },
-  meta: { icon: "📘", label: "Meta", tone: "bg-blue-50 text-blue-700 ring-blue-200 dark:bg-blue-950/40 dark:text-blue-300 dark:ring-blue-900/60" },
-  instagram: { icon: "📷", label: "Instagram", tone: "bg-pink-50 text-pink-700 ring-pink-200 dark:bg-pink-950/40 dark:text-pink-300 dark:ring-pink-900/60" },
-  ig: { icon: "📷", label: "Instagram", tone: "bg-pink-50 text-pink-700 ring-pink-200 dark:bg-pink-950/40 dark:text-pink-300 dark:ring-pink-900/60" },
-  google: { icon: "🔍", label: "Google", tone: "bg-amber-50 text-amber-700 ring-amber-200 dark:bg-amber-950/40 dark:text-amber-300 dark:ring-amber-900/60" },
-  whatsapp: { icon: "💬", label: "WhatsApp", tone: "bg-emerald-50 text-emerald-700 ring-emerald-200 dark:bg-emerald-950/40 dark:text-emerald-300 dark:ring-emerald-900/60" },
+const SOURCE_FALLBACK_META: Record<string, ChannelMeta> = {
+  website: { icon: "🌐", label: "Website", tone: TONES.web },
+  pixel: { icon: "📘", label: "Facebook Ads", tone: TONES.fb },
+  utm: { icon: "🏷️", label: "UTM Campaign", tone: TONES.violet },
+  direct: { icon: "🔗", label: "Direct", tone: TONES.neutral },
+  organic: { icon: "🔍", label: "Organic", tone: TONES.google },
   phone: { icon: "📞", label: "Phone Call", tone: "bg-sky-50 text-sky-700 ring-sky-200 dark:bg-sky-950/40 dark:text-sky-300 dark:ring-sky-900/60" },
-  manual: { icon: "✋", label: "Manual Entry", tone: "bg-amber-50 text-amber-700 ring-amber-200 dark:bg-amber-950/40 dark:text-amber-300 dark:ring-amber-900/60" },
-  shopify: { icon: "🛒", label: "Shopify", tone: "bg-emerald-50 text-emerald-700 ring-emerald-200 dark:bg-emerald-950/40 dark:text-emerald-300 dark:ring-emerald-900/60" },
+  shopify: { icon: "🛒", label: "Shopify", tone: TONES.web },
+  whatsapp: { icon: "💬", label: "WhatsApp", tone: TONES.wa },
 };
 
 function SourceRowBlock({
@@ -573,21 +607,13 @@ function SourceRowBlock({
 }: {
   source: string | null;
   sourcePlatform: string | null;
-  attribution: { utm_source: string | null; utm_medium: string | null } | null | undefined;
+  attribution: OrderAttribution | null | undefined;
   siteLabel: string;
   awaitingConfirm: boolean;
 }) {
   const src = (sourcePlatform ?? source ?? "").toLowerCase();
-  const meta = SOURCE_ROW_META[src] ?? SOURCE_ROW_META[(source ?? "").toLowerCase()];
-  const utmSource = attribution?.utm_source;
-  const utmMedium = attribution?.utm_medium;
-  const subtext = utmMedium
-    ? `${utmSource ?? siteLabel} · ${utmMedium}`
-    : utmSource && utmSource.toLowerCase() !== src
-    ? utmSource
-    : siteLabel || undefined;
 
-  if (src === "manual") {
+  if (src === "manual" || source?.toLowerCase() === "manual") {
     return (
       <span className="inline-flex flex-col items-start gap-0.5">
         <span
@@ -609,36 +635,22 @@ function SourceRowBlock({
     );
   }
 
-  if (meta) {
-    return (
-      <TooltipProvider delayDuration={100}>
-        <Tooltip>
-          <TooltipTrigger asChild>
-            <span className="inline-flex flex-col items-start gap-0.5 max-w-[150px]">
-              <span className={cn("inline-flex items-center gap-1 px-2 h-5 rounded-full text-[10px] font-semibold ring-1 ring-inset max-w-full", meta.tone)}>
-                <span>{meta.icon}</span>
-                <span className="truncate">{meta.label}</span>
-              </span>
-              {subtext && <span className="text-[9.5px] text-muted-foreground truncate pl-0.5 max-w-full" title={subtext}>{subtext}</span>}
-            </span>
-          </TooltipTrigger>
-          {subtext && <TooltipContent side="top" className="text-xs max-w-xs">{subtext}</TooltipContent>}
-        </Tooltip>
-      </TooltipProvider>
-    );
-  }
+  // 1) Real traffic channel from attribution (UTM + fbclid) — this is the truth.
+  // 2) Fall back to order source / source_platform.
+  // 3) Last resort: site label or Direct.
+  const channel = resolveChannel(attribution) ?? SOURCE_FALLBACK_META[src] ?? null;
+  const campaign = attribution?.utm_campaign?.trim();
+  const subtext = campaign || (channel ? siteLabel || undefined : undefined);
+  const meta: ChannelMeta = channel ?? { icon: "🔗", label: siteLabel || "Direct", tone: TONES.neutral };
 
-  // Fallback: use attribution source or source field raw.
-  const raw = (source ?? "").trim();
-  const label = raw ? raw.charAt(0).toUpperCase() + raw.slice(1) : (utmSource ?? siteLabel ?? "Direct");
   return (
     <TooltipProvider delayDuration={100}>
       <Tooltip>
         <TooltipTrigger asChild>
           <span className="inline-flex flex-col items-start gap-0.5 max-w-[150px]">
-            <span className="inline-flex items-center gap-1 px-2 h-5 rounded-full text-[10px] font-semibold ring-1 ring-inset bg-slate-50 text-slate-700 ring-slate-200 dark:bg-slate-900/50 dark:text-slate-300 dark:ring-slate-800 max-w-full">
-              <span>🗂️</span>
-              <span className="truncate">{label}</span>
+            <span className={cn("inline-flex items-center gap-1 px-2 h-5 rounded-full text-[10px] font-semibold ring-1 ring-inset max-w-full", meta.tone)}>
+              <span>{meta.icon}</span>
+              <span className="truncate">{meta.label}</span>
             </span>
             {subtext && <span className="text-[9.5px] text-muted-foreground truncate pl-0.5 max-w-full" title={subtext}>{subtext}</span>}
           </span>
@@ -868,7 +880,7 @@ function _WebOrdersPageBody() {
         const [{ data: items }, { data: orderNotes }, { data: attrs }] = await Promise.all([
           supabase.from("order_items").select("order_id,name,quantity,image,unit_price").in("order_id", ids),
           supabase.from("order_notes").select("order_id,body,created_at").in("order_id", ids).order("created_at", { ascending: false }),
-          supabase.from("mkt_order_attributions").select("order_id,utm_source,utm_medium").in("order_id", ids),
+          supabase.from("mkt_order_attributions").select("order_id,utm_source,utm_medium,utm_campaign,fbclid").in("order_id", ids),
         ]);
         const byOrder = new Map<string, { name: string; quantity: number; image: string | null; unit_price: number | null }[]>();
         (items ?? []).forEach((it) => {
@@ -880,9 +892,9 @@ function _WebOrdersPageBody() {
         (orderNotes ?? []).forEach((n) => {
           if (!latestNoteByOrder.has(n.order_id) && n.body) latestNoteByOrder.set(n.order_id, n.body);
         });
-        const attrByOrder = new Map<string, { utm_source: string | null; utm_medium: string | null }>();
+        const attrByOrder = new Map<string, OrderAttribution>();
         (attrs ?? []).forEach((a) => {
-          if (!attrByOrder.has(a.order_id)) attrByOrder.set(a.order_id, { utm_source: a.utm_source, utm_medium: a.utm_medium });
+          if (!attrByOrder.has(a.order_id)) attrByOrder.set(a.order_id, { utm_source: a.utm_source, utm_medium: a.utm_medium, utm_campaign: a.utm_campaign, fbclid: a.fbclid });
         });
         rows.forEach((r) => {
           r.items_summary = byOrder.get(r.id) ?? [];
