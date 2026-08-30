@@ -13177,6 +13177,52 @@ export type Database = {
           tax_name: string
         }[]
       }
+      growth_copurchase: {
+        Args: {
+          _brand_ids: string[]
+          _from: string
+          _limit: number
+          _to: string
+        }
+        Returns: {
+          a_orders: number
+          attach_rate: number
+          name_a: string
+          name_b: string
+          pair_orders: number
+          product_a: string
+          product_b: string
+        }[]
+      }
+      growth_retention_summary: {
+        Args: { _brand_ids: string[]; _from: string; _to: string }
+        Returns: {
+          aov_multi: number
+          aov_single: number
+          avg_ltv: number
+          avg_orders_per_customer: number
+          customers: number
+          median_gap_days: number
+          multi_item_order_pct: number
+          new_customers: number
+          orders: number
+          repeat_customers: number
+          repeat_rate: number
+          revenue: number
+        }[]
+      }
+      growth_winback: {
+        Args: { _brand_ids: string[]; _limit: number; _min_days: number }
+        Returns: {
+          days_since: number
+          last_order_at: string
+          last_product: string
+          name: string
+          orders: number
+          phone: string
+          total_spent: number
+        }[]
+      }
       hard_delete_order: { Args: { _order_id: string }; Returns: undefined }
       has_brand_access: {
         Args: { _brand_id: string; _user_id?: string }
