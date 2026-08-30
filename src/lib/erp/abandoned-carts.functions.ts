@@ -39,6 +39,19 @@ export type AbandonedCartRow = {
   last_followup_channel?: string | null;
 };
 
+// Date filters are business days in Asia/Dhaka. Accept either a plain
+// "YYYY-MM-DD" (converted to Dhaka day boundaries) or a full ISO string.
+function dhakaDayStart(v?: string | null): string | null {
+  if (!v) return null;
+  if (/^\d{4}-\d{2}-\d{2}$/.test(v)) return `${v}T00:00:00.000+06:00`;
+  return v;
+}
+function dhakaDayEnd(v?: string | null): string | null {
+  if (!v) return null;
+  if (/^\d{4}-\d{2}-\d{2}$/.test(v)) return `${v}T23:59:59.999+06:00`;
+  return v;
+}
+
 async function assertStaff(context: { supabase: any; userId: string }) {
   const [admin, cs, ops] = await Promise.all([
     context.supabase.rpc("has_role", { _user_id: context.userId, _role: "admin" }),
