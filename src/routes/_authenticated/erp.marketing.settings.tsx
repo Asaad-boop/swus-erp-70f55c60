@@ -564,10 +564,12 @@ function MarketingSettingsPage() {
           )}
           <Separator className="my-3" />
           <p className="text-[11px] text-muted-foreground">
-            Credential, wallet mapping ar sync schedule Settings → Integrations theke control hoy.
+            Credential, wallet mapping ar sync schedule Settings → Integrations thekeo control kora jay.
           </p>
         </CardContent>
       </Card>
+
+      <AdAccountDialog open={dialogOpen} onOpenChange={setDialogOpen} account={editing} />
     </div>
   );
 }
