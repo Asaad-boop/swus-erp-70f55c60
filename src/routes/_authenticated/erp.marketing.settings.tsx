@@ -452,11 +452,25 @@ function MarketingSettingsPage() {
             <Plug className="h-4 w-4 text-muted-foreground" />
             Connected ad accounts & channels
           </CardTitle>
-          <Button asChild variant="outline" size="sm" className="h-7 text-xs">
-            <Link to="/erp/settings" search={{ tab: "integrations" } as never}>
-              Manage in Integrations
-            </Link>
-          </Button>
+          <div className="flex items-center gap-1.5">
+            <Button
+              variant="default"
+              size="sm"
+              className="h-7 text-xs"
+              disabled={!canEdit}
+              onClick={() => {
+                setEditing(null);
+                setDialogOpen(true);
+              }}
+            >
+              <Plus className="mr-1 h-3.5 w-3.5" /> Add account
+            </Button>
+            <Button asChild variant="outline" size="sm" className="h-7 text-xs">
+              <Link to="/erp/settings" search={{ tab: "integrations" } as never}>
+                Manage in Integrations
+              </Link>
+            </Button>
+          </div>
         </CardHeader>
         <CardContent>
           {accountsQ.isLoading ? (
