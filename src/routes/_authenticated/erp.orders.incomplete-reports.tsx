@@ -27,22 +27,9 @@ export const Route = createFileRoute("/_authenticated/erp/orders/incomplete-repo
   component: IncompleteReportsPage,
 });
 
-const PRESETS = [
-  { label: "Today", days: 0 },
-  { label: "7d", days: 7 },
-  { label: "30d", days: 30 },
-  { label: "90d", days: 90 },
-] as const;
-
-// Business days are Asia/Dhaka days. Server normalizes "YYYY-MM-DD" to
-// Dhaka day boundaries (+06:00).
-function dhakaDate(d: Date) {
-  return new Intl.DateTimeFormat("en-CA", {
-    timeZone: "Asia/Dhaka",
-    year: "numeric",
-    month: "2-digit",
-    day: "2-digit",
-  }).format(d);
+function parseYmd(s: string) {
+  const [y, m, d] = s.split("-").map(Number);
+  return new Date(y ?? 1970, (m ?? 1) - 1, d ?? 1);
 }
 
 function IncompleteReportsPage() {
@@ -50,21 +37,11 @@ function IncompleteReportsPage() {
   const navigate = useNavigate();
   const reportsFn = useServerFn(incompleteReportsFn);
 
-  const [preset, setPreset] = useState<number | null>(30);
-  const [customFrom, setCustomFrom] = useState<string>("");
-  const [customTo, setCustomTo] = useState<string>("");
-
-  const { dateFrom, dateTo } = useMemo(() => {
-    if (preset != null) {
-      const to = new Date();
-      const from = preset === 0 ? new Date() : subDays(new Date(), preset);
-      return { dateFrom: dhakaDate(from), dateTo: dhakaDate(to) };
-    }
-    return {
-      dateFrom: customFrom || dhakaDate(subDays(new Date(), 30)),
-      dateTo: customTo || dhakaDate(new Date()),
-    };
-  }, [preset, customFrom, customTo]);
+  // Plain YYYY-MM-DD business days; the server converts them to Asia/Dhaka
+  // day boundaries (+06:00), so no timezone drift.
+  const [range, setRange] = useState<MktRangeValue>(() => buildPreset("30d"));
+  const dateFrom = range.from;
+  const dateTo = range.to;
 
   const { data, isLoading, isFetching } = useQuery({
     queryKey: [
