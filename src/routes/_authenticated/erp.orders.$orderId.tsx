@@ -439,39 +439,99 @@ type VariantLite = {
   stock: number | null;
 };
 
-function ProductSearchPanel({
-  brandId, onAdd,
-}: { brandId: string | null; onAdd: (p: ProductLite, v?: VariantLite) => void }) {
-  const [codeQ, setCodeQ] = useState("");
-  const [nameQ, setNameQ] = useState("");
-  const [debounced, setDebounced] = useState({ code: "", name: "" });
+function useCrossSellIds(currentProductIds: string[]) {
+  return useQuery({
+    queryKey: ["erp-cross-sell", [...currentProductIds].sort()],
+    enabled: currentProductIds.length > 0,
+    staleTime: 1000 * 60 * 10,
+    queryFn: async () => {
+      // Step 1: onno je order gulote ei product gulo ache
+      const { data: seedRows, error: e1 } = await supabase
+        .from("order_items")
+        .select("order_id")
+        .in("product_id", currentProductIds)
+        .limit(400);
+      if (e1) throw e1;
+      const orderIds = Array.from(new Set((seedRows ?? []).map((r) => r.order_id as string))).slice(0, 300);
+      if (orderIds.length === 0) return [] as string[];
+      // Step 2: oi order gulor onno product gulo count kori
+      const { data: coRows, error: e2 } = await supabase
+        .from("order_items")
+        .select("product_id")
+        .in("order_id", orderIds)
+        .limit(2000);
+      if (e2) throw e2;
+      const counts = new Map<string, number>();
+      for (const r of coRows ?? []) {
+        const pid = r.product_id as string;
+        if (!pid || currentProductIds.includes(pid)) continue;
+        counts.set(pid, (counts.get(pid) ?? 0) + 1);
+      }
+      return Array.from(counts.entries())
+        .sort((a, b) => b[1] - a[1])
+        .slice(0, 12)
+        .map(([id]) => id);
+    },
+  });
+}
 
+type SearchProduct = ProductLite & {
+  slug: string; sku: string | null; brand_id: string | null; brands: { name: string } | null;
+};
+
+function ProductSearchPanel({
+  brandId, onAdd, currentProductIds = [], addedCount,
+}: {
+  brandId: string | null;
+  onAdd: (p: ProductLite, v?: VariantLite, qty?: number) => void;
+  currentProductIds?: string[];
+  addedCount?: (productId: string, variantId: string | null) => number;
+}) {
+  const [q, setQ] = useState("");
+  const [debounced, setDebounced] = useState("");
+  const [tab, setTab] = useState<"suggested" | "featured" | "all">("suggested");
+  const [qty, setQty] = useState(1);
+  const inputRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => { inputRef.current?.focus(); }, []);
   useEffect(() => {
-    const t = setTimeout(() => setDebounced({ code: codeQ.trim(), name: nameQ.trim() }), 300);
+    const t = setTimeout(() => setDebounced(q.trim()), 250);
     return () => clearTimeout(t);
-  }, [codeQ, nameQ]);
+  }, [q]);
+
+  const searching = debounced.length > 0;
+  const { data: crossIds } = useCrossSellIds(currentProductIds);
 
   const { data: results, isFetching } = useQuery({
-    queryKey: ["erp-product-search", brandId, debounced],
+    queryKey: ["erp-product-search", brandId, debounced, searching ? "" : tab, crossIds ?? []],
     queryFn: async () => {
       // Cross-brand catalog: dui brand er product-i add kora jabe, shudhu chhoto brand tag dekhabe.
-      let q = supabase
+      let q2 = supabase
         .from("products")
         .select("id,title,price,image,stock,is_featured,slug,sku,brand_id,brands(name)")
         .eq("is_active", true)
-        .order("is_featured", { ascending: false })
-        .order("created_at", { ascending: false })
-        .limit(30);
-      if (debounced.name) q = q.ilike("title", `%${debounced.name}%`);
-      if (debounced.code) {
-        const c = debounced.code.replace(/[,()]/g, " ");
-        q = q.or(`slug.ilike.%${c}%,sku.ilike.%${c}%,barcode.ilike.%${c}%,title.ilike.%${c}%`);
+        .limit(searching ? 30 : 18);
+
+      if (searching) {
+        const c = debounced.replace(/[,()]/g, " ");
+        q2 = q2.or(`title.ilike.%${c}%,slug.ilike.%${c}%,sku.ilike.%${c}%,barcode.ilike.%${c}%`);
+        q2 = q2.order("is_featured", { ascending: false }).order("created_at", { ascending: false });
+      } else if (tab === "suggested" && (crossIds ?? []).length > 0) {
+        q2 = q2.in("id", crossIds!);
+      } else if (tab === "featured") {
+        q2 = q2.eq("is_featured", true).order("created_at", { ascending: false });
+      } else {
+        q2 = q2.order("is_featured", { ascending: false }).order("created_at", { ascending: false });
       }
-      const { data, error } = await q;
+
+      const { data, error } = await q2;
       if (error) throw error;
-      return (data ?? []) as unknown as (ProductLite & {
-        slug: string; sku: string | null; brand_id: string | null; brands: { name: string } | null;
-      })[];
+      let rows = (data ?? []) as unknown as SearchProduct[];
+      if (!searching && tab === "suggested" && (crossIds ?? []).length > 0) {
+        const order = new Map(crossIds!.map((id, i) => [id, i]));
+        rows = [...rows].sort((a, b) => (order.get(a.id) ?? 99) - (order.get(b.id) ?? 99));
+      }
+      return rows;
     },
   });
 
@@ -497,31 +557,99 @@ function ProductSearchPanel({
     },
   });
 
+  const toLite = (p: SearchProduct): ProductLite => ({
+    id: p.id, title: p.title, price: Number(p.price), image: p.image, stock: p.stock, is_featured: p.is_featured,
+  });
+
+  const handleAdd = (p: SearchProduct, v?: VariantLite) => {
+    onAdd(toLite(p), v, qty);
+  };
+
+  const suggestedEmpty = !searching && tab === "suggested" && (crossIds ?? []).length === 0;
+
   return (
     <div className="space-y-3">
-      <div className="grid grid-cols-2 gap-3">
-        <FieldShell label="Code/sku">
-          <div className="relative">
-            <Search className="absolute left-2 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
-            <Input value={codeQ} onChange={(e) => setCodeQ(e.target.value)} placeholder="Type to Search…" className="h-8 pl-7 text-xs" />
-          </div>
-        </FieldShell>
-        <FieldShell label="Name">
-          <div className="relative">
-            <Search className="absolute left-2 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
-            <Input value={nameQ} onChange={(e) => setNameQ(e.target.value)} placeholder="Type to Search…" className="h-8 pl-7 text-xs" />
-          </div>
-        </FieldShell>
+      {/* Ek search bar — name / SKU / code / barcode shob ekshathe */}
+      <div className="flex items-center gap-2">
+        <div className="relative flex-1">
+          <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+          <Input
+            ref={inputRef}
+            value={q}
+            onChange={(e) => setQ(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === "Enter") {
+                const first = (results ?? [])[0];
+                if (!first) return;
+                const vs = variantsByProduct?.get(first.id) ?? [];
+                if (vs.length === 0) handleAdd(first);
+              }
+              if (e.key === "Escape") setQ("");
+            }}
+            placeholder="Search by name, SKU, code or barcode…"
+            className="h-9 pl-8 pr-8 text-xs"
+          />
+          {q && (
+            <button
+              type="button"
+              onClick={() => { setQ(""); inputRef.current?.focus(); }}
+              className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+              aria-label="Clear search"
+            >
+              <XCircle className="h-3.5 w-3.5" />
+            </button>
+          )}
+        </div>
+        <div className="flex items-center gap-1 rounded-md border px-1 h-9">
+          <button type="button" className="p-1 text-muted-foreground hover:text-foreground disabled:opacity-40"
+            disabled={qty <= 1} onClick={() => setQty((n) => Math.max(1, n - 1))} aria-label="Decrease qty">
+            <Minus className="h-3 w-3" />
+          </button>
+          <span className="w-6 text-center text-xs font-semibold tabular-nums">{qty}</span>
+          <button type="button" className="p-1 text-muted-foreground hover:text-foreground"
+            onClick={() => setQty((n) => Math.min(99, n + 1))} aria-label="Increase qty">
+            <Plus className="h-3 w-3" />
+          </button>
+        </div>
       </div>
-      <div className="max-h-[360px] overflow-y-auto -mx-2">
+
+      {!searching && (
+        <div className="flex items-center gap-1.5">
+          {([
+            { key: "suggested", label: "Upsell picks" },
+            { key: "featured", label: "Featured" },
+            { key: "all", label: "All products" },
+          ] as const).map((t) => (
+            <button
+              key={t.key}
+              type="button"
+              onClick={() => setTab(t.key)}
+              className={cn(
+                "rounded-full border px-2.5 py-1 text-[11px] font-medium transition-colors",
+                tab === t.key
+                  ? "border-indigo-400 bg-indigo-500/10 text-indigo-700 dark:text-indigo-300"
+                  : "text-muted-foreground hover:bg-muted",
+              )}
+            >{t.label}</button>
+          ))}
+          <span className="ml-auto text-[10px] text-muted-foreground">Enter = add top result</span>
+        </div>
+      )}
+
+      <div className="max-h-[380px] overflow-y-auto -mx-2">
         {isFetching && (results ?? []).length === 0 && (
           <div className="flex justify-center py-6"><Loader2 className="h-4 w-4 animate-spin text-muted-foreground" /></div>
         )}
         {!isFetching && (results ?? []).length === 0 && (
-          <p className="text-xs text-muted-foreground text-center py-6">No products found</p>
+          <p className="text-xs text-muted-foreground text-center py-6">
+            {suggestedEmpty ? "No upsell suggestion yet — try Featured or All products" : "No products found"}
+          </p>
         )}
         <ul className="divide-y">
-          {(results ?? []).map((p) => (
+          {(results ?? []).map((p) => {
+            const vs = variantsByProduct?.get(p.id) ?? [];
+            const inCart = addedCount?.(p.id, null) ?? 0;
+            return (
             <li key={p.id} className="px-2 py-2 hover:bg-muted/40 transition-colors">
              <div className="flex items-center gap-3">
               <div className="h-10 w-10 rounded-md bg-muted shrink-0 overflow-hidden flex items-center justify-center">
@@ -533,6 +661,11 @@ function ProductSearchPanel({
                 <div className="text-xs font-medium truncate flex items-center gap-1">
                   {p.is_featured && <Star className="h-3 w-3 text-amber-500 fill-amber-500 shrink-0" />}
                   {p.title}
+                  {inCart > 0 && (
+                    <span className="ml-1 shrink-0 rounded-full bg-emerald-500/15 px-1.5 py-px text-[9px] font-bold text-emerald-700 dark:text-emerald-300">
+                      In order ×{inCart}
+                    </span>
+                  )}
                 </div>
                 <div className="flex items-center gap-1.5">
                   <span className="text-[10px] text-muted-foreground font-mono">SKU: {p.sku ?? p.slug?.slice(0, 24) ?? p.id.slice(0, 8)}</span>
@@ -550,10 +683,10 @@ function ProductSearchPanel({
                   <span className={cn("text-muted-foreground", p.stock <= 0 && "text-rose-600")}>Stock: {p.stock}</span>
                 </div>
               </div>
-              {(variantsByProduct?.get(p.id)?.length ?? 0) === 0 ? (
-                <Button size="sm" variant="outline" className="h-7 px-2"
-                  onClick={() => onAdd({ id: p.id, title: p.title, price: Number(p.price), image: p.image, stock: p.stock, is_featured: p.is_featured })}>
-                  <Plus className="h-3 w-3" />
+              {vs.length === 0 ? (
+                <Button size="sm" variant="outline" className="h-7 px-2 text-[11px]"
+                  onClick={() => handleAdd(p)}>
+                  <Plus className="h-3 w-3 mr-1" />Add{qty > 1 ? ` ×${qty}` : ""}
                 </Button>
               ) : (
                 <span className="shrink-0 rounded-full bg-indigo-500/10 px-2 py-0.5 text-[9px] font-bold uppercase tracking-wide text-indigo-700 dark:text-indigo-300">
@@ -561,20 +694,22 @@ function ProductSearchPanel({
                 </span>
               )}
              </div>
-             {(variantsByProduct?.get(p.id)?.length ?? 0) > 0 && (
+             {vs.length > 0 && (
                <div className="mt-2 flex flex-wrap gap-1.5 pl-[52px]">
-                 {(variantsByProduct?.get(p.id) ?? []).map((v) => {
+                 {vs.map((v) => {
                    const out = (v.stock ?? 0) <= 0;
+                   const vCount = addedCount?.(p.id, v.id) ?? 0;
                    return (
                      <button
                        key={v.id}
                        type="button"
                         title={`Add ${v.color_name ?? "variant"}${out ? " (backorder)" : ""}`}
-                       onClick={() => onAdd({ id: p.id, title: p.title, price: Number(p.price), image: p.image, stock: p.stock, is_featured: p.is_featured }, v)}
+                       onClick={() => handleAdd(p, v)}
                        className={cn(
                          "inline-flex items-center gap-1.5 rounded-full border px-2 py-1 text-[10px] font-medium transition-colors",
                           "hover:border-indigo-400 hover:bg-indigo-500/10",
                           out && "border-dashed",
+                          vCount > 0 && "border-emerald-400 bg-emerald-500/10",
                        )}
                      >
                        <span className="h-3 w-3 rounded-full border shrink-0" style={{ background: v.color_hex || "transparent" }} />
@@ -587,12 +722,14 @@ function ProductSearchPanel({
                </div>
              )}
             </li>
-          ))}
+            );
+          })}
         </ul>
       </div>
     </div>
   );
 }
+
 
 /* -------------------------------------------------------------------------- */
 /*  Page                                                                       */
