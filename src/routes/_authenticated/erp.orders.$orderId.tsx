@@ -22,6 +22,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { useOrderDetail } from "@/hooks/erp/use-orders-query";
+import { useLogCallAttempt } from "@/hooks/erp/use-order-ops";
 import { bdPhoneError, customerName, customerPhone, invoiceDisplay, settlementBadge, statusBadge, type OrderStatus } from "@/lib/erp/orders";
 import { PrintableInvoice } from "@/components/erp/orders/order-invoice";
 import { BookPathaoDialog } from "@/components/erp/courier/book-pathao-dialog";
@@ -607,6 +608,7 @@ function OrderDetailsPage() {
   const qc = useQueryClient();
   const navigate = useNavigate();
   const { data, isLoading } = useOrderDetail(orderId);
+  const logCall = useLogCallAttempt();
   const orderLock = useOrderLock(orderId);
   const detectFn = useServerFn(pathaoDetectForOrderFn);
   const matchAddressFn = useServerFn(pathaoMatchAddressFn);
@@ -1488,7 +1490,26 @@ function splitCourierProviders(providers?: HistProvider[] | null) {
                 <div className="relative">
                   <Input value={form.mobile} onChange={(e) => setForm({ ...form, mobile: e.target.value })} className="h-9 pr-16 font-mono" />
                   <div className="absolute right-1 top-1/2 -translate-y-1/2 flex gap-0.5">
-                    <a href={`tel:${form.mobile}`} className="p-1 rounded hover:bg-muted text-emerald-600"><Phone className="h-3.5 w-3.5" /></a>
+                    <a
+                      href={`tel:${form.mobile}`}
+                      title="Call customer (logs a call attempt)"
+                      onClick={() => {
+                        if (!order) return;
+                        const o = order as { call_attempt_count?: number | null; call_status?: string | null };
+                        logCall.mutate({
+                          orderId,
+                          attempts: o.call_attempt_count ?? 0,
+                          currentStatus: o.call_status ?? null,
+                        });
+                      }}
+                      className="p-1 rounded hover:bg-muted text-emerald-600"
+                    ><Phone className="h-3.5 w-3.5" /></a>
+                    {(() => {
+                      const n = Number((order as { call_attempt_count?: number | null } | undefined)?.call_attempt_count ?? 0);
+                      return n > 0 ? (
+                        <span className="text-[10px] font-semibold tabular-nums text-muted-foreground" title={`${n} call attempt${n > 1 ? "s" : ""} logged`}>×{n}</span>
+                      ) : null;
+                    })()}
                     <a href={`https://wa.me/${form.mobile.replace(/^0/, "880")}`} target="_blank" rel="noreferrer" className="p-1 rounded hover:bg-muted text-emerald-600"><MessageCircle className="h-3.5 w-3.5" /></a>
                   </div>
                 </div>

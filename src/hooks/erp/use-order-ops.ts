@@ -10,6 +10,7 @@ import { supabase } from "@/integrations/supabase/client";
 function invalidateOrders(qc: ReturnType<typeof useQueryClient>) {
   qc.invalidateQueries({ queryKey: ["orders"] });
   qc.invalidateQueries({ queryKey: ["web-orders"] });
+  qc.invalidateQueries({ queryKey: ["order-detail"] });
   qc.invalidateQueries({ queryKey: ["order-status-counts"] });
 }
 
