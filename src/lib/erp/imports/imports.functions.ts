@@ -188,6 +188,8 @@ export const getPurchaseOrderDetail = createServerFn({ method: "POST" })
     if (itemsRes.error) throw itemsRes.error;
     if (cartonsRes.error) throw cartonsRes.error;
     if (paymentsRes.error) throw paymentsRes.error;
+    // Releases silently empty hoye gele "0 released" dekhato — tai error throw kori
+    if (releasesRes.error) throw releasesRes.error;
     return {
       po: poRes.data,
       items: itemsRes.data ?? [],
