@@ -79,7 +79,7 @@ function IncompleteReportsPage() {
           <div>
             <h1 className="text-2xl font-bold tracking-tight">Incomplete Reports</h1>
             <p className="text-sm text-muted-foreground">
-              {format(new Date(dateFrom), "dd MMM yyyy")} – {format(new Date(dateTo), "dd MMM yyyy")}
+              {format(parseYmd(dateFrom), "dd MMM yyyy")} – {format(parseYmd(dateTo), "dd MMM yyyy")}
               {isFetching && <span className="ml-2 text-xs">· syncing</span>}
             </p>
           </div>
