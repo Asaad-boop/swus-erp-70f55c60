@@ -1611,14 +1611,44 @@ function splitCourierProviders(providers?: HistProvider[] | null) {
               <div className="space-y-3">
                 <FieldShell label="Source Platform">
                   <Select value={form.source_platform} onValueChange={(v) => setForm({ ...form, source_platform: v })}>
-                    <SelectTrigger className="h-9"><SelectValue /></SelectTrigger>
+                    <SelectTrigger className="h-9">
+                      <SelectValue placeholder="Select source platform">
+                        {(() => {
+                          const opt = SOURCE_PLATFORM_OPTIONS.find((o) => o.value === form.source_platform);
+                          if (!opt) return null;
+                          const Icon = opt.icon;
+                          return (
+                            <span className="flex items-center gap-2">
+                              <Icon className="h-3.5 w-3.5 text-muted-foreground" />
+                              <span>{opt.label}</span>
+                            </span>
+                          );
+                        })()}
+                      </SelectValue>
+                    </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="Website">Website</SelectItem>
-                      <SelectItem value="Facebook">Facebook</SelectItem>
-                      <SelectItem value="Instagram">Instagram</SelectItem>
-                      <SelectItem value="WhatsApp">WhatsApp</SelectItem>
-                      <SelectItem value="Phone">Phone</SelectItem>
-                      <SelectItem value="Other">Other</SelectItem>
+                      {["Online", "Social", "Messaging", "Direct", "Other"].map((group) => {
+                        const items = SOURCE_PLATFORM_OPTIONS.filter((o) => o.group === group);
+                        if (items.length === 0) return null;
+                        return (
+                          <SelectGroup key={group}>
+                            <SelectLabel className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
+                              {group}
+                            </SelectLabel>
+                            {items.map((item) => {
+                              const Icon = item.icon;
+                              return (
+                                <SelectItem key={item.value} value={item.value}>
+                                  <span className="flex items-center gap-2">
+                                    <Icon className={cn("h-3.5 w-3.5", item.value === "Website" && "text-sky-600", item.value === "Facebook" && "text-blue-600", item.value === "Instagram" && "text-pink-600", item.value === "WhatsApp" && "text-emerald-600", item.value === "Phone" && "text-amber-600")} />
+                                    <span>{item.label}</span>
+                                  </span>
+                                </SelectItem>
+                              );
+                            })}
+                          </SelectGroup>
+                        );
+                      })}
                     </SelectContent>
                   </Select>
                 </FieldShell>
