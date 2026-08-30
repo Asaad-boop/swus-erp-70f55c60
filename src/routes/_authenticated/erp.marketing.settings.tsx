@@ -139,6 +139,20 @@ function MarketingSettingsPage() {
 
   const [form, setForm] = useState<MarketingSettings>(DEFAULT_MARKETING_SETTINGS);
   const [dirty, setDirty] = useState(false);
+  const [dialogOpen, setDialogOpen] = useState(false);
+  const [editing, setEditing] = useState<AdAccountRow | null>(null);
+  const testConn = useServerFn(testAdAccountConnection);
+  const retestM = useMutation({
+    mutationFn: (accountId: string) => testConn({ data: { accountId } as never }),
+    onSuccess: () => {
+      toast.success("Connection OK — status active hoye geche");
+      qc.invalidateQueries({ queryKey: ["mkt-settings-accounts"] });
+    },
+    onError: (e: any) => {
+      toast.error(e?.message ?? "Connection failed");
+      qc.invalidateQueries({ queryKey: ["mkt-settings-accounts"] });
+    },
+  });
 
   useEffect(() => {
     if (settingsQ.data?.settings) {
