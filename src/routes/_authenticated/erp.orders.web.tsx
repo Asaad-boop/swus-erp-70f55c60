@@ -587,7 +587,7 @@ function SourceRowBlock({
     ? utmSource
     : siteLabel || undefined;
 
-  if (src === "manual" || awaitingConfirm) {
+  if (src === "manual") {
     return (
       <span className="inline-flex flex-col items-start gap-0.5">
         <span
