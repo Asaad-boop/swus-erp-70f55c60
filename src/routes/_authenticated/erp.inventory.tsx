@@ -604,10 +604,11 @@ function InventoryPage() {
                   const reserved = Number(r.reserved_stock ?? 0);
                   const available = Number(r.available_stock ?? (r.stock - reserved));
                   const wac = Number(r.weighted_avg_cost ?? r.cost_price ?? 0);
-                  const threshold = r.low_stock_threshold ?? 5;
                   const reorderPoint = r.reorder_point ?? 0;
-                  const isOut = r.stock <= 0;
-                  const isLow = !isOut && r.stock <= threshold;
+                  // Canonical low-stock rule (P3): available_stock <= effective threshold
+                  const threshold = reorderPoint > 0 ? reorderPoint : (r.low_stock_threshold ?? 5);
+                  const isOut = available <= 0;
+                  const isLow = !isOut && available <= threshold;
                   const needsReorder = reorderPoint > 0 && available <= reorderPoint;
 
                   return (
