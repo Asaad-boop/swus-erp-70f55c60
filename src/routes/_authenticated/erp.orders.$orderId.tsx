@@ -5,7 +5,7 @@ import {
   ArrowLeft, Printer, Truck, Loader2, Phone, MessageCircle, Plus, Minus, Trash2,
   Search, Star, Tag as TagIcon, XCircle, Smartphone, Save, Undo2, CheckCircle2,
   ChevronLeft, ChevronRight, RotateCcw, Repeat, Copy, Check, MapPin, ShieldCheck, ShieldAlert, CalendarClock, RefreshCw,
-  ChevronDown,
+  ChevronDown, Globe, Facebook, Instagram, MoreHorizontal,
 } from "lucide-react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { PreorderConvertDialog } from "@/components/erp/orders/preorder-convert-dialog";
@@ -19,7 +19,8 @@ import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Switch } from "@/components/ui/switch";
 import { Textarea } from "@/components/ui/textarea";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Select, SelectContent, SelectGroup, SelectItem, SelectLabel, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { useOrderDetail } from "@/hooks/erp/use-orders-query";
 import { useLogCallAttempt } from "@/hooks/erp/use-order-ops";
@@ -108,6 +109,15 @@ function sourceLabel(source?: string | null): string {
   if (s === "google") return "Google";
   return source;
 }
+
+const SOURCE_PLATFORM_OPTIONS = [
+  { value: "Website", label: "Website", icon: Globe, group: "Online" },
+  { value: "Facebook", label: "Facebook", icon: Facebook, group: "Social" },
+  { value: "Instagram", label: "Instagram", icon: Instagram, group: "Social" },
+  { value: "WhatsApp", label: "WhatsApp", icon: MessageCircle, group: "Messaging" },
+  { value: "Phone", label: "Phone Call", icon: Phone, group: "Direct" },
+  { value: "Other", label: "Other", icon: MoreHorizontal, group: "Other" },
+] as const;
 
 function CopyChip({ value, className, children }: { value: string; className?: string; children: React.ReactNode }) {
   const [copied, setCopied] = useState(false);
@@ -1601,14 +1611,44 @@ function splitCourierProviders(providers?: HistProvider[] | null) {
               <div className="space-y-3">
                 <FieldShell label="Source Platform">
                   <Select value={form.source_platform} onValueChange={(v) => setForm({ ...form, source_platform: v })}>
-                    <SelectTrigger className="h-9"><SelectValue /></SelectTrigger>
+                    <SelectTrigger className="h-9">
+                      <SelectValue placeholder="Select source platform">
+                        {(() => {
+                          const opt = SOURCE_PLATFORM_OPTIONS.find((o) => o.value === form.source_platform);
+                          if (!opt) return null;
+                          const Icon = opt.icon;
+                          return (
+                            <span className="flex items-center gap-2">
+                              <Icon className="h-3.5 w-3.5 text-muted-foreground" />
+                              <span>{opt.label}</span>
+                            </span>
+                          );
+                        })()}
+                      </SelectValue>
+                    </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="Website">Website</SelectItem>
-                      <SelectItem value="Facebook">Facebook</SelectItem>
-                      <SelectItem value="Instagram">Instagram</SelectItem>
-                      <SelectItem value="WhatsApp">WhatsApp</SelectItem>
-                      <SelectItem value="Phone">Phone</SelectItem>
-                      <SelectItem value="Other">Other</SelectItem>
+                      {["Online", "Social", "Messaging", "Direct", "Other"].map((group) => {
+                        const items = SOURCE_PLATFORM_OPTIONS.filter((o) => o.group === group);
+                        if (items.length === 0) return null;
+                        return (
+                          <SelectGroup key={group}>
+                            <SelectLabel className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
+                              {group}
+                            </SelectLabel>
+                            {items.map((item) => {
+                              const Icon = item.icon;
+                              return (
+                                <SelectItem key={item.value} value={item.value}>
+                                  <span className="flex items-center gap-2">
+                                    <Icon className={cn("h-3.5 w-3.5", item.value === "Website" && "text-sky-600", item.value === "Facebook" && "text-blue-600", item.value === "Instagram" && "text-pink-600", item.value === "WhatsApp" && "text-emerald-600", item.value === "Phone" && "text-amber-600")} />
+                                    <span>{item.label}</span>
+                                  </span>
+                                </SelectItem>
+                              );
+                            })}
+                          </SelectGroup>
+                        );
+                      })}
                     </SelectContent>
                   </Select>
                 </FieldShell>
@@ -2398,6 +2438,7 @@ const SHIPPING_PRESETS_KEY = "erp:shipping_note_presets";
 function ShippingNotePresets({ value, onChange }: { value: string; onChange: (v: string) => void }) {
   const [custom, setCustom] = useState<string[]>([]);
   const [newPreset, setNewPreset] = useState("");
+  const [open, setOpen] = useState(false);
 
   useEffect(() => {
     try {
@@ -2431,46 +2472,63 @@ function ShippingNotePresets({ value, onChange }: { value: string; onChange: (v:
         <span>Click preset to append</span>
         <span>{value.length}/150</span>
       </div>
-      <div className="flex flex-wrap gap-1.5">
-        {all.map((p, i) => {
-          const isCustom = i >= DEFAULT_SHIPPING_PRESETS.length;
-          return (
-            <span key={`${p}-${i}`} className="group inline-flex items-center gap-1 rounded-full border bg-muted/40 hover:bg-muted px-2 py-0.5 text-[11px]">
-              <button type="button" onClick={() => apply(p)} className="truncate max-w-[180px]">{p}</button>
-              {isCustom && (
-                <button
-                  type="button"
-                  onClick={() => persist(custom.filter((c) => c !== p))}
-                  className="text-muted-foreground hover:text-destructive"
-                  aria-label="Remove preset"
-                >
-                  <XCircle className="h-3 w-3" />
-                </button>
-              )}
+      <Collapsible open={open} onOpenChange={setOpen}>
+        <CollapsibleTrigger asChild>
+          <button
+            type="button"
+            className="flex w-full items-center justify-between gap-2 rounded-lg border border-border/60 bg-muted/30 px-2.5 py-1.5 text-[11px] font-semibold text-muted-foreground transition-colors hover:bg-muted/60"
+          >
+            <span className="flex items-center gap-1.5">
+              <Plus className="h-3 w-3" />
+              Quick presets
+              <span className="rounded-full bg-background px-1.5 py-px text-[10px] tabular-nums text-foreground">{all.length}</span>
             </span>
-          );
-        })}
-      </div>
-      <div className="flex gap-1.5">
-        <Input
-          value={newPreset}
-          onChange={(e) => setNewPreset(e.target.value)}
-          placeholder="Save new preset..."
-          className="h-7 text-xs"
-        />
-        <Button
-          type="button"
-          size="sm"
-          variant="outline"
-          className="h-7 text-xs"
-          onClick={() => {
-            const t = newPreset.trim();
-            if (!t || custom.includes(t) || DEFAULT_SHIPPING_PRESETS.includes(t)) return;
-            persist([...custom, t]);
-            setNewPreset("");
-          }}
-        >Save</Button>
-      </div>
+            <ChevronDown className={cn("h-3.5 w-3.5 transition-transform duration-200", open && "rotate-180")} />
+          </button>
+        </CollapsibleTrigger>
+        <CollapsibleContent className="space-y-2 overflow-hidden data-[state=closed]:animate-collapsible-up data-[state=open]:animate-collapsible-down">
+          <div className="flex flex-wrap gap-1.5 pt-2">
+            {all.map((p, i) => {
+              const isCustom = i >= DEFAULT_SHIPPING_PRESETS.length;
+              return (
+                <span key={`${p}-${i}`} className="group inline-flex items-center gap-1 rounded-full border bg-muted/40 hover:bg-muted px-2 py-0.5 text-[11px]">
+                  <button type="button" onClick={() => apply(p)} className="truncate max-w-[180px]">{p}</button>
+                  {isCustom && (
+                    <button
+                      type="button"
+                      onClick={() => persist(custom.filter((c) => c !== p))}
+                      className="text-muted-foreground hover:text-destructive"
+                      aria-label="Remove preset"
+                    >
+                      <XCircle className="h-3 w-3" />
+                    </button>
+                  )}
+                </span>
+              );
+            })}
+          </div>
+          <div className="flex gap-1.5">
+            <Input
+              value={newPreset}
+              onChange={(e) => setNewPreset(e.target.value)}
+              placeholder="Save new preset..."
+              className="h-7 text-xs"
+            />
+            <Button
+              type="button"
+              size="sm"
+              variant="outline"
+              className="h-7 text-xs"
+              onClick={() => {
+                const t = newPreset.trim();
+                if (!t || custom.includes(t) || DEFAULT_SHIPPING_PRESETS.includes(t)) return;
+                persist([...custom, t]);
+                setNewPreset("");
+              }}
+            >Save</Button>
+          </div>
+        </CollapsibleContent>
+      </Collapsible>
     </div>
   );
 }
