@@ -1504,6 +1504,12 @@ function splitCourierProviders(providers?: HistProvider[] | null) {
                       }}
                       className="p-1 rounded hover:bg-muted text-emerald-600"
                     ><Phone className="h-3.5 w-3.5" /></a>
+                    {(() => {
+                      const n = Number((order as { call_attempt_count?: number | null } | undefined)?.call_attempt_count ?? 0);
+                      return n > 0 ? (
+                        <span className="text-[10px] font-semibold tabular-nums text-muted-foreground" title={`${n} call attempt${n > 1 ? "s" : ""} logged`}>×{n}</span>
+                      ) : null;
+                    })()}
                     <a href={`https://wa.me/${form.mobile.replace(/^0/, "880")}`} target="_blank" rel="noreferrer" className="p-1 rounded hover:bg-muted text-emerald-600"><MessageCircle className="h-3.5 w-3.5" /></a>
                   </div>
                 </div>
