@@ -1033,20 +1033,7 @@ function _WebOrdersPageBody() {
     });
   };
 
-  // Pagination
-  const goToPage = useCallback((p: number) => {
-    const clamped = Math.max(1, Math.min(totalPages, p));
-    navigate({ search: (prev: WebOrdersSearch) => ({ ...prev, page: clamped }), replace: true });
-    if (typeof window !== "undefined") window.scrollTo({ top: 0, behavior: "smooth" });
-  }, [navigate, totalPages]);
-
-  // Reset page to 1 whenever filters change
-  useEffect(() => {
-    if ((search.page ?? 1) !== 1) {
-      navigate({ search: (prev: WebOrdersSearch) => ({ ...prev, page: 1 }), replace: true });
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [activeTab, debouncedSearch, sort, sourceFilter, paymentFilter, dateRange.from, dateRange.to]);
+  // Infinite scroll — no page state to reset; filter changes swap the query key.
 
   const setActiveTab = (key: WebStatus | "all") => navigate({ search: (prev: WebOrdersSearch) => ({ ...prev, tab: key, page: 1 }), replace: true });
 
@@ -1680,14 +1667,7 @@ function _WebOrdersPageBody() {
           <div className="flex flex-col sm:flex-row items-center justify-between gap-3 border-t px-4 py-3 text-sm">
             <div className="flex items-center gap-3">
               <div className="text-xs text-muted-foreground">
-                Showing{" "}
-                <span className="font-medium text-foreground">
-                  {pageSize > 0 ? (page - 1) * pageSize + 1 : 1}
-                </span>
-                –
-                <span className="font-medium text-foreground">
-                  {pageSize > 0 ? Math.min(page * pageSize, totalRows) : rows.length}
-                </span>
+                Showing <span className="font-medium text-foreground">{rows.length}</span>
                 {" of "}<span className="font-medium text-foreground">{totalRows}</span>
                 {ordersQuery.isFetching && <Loader2 className="ml-2 inline h-3 w-3 animate-spin" />}
               </div>
@@ -1709,19 +1689,28 @@ function _WebOrdersPageBody() {
                 </Select>
               </div>
             </div>
-            <div className="flex items-center gap-1">
-              <Button variant="outline" size="sm" disabled={page <= 1} onClick={() => goToPage(1)}>First</Button>
-              <Button variant="outline" size="sm" disabled={page <= 1} onClick={() => goToPage(page - 1)}>
-                <ChevronLeft className="h-4 w-4" /> Prev
+            {ordersQuery.hasNextPage ? (
+              <Button
+                variant="outline"
+                size="sm"
+                disabled={ordersQuery.isFetchingNextPage}
+                onClick={() => void ordersQuery.fetchNextPage()}
+              >
+                {ordersQuery.isFetchingNextPage ? (
+                  <Loader2 className="mr-1.5 h-3.5 w-3.5 animate-spin" />
+                ) : null}
+                Load more ({totalRows - rows.length} left)
               </Button>
-              <span className="px-3 text-xs text-muted-foreground">
-                Page <span className="font-medium text-foreground">{page}</span> of {totalPages}
-              </span>
-              <Button variant="outline" size="sm" disabled={page >= totalPages} onClick={() => goToPage(page + 1)}>
-                Next <ChevronRight className="h-4 w-4" />
-              </Button>
-              <Button variant="outline" size="sm" disabled={page >= totalPages} onClick={() => goToPage(totalPages)}>Last</Button>
-            </div>
+            ) : (
+              <span className="text-xs text-muted-foreground/70">সবগুলো order লোড হয়েছে ✓</span>
+            )}
+          </div>
+        )}
+        {/* Infinite-scroll sentinel */}
+        <div ref={loadMoreRef} className="h-1" />
+        {ordersQuery.isFetchingNextPage && (
+          <div className="flex justify-center py-3">
+            <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
           </div>
         )}
       </div>
