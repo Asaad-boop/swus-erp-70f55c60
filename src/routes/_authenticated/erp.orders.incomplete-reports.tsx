@@ -85,32 +85,7 @@ function IncompleteReportsPage() {
           </div>
         </div>
         <div className="flex items-center gap-2 flex-wrap">
-          {PRESETS.map((p) => (
-            <Button
-              key={p.days}
-              variant={preset === p.days ? "default" : "outline"}
-              size="sm"
-              className="h-8 text-xs"
-              onClick={() => setPreset(p.days)}
-            >
-              {p.label}
-            </Button>
-          ))}
-          <div className="flex items-center gap-1.5">
-            <Input
-              type="date"
-              value={customFrom}
-              onChange={(e) => { setCustomFrom(e.target.value); setPreset(null); }}
-              className="h-8 text-xs w-[140px]"
-            />
-            <span className="text-muted-foreground text-xs">→</span>
-            <Input
-              type="date"
-              value={customTo}
-              onChange={(e) => { setCustomTo(e.target.value); setPreset(null); }}
-              className="h-8 text-xs w-[140px]"
-            />
-          </div>
+          <DateRangePicker value={range} onChange={setRange} />
         </div>
       </div>
 
