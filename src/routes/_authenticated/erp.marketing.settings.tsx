@@ -511,11 +511,16 @@ function MarketingSettingsPage() {
                       <td className="px-3 py-2">{brandName(a.primary_brand_id)}</td>
                       <td className="px-3 py-2">
                         <Badge
-                          variant={a.status === "active" ? "default" : "secondary"}
+                          variant={a.status === "active" ? "default" : a.status === "error" ? "destructive" : "secondary"}
                           className="text-[10px]"
                         >
                           {a.status}
                         </Badge>
+                        {a.status === "error" && a.last_error && (
+                          <p className="mt-1 max-w-[220px] truncate text-[10px] text-destructive" title={a.last_error}>
+                            {a.last_error}
+                          </p>
+                        )}
                       </td>
                       <td className="px-3 py-2">{a.has_access_token ? "Saved" : "Missing"}</td>
                       <td className="px-3 py-2">{a.auto_post_to_finance ? "On" : "Off"}</td>
@@ -523,6 +528,33 @@ function MarketingSettingsPage() {
                         {a.last_insights_sync_at
                           ? new Date(a.last_insights_sync_at).toLocaleString("en-GB")
                           : "—"}
+                      </td>
+                      <td className="px-3 py-2">
+                        <div className="flex items-center gap-1">
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-7 w-7"
+                            title="Edit"
+                            disabled={!canEdit}
+                            onClick={() => {
+                              setEditing(a as AdAccountRow);
+                              setDialogOpen(true);
+                            }}
+                          >
+                            <Pencil className="h-3.5 w-3.5" />
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-7 w-7"
+                            title="Test connection"
+                            disabled={!canEdit || retestM.isPending}
+                            onClick={() => retestM.mutate(a.id)}
+                          >
+                            <PlugZap className="h-3.5 w-3.5" />
+                          </Button>
+                        </div>
                       </td>
                     </tr>
                   ))}
