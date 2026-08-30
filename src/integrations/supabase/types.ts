@@ -6891,10 +6891,31 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "imp_po_release_items_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "products"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "imp_po_release_items_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "v_combo_summary"
+            referencedColumns: ["combo_product_id"]
+          },
+          {
             foreignKeyName: "imp_po_release_items_release_id_fkey"
             columns: ["release_id"]
             isOneToOne: false
             referencedRelation: "imp_po_releases"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "imp_po_release_items_variant_id_fkey"
+            columns: ["variant_id"]
+            isOneToOne: false
+            referencedRelation: "product_variants"
             referencedColumns: ["id"]
           },
         ]
