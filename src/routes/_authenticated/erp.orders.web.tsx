@@ -548,7 +548,7 @@ function SourcePill({ attribution, siteLabel }: { attribution: { utm_source: str
 
 const SOURCE_ROW_META: Record<string, { icon: string; label: string; tone: string }> = {
   website: { icon: "🌐", label: "Website", tone: "bg-emerald-50 text-emerald-700 ring-emerald-200 dark:bg-emerald-950/40 dark:text-emerald-300 dark:ring-emerald-900/60" },
-  pixel: { icon: "📊", label: "Pixel", tone: "bg-indigo-50 text-indigo-700 ring-indigo-200 dark:bg-indigo-950/40 dark:text-indigo-300 dark:ring-indigo-900/60" },
+  pixel: { icon: "📘", label: "Facebook Ads", tone: "bg-blue-50 text-blue-700 ring-blue-200 dark:bg-blue-950/40 dark:text-blue-300 dark:ring-blue-900/60" },
   utm: { icon: "🏷️", label: "UTM", tone: "bg-violet-50 text-violet-700 ring-violet-200 dark:bg-violet-950/40 dark:text-violet-300 dark:ring-violet-900/60" },
   direct: { icon: "🔗", label: "Direct", tone: "bg-muted/60 text-muted-foreground ring-border" },
   organic: { icon: "🔍", label: "Organic", tone: "bg-amber-50 text-amber-700 ring-amber-200 dark:bg-amber-950/40 dark:text-amber-300 dark:ring-amber-900/60" },
