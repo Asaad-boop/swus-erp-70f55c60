@@ -52,8 +52,8 @@ export function CopyIconBtn({ value, label, className }: { value: string; label:
   );
 }
 
-/** Phone action cluster: copy + call (tel:) + whatsapp. */
-export function PhoneActions({ phone, className }: { phone: string; className?: string }) {
+/** Phone action cluster: copy + call (tel:) + whatsapp. `onCall` fires when the call icon is clicked (e.g. to log an attempt). */
+export function PhoneActions({ phone, className, onCall }: { phone: string; className?: string; onCall?: () => void }) {
   if (!phone) return null;
   const wa = waNumber(phone);
   return (
@@ -61,7 +61,7 @@ export function PhoneActions({ phone, className }: { phone: string; className?: 
       <CopyIconBtn value={phone} label="Phone" />
       <a
         href={`tel:${phone}`}
-        onClick={(e) => e.stopPropagation()}
+        onClick={(e) => { e.stopPropagation(); onCall?.(); }}
         title="Call"
         aria-label="Call"
         className="inline-flex items-center justify-center h-5 w-5 rounded hover:bg-emerald-500/15 text-muted-foreground hover:text-emerald-600 transition-colors"

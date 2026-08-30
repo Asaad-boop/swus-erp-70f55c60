@@ -15,6 +15,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Textarea } from "@/components/ui/textarea";
 import { useOrderDetail, useStaffList } from "@/hooks/erp/use-orders-query";
 import { useOrderLock } from "@/hooks/erp/use-order-lock";
+import { useLogCallAttempt } from "@/hooks/erp/use-order-ops";
 import { STATUS_GROUPS, STATUS_BADGE, bdPhoneError, customerName, customerPhone, invoiceDisplay, statusBadge, type OrderStatus } from "@/lib/erp/orders";
 import { setOrderActualShippingCostFn } from "@/lib/erp/courier-sync.functions";
 import { confirmOrderAdvanceReceivedFn } from "@/lib/erp/finance/advance.functions";
@@ -107,6 +108,7 @@ export function OrderDrawer({ orderId, onClose, mode = "fulfillment" }: Props) {
   const { data, isLoading } = useOrderDetail(orderId);
   const { data: staff = [] } = useStaffList();
   const lockState = useOrderLock(orderId);
+  const logCall = useLogCallAttempt();
   const [note, setNote] = useState("");
   const [advOpen, setAdvOpen] = useState(false);
   const [preorderOpen, setPreorderOpen] = useState(false);
@@ -509,7 +511,20 @@ export function OrderDrawer({ orderId, onClose, mode = "fulfillment" }: Props) {
                     ) : (
                       <div className="space-y-2 text-sm">
                         <div className="text-base font-semibold">{customerName(order)}</div>
-                        <a href={`tel:${customerPhone(order)}`} className="flex items-center gap-2 text-foreground hover:text-primary transition-colors">
+                        <a
+                          href={`tel:${customerPhone(order)}`}
+                          title="Call customer (logs a call attempt)"
+                          onClick={() => {
+                            if (!orderId) return;
+                            const o = order as { call_attempt_count?: number | null; call_status?: string | null } | undefined;
+                            logCall.mutate({
+                              orderId,
+                              attempts: o?.call_attempt_count ?? 0,
+                              currentStatus: o?.call_status ?? null,
+                            });
+                          }}
+                          className="flex items-center gap-2 text-foreground hover:text-primary transition-colors"
+                        >
                           <Phone className="h-3.5 w-3.5 text-muted-foreground" /><span className="font-medium tabular-nums">{customerPhone(order)}</span>
                         </a>
                         <div className="flex items-start gap-2 text-muted-foreground">
