@@ -39,6 +39,19 @@ export type AbandonedCartRow = {
   last_followup_channel?: string | null;
 };
 
+// Date filters are business days in Asia/Dhaka. Accept either a plain
+// "YYYY-MM-DD" (converted to Dhaka day boundaries) or a full ISO string.
+function dhakaDayStart(v?: string | null): string | null {
+  if (!v) return null;
+  if (/^\d{4}-\d{2}-\d{2}$/.test(v)) return `${v}T00:00:00.000+06:00`;
+  return v;
+}
+function dhakaDayEnd(v?: string | null): string | null {
+  if (!v) return null;
+  if (/^\d{4}-\d{2}-\d{2}$/.test(v)) return `${v}T23:59:59.999+06:00`;
+  return v;
+}
+
 async function assertStaff(context: { supabase: any; userId: string }) {
   const [admin, cs, ops] = await Promise.all([
     context.supabase.rpc("has_role", { _user_id: context.userId, _role: "admin" }),
@@ -98,8 +111,12 @@ export const listAbandonedCartsFn = createServerFn({ method: "POST" })
       );
     }
 
-    if (data.dateFrom) q = q.gte("updated_at", data.dateFrom);
-    if (data.dateTo) q = q.lte("updated_at", data.dateTo);
+    // Filter on created_at (cart date) — updated_at moves when staff logs a
+    // follow-up, which used to make carts jump between date buckets.
+    const df = dhakaDayStart(data.dateFrom);
+    const dt = dhakaDayEnd(data.dateTo);
+    if (df) q = q.gte("created_at", df);
+    if (dt) q = q.lte("created_at", dt);
     if (typeof data.subtotalMin === "number") q = q.gte("subtotal", data.subtotalMin);
     if (typeof data.subtotalMax === "number") q = q.lte("subtotal", data.subtotalMax);
     if (data.lastSteps && data.lastSteps.length > 0) q = q.in("last_step", data.lastSteps);
@@ -412,8 +429,8 @@ export const incompleteReportsFn = createServerFn({ method: "POST" })
     let q = context.supabase
       .from("abandoned_carts")
       .select("id, subtotal, is_converted, last_step, followup_status, followup_count")
-      .gte("updated_at", data.dateFrom)
-      .lte("updated_at", data.dateTo)
+      .gte("created_at", dhakaDayStart(data.dateFrom) ?? data.dateFrom)
+      .lte("created_at", dhakaDayEnd(data.dateTo) ?? data.dateTo)
       .not("customer_phone", "is", null)
       .neq("customer_phone", "")
       .gt("subtotal", 0);

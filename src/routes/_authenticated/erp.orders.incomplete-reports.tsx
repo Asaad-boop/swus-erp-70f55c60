@@ -1,8 +1,8 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
-import { useMemo, useState } from "react";
+import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
-import { format, subDays } from "date-fns";
+import { format } from "date-fns";
 import {
   ArrowLeft,
   ShoppingCart,
@@ -16,8 +16,12 @@ import {
 } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
+import {
+  DateRangePicker,
+  buildPreset,
+  type MktRangeValue,
+} from "@/components/erp/marketing/date-range-picker";
 import { useBrand } from "@/contexts/brand-context";
 import { incompleteReportsFn } from "@/lib/erp/abandoned-carts.functions";
 import { cn } from "@/lib/utils";
@@ -27,18 +31,9 @@ export const Route = createFileRoute("/_authenticated/erp/orders/incomplete-repo
   component: IncompleteReportsPage,
 });
 
-const PRESETS = [
-  { label: "Today", days: 0 },
-  { label: "7d", days: 7 },
-  { label: "30d", days: 30 },
-  { label: "90d", days: 90 },
-] as const;
-
-function toIsoDate(d: Date, endOfDay = false) {
-  const c = new Date(d);
-  if (endOfDay) c.setHours(23, 59, 59, 999);
-  else c.setHours(0, 0, 0, 0);
-  return c.toISOString();
+function parseYmd(s: string) {
+  const [y, m, d] = s.split("-").map(Number);
+  return new Date(y ?? 1970, (m ?? 1) - 1, d ?? 1);
 }
 
 function IncompleteReportsPage() {
@@ -46,21 +41,11 @@ function IncompleteReportsPage() {
   const navigate = useNavigate();
   const reportsFn = useServerFn(incompleteReportsFn);
 
-  const [preset, setPreset] = useState<number | null>(30);
-  const [customFrom, setCustomFrom] = useState<string>("");
-  const [customTo, setCustomTo] = useState<string>("");
-
-  const { dateFrom, dateTo } = useMemo(() => {
-    if (preset != null) {
-      const to = new Date();
-      const from = preset === 0 ? new Date() : subDays(new Date(), preset);
-      return { dateFrom: toIsoDate(from), dateTo: toIsoDate(to, true) };
-    }
-    return {
-      dateFrom: customFrom ? toIsoDate(new Date(customFrom)) : toIsoDate(subDays(new Date(), 30)),
-      dateTo: customTo ? toIsoDate(new Date(customTo), true) : toIsoDate(new Date(), true),
-    };
-  }, [preset, customFrom, customTo]);
+  // Plain YYYY-MM-DD business days; the server converts them to Asia/Dhaka
+  // day boundaries (+06:00), so no timezone drift.
+  const [range, setRange] = useState<MktRangeValue>(() => buildPreset("30d"));
+  const dateFrom = range.from;
+  const dateTo = range.to;
 
   const { data, isLoading, isFetching } = useQuery({
     queryKey: [
@@ -94,38 +79,13 @@ function IncompleteReportsPage() {
           <div>
             <h1 className="text-2xl font-bold tracking-tight">Incomplete Reports</h1>
             <p className="text-sm text-muted-foreground">
-              {format(new Date(dateFrom), "dd MMM yyyy")} – {format(new Date(dateTo), "dd MMM yyyy")}
+              {format(parseYmd(dateFrom), "dd MMM yyyy")} – {format(parseYmd(dateTo), "dd MMM yyyy")}
               {isFetching && <span className="ml-2 text-xs">· syncing</span>}
             </p>
           </div>
         </div>
         <div className="flex items-center gap-2 flex-wrap">
-          {PRESETS.map((p) => (
-            <Button
-              key={p.days}
-              variant={preset === p.days ? "default" : "outline"}
-              size="sm"
-              className="h-8 text-xs"
-              onClick={() => setPreset(p.days)}
-            >
-              {p.label}
-            </Button>
-          ))}
-          <div className="flex items-center gap-1.5">
-            <Input
-              type="date"
-              value={customFrom}
-              onChange={(e) => { setCustomFrom(e.target.value); setPreset(null); }}
-              className="h-8 text-xs w-[140px]"
-            />
-            <span className="text-muted-foreground text-xs">→</span>
-            <Input
-              type="date"
-              value={customTo}
-              onChange={(e) => { setCustomTo(e.target.value); setPreset(null); }}
-              className="h-8 text-xs w-[140px]"
-            />
-          </div>
+          <DateRangePicker value={range} onChange={setRange} />
         </div>
       </div>
 
