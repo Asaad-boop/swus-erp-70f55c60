@@ -171,23 +171,34 @@ export function QuantityReleaseCard({
   const overheadPerUnit = poOverheadPerUnit + releaseOverheadPerUnit;
   const overheadTotal = poOverheadTotal;
 
-  // Paid ta age goods (purchase) er against dhora hoy, tarpor shipping/overhead
-  const paidSoFar = Number(po?.paid_bdt ?? 0);
-  const goodsTotalAll = items.reduce(
-    (s, i) => s + Number(i.unit_cost_cny ?? i.unit_cost_foreign ?? 0) * fx * Number(i.quantity ?? 0),
+  // ---- Payment credit: type onujayi (goods vs shipping), ar release-wise ledger ----
+  // Purono bug: paid_bdt take shob ordered pcs-er upor bhag kora hoto, tai
+  // 3rd release-er shipping due kome (18,659) dekhato. Ekhon: joto pcs release
+  // hoyeche tar cumulative due theke joto paid hoyeche seta bad — tai per-release
+  // rate thik thake (100 pcs × ৳197.8 = ৳19,780).
+  const payList = (payments ?? []).filter((p: any) => !p?.is_reversed);
+  const paidGoods = payList
+    .filter((p: any) => ["supplier_advance", "supplier_payment", "supplier_balance"].includes(p.payment_type))
+    .reduce((s: number, p: any) => s + Number(p.amount_bdt ?? 0), 0);
+  const paidShipAll = payList
+    .filter((p: any) => p.payment_type === "shipping")
+    .reduce((s: number, p: any) => s + Number(p.amount_bdt ?? 0), 0);
+
+  const goodsUnitFor = (i: any) => Number(i.unit_cost_cny ?? i.unit_cost_foreign ?? 0) * fx;
+  const goodsTotalAll = items.reduce((s, i) => s + goodsUnitFor(i) * Number(i.quantity ?? 0), 0);
+  const shipTotalAll = overheadTotal + commissionPerUnit * totalOrdered;
+  const shipPerUnitRate = totalOrdered > 0 ? shipTotalAll / totalOrdered : 0;
+
+  // Age-i release howa pcs-er due (ei gulor against-e paid ta age boshbe)
+  const priorGoodsValue = items.reduce(
+    (s, i) => s + goodsUnitFor(i) * (releasedByItem.get(i.id) ?? 0),
     0,
   );
-  const shipTotalAll = overheadTotal + commissionPerUnit * totalOrdered;
-  const paidToGoods = Math.min(paidSoFar, goodsTotalAll);
-  const paidToShip = Math.max(0, paidSoFar - goodsTotalAll);
-  // Line-wise: paid ta protita line-e tar nijer goods value onushare pro-rata bosbe,
-  // tai jei line-er unit cost beshi, tar due/pc o beshi.
-  const goodsPaidRatio = goodsTotalAll > 0 ? Math.min(1, paidToGoods / goodsTotalAll) : 0;
-  const goodsDuePerUnitFor = (i: any) =>
-    Math.max(0, Number(i.unit_cost_cny ?? i.unit_cost_foreign ?? 0) * fx * (1 - goodsPaidRatio));
-  // avg (fallback / display only)
-  const goodsDuePerUnit = totalOrdered > 0 ? Math.max(0, goodsTotalAll - paidToGoods) / totalOrdered : 0;
-  const shipDuePerUnit = totalOrdered > 0 ? Math.max(0, shipTotalAll - paidToShip) / totalOrdered : 0;
+  const priorPcs = Array.from(releasedByItem.values()).reduce((s, n) => s + n, 0);
+  const priorShipValue = priorPcs * shipPerUnitRate;
+  const goodsCredit = Math.max(0, paidGoods - priorGoodsValue);
+  const shipCredit = Math.max(0, paidShipAll - priorShipValue);
+
 
   const previewLines = items
     .map((i) => {
