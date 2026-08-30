@@ -1,0 +1,1 @@
+ALTER TABLE public.stock_movements ALTER COLUMN user_id DROP NOT NULL;

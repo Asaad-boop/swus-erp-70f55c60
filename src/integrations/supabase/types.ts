@@ -11474,7 +11474,7 @@ export type Database = {
           stock_before: number
           total_cost_bdt: number | null
           unit_cost_bdt: number | null
-          user_id: string
+          user_id: string | null
           variant_id: string | null
           warehouse_id: string | null
         }
@@ -11495,7 +11495,7 @@ export type Database = {
           stock_before: number
           total_cost_bdt?: number | null
           unit_cost_bdt?: number | null
-          user_id: string
+          user_id?: string | null
           variant_id?: string | null
           warehouse_id?: string | null
         }
@@ -11516,7 +11516,7 @@ export type Database = {
           stock_before?: number
           total_cost_bdt?: number | null
           unit_cost_bdt?: number | null
-          user_id?: string
+          user_id?: string | null
           variant_id?: string | null
           warehouse_id?: string | null
         }
