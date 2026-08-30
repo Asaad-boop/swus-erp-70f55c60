@@ -12940,6 +12940,25 @@ export type Database = {
         Returns: undefined
       }
       imp_update_po: { Args: { _payload: Json; _po_id: string }; Returns: Json }
+      inv_backfill_opening_stock: { Args: never; Returns: number }
+      inv_is_ledger_tracked_product: {
+        Args: { _product_id: string }
+        Returns: boolean
+      }
+      inv_ledger_drift: {
+        Args: never
+        Returns: {
+          drift: number
+          entity: string
+          label: string
+          ledger_qty: number
+          movements: number
+          product_id: string
+          sku: string
+          stock: number
+          variant_id: string
+        }[]
+      }
       inv_open_order_qty: {
         Args: { p_product_id: string; p_variant_id: string }
         Returns: number
@@ -12956,6 +12975,7 @@ export type Database = {
         Args: { p_order_id: string }
         Returns: undefined
       }
+      inv_reconcile_ledger: { Args: { _note?: string }; Returns: number }
       inv_reservation_drift: {
         Args: never
         Returns: {
