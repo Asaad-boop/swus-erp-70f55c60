@@ -2,7 +2,7 @@ import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useState, useEffect, useMemo, useCallback, useRef } from "react";
 import * as React from "react";
 import { format, formatDistanceToNowStrict } from "date-fns";
-import { useMutation, useQuery, useQueryClient, keepPreviousData } from "@tanstack/react-query";
+import { useInfiniteQuery, useMutation, useQuery, useQueryClient, keepPreviousData } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { MessageSquare, Loader2, Star, AlertTriangle, Repeat, Phone as PhoneIcon, Package, ChevronLeft, ChevronRight, Search, X, Lock, CalendarClock } from "lucide-react";
 import { toast } from "sonner";
@@ -666,18 +666,18 @@ function _WebOrdersPageBody() {
     },
   });
 
-  // Paginated orders (page 1-indexed in URL)
-  const page = search.page ?? 1;
+  // Infinite-scrolled orders — pages accumulate as the user scrolls
   const pageSize = search.pageSize ?? DEFAULT_PAGE_SIZE; // 0 = All
-  const ordersQueryKey = ["web-orders-page", brandsKey, activeTab, debouncedSearch, sort, sourceFilter, paymentFilter, dateRange.from, dateRange.to, sourceOrderIds?.join(",") ?? "", page, pageSize] as const;
+  const ordersQueryKey = ["web-orders-page", brandsKey, activeTab, debouncedSearch, sort, sourceFilter, paymentFilter, dateRange.from, dateRange.to, sourceOrderIds?.join(",") ?? "", pageSize] as const;
 
-  const ordersQuery = useQuery({
+  const ordersQuery = useInfiniteQuery({
     queryKey: ordersQueryKey,
     enabled: brandIds.length > 0 && activeTab !== "incomplete"
       && (sourceFilter === "all" || sourceFilter === "direct" || !!sourceOrderIds),
     placeholderData: keepPreviousData,
-    queryFn: async () => {
-      const pageIdx = page - 1;
+    initialPageParam: 1,
+    queryFn: async ({ pageParam }) => {
+      const pageIdx = pageParam - 1;
       let q = applyBrandScope(
         supabase
           .from("orders")
@@ -780,12 +780,33 @@ function _WebOrdersPageBody() {
       const total = count ?? 0;
       return { rows, total };
     },
+    getNextPageParam: (last, pages) =>
+      pageSize > 0 && pages.length * pageSize < last.total ? pages.length + 1 : undefined,
   });
 
-  const rows = useMemo<WebOrderRow[]>(() => ordersQuery.data?.rows ?? [], [ordersQuery.data]);
-  const totalRows = ordersQuery.data?.total ?? 0;
-  const totalPages = pageSize > 0 ? Math.max(1, Math.ceil(totalRows / pageSize)) : 1;
+  const rows = useMemo<WebOrderRow[]>(
+    () => ordersQuery.data?.pages.flatMap((p) => p.rows) ?? [],
+    [ordersQuery.data],
+  );
+  const totalRows = ordersQuery.data?.pages[0]?.total ?? 0;
   const isLoading = ordersQuery.isLoading;
+
+  // Infinite scroll — sentinel near the bottom loads the next page
+  const loadMoreRef = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    const el = loadMoreRef.current;
+    if (!el) return;
+    const io = new IntersectionObserver(
+      (entries) => {
+        if (entries[0]?.isIntersecting && ordersQuery.hasNextPage && !ordersQuery.isFetchingNextPage) {
+          void ordersQuery.fetchNextPage();
+        }
+      },
+      { rootMargin: "600px" },
+    );
+    io.observe(el);
+    return () => io.disconnect();
+  }, [ordersQuery.hasNextPage, ordersQuery.isFetchingNextPage, ordersQuery.fetchNextPage]);
 
   // counts per status — parallel head count queries
   const { data: counts } = useQuery({
