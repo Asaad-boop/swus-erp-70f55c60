@@ -546,6 +546,99 @@ function SourcePill({ attribution, siteLabel }: { attribution: { utm_source: str
   );
 }
 
+const SOURCE_ROW_META: Record<string, { icon: string; label: string; tone: string }> = {
+  website: { icon: "🌐", label: "Website", tone: "bg-emerald-50 text-emerald-700 ring-emerald-200 dark:bg-emerald-950/40 dark:text-emerald-300 dark:ring-emerald-900/60" },
+  pixel: { icon: "📊", label: "Pixel", tone: "bg-indigo-50 text-indigo-700 ring-indigo-200 dark:bg-indigo-950/40 dark:text-indigo-300 dark:ring-indigo-900/60" },
+  utm: { icon: "🏷️", label: "UTM", tone: "bg-violet-50 text-violet-700 ring-violet-200 dark:bg-violet-950/40 dark:text-violet-300 dark:ring-violet-900/60" },
+  direct: { icon: "🔗", label: "Direct", tone: "bg-muted/60 text-muted-foreground ring-border" },
+  organic: { icon: "🔍", label: "Organic", tone: "bg-amber-50 text-amber-700 ring-amber-200 dark:bg-amber-950/40 dark:text-amber-300 dark:ring-amber-900/60" },
+  facebook: { icon: "📘", label: "Facebook", tone: "bg-blue-50 text-blue-700 ring-blue-200 dark:bg-blue-950/40 dark:text-blue-300 dark:ring-blue-900/60" },
+  fb: { icon: "📘", label: "Facebook", tone: "bg-blue-50 text-blue-700 ring-blue-200 dark:bg-blue-950/40 dark:text-blue-300 dark:ring-blue-900/60" },
+  meta: { icon: "📘", label: "Meta", tone: "bg-blue-50 text-blue-700 ring-blue-200 dark:bg-blue-950/40 dark:text-blue-300 dark:ring-blue-900/60" },
+  instagram: { icon: "📷", label: "Instagram", tone: "bg-pink-50 text-pink-700 ring-pink-200 dark:bg-pink-950/40 dark:text-pink-300 dark:ring-pink-900/60" },
+  ig: { icon: "📷", label: "Instagram", tone: "bg-pink-50 text-pink-700 ring-pink-200 dark:bg-pink-950/40 dark:text-pink-300 dark:ring-pink-900/60" },
+  google: { icon: "🔍", label: "Google", tone: "bg-amber-50 text-amber-700 ring-amber-200 dark:bg-amber-950/40 dark:text-amber-300 dark:ring-amber-900/60" },
+  whatsapp: { icon: "💬", label: "WhatsApp", tone: "bg-emerald-50 text-emerald-700 ring-emerald-200 dark:bg-emerald-950/40 dark:text-emerald-300 dark:ring-emerald-900/60" },
+  phone: { icon: "📞", label: "Phone Call", tone: "bg-sky-50 text-sky-700 ring-sky-200 dark:bg-sky-950/40 dark:text-sky-300 dark:ring-sky-900/60" },
+  manual: { icon: "✋", label: "Manual Entry", tone: "bg-amber-50 text-amber-700 ring-amber-200 dark:bg-amber-950/40 dark:text-amber-300 dark:ring-amber-900/60" },
+  shopify: { icon: "🛒", label: "Shopify", tone: "bg-emerald-50 text-emerald-700 ring-emerald-200 dark:bg-emerald-950/40 dark:text-emerald-300 dark:ring-emerald-900/60" },
+};
+
+function SourceRowBlock({
+  source,
+  sourcePlatform,
+  attribution,
+  siteLabel,
+  awaitingConfirm,
+}: {
+  source: string | null;
+  sourcePlatform: string | null;
+  attribution: { utm_source: string | null; utm_medium: string | null } | null | undefined;
+  siteLabel: string;
+  awaitingConfirm: boolean;
+}) {
+  const src = (sourcePlatform ?? source ?? "").toLowerCase();
+  const meta = SOURCE_ROW_META[src] ?? SOURCE_ROW_META[(source ?? "").toLowerCase()];
+  const utmSource = attribution?.utm_source;
+  const utmMedium = attribution?.utm_medium;
+  const subtext = utmMedium
+    ? `${utmSource ?? siteLabel} · ${utmMedium}`
+    : utmSource && utmSource.toLowerCase() !== src
+    ? utmSource
+    : siteLabel || undefined;
+
+  if (src === "manual" || awaitingConfirm) {
+    return (
+      <span className="inline-flex flex-col items-start gap-0.5">
+        <span className="inline-flex items-center gap-1 px-2 h-5 rounded-full text-[10px] font-semibold ring-1 ring-inset bg-amber-50 text-amber-700 ring-amber-200 dark:bg-amber-950/40 dark:text-amber-300 dark:ring-amber-900/60">
+          <span>✋</span>
+          <span>Manual Entry</span>
+        </span>
+        <span className="text-[9.5px] font-medium text-amber-600/90 dark:text-amber-400/80 pl-0.5">Waiting for confirm call</span>
+      </span>
+    );
+  }
+
+  if (meta) {
+    return (
+      <TooltipProvider delayDuration={100}>
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <span className="inline-flex flex-col items-start gap-0.5 max-w-[150px]">
+              <span className={cn("inline-flex items-center gap-1 px-2 h-5 rounded-full text-[10px] font-semibold ring-1 ring-inset max-w-full", meta.tone)}>
+                <span>{meta.icon}</span>
+                <span className="truncate">{meta.label}</span>
+              </span>
+              {subtext && <span className="text-[9.5px] text-muted-foreground truncate pl-0.5 max-w-full" title={subtext}>{subtext}</span>}
+            </span>
+          </TooltipTrigger>
+          {subtext && <TooltipContent side="top" className="text-xs max-w-xs">{subtext}</TooltipContent>}
+        </Tooltip>
+      </TooltipProvider>
+    );
+  }
+
+  // Fallback: use attribution source or source field raw.
+  const raw = (source ?? "").trim();
+  const label = raw ? raw.charAt(0).toUpperCase() + raw.slice(1) : (utmSource ?? siteLabel ?? "Direct");
+  return (
+    <TooltipProvider delayDuration={100}>
+      <Tooltip>
+        <TooltipTrigger asChild>
+          <span className="inline-flex flex-col items-start gap-0.5 max-w-[150px]">
+            <span className="inline-flex items-center gap-1 px-2 h-5 rounded-full text-[10px] font-semibold ring-1 ring-inset bg-slate-50 text-slate-700 ring-slate-200 dark:bg-slate-900/50 dark:text-slate-300 dark:ring-slate-800 max-w-full">
+              <span>🗂️</span>
+              <span className="truncate">{label}</span>
+            </span>
+            {subtext && <span className="text-[9.5px] text-muted-foreground truncate pl-0.5 max-w-full" title={subtext}>{subtext}</span>}
+          </span>
+        </TooltipTrigger>
+        {subtext && <TooltipContent side="top" className="text-xs max-w-xs">{subtext}</TooltipContent>}
+      </Tooltip>
+    </TooltipProvider>
+  );
+}
+
 type SiteIdentity = {
   key: "toyora" | "hobbyshop" | "main" | "other";
   label: string;
