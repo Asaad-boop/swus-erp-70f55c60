@@ -13,6 +13,7 @@ import {
   PackageSearch,
   Swords,
   LineChart,
+  Repeat,
   Menu,
   X,
   type LucideIcon,
