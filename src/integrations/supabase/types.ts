@@ -12940,6 +12940,34 @@ export type Database = {
         Returns: undefined
       }
       imp_update_po: { Args: { _payload: Json; _po_id: string }; Returns: Json }
+      inv_open_order_qty: {
+        Args: { p_product_id: string; p_variant_id: string }
+        Returns: number
+      }
+      inv_qc_hold_qty: {
+        Args: { p_product_id: string; p_variant_id: string }
+        Returns: number
+      }
+      inv_recalc_reservation: {
+        Args: { p_product_id: string; p_variant_id: string }
+        Returns: undefined
+      }
+      inv_recalc_reservation_for_order: {
+        Args: { p_order_id: string }
+        Returns: undefined
+      }
+      inv_reservation_drift: {
+        Args: never
+        Returns: {
+          drift: number
+          expected_reserved: number
+          product_id: string
+          sku: string
+          stored_reserved: number
+          title: string
+          variant_id: string
+        }[]
+      }
       inv_take_snapshot: {
         Args: { _label: string; _note?: string }
         Returns: string
