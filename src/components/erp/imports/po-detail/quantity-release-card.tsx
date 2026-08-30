@@ -199,6 +199,18 @@ export function QuantityReleaseCard({
   const goodsCredit = Math.max(0, paidGoods - priorGoodsValue);
   const shipCredit = Math.max(0, paidShipAll - priorShipValue);
 
+  // Ei draft-er gross value, tarpor baki credit bad diye due rate
+  const draftPcsAll = items.reduce((s, i) => s + lineTotal(i), 0);
+  const draftGoodsGross = items.reduce((s, i) => s + goodsUnitFor(i) * lineTotal(i), 0);
+  const goodsDueRatio =
+    draftGoodsGross > 0 ? Math.min(1, Math.max(0, 1 - goodsCredit / draftGoodsGross)) : 0;
+  const goodsDuePerUnitFor = (i: any) => goodsUnitFor(i) * goodsDueRatio;
+  const shipDuePerUnit =
+    draftPcsAll > 0
+      ? Math.max(0, draftPcsAll * shipPerUnitRate - shipCredit) / draftPcsAll
+      : Math.max(0, shipPerUnitRate);
+  const goodsDuePerUnit = draftPcsAll > 0 ? (draftGoodsGross * goodsDueRatio) / draftPcsAll : 0;
+
 
   const previewLines = items
     .map((i) => {
