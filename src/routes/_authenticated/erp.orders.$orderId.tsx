@@ -110,6 +110,21 @@ function sourceLabel(source?: string | null): string {
   return source;
 }
 
+function callLogHighlight(lastCallAt?: string | null) {
+  if (!lastCallAt) return { text: "এখনো কল লগ হয়নি", tone: "muted" as const };
+  const then = new Date(lastCallAt).getTime();
+  const now = Date.now();
+  const mins = Math.max(0, Math.floor((now - then) / 60000));
+  const hours = Math.floor(mins / 60);
+  const text =
+    mins < 1 ? "এইমাত্র কল হয়েছে" :
+    mins < 60 ? `${mins} মিনিট আগে` :
+    hours < 24 ? `${hours} ঘণ্টা আগে` :
+    formatDistanceToNow(new Date(lastCallAt), { addSuffix: true });
+  const tone = mins < 5 ? "fresh" : mins < 60 ? "warm" : "cold";
+  return { text, tone };
+}
+
 const SOURCE_PLATFORM_OPTIONS = [
   { value: "Website", label: "Website", icon: Globe, group: "Online" },
   { value: "Facebook", label: "Facebook", icon: Facebook, group: "Social" },
