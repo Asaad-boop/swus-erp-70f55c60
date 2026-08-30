@@ -1652,8 +1652,8 @@ function splitCourierProviders(providers?: HistProvider[] | null) {
 
               <FieldShell label="Mobile Number">
                 <div className="relative">
-                  <Input value={form.mobile} onChange={(e) => setForm({ ...form, mobile: e.target.value })} className="h-9 pr-16 font-mono" />
-                  <div className="absolute right-1 top-1/2 -translate-y-1/2 flex gap-0.5">
+                  <Input value={form.mobile} onChange={(e) => setForm({ ...form, mobile: e.target.value })} className="h-9 pr-14 font-mono" />
+                  <div className="absolute right-1 top-1/2 -translate-y-1/2 flex items-center gap-0.5">
                     <a
                       href={`tel:${form.mobile}`}
                       title="Call customer (logs a call attempt)"
@@ -1666,16 +1666,42 @@ function splitCourierProviders(providers?: HistProvider[] | null) {
                           currentStatus: o.call_status ?? null,
                         });
                       }}
-                      className="p-1 rounded hover:bg-muted text-emerald-600"
+                      className="grid h-7 w-7 place-items-center rounded-full hover:bg-emerald-500/10 text-emerald-600 transition-colors"
                     ><Phone className="h-3.5 w-3.5" /></a>
-                    {(() => {
-                      const n = Number((order as { call_attempt_count?: number | null } | undefined)?.call_attempt_count ?? 0);
-                      return n > 0 ? (
-                        <span className="text-[10px] font-semibold tabular-nums text-muted-foreground" title={`${n} call attempt${n > 1 ? "s" : ""} logged`}>×{n}</span>
-                      ) : null;
-                    })()}
-                    <a href={`https://wa.me/${form.mobile.replace(/^0/, "880")}`} target="_blank" rel="noreferrer" className="p-1 rounded hover:bg-muted text-emerald-600"><MessageCircle className="h-3.5 w-3.5" /></a>
+                    <a href={`https://wa.me/${form.mobile.replace(/^0/, "880")}`} target="_blank" rel="noreferrer" className="grid h-7 w-7 place-items-center rounded-full hover:bg-emerald-500/10 text-emerald-600 transition-colors"><MessageCircle className="h-3.5 w-3.5" /></a>
                   </div>
+                </div>
+                <div className="mt-1.5 flex flex-wrap items-center gap-2">
+                  {(() => {
+                    const n = Number((order as { call_attempt_count?: number | null } | undefined)?.call_attempt_count ?? 0);
+                    return n > 0 ? (
+                      <span className="inline-flex items-center gap-1 rounded-full bg-slate-100 dark:bg-slate-900 px-1.5 py-0.5 text-[10px] font-semibold tabular-nums text-slate-600 dark:text-slate-300 ring-1 ring-slate-200 dark:ring-slate-700" title={`${n} call attempt${n > 1 ? "s" : ""} logged`}>
+                        <Phone className="h-3 w-3" /> ×{n}
+                      </span>
+                    ) : null;
+                  })()}
+                  {(() => {
+                    const h = callLogHighlight(order.last_call_at);
+                    const cls =
+                      h.tone === "fresh"
+                        ? "bg-emerald-500/10 text-emerald-700 dark:text-emerald-300 ring-emerald-500/30 animate-pulse"
+                        : h.tone === "warm"
+                        ? "bg-amber-500/10 text-amber-700 dark:text-amber-300 ring-amber-500/30"
+                        : h.tone === "cold"
+                        ? "bg-muted/50 text-muted-foreground ring-border"
+                        : "bg-slate-100 dark:bg-slate-900 text-slate-500 dark:text-slate-400 ring-slate-200 dark:ring-slate-700";
+                    const dot =
+                      h.tone === "fresh" ? "bg-emerald-500" :
+                      h.tone === "warm" ? "bg-amber-500" :
+                      h.tone === "cold" ? "bg-muted-foreground/60" :
+                      "bg-slate-400";
+                    return (
+                      <span className={cn("inline-flex items-center gap-1.5 rounded-full px-2 py-0.5 text-[10px] font-medium ring-1", cls)} title={order.last_call_at ? `Last call: ${format(new Date(order.last_call_at), "dd MMM yyyy, h:mm a")}` : undefined}>
+                        <span className={cn("h-1.5 w-1.5 rounded-full", dot)} />
+                        {h.text}
+                      </span>
+                    );
+                  })()}
                 </div>
                 {stats.ourRecord.total > 0 && (
                   <p className="text-[10px] text-sky-600">Check Our Record above for customer history</p>
