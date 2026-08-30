@@ -260,6 +260,9 @@ function GrowthCommandCenter() {
 
       {loading && <Skeleton className="h-28 w-full rounded-xl" />}
 
+      {/* Today-first sales & ads cockpit */}
+      <DailyCockpit />
+
       {/* Pulse strip */}
       <div className="grid grid-cols-2 gap-2.5 md:grid-cols-3 xl:grid-cols-6">
         <Stat
