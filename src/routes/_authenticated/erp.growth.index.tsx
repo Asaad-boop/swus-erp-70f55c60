@@ -27,6 +27,7 @@ import { useBrand } from "@/contexts/brand-context";
 import { supabase } from "@/integrations/supabase/client";
 import { useCurrentRole } from "@/hooks/use-current-role";
 import { GrowthPageHeader } from "@/components/erp/growth/growth-shell";
+import { DailyCockpit } from "@/components/erp/growth/daily-cockpit";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -259,6 +260,9 @@ function GrowthCommandCenter() {
       />
 
       {loading && <Skeleton className="h-28 w-full rounded-xl" />}
+
+      {/* Today-first sales & ads cockpit */}
+      <DailyCockpit />
 
       {/* Pulse strip */}
       <div className="grid grid-cols-2 gap-2.5 md:grid-cols-3 xl:grid-cols-6">
