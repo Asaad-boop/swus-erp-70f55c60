@@ -140,7 +140,7 @@ type WebOrderRow = {
   preorder_expected_date: string | null;
   items_summary?: { name: string; quantity: number; image: string | null; unit_price: number | null }[];
   latest_order_note?: string | null;
-  attribution?: { utm_source: string | null; utm_medium: string | null } | null;
+  attribution?: OrderAttribution | null;
 };
 
 function CallLogPopover({
