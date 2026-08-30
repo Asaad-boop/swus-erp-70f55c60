@@ -384,8 +384,9 @@ function LowStockTab({ brandId }: { brandId: string }) {
               <EmptyRow cols={6} icon={Check} text="All products are above reorder point" tone="emerald" />
             ) : (
               rows.map((r) => {
-                const severity = r.stock <= 0 ? "out" : r.stock <= r.reorder_point / 2 ? "critical" : "low";
-                const suggested = r.reorder_qty || Math.max(r.reorder_point * 2 - r.stock, 1);
+                const avail = Number(r.available_stock ?? r.stock ?? 0);
+                const severity = avail <= 0 ? "out" : avail <= r.reorder_point / 2 ? "critical" : "low";
+                const suggested = r.reorder_qty || Math.max(r.reorder_point * 2 - avail, 1);
                 return (
                   <TableRow key={r.id}>
                     <TableCell>
