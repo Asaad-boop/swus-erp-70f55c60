@@ -12155,6 +12155,21 @@ export type Database = {
           },
         ]
       }
+      inv_low_stock: {
+        Row: {
+          available_stock: number | null
+          brand_id: string | null
+          effective_threshold: number | null
+          product_id: string | null
+          product_name: string | null
+          reserved_stock: number | null
+          sku: string | null
+          stock: number | null
+          variant_id: string | null
+          variant_name: string | null
+        }
+        Relationships: []
+      }
       inv_missing_cost: {
         Row: {
           brand_id: string | null
