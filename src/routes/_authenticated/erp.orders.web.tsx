@@ -880,7 +880,7 @@ function _WebOrdersPageBody() {
         const [{ data: items }, { data: orderNotes }, { data: attrs }] = await Promise.all([
           supabase.from("order_items").select("order_id,name,quantity,image,unit_price").in("order_id", ids),
           supabase.from("order_notes").select("order_id,body,created_at").in("order_id", ids).order("created_at", { ascending: false }),
-          supabase.from("mkt_order_attributions").select("order_id,utm_source,utm_medium").in("order_id", ids),
+          supabase.from("mkt_order_attributions").select("order_id,utm_source,utm_medium,utm_campaign,fbclid").in("order_id", ids),
         ]);
         const byOrder = new Map<string, { name: string; quantity: number; image: string | null; unit_price: number | null }[]>();
         (items ?? []).forEach((it) => {
