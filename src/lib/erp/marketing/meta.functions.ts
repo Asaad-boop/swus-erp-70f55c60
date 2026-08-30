@@ -324,6 +324,11 @@ export const testAdAccountConnection = createServerFn({ method: "POST" })
     try {
       const info = await verifyAdAccount(actId, token);
       if (data.accountId) {
+        const { data: cur } = await context.supabase
+          .from("mkt_ad_accounts")
+          .select("status")
+          .eq("id", data.accountId)
+          .single();
         await context.supabase
           .from("mkt_ad_accounts")
           .update({
@@ -331,6 +336,8 @@ export const testAdAccountConnection = createServerFn({ method: "POST" })
             timezone: info.timezone_name ?? null,
             business_id: info.business?.id ?? null,
             last_error: null,
+            // Recover from "error" state once the token verifies again.
+            ...(cur?.status === "error" ? { status: "active" } : {}),
           })
           .eq("id", data.accountId);
       }

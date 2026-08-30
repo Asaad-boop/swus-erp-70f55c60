@@ -3,7 +3,9 @@ import { useEffect, useMemo, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { toast } from "sonner";
-import { ArrowDown, ArrowUp, Save, Settings2, ShieldAlert, Plug } from "lucide-react";
+import { ArrowDown, ArrowUp, Save, Settings2, ShieldAlert, Plug, Plus, Pencil, PlugZap } from "lucide-react";
+import { AdAccountDialog, type AdAccountRow } from "@/components/erp/marketing/ad-account-dialog";
+import { testAdAccountConnection } from "@/lib/erp/marketing/meta.functions";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -137,6 +139,20 @@ function MarketingSettingsPage() {
 
   const [form, setForm] = useState<MarketingSettings>(DEFAULT_MARKETING_SETTINGS);
   const [dirty, setDirty] = useState(false);
+  const [dialogOpen, setDialogOpen] = useState(false);
+  const [editing, setEditing] = useState<AdAccountRow | null>(null);
+  const testConn = useServerFn(testAdAccountConnection);
+  const retestM = useMutation({
+    mutationFn: (accountId: string) => testConn({ data: { accountId } as never }),
+    onSuccess: () => {
+      toast.success("Connection OK — status active hoye geche");
+      qc.invalidateQueries({ queryKey: ["mkt-settings-accounts"] });
+    },
+    onError: (e: any) => {
+      toast.error(e?.message ?? "Connection failed");
+      qc.invalidateQueries({ queryKey: ["mkt-settings-accounts"] });
+    },
+  });
 
   useEffect(() => {
     if (settingsQ.data?.settings) {
@@ -436,11 +452,25 @@ function MarketingSettingsPage() {
             <Plug className="h-4 w-4 text-muted-foreground" />
             Connected ad accounts & channels
           </CardTitle>
-          <Button asChild variant="outline" size="sm" className="h-7 text-xs">
-            <Link to="/erp/settings" search={{ tab: "integrations" } as never}>
-              Manage in Integrations
-            </Link>
-          </Button>
+          <div className="flex items-center gap-1.5">
+            <Button
+              variant="default"
+              size="sm"
+              className="h-7 text-xs"
+              disabled={!canEdit}
+              onClick={() => {
+                setEditing(null);
+                setDialogOpen(true);
+              }}
+            >
+              <Plus className="mr-1 h-3.5 w-3.5" /> Add account
+            </Button>
+            <Button asChild variant="outline" size="sm" className="h-7 text-xs">
+              <Link to="/erp/settings" search={{ tab: "integrations" } as never}>
+                Manage in Integrations
+              </Link>
+            </Button>
+          </div>
         </CardHeader>
         <CardContent>
           {accountsQ.isLoading ? (
@@ -462,6 +492,7 @@ function MarketingSettingsPage() {
                       "Token",
                       "Auto-post",
                       "Last insights sync",
+                      "Actions",
                     ].map((h) => (
                       <th key={h} className="whitespace-nowrap px-3 py-2 text-left font-medium">
                         {h}
@@ -480,11 +511,16 @@ function MarketingSettingsPage() {
                       <td className="px-3 py-2">{brandName(a.primary_brand_id)}</td>
                       <td className="px-3 py-2">
                         <Badge
-                          variant={a.status === "active" ? "default" : "secondary"}
+                          variant={a.status === "active" ? "default" : a.status === "error" ? "destructive" : "secondary"}
                           className="text-[10px]"
                         >
                           {a.status}
                         </Badge>
+                        {a.status === "error" && a.last_error && (
+                          <p className="mt-1 max-w-[220px] truncate text-[10px] text-destructive" title={a.last_error}>
+                            {a.last_error}
+                          </p>
+                        )}
                       </td>
                       <td className="px-3 py-2">{a.has_access_token ? "Saved" : "Missing"}</td>
                       <td className="px-3 py-2">{a.auto_post_to_finance ? "On" : "Off"}</td>
@@ -492,6 +528,33 @@ function MarketingSettingsPage() {
                         {a.last_insights_sync_at
                           ? new Date(a.last_insights_sync_at).toLocaleString("en-GB")
                           : "—"}
+                      </td>
+                      <td className="px-3 py-2">
+                        <div className="flex items-center gap-1">
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-7 w-7"
+                            title="Edit"
+                            disabled={!canEdit}
+                            onClick={() => {
+                              setEditing(a as AdAccountRow);
+                              setDialogOpen(true);
+                            }}
+                          >
+                            <Pencil className="h-3.5 w-3.5" />
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-7 w-7"
+                            title="Test connection"
+                            disabled={!canEdit || retestM.isPending}
+                            onClick={() => retestM.mutate(a.id)}
+                          >
+                            <PlugZap className="h-3.5 w-3.5" />
+                          </Button>
+                        </div>
                       </td>
                     </tr>
                   ))}
@@ -501,10 +564,12 @@ function MarketingSettingsPage() {
           )}
           <Separator className="my-3" />
           <p className="text-[11px] text-muted-foreground">
-            Credential, wallet mapping ar sync schedule Settings → Integrations theke control hoy.
+            Credential, wallet mapping ar sync schedule Settings → Integrations thekeo control kora jay.
           </p>
         </CardContent>
       </Card>
+
+      <AdAccountDialog open={dialogOpen} onOpenChange={setDialogOpen} account={editing} />
     </div>
   );
 }
