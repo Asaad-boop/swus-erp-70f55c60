@@ -2,7 +2,7 @@ import { createFileRoute, Link } from "@tanstack/react-router";
 import { useMemo, useState, useEffect, Fragment } from "react";
 import {
   Download, Search, ArrowUp, ArrowDown, History, Check, Package, Boxes,
-  AlertTriangle, Wallet, ChevronRight, ChevronDown, BarChart3, MoreVertical,
+  AlertTriangle, Wallet, ChevronRight, ChevronDown, BarChart3, MoreVertical, Activity,
   ScanLine, Plus, Settings, Lock, TrendingUp, TrendingDown, Layers, Clock,
   Edit3, AlertCircle, X, Trash2, Tag, DollarSign, ClipboardCheck,
 } from "lucide-react";
