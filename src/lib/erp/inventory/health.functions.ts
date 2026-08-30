@@ -37,7 +37,7 @@ export const getStockHealth = createServerFn({ method: "POST" })
           .lt("available_stock", 0),
         context.supabase
           .from("inv_snapshot_runs")
-          .select("id, created_at, note")
+          .select("id, created_at, label, note, row_count")
           .order("created_at", { ascending: false })
           .limit(5),
       ]);
@@ -62,18 +62,10 @@ export const getStockHealth = createServerFn({ method: "POST" })
 
 export const takeStockSnapshot = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((d: unknown) => (d ?? {}) as { note?: string })
-  .handler(async ({ data, context }) => {
+  .inputValidator((d: unknown) => (d ?? {}) as Record<string, never>)
+  .handler(async ({ context }) => {
     await assertStaff(context.supabase, context.userId);
-    const note = (data as any)?.note ?? "manual: stock health dashboard";
-    const { data: id, error } = await context.supabase.rpc("inv_take_snapshot", {
-      _note: note,
-    } as any);
-    if (error) {
-      // Fallback: no-arg signature
-      const retry = await context.supabase.rpc("inv_take_snapshot" as any);
-      if (retry.error) throw retry.error;
-      return { id: retry.data };
-    }
+    const { data: id, error } = await context.supabase.rpc("inv_take_snapshot" as any);
+    if (error) throw error;
     return { id };
   });
