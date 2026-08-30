@@ -38,15 +38,12 @@ export const getGrowthDailyPulse = createServerFn({ method: "POST" })
     const kpi = (from: string, to: string) =>
       sb.rpc("mkt_dashboard_kpis", { _brand_ids: data.brandIds, _from: from, _to: to } as never);
 
-    const [t, y, w, mtd, accts, lastSpend] = await Promise.all([
+    const [t, y, w, mtd, links, lastSpend] = await Promise.all([
       kpi(today, today),
       kpi(yest, yest),
       kpi(dhakaShift(today, -6), today),
       kpi(m.start, today),
-      sb
-        .from("mkt_ad_accounts")
-        .select("id,name,status,last_error")
-        .overlaps("brand_ids", data.brandIds),
+      sb.from("mkt_ad_account_brands").select("ad_account_id").in("brand_id", data.brandIds),
       sb
         .from("mkt_insights_daily")
         .select("date")
@@ -56,6 +53,21 @@ export const getGrowthDailyPulse = createServerFn({ method: "POST" })
         .limit(1),
     ]);
 
+    const acctIds = Array.from(new Set(((links.data as any[]) ?? []).map((r) => r.ad_account_id)));
+    let adAccounts: GrowthDailyPulse["adAccounts"] = [];
+    if (acctIds.length) {
+      const accts = await sb
+        .from("mkt_ad_accounts")
+        .select("id,name,status,last_error")
+        .in("id", acctIds);
+      adAccounts = ((accts.data as any[]) ?? []).map((a) => ({
+        id: String(a.id),
+        name: String(a.name ?? "—"),
+        status: String(a.status ?? "unknown"),
+        last_error: a.last_error ?? null,
+      }));
+    }
+
     const first = (r: { data: unknown }) =>
       mapWindow(((r.data as Record<string, unknown>[]) ?? [])[0]);
 
@@ -63,12 +75,7 @@ export const getGrowthDailyPulse = createServerFn({ method: "POST" })
       today,
       windows: { today: first(t), yesterday: first(y), last7: first(w), mtd: first(mtd) },
       month: m,
-      adAccounts: ((accts.data as any[]) ?? []).map((a) => ({
-        id: String(a.id),
-        name: String(a.name ?? "—"),
-        status: String(a.status ?? "unknown"),
-        last_error: a.last_error ?? null,
-      })),
+      adAccounts,
       lastSpendDate: (lastSpend.data as any[])?.[0]?.date ?? null,
     };
   });
