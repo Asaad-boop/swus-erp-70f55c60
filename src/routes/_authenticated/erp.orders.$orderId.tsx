@@ -1456,22 +1456,24 @@ function splitCourierProviders(providers?: HistProvider[] | null) {
   });
 
   const addItem = useMutation({
-    mutationFn: async ({ p, v }: { p: ProductLite; v?: VariantLite }) => {
+    mutationFn: async ({ p, v, qty = 1 }: { p: ProductLite; v?: VariantLite; qty?: number }) => {
+      const n = Math.max(1, Math.min(99, Math.round(qty)));
       const existing = items.find((x) =>
         x.product_id === p.id && ((x as any).variant_id ?? null) === (v?.id ?? null));
-      if (existing) { await updateItem.mutateAsync({ id: existing.id, quantity: existing.quantity + 1 }); return; }
+      if (existing) { await updateItem.mutateAsync({ id: existing.id, quantity: existing.quantity + n }); return; }
       const unit_price = p.price;
       const variant_label = v ? [v.color_name, v.sku].filter(Boolean).join(" · ") : null;
       const { error } = await supabase.from("order_items").insert({
         order_id: orderId, product_id: p.id, name: p.title, image: v?.image || p.image,
         variant_id: v?.id ?? null, variant_label,
-        quantity: 1, price: unit_price, unit_price, line_total: unit_price,
+        quantity: n, price: unit_price, unit_price, line_total: unit_price * n,
       });
       if (error) throw error;
     },
     onSuccess: () => { toast.success("Item added"); invalidate(); },
     onError: (e: Error) => toast.error(e.message),
   });
+
 
   const updateTags = useMutation({
     mutationFn: async (tags: string[]) => {
