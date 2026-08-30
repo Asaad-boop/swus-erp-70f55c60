@@ -58,11 +58,11 @@ function IncompleteReportsPage() {
     if (preset != null) {
       const to = new Date();
       const from = preset === 0 ? new Date() : subDays(new Date(), preset);
-      return { dateFrom: toIsoDate(from), dateTo: toIsoDate(to, true) };
+      return { dateFrom: dhakaDate(from), dateTo: dhakaDate(to) };
     }
     return {
-      dateFrom: customFrom ? toIsoDate(new Date(customFrom)) : toIsoDate(subDays(new Date(), 30)),
-      dateTo: customTo ? toIsoDate(new Date(customTo), true) : toIsoDate(new Date(), true),
+      dateFrom: customFrom || dhakaDate(subDays(new Date(), 30)),
+      dateTo: customTo || dhakaDate(new Date()),
     };
   }, [preset, customFrom, customTo]);
 
