@@ -1869,7 +1869,16 @@ function splitCourierProviders(providers?: HistProvider[] | null) {
             <div>
               {showAddProducts && (
                 <div className="mb-4 rounded-xl border border-dashed border-gray-200 dark:border-border p-3">
-                  <ProductSearchPanel brandId={order.brand_id ?? null} onAdd={(p, v) => addItem.mutate({ p, v })} />
+                  <ProductSearchPanel
+                    brandId={order.brand_id ?? null}
+                    currentProductIds={productIds}
+                    addedCount={(pid, vid) =>
+                      items
+                        .filter((x) => x.product_id === pid && ((x as any).variant_id ?? null) === vid)
+                        .reduce((s, x) => s + Number(x.quantity ?? 0), 0)}
+                    onAdd={(p, v, qty) => addItem.mutate({ p, v, qty })}
+                  />
+
                 </div>
               )}
               {items.length === 0 ? (
