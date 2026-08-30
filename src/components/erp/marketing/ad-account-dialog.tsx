@@ -132,7 +132,8 @@ export function AdAccountDialog({ open, onOpenChange, account }: Props) {
       });
     },
     onSuccess: (r: any) => {
-      toast.success(`Connection OK — ${r?.info?.name ?? "Meta account"}`);
+      if (r?.ok === false) toast.error(r?.error ?? "Connection failed");
+      else toast.success(`Connection OK — ${r?.info?.name ?? "Meta account"}`);
       invalidate();
     },
     onError: (e: any) => {

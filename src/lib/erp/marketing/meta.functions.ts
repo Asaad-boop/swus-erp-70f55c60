@@ -352,13 +352,20 @@ export const testAdAccountConnection = createServerFn({ method: "POST" })
         },
       };
     } catch (e: any) {
+      const raw = String(e?.message ?? e ?? "Connection failed");
+      const expired =
+        /access token/i.test(raw) && /(expired|session has expired|invalid)/i.test(raw);
+      const message = expired
+        ? "Meta access token expire hoye geche — Meta Business theke notun token niye ekhane paste korun."
+        : raw;
       if (data.accountId) {
         await context.supabase
           .from("mkt_ad_accounts")
-          .update({ last_error: String(e?.message ?? e), status: "error" })
+          .update({ last_error: message, status: "error" })
           .eq("id", data.accountId);
       }
-      throw new Error(e?.message ?? "Connection failed");
+      // Return instead of throw: throwing from the server fn blanks the screen.
+      return { ok: false as const, error: message, tokenExpired: expired };
     }
   });
 
