@@ -50,6 +50,7 @@ export const GROWTH_NAV: GrowthNavItem[] = [
   { to: "/erp/growth/pipeline", label: "Content Pipeline", short: "Pipeline", icon: KanbanSquare, group: "Create" },
   { to: "/erp/growth/media-plans", label: "Media Buying Hub", short: "Media", icon: Megaphone, group: "Create" },
 
+  { to: "/erp/growth/retention", label: "Retention & Upsell", short: "Retention", icon: Repeat, group: "People & Market" },
   { to: "/erp/growth/creators", label: "Creator CRM", short: "Creators", icon: Users, group: "People & Market" },
   { to: "/erp/growth/products", label: "Product Pipeline", short: "Products", icon: Lightbulb, group: "People & Market" },
   { to: "/erp/growth/rivals", label: "Competitors", short: "Rivals", icon: Swords, group: "People & Market" },
