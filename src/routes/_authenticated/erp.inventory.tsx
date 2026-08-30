@@ -307,6 +307,9 @@ function InventoryPage() {
           <Button size="sm" variant="outline" onClick={handleExport} disabled={!rows.length} className="gap-1.5">
             <Download className="h-4 w-4" />Export
           </Button>
+          <Link to="/erp/inventory/health">
+            <Button size="sm" variant="outline" className="gap-1.5"><Activity className="h-4 w-4" />Health</Button>
+          </Link>
           <Link to="/erp/inventory-reports">
             <Button size="sm" variant="outline" className="gap-1.5"><BarChart3 className="h-4 w-4" />Reports</Button>
           </Link>
