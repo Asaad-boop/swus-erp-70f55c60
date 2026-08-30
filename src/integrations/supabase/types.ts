@@ -13267,6 +13267,10 @@ export type Database = {
       imp_next_po_number: { Args: { _brand: string }; Returns: string }
       imp_pay_carton_due: { Args: { _payload: Json }; Returns: Json }
       imp_post_to_inventory: { Args: { _payload: Json }; Returns: Json }
+      imp_qc_finalize_cost: {
+        Args: { _final_unit_cost: number; _release_item_id: string }
+        Returns: undefined
+      }
       imp_quick_create_product: {
         Args: { _brand: string; _image?: string; _sku?: string; _title: string }
         Returns: Json
