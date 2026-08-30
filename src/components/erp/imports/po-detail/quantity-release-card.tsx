@@ -34,13 +34,14 @@ type Release = {
 };
 
 export function QuantityReleaseCard({
-  poId, brandId, po, items, releases, onPayDue,
+  poId, brandId, po, items, releases, payments, onPayDue,
 }: {
   poId: string;
   brandId: string | null;
   po?: any;
   items: any[];
   releases: Release[];
+  payments?: any[];
   onPayDue?: () => void;
 }) {
   const qc = useQueryClient();
