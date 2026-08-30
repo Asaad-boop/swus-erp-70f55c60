@@ -299,7 +299,11 @@ export function IncompleteOrdersTable({
     <div className="bg-card overflow-x-auto">
       {/* Toolbar: filters + reports link */}
       <div className="flex flex-wrap items-center gap-2 px-3 py-2 border-b bg-muted/20">
-        <FiltersPopover filters={filters} onChange={setFilters} activeCount={activeFilterCount} />
+        <FiltersPopover
+          filters={filters}
+          onChange={(f) => { setFilters(f); onPageChange(0); }}
+          activeCount={activeFilterCount}
+        />
         <Select
           value={filters.sort ?? "newest"}
           onValueChange={(v: any) => setFilters((f) => ({ ...f, sort: v }))}
