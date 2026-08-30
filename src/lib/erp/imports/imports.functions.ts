@@ -1899,12 +1899,15 @@ export const qcPoRelease = createServerFn({ method: "POST" })
         .eq("id", l.release_item_id);
       if (uErr) throw uErr;
 
-      // Product-er cost final value-te update
+      // QC-final cost e release movement revalue + WAC recompute (P5)
+      // Age shudhu delta movement-e final cost jeto — delta 0 hole WAC kokhono
+      // asol QC cost peto na. Ekhon original release movement-i revalue hoy.
       if (ri.product_id && l.good_qty > 0) {
-        await context.supabase
-          .from("products")
-          .update({ cost_price: +finalUnit.toFixed(2) } as any)
-          .eq("id", ri.product_id as string);
+        const { error: qcCostErr } = await context.supabase.rpc("imp_qc_finalize_cost" as any, {
+          _release_item_id: l.release_item_id,
+          _final_unit_cost: finalUnit,
+        });
+        if (qcCostErr) throw qcCostErr;
       }
 
       applied.push({
