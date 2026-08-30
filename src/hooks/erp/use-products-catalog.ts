@@ -92,7 +92,12 @@ export function useProductsCatalog(filter: CatalogFilter) {
         const { data, error } = await q.limit(5000);
         if (error) throw error;
         let all = ((data ?? []) as Array<Record<string, any>>).map(map);
-        if (filter.stock === "low") all = all.filter((p) => p.stock > 0 && p.stock <= (p.low_stock_threshold ?? 5));
+        // Canonical low-stock rule (P3): available_stock <= effective threshold
+        if (filter.stock === "low") all = all.filter((p) => {
+          const avail = Number(p.available_stock ?? p.stock ?? 0);
+          const t = Number(p.reorder_point ?? 0) || Number(p.low_stock_threshold ?? 0) || 5;
+          return avail > 0 && avail <= t;
+        });
         if (filter.flag === "variants") all = all.filter((p) => p.variants.length > 0);
         const from = filter.page * filter.pageSize;
         return { rows: all.slice(from, from + filter.pageSize), total: all.length };
