@@ -590,11 +590,21 @@ function SourceRowBlock({
   if (src === "manual" || awaitingConfirm) {
     return (
       <span className="inline-flex flex-col items-start gap-0.5">
-        <span className="inline-flex items-center gap-1 px-2 h-5 rounded-full text-[10px] font-semibold ring-1 ring-inset bg-amber-50 text-amber-700 ring-amber-200 dark:bg-amber-950/40 dark:text-amber-300 dark:ring-amber-900/60">
+        <span
+          className={cn(
+            "inline-flex items-center gap-1 px-1.5 h-[18px] rounded-full text-[9.5px] font-semibold ring-1 ring-inset",
+            awaitingConfirm
+              ? "bg-amber-50 text-amber-700 ring-amber-200 dark:bg-amber-950/40 dark:text-amber-300 dark:ring-amber-900/60"
+              : "bg-slate-50 text-slate-600 ring-slate-200 dark:bg-slate-900/50 dark:text-slate-300 dark:ring-slate-800",
+          )}
+          title={awaitingConfirm ? "Manual entry — waiting for confirm call" : "Manual entry"}
+        >
           <span>✋</span>
-          <span>Manual Entry</span>
+          <span>Manual</span>
         </span>
-        <span className="text-[9.5px] font-medium text-amber-600/90 dark:text-amber-400/80 pl-0.5">Waiting for confirm call</span>
+        {awaitingConfirm && (
+          <span className="text-[9px] font-medium text-amber-600/90 dark:text-amber-400/80 pl-0.5 leading-tight">Waiting for confirm</span>
+        )}
       </span>
     );
   }
