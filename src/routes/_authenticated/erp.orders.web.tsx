@@ -1,7 +1,7 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useState, useEffect, useMemo, useRef } from "react";
 import * as React from "react";
-import { format, formatDistanceToNowStrict } from "date-fns";
+import { format, formatDistanceToNowStrict, formatDistanceToNow } from "date-fns";
 import { useInfiniteQuery, useMutation, useQuery, useQueryClient, keepPreviousData } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { MessageSquare, Loader2, Star, AlertTriangle, Repeat, Phone as PhoneIcon, Package, Search, X, Lock, CalendarClock } from "lucide-react";
@@ -121,6 +121,7 @@ type WebOrderRow = {
   notes: string | null;
   tags: string[] | null;
   source_website: string | null;
+  source_platform: string | null;
   source: string | null;
   confirmation_status: string | null;
   status: string | null;
@@ -301,6 +302,21 @@ function initials(name: string) {
 }
 
 /** Bangla verdict for a success percentage. */
+function callLogHighlight(lastCallAt?: string | null) {
+  if (!lastCallAt) return { text: "এখনো কল লগ হয়নি", tone: "muted" as const };
+  const then = new Date(lastCallAt).getTime();
+  const now = Date.now();
+  const mins = Math.max(0, Math.floor((now - then) / 60000));
+  const hours = Math.floor(mins / 60);
+  const text =
+    mins < 1 ? "এইমাত্র কল হয়েছে" :
+    mins < 60 ? `${mins} মিনিট আগে` :
+    hours < 24 ? `${hours} ঘণ্টা আগে` :
+    formatDistanceToNow(new Date(lastCallAt), { addSuffix: true });
+  const tone = mins < 5 ? "fresh" : mins < 60 ? "warm" : "cold";
+  return { text, tone };
+}
+
 function banglaVerdict(pct: number, empty: boolean) {
   if (empty) return { label: "তথ্য নেই", chip: "bg-muted/50 text-muted-foreground ring-border" };
   if (pct >= 80) return { label: "ভালো", chip: "bg-emerald-500/10 text-emerald-700 dark:text-emerald-300 ring-emerald-500/30" };
@@ -530,6 +546,99 @@ function SourcePill({ attribution, siteLabel }: { attribution: { utm_source: str
   );
 }
 
+const SOURCE_ROW_META: Record<string, { icon: string; label: string; tone: string }> = {
+  website: { icon: "🌐", label: "Website", tone: "bg-emerald-50 text-emerald-700 ring-emerald-200 dark:bg-emerald-950/40 dark:text-emerald-300 dark:ring-emerald-900/60" },
+  pixel: { icon: "📊", label: "Pixel", tone: "bg-indigo-50 text-indigo-700 ring-indigo-200 dark:bg-indigo-950/40 dark:text-indigo-300 dark:ring-indigo-900/60" },
+  utm: { icon: "🏷️", label: "UTM", tone: "bg-violet-50 text-violet-700 ring-violet-200 dark:bg-violet-950/40 dark:text-violet-300 dark:ring-violet-900/60" },
+  direct: { icon: "🔗", label: "Direct", tone: "bg-muted/60 text-muted-foreground ring-border" },
+  organic: { icon: "🔍", label: "Organic", tone: "bg-amber-50 text-amber-700 ring-amber-200 dark:bg-amber-950/40 dark:text-amber-300 dark:ring-amber-900/60" },
+  facebook: { icon: "📘", label: "Facebook", tone: "bg-blue-50 text-blue-700 ring-blue-200 dark:bg-blue-950/40 dark:text-blue-300 dark:ring-blue-900/60" },
+  fb: { icon: "📘", label: "Facebook", tone: "bg-blue-50 text-blue-700 ring-blue-200 dark:bg-blue-950/40 dark:text-blue-300 dark:ring-blue-900/60" },
+  meta: { icon: "📘", label: "Meta", tone: "bg-blue-50 text-blue-700 ring-blue-200 dark:bg-blue-950/40 dark:text-blue-300 dark:ring-blue-900/60" },
+  instagram: { icon: "📷", label: "Instagram", tone: "bg-pink-50 text-pink-700 ring-pink-200 dark:bg-pink-950/40 dark:text-pink-300 dark:ring-pink-900/60" },
+  ig: { icon: "📷", label: "Instagram", tone: "bg-pink-50 text-pink-700 ring-pink-200 dark:bg-pink-950/40 dark:text-pink-300 dark:ring-pink-900/60" },
+  google: { icon: "🔍", label: "Google", tone: "bg-amber-50 text-amber-700 ring-amber-200 dark:bg-amber-950/40 dark:text-amber-300 dark:ring-amber-900/60" },
+  whatsapp: { icon: "💬", label: "WhatsApp", tone: "bg-emerald-50 text-emerald-700 ring-emerald-200 dark:bg-emerald-950/40 dark:text-emerald-300 dark:ring-emerald-900/60" },
+  phone: { icon: "📞", label: "Phone Call", tone: "bg-sky-50 text-sky-700 ring-sky-200 dark:bg-sky-950/40 dark:text-sky-300 dark:ring-sky-900/60" },
+  manual: { icon: "✋", label: "Manual Entry", tone: "bg-amber-50 text-amber-700 ring-amber-200 dark:bg-amber-950/40 dark:text-amber-300 dark:ring-amber-900/60" },
+  shopify: { icon: "🛒", label: "Shopify", tone: "bg-emerald-50 text-emerald-700 ring-emerald-200 dark:bg-emerald-950/40 dark:text-emerald-300 dark:ring-emerald-900/60" },
+};
+
+function SourceRowBlock({
+  source,
+  sourcePlatform,
+  attribution,
+  siteLabel,
+  awaitingConfirm,
+}: {
+  source: string | null;
+  sourcePlatform: string | null;
+  attribution: { utm_source: string | null; utm_medium: string | null } | null | undefined;
+  siteLabel: string;
+  awaitingConfirm: boolean;
+}) {
+  const src = (sourcePlatform ?? source ?? "").toLowerCase();
+  const meta = SOURCE_ROW_META[src] ?? SOURCE_ROW_META[(source ?? "").toLowerCase()];
+  const utmSource = attribution?.utm_source;
+  const utmMedium = attribution?.utm_medium;
+  const subtext = utmMedium
+    ? `${utmSource ?? siteLabel} · ${utmMedium}`
+    : utmSource && utmSource.toLowerCase() !== src
+    ? utmSource
+    : siteLabel || undefined;
+
+  if (src === "manual" || awaitingConfirm) {
+    return (
+      <span className="inline-flex flex-col items-start gap-0.5">
+        <span className="inline-flex items-center gap-1 px-2 h-5 rounded-full text-[10px] font-semibold ring-1 ring-inset bg-amber-50 text-amber-700 ring-amber-200 dark:bg-amber-950/40 dark:text-amber-300 dark:ring-amber-900/60">
+          <span>✋</span>
+          <span>Manual Entry</span>
+        </span>
+        <span className="text-[9.5px] font-medium text-amber-600/90 dark:text-amber-400/80 pl-0.5">Waiting for confirm call</span>
+      </span>
+    );
+  }
+
+  if (meta) {
+    return (
+      <TooltipProvider delayDuration={100}>
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <span className="inline-flex flex-col items-start gap-0.5 max-w-[150px]">
+              <span className={cn("inline-flex items-center gap-1 px-2 h-5 rounded-full text-[10px] font-semibold ring-1 ring-inset max-w-full", meta.tone)}>
+                <span>{meta.icon}</span>
+                <span className="truncate">{meta.label}</span>
+              </span>
+              {subtext && <span className="text-[9.5px] text-muted-foreground truncate pl-0.5 max-w-full" title={subtext}>{subtext}</span>}
+            </span>
+          </TooltipTrigger>
+          {subtext && <TooltipContent side="top" className="text-xs max-w-xs">{subtext}</TooltipContent>}
+        </Tooltip>
+      </TooltipProvider>
+    );
+  }
+
+  // Fallback: use attribution source or source field raw.
+  const raw = (source ?? "").trim();
+  const label = raw ? raw.charAt(0).toUpperCase() + raw.slice(1) : (utmSource ?? siteLabel ?? "Direct");
+  return (
+    <TooltipProvider delayDuration={100}>
+      <Tooltip>
+        <TooltipTrigger asChild>
+          <span className="inline-flex flex-col items-start gap-0.5 max-w-[150px]">
+            <span className="inline-flex items-center gap-1 px-2 h-5 rounded-full text-[10px] font-semibold ring-1 ring-inset bg-slate-50 text-slate-700 ring-slate-200 dark:bg-slate-900/50 dark:text-slate-300 dark:ring-slate-800 max-w-full">
+              <span>🗂️</span>
+              <span className="truncate">{label}</span>
+            </span>
+            {subtext && <span className="text-[9.5px] text-muted-foreground truncate pl-0.5 max-w-full" title={subtext}>{subtext}</span>}
+          </span>
+        </TooltipTrigger>
+        {subtext && <TooltipContent side="top" className="text-xs max-w-xs">{subtext}</TooltipContent>}
+      </Tooltip>
+    </TooltipProvider>
+  );
+}
+
 type SiteIdentity = {
   key: "toyora" | "hobbyshop" | "main" | "other";
   label: string;
@@ -682,7 +791,7 @@ function _WebOrdersPageBody() {
         supabase
           .from("orders")
           .select(
-            "id,created_at,shipping_name,shipping_phone,shipping_address,shipping_city,shipping_district,guest_name,guest_phone,latest_note,customer_note,notes,tags,source_website,source,confirmation_status,status,web_status,total,advance_amount,advance_txn_id,verified_at,payment_method,call_attempt_count,call_status,last_call_at,assigned_to,brand_id,is_preorder,preorder_expected_date,updated_at",
+            "id,created_at,shipping_name,shipping_phone,shipping_address,shipping_city,shipping_district,guest_name,guest_phone,latest_note,customer_note,notes,tags,source_website,source_platform,source,confirmation_status,status,web_status,total,advance_amount,advance_txn_id,verified_at,payment_method,call_attempt_count,call_status,last_call_at,assigned_to,brand_id,is_preorder,preorder_expected_date,updated_at",
             { count: "exact" },
           ),
         brandIds,
@@ -1417,8 +1526,43 @@ function _WebOrdersPageBody() {
 
                     {/* Call */}
                     <TableCell className="py-3" onClick={(e) => e.stopPropagation()}>
-                      <div className="flex w-[180px] flex-col items-start gap-1.5">
-                        <CallStatusChip status={r.call_status} attempts={r.call_attempt_count} />
+                      <div className="flex w-[190px] flex-col items-start gap-1.5">
+                        <div className="flex items-center gap-1.5 flex-wrap">
+                          <CallStatusChip status={r.call_status} attempts={r.call_attempt_count} />
+                          {(() => {
+                            const h = callLogHighlight(r.last_call_at);
+                            const cls =
+                              h.tone === "fresh"
+                                ? "bg-emerald-500/10 text-emerald-700 dark:text-emerald-300 ring-emerald-500/30 animate-pulse"
+                                : h.tone === "warm"
+                                ? "bg-amber-500/10 text-amber-700 dark:text-amber-300 ring-amber-500/30"
+                                : h.tone === "cold"
+                                ? "bg-muted/50 text-muted-foreground ring-border"
+                                : "bg-slate-100 dark:bg-slate-900 text-slate-500 dark:text-slate-400 ring-slate-200 dark:ring-slate-700";
+                            const dot =
+                              h.tone === "fresh" ? "bg-emerald-500" :
+                              h.tone === "warm" ? "bg-amber-500" :
+                              h.tone === "cold" ? "bg-muted-foreground/60" :
+                              "bg-slate-400";
+                            return (
+                              <TooltipProvider delayDuration={100}>
+                                <Tooltip>
+                                  <TooltipTrigger asChild>
+                                    <span className={cn("inline-flex items-center gap-1 rounded-full px-1.5 py-0.5 text-[10px] font-medium ring-1", cls)}>
+                                      <span className={cn("h-1.5 w-1.5 rounded-full", dot)} />
+                                      {h.text}
+                                    </span>
+                                  </TooltipTrigger>
+                                  {r.last_call_at && (
+                                    <TooltipContent side="top" className="text-xs">
+                                      Last call: {format(new Date(r.last_call_at), "dd MMM yyyy, h:mm a")}
+                                    </TooltipContent>
+                                  )}
+                                </Tooltip>
+                              </TooltipProvider>
+                            );
+                          })()}
+                        </div>
                         <button
                           type="button"
                           onClick={() => {
@@ -1610,35 +1754,13 @@ function _WebOrdersPageBody() {
 
                     {/* Source */}
                     <TableCell className="py-3">
-                      {(() => {
-                        const src = (r.source ?? "").toLowerCase();
-                        const isWebSource = WEB_SOURCES.includes(src as never);
-                        const awaitingConfirm = r.status === "new" && r.confirmation_status === "pending";
-                        // Manually-created awaiting-confirmation orders (after-hours
-                        // name/address entries) — flag clearly so agents call to confirm.
-                        if (src === "manual" && awaitingConfirm) {
-                          return (
-                            <span className="inline-flex flex-col items-start gap-0.5">
-                              <span className="inline-flex items-center gap-1 px-2 h-5 rounded-full text-[10px] font-semibold ring-1 ring-inset bg-amber-50 text-amber-700 ring-amber-200 dark:bg-amber-950/40 dark:text-amber-300 dark:ring-amber-900/60">
-                                <span>✋</span>
-                                <span>Manual Entry</span>
-                              </span>
-                              <span className="text-[9.5px] font-medium text-amber-600/90 dark:text-amber-400/80 pl-0.5">Waiting for confirm call</span>
-                            </span>
-                          );
-                        }
-                        // Other non-website sources that landed in the queue.
-                        if (src && !isWebSource) {
-                          const label = src.charAt(0).toUpperCase() + src.slice(1);
-                          return (
-                            <span className="inline-flex items-center gap-1 px-2 h-5 rounded-full text-[10px] font-semibold ring-1 ring-inset bg-slate-50 text-slate-700 ring-slate-200 dark:bg-slate-900/50 dark:text-slate-300 dark:ring-slate-800 max-w-[120px]">
-                              <span>🗂️</span>
-                              <span className="truncate">{label}</span>
-                            </span>
-                          );
-                        }
-                        return <SourcePill attribution={r.attribution} siteLabel={siteLabel} />;
-                      })()}
+                      <SourceRowBlock
+                        source={r.source}
+                        sourcePlatform={r.source_platform}
+                        attribution={r.attribution}
+                        siteLabel={siteLabel}
+                        awaitingConfirm={r.status === "new" && r.confirmation_status === "pending"}
+                      />
                     </TableCell>
 
                     {/* Actions */}
