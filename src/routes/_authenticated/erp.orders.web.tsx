@@ -1433,8 +1433,43 @@ function _WebOrdersPageBody() {
 
                     {/* Call */}
                     <TableCell className="py-3" onClick={(e) => e.stopPropagation()}>
-                      <div className="flex w-[180px] flex-col items-start gap-1.5">
-                        <CallStatusChip status={r.call_status} attempts={r.call_attempt_count} />
+                      <div className="flex w-[190px] flex-col items-start gap-1.5">
+                        <div className="flex items-center gap-1.5 flex-wrap">
+                          <CallStatusChip status={r.call_status} attempts={r.call_attempt_count} />
+                          {(() => {
+                            const h = callLogHighlight(r.last_call_at);
+                            const cls =
+                              h.tone === "fresh"
+                                ? "bg-emerald-500/10 text-emerald-700 dark:text-emerald-300 ring-emerald-500/30 animate-pulse"
+                                : h.tone === "warm"
+                                ? "bg-amber-500/10 text-amber-700 dark:text-amber-300 ring-amber-500/30"
+                                : h.tone === "cold"
+                                ? "bg-muted/50 text-muted-foreground ring-border"
+                                : "bg-slate-100 dark:bg-slate-900 text-slate-500 dark:text-slate-400 ring-slate-200 dark:ring-slate-700";
+                            const dot =
+                              h.tone === "fresh" ? "bg-emerald-500" :
+                              h.tone === "warm" ? "bg-amber-500" :
+                              h.tone === "cold" ? "bg-muted-foreground/60" :
+                              "bg-slate-400";
+                            return (
+                              <TooltipProvider delayDuration={100}>
+                                <Tooltip>
+                                  <TooltipTrigger asChild>
+                                    <span className={cn("inline-flex items-center gap-1 rounded-full px-1.5 py-0.5 text-[10px] font-medium ring-1", cls)}>
+                                      <span className={cn("h-1.5 w-1.5 rounded-full", dot)} />
+                                      {h.text}
+                                    </span>
+                                  </TooltipTrigger>
+                                  {r.last_call_at && (
+                                    <TooltipContent side="top" className="text-xs">
+                                      Last call: {format(new Date(r.last_call_at), "dd MMM yyyy, h:mm a")}
+                                    </TooltipContent>
+                                  )}
+                                </Tooltip>
+                              </TooltipProvider>
+                            );
+                          })()}
+                        </div>
                         <button
                           type="button"
                           onClick={() => {
