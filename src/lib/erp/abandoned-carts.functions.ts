@@ -111,8 +111,12 @@ export const listAbandonedCartsFn = createServerFn({ method: "POST" })
       );
     }
 
-    if (data.dateFrom) q = q.gte("updated_at", data.dateFrom);
-    if (data.dateTo) q = q.lte("updated_at", data.dateTo);
+    // Filter on created_at (cart date) — updated_at moves when staff logs a
+    // follow-up, which used to make carts jump between date buckets.
+    const df = dhakaDayStart(data.dateFrom);
+    const dt = dhakaDayEnd(data.dateTo);
+    if (df) q = q.gte("created_at", df);
+    if (dt) q = q.lte("created_at", dt);
     if (typeof data.subtotalMin === "number") q = q.gte("subtotal", data.subtotalMin);
     if (typeof data.subtotalMax === "number") q = q.lte("subtotal", data.subtotalMax);
     if (data.lastSteps && data.lastSteps.length > 0) q = q.in("last_step", data.lastSteps);
@@ -425,8 +429,8 @@ export const incompleteReportsFn = createServerFn({ method: "POST" })
     let q = context.supabase
       .from("abandoned_carts")
       .select("id, subtotal, is_converted, last_step, followup_status, followup_count")
-      .gte("updated_at", data.dateFrom)
-      .lte("updated_at", data.dateTo)
+      .gte("created_at", dhakaDayStart(data.dateFrom) ?? data.dateFrom)
+      .lte("created_at", dhakaDayEnd(data.dateTo) ?? data.dateTo)
       .not("customer_phone", "is", null)
       .neq("customer_phone", "")
       .gt("subtotal", 0);
