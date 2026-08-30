@@ -121,6 +121,7 @@ type WebOrderRow = {
   notes: string | null;
   tags: string[] | null;
   source_website: string | null;
+  source_platform: string | null;
   source: string | null;
   confirmation_status: string | null;
   status: string | null;
