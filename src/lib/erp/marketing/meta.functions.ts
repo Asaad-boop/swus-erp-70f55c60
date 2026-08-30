@@ -583,7 +583,16 @@ export const syncSpendCapToWallet = createServerFn({ method: "POST" })
           new_spend_cap_usd: newCapCents / 100,
         });
       } catch (e: any) {
-        skipped.push({ accountId: acc.id, name, reason: e?.message ?? String(e) });
+        let reason = e?.message ?? String(e);
+        if (/invalid parameter/i.test(reason)) {
+          reason +=
+            " — ei ad account e spend cap set kora jacche na (prepaid/credit-line funding othoba cap must be > already spent). Meta Ads Manager > Billing theke manually check korun.";
+        }
+        skipped.push({ accountId: acc.id, name, reason });
+        await context.supabase
+          .from("mkt_ad_accounts")
+          .update({ last_error: reason })
+          .eq("id", acc.id);
       }
     }
     return { updated, skipped };
