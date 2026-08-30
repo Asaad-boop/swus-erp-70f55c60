@@ -513,6 +513,7 @@ export function OrderDrawer({ orderId, onClose, mode = "fulfillment" }: Props) {
                         <div className="text-base font-semibold">{customerName(order)}</div>
                         <a
                           href={`tel:${customerPhone(order)}`}
+                          title="Call customer (logs a call attempt)"
                           onClick={() => {
                             if (!orderId) return;
                             const o = order as { call_attempt_count?: number | null; call_status?: string | null } | undefined;
@@ -525,7 +526,6 @@ export function OrderDrawer({ orderId, onClose, mode = "fulfillment" }: Props) {
                           className="flex items-center gap-2 text-foreground hover:text-primary transition-colors"
                         >
                           <Phone className="h-3.5 w-3.5 text-muted-foreground" /><span className="font-medium tabular-nums">{customerPhone(order)}</span>
-                          <span className="text-[10px] text-muted-foreground">tap = call + log</span>
                         </a>
                         <div className="flex items-start gap-2 text-muted-foreground">
                           <MapPin className="h-3.5 w-3.5 mt-0.5 shrink-0" />
