@@ -415,7 +415,7 @@ function PoDetailPage() {
       </Card>
 
       {isQtyMode && (
-        <QuantityReleaseCard poId={po.id} brandId={brandId} po={po as any} items={items} releases={releases as any} onPayDue={() => setPaymentOpen(true)} />
+        <QuantityReleaseCard poId={po.id} brandId={brandId} po={po as any} items={items} releases={releases as any} payments={payments} onPayDue={() => setPaymentOpen(true)} />
       )}
 
       {/* Carton-wise shipping bill */}
