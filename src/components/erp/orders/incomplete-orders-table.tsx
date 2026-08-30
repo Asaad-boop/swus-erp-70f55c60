@@ -946,24 +946,19 @@ function FiltersPopover({
       </PopoverTrigger>
       <PopoverContent align="start" className="w-[340px] p-3 space-y-3">
         <div>
-          <div className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground mb-1.5">Date range (updated)</div>
+          <div className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground mb-1.5">Cart date (Dhaka)</div>
           <div className="grid grid-cols-2 gap-2">
             <Input
               type="date"
               className="h-8 text-xs"
-              value={draft.dateFrom ? draft.dateFrom.slice(0, 10) : ""}
-              onChange={(e) => setDraft({ ...draft, dateFrom: e.target.value ? new Date(e.target.value).toISOString() : null })}
+              value={draft.dateFrom ?? ""}
+              onChange={(e) => setDraft({ ...draft, dateFrom: e.target.value || null })}
             />
             <Input
               type="date"
               className="h-8 text-xs"
-              value={draft.dateTo ? draft.dateTo.slice(0, 10) : ""}
-              onChange={(e) => {
-                if (!e.target.value) { setDraft({ ...draft, dateTo: null }); return; }
-                const d = new Date(e.target.value);
-                d.setHours(23, 59, 59, 999);
-                setDraft({ ...draft, dateTo: d.toISOString() });
-              }}
+              value={draft.dateTo ?? ""}
+              onChange={(e) => setDraft({ ...draft, dateTo: e.target.value || null })}
             />
           </div>
         </div>
