@@ -314,7 +314,17 @@ export async function setAdAccountSpendCap(actId: string, spendCapMinor: number,
   });
   const json = (await res.json()) as any;
   if (!res.ok || json?.error) {
-    throw new Error(json?.error?.message || `Meta API ${res.status}`);
+    const e = json?.error ?? {};
+    // Meta's generic "Invalid parameter" hides the real cause in these fields.
+    const detail =
+      e.error_user_msg ||
+      e.error_user_title ||
+      e.error_data?.blame_field_specs?.flat?.().join(", ") ||
+      "";
+    const parts = [e.message || `Meta API ${res.status}`];
+    if (detail) parts.push(detail);
+    if (e.code) parts.push(`(code ${e.code}${e.error_subcode ? `/${e.error_subcode}` : ""})`);
+    throw new Error(parts.join(" — "));
   }
   return json as { success?: boolean };
 }
