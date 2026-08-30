@@ -110,6 +110,15 @@ function sourceLabel(source?: string | null): string {
   return source;
 }
 
+const SOURCE_PLATFORM_OPTIONS = [
+  { value: "Website", label: "Website", icon: Globe, group: "Online" },
+  { value: "Facebook", label: "Facebook", icon: Facebook, group: "Social" },
+  { value: "Instagram", label: "Instagram", icon: Instagram, group: "Social" },
+  { value: "WhatsApp", label: "WhatsApp", icon: MessageCircle, group: "Messaging" },
+  { value: "Phone", label: "Phone Call", icon: Phone, group: "Direct" },
+  { value: "Other", label: "Other", icon: MoreHorizontal, group: "Other" },
+] as const;
+
 function CopyChip({ value, className, children }: { value: string; className?: string; children: React.ReactNode }) {
   const [copied, setCopied] = useState(false);
   return (
