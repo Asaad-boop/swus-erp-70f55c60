@@ -34,11 +34,15 @@ const PRESETS = [
   { label: "90d", days: 90 },
 ] as const;
 
-function toIsoDate(d: Date, endOfDay = false) {
-  const c = new Date(d);
-  if (endOfDay) c.setHours(23, 59, 59, 999);
-  else c.setHours(0, 0, 0, 0);
-  return c.toISOString();
+// Business days are Asia/Dhaka days. Server normalizes "YYYY-MM-DD" to
+// Dhaka day boundaries (+06:00).
+function dhakaDate(d: Date) {
+  return new Intl.DateTimeFormat("en-CA", {
+    timeZone: "Asia/Dhaka",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  }).format(d);
 }
 
 function IncompleteReportsPage() {

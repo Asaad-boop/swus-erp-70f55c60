@@ -461,11 +461,11 @@ export function IncompleteOrdersTable({
                       aria-hidden
                       className="absolute left-0 top-1/2 -translate-y-1/2 h-8 w-[3px] rounded-r-full bg-amber-500"
                     />
-                    <div className="text-xs leading-tight whitespace-nowrap pl-1">
+                    <div className="text-xs leading-tight whitespace-nowrap pl-1" title={`Last activity: ${format(new Date(r.updated_at), "dd/MM/yyyy h:mm a")}`}>
                       <div className="font-medium">
-                        {format(new Date(r.updated_at), "dd/MM/yyyy,")}
+                        {format(new Date(r.created_at), "dd/MM/yyyy,")}
                       </div>
-                      <div>{format(new Date(r.updated_at), "h:mm a")}</div>
+                      <div>{format(new Date(r.created_at), "h:mm a")}</div>
                       <div className="text-[10px] text-muted-foreground mt-0.5">
                         {relTime(r.updated_at)}
                       </div>
