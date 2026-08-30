@@ -492,6 +492,7 @@ function MarketingSettingsPage() {
                       "Token",
                       "Auto-post",
                       "Last insights sync",
+                      "Actions",
                     ].map((h) => (
                       <th key={h} className="whitespace-nowrap px-3 py-2 text-left font-medium">
                         {h}
