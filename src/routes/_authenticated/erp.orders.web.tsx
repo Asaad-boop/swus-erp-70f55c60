@@ -1421,17 +1421,21 @@ function _WebOrdersPageBody() {
                         <CallStatusChip status={r.call_status} attempts={r.call_attempt_count} />
                         <button
                           type="button"
-                          onClick={() =>
+                          onClick={() => {
                             logCall.mutate({
                               orderId: r.id,
                               attempts: r.call_attempt_count ?? 0,
                               currentStatus: r.call_status ?? null,
-                            })
-                          }
+                            });
+                            if (phone) window.location.href = `tel:${phone}`;
+                          }}
                           disabled={logCall.isPending}
                           className="focus-ring inline-flex items-center gap-1 rounded-[var(--radius-chip)] border border-border px-1.5 py-0.5 text-[11px] font-medium text-muted-foreground hover:bg-muted hover:text-foreground disabled:opacity-50"
                         >
                           <PhoneIcon className="h-3 w-3" /> Call now
+                          {(r.call_attempt_count ?? 0) > 0 && (
+                            <span className="tabular-nums text-[10px] text-muted-foreground">×{r.call_attempt_count}</span>
+                          )}
                         </button>
                         {note && (
                           <p className="line-clamp-2 border-l-2 border-amber-400/60 pl-2 text-[11px] leading-snug text-foreground/80" title={note}>
