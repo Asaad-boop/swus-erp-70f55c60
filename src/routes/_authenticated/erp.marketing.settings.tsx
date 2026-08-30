@@ -144,8 +144,9 @@ function MarketingSettingsPage() {
   const testConn = useServerFn(testAdAccountConnection);
   const retestM = useMutation({
     mutationFn: (accountId: string) => testConn({ data: { accountId } as never }),
-    onSuccess: () => {
-      toast.success("Connection OK — status active hoye geche");
+    onSuccess: (r: any) => {
+      if (r?.ok === false) toast.error(r?.error ?? "Connection failed");
+      else toast.success("Connection OK — status active hoye geche");
       qc.invalidateQueries({ queryKey: ["mkt-settings-accounts"] });
     },
     onError: (e: any) => {
