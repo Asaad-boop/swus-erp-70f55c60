@@ -892,9 +892,9 @@ function _WebOrdersPageBody() {
         (orderNotes ?? []).forEach((n) => {
           if (!latestNoteByOrder.has(n.order_id) && n.body) latestNoteByOrder.set(n.order_id, n.body);
         });
-        const attrByOrder = new Map<string, { utm_source: string | null; utm_medium: string | null }>();
+        const attrByOrder = new Map<string, OrderAttribution>();
         (attrs ?? []).forEach((a) => {
-          if (!attrByOrder.has(a.order_id)) attrByOrder.set(a.order_id, { utm_source: a.utm_source, utm_medium: a.utm_medium });
+          if (!attrByOrder.has(a.order_id)) attrByOrder.set(a.order_id, { utm_source: a.utm_source, utm_medium: a.utm_medium, utm_campaign: a.utm_campaign, fbclid: a.fbclid });
         });
         rows.forEach((r) => {
           r.items_summary = byOrder.get(r.id) ?? [];
