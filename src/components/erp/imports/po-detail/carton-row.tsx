@@ -18,6 +18,52 @@ import { listWarehouses, payCartonDue, postCartonToInventory, releaseCarton } fr
 import { CARTON_STATUS_LABEL, fmtBdt, newIdemKey, type ImpCartonStatus } from "@/lib/erp/imports/types";
 import { Mini, Row } from "./atoms";
 
+const PRE_ARRIVAL: string[] = ["ordered", "at_china_warehouse", "in_transit"];
+const LADDER: { key: ImpCartonStatus; label: string }[] = [
+  { key: "ordered", label: "Ordered" },
+  { key: "at_china_warehouse", label: "At China WH" },
+  { key: "in_transit", label: "In Transit" },
+  { key: "arrived_bd", label: "Arrived BD" },
+  { key: "released", label: "Released" },
+  { key: "in_stock", label: "In Stock" },
+];
+
+/** Kon step e achi ar next step ki — protita carton row te dekha jabe. */
+function StageLadder({ status, onStage }: { status: ImpCartonStatus; onStage: (s: ImpCartonStatus) => void }) {
+  const idx = LADDER.findIndex((l) => l.key === status);
+  if (idx < 0) return null;
+  const next = PRE_ARRIVAL.includes(status) ? LADDER[idx + 1] : null;
+  return (
+    <div className="flex items-center gap-2 flex-wrap py-3">
+      {LADDER.map((l, i) => (
+        <div key={l.key} className="flex items-center gap-2">
+          <span
+            className={cn(
+              "text-[11px] px-2 py-1 rounded-full border",
+              i < idx && "border-emerald-300 bg-emerald-50 text-emerald-700 dark:bg-emerald-950/30 dark:text-emerald-300 dark:border-emerald-900",
+              i === idx && "border-primary bg-primary/10 text-primary font-semibold",
+              i > idx && "border-dashed border-border text-muted-foreground",
+            )}
+          >
+            {l.label}
+          </span>
+          {i < LADDER.length - 1 && <span className="text-muted-foreground/40 text-xs">›</span>}
+        </div>
+      ))}
+      {next && next.key !== "arrived_bd" && (
+        <Button size="sm" variant="outline" className="ml-auto" onClick={() => onStage(next.key)}>
+          Next: {next.label}
+        </Button>
+      )}
+      {next && next.key === "arrived_bd" && (
+        <span className="ml-auto text-[11px] text-muted-foreground">
+          Arrived BD korte upore <span className="font-medium">Receive at BD</span> use korun (shipping bill soho).
+        </span>
+      )}
+    </div>
+  );
+}
+
 export function CartonRow({ carton, poId, poNumber, poItems, brandId, poDue, poPaid, poSupplierTotal, onStage, selected, onToggleSelect }: {
   carton: any; poId: string; poNumber: string; poItems: any[]; brandId: string | null; poDue: number; poPaid: number; poSupplierTotal: number;
   onStage: (s: ImpCartonStatus) => void;
@@ -108,6 +154,7 @@ export function CartonRow({ carton, poId, poNumber, poItems, brandId, poDue, poP
       </div>
       {open && (
         <div className="px-4 pb-4 pt-1 border-t border-border/50 bg-background/50">
+          <StageLadder status={status} onStage={onStage} />
           {status === "arrived_bd" && brandId && (
             <InlineReleaseForm carton={carton} brandId={brandId} poId={poId} poPaid={poPaid} poSupplierTotal={poSupplierTotal} />
           )}
@@ -117,13 +164,25 @@ export function CartonRow({ carton, poId, poNumber, poItems, brandId, poDue, poP
           {hasDue && brandId && (
             <InlinePayDueForm carton={carton} brandId={brandId} poId={poId} cartonDue={cartonDue} />
           )}
-          {!needsAction && (
+          {PRE_ARRIVAL.includes(status) && (
+            <div className="py-3 space-y-2">
+              <Button size="sm" disabled className="w-full sm:w-auto">
+                <Send className="h-4 w-4 mr-1" />Release carton
+              </Button>
+              <p className="text-[11px] text-muted-foreground">
+                Release korte age carton ta <span className="font-medium">Arrived BD</span> hote hobe — upore stage ladder
+                theke next step e nin (Ordered → China WH → In Transit → Arrived BD).
+              </p>
+            </div>
+          )}
+          {status === "in_stock" && (
             <div className="text-xs text-muted-foreground py-2">
-              {status === "in_stock" && carton.posted_at ? `Posted to inventory on ${carton.posted_at}` : "No action required at this stage."}
+              {carton.posted_at ? `Posted to inventory on ${carton.posted_at}` : "Stock e post hoye geche ✓"}
             </div>
           )}
         </div>
       )}
+
     </div>
   );
 }

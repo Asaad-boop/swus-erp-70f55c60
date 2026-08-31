@@ -33,6 +33,8 @@ import { ArrivedDialog, PaymentDialog, BulkReleaseDialog, QtyArrivedDialog, Edit
 import { QuantityReleaseCard } from "@/components/erp/imports/po-detail/quantity-release-card";
 import { EditPoDialog } from "@/components/erp/imports/po-detail/edit-po-dialog";
 import { CartonPlanDialog } from "@/components/erp/imports/po-detail/carton-plan-dialog";
+import { NextActionBar } from "@/components/erp/imports/po-detail/next-action-bar";
+import { computePoMath } from "@/components/erp/imports/po-detail/po-math";
 
 export const Route = createFileRoute("/_authenticated/erp/imports/orders/$orderId")({
   head: () => ({ meta: [{ title: "Purchase Order — Imports" }] }),
@@ -115,6 +117,9 @@ function PoDetailPage() {
       s + (r.items ?? []).reduce((n: number, i: any) => n + Number(i.quantity ?? 0) + Number(i.damaged_qty ?? 0), 0),
     0,
   );
+
+  const poMath = computePoMath({ po, items, cartons, releases, payments, isQtyMode });
+
 
   const totalCartons = cartons.length;
   const totalPieces = cartons.reduce((s, c) => s + Number(c.expected_quantity || 0), 0);
@@ -202,7 +207,36 @@ function PoDetailPage() {
         </div>
       </Card>
 
+      {/* Next action — ekhon ki korte hobe */}
+      <NextActionBar
+        po={po}
+        cartons={cartons}
+        math={poMath}
+        isQtyMode={isQtyMode}
+        onCartonPlan={() => setCartonPlanOpen(true)}
+        onBulkStage={async (stage, ids) => {
+          try {
+            await Promise.all(ids.map((id) => stageFn({ data: { carton_id: id, new_stage: stage, idempotency_key: newIdemKey("stage") } as any })));
+            toast.success(`${ids.length} carton moved`);
+            qc.invalidateQueries({ queryKey: ["imp-po", orderId] });
+          } catch (e: any) { toast.error(e?.message ?? "Failed"); }
+        }}
+        onReceiveBd={() => (isQtyMode ? setQtyArrivedOpen(true) : setArrivedOpen(true))}
+        onPayDue={() => setPaymentOpen(true)}
+      />
+
+      {poMath.totalsMismatch && (
+        <Card className="p-3 border-amber-300 bg-amber-50/60 dark:bg-amber-950/20 dark:border-amber-900/50 text-xs text-amber-800 dark:text-amber-200 flex items-center gap-2">
+          <AlertTriangle className="h-4 w-4 shrink-0" />
+          <span>
+            PO grand total ar line total + charges er moddhe <span className="font-mono font-semibold">{fmtBdt(Math.abs(poMath.mismatchAmount))}</span> difference —
+            Edit PO the ke charges/quantity milie nin.
+          </span>
+        </Card>
+      )}
+
       {/* Order Pipeline */}
+
       {!isQtyMode && (
       <Card className="p-5">
         <div className="flex items-start justify-between mb-4 flex-wrap gap-2">
@@ -341,47 +375,17 @@ function PoDetailPage() {
         </div>
       )}
 
-      {/* "Goods arrived in BD?" alert — hide once any carton has reached arrived_bd or beyond */}
-      {!isQtyMode &&
-        !["arrived_bd", "partially_received", "completed", "cancelled"].includes(po.status) &&
-        !cartons.some((c: any) => ["arrived_bd", "released", "in_stock"].includes(c.status)) && (
-        <Card className="p-4 border-orange-200 bg-orange-50/50 dark:bg-orange-950/20 dark:border-orange-900/40">
-          <div className="flex items-center gap-3 flex-wrap">
-            <div className="h-10 w-10 rounded-full bg-orange-100 dark:bg-orange-900/40 flex items-center justify-center">
-              <Truck className="h-5 w-5 text-orange-600" />
-            </div>
-            <div className="flex-1 min-w-0">
-              <div className="font-semibold text-sm">Goods arrived in BD?</div>
-              <p className="text-xs text-muted-foreground">Enter shipping bill (weight × rate) — auto-distributes to cartons</p>
-            </div>
-            <Button onClick={() => setArrivedOpen(true)}><Truck className="h-4 w-4 mr-1" />Receive at BD</Button>
+      {/* Receiving bill summary — Next-action bar er porei, sudhu already received hole */}
+      {isQtyMode && brandId && ["arrived_bd", "partially_received", "completed"].includes(po.status) && (
+        <Card className="p-3 flex items-center gap-3 flex-wrap">
+          <Truck className="h-4 w-4 text-muted-foreground" />
+          <div className="flex-1 min-w-0 text-xs text-muted-foreground">
+            Received in BD · freight {fmtBdt(po.freight_cost_bdt)} · landed {fmtBdt(poMath.landedPerUnit)}/pc
           </div>
+          <Button size="sm" variant="outline" onClick={() => setQtyArrivedOpen(true)}>Edit receiving bill</Button>
         </Card>
       )}
 
-      {/* Quantity mode: goods arrived in BD */}
-      {isQtyMode && brandId && (
-        <Card className="p-4 border-orange-200 bg-orange-50/50 dark:bg-orange-950/20 dark:border-orange-900/40">
-          <div className="flex items-center gap-3 flex-wrap">
-            <div className="h-10 w-10 rounded-full bg-orange-100 dark:bg-orange-900/40 flex items-center justify-center">
-              <Truck className="h-5 w-5 text-orange-600" />
-            </div>
-            <div className="flex-1 min-w-0">
-              <div className="font-semibold text-sm">
-                {["arrived_bd", "partially_received", "completed"].includes(po.status) ? "Received in BD" : "Goods arrived in BD?"}
-              </div>
-              <p className="text-xs text-muted-foreground">
-                Shipping (kg × rate ba flat), customs, other charges din — per-piece landed cost e jabe.
-                {Number(po.freight_cost_bdt) > 0 ? ` Current freight: ${fmtBdt(po.freight_cost_bdt)}` : ""}
-              </p>
-            </div>
-            <Button variant={["arrived_bd", "partially_received", "completed"].includes(po.status) ? "outline" : "default"} onClick={() => setQtyArrivedOpen(true)}>
-              <Truck className="h-4 w-4 mr-1" />
-              {["arrived_bd", "partially_received", "completed"].includes(po.status) ? "Edit receiving bill" : "Receive at BD"}
-            </Button>
-          </div>
-        </Card>
-      )}
 
       {/* Receive mode */}
       <Card className="p-3 flex items-center gap-3 flex-wrap">
@@ -415,11 +419,14 @@ function PoDetailPage() {
       </Card>
 
       {isQtyMode && (
-        <QuantityReleaseCard poId={po.id} brandId={brandId} po={po as any} items={items} releases={releases as any} payments={payments} onPayDue={() => setPaymentOpen(true)} />
+        <div id="release-section" className="scroll-mt-24">
+          <QuantityReleaseCard poId={po.id} brandId={brandId} po={po as any} items={items} releases={releases as any} payments={payments} onPayDue={() => setPaymentOpen(true)} />
+        </div>
       )}
 
       {/* Carton-wise shipping bill */}
       {!isQtyMode && cartons.length > 0 && (
+        <div id="freight-section" className="scroll-mt-24">
         <CartonFreightCard
           poId={po.id}
           poNumber={po.po_number}
@@ -441,11 +448,13 @@ function PoDetailPage() {
           }
           poWeightKg={Number(po.shipping_weight_kg ?? po.total_weight_kg) || 0}
         />
+        </div>
       )}
 
       {/* Cartons */}
       {!isQtyMode && (
-      <Card className="overflow-hidden">
+      <Card id="cartons-section" className="overflow-hidden scroll-mt-24">
+
         <CartonsHeader
           cartons={cartons}
           selected={selectedCartons}
