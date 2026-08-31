@@ -859,6 +859,18 @@ export const reverseImportPayment = createServerFn({ method: "POST" })
       _reason: data.reason ?? undefined,
     });
     if (error) throw error;
+    try {
+      const { data: p } = await context.supabase
+        .from("imp_payments").select("po_id, amount_bdt, payment_type").eq("id", data.payment_id).maybeSingle();
+      if (p?.po_id) {
+        await logPoEvent(context.supabase, context.userId, p.po_id, "po_payment_reversed", {
+          group: "money",
+          title: "Payment withdraw / reverse",
+          detail: [p.payment_type, data.reason].filter(Boolean).join(" · ") || null,
+          amount: Number(p.amount_bdt || 0),
+        });
+      }
+    } catch { /* non-fatal */ }
     return out;
   });
 
