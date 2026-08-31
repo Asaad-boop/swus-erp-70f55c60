@@ -2114,5 +2114,16 @@ export const receiveQuantityBd = createServerFn({ method: "POST" })
       _payload: data as any,
     });
     if (error) throw error;
+    const shipTotal = data.shipping_total_bdt ?? +(Number(data.total_weight_kg || 0) * Number(data.rate_per_kg_bdt || 0)).toFixed(2);
+    await logPoEvent(context.supabase, context.userId, data.po_id, "po_received_bd", {
+      group: "shipment",
+      title: `BD te receive — shipping bill ${data.mode === "add" ? "add" : "set"}`,
+      detail: [
+        data.total_weight_kg ? `${data.total_weight_kg} kg × ${data.rate_per_kg_bdt ?? 0}৳/kg` : null,
+        data.customs_duty_bdt ? `customs ${data.customs_duty_bdt}৳` : null,
+        data.other_charges_bdt ? `other ${data.other_charges_bdt}৳` : null,
+      ].filter(Boolean).join(" · ") || null,
+      amount: shipTotal,
+    });
     return out as any;
   });
