@@ -108,6 +108,7 @@ export function CartonRow({ carton, poId, poNumber, poItems, brandId, poDue, poP
       </div>
       {open && (
         <div className="px-4 pb-4 pt-1 border-t border-border/50 bg-background/50">
+          <StageLadder status={status} onStage={onStage} />
           {status === "arrived_bd" && brandId && (
             <InlineReleaseForm carton={carton} brandId={brandId} poId={poId} poPaid={poPaid} poSupplierTotal={poSupplierTotal} />
           )}
@@ -117,13 +118,25 @@ export function CartonRow({ carton, poId, poNumber, poItems, brandId, poDue, poP
           {hasDue && brandId && (
             <InlinePayDueForm carton={carton} brandId={brandId} poId={poId} cartonDue={cartonDue} />
           )}
-          {!needsAction && (
+          {PRE_ARRIVAL.includes(status) && (
+            <div className="py-3 space-y-2">
+              <Button size="sm" disabled className="w-full sm:w-auto">
+                <Send className="h-4 w-4 mr-1" />Release carton
+              </Button>
+              <p className="text-[11px] text-muted-foreground">
+                Release korte age carton ta <span className="font-medium">Arrived BD</span> hote hobe — upore stage ladder
+                theke next step e nin (Ordered → China WH → In Transit → Arrived BD).
+              </p>
+            </div>
+          )}
+          {status === "in_stock" && (
             <div className="text-xs text-muted-foreground py-2">
-              {status === "in_stock" && carton.posted_at ? `Posted to inventory on ${carton.posted_at}` : "No action required at this stage."}
+              {carton.posted_at ? `Posted to inventory on ${carton.posted_at}` : "Stock e post hoye geche ✓"}
             </div>
           )}
         </div>
       )}
+
     </div>
   );
 }
