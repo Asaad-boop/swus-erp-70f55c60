@@ -65,7 +65,7 @@ function timeLabel(ts: string) {
 export function ActivityTimeline({ poId, poNumber }: { poId: string; poNumber?: string }) {
   const fn = useServerFn(getPoActivity);
   const { data, isLoading } = useQuery({
-    queryKey: ["po-activity", poId],
+    queryKey: ["imp-po", poId, "activity"],
     queryFn: () => fn({ data: { poId } }),
   });
 
