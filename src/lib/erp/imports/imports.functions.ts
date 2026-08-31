@@ -1041,6 +1041,12 @@ export const saveShippingCost = createServerFn({ method: "POST" })
       .eq("id", data.po_id);
     if (error) throw error;
     const recompute = await recomputeCartonCostSharesInternal(context.supabase, data.po_id);
+    await logPoEvent(context.supabase, context.userId, data.po_id, "po_shipping_saved", {
+      group: "shipment",
+      title: "Shipping bill (PO level) save",
+      detail: `${data.shipping_weight_kg} kg × ${data.shipping_rate_per_kg}৳/kg${data.other_charges_bdt ? ` + other ${data.other_charges_bdt}৳` : ""}`,
+      amount: shipping_cost_bdt,
+    });
     return { ok: true, shipping_cost_bdt, ...recompute };
   });
 
