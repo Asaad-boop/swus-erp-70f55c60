@@ -1106,6 +1106,18 @@ export const saveCartonFreight = createServerFn({ method: "POST" })
     }
 
     const recompute = await recomputeCartonCostSharesInternal(context.supabase, data.po_id);
+    await logPoEvent(
+      context.supabase, context.userId, data.po_id,
+      data.clear ? "po_carton_freight_cleared" : "po_carton_freight_saved",
+      {
+        group: "shipment",
+        title: data.clear
+          ? `${data.cartons.length} carton er freight bill remove`
+          : `${data.cartons.length} carton er shipping bill add`,
+        detail: data.note ?? null,
+        amount: data.clear ? null : +total.toFixed(2),
+      },
+    );
     return { ok: true, cartons: data.cartons.length, freight_total: +total.toFixed(2), ...recompute };
   });
 
