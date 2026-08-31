@@ -2046,6 +2046,11 @@ export const updateImportPo = createServerFn({ method: "POST" })
       _payload: payload,
     });
     if (error) throw error;
+    await logPoEvent(context.supabase, context.userId, poId, "po_updated", {
+      group: "plan",
+      title: "PO edit kora hoyeche",
+      detail: Object.keys(payload).filter((k) => (payload as any)[k] !== undefined).join(", ") || null,
+    });
     return out as { ok: boolean; items_updated: boolean; locked: boolean };
   });
 
