@@ -116,6 +116,9 @@ function PoDetailPage() {
     0,
   );
 
+  const poMath = computePoMath({ po, items, cartons, releases, payments, isQtyMode });
+
+
   const totalCartons = cartons.length;
   const totalPieces = cartons.reduce((s, c) => s + Number(c.expected_quantity || 0), 0);
   const deliveredCartons = cartons.filter((c) => c.status === "in_stock").length;
