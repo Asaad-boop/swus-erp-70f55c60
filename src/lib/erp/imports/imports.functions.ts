@@ -739,6 +739,12 @@ export const markArrivedInBd = createServerFn({ method: "POST" })
     await assertAnyRole(context.supabase, context.userId, ["admin", "operations", "accountant"]);
     const { data: out, error } = await context.supabase.rpc("imp_mark_arrived", { _payload: data });
     if (error) throw error;
+    await logPoEvent(context.supabase, context.userId, data.po_id, "po_received_bd", {
+      group: "shipment",
+      title: "BD te arrived mark kora hoyeche",
+      detail: `${data.total_weight_kg} kg × ${data.rate_per_kg_bdt}৳/kg`,
+      amount: +(data.total_weight_kg * data.rate_per_kg_bdt).toFixed(2),
+    });
     return out;
   });
 
