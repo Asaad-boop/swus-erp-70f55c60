@@ -448,11 +448,13 @@ function PoDetailPage() {
           }
           poWeightKg={Number(po.shipping_weight_kg ?? po.total_weight_kg) || 0}
         />
+        </div>
       )}
 
       {/* Cartons */}
       {!isQtyMode && (
-      <Card className="overflow-hidden">
+      <Card id="cartons-section" className="overflow-hidden scroll-mt-24">
+
         <CartonsHeader
           cartons={cartons}
           selected={selectedCartons}
