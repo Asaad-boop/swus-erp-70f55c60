@@ -97,6 +97,7 @@ export function CartonsHeader({
               <Button size="sm" variant="outline" onClick={() => onBulkStage("ordered")}>Ordered</Button>
               <Button size="sm" variant="outline" onClick={() => onBulkStage("at_china_warehouse")}>At China WH</Button>
               <Button size="sm" variant="outline" onClick={() => onBulkStage("in_transit")}>In Transit</Button>
+              <Button size="sm" onClick={() => onBulkStage("arrived_bd")}>Arrived BD</Button>
               {arrived.length === 0 && (
                 <Button size="sm" variant="ghost" onClick={() => setSelected(new Set())}>Clear</Button>
               )}

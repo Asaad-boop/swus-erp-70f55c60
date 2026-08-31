@@ -33,6 +33,7 @@ function StageLadder({ status, onStage }: { status: ImpCartonStatus; onStage: (s
   const idx = LADDER.findIndex((l) => l.key === status);
   if (idx < 0) return null;
   const next = PRE_ARRIVAL.includes(status) ? LADDER[idx + 1] : null;
+  const arrivedNext = next?.key === "arrived_bd";
   return (
     <div className="flex items-center gap-2 flex-wrap py-3">
       {LADDER.map((l, i) => (
@@ -50,15 +51,15 @@ function StageLadder({ status, onStage }: { status: ImpCartonStatus; onStage: (s
           {i < LADDER.length - 1 && <span className="text-muted-foreground/40 text-xs">›</span>}
         </div>
       ))}
-      {next && next.key !== "arrived_bd" && (
-        <Button size="sm" variant="outline" className="ml-auto" onClick={() => onStage(next.key)}>
+      {next && (
+        <Button
+          size="sm"
+          variant={arrivedNext ? "default" : "outline"}
+          className="ml-auto"
+          onClick={() => onStage(next.key)}
+        >
           Next: {next.label}
         </Button>
-      )}
-      {next && next.key === "arrived_bd" && (
-        <span className="ml-auto text-[11px] text-muted-foreground">
-          Arrived BD korte upore <span className="font-medium">Receive at BD</span> use korun (shipping bill soho).
-        </span>
       )}
     </div>
   );
@@ -146,6 +147,7 @@ export function CartonRow({ carton, poId, poNumber, poItems, brandId, poDue, poP
                 <SelectItem value="ordered">Ordered</SelectItem>
                 <SelectItem value="at_china_warehouse">At China WH</SelectItem>
                 <SelectItem value="in_transit">In Transit</SelectItem>
+                <SelectItem value="arrived_bd">Arrived BD</SelectItem>
               </SelectContent>
             </Select>
           </div>
@@ -166,13 +168,28 @@ export function CartonRow({ carton, poId, poNumber, poItems, brandId, poDue, poP
           )}
           {PRE_ARRIVAL.includes(status) && (
             <div className="py-3 space-y-2">
-              <Button size="sm" disabled className="w-full sm:w-auto">
-                <Send className="h-4 w-4 mr-1" />Release carton
-              </Button>
-              <p className="text-[11px] text-muted-foreground">
-                Release korte age carton ta <span className="font-medium">Arrived BD</span> hote hobe — upore stage ladder
-                theke next step e nin (Ordered → China WH → In Transit → Arrived BD).
-              </p>
+              {status === "in_transit" ? (
+                <>
+                  <Button size="sm" className="w-full sm:w-auto" onClick={() => onStage("arrived_bd")}>
+                    <Send className="h-4 w-4 mr-1" />Mark Arrived BD (tarpor release)
+                  </Button>
+                  <p className="text-[11px] text-muted-foreground">
+                    {shippingCost > 0
+                      ? `Freight bill ${fmtBdt(shippingCost)} already boshano ache — arrived mark korlei release form khulbe.`
+                      : "Ei carton e ekhono freight bill boshano nai — Arrived mark korte paren, kintu shipping bill Shipment tab theke boshale landed cost thik hobe."}
+                  </p>
+                </>
+              ) : (
+                <>
+                  <Button size="sm" disabled className="w-full sm:w-auto">
+                    <Send className="h-4 w-4 mr-1" />Release carton
+                  </Button>
+                  <p className="text-[11px] text-muted-foreground">
+                    Release korte age carton ta <span className="font-medium">Arrived BD</span> hote hobe — upore stage ladder
+                    theke next step e nin (Ordered → China WH → In Transit → Arrived BD).
+                  </p>
+                </>
+              )}
             </div>
           )}
           {status === "in_stock" && (
