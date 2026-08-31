@@ -3,7 +3,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { useMemo, useState } from "react";
 import {
-  ArrowLeft, ClipboardCheck, Search, Save, Loader2, CheckCircle2, XCircle,
+  ArrowLeft, ClipboardCheck, Search, CheckCircle2, XCircle,
   Plus, Trash2, Download, AlertTriangle, Filter,
 } from "lucide-react";
 import { toast } from "sonner";
@@ -21,6 +21,7 @@ import { cn } from "@/lib/utils";
 import { exportToXlsx } from "@/lib/erp/utils/excel";
 import { useBrand } from "@/contexts/brand-context";
 import { ProductPicker, type PickedProduct } from "@/components/erp/imports/product-picker";
+import { FinalizeChecklistDialog } from "@/components/erp/stocktake/finalize-checklist-dialog";
 import {
   getStocktakeDetail,
   updateStocktakeCount,
@@ -206,28 +207,12 @@ function StocktakeDetailPage() {
                   </AlertDialogFooter>
                 </AlertDialogContent>
               </AlertDialog>
-              <AlertDialog>
-                <AlertDialogTrigger asChild>
-                  <Button size="sm"><CheckCircle2 className="h-4 w-4 mr-1" />Finalize</Button>
-                </AlertDialogTrigger>
-                <AlertDialogContent>
-                  <AlertDialogHeader>
-                    <AlertDialogTitle>Finalize stocktake?</AlertDialogTitle>
-                    <AlertDialogDescription>
-                      Will apply <b>{stats.variance}</b> stock adjustments with a net value of
-                      <b className={cn("ml-1", stats.totalVarVal < 0 ? "text-rose-600" : "text-emerald-600")}>{fmtBdt(stats.totalVarVal)}</b>.
-                      Uncounted items are skipped. This cannot be undone.
-                    </AlertDialogDescription>
-                  </AlertDialogHeader>
-                  <AlertDialogFooter>
-                    <AlertDialogCancel>Not yet</AlertDialogCancel>
-                    <AlertDialogAction onClick={() => finalizeMut.mutate()}>
-                      {finalizeMut.isPending ? <Loader2 className="h-4 w-4 mr-1 animate-spin" /> : null}
-                      Finalize & adjust stock
-                    </AlertDialogAction>
-                  </AlertDialogFooter>
-                </AlertDialogContent>
-              </AlertDialog>
+              <FinalizeChecklistDialog
+                items={items}
+                stats={{ variance: stats.variance, totalVarVal: stats.totalVarVal }}
+                isPending={finalizeMut.isPending}
+                onFinalize={() => finalizeMut.mutate()}
+              />
             </>
           )}
         </div>
