@@ -17,7 +17,7 @@ import {
   ArrowRight,
   Users,
   Building2,
-  Megaphone,
+  
   PackageOpen,
   CalendarDays,
   TrendingUp,
@@ -27,7 +27,7 @@ import { useBrand } from "@/contexts/brand-context";
 import { supabase } from "@/integrations/supabase/client";
 import { useCurrentRole } from "@/hooks/use-current-role";
 import { GrowthPageHeader } from "@/components/erp/growth/growth-shell";
-import { DailyCockpit } from "@/components/erp/growth/daily-cockpit";
+
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -178,15 +178,51 @@ function GrowthCommandCenter() {
     () => (liveMedia.length ? liveMedia : mediaPlans.slice(0, 4)).slice(0, 5).map((p) => ({ plan: p, econ: mediaPlanEconomics(p) })),
     [liveMedia, mediaPlans],
   );
-  const liveBudget = (liveMedia.length ? liveMedia : []).reduce(
-    (s, p) => s + mediaPlanEconomics(p).totalBudget,
-    0,
-  );
 
   /* ---------------- People & market ---------------- */
   const activeCreators = creators.filter((c) => c.status === "active" || c.negotiation_status === "working");
   const creatorLeads = creators.filter((c) => ["new", "contacted", "negotiating"].includes(c.negotiation_status));
   const intakeNeedsContent = intake.filter((r) => r.content_count === 0);
+
+  /* ---------------- Team workload ---------------- */
+  const assigneeIds = useMemo(
+    () => Array.from(new Set(tasks.map((t) => t.assignee_id).filter(Boolean) as string[])),
+    [tasks],
+  );
+  const namesQ = useQuery({
+    queryKey: ["growth-assignee-names", assigneeIds],
+    enabled: assigneeIds.length > 0,
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("profiles")
+        .select("id, display_name")
+        .in("id", assigneeIds);
+      if (error) throw error;
+      const m = new Map<string, string>();
+      for (const p of data ?? []) m.set(p.id, p.display_name ?? "—");
+      return m;
+    },
+  });
+
+  const teamRows = useMemo(() => {
+    const map = new Map<string, { id: string; open: number; overdue: number; doing: number; done7: number }>();
+    for (const t of tasks) {
+      const id = t.assignee_id;
+      if (!id) continue;
+      const cur = map.get(id) ?? { id, open: 0, overdue: 0, doing: 0, done7: 0 };
+      if (t.status === "done") {
+        if (t.completed_at && new Date(t.completed_at).getTime() > Date.now() - 7 * DAY) cur.done7 += 1;
+      } else {
+        cur.open += 1;
+        if (t.status === "doing") cur.doing += 1;
+        if (t.due_date && t.due_date < today) cur.overdue += 1;
+      }
+      map.set(id, cur);
+    }
+    return Array.from(map.values())
+      .filter((r) => r.open > 0 || r.done7 > 0)
+      .sort((a, b) => b.open - a.open || b.overdue - a.overdue);
+  }, [tasks, today]);
 
   /* ---------------- Needs my action ---------------- */
   const myTasks = useMemo(
@@ -261,10 +297,7 @@ function GrowthCommandCenter() {
 
       {loading && <Skeleton className="h-28 w-full rounded-xl" />}
 
-      {/* Today-first sales & ads cockpit */}
-      <DailyCockpit />
-
-      {/* Pulse strip */}
+      {/* Pulse strip — growth execution only (no sales/ads numbers) */}
       <div className="grid grid-cols-2 gap-2.5 md:grid-cols-3 xl:grid-cols-6">
         <Stat
           label="Goals on track"
@@ -278,11 +311,11 @@ function GrowthCommandCenter() {
         <Stat label="Content in production" value={inProduction.length} hint={`${contentLate.length} past due`} tone={contentLate.length ? "warning" : "default"} icon={Clapperboard} />
         <Stat label="Published · 30d" value={published30.length} hint={views30 ? `${views30.toLocaleString()} views` : "no view data"} tone="success" icon={TrendingUp} />
         <Stat
-          label="Live media budget"
-          value={liveMedia.length ? bdt(liveBudget) : "—"}
-          hint={liveMedia.length ? `${liveMedia.length} active plan` : "no active plan"}
-          tone={liveMedia.length ? "primary" : "muted"}
-          icon={Megaphone}
+          label="Team on task"
+          value={teamRows.length}
+          hint={teamRows.length ? `${teamRows.reduce((s, r) => s + r.open, 0)} open task` : "কেউ assigned নেই"}
+          tone={teamRows.length ? "primary" : "muted"}
+          icon={Users}
         />
       </div>
 
@@ -499,6 +532,38 @@ function GrowthCommandCenter() {
           </Card>
         )}
       </div>
+
+      {/* Team workload */}
+      {teamRows.length > 0 && (
+        <Card>
+          <CardContent className="space-y-3 p-4">
+            <SectionHead title="Team workload" to="/erp/growth/tasks" cta="Task board" />
+            <div className="grid gap-2 md:grid-cols-2 xl:grid-cols-3">
+              {teamRows.map((r) => (
+                <div key={r.id} className="flex items-center justify-between gap-3 rounded-lg border px-3 py-2">
+                  <div className="min-w-0">
+                    <p className="truncate text-sm font-medium">
+                      {namesQ.data?.get(r.id) ?? "Team member"}
+                    </p>
+                    <p className="text-[11px] text-muted-foreground">
+                      {r.open} open · {r.doing} doing · {r.done7} done · 7d
+                    </p>
+                  </div>
+                  {r.overdue > 0 ? (
+                    <Badge variant="destructive" className="shrink-0 text-[10px]">
+                      {r.overdue} overdue
+                    </Badge>
+                  ) : (
+                    <Badge variant="secondary" className="shrink-0 text-[10px]">
+                      on track
+                    </Badge>
+                  )}
+                </div>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
+      )}
 
       {/* Module pulse */}
       <div className="grid gap-3 grid-cols-2 lg:grid-cols-3 xl:grid-cols-6">
