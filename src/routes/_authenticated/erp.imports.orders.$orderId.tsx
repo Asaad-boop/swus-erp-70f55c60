@@ -4,7 +4,7 @@ import { useServerFn } from "@tanstack/react-start";
 import { useState } from "react";
 import {
   ArrowLeft, Truck, CheckCircle2, AlertTriangle, Wallet, Loader2,
-  PackageCheck, Receipt, Trash2, Pencil, MoreHorizontal, Boxes, Repeat, ClipboardList,
+  PackageCheck, Receipt, Trash2, Pencil, MoreHorizontal, Boxes, Repeat, ClipboardList, History,
 } from "lucide-react";
 import { toast } from "sonner";
 import { Card } from "@/components/ui/card";
@@ -38,6 +38,7 @@ import { ArrivedDialog, PaymentDialog, BulkReleaseDialog, QtyArrivedDialog, Edit
 import { QuantityReleaseCard } from "@/components/erp/imports/po-detail/quantity-release-card";
 import { EditPoDialog } from "@/components/erp/imports/po-detail/edit-po-dialog";
 import { CartonPlanDialog } from "@/components/erp/imports/po-detail/carton-plan-dialog";
+import { ActivityTimeline } from "@/components/erp/imports/po-detail/activity-timeline";
 import { NextActionBar } from "@/components/erp/imports/po-detail/next-action-bar";
 import { computePoMath } from "@/components/erp/imports/po-detail/po-math";
 
@@ -274,6 +275,9 @@ function PoDetailPage() {
             <TabsTrigger value="money" className="gap-1.5">
               <Wallet className="h-3.5 w-3.5" />Money
               {dueAmt > 0 && <span className="ml-1 h-1.5 w-1.5 rounded-full bg-orange-500" />}
+            </TabsTrigger>
+            <TabsTrigger value="activity" className="gap-1.5">
+              <History className="h-3.5 w-3.5" />Activity
             </TabsTrigger>
           </TabsList>
 
@@ -558,6 +562,11 @@ function PoDetailPage() {
                 </Table>
               )}
             </Card>
+          </TabsContent>
+
+          {/* ============ ACTIVITY ============ */}
+          <TabsContent value="activity" className="space-y-5 m-0">
+            <ActivityTimeline poId={po.id} poNumber={po.po_number} />
           </TabsContent>
         </Tabs>
 

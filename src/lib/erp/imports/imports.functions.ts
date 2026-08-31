@@ -19,6 +19,25 @@ async function assertAnyRole(
   }
 }
 
+/** Activity log — PO timeline er jonno (non-fatal) */
+async function logPoEvent(
+  supabase: any,
+  userId: string,
+  poId: string,
+  action: string,
+  details: Record<string, any>,
+) {
+  try {
+    await supabase.from("activity_log").insert({
+      entity_type: "imp_po",
+      entity_id: poId,
+      action,
+      performed_by: userId,
+      details: details as any,
+    });
+  } catch { /* non-fatal */ }
+}
+
 /* ============================================================
    DELETE Import PO (admin only — reverses payments + stock)
    ============================================================ */
@@ -720,6 +739,12 @@ export const markArrivedInBd = createServerFn({ method: "POST" })
     await assertAnyRole(context.supabase, context.userId, ["admin", "operations", "accountant"]);
     const { data: out, error } = await context.supabase.rpc("imp_mark_arrived", { _payload: data });
     if (error) throw error;
+    await logPoEvent(context.supabase, context.userId, data.po_id, "po_received_bd", {
+      group: "shipment",
+      title: "BD te arrived mark kora hoyeche",
+      detail: `${data.total_weight_kg} kg × ${data.rate_per_kg_bdt}৳/kg`,
+      amount: +(data.total_weight_kg * data.rate_per_kg_bdt).toFixed(2),
+    });
     return out;
   });
 
@@ -834,6 +859,18 @@ export const reverseImportPayment = createServerFn({ method: "POST" })
       _reason: data.reason ?? undefined,
     });
     if (error) throw error;
+    try {
+      const { data: p } = await context.supabase
+        .from("imp_payments").select("po_id, amount_bdt, payment_type").eq("id", data.payment_id).maybeSingle();
+      if (p?.po_id) {
+        await logPoEvent(context.supabase, context.userId, p.po_id, "po_payment_reversed", {
+          group: "money",
+          title: "Payment withdraw / reverse",
+          detail: [p.payment_type, data.reason].filter(Boolean).join(" · ") || null,
+          amount: Number(p.amount_bdt || 0),
+        });
+      }
+    } catch { /* non-fatal */ }
     return out;
   });
 
@@ -1004,6 +1041,12 @@ export const saveShippingCost = createServerFn({ method: "POST" })
       .eq("id", data.po_id);
     if (error) throw error;
     const recompute = await recomputeCartonCostSharesInternal(context.supabase, data.po_id);
+    await logPoEvent(context.supabase, context.userId, data.po_id, "po_shipping_saved", {
+      group: "shipment",
+      title: "Shipping bill (PO level) save",
+      detail: `${data.shipping_weight_kg} kg × ${data.shipping_rate_per_kg}৳/kg${data.other_charges_bdt ? ` + other ${data.other_charges_bdt}৳` : ""}`,
+      amount: shipping_cost_bdt,
+    });
     return { ok: true, shipping_cost_bdt, ...recompute };
   });
 
@@ -1063,6 +1106,18 @@ export const saveCartonFreight = createServerFn({ method: "POST" })
     }
 
     const recompute = await recomputeCartonCostSharesInternal(context.supabase, data.po_id);
+    await logPoEvent(
+      context.supabase, context.userId, data.po_id,
+      data.clear ? "po_carton_freight_cleared" : "po_carton_freight_saved",
+      {
+        group: "shipment",
+        title: data.clear
+          ? `${data.cartons.length} carton er freight bill remove`
+          : `${data.cartons.length} carton er shipping bill add`,
+        detail: data.note ?? null,
+        amount: data.clear ? null : +total.toFixed(2),
+      },
+    );
     return { ok: true, cartons: data.cartons.length, freight_total: +total.toFixed(2), ...recompute };
   });
 
@@ -1991,6 +2046,11 @@ export const updateImportPo = createServerFn({ method: "POST" })
       _payload: payload,
     });
     if (error) throw error;
+    await logPoEvent(context.supabase, context.userId, poId, "po_updated", {
+      group: "plan",
+      title: "PO edit kora hoyeche",
+      detail: Object.keys(payload).filter((k) => (payload as any)[k] !== undefined).join(", ") || null,
+    });
     return out as { ok: boolean; items_updated: boolean; locked: boolean };
   });
 
@@ -2016,6 +2076,10 @@ export const saveCartonPlan = createServerFn({ method: "POST" })
     await assertAnyRole(context.supabase, context.userId, ["admin", "operations", "accountant"]);
     const { data: out, error } = await context.supabase.rpc("imp_save_cartons", { _payload: data });
     if (error) throw error;
+    await logPoEvent(context.supabase, context.userId, data.po_id, "po_carton_plan_saved", {
+      group: "plan",
+      title: `Carton plan save — ${data.cartons.length} carton`,
+    });
     return out as { ok: boolean; cartons: number; total_qty: number };
   });
 
@@ -2050,5 +2114,16 @@ export const receiveQuantityBd = createServerFn({ method: "POST" })
       _payload: data as any,
     });
     if (error) throw error;
+    const shipTotal = data.shipping_total_bdt ?? +(Number(data.total_weight_kg || 0) * Number(data.rate_per_kg_bdt || 0)).toFixed(2);
+    await logPoEvent(context.supabase, context.userId, data.po_id, "po_received_bd", {
+      group: "shipment",
+      title: `BD te receive — shipping bill ${data.mode === "add" ? "add" : "set"}`,
+      detail: [
+        data.total_weight_kg ? `${data.total_weight_kg} kg × ${data.rate_per_kg_bdt ?? 0}৳/kg` : null,
+        data.customs_duty_bdt ? `customs ${data.customs_duty_bdt}৳` : null,
+        data.other_charges_bdt ? `other ${data.other_charges_bdt}৳` : null,
+      ].filter(Boolean).join(" · ") || null,
+      amount: shipTotal,
+    });
     return out as any;
   });
