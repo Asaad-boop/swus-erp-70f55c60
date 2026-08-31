@@ -562,6 +562,11 @@ function PoDetailPage() {
               )}
             </Card>
           </TabsContent>
+
+          {/* ============ ACTIVITY ============ */}
+          <TabsContent value="activity" className="space-y-5 m-0">
+            <ActivityTimeline poId={po.id} poNumber={po.po_number} />
+          </TabsContent>
         </Tabs>
 
         <CartonPlanDialog
