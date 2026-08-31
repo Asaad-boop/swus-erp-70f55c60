@@ -700,7 +700,7 @@ export const updateCartonStage = createServerFn({ method: "POST" })
   .inputValidator((d: { carton_id: string; new_stage: string; notes?: string }) =>
     z.object({
       carton_id: z.string().uuid(),
-      new_stage: z.enum(["ordered", "at_china_warehouse", "in_transit", "cancelled"]),
+      new_stage: z.enum(["ordered", "at_china_warehouse", "in_transit", "arrived_bd", "cancelled"]),
       notes: z.string().optional(),
     }).parse(d),
   )

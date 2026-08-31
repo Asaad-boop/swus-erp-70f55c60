@@ -50,7 +50,7 @@ export function NextActionBar({
   math: PoMath;
   isQtyMode: boolean;
   onCartonPlan: () => void;
-  onBulkStage: (stage: "at_china_warehouse" | "in_transit", ids: string[]) => void;
+  onBulkStage: (stage: "at_china_warehouse" | "in_transit" | "arrived_bd", ids: string[]) => void;
   onReceiveBd: () => void;
   onPayDue: () => void;
 }) {
@@ -99,7 +99,7 @@ function cartonStep({
 }: {
   po: any; cartons: any[]; math: PoMath;
   onCartonPlan: () => void;
-  onBulkStage: (stage: "at_china_warehouse" | "in_transit", ids: string[]) => void;
+  onBulkStage: (stage: "at_china_warehouse" | "in_transit" | "arrived_bd", ids: string[]) => void;
   onReceiveBd: () => void;
   onPayDue: () => void;
 }): Step {
@@ -142,9 +142,9 @@ function cartonStep({
     return {
       step: 3, tone: "indigo", Icon: Truck,
       title: `${transit.length} carton in transit — BD te pouchheche?`,
-      hint: "Shipping bill (weight × rate) diye receive korle carton gulo Arrived BD hobe.",
-      cta: { label: "Receive at BD", onClick: onReceiveBd },
-      secondary: { label: "Freight bill", onClick: () => scrollToSection("freight-section") },
+      hint: "Puro PO ekshathe hole 'Receive at BD'. Ekta ekta / partial shipment hole shudhu je carton eseche shegulo 'Arrived BD' mark korun — tarpor oi carton release kora jabe.",
+      cta: { label: `Mark ${transit.length} Arrived BD`, onClick: () => onBulkStage("arrived_bd", transit.map((c) => c.id)) },
+      secondary: { label: "Receive at BD (full PO)", onClick: onReceiveBd },
     };
   }
 
