@@ -19,6 +19,25 @@ async function assertAnyRole(
   }
 }
 
+/** Activity log — PO timeline er jonno (non-fatal) */
+async function logPoEvent(
+  supabase: any,
+  userId: string,
+  poId: string,
+  action: string,
+  details: Record<string, any>,
+) {
+  try {
+    await supabase.from("activity_log").insert({
+      entity_type: "imp_po",
+      entity_id: poId,
+      action,
+      performed_by: userId,
+      details: details as any,
+    });
+  } catch { /* non-fatal */ }
+}
+
 /* ============================================================
    DELETE Import PO (admin only — reverses payments + stock)
    ============================================================ */
