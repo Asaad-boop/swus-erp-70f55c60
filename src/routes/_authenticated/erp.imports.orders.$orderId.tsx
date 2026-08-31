@@ -419,11 +419,14 @@ function PoDetailPage() {
       </Card>
 
       {isQtyMode && (
-        <QuantityReleaseCard poId={po.id} brandId={brandId} po={po as any} items={items} releases={releases as any} payments={payments} onPayDue={() => setPaymentOpen(true)} />
+        <div id="release-section" className="scroll-mt-24">
+          <QuantityReleaseCard poId={po.id} brandId={brandId} po={po as any} items={items} releases={releases as any} payments={payments} onPayDue={() => setPaymentOpen(true)} />
+        </div>
       )}
 
       {/* Carton-wise shipping bill */}
       {!isQtyMode && cartons.length > 0 && (
+        <div id="freight-section" className="scroll-mt-24">
         <CartonFreightCard
           poId={po.id}
           poNumber={po.po_number}
