@@ -644,6 +644,8 @@ function PoDetailPage() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+      </div>
     </div>
+
   );
 }
