@@ -375,47 +375,17 @@ function PoDetailPage() {
         </div>
       )}
 
-      {/* "Goods arrived in BD?" alert — hide once any carton has reached arrived_bd or beyond */}
-      {!isQtyMode &&
-        !["arrived_bd", "partially_received", "completed", "cancelled"].includes(po.status) &&
-        !cartons.some((c: any) => ["arrived_bd", "released", "in_stock"].includes(c.status)) && (
-        <Card className="p-4 border-orange-200 bg-orange-50/50 dark:bg-orange-950/20 dark:border-orange-900/40">
-          <div className="flex items-center gap-3 flex-wrap">
-            <div className="h-10 w-10 rounded-full bg-orange-100 dark:bg-orange-900/40 flex items-center justify-center">
-              <Truck className="h-5 w-5 text-orange-600" />
-            </div>
-            <div className="flex-1 min-w-0">
-              <div className="font-semibold text-sm">Goods arrived in BD?</div>
-              <p className="text-xs text-muted-foreground">Enter shipping bill (weight × rate) — auto-distributes to cartons</p>
-            </div>
-            <Button onClick={() => setArrivedOpen(true)}><Truck className="h-4 w-4 mr-1" />Receive at BD</Button>
+      {/* Receiving bill summary — Next-action bar er porei, sudhu already received hole */}
+      {isQtyMode && brandId && ["arrived_bd", "partially_received", "completed"].includes(po.status) && (
+        <Card className="p-3 flex items-center gap-3 flex-wrap">
+          <Truck className="h-4 w-4 text-muted-foreground" />
+          <div className="flex-1 min-w-0 text-xs text-muted-foreground">
+            Received in BD · freight {fmtBdt(po.freight_cost_bdt)} · landed {fmtBdt(poMath.landedPerUnit)}/pc
           </div>
+          <Button size="sm" variant="outline" onClick={() => setQtyArrivedOpen(true)}>Edit receiving bill</Button>
         </Card>
       )}
 
-      {/* Quantity mode: goods arrived in BD */}
-      {isQtyMode && brandId && (
-        <Card className="p-4 border-orange-200 bg-orange-50/50 dark:bg-orange-950/20 dark:border-orange-900/40">
-          <div className="flex items-center gap-3 flex-wrap">
-            <div className="h-10 w-10 rounded-full bg-orange-100 dark:bg-orange-900/40 flex items-center justify-center">
-              <Truck className="h-5 w-5 text-orange-600" />
-            </div>
-            <div className="flex-1 min-w-0">
-              <div className="font-semibold text-sm">
-                {["arrived_bd", "partially_received", "completed"].includes(po.status) ? "Received in BD" : "Goods arrived in BD?"}
-              </div>
-              <p className="text-xs text-muted-foreground">
-                Shipping (kg × rate ba flat), customs, other charges din — per-piece landed cost e jabe.
-                {Number(po.freight_cost_bdt) > 0 ? ` Current freight: ${fmtBdt(po.freight_cost_bdt)}` : ""}
-              </p>
-            </div>
-            <Button variant={["arrived_bd", "partially_received", "completed"].includes(po.status) ? "outline" : "default"} onClick={() => setQtyArrivedOpen(true)}>
-              <Truck className="h-4 w-4 mr-1" />
-              {["arrived_bd", "partially_received", "completed"].includes(po.status) ? "Edit receiving bill" : "Receive at BD"}
-            </Button>
-          </div>
-        </Card>
-      )}
 
       {/* Receive mode */}
       <Card className="p-3 flex items-center gap-3 flex-wrap">
