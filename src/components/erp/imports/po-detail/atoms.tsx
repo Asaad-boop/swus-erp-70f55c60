@@ -39,11 +39,27 @@ export function SummaryBox({ tone, label, cartons, pieces }: { tone: "emerald" |
   );
 }
 
-export function BillTile({ label, value, valueClass }: { label: string; value: string; valueClass?: string }) {
+export function BillTile({
+  label,
+  value,
+  valueClass,
+  hint,
+  title,
+}: {
+  label: string;
+  value: string;
+  valueClass?: string;
+  hint?: string;
+  title?: string;
+}) {
   return (
-    <div className="rounded-md bg-background/60 border border-border/60 px-3 py-2">
-      <div className="text-[10px] tracking-wider font-semibold text-muted-foreground uppercase">{label}</div>
-      <div className={cn("font-bold tabular-nums text-sm mt-0.5", valueClass)}>{value}</div>
+    <div
+      title={title}
+      className="rounded-lg bg-background/70 border border-border/60 px-3 py-2.5 shadow-[0_1px_0_0_hsl(var(--border)/0.4)] transition-colors hover:border-border"
+    >
+      <div className="text-[10px] tracking-wider font-semibold text-muted-foreground uppercase truncate">{label}</div>
+      <div className={cn("font-bold tabular-nums text-base leading-tight mt-1", valueClass)}>{value}</div>
+      {hint && <div className="mt-0.5 text-[10px] text-muted-foreground tabular-nums truncate">{hint}</div>}
     </div>
   );
 }

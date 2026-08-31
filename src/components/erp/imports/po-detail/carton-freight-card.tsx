@@ -11,7 +11,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { cn } from "@/lib/utils";
 import { saveCartonFreight } from "@/lib/erp/imports/imports.functions";
-import { CARTON_STATUS_LABEL, fmtBdt, type ImpCartonStatus } from "@/lib/erp/imports/types";
+import { CARTON_STATUS_LABEL, fmtBdt, fmtBdtShort, type ImpCartonStatus } from "@/lib/erp/imports/types";
 import { BillTile } from "./atoms";
 
 type Draft = { weight: string; freight: string };
@@ -203,17 +203,31 @@ export function CartonFreightCard({
           Baki carton pore ashle tokhon alada bill deben; ekhane pending list-e thakbe.
         </p>
         <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mt-3">
-          <BillTile label="PO planned shipping" value={fmtBdt(plannedShipping)} />
+          <BillTile
+            label="PO planned shipping"
+            value={fmtBdtShort(plannedShipping)}
+            hint={plannedShipping >= 1000 ? fmtBdt(plannedShipping) : undefined}
+            title={fmtBdt(plannedShipping)}
+          />
           <BillTile
             label={`Billed — ${billedCartons.length} carton`}
-            value={fmtBdt(billedTotal)}
+            value={fmtBdtShort(billedTotal)}
+            hint={billedTotal >= 1000 ? fmtBdt(billedTotal) : undefined}
+            title={fmtBdt(billedTotal)}
             valueClass="text-blue-700 dark:text-blue-300"
           />
           <BillTile
             label="Pending carton (pore bill hobe)"
-            value={pendingCartons.length ? `${pendingCartons.length} — CTN ${rangeLabel(pendingCartons.map((c) => Number(c.carton_number)))}` : "0"}
+            value={pendingCartons.length ? `${pendingCartons.length} carton` : "0"}
+            hint={pendingCartons.length ? `CTN ${rangeLabel(pendingCartons.map((c) => Number(c.carton_number)))}` : undefined}
+            valueClass={pendingCartons.length ? "text-amber-700 dark:text-amber-300" : undefined}
           />
-          <BillTile label="Planned baki (unbilled share)" value={fmtBdt(remainingPlanned)} />
+          <BillTile
+            label="Planned baki (unbilled share)"
+            value={fmtBdtShort(remainingPlanned)}
+            hint={remainingPlanned >= 1000 ? fmtBdt(remainingPlanned) : undefined}
+            title={fmtBdt(remainingPlanned)}
+          />
         </div>
       </div>
 
