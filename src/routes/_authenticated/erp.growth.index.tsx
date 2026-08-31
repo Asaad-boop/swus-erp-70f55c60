@@ -533,6 +533,38 @@ function GrowthCommandCenter() {
         )}
       </div>
 
+      {/* Team workload */}
+      {teamRows.length > 0 && (
+        <Card>
+          <CardContent className="space-y-3 p-4">
+            <SectionHead title="Team workload" to="/erp/growth/tasks" cta="Task board" />
+            <div className="grid gap-2 md:grid-cols-2 xl:grid-cols-3">
+              {teamRows.map((r) => (
+                <div key={r.id} className="flex items-center justify-between gap-3 rounded-lg border px-3 py-2">
+                  <div className="min-w-0">
+                    <p className="truncate text-sm font-medium">
+                      {namesQ.data?.get(r.id) ?? "Team member"}
+                    </p>
+                    <p className="text-[11px] text-muted-foreground">
+                      {r.open} open · {r.doing} doing · {r.done7} done · 7d
+                    </p>
+                  </div>
+                  {r.overdue > 0 ? (
+                    <Badge variant="destructive" className="shrink-0 text-[10px]">
+                      {r.overdue} overdue
+                    </Badge>
+                  ) : (
+                    <Badge variant="secondary" className="shrink-0 text-[10px]">
+                      on track
+                    </Badge>
+                  )}
+                </div>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
       {/* Module pulse */}
       <div className="grid gap-3 grid-cols-2 lg:grid-cols-3 xl:grid-cols-6">
         <PulseCard to="/erp/growth/intake" icon={PackageOpen} title="Intake" value={intakeNeedsContent.length} hint="need content" />
