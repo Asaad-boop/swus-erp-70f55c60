@@ -4,7 +4,7 @@ import { useServerFn } from "@tanstack/react-start";
 import { useState } from "react";
 import {
   ArrowLeft, Truck, CheckCircle2, AlertTriangle, Wallet, Loader2,
-  PackageCheck, Receipt, Trash2, Pencil,
+  PackageCheck, Receipt, Trash2, Pencil, MoreHorizontal, Boxes, Repeat, ClipboardList,
 } from "lucide-react";
 import { toast } from "sonner";
 import { Card } from "@/components/ui/card";
@@ -12,9 +12,14 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
+import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
+import {
+  DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator,
+} from "@/components/ui/dropdown-menu";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from "@/components/ui/dialog";
 import { Table, TableHeader, TableHead, TableBody, TableRow, TableCell } from "@/components/ui/table";
 import { Progress } from "@/components/ui/progress";
+
 import {
   getPurchaseOrderDetail, updateCartonStage, deleteImportPo, setPoReceiveMode,
 } from "@/lib/erp/imports/imports.functions";
