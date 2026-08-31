@@ -275,6 +275,9 @@ function PoDetailPage() {
               <Wallet className="h-3.5 w-3.5" />Money
               {dueAmt > 0 && <span className="ml-1 h-1.5 w-1.5 rounded-full bg-orange-500" />}
             </TabsTrigger>
+            <TabsTrigger value="activity" className="gap-1.5">
+              <History className="h-3.5 w-3.5" />Activity
+            </TabsTrigger>
           </TabsList>
 
           {/* ============ OVERVIEW ============ */}
