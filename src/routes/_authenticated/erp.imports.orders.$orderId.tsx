@@ -202,7 +202,36 @@ function PoDetailPage() {
         </div>
       </Card>
 
+      {/* Next action — ekhon ki korte hobe */}
+      <NextActionBar
+        po={po}
+        cartons={cartons}
+        math={poMath}
+        isQtyMode={isQtyMode}
+        onCartonPlan={() => setCartonPlanOpen(true)}
+        onBulkStage={async (stage, ids) => {
+          try {
+            await Promise.all(ids.map((id) => stageFn({ data: { carton_id: id, new_stage: stage, idempotency_key: newIdemKey("stage") } as any })));
+            toast.success(`${ids.length} carton moved`);
+            qc.invalidateQueries({ queryKey: ["imp-po", orderId] });
+          } catch (e: any) { toast.error(e?.message ?? "Failed"); }
+        }}
+        onReceiveBd={() => (isQtyMode ? setQtyArrivedOpen(true) : setArrivedOpen(true))}
+        onPayDue={() => setPaymentOpen(true)}
+      />
+
+      {poMath.totalsMismatch && (
+        <Card className="p-3 border-amber-300 bg-amber-50/60 dark:bg-amber-950/20 dark:border-amber-900/50 text-xs text-amber-800 dark:text-amber-200 flex items-center gap-2">
+          <AlertTriangle className="h-4 w-4 shrink-0" />
+          <span>
+            PO grand total ar line total + charges er moddhe <span className="font-mono font-semibold">{fmtBdt(Math.abs(poMath.mismatchAmount))}</span> difference —
+            Edit PO the ke charges/quantity milie nin.
+          </span>
+        </Card>
+      )}
+
       {/* Order Pipeline */}
+
       {!isQtyMode && (
       <Card className="p-5">
         <div className="flex items-start justify-between mb-4 flex-wrap gap-2">
