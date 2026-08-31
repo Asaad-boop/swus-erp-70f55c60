@@ -238,14 +238,30 @@ export function CartonFreightCard({
             <Receipt className="h-3.5 w-3.5" /> Shipping bills ({bills.length})
           </div>
           {bills.map((b) => (
-            <div key={b.key} className="flex flex-wrap items-center gap-2 rounded-md border bg-background/70 px-2.5 py-1.5 text-xs">
+            <div
+              key={b.key}
+              className="flex flex-wrap items-center gap-x-2.5 gap-y-1 rounded-lg border border-blue-100 bg-background/80 px-3 py-2 text-xs shadow-sm dark:border-blue-900/40"
+            >
               <CheckCircle2 className="h-3.5 w-3.5 text-blue-600 shrink-0" />
               <Badge className="bg-blue-600 text-white hover:bg-blue-600 text-[10px] px-1.5">Bill #{b.no}</Badge>
-              <span className="font-semibold tabular-nums">{fmtBdt(b.total)}</span>
-              <span className="text-muted-foreground">·</span>
+              <span
+                className="text-sm font-bold tabular-nums text-blue-700 dark:text-blue-300"
+                title={fmtBdt(b.total)}
+              >
+                {fmtBdtShort(b.total)}
+              </span>
+              <span className="text-muted-foreground/60">·</span>
               <span className="font-medium">{b.nums.length} carton</span>
               <Badge variant="outline" className="font-mono text-[10px]">CTN {rangeLabel(b.nums)}</Badge>
-              {b.kg > 0 && <span className="text-muted-foreground tabular-nums">{b.kg.toFixed(2)} kg</span>}
+              {b.kg > 0 && (
+                <span className="tabular-nums text-muted-foreground">
+                  {b.kg.toFixed(2)} kg
+                  <span className="text-muted-foreground/70"> · ≈{fmtBdt(+(b.total / b.kg).toFixed(2))}/kg</span>
+                </span>
+              )}
+              {b.kg <= 0 && (
+                <span className="text-[10px] italic text-amber-600 dark:text-amber-400">kg deya hoy nai</span>
+              )}
               {b.note && <span className="truncate text-muted-foreground">“{b.note}”</span>}
               {b.at && (
                 <span className="ml-auto text-[10px] text-muted-foreground">
