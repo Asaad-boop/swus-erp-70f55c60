@@ -178,10 +178,6 @@ function GrowthCommandCenter() {
     () => (liveMedia.length ? liveMedia : mediaPlans.slice(0, 4)).slice(0, 5).map((p) => ({ plan: p, econ: mediaPlanEconomics(p) })),
     [liveMedia, mediaPlans],
   );
-  const liveBudget = (liveMedia.length ? liveMedia : []).reduce(
-    (s, p) => s + mediaPlanEconomics(p).totalBudget,
-    0,
-  );
 
   /* ---------------- People & market ---------------- */
   const activeCreators = creators.filter((c) => c.status === "active" || c.negotiation_status === "working");
