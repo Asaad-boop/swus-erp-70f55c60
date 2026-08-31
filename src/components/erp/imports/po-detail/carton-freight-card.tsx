@@ -11,7 +11,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { cn } from "@/lib/utils";
 import { saveCartonFreight } from "@/lib/erp/imports/imports.functions";
-import { CARTON_STATUS_LABEL, fmtBdt, type ImpCartonStatus } from "@/lib/erp/imports/types";
+import { CARTON_STATUS_LABEL, fmtBdt, fmtBdtShort, type ImpCartonStatus } from "@/lib/erp/imports/types";
 import { BillTile } from "./atoms";
 
 type Draft = { weight: string; freight: string };
@@ -203,17 +203,31 @@ export function CartonFreightCard({
           Baki carton pore ashle tokhon alada bill deben; ekhane pending list-e thakbe.
         </p>
         <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mt-3">
-          <BillTile label="PO planned shipping" value={fmtBdt(plannedShipping)} />
+          <BillTile
+            label="PO planned shipping"
+            value={fmtBdtShort(plannedShipping)}
+            hint={plannedShipping >= 1000 ? fmtBdt(plannedShipping) : undefined}
+            title={fmtBdt(plannedShipping)}
+          />
           <BillTile
             label={`Billed — ${billedCartons.length} carton`}
-            value={fmtBdt(billedTotal)}
+            value={fmtBdtShort(billedTotal)}
+            hint={billedTotal >= 1000 ? fmtBdt(billedTotal) : undefined}
+            title={fmtBdt(billedTotal)}
             valueClass="text-blue-700 dark:text-blue-300"
           />
           <BillTile
             label="Pending carton (pore bill hobe)"
-            value={pendingCartons.length ? `${pendingCartons.length} — CTN ${rangeLabel(pendingCartons.map((c) => Number(c.carton_number)))}` : "0"}
+            value={pendingCartons.length ? `${pendingCartons.length} carton` : "0"}
+            hint={pendingCartons.length ? `CTN ${rangeLabel(pendingCartons.map((c) => Number(c.carton_number)))}` : undefined}
+            valueClass={pendingCartons.length ? "text-amber-700 dark:text-amber-300" : undefined}
           />
-          <BillTile label="Planned baki (unbilled share)" value={fmtBdt(remainingPlanned)} />
+          <BillTile
+            label="Planned baki (unbilled share)"
+            value={fmtBdtShort(remainingPlanned)}
+            hint={remainingPlanned >= 1000 ? fmtBdt(remainingPlanned) : undefined}
+            title={fmtBdt(remainingPlanned)}
+          />
         </div>
       </div>
 
@@ -224,14 +238,30 @@ export function CartonFreightCard({
             <Receipt className="h-3.5 w-3.5" /> Shipping bills ({bills.length})
           </div>
           {bills.map((b) => (
-            <div key={b.key} className="flex flex-wrap items-center gap-2 rounded-md border bg-background/70 px-2.5 py-1.5 text-xs">
+            <div
+              key={b.key}
+              className="flex flex-wrap items-center gap-x-2.5 gap-y-1 rounded-lg border border-blue-100 bg-background/80 px-3 py-2 text-xs shadow-sm dark:border-blue-900/40"
+            >
               <CheckCircle2 className="h-3.5 w-3.5 text-blue-600 shrink-0" />
               <Badge className="bg-blue-600 text-white hover:bg-blue-600 text-[10px] px-1.5">Bill #{b.no}</Badge>
-              <span className="font-semibold tabular-nums">{fmtBdt(b.total)}</span>
-              <span className="text-muted-foreground">·</span>
+              <span
+                className="text-sm font-bold tabular-nums text-blue-700 dark:text-blue-300"
+                title={fmtBdt(b.total)}
+              >
+                {fmtBdtShort(b.total)}
+              </span>
+              <span className="text-muted-foreground/60">·</span>
               <span className="font-medium">{b.nums.length} carton</span>
               <Badge variant="outline" className="font-mono text-[10px]">CTN {rangeLabel(b.nums)}</Badge>
-              {b.kg > 0 && <span className="text-muted-foreground tabular-nums">{b.kg.toFixed(2)} kg</span>}
+              {b.kg > 0 && (
+                <span className="tabular-nums text-muted-foreground">
+                  {b.kg.toFixed(2)} kg
+                  <span className="text-muted-foreground/70"> · ≈{fmtBdt(+(b.total / b.kg).toFixed(2))}/kg</span>
+                </span>
+              )}
+              {b.kg <= 0 && (
+                <span className="text-[10px] italic text-amber-600 dark:text-amber-400">kg deya hoy nai</span>
+              )}
               {b.note && <span className="truncate text-muted-foreground">“{b.note}”</span>}
               {b.at && (
                 <span className="ml-auto text-[10px] text-muted-foreground">
