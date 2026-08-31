@@ -2076,6 +2076,10 @@ export const saveCartonPlan = createServerFn({ method: "POST" })
     await assertAnyRole(context.supabase, context.userId, ["admin", "operations", "accountant"]);
     const { data: out, error } = await context.supabase.rpc("imp_save_cartons", { _payload: data });
     if (error) throw error;
+    await logPoEvent(context.supabase, context.userId, data.po_id, "po_carton_plan_saved", {
+      group: "plan",
+      title: `Carton plan save — ${data.cartons.length} carton`,
+    });
     return out as { ok: boolean; cartons: number; total_qty: number };
   });
 
