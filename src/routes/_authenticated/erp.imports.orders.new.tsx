@@ -205,6 +205,36 @@ function NewPoPage() {
       return { ...c, allocations: next };
     }));
 
+  /** Change which product a carton line points to (keeps qty; defaults to remaining). */
+  const moveAlloc = (cartonId: string, oldKey: string, newKey: string) =>
+    setCartons((cs) => cs.map((c) => {
+      if (c.id !== cartonId) return c;
+      const next = { ...c.allocations };
+      const qty = oldKey ? next[oldKey] ?? 0 : 0;
+      if (oldKey) delete next[oldKey];
+      const leaf = leaves.find((l) => l.key === newKey);
+      const allocatedElsewhere = cartons.reduce(
+        (s, x) => s + (x.id === cartonId ? 0 : Number(x.allocations[newKey] ?? 0)), 0,
+      );
+      const remaining = Math.max(0, (leaf?.qty ?? 0) - allocatedElsewhere);
+      next[newKey] = qty > 0 ? Math.min(qty, remaining) : remaining;
+      return { ...c, allocations: next };
+    }));
+
+  /** Add an empty extra line to a carton (mixed carton). */
+  const addAllocRow = (cartonId: string) =>
+    setCartons((cs) => cs.map((c) => {
+      if (c.id !== cartonId) return c;
+      const free = leaves.find((l) => c.allocations[l.key] === undefined);
+      if (!free) return c;
+      const allocatedElsewhere = cs.reduce(
+        (s, x) => s + (x.id === cartonId ? 0 : Number(x.allocations[free.key] ?? 0)), 0,
+      );
+      const remaining = Math.max(0, free.qty - allocatedElsewhere);
+      return { ...c, allocations: { ...c.allocations, [free.key]: remaining } };
+    }));
+
+
   /** Sequential fill: each carton gets ONE product as much as possible (mixed only at boundaries). */
   const autoSplit = () => {
     if (cartons.length === 0) return;
