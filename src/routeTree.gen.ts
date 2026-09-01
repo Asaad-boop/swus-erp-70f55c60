@@ -105,6 +105,7 @@ import { Route as AuthenticatedErpMarketingAlertsRouteImport } from './routes/_a
 import { Route as AuthenticatedErpInventoryHealthRouteImport } from './routes/_authenticated/erp.inventory.health'
 import { Route as AuthenticatedErpImportsSettingsRouteImport } from './routes/_authenticated/erp.imports.settings'
 import { Route as AuthenticatedErpImportsReportsRouteImport } from './routes/_authenticated/erp.imports.reports'
+import { Route as AuthenticatedErpImportsIncomingRouteImport } from './routes/_authenticated/erp.imports.incoming'
 import { Route as AuthenticatedErpImportsAgentsRouteImport } from './routes/_authenticated/erp.imports.agents'
 import { Route as AuthenticatedErpHubSplatRouteImport } from './routes/_authenticated/erp.hub.$'
 import { Route as AuthenticatedErpHrSettingsRouteImport } from './routes/_authenticated/erp.hr.settings'
@@ -701,6 +702,12 @@ const AuthenticatedErpImportsReportsRoute =
     path: '/reports',
     getParentRoute: () => AuthenticatedErpImportsRoute,
   } as any)
+const AuthenticatedErpImportsIncomingRoute =
+  AuthenticatedErpImportsIncomingRouteImport.update({
+    id: '/incoming',
+    path: '/incoming',
+    getParentRoute: () => AuthenticatedErpImportsRoute,
+  } as any)
 const AuthenticatedErpImportsAgentsRoute =
   AuthenticatedErpImportsAgentsRouteImport.update({
     id: '/agents',
@@ -1035,6 +1042,7 @@ export interface FileRoutesByFullPath {
   '/erp/hr/settings': typeof AuthenticatedErpHrSettingsRoute
   '/erp/hub/$': typeof AuthenticatedErpHubSplatRoute
   '/erp/imports/agents': typeof AuthenticatedErpImportsAgentsRoute
+  '/erp/imports/incoming': typeof AuthenticatedErpImportsIncomingRoute
   '/erp/imports/reports': typeof AuthenticatedErpImportsReportsRoute
   '/erp/imports/settings': typeof AuthenticatedErpImportsSettingsRoute
   '/erp/inventory/health': typeof AuthenticatedErpInventoryHealthRoute
@@ -1165,6 +1173,7 @@ export interface FileRoutesByTo {
   '/erp/hr/settings': typeof AuthenticatedErpHrSettingsRoute
   '/erp/hub/$': typeof AuthenticatedErpHubSplatRoute
   '/erp/imports/agents': typeof AuthenticatedErpImportsAgentsRoute
+  '/erp/imports/incoming': typeof AuthenticatedErpImportsIncomingRoute
   '/erp/imports/reports': typeof AuthenticatedErpImportsReportsRoute
   '/erp/imports/settings': typeof AuthenticatedErpImportsSettingsRoute
   '/erp/inventory/health': typeof AuthenticatedErpInventoryHealthRoute
@@ -1307,6 +1316,7 @@ export interface FileRoutesById {
   '/_authenticated/erp/hr/settings': typeof AuthenticatedErpHrSettingsRoute
   '/_authenticated/erp/hub/$': typeof AuthenticatedErpHubSplatRoute
   '/_authenticated/erp/imports/agents': typeof AuthenticatedErpImportsAgentsRoute
+  '/_authenticated/erp/imports/incoming': typeof AuthenticatedErpImportsIncomingRoute
   '/_authenticated/erp/imports/reports': typeof AuthenticatedErpImportsReportsRoute
   '/_authenticated/erp/imports/settings': typeof AuthenticatedErpImportsSettingsRoute
   '/_authenticated/erp/inventory/health': typeof AuthenticatedErpInventoryHealthRoute
@@ -1449,6 +1459,7 @@ export interface FileRouteTypes {
     | '/erp/hr/settings'
     | '/erp/hub/$'
     | '/erp/imports/agents'
+    | '/erp/imports/incoming'
     | '/erp/imports/reports'
     | '/erp/imports/settings'
     | '/erp/inventory/health'
@@ -1579,6 +1590,7 @@ export interface FileRouteTypes {
     | '/erp/hr/settings'
     | '/erp/hub/$'
     | '/erp/imports/agents'
+    | '/erp/imports/incoming'
     | '/erp/imports/reports'
     | '/erp/imports/settings'
     | '/erp/inventory/health'
@@ -1720,6 +1732,7 @@ export interface FileRouteTypes {
     | '/_authenticated/erp/hr/settings'
     | '/_authenticated/erp/hub/$'
     | '/_authenticated/erp/imports/agents'
+    | '/_authenticated/erp/imports/incoming'
     | '/_authenticated/erp/imports/reports'
     | '/_authenticated/erp/imports/settings'
     | '/_authenticated/erp/inventory/health'
@@ -2485,6 +2498,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedErpImportsReportsRouteImport
       parentRoute: typeof AuthenticatedErpImportsRoute
     }
+    '/_authenticated/erp/imports/incoming': {
+      id: '/_authenticated/erp/imports/incoming'
+      path: '/incoming'
+      fullPath: '/erp/imports/incoming'
+      preLoaderRoute: typeof AuthenticatedErpImportsIncomingRouteImport
+      parentRoute: typeof AuthenticatedErpImportsRoute
+    }
     '/_authenticated/erp/imports/agents': {
       id: '/_authenticated/erp/imports/agents'
       path: '/agents'
@@ -2918,6 +2938,7 @@ const AuthenticatedErpHrRouteWithChildren =
 
 interface AuthenticatedErpImportsRouteChildren {
   AuthenticatedErpImportsAgentsRoute: typeof AuthenticatedErpImportsAgentsRoute
+  AuthenticatedErpImportsIncomingRoute: typeof AuthenticatedErpImportsIncomingRoute
   AuthenticatedErpImportsReportsRoute: typeof AuthenticatedErpImportsReportsRoute
   AuthenticatedErpImportsSettingsRoute: typeof AuthenticatedErpImportsSettingsRoute
   AuthenticatedErpImportsIndexRoute: typeof AuthenticatedErpImportsIndexRoute
@@ -2929,6 +2950,7 @@ interface AuthenticatedErpImportsRouteChildren {
 const AuthenticatedErpImportsRouteChildren: AuthenticatedErpImportsRouteChildren =
   {
     AuthenticatedErpImportsAgentsRoute: AuthenticatedErpImportsAgentsRoute,
+    AuthenticatedErpImportsIncomingRoute: AuthenticatedErpImportsIncomingRoute,
     AuthenticatedErpImportsReportsRoute: AuthenticatedErpImportsReportsRoute,
     AuthenticatedErpImportsSettingsRoute: AuthenticatedErpImportsSettingsRoute,
     AuthenticatedErpImportsIndexRoute: AuthenticatedErpImportsIndexRoute,
