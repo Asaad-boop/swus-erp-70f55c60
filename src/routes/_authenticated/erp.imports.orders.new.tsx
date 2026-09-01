@@ -205,21 +205,62 @@ function NewPoPage() {
       return { ...c, allocations: next };
     }));
 
+  /** Change which product a carton line points to (keeps qty; defaults to remaining). */
+  const moveAlloc = (cartonId: string, oldKey: string, newKey: string) =>
+    setCartons((cs) => cs.map((c) => {
+      if (c.id !== cartonId) return c;
+      const next = { ...c.allocations };
+      const qty = oldKey ? next[oldKey] ?? 0 : 0;
+      if (oldKey) delete next[oldKey];
+      const leaf = leaves.find((l) => l.key === newKey);
+      const allocatedElsewhere = cartons.reduce(
+        (s, x) => s + (x.id === cartonId ? 0 : Number(x.allocations[newKey] ?? 0)), 0,
+      );
+      const remaining = Math.max(0, (leaf?.qty ?? 0) - allocatedElsewhere);
+      next[newKey] = qty > 0 ? Math.min(qty, remaining) : remaining;
+      return { ...c, allocations: next };
+    }));
+
+  /** Add an empty extra line to a carton (mixed carton). */
+  const addAllocRow = (cartonId: string) =>
+    setCartons((cs) => cs.map((c) => {
+      if (c.id !== cartonId) return c;
+      const free = leaves.find((l) => c.allocations[l.key] === undefined);
+      if (!free) return c;
+      const allocatedElsewhere = cs.reduce(
+        (s, x) => s + (x.id === cartonId ? 0 : Number(x.allocations[free.key] ?? 0)), 0,
+      );
+      const remaining = Math.max(0, free.qty - allocatedElsewhere);
+      return { ...c, allocations: { ...c.allocations, [free.key]: remaining } };
+    }));
+
+
+  /** Sequential fill: each carton gets ONE product as much as possible (mixed only at boundaries). */
   const autoSplit = () => {
     if (cartons.length === 0) return;
-    setCartons((cs) =>
-      cs.map((c, ci) => {
-        const newAlloc: Record<string, number> = {};
-        leaves.forEach((l) => {
-          const base = Math.floor(l.qty / cs.length);
-          const rem = l.qty - base * cs.length;
-          const share = base + (ci < rem ? 1 : 0);
-          if (share > 0) newAlloc[l.key] = share;
-        });
-        return { ...c, allocations: newAlloc };
-      }),
+    const n = cartons.length;
+    const totalUnitsAll = leaves.reduce((s, l) => s + l.qty, 0);
+    if (totalUnitsAll <= 0) return;
+    const caps = Array.from({ length: n }, (_, i) =>
+      Math.floor(totalUnitsAll / n) + (i < totalUnitsAll % n ? 1 : 0),
     );
+    const allocs: Record<string, number>[] = Array.from({ length: n }, () => ({}));
+    let ci = 0;
+    for (const l of leaves) {
+      let left = l.qty;
+      while (left > 0 && ci < n) {
+        const room = caps[ci];
+        if (room <= 0) { ci++; continue; }
+        const take = Math.min(room, left);
+        allocs[ci][l.key] = (allocs[ci][l.key] ?? 0) + take;
+        caps[ci] -= take;
+        left -= take;
+        if (caps[ci] === 0) ci++;
+      }
+    }
+    setCartons((cs) => cs.map((c, i) => ({ ...c, allocations: allocs[i] ?? {} })));
   };
+
 
   const submitMut = useMutation({
     mutationFn: async () => {
@@ -629,50 +670,87 @@ function NewPoPage() {
                       </Button>
                     </div>
                   </div>
-                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-2">
-                    {leaves.map((l) => {
-                      const alloc = c.allocations[l.key] ?? 0;
-                      const over = alloc > l.qty;
-                      return (
-                        <div
-                          key={l.key}
-                          className={cn(
-                            "flex items-center gap-2 text-xs p-1.5 rounded border bg-background/60",
-                            over ? "border-red-300" : "border-border/60",
-                          )}
-                        >
-                          {l.image ? (
-                            <img src={l.image} alt="" className="h-9 w-9 rounded object-cover flex-shrink-0 border border-border" />
-                          ) : (
-                            <div className="h-9 w-9 rounded bg-muted flex items-center justify-center flex-shrink-0 border border-dashed border-border">
-                              <Package className="h-4 w-4 text-muted-foreground/60" />
-                            </div>
-                          )}
-                          <div className="flex-1 min-w-0">
-                            <div className="truncate font-medium flex items-center gap-1.5">
-                              {l.variantLabel && (
-                                <span
-                                  className="h-3 w-3 rounded-sm border border-border shrink-0"
-                                  style={{ background: l.variantHex || "#e5e7eb" }}
-                                />
+                  {(() => {
+                    const rows = Object.keys(c.allocations);
+                    const display = rows.length ? rows : [""];
+                    return (
+                      <div className="space-y-2">
+                        {display.map((key, ri) => {
+                          const leaf = leaves.find((l) => l.key === key);
+                          const qty = key ? c.allocations[key] ?? 0 : 0;
+                          const remainingForLeaf = leaf ? leaf.qty - (totalAllocated[leaf.key] ?? 0) + qty : 0;
+                          const over = leaf ? qty > remainingForLeaf : false;
+                          return (
+                            <div key={key || `empty-${ri}`} className="flex items-center gap-2 flex-wrap rounded border border-border/60 bg-background/60 p-2">
+                              {leaf?.image ? (
+                                <img src={leaf.image} alt="" className="h-10 w-10 rounded object-cover border border-border" />
+                              ) : (
+                                <div className="h-10 w-10 rounded bg-muted flex items-center justify-center border border-dashed border-border">
+                                  <Package className="h-4 w-4 text-muted-foreground/60" />
+                                </div>
                               )}
-                              <span className="truncate">{l.title}</span>
+                              <Select
+                                value={key || undefined}
+                                onValueChange={(nk) => moveAlloc(c.id, key, nk)}
+                              >
+                                <SelectTrigger className="h-9 flex-1 min-w-[200px] text-xs">
+                                  <SelectValue placeholder="Select product / color for this carton" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                  {leaves.map((l) => {
+                                    const rem = l.qty - (totalAllocated[l.key] ?? 0) + (l.key === key ? qty : 0);
+                                    const used = l.key !== key && c.allocations[l.key] !== undefined;
+                                    return (
+                                      <SelectItem key={l.key} value={l.key} disabled={used}>
+                                        <span className="inline-flex items-center gap-2">
+                                          {l.variantLabel && (
+                                            <span className="h-3 w-3 rounded-sm border border-border" style={{ background: l.variantHex || "#e5e7eb" }} />
+                                          )}
+                                          <span>{l.title}{l.variantLabel ? ` — ${l.variantLabel}` : ""}</span>
+                                          <span className="text-[10px] text-muted-foreground tabular-nums">({rem} left)</span>
+                                        </span>
+                                      </SelectItem>
+                                    );
+                                  })}
+                                </SelectContent>
+                              </Select>
+                              <div className="flex items-center gap-1.5">
+                                <Label className="text-[11px] text-muted-foreground">Qty</Label>
+                                <Input
+                                  type="number" min={0}
+                                  disabled={!leaf}
+                                  className={cn("w-24 h-9 text-right tabular-nums", over && "border-red-400 text-red-600")}
+                                  value={qty || ""}
+                                  placeholder="0"
+                                  onChange={(e) => key && setAlloc(c.id, key, Number(e.target.value) || 0)}
+                                />
+                                {leaf && (
+                                  <Button
+                                    size="sm" variant="ghost" className="h-8 px-2 text-[11px]"
+                                    onClick={() => setAlloc(c.id, key, remainingForLeaf)}
+                                    title="Fill all remaining pieces of this product into this carton"
+                                  >
+                                    All {remainingForLeaf}
+                                  </Button>
+                                )}
+                                {leaf && (
+                                  <Button size="icon" variant="ghost" className="h-8 w-8" onClick={() => setAlloc(c.id, key, 0)}>
+                                    <Trash2 className="h-3.5 w-3.5 text-red-500" />
+                                  </Button>
+                                )}
+                              </div>
                             </div>
-                            <div className="text-[10px] text-muted-foreground tabular-nums truncate">
-                              {l.variantLabel ? `${l.variantLabel} · ` : ""}of {l.qty}
-                            </div>
-                          </div>
-                          <Input
-                            type="number" min={0} max={l.qty}
-                            className={cn("w-16 h-8 text-right tabular-nums", over && "border-red-400 text-red-600")}
-                            value={alloc || ""}
-                            placeholder="0"
-                            onChange={(e) => setAlloc(c.id, l.key, Number(e.target.value) || 0)}
-                          />
-                        </div>
-                      );
-                    })}
-                  </div>
+                          );
+                        })}
+                        {leaves.length > 1 && rows.length > 0 && rows.length < leaves.length && (
+                          <Button size="sm" variant="ghost" className="h-7 text-[11px]" onClick={() => addAllocRow(c.id)}>
+                            <Plus className="h-3 w-3 mr-1" /> Add another product to this carton
+                          </Button>
+                        )}
+                      </div>
+                    );
+                  })()}
+
                 </div>
               ))}
             </div>
