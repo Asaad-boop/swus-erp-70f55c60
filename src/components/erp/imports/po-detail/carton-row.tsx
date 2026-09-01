@@ -126,9 +126,42 @@ export function CartonRow({ carton, poId, poNumber, poItems, brandId, poDue, poP
           </span>
         )}
         <Badge variant="secondary" className={cn("font-medium", meta?.tone)}>{meta?.label}</Badge>
+        {/* Product thumbnails — collapsed row e ki product ache ek nojore */}
+        {(() => {
+          const imgs = (carton.items ?? [])
+            .map((it: any) => ({ src: it.variant?.image || it.product?.image, label: it.variant?.color_name || it.product?.title }))
+            .filter((x: any) => x.src);
+          if (imgs.length === 0) return null;
+          return (
+            <div className="flex items-center">
+              {imgs.slice(0, 3).map((im: any, i: number) => (
+                <img
+                  key={i}
+                  src={im.src}
+                  alt={im.label ?? ""}
+                  title={im.label ?? ""}
+                  className={cn("h-9 w-9 rounded-md object-cover border-2 border-background shadow-sm", i > 0 && "-ml-2.5")}
+                />
+              ))}
+              {imgs.length > 3 && (
+                <span className="-ml-2.5 h-9 w-9 rounded-md border-2 border-background bg-muted text-[10px] font-medium flex items-center justify-center">
+                  +{imgs.length - 3}
+                </span>
+              )}
+            </div>
+          );
+        })()}
         <div className="flex-1 min-w-0">
           <div className="font-mono text-sm font-semibold">{poNumber}-C{carton.carton_number}</div>
-          <div className="text-[11px] text-muted-foreground">{carton.expected_quantity} pcs · landed {fmtBdt(carton.total_landed_bdt)}</div>
+          <div className="text-[11px] text-muted-foreground truncate">
+            {carton.expected_quantity} pcs · landed {fmtBdt(carton.total_landed_bdt)}
+            {(carton.items ?? []).length > 0 && (
+              <span className="hidden sm:inline">
+                {" · "}
+                {(carton.items ?? []).map((it: any) => it.variant?.color_name || it.product?.title).filter(Boolean).slice(0, 2).join(", ")}
+              </span>
+            )}
+          </div>
         </div>
         {hasDue && (
           <Badge variant="secondary" className="bg-orange-100 text-orange-700 border-orange-300 dark:bg-orange-950/40 dark:text-orange-300">
