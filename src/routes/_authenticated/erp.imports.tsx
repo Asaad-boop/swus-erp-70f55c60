@@ -1,5 +1,5 @@
 import { createFileRoute, Link, Outlet, useLocation } from "@tanstack/react-router";
-import { LayoutDashboard, ListOrdered, BarChart3, Settings as SettingsIcon, Container, Truck } from "lucide-react";
+import { LayoutDashboard, ListOrdered, BarChart3, Settings as SettingsIcon, Container, Truck, PackageSearch } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 export const Route = createFileRoute("/_authenticated/erp/imports")({
@@ -10,10 +10,12 @@ export const Route = createFileRoute("/_authenticated/erp/imports")({
 const tabs = [
   { to: "/erp/imports", label: "Dashboard", icon: LayoutDashboard, exact: true },
   { to: "/erp/imports/orders", label: "Purchase Orders", icon: ListOrdered },
+  { to: "/erp/imports/incoming", label: "Incoming & QC", icon: PackageSearch },
   { to: "/erp/imports/agents", label: "Cargo Agents", icon: Truck },
   { to: "/erp/imports/reports", label: "Reports", icon: BarChart3 },
   { to: "/erp/imports/settings", label: "Settings", icon: SettingsIcon },
 ];
+
 
 function ImportsLayout() {
   const location = useLocation();

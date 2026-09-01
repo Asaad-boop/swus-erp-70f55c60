@@ -2127,3 +2127,73 @@ export const receiveQuantityBd = createServerFn({ method: "POST" })
     });
     return out as any;
   });
+
+/* ============================================================
+   Incoming pipeline — released kintu ekhono QC hoy nai
+   ============================================================ */
+export const listIncomingReleases = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d: { brandIds?: string[] }) =>
+    z.object({ brandIds: z.array(z.string().uuid()).optional() }).parse(d ?? {}),
+  )
+  .handler(async ({ data, context }) => {
+    let q = context.supabase
+      .from("imp_po_releases")
+      .select(`
+        id, po_id, brand_id, release_number, released_at, notes, warehouse_id,
+        local_courier_bdt, local_courier_source, local_delivery_bdt,
+        shipping_charge_bdt, shipping_weight_kg, shipping_rate_per_kg,
+        qc_status, qc_at, qc_notes,
+        po:po_id ( id, po_number, status, order_date ),
+        items:imp_po_release_items ( id, po_item_id, product_id, variant_id, sku_snapshot,
+          quantity, damaged_qty, missing_qty, unit_landed_cost_bdt, final_unit_cost_bdt,
+          qc_good_qty, qc_damaged_qty, qc_extra_qty,
+          product:product_id ( id, title, image, sku ),
+          variant:variant_id ( id, sku, color_name, color_hex, image ) )
+      `)
+      .or("qc_status.is.null,qc_status.neq.done")
+      .order("released_at", { ascending: false })
+      .limit(300);
+    if (data.brandIds?.length) q = q.in("brand_id", data.brandIds);
+    const { data: rows, error } = await q;
+    if (error) throw error;
+
+    const releases = (rows ?? []) as any[];
+    const poIds = Array.from(new Set(releases.map((r) => r.po_id)));
+    if (poIds.length === 0) return { releases: [], progress: {} as Record<string, any> };
+
+    const [itemsRes, allRelRes] = await Promise.all([
+      context.supabase
+        .from("imp_po_items")
+        .select("id, po_id, quantity, name_snapshot, sku_snapshot")
+        .in("po_id", poIds),
+      context.supabase
+        .from("imp_po_releases")
+        .select("id, po_id, items:imp_po_release_items ( po_item_id, quantity, damaged_qty, missing_qty )")
+        .in("po_id", poIds),
+    ]);
+    if (itemsRes.error) throw itemsRes.error;
+    if (allRelRes.error) throw allRelRes.error;
+
+    const releasedByItem: Record<string, number> = {};
+    for (const r of (allRelRes.data ?? []) as any[]) {
+      for (const it of r.items ?? []) {
+        releasedByItem[it.po_item_id] =
+          (releasedByItem[it.po_item_id] ?? 0) +
+          Number(it.quantity ?? 0) + Number(it.damaged_qty ?? 0) + Number(it.missing_qty ?? 0);
+      }
+    }
+
+    const progress: Record<string, { ordered: number; released: number; remaining: number; byItem: Record<string, { ordered: number; released: number }> }> = {};
+    for (const it of (itemsRes.data ?? []) as any[]) {
+      const p = (progress[it.po_id] ??= { ordered: 0, released: 0, remaining: 0, byItem: {} });
+      const ordered = Number(it.quantity ?? 0);
+      const rel = releasedByItem[it.id] ?? 0;
+      p.ordered += ordered;
+      p.released += rel;
+      p.remaining = Math.max(0, p.ordered - p.released);
+      p.byItem[it.id] = { ordered, released: rel };
+    }
+
+    return { releases, progress };
+  });
