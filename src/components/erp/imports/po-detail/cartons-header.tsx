@@ -1,4 +1,4 @@
-import { Package, Send, Pencil } from "lucide-react";
+import { Package, Send, Pencil, Wand2 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -6,13 +6,14 @@ import { fmtBdt, type ImpCartonStatus } from "@/lib/erp/imports/types";
 import { BillTile } from "./atoms";
 
 export function CartonsHeader({
-  cartons, selected, setSelected, onBulkStage, onBulkRelease, poPaid, poSupplierTotal, onEditPlan,
+  cartons, selected, setSelected, onBulkStage, onBulkRelease, onOpenWizard, poPaid, poSupplierTotal, onEditPlan,
 }: {
   cartons: any[];
   selected: Set<string>;
   setSelected: (s: Set<string>) => void;
   onBulkStage: (s: ImpCartonStatus) => void;
   onBulkRelease: () => void;
+  onOpenWizard?: () => void;
   poPaid: number;
   poSupplierTotal: number;
   onEditPlan?: () => void;
@@ -56,6 +57,12 @@ export function CartonsHeader({
             <div className="text-xs text-muted-foreground hidden md:block">
               Select cartons to bulk update stage or release
             </div>
+          )}
+          {onOpenWizard && cartons.length > 0 && (
+            <Button size="sm" onClick={onOpenWizard} className="bg-emerald-600 hover:bg-emerald-700 text-white shadow-sm">
+              <Wand2 className="h-4 w-4 mr-1" />
+              Release Wizard
+            </Button>
           )}
           {onEditPlan && (
             <Button size="sm" variant="outline" onClick={onEditPlan}>
