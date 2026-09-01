@@ -13211,6 +13211,18 @@ export type Database = {
           revenue: number
         }[]
       }
+      growth_team_scoreboard: {
+        Args: { _brand_ids: string[]; _from: string; _to: string }
+        Returns: {
+          calls: number
+          confirmed_orders: number
+          confirmed_value: number
+          delivered_orders: number
+          delivered_value: number
+          name: string
+          user_id: string
+        }[]
+      }
       growth_winback: {
         Args: { _brand_ids: string[]; _limit: number; _min_days: number }
         Returns: {

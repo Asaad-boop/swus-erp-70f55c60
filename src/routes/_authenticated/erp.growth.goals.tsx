@@ -6,6 +6,7 @@ import { Target, Plus, Trash2, Pencil } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useBrand } from "@/contexts/brand-context";
 import { GrowthPageHeader } from "@/components/erp/growth/growth-shell";
+import { VisionBoard } from "@/components/erp/growth/vision-board";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -39,13 +40,13 @@ import {
 export const Route = createFileRoute("/_authenticated/erp/growth/goals")({
   head: () => ({
     meta: [
-      { title: "Vision & Goals — Growth Studio" },
+      { title: "Vision & Targets — Growth Studio" },
       {
         name: "description",
         content:
-          "Monthly and quarterly objectives with auto-tracked KPIs: revenue, orders, delivered orders and ad spend targets per brand.",
+          "Daily, weekly and monthly order & revenue targets with live pace tracking and a team order-confirmation scoreboard.",
       },
-      { property: "og:title", content: "Vision & Goals — Growth Studio" },
+      { property: "og:title", content: "Vision & Targets — Growth Studio" },
       {
         property: "og:description",
         content: "Track objectives and key results against live ERP data.",
@@ -187,7 +188,7 @@ function GoalsPage() {
     <div className="mx-auto max-w-[1500px] space-y-4 p-3 md:p-6">
       <GrowthPageHeader
         icon={Target}
-        title="Vision & Goals"
+        title="Vision & Targets"
         subtitle={
           activeBrand
             ? `${activeBrand.name} — this month's objectives`
@@ -199,6 +200,8 @@ function GoalsPage() {
           </Button>
         }
       />
+
+      <VisionBoard />
 
       {summary && (
         <div className="grid gap-3 sm:grid-cols-3">
