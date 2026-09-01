@@ -1,23 +1,15 @@
 import { useMemo, useState } from "react";
-import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { useServerFn } from "@tanstack/react-start";
-import { toast } from "sonner";
 import {
-  AlertTriangle, ChevronDown, ChevronRight, ClipboardCheck, Loader2, PackageCheck, Printer, Truck,
+  AlertTriangle, ChevronDown, ChevronRight, ClipboardCheck, PackageCheck, Printer, Truck,
 } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { AccountCombobox } from "@/components/erp/finance/account-combobox";
-import { useAccounts } from "@/hooks/erp/use-finance-query";
-import { qcPoRelease } from "@/lib/erp/imports/imports.functions";
 import { fmtBdt } from "@/lib/erp/imports/types";
 import { printReleaseSlip, printQcReport } from "@/lib/erp/imports/print";
+import { QcReleaseDialog } from "./qc-release-dialog";
+
 
 export type ReleaseItem = {
   id: string;
