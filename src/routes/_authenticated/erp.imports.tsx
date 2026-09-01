@@ -10,10 +10,12 @@ export const Route = createFileRoute("/_authenticated/erp/imports")({
 const tabs = [
   { to: "/erp/imports", label: "Dashboard", icon: LayoutDashboard, exact: true },
   { to: "/erp/imports/orders", label: "Purchase Orders", icon: ListOrdered },
+  { to: "/erp/imports/incoming", label: "Incoming & QC", icon: PackageSearch },
   { to: "/erp/imports/agents", label: "Cargo Agents", icon: Truck },
   { to: "/erp/imports/reports", label: "Reports", icon: BarChart3 },
   { to: "/erp/imports/settings", label: "Settings", icon: SettingsIcon },
 ];
+
 
 function ImportsLayout() {
   const location = useLocation();
