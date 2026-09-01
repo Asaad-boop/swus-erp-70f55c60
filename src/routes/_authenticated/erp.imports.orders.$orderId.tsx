@@ -36,6 +36,7 @@ import { CartonsHeader } from "@/components/erp/imports/po-detail/cartons-header
 import { CartonFreightCard } from "@/components/erp/imports/po-detail/carton-freight-card";
 import { ArrivedDialog, PaymentDialog, BulkReleaseDialog, QtyArrivedDialog, EditPaymentDialog } from "@/components/erp/imports/po-detail/dialogs";
 import { QuantityReleaseCard } from "@/components/erp/imports/po-detail/quantity-release-card";
+import { ReleaseWizard } from "@/components/erp/imports/po-detail/release-wizard";
 import { EditPoDialog } from "@/components/erp/imports/po-detail/edit-po-dialog";
 import { CartonPlanDialog } from "@/components/erp/imports/po-detail/carton-plan-dialog";
 import { ActivityTimeline } from "@/components/erp/imports/po-detail/activity-timeline";
@@ -98,6 +99,7 @@ function PoDetailPage() {
 
   const [selectedCartons, setSelectedCartons] = useState<Set<string>>(new Set());
   const [bulkReleaseOpen, setBulkReleaseOpen] = useState(false);
+  const [wizardOpen, setWizardOpen] = useState(false);
   const bulkMarkSelected = async (stage: ImpCartonStatus, cartons: any[]) => {
     const targets = cartons.filter((c) => selectedCartons.has(c.id) && ["ordered", "at_china_warehouse", "in_transit"].includes(c.status));
     if (targets.length === 0) { toast.info("No selected cartons can move to this stage"); return; }
@@ -437,6 +439,7 @@ function PoDetailPage() {
                   setSelected={setSelectedCartons}
                   onBulkStage={(s) => bulkMarkSelected(s, cartons)}
                   onBulkRelease={() => setBulkReleaseOpen(true)}
+                  onOpenWizard={() => setWizardOpen(true)}
                   poPaid={poPaidForRelease}
                   poSupplierTotal={poSupplierTotal}
                   onEditPlan={() => setCartonPlanOpen(true)}
@@ -619,6 +622,19 @@ function PoDetailPage() {
           brandId={brandId}
           poId={po.id}
           onClose={() => setEditPayment(null)}
+        />
+      )}
+      {wizardOpen && brandId && (
+        <ReleaseWizard
+          open
+          onClose={() => { setWizardOpen(false); setSelectedCartons(new Set()); }}
+          poId={po.id}
+          poNumber={po.po_number}
+          brandId={brandId}
+          cartons={cartons}
+          poItems={items}
+          poPaid={poPaidForRelease}
+          poSupplierTotal={poSupplierTotal}
         />
       )}
       {bulkReleaseOpen && brandId && (
