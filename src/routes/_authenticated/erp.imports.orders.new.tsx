@@ -205,21 +205,32 @@ function NewPoPage() {
       return { ...c, allocations: next };
     }));
 
+  /** Sequential fill: each carton gets ONE product as much as possible (mixed only at boundaries). */
   const autoSplit = () => {
     if (cartons.length === 0) return;
-    setCartons((cs) =>
-      cs.map((c, ci) => {
-        const newAlloc: Record<string, number> = {};
-        leaves.forEach((l) => {
-          const base = Math.floor(l.qty / cs.length);
-          const rem = l.qty - base * cs.length;
-          const share = base + (ci < rem ? 1 : 0);
-          if (share > 0) newAlloc[l.key] = share;
-        });
-        return { ...c, allocations: newAlloc };
-      }),
+    const n = cartons.length;
+    const totalUnitsAll = leaves.reduce((s, l) => s + l.qty, 0);
+    if (totalUnitsAll <= 0) return;
+    const caps = Array.from({ length: n }, (_, i) =>
+      Math.floor(totalUnitsAll / n) + (i < totalUnitsAll % n ? 1 : 0),
     );
+    const allocs: Record<string, number>[] = Array.from({ length: n }, () => ({}));
+    let ci = 0;
+    for (const l of leaves) {
+      let left = l.qty;
+      while (left > 0 && ci < n) {
+        const room = caps[ci];
+        if (room <= 0) { ci++; continue; }
+        const take = Math.min(room, left);
+        allocs[ci][l.key] = (allocs[ci][l.key] ?? 0) + take;
+        caps[ci] -= take;
+        left -= take;
+        if (caps[ci] === 0) ci++;
+      }
+    }
+    setCartons((cs) => cs.map((c, i) => ({ ...c, allocations: allocs[i] ?? {} })));
   };
+
 
   const submitMut = useMutation({
     mutationFn: async () => {
