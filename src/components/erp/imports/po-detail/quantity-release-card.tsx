@@ -348,20 +348,26 @@ export function QuantityReleaseCard({
   return (
     <div className="space-y-4">
       <Card className="overflow-hidden">
-        <div className="p-4 border-b border-border flex items-center justify-between gap-2 flex-wrap">
+        <div className="p-4 border-b border-border bg-gradient-to-r from-primary/5 to-transparent flex items-center justify-between gap-3 flex-wrap">
           <div>
-            <h3 className="font-semibold inline-flex items-center gap-2"><Boxes className="h-4 w-4" />Quantity release</h3>
+            <h3 className="font-semibold inline-flex items-center gap-2"><Boxes className="h-4 w-4 text-primary" />Quantity release</h3>
             <p className="text-xs text-muted-foreground mt-0.5">
               Carton lagbe na — joto piece stock e nite chan toto din, baki gulo pore release kora jabe.
             </p>
           </div>
-          <div className="text-right text-xs">
-            <div className="font-semibold tabular-nums">{totalReleased} / {totalOrdered} pcs released</div>
-            <div className="text-muted-foreground">{pct}%</div>
+          <div className="text-right">
+            <div className="text-lg font-semibold tabular-nums leading-none">
+              {totalReleased}<span className="text-sm text-muted-foreground"> / {totalOrdered} pcs</span>
+            </div>
+            <div className="text-[11px] text-muted-foreground mt-1">{pct}% released · baki {Math.max(0, totalOrdered - totalReleased)} pcs</div>
           </div>
         </div>
         <div className="px-4 pt-3">
           <Progress value={pct} className="h-2 [&>div]:bg-emerald-500" />
+        </div>
+        <div className="mx-4 mt-3 rounded-md border border-sky-200 dark:border-sky-900/40 bg-sky-50/60 dark:bg-sky-950/20 px-3 py-2 text-[11px] text-sky-900 dark:text-sky-200">
+          Release korle maal <b>Incoming & QC</b> queue-te jabe (reserved stock) — hate pele okhane good / damaged /
+          missing ar local courier charge bosiye confirm korle final costing boshbe.
         </div>
 
         <Table>
@@ -371,11 +377,12 @@ export function QuantityReleaseCard({
               <TableHead className="text-right">Ordered</TableHead>
               <TableHead className="text-right">Released</TableHead>
               <TableHead className="text-right">Remaining</TableHead>
-              <TableHead className="text-right w-[110px]">Release now</TableHead>
-              <TableHead className="text-right w-[110px]">Damaged</TableHead>
-              <TableHead className="text-right w-[110px]">Missing</TableHead>
+              <TableHead className="text-right w-[110px] text-emerald-700 dark:text-emerald-400">Release now</TableHead>
+              <TableHead className="text-right w-[110px] text-orange-700 dark:text-orange-400">Damaged</TableHead>
+              <TableHead className="text-right w-[110px] text-rose-700 dark:text-rose-400">Missing</TableHead>
             </TableRow>
           </TableHeader>
+
           <TableBody>
             {items.map((it: any) => {
               const ordered = Number(it.quantity ?? 0);
