@@ -40,13 +40,13 @@ import {
 export const Route = createFileRoute("/_authenticated/erp/growth/goals")({
   head: () => ({
     meta: [
-      { title: "Vision & Goals — Growth Studio" },
+      { title: "Vision & Targets — Growth Studio" },
       {
         name: "description",
         content:
-          "Monthly and quarterly objectives with auto-tracked KPIs: revenue, orders, delivered orders and ad spend targets per brand.",
+          "Daily, weekly and monthly order & revenue targets with live pace tracking and a team order-confirmation scoreboard.",
       },
-      { property: "og:title", content: "Vision & Goals — Growth Studio" },
+      { property: "og:title", content: "Vision & Targets — Growth Studio" },
       {
         property: "og:description",
         content: "Track objectives and key results against live ERP data.",
