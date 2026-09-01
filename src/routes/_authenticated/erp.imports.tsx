@@ -1,5 +1,5 @@
 import { createFileRoute, Link, Outlet, useLocation } from "@tanstack/react-router";
-import { LayoutDashboard, ListOrdered, BarChart3, Settings as SettingsIcon, Container, Truck } from "lucide-react";
+import { LayoutDashboard, ListOrdered, BarChart3, Settings as SettingsIcon, Container, Truck, PackageSearch } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 export const Route = createFileRoute("/_authenticated/erp/imports")({
