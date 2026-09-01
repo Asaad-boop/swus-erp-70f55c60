@@ -3,7 +3,6 @@ import { useQuery } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import {
   Bar,
-  BarChart,
   CartesianGrid,
   Line,
   ResponsiveContainer,
@@ -39,10 +38,8 @@ function Ring({ pct, tone }: { pct: number; tone: string }) {
       style={{
         background: `conic-gradient(currentColor ${p * 3.6}deg, hsl(var(--muted)) 0deg)`,
       }}
-      // tone drives currentColor
-      data-pct={p}
+      data-tone={tone}
     >
-      <div className={cn("absolute inset-0 rounded-full", tone)} style={{ opacity: 0 }} />
       <div className="absolute inset-[5px] flex items-center justify-center rounded-full bg-card text-[11px] font-semibold tabular-nums text-foreground">
         {Math.round(pct)}%
       </div>
@@ -404,7 +401,3 @@ export function VisionBoard() {
     </div>
   );
 }
-
-// keep BarChart import used for tree-shaking clarity
-export type { TeamScoreRow };
-void BarChart;
