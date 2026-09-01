@@ -55,8 +55,6 @@ export type ReleaseRow = {
   qc_notes?: string | null;
 };
 
-type Draft = Record<string, { good: number; damaged: number; extra: number }>;
-
 export function ReleaseHistory({
   poId, brandId, po, releases, items,
 }: {
@@ -66,16 +64,8 @@ export function ReleaseHistory({
   releases: ReleaseRow[];
   items: any[];
 }) {
-  const qc = useQueryClient();
-  const qcFn = useServerFn(qcPoRelease);
-  const { data: wallets = [] } = useAccounts(brandId ? [brandId] : []);
   const [open, setOpen] = useState<Record<string, boolean>>({});
   const [qcFor, setQcFor] = useState<ReleaseRow | null>(null);
-  const [draft, setDraft] = useState<Draft>({});
-  const [qcNote, setQcNote] = useState("");
-  const [lcAmount, setLcAmount] = useState("");
-  const [lcWallet, setLcWallet] = useState("");
-  const [lcRef, setLcRef] = useState("");
 
   const itemMap = useMemo(() => {
     const m = new Map<string, any>();
@@ -98,63 +88,8 @@ export function ReleaseHistory({
     return { name: v?.color_name ?? "Color", hex: v?.color_hex ?? "#999" };
   };
 
-  const startQc = (r: ReleaseRow) => {
-    const d: Draft = {};
-    for (const ri of r.items ?? []) {
-      d[ri.id] = {
-        good: ri.qc_good_qty ?? Number(ri.quantity ?? 0),
-        damaged: ri.qc_damaged_qty ?? Number(ri.damaged_qty ?? 0),
-        extra: ri.qc_extra_qty ?? 0,
-      };
-    }
-    setDraft(d);
-    setQcNote(r.qc_notes ?? "");
-    setLcAmount(Number(r.local_courier_bdt ?? 0) > 0 ? String(r.local_courier_bdt) : "");
-    setLcWallet("");
-    setLcRef("");
-    setQcFor(r);
-  };
+  const startQc = (r: ReleaseRow) => setQcFor(r);
 
-  const qcModeCourier = ((qcFor?.local_courier_source ?? "release") === "qc");
-  const lcNum = Math.max(0, Number(lcAmount) || 0);
-  const draftGood = (qcFor?.items ?? []).reduce((s, ri) => s + (draft[ri.id]?.good ?? 0), 0);
-  const draftReleaseCost = (qcFor?.items ?? []).reduce(
-    (s, ri) => s + Number(ri.unit_landed_cost_bdt ?? 0) * (Number(ri.quantity ?? 0) + Number(ri.damaged_qty ?? 0)),
-    0,
-  );
-  const finalPerPc = draftGood > 0 ? (draftReleaseCost + (qcModeCourier ? lcNum : 0)) / draftGood : 0;
-
-  const mut = useMutation({
-    mutationFn: () =>
-      qcFn({
-        data: {
-          release_id: qcFor!.id,
-          notes: qcNote || undefined,
-          items: (qcFor!.items ?? []).map((ri) => ({
-            release_item_id: ri.id,
-            good_qty: draft[ri.id]?.good ?? 0,
-            damaged_qty: draft[ri.id]?.damaged ?? 0,
-            extra_qty: draft[ri.id]?.extra ?? 0,
-          })),
-          local_courier: qcModeCourier && lcNum > 0
-            ? {
-                amount_bdt: +lcNum.toFixed(2),
-                wallet_id: lcWallet || undefined,
-                payment_date: new Date().toISOString().slice(0, 10),
-                reference: lcRef || undefined,
-                note: lcRef || undefined,
-              }
-            : undefined,
-        },
-      }),
-    onSuccess: () => {
-      toast.success("Warehouse QC confirm holo — stock sellable, final cost boshe gelo");
-      setQcFor(null);
-      qc.invalidateQueries({ queryKey: ["imp-po", poId] });
-      qc.invalidateQueries({ queryKey: ["inventory"] });
-    },
-    onError: (e: any) => toast.error(e?.message ?? "QC failed"),
-  });
 
   if (releases.length === 0) return null;
 
