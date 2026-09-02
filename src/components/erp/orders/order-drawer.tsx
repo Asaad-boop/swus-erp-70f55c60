@@ -441,8 +441,10 @@ export function OrderDrawer({ orderId, onClose, mode = "fulfillment" }: Props) {
   };
 
   const addNote = useMutation({
-    mutationFn: async () => {
-      const { error } = await supabase.rpc("add_order_note", { _order_id: orderId!, _body: note, _is_internal: true });
+    mutationFn: async (body?: string) => {
+      const text = (body ?? note).trim();
+      if (!text) throw new Error("Note khali");
+      const { error } = await supabase.rpc("add_order_note", { _order_id: orderId!, _body: text, _is_internal: true });
       if (error) throw error;
     },
     onSuccess: () => {
@@ -452,6 +454,62 @@ export function OrderDrawer({ orderId, onClose, mode = "fulfillment" }: Props) {
     },
     onError: (e: Error) => toast.error(e.message),
   });
+
+  const risk = riskFrom(footprint);
+  const lastOrderAt = footprint?.last?.created_at ? new Date(footprint.last.created_at) : null;
+  const isDuplicateRisk = !!lastOrderAt && Date.now() - lastOrderAt.getTime() < 24 * 60 * 60 * 1000;
+
+  /** Copy a paste-ready order summary (for WhatsApp / courier / team chat). */
+  const copySummary = () => {
+    if (!order) return;
+    const lines = [
+      `#${invoiceDisplay(order)}`,
+      `${customerName(order)} · ${customerPhone(order)}`,
+      `${order.shipping_address ?? ""}, ${[order.shipping_thana, order.shipping_city, order.shipping_district].filter(Boolean).join(", ")}`,
+      "",
+      ...items.map((it) => `• ${it.name}${it.variant_label ? ` (${it.variant_label})` : ""} × ${it.quantity} = ৳${Number(it.line_total ?? Number(it.unit_price ?? it.price) * it.quantity).toLocaleString()}`),
+      "",
+      `Subtotal: ৳${subtotal.toLocaleString()}`,
+      `Shipping: ৳${shippingFee.toLocaleString()}`,
+      ...(advanceAmount > 0 ? [`Advance: ৳${advanceAmount.toLocaleString()}`] : []),
+      `${advanceAmount > 0 ? "Due" : "Total"}: ৳${payableTotal.toLocaleString()}`,
+    ];
+    navigator.clipboard.writeText(lines.join("\n"));
+    toast.success("Order summary copied");
+  };
+
+  const copyAddress = () => {
+    if (!order) return;
+    navigator.clipboard.writeText(
+      `${customerName(order)}, ${customerPhone(order)}\n${order.shipping_address ?? ""}, ${[order.shipping_thana, order.shipping_city, order.shipping_district].filter(Boolean).join(", ")}`,
+    );
+    toast.success("Address copied");
+  };
+
+  const confirmPrimary = () => {
+    if (mode === "web") onPickWebStatus("complete");
+    else guardedAction(() => updateStatus.mutate("confirmed" as OrderStatus));
+  };
+
+  /** Keyboard shortcuts — power-user speed on the confirmation desk. */
+  useEffect(() => {
+    if (!orderId || editingBlocked) return;
+    const onKey = (e: KeyboardEvent) => {
+      const t = e.target as HTMLElement | null;
+      if (t && (t.tagName === "INPUT" || t.tagName === "TEXTAREA" || t.isContentEditable)) return;
+      if (e.metaKey || e.ctrlKey || e.altKey) return;
+      const k = e.key.toLowerCase();
+      if (k === "c") { e.preventDefault(); confirmPrimary(); }
+      else if (k === "h" && mode === "web") { e.preventDefault(); onPickWebStatus("on_hold"); }
+      else if (k === "r" && mode === "web") { e.preventDefault(); onPickWebStatus("no_response"); }
+      else if (k === "a" && mode === "web") { e.preventDefault(); onPickWebStatus("advance_payment"); }
+      else if (k === "p" && phone) { e.preventDefault(); window.location.href = `tel:${phone}`; if (orderId) logCall.mutate({ orderId, attempts: callAttempts, currentStatus: callStatus }); }
+      else if (k === "y") { e.preventDefault(); copySummary(); }
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [orderId, editingBlocked, mode, phone, callAttempts, callStatus, items, order]);
 
   return (
     <Dialog open={!!orderId} onOpenChange={(o) => !o && onClose()}>
