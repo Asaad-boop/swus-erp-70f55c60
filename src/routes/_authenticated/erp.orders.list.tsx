@@ -726,7 +726,7 @@ function OrdersPage() {
               <OrdersBulkActions
                 selectedCount={selectedIds.size}
                 totalCount={rows.length}
-                onSelectAll={() => setSelectedIds(new Set(rows.map((r) => r.id)))}
+                onSelectAll={() => void selectAllMatching()}
                 onClear={() => setSelectedIds(new Set())}
                 onStatus={(s) => bulkStatus.mutate(s)}
                 onExport={handleExport}
