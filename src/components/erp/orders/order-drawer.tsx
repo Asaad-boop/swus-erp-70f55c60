@@ -576,7 +576,8 @@ export function OrderDrawer({ orderId, onClose, mode = "fulfillment" }: Props) {
 
                     <>
                       {(["confirmed", "packed", "ready_to_ship", "delivered"] as OrderStatus[])
-                        .filter((s) => s !== order.status)
+                        .filter((s) => s !== order.status && s !== "confirmed")
+
                         .map((s) => (
                           <Button key={s} size="sm" variant="outline" className="h-8 gap-1.5" disabled={updateStatus.isPending} onClick={() => guardedAction(() => updateStatus.mutate(s))}>
                             {STATUS_BADGE[s]?.label ?? s.replace(/_/g, " ")}
