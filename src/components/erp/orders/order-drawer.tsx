@@ -714,7 +714,43 @@ export function OrderDrawer({ orderId, onClose, mode = "fulfillment" }: Props) {
                     ))}
                   </div>
                 )}
+                <div className="mt-2 flex flex-wrap items-center gap-2">
+                  <Button size="sm" variant="ghost" className="h-7 gap-1.5 px-2 text-[11px] text-muted-foreground" onClick={copySummary}>
+                    <ClipboardCopy className="h-3.5 w-3.5" /> Copy summary
+                  </Button>
+                  <Button size="sm" variant="ghost" className="h-7 gap-1.5 px-2 text-[11px] text-muted-foreground" onClick={copyAddress}>
+                    <MapPin className="h-3.5 w-3.5" /> Copy address
+                  </Button>
+                  <span className="ml-auto hidden items-center gap-1.5 text-[10px] text-muted-foreground md:inline-flex">
+                    <Command className="h-3 w-3" />
+                    {(["C confirm", ...(mode === "web" ? ["A advance", "H hold", "R no-response"] : []), "P call", "Y copy"]).map((s) => (
+                      <kbd key={s} className="rounded border bg-muted px-1.5 py-0.5 font-mono text-[9px]">{s}</kbd>
+                    ))}
+                  </span>
+                </div>
               </div>
+
+              {(risk || isDuplicateRisk) && (
+                <div className="flex flex-wrap gap-2 px-5 pt-4">
+                  {risk && (
+                    <div className={cn(
+                      "inline-flex items-center gap-2 rounded-lg border px-3 py-2 text-xs font-medium",
+                      risk.level === "high" && "border-rose-300/70 bg-rose-50 text-rose-800 dark:border-rose-900/60 dark:bg-rose-950/40 dark:text-rose-200",
+                      risk.level === "watch" && "border-amber-300/70 bg-amber-50 text-amber-800 dark:border-amber-900/60 dark:bg-amber-950/40 dark:text-amber-200",
+                      risk.level === "good" && "border-emerald-300/70 bg-emerald-50 text-emerald-800 dark:border-emerald-900/60 dark:bg-emerald-950/40 dark:text-emerald-200",
+                    )}>
+                      {risk.level === "good" ? <ShieldCheck className="h-4 w-4 shrink-0" /> : <AlertTriangle className="h-4 w-4 shrink-0" />}
+                      <span>{risk.label} · <span className="font-normal opacity-80">{risk.detail}</span></span>
+                    </div>
+                  )}
+                  {isDuplicateRisk && (
+                    <div className="inline-flex items-center gap-2 rounded-lg border border-violet-300/70 bg-violet-50 px-3 py-2 text-xs font-medium text-violet-800 dark:border-violet-900/60 dark:bg-violet-950/40 dark:text-violet-200">
+                      <Repeat2 className="h-4 w-4 shrink-0" />
+                      Possible duplicate — same number theke {lastOrderAt ? format(lastOrderAt, "dd MMM, hh:mm a") : ""} e ekta order ache
+                    </div>
+                  )}
+                </div>
+              )}
 
               <div className="grid lg:grid-cols-3 gap-4 p-5">
 
