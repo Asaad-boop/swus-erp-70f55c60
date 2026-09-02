@@ -531,14 +531,31 @@ export function OrderDrawer({ orderId, onClose, mode = "fulfillment" }: Props) {
               ) : (
               <>
               {/* QUICK ACTIONS — one tap status change */}
-              <div className="sticky top-0 z-20 border-b bg-background/95 px-5 py-2.5 backdrop-blur">
+              <div className="sticky top-0 z-20 border-b bg-background/95 px-5 py-3 backdrop-blur">
+                {/* Primary CTA — big, always first, full width on mobile */}
+                {mode === "web" ? (
+                  <Button
+                    size="lg"
+                    className="mb-2.5 h-12 w-full gap-2 rounded-xl bg-emerald-600 text-base font-bold text-white shadow-lg shadow-emerald-600/25 transition hover:bg-emerald-700 sm:w-auto sm:min-w-[16rem]"
+                    disabled={updateWebStatus.isPending}
+                    onClick={() => onPickWebStatus("complete")}
+                  >
+                    {updateWebStatus.isPending ? <Loader2 className="h-5 w-5 animate-spin" /> : <CheckCircle2 className="h-5 w-5" />} Confirm Order
+                  </Button>
+                ) : order.status !== "confirmed" && order.status !== "delivered" ? (
+                  <Button
+                    size="lg"
+                    className="mb-2.5 h-12 w-full gap-2 rounded-xl bg-emerald-600 text-base font-bold text-white shadow-lg shadow-emerald-600/25 transition hover:bg-emerald-700 sm:w-auto sm:min-w-[16rem]"
+                    disabled={updateStatus.isPending}
+                    onClick={() => guardedAction(() => updateStatus.mutate("confirmed" as OrderStatus))}
+                  >
+                    {updateStatus.isPending ? <Loader2 className="h-5 w-5 animate-spin" /> : <CheckCircle2 className="h-5 w-5" />} Confirm Order
+                  </Button>
+                ) : null}
                 <div className="flex flex-wrap items-center gap-1.5">
                   <span className="mr-1 text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Quick actions</span>
                   {mode === "web" ? (
                     <>
-                      <Button size="sm" className="h-8 gap-1.5 bg-emerald-600 text-white hover:bg-emerald-700" disabled={updateWebStatus.isPending} onClick={() => onPickWebStatus("complete")}>
-                        <CheckCircle2 className="h-3.5 w-3.5" /> Confirm Order
-                      </Button>
                       <Button size="sm" variant="outline" className="h-8 gap-1.5" disabled={updateWebStatus.isPending} onClick={() => onPickWebStatus("good_but_no_response")}>
                         <PhoneOff className="h-3.5 w-3.5" /> Good / No response
                       </Button>
@@ -556,6 +573,7 @@ export function OrderDrawer({ orderId, onClose, mode = "fulfillment" }: Props) {
                       </Button>
                     </>
                   ) : (
+
                     <>
                       {(["confirmed", "packed", "ready_to_ship", "delivered"] as OrderStatus[])
                         .filter((s) => s !== order.status)
