@@ -5501,6 +5501,69 @@ export type Database = {
           },
         ]
       }
+      hub_experiments: {
+        Row: {
+          brand_id: string | null
+          budget: number
+          created_at: string
+          created_by: string | null
+          end_date: string | null
+          hypothesis: string | null
+          id: string
+          learning: string | null
+          product_id: string | null
+          result: string | null
+          start_date: string | null
+          status: string
+          title: string
+          updated_at: string
+          variable: string | null
+          variant_a: string | null
+          variant_b: string | null
+          winner: string | null
+        }
+        Insert: {
+          brand_id?: string | null
+          budget?: number
+          created_at?: string
+          created_by?: string | null
+          end_date?: string | null
+          hypothesis?: string | null
+          id?: string
+          learning?: string | null
+          product_id?: string | null
+          result?: string | null
+          start_date?: string | null
+          status?: string
+          title: string
+          updated_at?: string
+          variable?: string | null
+          variant_a?: string | null
+          variant_b?: string | null
+          winner?: string | null
+        }
+        Update: {
+          brand_id?: string | null
+          budget?: number
+          created_at?: string
+          created_by?: string | null
+          end_date?: string | null
+          hypothesis?: string | null
+          id?: string
+          learning?: string | null
+          product_id?: string | null
+          result?: string | null
+          start_date?: string | null
+          status?: string
+          title?: string
+          updated_at?: string
+          variable?: string | null
+          variant_a?: string | null
+          variant_b?: string | null
+          winner?: string | null
+        }
+        Relationships: []
+      }
       hub_goals: {
         Row: {
           brand_id: string | null
@@ -5663,6 +5726,50 @@ export type Database = {
             columns: ["idea_id"]
             isOneToOne: false
             referencedRelation: "hub_product_ideas"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      hub_learnings: {
+        Row: {
+          brand_id: string | null
+          category: string | null
+          confidence: string
+          created_at: string
+          created_by: string | null
+          experiment_id: string | null
+          id: string
+          insight: string
+          tags: string[]
+        }
+        Insert: {
+          brand_id?: string | null
+          category?: string | null
+          confidence?: string
+          created_at?: string
+          created_by?: string | null
+          experiment_id?: string | null
+          id?: string
+          insight: string
+          tags?: string[]
+        }
+        Update: {
+          brand_id?: string | null
+          category?: string | null
+          confidence?: string
+          created_at?: string
+          created_by?: string | null
+          experiment_id?: string | null
+          id?: string
+          insight?: string
+          tags?: string[]
+        }
+        Relationships: [
+          {
+            foreignKeyName: "hub_learnings_experiment_id_fkey"
+            columns: ["experiment_id"]
+            isOneToOne: false
+            referencedRelation: "hub_experiments"
             referencedColumns: ["id"]
           },
         ]
