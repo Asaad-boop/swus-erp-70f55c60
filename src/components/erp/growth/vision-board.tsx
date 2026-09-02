@@ -291,7 +291,7 @@ export function VisionBoard() {
         <PaceCard
           icon={CalendarDays}
           label="Order"
-          scope={`মাস (${d.month.daysLeft} দিন বাকি)`}
+          scope={`মাস (${d.month.dayOfMonth}/${d.month.daysInMonth} দিন)`}
           actual={d.windows.mtd.orders}
           target={d.targets.orders || null}
           fmt={int}
@@ -335,7 +335,11 @@ export function VisionBoard() {
           fmt={short}
           extra={
             <p className="mt-0.5 text-[11px] text-muted-foreground">
-              ROAS {d.windows.mtd.roas == null ? "—" : `${d.windows.mtd.roas.toFixed(2)}x`}
+              Booked ROAS {d.windows.mtd.roas == null ? "—" : `${d.windows.mtd.roas.toFixed(2)}x`} ·
+              Delivered{" "}
+              {d.windows.mtd.spend_bdt > 0
+                ? `${(d.windows.mtd.delivered_revenue / d.windows.mtd.spend_bdt).toFixed(2)}x`
+                : "—"}
             </p>
           }
         />
