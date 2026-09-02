@@ -385,7 +385,9 @@ function OrdersPage() {
     setSelectedIds(next);
   };
   const toggleAll = (checked: boolean) => {
-    if (checked) setSelectedIds(new Set(visibleRows.map((r) => r.id)));
+    // Bulk-select means EVERYTHING matching the current filter, not just the
+    // loaded chunk — so bulk actions (print/book/status) cover all orders.
+    if (checked) void selectAllMatching();
     else setSelectedIds(new Set());
   };
 
@@ -431,7 +433,7 @@ function OrdersPage() {
         const n = new Set(prev); n.add(id); return n;
       });
       await qc.cancelQueries({ queryKey: ["orders"] });
-      const queryKey = ["orders", effective] as const;
+      const queryKey = ["orders", queryFilter] as const;
       const previous = qc.getQueryData<{ rows: OrderRow[]; total: number }>(queryKey);
       if (previous) {
         qc.setQueryData(queryKey, {
@@ -549,7 +551,6 @@ function OrdersPage() {
   };
   const hasActiveFilters = !!(filter.search || filter.source || filter.courier || filter.dateFrom || filter.dateTo || filter.statuses.length > 0);
 
-  const totalPages = Math.max(1, Math.ceil(total / filter.pageSize));
   const activeTab =
     view === "incomplete" ? "incomplete"
       : tabForStatuses(effective.statuses);
@@ -566,7 +567,7 @@ function OrdersPage() {
         document.querySelector<HTMLInputElement>("input[data-orders-search]")?.focus();
       } else if (e.key === "a") {
         e.preventDefault();
-        setSelectedIds(new Set(visibleRows.map((r) => r.id)));
+        void selectAllMatching();
       } else if (e.key === "r") {
         e.preventDefault();
         handleRefresh();
