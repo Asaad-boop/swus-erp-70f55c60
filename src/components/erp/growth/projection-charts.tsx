@@ -41,7 +41,7 @@ export function PaceChart({ data }: { data: PacePoint[] }) {
               <stop offset="100%" stopColor="#6366F1" stopOpacity={0.02} />
             </linearGradient>
           </defs>
-          <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="hsl(var(--border))" />
+          <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="var(--border)" />
           <XAxis dataKey="label" tick={{ fontSize: 10 }} tickLine={false} axisLine={false} interval="preserveStartEnd" />
           <YAxis tickFormatter={short} tick={{ fontSize: 10 }} tickLine={false} axisLine={false} width={44} />
           <Tooltip
@@ -90,7 +90,7 @@ export function DailyChart({ data }: { data: PacePoint[] }) {
     <div className="h-[220px] w-full">
       <ResponsiveContainer width="100%" height="100%">
         <ComposedChart data={data} margin={{ top: 8, right: 8, left: 0, bottom: 0 }}>
-          <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="hsl(var(--border))" />
+          <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="var(--border)" />
           <XAxis dataKey="label" tick={{ fontSize: 10 }} tickLine={false} axisLine={false} interval="preserveStartEnd" />
           <YAxis tickFormatter={short} tick={{ fontSize: 10 }} tickLine={false} axisLine={false} width={44} />
           <Tooltip

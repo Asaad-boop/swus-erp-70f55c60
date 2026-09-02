@@ -91,7 +91,7 @@ export function CrmKpiCards({ kpis, loading }: { kpis?: Kpis; loading?: boolean 
                   </defs>
                   <Tooltip
                     cursor={{ stroke: "#10b981", strokeWidth: 1, strokeDasharray: "3 3" }}
-                    contentStyle={{ fontSize: 11, padding: "4px 8px", border: "1px solid hsl(var(--border))", borderRadius: 6 }}
+                    contentStyle={{ fontSize: 11, padding: "4px 8px", border: "1px solid var(--border)", borderRadius: 6 }}
                     labelFormatter={(l) => new Date(l as string).toLocaleDateString("en-GB", { day: "2-digit", month: "short" })}
                     formatter={(v: number) => [v, "new"]}
                   />
@@ -118,7 +118,7 @@ export function CrmKpiCards({ kpis, loading }: { kpis?: Kpis; loading?: boolean 
                       ))}
                     </Pie>
                     <Tooltip
-                      contentStyle={{ fontSize: 11, padding: "4px 8px", border: "1px solid hsl(var(--border))", borderRadius: 6 }}
+                      contentStyle={{ fontSize: 11, padding: "4px 8px", border: "1px solid var(--border)", borderRadius: 6 }}
                       formatter={(v: number, n) => [v, n]}
                     />
                   </PieChart>

@@ -550,7 +550,7 @@ function CrmListPage() {
       <Card>
         <div className="overflow-x-auto max-h-[calc(100vh-380px)] min-h-[320px] overflow-y-auto">
           <Table>
-            <TableHeader className="sticky top-0 z-10 bg-card shadow-[0_1px_0_0_hsl(var(--border))]">
+            <TableHeader className="sticky top-0 z-10 bg-card shadow-[0_1px_0_0_var(--border)]">
               <TableRow>
                 <TableHead className="w-10">
                   <Checkbox checked={allOnPageSelected} onCheckedChange={toggleAllOnPage} />

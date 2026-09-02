@@ -175,7 +175,7 @@ function CnyQuickUpdate({ brandId }: { brandId?: string }) {
             <ResponsiveContainer width="100%" height="100%">
               <LineChart data={sparkData}>
                 <Tooltip formatter={(v: any) => Number(v).toFixed(4)} />
-                <Line type="monotone" dataKey="rate" stroke="hsl(var(--primary))" strokeWidth={2} dot={false} />
+                <Line type="monotone" dataKey="rate" stroke="var(--primary)" strokeWidth={2} dot={false} />
               </LineChart>
             </ResponsiveContainer>
           </div>

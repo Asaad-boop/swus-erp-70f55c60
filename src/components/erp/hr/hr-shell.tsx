@@ -61,7 +61,7 @@ export function HrSubnav() {
               ref={on ? activeRef : undefined}
               className={`inline-flex shrink-0 items-center gap-1.5 rounded-full border px-3 py-1.5 text-xs font-medium transition-all duration-200 ease-out active:scale-[0.97] ${
                 on
-                  ? "border-primary/30 bg-primary/10 text-primary shadow-[0_1px_10px_-4px_hsl(var(--primary)/0.6)]"
+                  ? "border-primary/30 bg-primary/10 text-primary shadow-[0_1px_10px_-4px_color-mix(in oklab, var(--primary) 60%, transparent)]"
                   : "border-transparent text-muted-foreground hover:bg-muted hover:text-foreground"
               }`}
             >

@@ -182,7 +182,7 @@ export function TrendChart({
           <div className="h-64">
             <ResponsiveContainer width="100%" height="100%">
               <ComposedChart data={rows} margin={{ top: 8, right: 8, bottom: 0, left: 0 }}>
-                <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" vertical={false} />
+                <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" vertical={false} />
                 <XAxis
                   dataKey="bucket"
                   tick={{ fontSize: 10 }}
@@ -217,13 +217,13 @@ export function TrendChart({
                 <Bar
                   name="Ad spend"
                   dataKey="spend_bdt"
-                  fill="hsl(var(--primary))"
+                  fill="var(--primary)"
                   radius={[3, 3, 0, 0]}
                 />
                 <Bar
                   name="Booked revenue"
                   dataKey="booked_revenue"
-                  fill="hsl(var(--muted-foreground))"
+                  fill="var(--muted-foreground)"
                   opacity={0.35}
                   radius={[3, 3, 0, 0]}
                 />
@@ -240,7 +240,7 @@ export function TrendChart({
                   yAxisId="r"
                   type="monotone"
                   dataKey="roas"
-                  stroke="hsl(var(--destructive))"
+                  stroke="var(--destructive)"
                   strokeWidth={1.5}
                   dot={false}
                 />

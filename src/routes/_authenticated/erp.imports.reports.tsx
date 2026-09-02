@@ -261,7 +261,7 @@ function CostAnalysisTab({ brandId, from, to }: { brandId?: string; from: string
                 <XAxis dataKey="date" fontSize={11} />
                 <YAxis fontSize={11} />
                 <Tooltip />
-                <Line type="monotone" dataKey="cost" stroke="hsl(var(--primary))" strokeWidth={2} dot />
+                <Line type="monotone" dataKey="cost" stroke="var(--primary)" strokeWidth={2} dot />
               </LineChart>
             </ResponsiveContainer>
           </div>

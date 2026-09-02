@@ -467,7 +467,7 @@ function ChartView({ loading, rows }: { loading: boolean; rows: Row[] }) {
         <div className="h-80">
           <ResponsiveContainer width="100%" height="100%">
             <LineChart data={data} margin={{ top: 8, right: 12, bottom: 0, left: 0 }}>
-              <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
+              <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" />
               <XAxis
                 dataKey="day"
                 tickFormatter={(d) => (d ? d.slice(5) : "")}
@@ -486,7 +486,7 @@ function ChartView({ loading, rows }: { loading: boolean; rows: Row[] }) {
                 type="monotone"
                 name="Spend"
                 dataKey="spend_bdt"
-                stroke="hsl(var(--primary))"
+                stroke="var(--primary)"
                 strokeWidth={2}
                 dot={false}
               />

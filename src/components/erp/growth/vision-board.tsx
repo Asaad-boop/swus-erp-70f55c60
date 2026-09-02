@@ -36,7 +36,7 @@ function Ring({ pct, tone }: { pct: number; tone: string }) {
     <div
       className="relative h-14 w-14 shrink-0 rounded-full"
       style={{
-        background: `conic-gradient(currentColor ${p * 3.6}deg, hsl(var(--muted)) 0deg)`,
+        background: `conic-gradient(currentColor ${p * 3.6}deg, var(--muted) 0deg)`,
       }}
       data-tone={tone}
     >
@@ -378,12 +378,12 @@ export function VisionBoard() {
                         n === "orders" ? [int(v), "Order"] : [short(v), "Delivered revenue"]
                       }
                     />
-                    <Bar dataKey="orders" fill="hsl(var(--primary))" radius={[3, 3, 0, 0]} />
+                    <Bar dataKey="orders" fill="var(--primary)" radius={[3, 3, 0, 0]} />
                     {derived.needOrdersToday > 0 && (
                       <Line
                         type="monotone"
                         dataKey={() => Math.round(d.targets.orders / d.month.daysInMonth)}
-                        stroke="hsl(var(--muted-foreground))"
+                        stroke="var(--muted-foreground)"
                         strokeDasharray="4 4"
                         dot={false}
                         name="target/day"

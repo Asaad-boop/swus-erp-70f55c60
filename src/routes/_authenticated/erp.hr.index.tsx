@@ -234,12 +234,12 @@ function HrOverview() {
               <div className="h-[120px] w-full">
                 <ResponsiveContainer width="100%" height="100%">
                   <BarChart data={trendData} margin={{ top: 6, right: 4, left: 4, bottom: 0 }}>
-                    <XAxis dataKey="day" tickLine={false} axisLine={false} interval={2} tick={{ fontSize: 10, fill: "hsl(var(--muted-foreground))" }} />
+                    <XAxis dataKey="day" tickLine={false} axisLine={false} interval={2} tick={{ fontSize: 10, fill: "var(--muted-foreground)" }} />
                     <Tooltip
-                      cursor={{ fill: "hsl(var(--muted)/0.4)" }}
+                      cursor={{ fill: "color-mix(in oklab, var(--muted) 40%, transparent)" }}
                       contentStyle={{
-                        background: "hsl(var(--popover))",
-                        border: "1px solid hsl(var(--border))",
+                        background: "var(--popover)",
+                        border: "1px solid var(--border)",
                         borderRadius: 10,
                         fontSize: 12,
                       }}
@@ -247,7 +247,7 @@ function HrOverview() {
                     />
                     <Bar dataKey="value" radius={[4, 4, 0, 0]}>
                       {trendData.map((d, i) => (
-                        <Cell key={i} fill={d.isToday ? "hsl(var(--primary))" : "hsl(var(--primary)/0.28)"} />
+                        <Cell key={i} fill={d.isToday ? "var(--primary)" : "color-mix(in oklab, var(--primary) 28%, transparent)"} />
                       ))}
                     </Bar>
                   </BarChart>

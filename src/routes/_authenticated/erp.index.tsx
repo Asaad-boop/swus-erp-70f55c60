@@ -1652,7 +1652,7 @@ const SOURCE_COLORS: Record<string, string> = {
   Marketplace: "#A855F7",
   Email: "#22C55E",
   SMS: "#0EA5E9",
-  Direct: "hsl(var(--foreground))",
+  Direct: "var(--foreground)",
   Other: "#F59E0B",
 };
 // Lighter gradient stop per source for premium donut look
@@ -1892,7 +1892,7 @@ function TodayAnalytics({ brandIds, enabled, range, rangeLabel }: { brandIds: st
                         outerRadius={90}
                         paddingAngle={2}
                         cornerRadius={4}
-                        stroke="hsl(var(--card))"
+                        stroke="var(--card)"
                         strokeWidth={2}
                       >
                         {sourceData.map((d, i) => (
@@ -1901,7 +1901,7 @@ function TodayAnalytics({ brandIds, enabled, range, rangeLabel }: { brandIds: st
                       </Pie>
                       <Tooltip
                         cursor={{ fill: "transparent" }}
-                        contentStyle={{ borderRadius: 8, border: "1px solid hsl(var(--border))", fontSize: 12, boxShadow: "0 8px 24px -8px rgba(0,0,0,0.15)" }}
+                        contentStyle={{ borderRadius: 8, border: "1px solid var(--border)", fontSize: 12, boxShadow: "0 8px 24px -8px rgba(0,0,0,0.15)" }}
                         formatter={(value: number, name: string) => [
                           `${value} (${totalSource ? Math.round((value / totalSource) * 100) : 0}%)`, name,
                         ]}

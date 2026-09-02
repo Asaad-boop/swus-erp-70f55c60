@@ -185,7 +185,7 @@ function TrendChart({ points }: { points: CampaignTrendPoint[] }) {
               <stop offset="100%" stopColor="#6366F1" stopOpacity={0.02} />
             </linearGradient>
           </defs>
-          <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="hsl(var(--border))" />
+          <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="var(--border)" />
           <XAxis dataKey="label" tick={{ fontSize: 10 }} tickLine={false} axisLine={false} />
           <YAxis tickFormatter={short} tick={{ fontSize: 10 }} tickLine={false} axisLine={false} width={44} />
           <Tooltip
