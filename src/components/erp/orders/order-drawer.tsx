@@ -675,7 +675,19 @@ export function OrderDrawer({ orderId, onClose, mode = "fulfillment" }: Props) {
                       </div>
                     ) : (
                       <div className="space-y-2 text-sm">
-                        <div className="text-base font-semibold">{customerName(order)}</div>
+                        <div className="flex flex-wrap items-center gap-2">
+                          <span className="text-base font-semibold">{customerName(order)}</span>
+                          {footprint && footprint.total > 0 && (
+                            <span className="inline-flex items-center gap-1.5 rounded-full border bg-muted/50 px-2 py-0.5 text-[10px] font-medium">
+                              <History className="h-3 w-3" />
+                              {footprint.total} past
+                              <span className="text-emerald-600 dark:text-emerald-400">{footprint.delivered}✓</span>
+                              {footprint.returned > 0 && <span className="text-rose-600 dark:text-rose-400">{footprint.returned}↩</span>}
+                              {footprint.cancelled > 0 && <span className="text-muted-foreground">{footprint.cancelled}✕</span>}
+                            </span>
+                          )}
+                        </div>
+
                         <a
                           href={`tel:${customerPhone(order)}`}
                           title="Call customer (logs a call attempt)"
