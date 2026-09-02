@@ -72,7 +72,7 @@ import { cn } from "@/lib/utils";
 import { Building2, Network } from "lucide-react";
 import { GrowthPageTabs, useTabParam, type PageTab } from "@/components/erp/growth/page-tabs";
 import { AgenciesPage } from "./agencies";
-import { MatchingPage } from "@/routes/_authenticated/erp.growth.matching";
+import { MatchingPage } from "./matching";
 
 const PEOPLE_TABS: PageTab[] = [
   { key: "creators", label: "Creator CRM", icon: Users },

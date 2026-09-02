@@ -1,5 +1,5 @@
 import { GrowthPageTabs, useTabParam, type PageTab } from "@/components/erp/growth/page-tabs";
-import { RoutinesPage } from "@/routes/_authenticated/erp.growth.routines";
+import { RoutinesPage } from "./routines";
 import { useMemo, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
