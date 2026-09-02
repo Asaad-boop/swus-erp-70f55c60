@@ -32,17 +32,16 @@ const short = (n: number) =>
         : `৳${Math.round(n)}`;
 const int = (n: number) => Math.round(n).toLocaleString("en-IN");
 
-function Ring({ pct, tone }: { pct: number; tone: string }) {
+function Ring({ pct }: { pct: number }) {
   const p = Math.max(0, Math.min(100, pct));
   return (
     <div
-      className="relative h-14 w-14 shrink-0 rounded-full"
+      className="relative h-14 w-14 shrink-0 rounded-full shadow-inner"
       style={{
-        background: `conic-gradient(currentColor ${p * 3.6}deg, var(--muted) 0deg)`,
+        background: `conic-gradient(currentColor ${p * 3.6}deg, color-mix(in oklab, currentColor 12%, transparent) 0deg)`,
       }}
-      data-tone={tone}
     >
-      <div className="absolute inset-[5px] flex items-center justify-center rounded-full bg-card text-[11px] font-semibold tabular-nums text-foreground">
+      <div className="absolute inset-[5px] flex items-center justify-center rounded-full bg-card text-[11px] font-bold tabular-nums text-foreground">
         {Math.round(pct)}%
       </div>
     </div>
@@ -77,22 +76,40 @@ function PaceCard({
           ? "text-amber-500"
           : "text-rose-500";
   return (
-    <Card className="overflow-hidden">
+    <Card
+      className={cn(
+        "group relative overflow-hidden border-border/60 transition-all hover:-translate-y-0.5 hover:shadow-lg",
+      )}
+    >
+      <span
+        className={cn(
+          "absolute inset-x-0 top-0 h-0.5",
+          pct == null
+            ? "bg-border"
+            : pct >= 100
+              ? "bg-emerald-500"
+              : pct >= 70
+                ? "bg-amber-500"
+                : "bg-rose-500",
+        )}
+      />
       <CardContent className="flex items-center gap-3 p-4">
         {pct == null ? (
-          <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-full bg-muted">
+          <div className="grid h-14 w-14 shrink-0 place-items-center rounded-full bg-muted/60">
             <Icon className="h-5 w-5 text-muted-foreground" />
           </div>
         ) : (
           <div className={tone}>
-            <Ring pct={pct} tone={tone} />
+            <Ring pct={pct} />
           </div>
         )}
         <div className="min-w-0 flex-1">
-          <p className="truncate text-[11px] font-medium uppercase tracking-wide text-muted-foreground">
+          <p className="truncate text-[10px] font-semibold uppercase tracking-[0.08em] text-muted-foreground">
             {label} · {scope}
           </p>
-          <p className="text-xl font-semibold tabular-nums">{fmt(actual)}</p>
+          <p className="font-display text-2xl font-bold tabular-nums leading-tight">
+            {fmt(actual)}
+          </p>
           <p className="truncate text-[11px] text-muted-foreground">
             {target && target > 0
               ? gap > 0
@@ -106,6 +123,19 @@ function PaceCard({
     </Card>
   );
 }
+
+function SectionTitle({ children }: { children: React.ReactNode }) {
+  return (
+    <div className="flex items-center gap-2 pt-1">
+      <span className="h-3.5 w-1 rounded-full bg-primary" />
+      <h3 className="text-[11px] font-semibold uppercase tracking-[0.1em] text-muted-foreground">
+        {children}
+      </h3>
+      <span className="h-px flex-1 bg-border/70" />
+    </div>
+  );
+}
+
 
 function Delta({ now, prev, label }: { now: number; prev: number; label: string }) {
   if (!prev) return null;
