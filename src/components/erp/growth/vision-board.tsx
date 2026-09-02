@@ -18,7 +18,9 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { cn } from "@/lib/utils";
 import { useBrand } from "@/contexts/brand-context";
 import { getGrowthVision, type TeamScoreRow } from "@/lib/erp/growth/vision.functions";
+import { TargetSetupDialog } from "@/components/erp/growth/target-setup-dialog";
 
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 const bdt = (n: number) => "৳" + Math.round(n).toLocaleString("en-IN");
 const short = (n: number) =>
   n >= 1e7
