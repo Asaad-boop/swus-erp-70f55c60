@@ -20,6 +20,7 @@ import { STATUS_GROUPS, STATUS_BADGE, bdPhoneError, customerName, customerPhone,
 import { setOrderActualShippingCostFn } from "@/lib/erp/courier-sync.functions";
 import { confirmOrderAdvanceReceivedFn } from "@/lib/erp/finance/advance.functions";
 import { PreorderConvertDialog } from "@/components/erp/orders/preorder-convert-dialog";
+import { OrderItemsEditor } from "@/components/erp/orders/order-items-editor";
 import { fireOrderSms } from "@/lib/erp/sms/notify";
 import { cn } from "@/lib/utils";
 
@@ -175,6 +176,7 @@ export function OrderDrawer({ orderId, onClose, mode = "fulfillment" }: Props) {
   const [feeOpen, setFeeOpen] = useState(false);
   const [feeAmount, setFeeAmount] = useState("");
   const [customerEditing, setCustomerEditing] = useState(false);
+  const [itemsEditing, setItemsEditing] = useState(false);
   const [customerDraft, setCustomerDraft] = useState<CustomerDraft>(EMPTY_CUSTOMER_DRAFT);
   const setFeeFn = useServerFn(setOrderActualShippingCostFn);
   const confirmAdvanceFn = useServerFn(confirmOrderAdvanceReceivedFn);
