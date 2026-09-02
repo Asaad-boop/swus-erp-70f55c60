@@ -209,6 +209,29 @@ export function OrderDrawer({ orderId, onClose, mode = "fulfillment" }: Props) {
   const advancePaymentNumber = (order as { advance_payment_number?: string | null } | undefined)?.advance_payment_number;
   const advanceTxnId = (order as { advance_txn_id?: string | null } | undefined)?.advance_txn_id;
   const editingBlocked = mode === "web" && lockState.heldByOther;
+  const phone = order ? customerPhone(order) : "";
+  const { data: footprint } = useCustomerFootprint(phone || null, orderId);
+  const callAttempts = Number((order as { call_attempt_count?: number | null } | undefined)?.call_attempt_count ?? 0);
+  const callStatus = (order as { call_status?: string | null } | undefined)?.call_status ?? "not_called";
+  const lastCallAt = (order as { last_call_at?: string | null } | undefined)?.last_call_at ?? null;
+  const orderTags = ((order as { tags?: string[] | null } | undefined)?.tags ?? []).filter(Boolean);
+  const trackingNumber = (order as { tracking_number?: string | null } | undefined)?.tracking_number ?? null;
+  const courierNameVal = (order as { courier_name?: string | null } | undefined)?.courier_name ?? null;
+
+  const setCallStatus = useMutation({
+    mutationFn: async (value: string) => {
+      const { error } = await supabase.from("orders").update({ call_status: value as never }).eq("id", orderId!);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      toast.success("Call status updated");
+      qc.invalidateQueries({ queryKey: ["order-detail", orderId] });
+      qc.invalidateQueries({ queryKey: ["web-orders"] });
+      qc.invalidateQueries({ queryKey: ["orders"] });
+    },
+    onError: (e: Error) => toast.error(e.message),
+  });
+
   useEffect(() => {
     if (!order || customerEditing) return;
     setCustomerDraft(draftFromOrder(order));
