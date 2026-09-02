@@ -688,22 +688,28 @@ export function OrderDrawer({ orderId, onClose, mode = "fulfillment" }: Props) {
                           )}
                         </div>
 
-                        <a
-                          href={`tel:${customerPhone(order)}`}
-                          title="Call customer (logs a call attempt)"
-                          onClick={() => {
-                            if (!orderId) return;
-                            const o = order as { call_attempt_count?: number | null; call_status?: string | null } | undefined;
-                            logCall.mutate({
-                              orderId,
-                              attempts: o?.call_attempt_count ?? 0,
-                              currentStatus: o?.call_status ?? null,
-                            });
-                          }}
-                          className="flex items-center gap-2 text-foreground hover:text-primary transition-colors"
-                        >
-                          <Phone className="h-3.5 w-3.5 text-muted-foreground" /><span className="font-medium tabular-nums">{customerPhone(order)}</span>
-                        </a>
+                        <div className="flex items-center gap-2">
+                          <a
+                            href={`tel:${customerPhone(order)}`}
+                            title="Call customer (logs a call attempt)"
+                            onClick={() => {
+                              if (!orderId) return;
+                              logCall.mutate({ orderId, attempts: callAttempts, currentStatus: callStatus });
+                            }}
+                            className={cn("flex items-center gap-2 text-foreground transition-colors hover:text-primary")}
+                          >
+                            <Phone className="h-3.5 w-3.5 text-muted-foreground" /><span className="font-medium tabular-nums">{customerPhone(order)}</span>
+                          </a>
+                          <button
+                            type="button"
+                            title="Copy phone"
+                            onClick={() => { navigator.clipboard.writeText(customerPhone(order)); toast.success("Phone copied"); }}
+                            className="text-muted-foreground transition-colors hover:text-foreground"
+                          >
+                            <Copy className="h-3.5 w-3.5" />
+                          </button>
+                        </div>
+
                         <div className="flex items-start gap-2 text-muted-foreground">
                           <MapPin className="h-3.5 w-3.5 mt-0.5 shrink-0" />
                           <span className="leading-relaxed">{order.shipping_address}, {[order.shipping_thana, order.shipping_city, order.shipping_district].filter(Boolean).join(", ")}</span>
