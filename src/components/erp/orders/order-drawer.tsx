@@ -349,7 +349,7 @@ export function OrderDrawer({ orderId, onClose, mode = "fulfillment" }: Props) {
           .from("orders")
           .update({ web_status: web_status as never, ...promo, ...(extra ?? {}) })
           .eq("id", orderId!)
-          .in("status", ["new", "incomplete"]);
+          .in("status", ["new", "incomplete", "pre_order"]);
         if (promoError) throw promoError;
       }
       const { error } = await supabase
@@ -363,10 +363,14 @@ export function OrderDrawer({ orderId, onClose, mode = "fulfillment" }: Props) {
       if (vars.web_status === "complete" && orderId) fireOrderSms(orderId, "order_confirm");
       qc.invalidateQueries({ queryKey: ["web-orders"] });
       qc.invalidateQueries({ queryKey: ["web-orders-page"] });
+      qc.invalidateQueries({ queryKey: ["web-orders-inf"] });
       qc.invalidateQueries({ queryKey: ["web-orders-counts"] });
       qc.invalidateQueries({ queryKey: ["orders"] });
       qc.invalidateQueries({ queryKey: ["orders-status-counts"] });
       qc.invalidateQueries({ queryKey: ["order-detail", orderId] });
+      // Final actions (confirm/cancel) end the workflow for this order —
+      // close the drawer so the user immediately sees the row leave the queue.
+      if (vars.web_status === "complete" || vars.web_status === "cancelled") onClose();
     },
     onError: (e: Error) => toast.error(e.message),
   });
