@@ -234,6 +234,8 @@ export function OrderDrawer({ orderId, onClose, mode = "fulfillment" }: Props) {
     onError: (e: Error) => toast.error(e.message),
   });
 
+  useEffect(() => { setItemsEditing(false); }, [orderId]);
+
   useEffect(() => {
     if (!order || customerEditing) return;
     setCustomerDraft(draftFromOrder(order));
