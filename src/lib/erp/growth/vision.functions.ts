@@ -30,6 +30,28 @@ export type VisionTargets = {
   delivered_orders: number;
   delivered_revenue: number;
   ad_spend: number;
+  daily_orders: number;
+  daily_revenue: number;
+  daily_profit: number;
+};
+
+/** Event-based day pulse (created / confirmed / dispatched / delivered on that day). */
+export type DayPulse = {
+  orders_created: number;
+  booked_revenue: number;
+  orders_confirmed: number;
+  confirmed_value: number;
+  orders_cancelled: number;
+  dispatched_orders: number;
+  delivered_orders: number;
+  delivered_revenue: number;
+  cogs: number;
+  courier_cost: number;
+  packaging_cost: number;
+  returned_orders: number;
+  returned_value: number;
+  ad_spend_bdt: number;
+  net_profit: number;
 };
 
 export type GrowthVision = {
@@ -44,10 +66,12 @@ export type GrowthVision = {
     mtd: DailyWindowKpis;
     prevMonth: DailyWindowKpis;
   };
+  pulse: { today: DayPulse; yesterday: DayPulse; week: DayPulse; mtd: DayPulse; prevMonth: DayPulse };
   targets: VisionTargets;
   trend: VisionTrendRow[];
   team: { today: TeamScoreRow[]; week: TeamScoreRow[]; month: TeamScoreRow[] };
 };
+
 
 const num = (v: unknown) => (v === null || v === undefined ? 0 : Number(v) || 0);
 
