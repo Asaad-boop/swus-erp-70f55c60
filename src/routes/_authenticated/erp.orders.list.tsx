@@ -17,7 +17,6 @@ import { OrdersToolbar } from "@/components/erp/orders/orders-toolbar";
 import { OrdersBulkActions } from "@/components/erp/orders/orders-bulk-actions";
 import { OrdersTable } from "@/components/erp/orders/orders-table";
 import { OrdersSelectionBar } from "@/components/erp/orders/orders-selection-bar";
-import { OrdersPagination } from "@/components/erp/orders/orders-pagination";
 import { ErpPageHeader, HeaderChip } from "@/components/erp/ui/page-header";
 import { EmptyState } from "@/components/erp/ui/data-panel";
 import { useOrdersPrefs, useSavedViews } from "@/hooks/erp/use-orders-prefs";
@@ -186,7 +185,23 @@ function OrdersPage() {
     [filter, activeBrand?.id, isAllBrands, brandIds],
   );
 
-  const { data, isLoading, isFetching } = useOrdersQuery(effective);
+  // Infinite scroll: instead of pages we grow a single `limit`. The query
+  // always fetches rows [0, limit) so data stays contiguous and selection
+  // never breaks across "pages".
+  const PAGE_CHUNK = 50;
+  const [limit, setLimit] = useState(PAGE_CHUNK);
+  const filterSignature = useMemo(() => {
+    const { page: _p, pageSize: _s, ...rest } = effective;
+    return JSON.stringify(rest);
+  }, [effective]);
+  useEffect(() => { setLimit(PAGE_CHUNK); }, [filterSignature]);
+
+  const queryFilter = useMemo<OrdersFilter>(
+    () => ({ ...effective, page: 0, pageSize: limit }),
+    [effective, limit],
+  );
+
+  const { data, isLoading, isFetching } = useOrdersQuery(queryFilter);
 
   // Stable update helper that writes the next filter state to the URL.
   const filterRef = useRef(filter);
