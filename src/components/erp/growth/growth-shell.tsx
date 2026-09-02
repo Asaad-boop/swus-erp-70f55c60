@@ -3,14 +3,9 @@ import { useEffect, useRef, useState, type ReactNode } from "react";
 import {
   Compass,
   Target,
-  ListChecks,
-  BarChart3,
-  PackageOpen,
   KanbanSquare,
   Megaphone,
-  Users,
   Lightbulb,
-  PackageSearch,
   Swords,
   LineChart,
   Repeat,
@@ -21,7 +16,7 @@ import {
 import { Sheet, SheetContent, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
 import { cn } from "@/lib/utils";
 
-export type GrowthGroup = "Overview" | "Plan" | "Create" | "People & Market" | "Report";
+export type GrowthGroup = "Growth";
 
 export type GrowthNavItem = {
   to: string;
@@ -32,31 +27,18 @@ export type GrowthNavItem = {
   exact?: boolean;
 };
 
-export const GROWTH_GROUPS: GrowthGroup[] = [
-  "Overview",
-  "Plan",
-  "Create",
-  "People & Market",
-  "Report",
-];
+export const GROWTH_GROUPS: GrowthGroup[] = ["Growth"];
 
+/** The Growth Operating System — exactly eight destinations. */
 export const GROWTH_NAV: GrowthNavItem[] = [
-  { to: "/erp/growth", label: "Command Center", short: "Center", icon: Compass, group: "Overview", exact: true },
-
-  { to: "/erp/growth/goals", label: "Vision & Goals", short: "Goals", icon: Target, group: "Plan" },
-  { to: "/erp/growth/tasks", label: "Task Board", short: "Tasks", icon: ListChecks, group: "Plan" },
-  { to: "/erp/growth/planning", label: "Monthly Projection", short: "Projection", icon: BarChart3, group: "Plan" },
-
-  { to: "/erp/growth/intake", label: "Content Intake", short: "Intake", icon: PackageOpen, group: "Create" },
-  { to: "/erp/growth/pipeline", label: "Content Pipeline", short: "Pipeline", icon: KanbanSquare, group: "Create" },
-  { to: "/erp/growth/media-plans", label: "Media Buying Hub", short: "Media", icon: Megaphone, group: "Create" },
-
-  { to: "/erp/growth/retention", label: "Retention & Upsell", short: "Retention", icon: Repeat, group: "People & Market" },
-  { to: "/erp/growth/creators", label: "Creator CRM", short: "Creators", icon: Users, group: "People & Market" },
-  { to: "/erp/growth/products", label: "Product Pipeline", short: "Products", icon: Lightbulb, group: "People & Market" },
-  { to: "/erp/growth/rivals", label: "Competitors", short: "Rivals", icon: Swords, group: "People & Market" },
-
-  { to: "/erp/growth/report", label: "Growth Report", short: "Report", icon: LineChart, group: "Report" },
+  { to: "/erp/growth", label: "Command Center", short: "Center", icon: Compass, group: "Growth", exact: true },
+  { to: "/erp/growth/goals", label: "Goals & Plan", short: "Goals", icon: Target, group: "Growth" },
+  { to: "/erp/growth/products", label: "Product Lab", short: "Products", icon: Lightbulb, group: "Growth" },
+  { to: "/erp/growth/content", label: "Content Engine", short: "Content", icon: KanbanSquare, group: "Growth" },
+  { to: "/erp/growth/media", label: "Media Center", short: "Media", icon: Megaphone, group: "Growth" },
+  { to: "/erp/growth/lab", label: "Growth Lab", short: "Lab", icon: Repeat, group: "Growth" },
+  { to: "/erp/growth/market", label: "Market Intelligence", short: "Market", icon: Swords, group: "Growth" },
+  { to: "/erp/growth/analytics", label: "Analytics", short: "Analytics", icon: LineChart, group: "Growth" },
 ];
 
 function isOn(pathname: string, it: GrowthNavItem) {
@@ -88,12 +70,8 @@ export function GrowthSubnav() {
         ref={scroller}
         className="mx-auto hidden max-w-[1500px] items-center gap-1 overflow-x-auto px-3 py-2 md:flex md:px-6 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
       >
-        {GROWTH_GROUPS.map((g, gi) => (
+        {GROWTH_GROUPS.map((g) => (
           <div key={g} className="flex shrink-0 items-center gap-1">
-            {gi > 0 && <span className="mx-1.5 h-4 w-px shrink-0 bg-border" />}
-            <span className="shrink-0 pr-0.5 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground/70">
-              {g}
-            </span>
             {GROWTH_NAV.filter((it) => it.group === g).map((it) => {
               const on = isOn(pathname, it);
               const Icon = it.icon;
@@ -159,9 +137,6 @@ export function GrowthSubnav() {
               <nav className="flex-1 space-y-4 overflow-y-auto p-3">
                 {GROWTH_GROUPS.map((g) => (
                   <div key={g} className="space-y-1">
-                    <p className="px-2 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground/70">
-                      {g}
-                    </p>
                     <ul className="space-y-1">
                       {GROWTH_NAV.filter((it) => it.group === g).map((it) => {
                         const on = isOn(pathname, it);

@@ -127,10 +127,15 @@ import { Route as AuthenticatedErpGrowthProductsRouteImport } from './routes/_au
 import { Route as AuthenticatedErpGrowthPlanningRouteImport } from './routes/_authenticated/erp.growth.planning'
 import { Route as AuthenticatedErpGrowthPipelineRouteImport } from './routes/_authenticated/erp.growth.pipeline'
 import { Route as AuthenticatedErpGrowthMediaPlansRouteImport } from './routes/_authenticated/erp.growth.media-plans'
+import { Route as AuthenticatedErpGrowthMediaRouteImport } from './routes/_authenticated/erp.growth.media'
 import { Route as AuthenticatedErpGrowthMatchingRouteImport } from './routes/_authenticated/erp.growth.matching'
+import { Route as AuthenticatedErpGrowthMarketRouteImport } from './routes/_authenticated/erp.growth.market'
+import { Route as AuthenticatedErpGrowthLabRouteImport } from './routes/_authenticated/erp.growth.lab'
 import { Route as AuthenticatedErpGrowthIntakeRouteImport } from './routes/_authenticated/erp.growth.intake'
 import { Route as AuthenticatedErpGrowthGoalsRouteImport } from './routes/_authenticated/erp.growth.goals'
 import { Route as AuthenticatedErpGrowthCreatorsRouteImport } from './routes/_authenticated/erp.growth.creators'
+import { Route as AuthenticatedErpGrowthContentRouteImport } from './routes/_authenticated/erp.growth.content'
+import { Route as AuthenticatedErpGrowthAnalyticsRouteImport } from './routes/_authenticated/erp.growth.analytics'
 import { Route as AuthenticatedErpGrowthAgenciesRouteImport } from './routes/_authenticated/erp.growth.agencies'
 import { Route as AuthenticatedErpFinanceWalletsRouteImport } from './routes/_authenticated/erp.finance.wallets'
 import { Route as AuthenticatedErpFinanceTaxesRouteImport } from './routes/_authenticated/erp.finance.taxes'
@@ -833,10 +838,28 @@ const AuthenticatedErpGrowthMediaPlansRoute =
     path: '/media-plans',
     getParentRoute: () => AuthenticatedErpGrowthRoute,
   } as any)
+const AuthenticatedErpGrowthMediaRoute =
+  AuthenticatedErpGrowthMediaRouteImport.update({
+    id: '/media',
+    path: '/media',
+    getParentRoute: () => AuthenticatedErpGrowthRoute,
+  } as any)
 const AuthenticatedErpGrowthMatchingRoute =
   AuthenticatedErpGrowthMatchingRouteImport.update({
     id: '/matching',
     path: '/matching',
+    getParentRoute: () => AuthenticatedErpGrowthRoute,
+  } as any)
+const AuthenticatedErpGrowthMarketRoute =
+  AuthenticatedErpGrowthMarketRouteImport.update({
+    id: '/market',
+    path: '/market',
+    getParentRoute: () => AuthenticatedErpGrowthRoute,
+  } as any)
+const AuthenticatedErpGrowthLabRoute =
+  AuthenticatedErpGrowthLabRouteImport.update({
+    id: '/lab',
+    path: '/lab',
     getParentRoute: () => AuthenticatedErpGrowthRoute,
   } as any)
 const AuthenticatedErpGrowthIntakeRoute =
@@ -855,6 +878,18 @@ const AuthenticatedErpGrowthCreatorsRoute =
   AuthenticatedErpGrowthCreatorsRouteImport.update({
     id: '/creators',
     path: '/creators',
+    getParentRoute: () => AuthenticatedErpGrowthRoute,
+  } as any)
+const AuthenticatedErpGrowthContentRoute =
+  AuthenticatedErpGrowthContentRouteImport.update({
+    id: '/content',
+    path: '/content',
+    getParentRoute: () => AuthenticatedErpGrowthRoute,
+  } as any)
+const AuthenticatedErpGrowthAnalyticsRoute =
+  AuthenticatedErpGrowthAnalyticsRouteImport.update({
+    id: '/analytics',
+    path: '/analytics',
     getParentRoute: () => AuthenticatedErpGrowthRoute,
   } as any)
 const AuthenticatedErpGrowthAgenciesRoute =
@@ -1017,10 +1052,15 @@ export interface FileRoutesByFullPath {
   '/erp/finance/taxes': typeof AuthenticatedErpFinanceTaxesRoute
   '/erp/finance/wallets': typeof AuthenticatedErpFinanceWalletsRoute
   '/erp/growth/agencies': typeof AuthenticatedErpGrowthAgenciesRoute
+  '/erp/growth/analytics': typeof AuthenticatedErpGrowthAnalyticsRoute
+  '/erp/growth/content': typeof AuthenticatedErpGrowthContentRoute
   '/erp/growth/creators': typeof AuthenticatedErpGrowthCreatorsRoute
   '/erp/growth/goals': typeof AuthenticatedErpGrowthGoalsRoute
   '/erp/growth/intake': typeof AuthenticatedErpGrowthIntakeRoute
+  '/erp/growth/lab': typeof AuthenticatedErpGrowthLabRoute
+  '/erp/growth/market': typeof AuthenticatedErpGrowthMarketRoute
   '/erp/growth/matching': typeof AuthenticatedErpGrowthMatchingRoute
+  '/erp/growth/media': typeof AuthenticatedErpGrowthMediaRoute
   '/erp/growth/media-plans': typeof AuthenticatedErpGrowthMediaPlansRoute
   '/erp/growth/pipeline': typeof AuthenticatedErpGrowthPipelineRoute
   '/erp/growth/planning': typeof AuthenticatedErpGrowthPlanningRoute
@@ -1148,10 +1188,15 @@ export interface FileRoutesByTo {
   '/erp/finance/taxes': typeof AuthenticatedErpFinanceTaxesRoute
   '/erp/finance/wallets': typeof AuthenticatedErpFinanceWalletsRoute
   '/erp/growth/agencies': typeof AuthenticatedErpGrowthAgenciesRoute
+  '/erp/growth/analytics': typeof AuthenticatedErpGrowthAnalyticsRoute
+  '/erp/growth/content': typeof AuthenticatedErpGrowthContentRoute
   '/erp/growth/creators': typeof AuthenticatedErpGrowthCreatorsRoute
   '/erp/growth/goals': typeof AuthenticatedErpGrowthGoalsRoute
   '/erp/growth/intake': typeof AuthenticatedErpGrowthIntakeRoute
+  '/erp/growth/lab': typeof AuthenticatedErpGrowthLabRoute
+  '/erp/growth/market': typeof AuthenticatedErpGrowthMarketRoute
   '/erp/growth/matching': typeof AuthenticatedErpGrowthMatchingRoute
+  '/erp/growth/media': typeof AuthenticatedErpGrowthMediaRoute
   '/erp/growth/media-plans': typeof AuthenticatedErpGrowthMediaPlansRoute
   '/erp/growth/pipeline': typeof AuthenticatedErpGrowthPipelineRoute
   '/erp/growth/planning': typeof AuthenticatedErpGrowthPlanningRoute
@@ -1291,10 +1336,15 @@ export interface FileRoutesById {
   '/_authenticated/erp/finance/taxes': typeof AuthenticatedErpFinanceTaxesRoute
   '/_authenticated/erp/finance/wallets': typeof AuthenticatedErpFinanceWalletsRoute
   '/_authenticated/erp/growth/agencies': typeof AuthenticatedErpGrowthAgenciesRoute
+  '/_authenticated/erp/growth/analytics': typeof AuthenticatedErpGrowthAnalyticsRoute
+  '/_authenticated/erp/growth/content': typeof AuthenticatedErpGrowthContentRoute
   '/_authenticated/erp/growth/creators': typeof AuthenticatedErpGrowthCreatorsRoute
   '/_authenticated/erp/growth/goals': typeof AuthenticatedErpGrowthGoalsRoute
   '/_authenticated/erp/growth/intake': typeof AuthenticatedErpGrowthIntakeRoute
+  '/_authenticated/erp/growth/lab': typeof AuthenticatedErpGrowthLabRoute
+  '/_authenticated/erp/growth/market': typeof AuthenticatedErpGrowthMarketRoute
   '/_authenticated/erp/growth/matching': typeof AuthenticatedErpGrowthMatchingRoute
+  '/_authenticated/erp/growth/media': typeof AuthenticatedErpGrowthMediaRoute
   '/_authenticated/erp/growth/media-plans': typeof AuthenticatedErpGrowthMediaPlansRoute
   '/_authenticated/erp/growth/pipeline': typeof AuthenticatedErpGrowthPipelineRoute
   '/_authenticated/erp/growth/planning': typeof AuthenticatedErpGrowthPlanningRoute
@@ -1434,10 +1484,15 @@ export interface FileRouteTypes {
     | '/erp/finance/taxes'
     | '/erp/finance/wallets'
     | '/erp/growth/agencies'
+    | '/erp/growth/analytics'
+    | '/erp/growth/content'
     | '/erp/growth/creators'
     | '/erp/growth/goals'
     | '/erp/growth/intake'
+    | '/erp/growth/lab'
+    | '/erp/growth/market'
     | '/erp/growth/matching'
+    | '/erp/growth/media'
     | '/erp/growth/media-plans'
     | '/erp/growth/pipeline'
     | '/erp/growth/planning'
@@ -1565,10 +1620,15 @@ export interface FileRouteTypes {
     | '/erp/finance/taxes'
     | '/erp/finance/wallets'
     | '/erp/growth/agencies'
+    | '/erp/growth/analytics'
+    | '/erp/growth/content'
     | '/erp/growth/creators'
     | '/erp/growth/goals'
     | '/erp/growth/intake'
+    | '/erp/growth/lab'
+    | '/erp/growth/market'
     | '/erp/growth/matching'
+    | '/erp/growth/media'
     | '/erp/growth/media-plans'
     | '/erp/growth/pipeline'
     | '/erp/growth/planning'
@@ -1707,10 +1767,15 @@ export interface FileRouteTypes {
     | '/_authenticated/erp/finance/taxes'
     | '/_authenticated/erp/finance/wallets'
     | '/_authenticated/erp/growth/agencies'
+    | '/_authenticated/erp/growth/analytics'
+    | '/_authenticated/erp/growth/content'
     | '/_authenticated/erp/growth/creators'
     | '/_authenticated/erp/growth/goals'
     | '/_authenticated/erp/growth/intake'
+    | '/_authenticated/erp/growth/lab'
+    | '/_authenticated/erp/growth/market'
     | '/_authenticated/erp/growth/matching'
+    | '/_authenticated/erp/growth/media'
     | '/_authenticated/erp/growth/media-plans'
     | '/_authenticated/erp/growth/pipeline'
     | '/_authenticated/erp/growth/planning'
@@ -2652,11 +2717,32 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedErpGrowthMediaPlansRouteImport
       parentRoute: typeof AuthenticatedErpGrowthRoute
     }
+    '/_authenticated/erp/growth/media': {
+      id: '/_authenticated/erp/growth/media'
+      path: '/media'
+      fullPath: '/erp/growth/media'
+      preLoaderRoute: typeof AuthenticatedErpGrowthMediaRouteImport
+      parentRoute: typeof AuthenticatedErpGrowthRoute
+    }
     '/_authenticated/erp/growth/matching': {
       id: '/_authenticated/erp/growth/matching'
       path: '/matching'
       fullPath: '/erp/growth/matching'
       preLoaderRoute: typeof AuthenticatedErpGrowthMatchingRouteImport
+      parentRoute: typeof AuthenticatedErpGrowthRoute
+    }
+    '/_authenticated/erp/growth/market': {
+      id: '/_authenticated/erp/growth/market'
+      path: '/market'
+      fullPath: '/erp/growth/market'
+      preLoaderRoute: typeof AuthenticatedErpGrowthMarketRouteImport
+      parentRoute: typeof AuthenticatedErpGrowthRoute
+    }
+    '/_authenticated/erp/growth/lab': {
+      id: '/_authenticated/erp/growth/lab'
+      path: '/lab'
+      fullPath: '/erp/growth/lab'
+      preLoaderRoute: typeof AuthenticatedErpGrowthLabRouteImport
       parentRoute: typeof AuthenticatedErpGrowthRoute
     }
     '/_authenticated/erp/growth/intake': {
@@ -2678,6 +2764,20 @@ declare module '@tanstack/react-router' {
       path: '/creators'
       fullPath: '/erp/growth/creators'
       preLoaderRoute: typeof AuthenticatedErpGrowthCreatorsRouteImport
+      parentRoute: typeof AuthenticatedErpGrowthRoute
+    }
+    '/_authenticated/erp/growth/content': {
+      id: '/_authenticated/erp/growth/content'
+      path: '/content'
+      fullPath: '/erp/growth/content'
+      preLoaderRoute: typeof AuthenticatedErpGrowthContentRouteImport
+      parentRoute: typeof AuthenticatedErpGrowthRoute
+    }
+    '/_authenticated/erp/growth/analytics': {
+      id: '/_authenticated/erp/growth/analytics'
+      path: '/analytics'
+      fullPath: '/erp/growth/analytics'
+      preLoaderRoute: typeof AuthenticatedErpGrowthAnalyticsRouteImport
       parentRoute: typeof AuthenticatedErpGrowthRoute
     }
     '/_authenticated/erp/growth/agencies': {
@@ -2864,10 +2964,15 @@ const AuthenticatedErpFinanceRouteWithChildren =
 
 interface AuthenticatedErpGrowthRouteChildren {
   AuthenticatedErpGrowthAgenciesRoute: typeof AuthenticatedErpGrowthAgenciesRoute
+  AuthenticatedErpGrowthAnalyticsRoute: typeof AuthenticatedErpGrowthAnalyticsRoute
+  AuthenticatedErpGrowthContentRoute: typeof AuthenticatedErpGrowthContentRoute
   AuthenticatedErpGrowthCreatorsRoute: typeof AuthenticatedErpGrowthCreatorsRoute
   AuthenticatedErpGrowthGoalsRoute: typeof AuthenticatedErpGrowthGoalsRoute
   AuthenticatedErpGrowthIntakeRoute: typeof AuthenticatedErpGrowthIntakeRoute
+  AuthenticatedErpGrowthLabRoute: typeof AuthenticatedErpGrowthLabRoute
+  AuthenticatedErpGrowthMarketRoute: typeof AuthenticatedErpGrowthMarketRoute
   AuthenticatedErpGrowthMatchingRoute: typeof AuthenticatedErpGrowthMatchingRoute
+  AuthenticatedErpGrowthMediaRoute: typeof AuthenticatedErpGrowthMediaRoute
   AuthenticatedErpGrowthMediaPlansRoute: typeof AuthenticatedErpGrowthMediaPlansRoute
   AuthenticatedErpGrowthPipelineRoute: typeof AuthenticatedErpGrowthPipelineRoute
   AuthenticatedErpGrowthPlanningRoute: typeof AuthenticatedErpGrowthPlanningRoute
@@ -2884,10 +2989,15 @@ interface AuthenticatedErpGrowthRouteChildren {
 const AuthenticatedErpGrowthRouteChildren: AuthenticatedErpGrowthRouteChildren =
   {
     AuthenticatedErpGrowthAgenciesRoute: AuthenticatedErpGrowthAgenciesRoute,
+    AuthenticatedErpGrowthAnalyticsRoute: AuthenticatedErpGrowthAnalyticsRoute,
+    AuthenticatedErpGrowthContentRoute: AuthenticatedErpGrowthContentRoute,
     AuthenticatedErpGrowthCreatorsRoute: AuthenticatedErpGrowthCreatorsRoute,
     AuthenticatedErpGrowthGoalsRoute: AuthenticatedErpGrowthGoalsRoute,
     AuthenticatedErpGrowthIntakeRoute: AuthenticatedErpGrowthIntakeRoute,
+    AuthenticatedErpGrowthLabRoute: AuthenticatedErpGrowthLabRoute,
+    AuthenticatedErpGrowthMarketRoute: AuthenticatedErpGrowthMarketRoute,
     AuthenticatedErpGrowthMatchingRoute: AuthenticatedErpGrowthMatchingRoute,
+    AuthenticatedErpGrowthMediaRoute: AuthenticatedErpGrowthMediaRoute,
     AuthenticatedErpGrowthMediaPlansRoute:
       AuthenticatedErpGrowthMediaPlansRoute,
     AuthenticatedErpGrowthPipelineRoute: AuthenticatedErpGrowthPipelineRoute,
