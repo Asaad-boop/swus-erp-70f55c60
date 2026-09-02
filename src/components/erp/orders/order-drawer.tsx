@@ -1056,9 +1056,22 @@ export function OrderDrawer({ orderId, onClose, mode = "fulfillment" }: Props) {
                         rows={2}
                         className="resize-none text-sm"
                       />
-                      <Button size="sm" className="w-full gap-1.5" disabled={!note.trim() || addNote.isPending || editingBlocked} onClick={() => guardedAction(() => addNote.mutate())}>
+                      <Button size="sm" className="w-full gap-1.5" disabled={!note.trim() || addNote.isPending || editingBlocked} onClick={() => guardedAction(() => addNote.mutate(undefined))}>
                         <Send className="h-3.5 w-3.5" />Add Note
                       </Button>
+                      <div className="flex flex-wrap gap-1.5 pt-1">
+                        {QUICK_NOTES.map((q) => (
+                          <button
+                            key={q}
+                            type="button"
+                            disabled={addNote.isPending || editingBlocked}
+                            onClick={() => guardedAction(() => addNote.mutate(q))}
+                            className="rounded-full border bg-muted/40 px-2.5 py-1 text-[10px] font-medium text-muted-foreground transition-colors hover:border-primary/40 hover:bg-primary/10 hover:text-primary disabled:opacity-50"
+                          >
+                            + {q}
+                          </button>
+                        ))}
+                      </div>
                     </div>
                     {notes.length > 0 ? (
                       <div className="space-y-2 max-h-72 overflow-y-auto pr-1">
