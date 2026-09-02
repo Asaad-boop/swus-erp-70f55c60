@@ -494,7 +494,7 @@ export function VisionBoard() {
 
       <div className="grid gap-3 lg:grid-cols-[1.3fr_1fr]">
         {d.trend.length > 1 && (
-          <Card>
+          <Card className="shadow-none">
             <CardContent className="p-4">
               <h3 className="mb-2 text-sm font-semibold">এই মাসের দৈনিক pace</h3>
               <div className="h-56">
