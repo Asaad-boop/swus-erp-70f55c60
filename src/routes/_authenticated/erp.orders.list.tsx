@@ -17,7 +17,6 @@ import { OrdersToolbar } from "@/components/erp/orders/orders-toolbar";
 import { OrdersBulkActions } from "@/components/erp/orders/orders-bulk-actions";
 import { OrdersTable } from "@/components/erp/orders/orders-table";
 import { OrdersSelectionBar } from "@/components/erp/orders/orders-selection-bar";
-import { OrdersPagination } from "@/components/erp/orders/orders-pagination";
 import { ErpPageHeader, HeaderChip } from "@/components/erp/ui/page-header";
 import { EmptyState } from "@/components/erp/ui/data-panel";
 import { useOrdersPrefs, useSavedViews } from "@/hooks/erp/use-orders-prefs";
@@ -186,7 +185,23 @@ function OrdersPage() {
     [filter, activeBrand?.id, isAllBrands, brandIds],
   );
 
-  const { data, isLoading, isFetching } = useOrdersQuery(effective);
+  // Infinite scroll: instead of pages we grow a single `limit`. The query
+  // always fetches rows [0, limit) so data stays contiguous and selection
+  // never breaks across "pages".
+  const PAGE_CHUNK = 50;
+  const [limit, setLimit] = useState(PAGE_CHUNK);
+  const filterSignature = useMemo(() => {
+    const { page: _p, pageSize: _s, ...rest } = effective;
+    return JSON.stringify(rest);
+  }, [effective]);
+  useEffect(() => { setLimit(PAGE_CHUNK); }, [filterSignature]);
+
+  const queryFilter = useMemo<OrdersFilter>(
+    () => ({ ...effective, page: 0, pageSize: limit }),
+    [effective, limit],
+  );
+
+  const { data, isLoading, isFetching } = useOrdersQuery(queryFilter);
 
   // Stable update helper that writes the next filter state to the URL.
   const filterRef = useRef(filter);
@@ -247,6 +262,19 @@ function OrdersPage() {
   const { data: shipmentsMap = {} } = useCourierShipments(pageOrderIds);
 
   const visibleRows = rows;
+  const hasMore = visibleRows.length < total;
+
+  // Infinite scroll sentinel — auto-grows `limit` as the user scrolls down.
+  const sentinelRef = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    const el = sentinelRef.current;
+    if (!el || !hasMore) return;
+    const io = new IntersectionObserver((entries) => {
+      if (entries[0]?.isIntersecting) setLimit((l) => l + PAGE_CHUNK);
+    }, { rootMargin: "600px" });
+    io.observe(el);
+    return () => io.disconnect();
+  }, [hasMore, filterSignature]);
 
   // Realtime: subscribe to courier_shipments UPDATE/INSERT
   const idsKey = useMemo(() => [...pageOrderIds].sort().join(","), [pageOrderIds]);
@@ -357,7 +385,9 @@ function OrdersPage() {
     setSelectedIds(next);
   };
   const toggleAll = (checked: boolean) => {
-    if (checked) setSelectedIds(new Set(visibleRows.map((r) => r.id)));
+    // Bulk-select means EVERYTHING matching the current filter, not just the
+    // loaded chunk — so bulk actions (print/book/status) cover all orders.
+    if (checked) void selectAllMatching();
     else setSelectedIds(new Set());
   };
 
@@ -403,7 +433,7 @@ function OrdersPage() {
         const n = new Set(prev); n.add(id); return n;
       });
       await qc.cancelQueries({ queryKey: ["orders"] });
-      const queryKey = ["orders", effective] as const;
+      const queryKey = ["orders", queryFilter] as const;
       const previous = qc.getQueryData<{ rows: OrderRow[]; total: number }>(queryKey);
       if (previous) {
         qc.setQueryData(queryKey, {
@@ -521,7 +551,6 @@ function OrdersPage() {
   };
   const hasActiveFilters = !!(filter.search || filter.source || filter.courier || filter.dateFrom || filter.dateTo || filter.statuses.length > 0);
 
-  const totalPages = Math.max(1, Math.ceil(total / filter.pageSize));
   const activeTab =
     view === "incomplete" ? "incomplete"
       : tabForStatuses(effective.statuses);
@@ -538,7 +567,7 @@ function OrdersPage() {
         document.querySelector<HTMLInputElement>("input[data-orders-search]")?.focus();
       } else if (e.key === "a") {
         e.preventDefault();
-        setSelectedIds(new Set(visibleRows.map((r) => r.id)));
+        void selectAllMatching();
       } else if (e.key === "r") {
         e.preventDefault();
         handleRefresh();
@@ -697,7 +726,7 @@ function OrdersPage() {
               <OrdersBulkActions
                 selectedCount={selectedIds.size}
                 totalCount={rows.length}
-                onSelectAll={() => setSelectedIds(new Set(rows.map((r) => r.id)))}
+                onSelectAll={() => void selectAllMatching()}
                 onClear={() => setSelectedIds(new Set())}
                 onStatus={(s) => bulkStatus.mutate(s)}
                 onExport={handleExport}
@@ -778,14 +807,30 @@ function OrdersPage() {
             }
           />
         )}
-        <OrdersPagination
-          page={filter.page}
-          pageSize={filter.pageSize}
-          total={total}
-          rowsOnPage={visibleRows.length}
-          onPage={(p) => updateFilter({ page: p })}
-          onPageSize={(n) => updateFilter({ pageSize: n, page: 0 })}
-        />
+        {/* Infinite scroll footer — sentinel auto-loads the next chunk. */}
+        {!isLoading && visibleRows.length > 0 && (
+          <div className="flex flex-col items-center gap-2 border-t border-[var(--panel-border)] px-4 py-3">
+            <span className="text-[11px] text-muted-foreground tabular-nums">
+              Showing {visibleRows.length.toLocaleString()} of {total.toLocaleString()}
+            </span>
+            {hasMore ? (
+              <>
+                <div ref={sentinelRef} className="h-1 w-full" />
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="h-8 rounded-xl text-[12px]"
+                  disabled={isFetching}
+                  onClick={() => setLimit((l) => l + PAGE_CHUNK)}
+                >
+                  {isFetching ? "Loading…" : `Load more (${(total - visibleRows.length).toLocaleString()} left)`}
+                </Button>
+              </>
+            ) : (
+              <span className="text-[11px] text-muted-foreground/70">সব order লোড হয়েছে ✓</span>
+            )}
+          </div>
+        )}
         </div>
           </>
         )}
