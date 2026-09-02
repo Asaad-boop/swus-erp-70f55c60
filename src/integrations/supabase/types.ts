@@ -13194,6 +13194,26 @@ export type Database = {
           product_b: string
         }[]
       }
+      growth_day_pulse: {
+        Args: { _brand_ids: string[]; _from: string; _to: string }
+        Returns: {
+          ad_spend_bdt: number
+          booked_revenue: number
+          cogs: number
+          confirmed_value: number
+          courier_cost: number
+          delivered_orders: number
+          delivered_revenue: number
+          dispatched_orders: number
+          net_profit: number
+          orders_cancelled: number
+          orders_confirmed: number
+          orders_created: number
+          packaging_cost: number
+          returned_orders: number
+          returned_value: number
+        }[]
+      }
       growth_retention_summary: {
         Args: { _brand_ids: string[]; _from: string; _to: string }
         Returns: {

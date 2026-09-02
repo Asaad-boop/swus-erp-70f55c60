@@ -18,7 +18,9 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { cn } from "@/lib/utils";
 import { useBrand } from "@/contexts/brand-context";
 import { getGrowthVision, type TeamScoreRow } from "@/lib/erp/growth/vision.functions";
+import { TargetSetupDialog } from "@/components/erp/growth/target-setup-dialog";
 
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 const bdt = (n: number) => "৳" + Math.round(n).toLocaleString("en-IN");
 const short = (n: number) =>
   n >= 1e7
@@ -246,118 +248,191 @@ export function VisionBoard() {
   if (q.isLoading) return <Skeleton className="h-64 w-full rounded-xl" />;
   if (!d || !derived) return null;
 
-  const hasTargets =
-    d.targets.orders > 0 || d.targets.delivered_revenue > 0 || d.targets.delivered_orders > 0;
-  const hasActivity = d.windows.mtd.orders > 0 || d.windows.mtd.booked_revenue > 0;
-  if (!hasTargets && !hasActivity) return null;
+  const p = d.pulse.today;
+  const py = d.pulse.yesterday;
+  const pm = d.pulse.mtd;
+  const dailyOrderTarget = d.targets.daily_orders || derived.needOrdersToday || 0;
+  const dailyRevenueTarget = d.targets.daily_revenue || derived.needRevenueToday || 0;
+  const dailyProfitTarget = d.targets.daily_profit || 0;
 
   return (
     <div className="space-y-3">
-      {/* Today */}
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <div>
+          <h2 className="text-sm font-semibold">আজকের অপারেশন · {d.today}</h2>
+          <p className="text-[11px] text-muted-foreground">
+            সব হিসাব Asia/Dhaka দিনের event অনুযায়ী (কবে create/confirm/dispatch/deliver হলো)
+          </p>
+        </div>
+        <TargetSetupDialog />
+      </div>
+
+      {/* Today's real operations */}
       <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
         <PaceCard
           icon={Sun}
-          label="Order"
+          label="Order এসেছে"
           scope="আজ"
-          actual={d.windows.today.orders}
-          target={derived.needOrdersToday || null}
+          actual={p.orders_created}
+          target={dailyOrderTarget || null}
           fmt={int}
-          extra={<Delta now={d.windows.today.orders} prev={d.windows.yesterday.orders} label="vs কাল" />}
+          extra={
+            <>
+              <p className="mt-0.5 text-[11px] text-muted-foreground">
+                {short(p.booked_revenue)} booked
+              </p>
+              <Delta now={p.orders_created} prev={py.orders_created} label="vs কাল" />
+            </>
+          }
         />
         <PaceCard
-          icon={Flame}
-          label="Delivered revenue"
+          icon={PhoneCall}
+          label="Confirm হয়েছে"
           scope="আজ"
-          actual={d.windows.today.delivered_revenue}
-          target={derived.needRevenueToday || null}
-          fmt={short}
+          actual={p.orders_confirmed}
+          target={null}
+          fmt={int}
           extra={
-            <Delta
-              now={d.windows.today.delivered_revenue}
-              prev={d.windows.yesterday.delivered_revenue}
-              label="vs কাল"
-            />
+            <p className="mt-0.5 text-[11px] text-muted-foreground">
+              {short(p.confirmed_value)} value · {int(p.orders_cancelled)} cancel
+            </p>
           }
         />
         <PaceCard
           icon={CalendarRange}
-          label="Order"
-          scope={`সপ্তাহ (${derived.weekDays}/7 দিন)`}
-          actual={d.windows.week.orders}
-          target={derived.weekTargetOrders || null}
+          label="কুরিয়ারে গেছে"
+          scope="আজ"
+          actual={p.dispatched_orders}
+          target={null}
           fmt={int}
-          extra={<Delta now={d.windows.week.orders} prev={d.windows.prevWeek.orders} label="vs গত সপ্তাহ" />}
+          extra={<Delta now={p.dispatched_orders} prev={py.dispatched_orders} label="vs কাল" />}
         />
         <PaceCard
-          icon={CalendarDays}
-          label="Order"
-          scope={`মাস (${d.month.dayOfMonth}/${d.month.daysInMonth} দিন)`}
-          actual={d.windows.mtd.orders}
-          target={d.targets.orders || null}
+          icon={Flame}
+          label="Delivered"
+          scope="আজ"
+          actual={p.delivered_orders}
+          target={null}
           fmt={int}
           extra={
             <p className="mt-0.5 text-[11px] text-muted-foreground">
-              ~{int(derived.projectedOrders)} projected
+              {int(p.returned_orders)} return আজ
             </p>
           }
         />
       </div>
 
-      {/* Month money strip */}
+      {/* Today's money */}
       <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
         <PaceCard
-          icon={CalendarDays}
+          icon={Flame}
           label="Delivered revenue"
-          scope="মাস"
-          actual={d.windows.mtd.delivered_revenue}
-          target={d.targets.delivered_revenue || null}
+          scope="আজ"
+          actual={p.delivered_revenue}
+          target={dailyRevenueTarget || null}
           fmt={short}
-          extra={
-            <p className="mt-0.5 text-[11px] text-muted-foreground">
-              ~{short(derived.projectedRevenue)} projected
-            </p>
-          }
-        />
-        <PaceCard
-          icon={CalendarDays}
-          label="Delivered order"
-          scope="মাস"
-          actual={d.windows.mtd.delivered_orders}
-          target={d.targets.delivered_orders || null}
-          fmt={int}
+          extra={<Delta now={p.delivered_revenue} prev={py.delivered_revenue} label="vs কাল" />}
         />
         <PaceCard
           icon={CalendarDays}
           label="Ad spend"
-          scope="মাস"
-          actual={d.windows.mtd.spend_bdt}
-          target={d.targets.ad_spend || null}
+          scope="আজ"
+          actual={p.ad_spend_bdt}
+          target={null}
           fmt={short}
           extra={
             <p className="mt-0.5 text-[11px] text-muted-foreground">
-              Booked ROAS {d.windows.mtd.roas == null ? "—" : `${d.windows.mtd.roas.toFixed(2)}x`} ·
-              Delivered{" "}
-              {d.windows.mtd.spend_bdt > 0
-                ? `${(d.windows.mtd.delivered_revenue / d.windows.mtd.spend_bdt).toFixed(2)}x`
-                : "—"}
+              Delivered ROAS{" "}
+              {p.ad_spend_bdt > 0 ? `${(p.delivered_revenue / p.ad_spend_bdt).toFixed(2)}x` : "—"}
+            </p>
+          }
+        />
+        <PaceCard
+          icon={Trophy}
+          label="Net profit"
+          scope="আজ"
+          actual={p.net_profit}
+          target={dailyProfitTarget || null}
+          fmt={short}
+          extra={
+            <p className="mt-0.5 text-[11px] text-muted-foreground">
+              COGS {short(p.cogs)} · কুরিয়ার {short(p.courier_cost)} · ads {short(p.ad_spend_bdt)}
             </p>
           }
         />
         <Card>
           <CardContent className="p-4">
             <p className="text-[11px] font-medium uppercase tracking-wide text-muted-foreground">
-              গত মাস (full)
+              কালকের দিন
             </p>
-            <p className="text-xl font-semibold tabular-nums">{int(d.windows.prevMonth.orders)}</p>
+            <p className="text-xl font-semibold tabular-nums">{int(py.orders_created)} order</p>
             <p className="text-[11px] text-muted-foreground">
-              {bdt(d.windows.prevMonth.delivered_revenue)} delivered
+              {short(py.delivered_revenue)} delivered · profit {short(py.net_profit)}
             </p>
             <Badge variant="outline" className="mt-2 text-[10px]">
-              MTD {int(d.windows.mtd.orders)} order
+              {int(py.delivered_orders)} delivered
             </Badge>
           </CardContent>
         </Card>
       </div>
+
+      {/* Month strip */}
+      <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
+        <PaceCard
+          icon={CalendarDays}
+          label="Order"
+          scope={`মাস (${d.month.dayOfMonth}/${d.month.daysInMonth} দিন)`}
+          actual={pm.orders_created}
+          target={d.targets.orders || null}
+          fmt={int}
+          extra={
+            <p className="mt-0.5 text-[11px] text-muted-foreground">
+              ~{int(Math.round((pm.orders_created / Math.max(1, d.month.dayOfMonth)) * d.month.daysInMonth))} projected
+            </p>
+          }
+        />
+        <PaceCard
+          icon={CalendarDays}
+          label="Delivered revenue"
+          scope="মাস"
+          actual={pm.delivered_revenue}
+          target={d.targets.delivered_revenue || null}
+          fmt={short}
+          extra={
+            <p className="mt-0.5 text-[11px] text-muted-foreground">
+              {int(pm.delivered_orders)} delivered order
+            </p>
+          }
+        />
+        <PaceCard
+          icon={CalendarDays}
+          label="Ad spend"
+          scope="মাস"
+          actual={pm.ad_spend_bdt}
+          target={d.targets.ad_spend || null}
+          fmt={short}
+          extra={
+            <p className="mt-0.5 text-[11px] text-muted-foreground">
+              Delivered ROAS{" "}
+              {pm.ad_spend_bdt > 0 ? `${(pm.delivered_revenue / pm.ad_spend_bdt).toFixed(2)}x` : "—"}
+            </p>
+          }
+        />
+        <PaceCard
+          icon={Trophy}
+          label="Net profit"
+          scope="মাস"
+          actual={pm.net_profit}
+          target={dailyProfitTarget ? dailyProfitTarget * d.month.daysInMonth : null}
+          fmt={short}
+          extra={
+            <p className="mt-0.5 text-[11px] text-muted-foreground">
+              গত মাস {short(d.pulse.prevMonth.net_profit)}
+            </p>
+          }
+        />
+      </div>
+
 
       <div className="grid gap-3 lg:grid-cols-[1.3fr_1fr]">
         {d.trend.length > 1 && (

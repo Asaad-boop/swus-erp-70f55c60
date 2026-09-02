@@ -30,6 +30,28 @@ export type VisionTargets = {
   delivered_orders: number;
   delivered_revenue: number;
   ad_spend: number;
+  daily_orders: number;
+  daily_revenue: number;
+  daily_profit: number;
+};
+
+/** Event-based day pulse (created / confirmed / dispatched / delivered on that day). */
+export type DayPulse = {
+  orders_created: number;
+  booked_revenue: number;
+  orders_confirmed: number;
+  confirmed_value: number;
+  orders_cancelled: number;
+  dispatched_orders: number;
+  delivered_orders: number;
+  delivered_revenue: number;
+  cogs: number;
+  courier_cost: number;
+  packaging_cost: number;
+  returned_orders: number;
+  returned_value: number;
+  ad_spend_bdt: number;
+  net_profit: number;
 };
 
 export type GrowthVision = {
@@ -44,10 +66,12 @@ export type GrowthVision = {
     mtd: DailyWindowKpis;
     prevMonth: DailyWindowKpis;
   };
+  pulse: { today: DayPulse; yesterday: DayPulse; week: DayPulse; mtd: DayPulse; prevMonth: DayPulse };
   targets: VisionTargets;
   trend: VisionTrendRow[];
   team: { today: TeamScoreRow[]; week: TeamScoreRow[]; month: TeamScoreRow[] };
 };
+
 
 const num = (v: unknown) => (v === null || v === undefined ? 0 : Number(v) || 0);
 
@@ -64,7 +88,28 @@ const TARGET_KEYS: Record<string, keyof VisionTargets> = {
   delivered_orders: "delivered_orders",
   delivered_revenue: "delivered_revenue",
   ad_spend: "ad_spend",
+  daily_orders: "daily_orders",
+  daily_revenue: "daily_revenue",
+  daily_profit: "daily_profit",
 };
+
+const emptyPulse = (): DayPulse => ({
+  orders_created: 0,
+  booked_revenue: 0,
+  orders_confirmed: 0,
+  confirmed_value: 0,
+  orders_cancelled: 0,
+  dispatched_orders: 0,
+  delivered_orders: 0,
+  delivered_revenue: 0,
+  cogs: 0,
+  courier_cost: 0,
+  packaging_cost: 0,
+  returned_orders: 0,
+  returned_value: 0,
+  ad_spend_bdt: 0,
+  net_profit: 0,
+});
 
 export const getGrowthVision = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
@@ -84,9 +129,27 @@ export const getGrowthVision = createServerFn({ method: "POST" })
       sb.rpc("mkt_dashboard_kpis", { _brand_ids: brandIds, _from: from, _to: to } as never);
     const team = (from: string, to: string) =>
       sb.rpc("growth_team_scoreboard", { _brand_ids: brandIds, _from: from, _to: to } as never);
+    const pulse = (from: string, to: string) =>
+      sb.rpc("growth_day_pulse", { _brand_ids: brandIds, _from: from, _to: to } as never);
 
-    const [t, y, wk, pw, mtd, pm, trendRes, goalsRes, teamToday, teamWeek, teamMonth] =
-      await Promise.all([
+    const [
+      t,
+      y,
+      wk,
+      pw,
+      mtd,
+      pm,
+      trendRes,
+      goalsRes,
+      teamToday,
+      teamWeek,
+      teamMonth,
+      pToday,
+      pYest,
+      pWeek,
+      pMtd,
+      pPrevMonth,
+    ] = await Promise.all([
         kpi(today, today),
         kpi(yest, yest),
         kpi(w.start, today),
@@ -108,7 +171,20 @@ export const getGrowthVision = createServerFn({ method: "POST" })
         team(today, today),
         team(w.start, today),
         team(m.start, today),
+        pulse(today, today),
+        pulse(yest, yest),
+        pulse(w.start, today),
+        pulse(m.start, today),
+        pulse(prevMonthStart, prevMonthEnd),
       ]);
+
+    const mapPulse = (r: { data: unknown }): DayPulse => {
+      const row = ((r.data as Record<string, unknown>[]) ?? [])[0];
+      if (!row) return emptyPulse();
+      const base = emptyPulse();
+      for (const k of Object.keys(base) as (keyof DayPulse)[]) base[k] = num(row[k]);
+      return base;
+    };
 
     const first = (r: { data: unknown }) =>
       mapWindow(((r.data as Record<string, unknown>[]) ?? [])[0]);
@@ -118,6 +194,9 @@ export const getGrowthVision = createServerFn({ method: "POST" })
       delivered_orders: 0,
       delivered_revenue: 0,
       ad_spend: 0,
+      daily_orders: 0,
+      daily_revenue: 0,
+      daily_profit: 0,
     };
     for (const g of ((goalsRes.data as any[]) ?? [])) {
       if (g.brand_id && !brandIds.includes(String(g.brand_id))) continue;
@@ -154,6 +233,13 @@ export const getGrowthVision = createServerFn({ method: "POST" })
         prevWeek: first(pw),
         mtd: first(mtd),
         prevMonth: first(pm),
+      },
+      pulse: {
+        today: mapPulse(pToday),
+        yesterday: mapPulse(pYest),
+        week: mapPulse(pWeek),
+        mtd: mapPulse(pMtd),
+        prevMonth: mapPulse(pPrevMonth),
       },
       targets,
       trend,
