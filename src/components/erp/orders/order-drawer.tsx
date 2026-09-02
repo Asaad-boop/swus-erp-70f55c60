@@ -147,6 +147,27 @@ function useCustomerFootprint(phone: string | null, currentId: string | null) {
   });
 }
 
+/** One-tap canned notes — fastest way to log common call outcomes. */
+const QUICK_NOTES = [
+  "Customer confirm korlo",
+  "Call dhore nai — pore try korte hobe",
+  "Delivery date jante cheyeche",
+  "Address confirm kora hoyeche",
+  "Advance dite raji",
+  "Customer cancel korte cheyeche",
+];
+
+/** Simple risk read from the customer's past-order footprint. */
+function riskFrom(fp: { total: number; delivered: number; returned: number; cancelled: number } | undefined) {
+  if (!fp || fp.total === 0) return null;
+  const bad = fp.returned + fp.cancelled;
+  const rate = bad / fp.total;
+  if (fp.total >= 2 && rate >= 0.5) return { level: "high" as const, label: "High risk customer", detail: `${bad}/${fp.total} order return/cancel hoyeche` };
+  if (bad > 0) return { level: "watch" as const, label: "Watch", detail: `${bad} past return/cancel` };
+  if (fp.delivered >= 2) return { level: "good" as const, label: "Trusted repeat customer", detail: `${fp.delivered} successful delivery` };
+  return null;
+}
+
 const CALL_STATUS_OPTIONS: { value: string; label: string }[] = [
   { value: "not_called", label: "Not called" },
   { value: "attempting", label: "Attempting" },
