@@ -36,7 +36,7 @@ function Ring({ pct }: { pct: number }) {
   const p = Math.max(0, Math.min(100, pct));
   return (
     <div
-      className="relative h-14 w-14 shrink-0 rounded-full shadow-inner"
+      className="relative h-14 w-14 shrink-0 rounded-full"
       style={{
         background: `conic-gradient(currentColor ${p * 3.6}deg, color-mix(in oklab, currentColor 12%, transparent) 0deg)`,
       }}
@@ -78,7 +78,7 @@ function PaceCard({
   return (
     <Card
       className={cn(
-        "group relative overflow-hidden border-border/60 transition-all hover:-translate-y-0.5 hover:shadow-lg",
+        "group relative overflow-hidden border-border/70 shadow-none transition-colors hover:border-foreground/25",
       )}
     >
       <span
@@ -163,7 +163,7 @@ function TeamBoard({ team }: { team: Record<string, TeamScoreRow[]> }) {
   const rows = team[tab] ?? [];
   const max = Math.max(1, ...rows.map((r) => r.confirmed_orders));
   return (
-    <Card>
+    <Card className="shadow-none">
       <CardContent className="space-y-3 p-4">
         <div className="flex flex-wrap items-center justify-between gap-2">
           <h3 className="inline-flex items-center gap-1.5 text-sm font-semibold">
@@ -287,7 +287,7 @@ export function VisionBoard() {
 
   return (
     <div className="space-y-3">
-      <div className="relative overflow-hidden rounded-2xl border border-border/60 bg-[linear-gradient(135deg,color-mix(in_oklab,var(--primary)_16%,transparent),transparent_60%)] p-4 md:p-5">
+      <div className="relative overflow-hidden rounded-2xl border border-border/70 bg-card p-4 md:p-5">
         <div className="grid grid-cols-[minmax(0,1fr)_auto] items-start gap-4 sm:flex sm:flex-wrap sm:justify-between">
           <div className="min-w-0">
             <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-primary">
@@ -418,7 +418,7 @@ export function VisionBoard() {
             </p>
           }
         />
-        <Card>
+        <Card className="shadow-none">
           <CardContent className="p-4">
             <p className="text-[11px] font-medium uppercase tracking-wide text-muted-foreground">
               কালকের দিন
@@ -494,7 +494,7 @@ export function VisionBoard() {
 
       <div className="grid gap-3 lg:grid-cols-[1.3fr_1fr]">
         {d.trend.length > 1 && (
-          <Card>
+          <Card className="shadow-none">
             <CardContent className="p-4">
               <h3 className="mb-2 text-sm font-semibold">এই মাসের দৈনিক pace</h3>
               <div className="h-56">

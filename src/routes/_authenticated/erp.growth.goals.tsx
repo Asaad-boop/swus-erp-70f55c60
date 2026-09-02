@@ -214,7 +214,7 @@ function GoalsPage() {
       {(goalsQ.isLoading || brandLoading) && <Skeleton className="h-40 w-full rounded-xl" />}
 
       {!goalsQ.isLoading && goals.length === 0 && (
-        <Card>
+        <Card className="shadow-none">
           <CardContent className="p-10 text-center text-sm text-muted-foreground">
             এখনো কোনো goal নেই। মাসের target (revenue, order, নতুন product) যোগ করে শুরু করো।
           </CardContent>
@@ -226,7 +226,7 @@ function GoalsPage() {
           const actual = actuals?.get(g.id) ?? g.current_value;
           const pct = progressPct(g, actual);
           return (
-            <Card key={g.id} className="overflow-hidden">
+            <Card key={g.id} className="overflow-hidden shadow-none">
               <CardContent className="space-y-3 p-4">
                 <div className="flex items-start justify-between gap-2">
                   <div className="min-w-0">
@@ -411,7 +411,7 @@ function progressPct(g: HubGoal, actual: number) {
 
 function StatCard({ label, value }: { label: string; value: string }) {
   return (
-    <Card>
+    <Card className="shadow-none">
       <CardContent className="p-4">
         <p className="text-xs text-muted-foreground">{label}</p>
         <p className="font-display text-2xl font-bold">{value}</p>
