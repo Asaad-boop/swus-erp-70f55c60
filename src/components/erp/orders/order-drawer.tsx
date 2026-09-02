@@ -529,7 +529,93 @@ export function OrderDrawer({ orderId, onClose, mode = "fulfillment" }: Props) {
                   </div>
                 </div>
               ) : (
+              <>
+              {/* QUICK ACTIONS — one tap status change */}
+              <div className="sticky top-0 z-20 border-b bg-background/95 px-5 py-2.5 backdrop-blur">
+                <div className="flex flex-wrap items-center gap-1.5">
+                  <span className="mr-1 text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Quick actions</span>
+                  {mode === "web" ? (
+                    <>
+                      <Button size="sm" className="h-8 gap-1.5 bg-emerald-600 text-white hover:bg-emerald-700" disabled={updateWebStatus.isPending} onClick={() => onPickWebStatus("complete")}>
+                        <CheckCircle2 className="h-3.5 w-3.5" /> Confirm Order
+                      </Button>
+                      <Button size="sm" variant="outline" className="h-8 gap-1.5" disabled={updateWebStatus.isPending} onClick={() => onPickWebStatus("good_but_no_response")}>
+                        <PhoneOff className="h-3.5 w-3.5" /> Good / No response
+                      </Button>
+                      <Button size="sm" variant="outline" className="h-8 gap-1.5" disabled={updateWebStatus.isPending} onClick={() => onPickWebStatus("no_response")}>
+                        <PhoneOff className="h-3.5 w-3.5" /> No response
+                      </Button>
+                      <Button size="sm" variant="outline" className="h-8 gap-1.5" disabled={updateWebStatus.isPending} onClick={() => onPickWebStatus("on_hold")}>
+                        <PauseCircle className="h-3.5 w-3.5" /> On hold
+                      </Button>
+                      <Button size="sm" variant="outline" className="h-8 gap-1.5 border-violet-300 text-violet-700 dark:border-violet-900 dark:text-violet-300" disabled={updateWebStatus.isPending} onClick={() => onPickWebStatus("advance_payment")}>
+                        <Wallet className="h-3.5 w-3.5" /> Advance
+                      </Button>
+                      <Button size="sm" variant="outline" className="h-8 gap-1.5 text-destructive" disabled={updateWebStatus.isPending} onClick={() => onPickWebStatus("cancelled")}>
+                        <X className="h-3.5 w-3.5" /> Cancel
+                      </Button>
+                    </>
+                  ) : (
+                    <>
+                      {(["confirmed", "packed", "ready_to_ship", "delivered"] as OrderStatus[])
+                        .filter((s) => s !== order.status)
+                        .map((s) => (
+                          <Button key={s} size="sm" variant="outline" className="h-8 gap-1.5" disabled={updateStatus.isPending} onClick={() => guardedAction(() => updateStatus.mutate(s))}>
+                            {STATUS_BADGE[s]?.label ?? s.replace(/_/g, " ")}
+                          </Button>
+                        ))}
+                      <Button size="sm" variant="outline" className="h-8 gap-1.5 text-destructive" disabled={updateStatus.isPending} onClick={() => guardedAction(() => updateStatus.mutate("cancelled" as OrderStatus))}>
+                        <X className="h-3.5 w-3.5" /> Cancel
+                      </Button>
+                    </>
+                  )}
+                  <span className="mx-1 hidden h-5 w-px bg-border sm:block" />
+                  {phone && (
+                    <>
+                      <a
+                        href={`tel:${phone}`}
+                        onClick={() => orderId && logCall.mutate({ orderId, attempts: callAttempts, currentStatus: callStatus })}
+                        className="inline-flex h-8 items-center gap-1.5 rounded-md border border-primary/40 bg-primary/10 px-3 text-xs font-semibold text-primary transition-colors hover:bg-primary/20"
+                      >
+                        <PhoneCall className="h-3.5 w-3.5" /> Call now{callAttempts > 0 ? ` (${callAttempts})` : ""}
+                      </a>
+                      <a
+                        href={`https://wa.me/88${phone.replace(/\D/g, "").slice(-11)}`}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="inline-flex h-8 items-center gap-1.5 rounded-md border px-3 text-xs font-medium text-muted-foreground transition-colors hover:text-foreground"
+                      >
+                        <MessageCircle className="h-3.5 w-3.5" /> WhatsApp
+                      </a>
+                    </>
+                  )}
+                  <div className="ml-auto flex items-center gap-1.5">
+                    <span className="text-[10px] uppercase tracking-wider text-muted-foreground">Call</span>
+                    <Select value={callStatus} disabled={setCallStatus.isPending || editingBlocked} onValueChange={(v) => guardedAction(() => setCallStatus.mutate(v))}>
+                      <SelectTrigger className="h-8 w-[170px] text-xs"><SelectValue /></SelectTrigger>
+                      <SelectContent>
+                        {CALL_STATUS_OPTIONS.map((o) => (
+                          <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
+                {(lastCallAt || orderTags.length > 0 || trackingNumber) && (
+                  <div className="mt-2 flex flex-wrap items-center gap-2 text-[11px] text-muted-foreground">
+                    {lastCallAt && <span className="inline-flex items-center gap-1"><Clock className="h-3 w-3" />Last call {format(new Date(lastCallAt), "dd MMM, hh:mm a")}</span>}
+                    {trackingNumber && (
+                      <span className="inline-flex items-center gap-1"><Truck className="h-3 w-3" />{courierNameVal ?? "Courier"} · <span className="font-mono text-foreground">{trackingNumber}</span></span>
+                    )}
+                    {orderTags.map((t) => (
+                      <Badge key={t} variant="outline" className="h-5 gap-1 px-1.5 text-[10px]"><TagIcon className="h-2.5 w-2.5" />{t}</Badge>
+                    ))}
+                  </div>
+                )}
+              </div>
+
               <div className="grid lg:grid-cols-3 gap-4 p-5">
+
                 {/* LEFT — Customer + Items (2 cols) */}
                 <div className="lg:col-span-2 space-y-4">
                   {/* Customer */}
