@@ -287,18 +287,46 @@ export function VisionBoard() {
 
   return (
     <div className="space-y-3">
-      <div className="flex flex-wrap items-center justify-between gap-2">
-        <div>
-          <h2 className="text-sm font-semibold">আজকের অপারেশন · {d.today}</h2>
-          <p className="text-[11px] text-muted-foreground">
-            সব হিসাব Asia/Dhaka দিনের event অনুযায়ী (কবে create/confirm/dispatch/deliver হলো)
-          </p>
+      <div className="relative overflow-hidden rounded-2xl border border-border/60 bg-[linear-gradient(135deg,color-mix(in_oklab,var(--primary)_16%,transparent),transparent_60%)] p-4 md:p-5">
+        <div className="grid grid-cols-[minmax(0,1fr)_auto] items-start gap-4 sm:flex sm:flex-wrap sm:justify-between">
+          <div className="min-w-0">
+            <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-primary">
+              Vision cockpit
+            </p>
+            <h2 className="truncate font-display text-xl font-bold md:text-2xl">
+              আজকের অপারেশন · {d.today}
+            </h2>
+            <p className="text-[11px] text-muted-foreground">
+              সব হিসাব Asia/Dhaka দিনের event অনুযায়ী (কবে create/confirm/dispatch/deliver হলো)
+            </p>
+          </div>
+          <TargetSetupDialog />
         </div>
-        <TargetSetupDialog />
+        <div className="mt-3 flex flex-wrap gap-1.5">
+          <Badge variant="secondary" className="text-[10px] tabular-nums">
+            {int(p.orders_created)} order আজ
+          </Badge>
+          <Badge variant="secondary" className="text-[10px] tabular-nums">
+            {int(p.delivered_orders)} delivered
+          </Badge>
+          <Badge variant="secondary" className="text-[10px] tabular-nums">
+            {short(p.delivered_revenue)} revenue
+          </Badge>
+          <Badge
+            variant="outline"
+            className={cn(
+              "text-[10px] tabular-nums",
+              p.net_profit >= 0 ? "text-emerald-600 dark:text-emerald-400" : "text-rose-500",
+            )}
+          >
+            profit {short(p.net_profit)}
+          </Badge>
+        </div>
       </div>
 
-      {/* Today's real operations */}
+      <SectionTitle>আজকের অপারেশন</SectionTitle>
       <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
+
         <PaceCard
           icon={Sun}
           label="Order এসেছে"
