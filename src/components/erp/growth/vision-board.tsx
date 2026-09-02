@@ -380,7 +380,7 @@ export function VisionBoard() {
         />
       </div>
 
-      {/* Today's money */}
+      <SectionTitle>আজকের হিসাব</SectionTitle>
       <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
         <PaceCard
           icon={Flame}
@@ -434,7 +434,7 @@ export function VisionBoard() {
         </Card>
       </div>
 
-      {/* Month strip */}
+      <SectionTitle>এই মাসের pace</SectionTitle>
       <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
         <PaceCard
           icon={CalendarDays}
