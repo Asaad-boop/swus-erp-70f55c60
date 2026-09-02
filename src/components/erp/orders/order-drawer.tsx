@@ -105,6 +105,60 @@ function webStatusLabel(status: string | null | undefined) {
   return WEB_STATUS_OPTIONS.find((o) => o.value === status)?.label ?? (status ?? "Processing").replace(/_/g, " ");
 }
 
+/** Compact product thumbnail with graceful fallback. */
+function ItemThumb({ src, alt }: { src: string | null | undefined; alt: string }) {
+  const [failed, setFailed] = useState(false);
+  const url = src && String(src).trim() ? String(src) : null;
+  return (
+    <div className="h-12 w-12 shrink-0 overflow-hidden rounded-lg border bg-muted">
+      {!url || failed ? (
+        <div className="flex h-full w-full items-center justify-center text-muted-foreground">
+          <Package className="h-5 w-5 opacity-50" />
+        </div>
+      ) : (
+        <img src={url} alt={alt} loading="lazy" referrerPolicy="no-referrer" onError={() => setFailed(true)} className="h-full w-full object-cover" />
+      )}
+    </div>
+  );
+}
+
+/** Past order footprint for the same phone number (repeat / risk signal). */
+function useCustomerFootprint(phone: string | null, currentId: string | null) {
+  const digits = String(phone ?? "").replace(/\D/g, "").slice(-11);
+  return useQuery({
+    queryKey: ["order-drawer-footprint", digits],
+    enabled: digits.length === 11,
+    staleTime: 60_000,
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("orders")
+        .select("id,status,total,created_at")
+        .or(`shipping_phone.ilike.%${digits}%,guest_phone.ilike.%${digits}%`)
+        .order("created_at", { ascending: false })
+        .limit(100);
+      if (error) throw error;
+      const rows = (data ?? []).filter((r) => r.id !== currentId);
+      const delivered = rows.filter((r) => r.status === "delivered" || r.status === "completed" || r.status === "paid").length;
+      const returned = rows.filter((r) => String(r.status ?? "").includes("return")).length;
+      const cancelled = rows.filter((r) => r.status === "cancelled" || r.status === "fake").length;
+      return { total: rows.length, delivered, returned, cancelled, last: rows[0] ?? null };
+    },
+  });
+}
+
+const CALL_STATUS_OPTIONS: { value: string; label: string }[] = [
+  { value: "not_called", label: "Not called" },
+  { value: "attempting", label: "Attempting" },
+  { value: "reached", label: "Reached" },
+  { value: "no_response", label: "No response" },
+  { value: "wrong_number", label: "Wrong number" },
+  { value: "customer_confirmed", label: "Customer confirmed" },
+  { value: "customer_cancelled", label: "Customer cancelled" },
+  { value: "needs_followup", label: "Needs follow-up" },
+];
+
+
+
 export function OrderDrawer({ orderId, onClose, mode = "fulfillment" }: Props) {
   const qc = useQueryClient();
   const { data, isLoading } = useOrderDetail(orderId);
