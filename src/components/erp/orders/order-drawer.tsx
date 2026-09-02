@@ -923,7 +923,9 @@ export function OrderDrawer({ orderId, onClose, mode = "fulfillment" }: Props) {
                   </section>
                 </div>
               </div>
+              </>
               )}
+
             </div>
           </>
         )}
