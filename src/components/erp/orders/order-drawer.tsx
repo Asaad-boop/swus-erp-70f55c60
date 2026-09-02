@@ -1,7 +1,7 @@
 import { format } from "date-fns";
 import { useEffect, useState } from "react";
-import { User, Phone, MapPin, Package, Clock, Loader2, Hash, Calendar, Globe, UserCog, ListChecks, StickyNote, Send, AlertTriangle, Truck, Pencil, Lock, ShieldAlert, Save, X, CalendarClock } from "lucide-react";
-import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { User, Phone, MapPin, Package, Clock, Loader2, Hash, Calendar, Globe, UserCog, ListChecks, StickyNote, Send, AlertTriangle, Truck, Pencil, Lock, ShieldAlert, Save, X, CalendarClock, PhoneCall, Copy, MessageCircle, CheckCircle2, PauseCircle, PhoneOff, Wallet, History, Tag as TagIcon } from "lucide-react";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
@@ -21,6 +21,8 @@ import { setOrderActualShippingCostFn } from "@/lib/erp/courier-sync.functions";
 import { confirmOrderAdvanceReceivedFn } from "@/lib/erp/finance/advance.functions";
 import { PreorderConvertDialog } from "@/components/erp/orders/preorder-convert-dialog";
 import { fireOrderSms } from "@/lib/erp/sms/notify";
+import { cn } from "@/lib/utils";
+
 
 type Props = { orderId: string | null; onClose: () => void; mode?: "web" | "fulfillment" };
 
@@ -103,6 +105,60 @@ function webStatusLabel(status: string | null | undefined) {
   return WEB_STATUS_OPTIONS.find((o) => o.value === status)?.label ?? (status ?? "Processing").replace(/_/g, " ");
 }
 
+/** Compact product thumbnail with graceful fallback. */
+function ItemThumb({ src, alt }: { src: string | null | undefined; alt: string }) {
+  const [failed, setFailed] = useState(false);
+  const url = src && String(src).trim() ? String(src) : null;
+  return (
+    <div className="h-12 w-12 shrink-0 overflow-hidden rounded-lg border bg-muted">
+      {!url || failed ? (
+        <div className="flex h-full w-full items-center justify-center text-muted-foreground">
+          <Package className="h-5 w-5 opacity-50" />
+        </div>
+      ) : (
+        <img src={url} alt={alt} loading="lazy" referrerPolicy="no-referrer" onError={() => setFailed(true)} className="h-full w-full object-cover" />
+      )}
+    </div>
+  );
+}
+
+/** Past order footprint for the same phone number (repeat / risk signal). */
+function useCustomerFootprint(phone: string | null, currentId: string | null) {
+  const digits = String(phone ?? "").replace(/\D/g, "").slice(-11);
+  return useQuery({
+    queryKey: ["order-drawer-footprint", digits],
+    enabled: digits.length === 11,
+    staleTime: 60_000,
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("orders")
+        .select("id,status,total,created_at")
+        .or(`shipping_phone.ilike.%${digits}%,guest_phone.ilike.%${digits}%`)
+        .order("created_at", { ascending: false })
+        .limit(100);
+      if (error) throw error;
+      const rows = (data ?? []).filter((r) => r.id !== currentId);
+      const delivered = rows.filter((r) => r.status === "delivered" || r.status === "completed" || r.status === "paid").length;
+      const returned = rows.filter((r) => String(r.status ?? "").includes("return")).length;
+      const cancelled = rows.filter((r) => r.status === "cancelled" || r.status === "fake").length;
+      return { total: rows.length, delivered, returned, cancelled, last: rows[0] ?? null };
+    },
+  });
+}
+
+const CALL_STATUS_OPTIONS: { value: string; label: string }[] = [
+  { value: "not_called", label: "Not called" },
+  { value: "attempting", label: "Attempting" },
+  { value: "reached", label: "Reached" },
+  { value: "no_response", label: "No response" },
+  { value: "wrong_number", label: "Wrong number" },
+  { value: "customer_confirmed", label: "Customer confirmed" },
+  { value: "customer_cancelled", label: "Customer cancelled" },
+  { value: "needs_followup", label: "Needs follow-up" },
+];
+
+
+
 export function OrderDrawer({ orderId, onClose, mode = "fulfillment" }: Props) {
   const qc = useQueryClient();
   const { data, isLoading } = useOrderDetail(orderId);
@@ -153,6 +209,29 @@ export function OrderDrawer({ orderId, onClose, mode = "fulfillment" }: Props) {
   const advancePaymentNumber = (order as { advance_payment_number?: string | null } | undefined)?.advance_payment_number;
   const advanceTxnId = (order as { advance_txn_id?: string | null } | undefined)?.advance_txn_id;
   const editingBlocked = mode === "web" && lockState.heldByOther;
+  const phone = order ? customerPhone(order) : "";
+  const { data: footprint } = useCustomerFootprint(phone || null, orderId);
+  const callAttempts = Number((order as { call_attempt_count?: number | null } | undefined)?.call_attempt_count ?? 0);
+  const callStatus = (order as { call_status?: string | null } | undefined)?.call_status ?? "not_called";
+  const lastCallAt = (order as { last_call_at?: string | null } | undefined)?.last_call_at ?? null;
+  const orderTags = ((order as { tags?: string[] | null } | undefined)?.tags ?? []).filter(Boolean);
+  const trackingNumber = (order as { tracking_number?: string | null } | undefined)?.tracking_number ?? null;
+  const courierNameVal = (order as { courier_name?: string | null } | undefined)?.courier_name ?? null;
+
+  const setCallStatus = useMutation({
+    mutationFn: async (value: string) => {
+      const { error } = await supabase.from("orders").update({ call_status: value as never }).eq("id", orderId!);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      toast.success("Call status updated");
+      qc.invalidateQueries({ queryKey: ["order-detail", orderId] });
+      qc.invalidateQueries({ queryKey: ["web-orders"] });
+      qc.invalidateQueries({ queryKey: ["orders"] });
+    },
+    onError: (e: Error) => toast.error(e.message),
+  });
+
   useEffect(() => {
     if (!order || customerEditing) return;
     setCustomerDraft(draftFromOrder(order));
@@ -450,7 +529,93 @@ export function OrderDrawer({ orderId, onClose, mode = "fulfillment" }: Props) {
                   </div>
                 </div>
               ) : (
+              <>
+              {/* QUICK ACTIONS — one tap status change */}
+              <div className="sticky top-0 z-20 border-b bg-background/95 px-5 py-2.5 backdrop-blur">
+                <div className="flex flex-wrap items-center gap-1.5">
+                  <span className="mr-1 text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Quick actions</span>
+                  {mode === "web" ? (
+                    <>
+                      <Button size="sm" className="h-8 gap-1.5 bg-emerald-600 text-white hover:bg-emerald-700" disabled={updateWebStatus.isPending} onClick={() => onPickWebStatus("complete")}>
+                        <CheckCircle2 className="h-3.5 w-3.5" /> Confirm Order
+                      </Button>
+                      <Button size="sm" variant="outline" className="h-8 gap-1.5" disabled={updateWebStatus.isPending} onClick={() => onPickWebStatus("good_but_no_response")}>
+                        <PhoneOff className="h-3.5 w-3.5" /> Good / No response
+                      </Button>
+                      <Button size="sm" variant="outline" className="h-8 gap-1.5" disabled={updateWebStatus.isPending} onClick={() => onPickWebStatus("no_response")}>
+                        <PhoneOff className="h-3.5 w-3.5" /> No response
+                      </Button>
+                      <Button size="sm" variant="outline" className="h-8 gap-1.5" disabled={updateWebStatus.isPending} onClick={() => onPickWebStatus("on_hold")}>
+                        <PauseCircle className="h-3.5 w-3.5" /> On hold
+                      </Button>
+                      <Button size="sm" variant="outline" className="h-8 gap-1.5 border-violet-300 text-violet-700 dark:border-violet-900 dark:text-violet-300" disabled={updateWebStatus.isPending} onClick={() => onPickWebStatus("advance_payment")}>
+                        <Wallet className="h-3.5 w-3.5" /> Advance
+                      </Button>
+                      <Button size="sm" variant="outline" className="h-8 gap-1.5 text-destructive" disabled={updateWebStatus.isPending} onClick={() => onPickWebStatus("cancelled")}>
+                        <X className="h-3.5 w-3.5" /> Cancel
+                      </Button>
+                    </>
+                  ) : (
+                    <>
+                      {(["confirmed", "packed", "ready_to_ship", "delivered"] as OrderStatus[])
+                        .filter((s) => s !== order.status)
+                        .map((s) => (
+                          <Button key={s} size="sm" variant="outline" className="h-8 gap-1.5" disabled={updateStatus.isPending} onClick={() => guardedAction(() => updateStatus.mutate(s))}>
+                            {STATUS_BADGE[s]?.label ?? s.replace(/_/g, " ")}
+                          </Button>
+                        ))}
+                      <Button size="sm" variant="outline" className="h-8 gap-1.5 text-destructive" disabled={updateStatus.isPending} onClick={() => guardedAction(() => updateStatus.mutate("cancelled" as OrderStatus))}>
+                        <X className="h-3.5 w-3.5" /> Cancel
+                      </Button>
+                    </>
+                  )}
+                  <span className="mx-1 hidden h-5 w-px bg-border sm:block" />
+                  {phone && (
+                    <>
+                      <a
+                        href={`tel:${phone}`}
+                        onClick={() => orderId && logCall.mutate({ orderId, attempts: callAttempts, currentStatus: callStatus })}
+                        className="inline-flex h-8 items-center gap-1.5 rounded-md border border-primary/40 bg-primary/10 px-3 text-xs font-semibold text-primary transition-colors hover:bg-primary/20"
+                      >
+                        <PhoneCall className="h-3.5 w-3.5" /> Call now{callAttempts > 0 ? ` (${callAttempts})` : ""}
+                      </a>
+                      <a
+                        href={`https://wa.me/88${phone.replace(/\D/g, "").slice(-11)}`}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="inline-flex h-8 items-center gap-1.5 rounded-md border px-3 text-xs font-medium text-muted-foreground transition-colors hover:text-foreground"
+                      >
+                        <MessageCircle className="h-3.5 w-3.5" /> WhatsApp
+                      </a>
+                    </>
+                  )}
+                  <div className="ml-auto flex items-center gap-1.5">
+                    <span className="text-[10px] uppercase tracking-wider text-muted-foreground">Call</span>
+                    <Select value={callStatus} disabled={setCallStatus.isPending || editingBlocked} onValueChange={(v) => guardedAction(() => setCallStatus.mutate(v))}>
+                      <SelectTrigger className="h-8 w-[170px] text-xs"><SelectValue /></SelectTrigger>
+                      <SelectContent>
+                        {CALL_STATUS_OPTIONS.map((o) => (
+                          <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
+                {(lastCallAt || orderTags.length > 0 || trackingNumber) && (
+                  <div className="mt-2 flex flex-wrap items-center gap-2 text-[11px] text-muted-foreground">
+                    {lastCallAt && <span className="inline-flex items-center gap-1"><Clock className="h-3 w-3" />Last call {format(new Date(lastCallAt), "dd MMM, hh:mm a")}</span>}
+                    {trackingNumber && (
+                      <span className="inline-flex items-center gap-1"><Truck className="h-3 w-3" />{courierNameVal ?? "Courier"} · <span className="font-mono text-foreground">{trackingNumber}</span></span>
+                    )}
+                    {orderTags.map((t) => (
+                      <Badge key={t} variant="outline" className="h-5 gap-1 px-1.5 text-[10px]"><TagIcon className="h-2.5 w-2.5" />{t}</Badge>
+                    ))}
+                  </div>
+                )}
+              </div>
+
               <div className="grid lg:grid-cols-3 gap-4 p-5">
+
                 {/* LEFT — Customer + Items (2 cols) */}
                 <div className="lg:col-span-2 space-y-4">
                   {/* Customer */}
@@ -510,23 +675,41 @@ export function OrderDrawer({ orderId, onClose, mode = "fulfillment" }: Props) {
                       </div>
                     ) : (
                       <div className="space-y-2 text-sm">
-                        <div className="text-base font-semibold">{customerName(order)}</div>
-                        <a
-                          href={`tel:${customerPhone(order)}`}
-                          title="Call customer (logs a call attempt)"
-                          onClick={() => {
-                            if (!orderId) return;
-                            const o = order as { call_attempt_count?: number | null; call_status?: string | null } | undefined;
-                            logCall.mutate({
-                              orderId,
-                              attempts: o?.call_attempt_count ?? 0,
-                              currentStatus: o?.call_status ?? null,
-                            });
-                          }}
-                          className="flex items-center gap-2 text-foreground hover:text-primary transition-colors"
-                        >
-                          <Phone className="h-3.5 w-3.5 text-muted-foreground" /><span className="font-medium tabular-nums">{customerPhone(order)}</span>
-                        </a>
+                        <div className="flex flex-wrap items-center gap-2">
+                          <span className="text-base font-semibold">{customerName(order)}</span>
+                          {footprint && footprint.total > 0 && (
+                            <span className="inline-flex items-center gap-1.5 rounded-full border bg-muted/50 px-2 py-0.5 text-[10px] font-medium">
+                              <History className="h-3 w-3" />
+                              {footprint.total} past
+                              <span className="text-emerald-600 dark:text-emerald-400">{footprint.delivered}✓</span>
+                              {footprint.returned > 0 && <span className="text-rose-600 dark:text-rose-400">{footprint.returned}↩</span>}
+                              {footprint.cancelled > 0 && <span className="text-muted-foreground">{footprint.cancelled}✕</span>}
+                            </span>
+                          )}
+                        </div>
+
+                        <div className="flex items-center gap-2">
+                          <a
+                            href={`tel:${customerPhone(order)}`}
+                            title="Call customer (logs a call attempt)"
+                            onClick={() => {
+                              if (!orderId) return;
+                              logCall.mutate({ orderId, attempts: callAttempts, currentStatus: callStatus });
+                            }}
+                            className={cn("flex items-center gap-2 text-foreground transition-colors hover:text-primary")}
+                          >
+                            <Phone className="h-3.5 w-3.5 text-muted-foreground" /><span className="font-medium tabular-nums">{customerPhone(order)}</span>
+                          </a>
+                          <button
+                            type="button"
+                            title="Copy phone"
+                            onClick={() => { navigator.clipboard.writeText(customerPhone(order)); toast.success("Phone copied"); }}
+                            className="text-muted-foreground transition-colors hover:text-foreground"
+                          >
+                            <Copy className="h-3.5 w-3.5" />
+                          </button>
+                        </div>
+
                         <div className="flex items-start gap-2 text-muted-foreground">
                           <MapPin className="h-3.5 w-3.5 mt-0.5 shrink-0" />
                           <span className="leading-relaxed">{order.shipping_address}, {[order.shipping_thana, order.shipping_city, order.shipping_district].filter(Boolean).join(", ")}</span>
@@ -558,8 +741,10 @@ export function OrderDrawer({ orderId, onClose, mode = "fulfillment" }: Props) {
                     <h3 className="text-xs font-bold uppercase tracking-wider text-muted-foreground mb-3 flex items-center gap-1.5"><Package className="h-3.5 w-3.5" />Items ({items.length})</h3>
                     <div className="space-y-2">
                       {items.map((it) => (
-                        <div key={it.id} className="flex justify-between gap-3 text-sm p-2.5 rounded-lg bg-muted/40 hover:bg-muted/70 transition-colors">
+                        <div key={it.id} className="flex items-center justify-between gap-3 text-sm p-2.5 rounded-lg bg-muted/40 hover:bg-muted/70 transition-colors">
+                          <ItemThumb src={(it as { image?: string | null }).image} alt={it.name ?? "item"} />
                           <div className="flex-1 min-w-0">
+
                             <div className="font-medium truncate">{it.name}</div>
                             {it.variant_label && <div className="text-xs text-muted-foreground mt-0.5">{it.variant_label}</div>}
                             <div className="text-xs text-muted-foreground mt-0.5 tabular-nums">Qty: <span className="font-semibold text-foreground">{it.quantity}</span> × ৳ {Number(it.unit_price ?? it.price).toLocaleString()}</div>
@@ -756,7 +941,9 @@ export function OrderDrawer({ orderId, onClose, mode = "fulfillment" }: Props) {
                   </section>
                 </div>
               </div>
+              </>
               )}
+
             </div>
           </>
         )}
