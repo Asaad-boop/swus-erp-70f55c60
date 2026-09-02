@@ -793,14 +793,30 @@ function OrdersPage() {
             }
           />
         )}
-        <OrdersPagination
-          page={filter.page}
-          pageSize={filter.pageSize}
-          total={total}
-          rowsOnPage={visibleRows.length}
-          onPage={(p) => updateFilter({ page: p })}
-          onPageSize={(n) => updateFilter({ pageSize: n, page: 0 })}
-        />
+        {/* Infinite scroll footer — sentinel auto-loads the next chunk. */}
+        {!isLoading && visibleRows.length > 0 && (
+          <div className="flex flex-col items-center gap-2 border-t border-[var(--panel-border)] px-4 py-3">
+            <span className="text-[11px] text-muted-foreground tabular-nums">
+              Showing {visibleRows.length.toLocaleString()} of {total.toLocaleString()}
+            </span>
+            {hasMore ? (
+              <>
+                <div ref={sentinelRef} className="h-1 w-full" />
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="h-8 rounded-xl text-[12px]"
+                  disabled={isFetching}
+                  onClick={() => setLimit((l) => l + PAGE_CHUNK)}
+                >
+                  {isFetching ? "Loading…" : `Load more (${(total - visibleRows.length).toLocaleString()} left)`}
+                </Button>
+              </>
+            ) : (
+              <span className="text-[11px] text-muted-foreground/70">সব order লোড হয়েছে ✓</span>
+            )}
+          </div>
+        )}
         </div>
           </>
         )}
