@@ -1,6 +1,6 @@
 import { format } from "date-fns";
 import { useEffect, useState } from "react";
-import { User, Phone, MapPin, Package, Clock, Loader2, Hash, Calendar, Globe, UserCog, ListChecks, StickyNote, Send, AlertTriangle, Truck, Pencil, Lock, ShieldAlert, Save, X, CalendarClock, PhoneCall, Copy, MessageCircle, CheckCircle2, PauseCircle, PhoneOff, Wallet, History, Tag as TagIcon } from "lucide-react";
+import { User, Phone, MapPin, Package, Clock, Loader2, Hash, Calendar, Globe, UserCog, ListChecks, StickyNote, Send, AlertTriangle, Truck, Pencil, Lock, ShieldAlert, Save, X, CalendarClock, PhoneCall, Copy, MessageCircle, CheckCircle2, PauseCircle, PhoneOff, Wallet, History, Tag as TagIcon, ClipboardCopy, ShieldCheck, Command, Repeat2 } from "lucide-react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { toast } from "sonner";
@@ -145,6 +145,27 @@ function useCustomerFootprint(phone: string | null, currentId: string | null) {
       return { total: rows.length, delivered, returned, cancelled, last: rows[0] ?? null };
     },
   });
+}
+
+/** One-tap canned notes — fastest way to log common call outcomes. */
+const QUICK_NOTES = [
+  "Customer confirm korlo",
+  "Call dhore nai — pore try korte hobe",
+  "Delivery date jante cheyeche",
+  "Address confirm kora hoyeche",
+  "Advance dite raji",
+  "Customer cancel korte cheyeche",
+];
+
+/** Simple risk read from the customer's past-order footprint. */
+function riskFrom(fp: { total: number; delivered: number; returned: number; cancelled: number } | undefined) {
+  if (!fp || fp.total === 0) return null;
+  const bad = fp.returned + fp.cancelled;
+  const rate = bad / fp.total;
+  if (fp.total >= 2 && rate >= 0.5) return { level: "high" as const, label: "High risk customer", detail: `${bad}/${fp.total} order return/cancel hoyeche` };
+  if (bad > 0) return { level: "watch" as const, label: "Watch", detail: `${bad} past return/cancel` };
+  if (fp.delivered >= 2) return { level: "good" as const, label: "Trusted repeat customer", detail: `${fp.delivered} successful delivery` };
+  return null;
 }
 
 const CALL_STATUS_OPTIONS: { value: string; label: string }[] = [
@@ -420,8 +441,10 @@ export function OrderDrawer({ orderId, onClose, mode = "fulfillment" }: Props) {
   };
 
   const addNote = useMutation({
-    mutationFn: async () => {
-      const { error } = await supabase.rpc("add_order_note", { _order_id: orderId!, _body: note, _is_internal: true });
+    mutationFn: async (body?: string) => {
+      const text = (body ?? note).trim();
+      if (!text) throw new Error("Note khali");
+      const { error } = await supabase.rpc("add_order_note", { _order_id: orderId!, _body: text, _is_internal: true });
       if (error) throw error;
     },
     onSuccess: () => {
@@ -431,6 +454,62 @@ export function OrderDrawer({ orderId, onClose, mode = "fulfillment" }: Props) {
     },
     onError: (e: Error) => toast.error(e.message),
   });
+
+  const risk = riskFrom(footprint);
+  const lastOrderAt = footprint?.last?.created_at ? new Date(footprint.last.created_at) : null;
+  const isDuplicateRisk = !!lastOrderAt && Date.now() - lastOrderAt.getTime() < 24 * 60 * 60 * 1000;
+
+  /** Copy a paste-ready order summary (for WhatsApp / courier / team chat). */
+  const copySummary = () => {
+    if (!order) return;
+    const lines = [
+      `#${invoiceDisplay(order)}`,
+      `${customerName(order)} · ${customerPhone(order)}`,
+      `${order.shipping_address ?? ""}, ${[order.shipping_thana, order.shipping_city, order.shipping_district].filter(Boolean).join(", ")}`,
+      "",
+      ...items.map((it) => `• ${it.name}${it.variant_label ? ` (${it.variant_label})` : ""} × ${it.quantity} = ৳${Number(it.line_total ?? Number(it.unit_price ?? it.price) * it.quantity).toLocaleString()}`),
+      "",
+      `Subtotal: ৳${subtotal.toLocaleString()}`,
+      `Shipping: ৳${shippingFee.toLocaleString()}`,
+      ...(advanceAmount > 0 ? [`Advance: ৳${advanceAmount.toLocaleString()}`] : []),
+      `${advanceAmount > 0 ? "Due" : "Total"}: ৳${payableTotal.toLocaleString()}`,
+    ];
+    navigator.clipboard.writeText(lines.join("\n"));
+    toast.success("Order summary copied");
+  };
+
+  const copyAddress = () => {
+    if (!order) return;
+    navigator.clipboard.writeText(
+      `${customerName(order)}, ${customerPhone(order)}\n${order.shipping_address ?? ""}, ${[order.shipping_thana, order.shipping_city, order.shipping_district].filter(Boolean).join(", ")}`,
+    );
+    toast.success("Address copied");
+  };
+
+  const confirmPrimary = () => {
+    if (mode === "web") onPickWebStatus("complete");
+    else guardedAction(() => updateStatus.mutate("confirmed" as OrderStatus));
+  };
+
+  /** Keyboard shortcuts — power-user speed on the confirmation desk. */
+  useEffect(() => {
+    if (!orderId || editingBlocked) return;
+    const onKey = (e: KeyboardEvent) => {
+      const t = e.target as HTMLElement | null;
+      if (t && (t.tagName === "INPUT" || t.tagName === "TEXTAREA" || t.isContentEditable)) return;
+      if (e.metaKey || e.ctrlKey || e.altKey) return;
+      const k = e.key.toLowerCase();
+      if (k === "c") { e.preventDefault(); confirmPrimary(); }
+      else if (k === "h" && mode === "web") { e.preventDefault(); onPickWebStatus("on_hold"); }
+      else if (k === "r" && mode === "web") { e.preventDefault(); onPickWebStatus("no_response"); }
+      else if (k === "a" && mode === "web") { e.preventDefault(); onPickWebStatus("advance_payment"); }
+      else if (k === "p" && phone) { e.preventDefault(); window.location.href = `tel:${phone}`; if (orderId) logCall.mutate({ orderId, attempts: callAttempts, currentStatus: callStatus }); }
+      else if (k === "y") { e.preventDefault(); copySummary(); }
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [orderId, editingBlocked, mode, phone, callAttempts, callStatus, items, order]);
 
   return (
     <Dialog open={!!orderId} onOpenChange={(o) => !o && onClose()}>
@@ -635,7 +714,43 @@ export function OrderDrawer({ orderId, onClose, mode = "fulfillment" }: Props) {
                     ))}
                   </div>
                 )}
+                <div className="mt-2 flex flex-wrap items-center gap-2">
+                  <Button size="sm" variant="ghost" className="h-7 gap-1.5 px-2 text-[11px] text-muted-foreground" onClick={copySummary}>
+                    <ClipboardCopy className="h-3.5 w-3.5" /> Copy summary
+                  </Button>
+                  <Button size="sm" variant="ghost" className="h-7 gap-1.5 px-2 text-[11px] text-muted-foreground" onClick={copyAddress}>
+                    <MapPin className="h-3.5 w-3.5" /> Copy address
+                  </Button>
+                  <span className="ml-auto hidden items-center gap-1.5 text-[10px] text-muted-foreground md:inline-flex">
+                    <Command className="h-3 w-3" />
+                    {(["C confirm", ...(mode === "web" ? ["A advance", "H hold", "R no-response"] : []), "P call", "Y copy"]).map((s) => (
+                      <kbd key={s} className="rounded border bg-muted px-1.5 py-0.5 font-mono text-[9px]">{s}</kbd>
+                    ))}
+                  </span>
+                </div>
               </div>
+
+              {(risk || isDuplicateRisk) && (
+                <div className="flex flex-wrap gap-2 px-5 pt-4">
+                  {risk && (
+                    <div className={cn(
+                      "inline-flex items-center gap-2 rounded-lg border px-3 py-2 text-xs font-medium",
+                      risk.level === "high" && "border-rose-300/70 bg-rose-50 text-rose-800 dark:border-rose-900/60 dark:bg-rose-950/40 dark:text-rose-200",
+                      risk.level === "watch" && "border-amber-300/70 bg-amber-50 text-amber-800 dark:border-amber-900/60 dark:bg-amber-950/40 dark:text-amber-200",
+                      risk.level === "good" && "border-emerald-300/70 bg-emerald-50 text-emerald-800 dark:border-emerald-900/60 dark:bg-emerald-950/40 dark:text-emerald-200",
+                    )}>
+                      {risk.level === "good" ? <ShieldCheck className="h-4 w-4 shrink-0" /> : <AlertTriangle className="h-4 w-4 shrink-0" />}
+                      <span>{risk.label} · <span className="font-normal opacity-80">{risk.detail}</span></span>
+                    </div>
+                  )}
+                  {isDuplicateRisk && (
+                    <div className="inline-flex items-center gap-2 rounded-lg border border-violet-300/70 bg-violet-50 px-3 py-2 text-xs font-medium text-violet-800 dark:border-violet-900/60 dark:bg-violet-950/40 dark:text-violet-200">
+                      <Repeat2 className="h-4 w-4 shrink-0" />
+                      Possible duplicate — same number theke {lastOrderAt ? format(lastOrderAt, "dd MMM, hh:mm a") : ""} e ekta order ache
+                    </div>
+                  )}
+                </div>
+              )}
 
               <div className="grid lg:grid-cols-3 gap-4 p-5">
 
@@ -977,9 +1092,22 @@ export function OrderDrawer({ orderId, onClose, mode = "fulfillment" }: Props) {
                         rows={2}
                         className="resize-none text-sm"
                       />
-                      <Button size="sm" className="w-full gap-1.5" disabled={!note.trim() || addNote.isPending || editingBlocked} onClick={() => guardedAction(() => addNote.mutate())}>
+                      <Button size="sm" className="w-full gap-1.5" disabled={!note.trim() || addNote.isPending || editingBlocked} onClick={() => guardedAction(() => addNote.mutate(undefined))}>
                         <Send className="h-3.5 w-3.5" />Add Note
                       </Button>
+                      <div className="flex flex-wrap gap-1.5 pt-1">
+                        {QUICK_NOTES.map((q) => (
+                          <button
+                            key={q}
+                            type="button"
+                            disabled={addNote.isPending || editingBlocked}
+                            onClick={() => guardedAction(() => addNote.mutate(q))}
+                            className="rounded-full border bg-muted/40 px-2.5 py-1 text-[10px] font-medium text-muted-foreground transition-colors hover:border-primary/40 hover:bg-primary/10 hover:text-primary disabled:opacity-50"
+                          >
+                            + {q}
+                          </button>
+                        ))}
+                      </div>
                     </div>
                     {notes.length > 0 ? (
                       <div className="space-y-2 max-h-72 overflow-y-auto pr-1">
