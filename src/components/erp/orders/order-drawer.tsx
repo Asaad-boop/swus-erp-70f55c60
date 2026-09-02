@@ -20,6 +20,7 @@ import { STATUS_GROUPS, STATUS_BADGE, bdPhoneError, customerName, customerPhone,
 import { setOrderActualShippingCostFn } from "@/lib/erp/courier-sync.functions";
 import { confirmOrderAdvanceReceivedFn } from "@/lib/erp/finance/advance.functions";
 import { PreorderConvertDialog } from "@/components/erp/orders/preorder-convert-dialog";
+import { OrderItemsEditor } from "@/components/erp/orders/order-items-editor";
 import { fireOrderSms } from "@/lib/erp/sms/notify";
 import { cn } from "@/lib/utils";
 
@@ -175,6 +176,7 @@ export function OrderDrawer({ orderId, onClose, mode = "fulfillment" }: Props) {
   const [feeOpen, setFeeOpen] = useState(false);
   const [feeAmount, setFeeAmount] = useState("");
   const [customerEditing, setCustomerEditing] = useState(false);
+  const [itemsEditing, setItemsEditing] = useState(false);
   const [customerDraft, setCustomerDraft] = useState<CustomerDraft>(EMPTY_CUSTOMER_DRAFT);
   const setFeeFn = useServerFn(setOrderActualShippingCostFn);
   const confirmAdvanceFn = useServerFn(confirmOrderAdvanceReceivedFn);
@@ -231,6 +233,8 @@ export function OrderDrawer({ orderId, onClose, mode = "fulfillment" }: Props) {
     },
     onError: (e: Error) => toast.error(e.message),
   });
+
+  useEffect(() => { setItemsEditing(false); }, [orderId]);
 
   useEffect(() => {
     if (!order || customerEditing) return;
@@ -531,14 +535,31 @@ export function OrderDrawer({ orderId, onClose, mode = "fulfillment" }: Props) {
               ) : (
               <>
               {/* QUICK ACTIONS — one tap status change */}
-              <div className="sticky top-0 z-20 border-b bg-background/95 px-5 py-2.5 backdrop-blur">
+              <div className="sticky top-0 z-20 border-b bg-background/95 px-5 py-3 backdrop-blur">
+                {/* Primary CTA — big, always first, full width on mobile */}
+                {mode === "web" ? (
+                  <Button
+                    size="lg"
+                    className="mb-2.5 h-12 w-full gap-2 rounded-xl bg-emerald-600 text-base font-bold text-white shadow-lg shadow-emerald-600/25 transition hover:bg-emerald-700 sm:w-auto sm:min-w-[16rem]"
+                    disabled={updateWebStatus.isPending}
+                    onClick={() => onPickWebStatus("complete")}
+                  >
+                    {updateWebStatus.isPending ? <Loader2 className="h-5 w-5 animate-spin" /> : <CheckCircle2 className="h-5 w-5" />} Confirm Order
+                  </Button>
+                ) : order.status !== "confirmed" && order.status !== "delivered" ? (
+                  <Button
+                    size="lg"
+                    className="mb-2.5 h-12 w-full gap-2 rounded-xl bg-emerald-600 text-base font-bold text-white shadow-lg shadow-emerald-600/25 transition hover:bg-emerald-700 sm:w-auto sm:min-w-[16rem]"
+                    disabled={updateStatus.isPending}
+                    onClick={() => guardedAction(() => updateStatus.mutate("confirmed" as OrderStatus))}
+                  >
+                    {updateStatus.isPending ? <Loader2 className="h-5 w-5 animate-spin" /> : <CheckCircle2 className="h-5 w-5" />} Confirm Order
+                  </Button>
+                ) : null}
                 <div className="flex flex-wrap items-center gap-1.5">
                   <span className="mr-1 text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Quick actions</span>
                   {mode === "web" ? (
                     <>
-                      <Button size="sm" className="h-8 gap-1.5 bg-emerald-600 text-white hover:bg-emerald-700" disabled={updateWebStatus.isPending} onClick={() => onPickWebStatus("complete")}>
-                        <CheckCircle2 className="h-3.5 w-3.5" /> Confirm Order
-                      </Button>
                       <Button size="sm" variant="outline" className="h-8 gap-1.5" disabled={updateWebStatus.isPending} onClick={() => onPickWebStatus("good_but_no_response")}>
                         <PhoneOff className="h-3.5 w-3.5" /> Good / No response
                       </Button>
@@ -556,9 +577,11 @@ export function OrderDrawer({ orderId, onClose, mode = "fulfillment" }: Props) {
                       </Button>
                     </>
                   ) : (
+
                     <>
                       {(["confirmed", "packed", "ready_to_ship", "delivered"] as OrderStatus[])
-                        .filter((s) => s !== order.status)
+                        .filter((s) => s !== order.status && s !== "confirmed")
+
                         .map((s) => (
                           <Button key={s} size="sm" variant="outline" className="h-8 gap-1.5" disabled={updateStatus.isPending} onClick={() => guardedAction(() => updateStatus.mutate(s))}>
                             {STATUS_BADGE[s]?.label ?? s.replace(/_/g, " ")}
@@ -738,7 +761,37 @@ export function OrderDrawer({ orderId, onClose, mode = "fulfillment" }: Props) {
 
                   {/* Items */}
                   <section className="rounded-xl border bg-card p-4 shadow-sm">
-                    <h3 className="text-xs font-bold uppercase tracking-wider text-muted-foreground mb-3 flex items-center gap-1.5"><Package className="h-3.5 w-3.5" />Items ({items.length})</h3>
+                    <div className="mb-3 flex items-center justify-between gap-2">
+                      <h3 className="text-xs font-bold uppercase tracking-wider text-muted-foreground flex items-center gap-1.5"><Package className="h-3.5 w-3.5" />Items ({items.length})</h3>
+                      {!itemsEditing && (
+                        <button
+                          type="button"
+                          onClick={() => guardedAction(() => setItemsEditing(true))}
+                          className="inline-flex items-center gap-1 text-[11px] font-semibold text-primary hover:underline"
+                        >
+                          <Pencil className="h-3 w-3" /> Edit / Add product
+                        </button>
+                      )}
+                    </div>
+                    {itemsEditing ? (
+                      <OrderItemsEditor
+                        orderId={orderId!}
+                        shippingFee={shippingFee}
+                        discountAmount={discountAmount}
+                        disabled={editingBlocked}
+                        onDone={() => setItemsEditing(false)}
+                        items={items.map((it) => ({
+                          id: it.id,
+                          product_id: (it as { product_id: string }).product_id,
+                          variant_id: (it as { variant_id?: string | null }).variant_id ?? null,
+                          variant_label: it.variant_label ?? null,
+                          name: it.name ?? "Item",
+                          image: (it as { image?: string | null }).image ?? null,
+                          unit_price: Number(it.unit_price ?? it.price ?? 0),
+                          quantity: Number(it.quantity ?? 1),
+                        }))}
+                      />
+                    ) : (
                     <div className="space-y-2">
                       {items.map((it) => (
                         <div key={it.id} className="flex items-center justify-between gap-3 text-sm p-2.5 rounded-lg bg-muted/40 hover:bg-muted/70 transition-colors">
@@ -753,6 +806,8 @@ export function OrderDrawer({ orderId, onClose, mode = "fulfillment" }: Props) {
                         </div>
                       ))}
                     </div>
+                    )}
+
                     <div className="mt-4 pt-3 border-t space-y-1.5 text-sm">
                       <div className="flex justify-between"><span className="text-muted-foreground">Subtotal</span><span className="tabular-nums">৳ {subtotal.toLocaleString()}</span></div>
                       <div className="flex justify-between"><span className="text-muted-foreground">Shipping</span><span className="tabular-nums">৳ {shippingFee.toLocaleString()}</span></div>
