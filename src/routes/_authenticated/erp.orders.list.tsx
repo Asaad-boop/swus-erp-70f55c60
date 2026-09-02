@@ -262,6 +262,19 @@ function OrdersPage() {
   const { data: shipmentsMap = {} } = useCourierShipments(pageOrderIds);
 
   const visibleRows = rows;
+  const hasMore = visibleRows.length < total;
+
+  // Infinite scroll sentinel — auto-grows `limit` as the user scrolls down.
+  const sentinelRef = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    const el = sentinelRef.current;
+    if (!el || !hasMore) return;
+    const io = new IntersectionObserver((entries) => {
+      if (entries[0]?.isIntersecting) setLimit((l) => l + PAGE_CHUNK);
+    }, { rootMargin: "600px" });
+    io.observe(el);
+    return () => io.disconnect();
+  }, [hasMore, filterSignature]);
 
   // Realtime: subscribe to courier_shipments UPDATE/INSERT
   const idsKey = useMemo(() => [...pageOrderIds].sort().join(","), [pageOrderIds]);
