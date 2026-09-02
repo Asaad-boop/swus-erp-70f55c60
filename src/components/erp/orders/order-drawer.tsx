@@ -757,7 +757,37 @@ export function OrderDrawer({ orderId, onClose, mode = "fulfillment" }: Props) {
 
                   {/* Items */}
                   <section className="rounded-xl border bg-card p-4 shadow-sm">
-                    <h3 className="text-xs font-bold uppercase tracking-wider text-muted-foreground mb-3 flex items-center gap-1.5"><Package className="h-3.5 w-3.5" />Items ({items.length})</h3>
+                    <div className="mb-3 flex items-center justify-between gap-2">
+                      <h3 className="text-xs font-bold uppercase tracking-wider text-muted-foreground flex items-center gap-1.5"><Package className="h-3.5 w-3.5" />Items ({items.length})</h3>
+                      {!itemsEditing && (
+                        <button
+                          type="button"
+                          onClick={() => guardedAction(() => setItemsEditing(true))}
+                          className="inline-flex items-center gap-1 text-[11px] font-semibold text-primary hover:underline"
+                        >
+                          <Pencil className="h-3 w-3" /> Edit / Add product
+                        </button>
+                      )}
+                    </div>
+                    {itemsEditing ? (
+                      <OrderItemsEditor
+                        orderId={orderId!}
+                        shippingFee={shippingFee}
+                        discountAmount={discountAmount}
+                        disabled={editingBlocked}
+                        onDone={() => setItemsEditing(false)}
+                        items={items.map((it) => ({
+                          id: it.id,
+                          product_id: (it as { product_id: string }).product_id,
+                          variant_id: (it as { variant_id?: string | null }).variant_id ?? null,
+                          variant_label: it.variant_label ?? null,
+                          name: it.name ?? "Item",
+                          image: (it as { image?: string | null }).image ?? null,
+                          unit_price: Number(it.unit_price ?? it.price ?? 0),
+                          quantity: Number(it.quantity ?? 1),
+                        }))}
+                      />
+                    ) : (
                     <div className="space-y-2">
                       {items.map((it) => (
                         <div key={it.id} className="flex items-center justify-between gap-3 text-sm p-2.5 rounded-lg bg-muted/40 hover:bg-muted/70 transition-colors">
@@ -772,6 +802,8 @@ export function OrderDrawer({ orderId, onClose, mode = "fulfillment" }: Props) {
                         </div>
                       ))}
                     </div>
+                    )}
+
                     <div className="mt-4 pt-3 border-t space-y-1.5 text-sm">
                       <div className="flex justify-between"><span className="text-muted-foreground">Subtotal</span><span className="tabular-nums">৳ {subtotal.toLocaleString()}</span></div>
                       <div className="flex justify-between"><span className="text-muted-foreground">Shipping</span><span className="tabular-nums">৳ {shippingFee.toLocaleString()}</span></div>
