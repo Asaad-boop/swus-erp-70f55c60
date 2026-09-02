@@ -36,7 +36,7 @@ function Ring({ pct, tone }: { pct: number; tone: string }) {
     <div
       className="relative h-14 w-14 shrink-0 rounded-full"
       style={{
-        background: `conic-gradient(currentColor ${p * 3.6}deg, hsl(var(--muted)) 0deg)`,
+        background: `conic-gradient(currentColor ${p * 3.6}deg, var(--muted) 0deg)`,
       }}
       data-tone={tone}
     >
@@ -291,7 +291,7 @@ export function VisionBoard() {
         <PaceCard
           icon={CalendarDays}
           label="Order"
-          scope={`মাস (${d.month.daysLeft} দিন বাকি)`}
+          scope={`মাস (${d.month.dayOfMonth}/${d.month.daysInMonth} দিন)`}
           actual={d.windows.mtd.orders}
           target={d.targets.orders || null}
           fmt={int}
@@ -335,7 +335,11 @@ export function VisionBoard() {
           fmt={short}
           extra={
             <p className="mt-0.5 text-[11px] text-muted-foreground">
-              ROAS {d.windows.mtd.roas == null ? "—" : `${d.windows.mtd.roas.toFixed(2)}x`}
+              Booked ROAS {d.windows.mtd.roas == null ? "—" : `${d.windows.mtd.roas.toFixed(2)}x`} ·
+              Delivered{" "}
+              {d.windows.mtd.spend_bdt > 0
+                ? `${(d.windows.mtd.delivered_revenue / d.windows.mtd.spend_bdt).toFixed(2)}x`
+                : "—"}
             </p>
           }
         />
@@ -378,12 +382,12 @@ export function VisionBoard() {
                         n === "orders" ? [int(v), "Order"] : [short(v), "Delivered revenue"]
                       }
                     />
-                    <Bar dataKey="orders" fill="hsl(var(--primary))" radius={[3, 3, 0, 0]} />
+                    <Bar dataKey="orders" fill="var(--primary)" radius={[3, 3, 0, 0]} />
                     {derived.needOrdersToday > 0 && (
                       <Line
                         type="monotone"
                         dataKey={() => Math.round(d.targets.orders / d.month.daysInMonth)}
-                        stroke="hsl(var(--muted-foreground))"
+                        stroke="var(--muted-foreground)"
                         strokeDasharray="4 4"
                         dot={false}
                         name="target/day"

@@ -55,7 +55,7 @@ export function BillTile({
   return (
     <div
       title={title}
-      className="rounded-lg bg-background/70 border border-border/60 px-3 py-2.5 shadow-[0_1px_0_0_hsl(var(--border)/0.4)] transition-colors hover:border-border"
+      className="rounded-lg bg-background/70 border border-border/60 px-3 py-2.5 shadow-[0_1px_0_0_color-mix(in oklab, var(--border) 40%, transparent)] transition-colors hover:border-border"
     >
       <div className="text-[10px] tracking-wider font-semibold text-muted-foreground uppercase truncate">{label}</div>
       <div className={cn("font-bold tabular-nums text-base leading-tight mt-1", valueClass)}>{value}</div>

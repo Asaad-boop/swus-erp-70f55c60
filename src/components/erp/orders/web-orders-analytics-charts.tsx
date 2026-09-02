@@ -115,7 +115,7 @@ export default function WebOrdersAnalyticsCharts({ rows, todayRows }: { rows: Ro
         <div className="h-64">
           <ResponsiveContainer width="100%" height="100%">
             <BarChart data={hourly} margin={{ top: 8, right: 8, left: 0, bottom: 0 }}>
-              <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="hsl(var(--border))" />
+              <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="var(--border)" />
               <XAxis dataKey="label" tick={{ fontSize: 10 }} interval={2} />
               <YAxis tick={{ fontSize: 10 }} allowDecimals={false} width={28} />
               <RTooltip />
@@ -137,7 +137,7 @@ export default function WebOrdersAnalyticsCharts({ rows, todayRows }: { rows: Ro
         <div className="h-64">
           <ResponsiveContainer width="100%" height="100%">
             <LineChart data={hourly} margin={{ top: 8, right: 8, left: 0, bottom: 0 }}>
-              <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="hsl(var(--border))" />
+              <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="var(--border)" />
               <XAxis dataKey="label" tick={{ fontSize: 10 }} interval={2} />
               <YAxis tick={{ fontSize: 10 }} allowDecimals={false} width={28} />
               <RTooltip
