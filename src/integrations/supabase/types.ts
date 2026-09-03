@@ -14200,6 +14200,10 @@ export type Database = {
         Args: { _order_id: string }
         Returns: undefined
       }
+      mkt_meta_spend_summary: {
+        Args: { _brand_ids: string[]; _from: string; _to: string }
+        Returns: Json
+      }
       mkt_order_primary_campaign: {
         Args: { _brand_ids: string[]; _from: string; _to: string }
         Returns: {
@@ -14264,6 +14268,7 @@ export type Database = {
         }
         Returns: Json
       }
+      mkt_usd_bdt_rate: { Args: { _brand_ids: string[] }; Returns: number }
       mkt_utm_breakdown: {
         Args: {
           _brand_ids: string[]

@@ -39,6 +39,7 @@ import {
   getCampaignTrend,
   getCampaignProductsSummary,
   getAttributionHealth,
+  getMetaSpendSummary,
   searchProductsForCampaign,
   linkCampaignProducts,
   unlinkCampaignProduct,
@@ -256,6 +257,16 @@ function CampaignTruthPage() {
     staleTime: 60_000,
     refetchOnWindowFocus: false,
   });
+
+  const fetchSpendSummary = useServerFn(getMetaSpendSummary);
+  const spendQ = useQuery({
+    queryKey: ["mkt-meta-spend-summary", brandIds.slice().sort().join(","), range.from, range.to],
+    queryFn: () => fetchSpendSummary({ data: { brandIds, from: range.from, to: range.to } }),
+    enabled: brandIds.length > 0,
+    staleTime: 60_000,
+    refetchOnWindowFocus: false,
+  });
+  const metaSpend = spendQ.data ?? null;
 
   const fetchTrend = useServerFn(getCampaignTrend);
   const trendQ = useQuery({
@@ -730,6 +741,60 @@ function CampaignTruthPage() {
             </span>
           </div>
         </div>
+
+        {metaSpend && metaSpend.bdt_spend > 0 && (
+          <div className="flex flex-wrap items-center gap-x-5 gap-y-2 border-t px-4 py-2 text-[11px]">
+            <span className="text-[10px] uppercase tracking-[0.12em] text-muted-foreground">
+              Meta ad spend
+            </span>
+            <MicroStat
+              label="Spent (USD)"
+              value={"$" + metaSpend.usd_spend.toLocaleString("en-US", { maximumFractionDigits: 2 })}
+            />
+            <MicroStat label="Charged (BDT)" value={bdt(metaSpend.bdt_spend)} />
+            <MicroStat
+              label="Rate applied"
+              value={
+                metaSpend.effective_rate
+                  ? `৳${metaSpend.effective_rate.toFixed(2)}/$`
+                  : metaSpend.fx_rate
+                    ? `৳${metaSpend.fx_rate.toFixed(2)}/$`
+                    : "—"
+              }
+            />
+            <MicroStat
+              label="Wallet matched"
+              value={
+                metaSpend.wallet_coverage_pct === null
+                  ? "—"
+                  : `${metaSpend.wallet_coverage_pct.toFixed(0)}%`
+              }
+            />
+            <MicroStat
+              label="Last sync"
+              value={
+                metaSpend.last_sync_at
+                  ? new Date(metaSpend.last_sync_at).toLocaleString("en-GB", {
+                      timeZone: "Asia/Dhaka",
+                      day: "2-digit",
+                      month: "short",
+                      hour: "2-digit",
+                      minute: "2-digit",
+                    })
+                  : "কখনো না"
+              }
+            />
+            {metaSpend.bdt_from_fx > 0 && (
+              <span
+                className="inline-flex items-center gap-1 text-amber-700"
+                title={`$${metaSpend.usd_unconverted.toFixed(2)} এখনো wallet purchase-এর সাথে মেলানো হয়নি — FX rate ৳${metaSpend.fx_rate.toFixed(2)} দিয়ে ধরা হয়েছে`}
+              >
+                <AlertTriangle className="h-3 w-3" />
+                {bdt(metaSpend.bdt_from_fx)} FX estimate
+              </span>
+            )}
+          </div>
+        )}
 
         {(pendingDelivered > 0 || totals.missingCost > 0 || (health?.unattributed_orders ?? 0) > 0) && (
           <div className="flex flex-wrap items-center gap-x-4 gap-y-1 border-t px-4 py-2 text-[11px] text-muted-foreground">
