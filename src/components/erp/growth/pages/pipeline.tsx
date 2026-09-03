@@ -277,7 +277,7 @@ export function PipelinePage() {
 
 
   const createMut = useMutation({
-    mutationFn: async () => {
+    mutationFn: async (opts: { again?: boolean } = {}) => {
       if (!draft.title.trim()) throw new Error("Title দাও");
       if (!(draft.brand_id || activeBrand?.id)) throw new Error("Brand বাছাই করুন");
       const { error } = await supabase.from("content_items").insert({
@@ -294,15 +294,22 @@ export function PipelinePage() {
         cost: draft.cost,
       } as never);
       if (error) throw error;
+      return opts;
     },
-    onSuccess: () => {
+    onSuccess: (opts) => {
       toast.success("Content piece যোগ হয়েছে");
-      setCreating(false);
-      setDraft(emptyDraft);
+      if (opts?.again) {
+        // keep product/brand/type context, clear only the title for rapid entry
+        setDraft((d) => ({ ...d, title: "" }));
+      } else {
+        setCreating(false);
+        setDraft(emptyDraft);
+      }
       qc.invalidateQueries({ queryKey: ["content-items"] });
     },
     onError: (e: Error) => toast.error(e.message),
   });
+
 
   const deleteMut = useMutation({
     mutationFn: async (ids: string[]) => {
