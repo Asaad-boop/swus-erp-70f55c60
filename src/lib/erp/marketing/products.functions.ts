@@ -26,6 +26,10 @@ export type MktProductRow = {
   aov: number;
   margin_pct: number;
   cost_missing_units: number;
+  stock: number;
+  available_stock: number;
+  low_stock_threshold: number | null;
+  stock_cover_days: number | null;
 };
 
 export type MktAcquisitionSummary = {
@@ -75,7 +79,47 @@ export const getProductMarketing = createServerFn({ method: "POST" })
       _to: data.to,
     } as never);
     if (error) throw error;
-    return (Array.isArray(rows) ? rows : []) as MktProductRow[];
+
+    const perfRows = (Array.isArray(rows) ? rows : []) as Array<Record<string, unknown>>;
+    const productIds = perfRows
+      .map((row) => typeof row.product_id === "string" ? row.product_id : null)
+      .filter((id): id is string => Boolean(id));
+    const inventoryByProduct = new Map<string, {
+      stock: number;
+      available_stock: number;
+      low_stock_threshold: number | null;
+    }>();
+    if (productIds.length > 0) {
+      const { data: inventory, error: inventoryError } = await context.supabase
+        .from("products")
+        .select("id,stock,available_stock,low_stock_threshold")
+        .in("id", productIds);
+      if (inventoryError) throw inventoryError;
+      for (const item of inventory ?? []) {
+        inventoryByProduct.set(item.id, {
+          stock: Number(item.stock ?? 0),
+          available_stock: Number(item.available_stock ?? item.stock ?? 0),
+          low_stock_threshold: item.low_stock_threshold == null ? null : Number(item.low_stock_threshold),
+        });
+      }
+    }
+
+    const days = Math.max(1, Math.round((new Date(`${data.to}T00:00:00`).getTime() - new Date(`${data.from}T00:00:00`).getTime()) / 86_400_000) + 1);
+    return perfRows.map((row) => {
+      const productId = String(row.product_id ?? "");
+      const inventory = inventoryByProduct.get(productId);
+      const deliveredUnits = Number(row.delivered_units ?? 0);
+      const dailyUnits = deliveredUnits / days;
+      const availableStock = inventory?.available_stock ?? 0;
+      return {
+        ...row,
+        product_id: productId,
+        stock: inventory?.stock ?? 0,
+        available_stock: availableStock,
+        low_stock_threshold: inventory?.low_stock_threshold ?? null,
+        stock_cover_days: dailyUnits > 0 ? availableStock / dailyUnits : null,
+      } as MktProductRow;
+    });
   });
 
 export const getAcquisition = createServerFn({ method: "POST" })

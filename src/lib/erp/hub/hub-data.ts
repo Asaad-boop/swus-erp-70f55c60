@@ -291,6 +291,7 @@ export async function fetchIdeas(brandIds: string[]) {
     .select("*")
     .order("created_at", { ascending: false });
   if (brandIds.length === 1) q = q.or(`brand_id.is.null,brand_id.eq.${brandIds[0]}`);
+  else if (brandIds.length > 1) q = q.or(`brand_id.is.null,brand_id.in.(${brandIds.join(",")})`);
   const { data, error } = await q;
   if (error) throw error;
   return (data ?? []).map((r) => ({
