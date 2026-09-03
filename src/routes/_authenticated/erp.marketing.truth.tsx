@@ -336,6 +336,7 @@ function CampaignTruthPage() {
     all,
     search,
     truthFilter,
+    metaStatus,
     verdictFilter,
     minSpend,
     sortKey,
@@ -405,6 +406,15 @@ function CampaignTruthPage() {
   const truthCounts = useMemo(() => {
     const m: Record<string, number> = { all: all.length };
     for (const r of all) m[r.truth_status] = (m[r.truth_status] ?? 0) + 1;
+    return m;
+  }, [all]);
+
+  const metaStatusCounts = useMemo(() => {
+    const m: Record<string, number> = { all: all.length };
+    for (const r of all) {
+      const b = metaStatusBucket(r.status);
+      m[b] = (m[b] ?? 0) + 1;
+    }
     return m;
   }, [all]);
 
