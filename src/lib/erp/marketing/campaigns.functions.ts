@@ -1141,35 +1141,62 @@ export const getCampaignOrders = createServerFn({ method: "POST" })
 
     const { data: orders, error } = await context.supabase
       .from("orders")
-      .select("id, invoice_no, created_at, shipping_name, guest_name, status, confirmation_status, total")
+      .select("id, invoice_no, created_at, shipping_name, guest_name, status, confirmation_status, total, advance_amount")
       .in("id", ids)
       .order("created_at", { ascending: false });
     if (error) throw error;
 
-    const { data: recon } = await context.supabase
-      .from("erp_reconciliation_rows")
-      .select("matched_order_id, collected")
-      .in("matched_order_id", ids);
-    const collectedMap = new Map<string, number>();
-    for (const r of (recon ?? []) as any[]) {
-      if (!r?.matched_order_id) continue;
-      collectedMap.set(
-        r.matched_order_id,
-        (collectedMap.get(r.matched_order_id) ?? 0) + Number(r.collected ?? 0),
-      );
-    }
+    // Cash collected mirrors mkt_campaign_cash: courier reconciliation rows
+    // + courier settlement lines + the still-outstanding advance portion.
+    const courierCollected = new Map<string, number>();
+    const settleRows = new Map<string, number>();
+    const bump = (id: string | null, amount: unknown) => {
+      if (!id) return;
+      courierCollected.set(id, (courierCollected.get(id) ?? 0) + Number(amount ?? 0));
+      settleRows.set(id, (settleRows.get(id) ?? 0) + 1);
+    };
+
+    const [{ data: recon }, { data: settle }] = await Promise.all([
+      context.supabase
+        .from("erp_reconciliation_rows")
+        .select("matched_order_id, collected")
+        .in("matched_order_id", ids),
+      context.supabase
+        .from("erp_courier_settlement_lines")
+        .select("matched_order_id, collected_amount")
+        .in("matched_order_id", ids),
+    ]);
+    for (const r of (recon ?? []) as any[]) bump(r?.matched_order_id ?? null, r?.collected);
+    for (const s of (settle ?? []) as any[]) bump(s?.matched_order_id ?? null, s?.collected_amount);
+
+    const CANCELLED = new Set(["cancelled", "fake"]);
 
     return ((orders ?? []) as any[]).map((o) => {
       const a = attrMap.get(o.id);
+      const total = Number(o.total ?? 0);
+      const advance = Number(o.advance_amount ?? 0);
+      const courier = courierCollected.get(o.id) ?? 0;
+      const hasSettlement = (settleRows.get(o.id) ?? 0) > 0;
+      const advanceApplied = Math.min(advance, Math.max(total - courier, 0));
+      const cash = courier + advanceApplied;
+      const status = String(o.status ?? "");
+      // Settled or advance-paid → real number. Cancelled/fake with no cash → 0.
+      // Otherwise still awaiting courier settlement → Pending (never fake ৳0).
+      const collected =
+        hasSettlement || advanceApplied > 0
+          ? Math.round(cash * 100) / 100
+          : CANCELLED.has(status)
+            ? 0
+            : null;
       return {
         order_id: o.id as string,
         invoice_no: (o.invoice_no as string) ?? null,
         created_at: o.created_at as string,
         customer_name: ((o.shipping_name ?? o.guest_name) as string) ?? null,
-        status: String(o.status ?? ""),
+        status,
         confirmation_status: (o.confirmation_status as string) ?? null,
-        order_value: Number(o.total ?? 0),
-        collected: collectedMap.has(o.id) ? (collectedMap.get(o.id) as number) : null,
+        order_value: total,
+        collected,
         attr_source: a?.source ?? "unattributed",
         attr_confidence: Number(a?.confidence ?? 0),
       } satisfies CampaignOrderRow;
