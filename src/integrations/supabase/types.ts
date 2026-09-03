@@ -13920,6 +13920,10 @@ export type Database = {
         Args: { _campaign_id: string; _from: string; _to: string }
         Returns: Json
       }
+      mkt_campaign_products_summary: {
+        Args: { _campaign_ids: string[]; _from: string; _to: string }
+        Returns: Json
+      }
       mkt_campaign_summary: {
         Args: {
           p_brand_id: string
