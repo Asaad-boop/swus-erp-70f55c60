@@ -187,6 +187,21 @@ function CampaignTruthPage() {
     return m;
   }, [trendQ.data]);
 
+  const campaignIds = useMemo(
+    () => (q.data ?? []).map((r) => r.id).slice(0, 500),
+    [q.data],
+  );
+  const fetchProducts = useServerFn(getCampaignProductsSummary);
+  const productsQ = useQuery({
+    queryKey: ["mkt-campaign-products-summary", campaignIds.join(","), range.from, range.to],
+    queryFn: () => fetchProducts({ data: { campaignIds, from: range.from, to: range.to } }),
+    enabled: campaignIds.length > 0,
+    staleTime: 60_000,
+    refetchOnWindowFocus: false,
+  });
+  const productMap: CampaignProductsSummary = productsQ.data ?? {};
+
+
   const runRematch = useServerFn(rerunCampaignMatching);
   const rerun = useMutation({
     mutationFn: () => runRematch({ data: { brandIds, from: range.from, to: range.to } }),
