@@ -19,6 +19,8 @@ import {
   CheckCircle2,
   Users,
   Trash2,
+  Package,
+
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useBrand } from "@/contexts/brand-context";
