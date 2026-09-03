@@ -720,10 +720,11 @@ function CampaignTruthPage() {
                               )}
                             </div>
                             <div className="mt-0.5 text-[10px] text-muted-foreground">
-                              Delivery {r.delivery_rate}% ·{" "}
-                              {r.attribution_coverage === null
-                                ? "attribution pending"
-                                : `attr ${r.attribution_coverage}%`}
+                              Delivery {r.delivery_rate}% · ✋{r.explicit_attributed_orders} 🤖
+                              {r.auto_attributed_orders}
+                              {r.attribution_confidence === null
+                                ? ""
+                                : ` · conf ${r.attribution_confidence}%`}
                             </div>
                           </td>
                           <td className="p-2.5 align-top text-right tabular-nums">
@@ -768,15 +769,18 @@ function CampaignTruthPage() {
                               >
                                 {truthLabel(r.truth_status)}
                               </Badge>
-                              <span className="text-[10px] text-muted-foreground">
-                                {r.settlement_coverage === null
-                                  ? "settlement pending"
-                                  : `settled ${r.settlement_coverage}%`}
+                              <span
+                                className="text-[10px] text-muted-foreground"
+                                title={`Attribution ${r.attribution_coverage ?? "—"}% · Settlement ${r.settlement_coverage ?? "—"}% · COGS ${r.cogs_coverage ?? "—"}% · Courier ${r.courier_cost_coverage ?? "—"}%`}
+                              >
+                                {r.truth_coverage === null
+                                  ? "coverage pending"
+                                  : `truth coverage ${r.truth_coverage}%`}
                               </span>
                               <Badge
                                 variant="outline"
                                 className={`h-4 px-1 text-[10px] ${vm.tone}`}
-                                title="Projected verdict (delivered-based)"
+                                title="Verdict — realized cash based"
                               >
                                 {vm.label}
                               </Badge>
