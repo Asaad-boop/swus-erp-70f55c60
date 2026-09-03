@@ -258,6 +258,16 @@ function CampaignTruthPage() {
     refetchOnWindowFocus: false,
   });
 
+  const fetchSpendSummary = useServerFn(getMetaSpendSummary);
+  const spendQ = useQuery({
+    queryKey: ["mkt-meta-spend-summary", brandIds.slice().sort().join(","), range.from, range.to],
+    queryFn: () => fetchSpendSummary({ data: { brandIds, from: range.from, to: range.to } }),
+    enabled: brandIds.length > 0,
+    staleTime: 60_000,
+    refetchOnWindowFocus: false,
+  });
+  const metaSpend = spendQ.data ?? null;
+
   const fetchTrend = useServerFn(getCampaignTrend);
   const trendQ = useQuery({
     queryKey: ["mkt-campaign-trend", brandIds.slice().sort().join(","), range.from, range.to, grain],
