@@ -766,13 +766,24 @@ export function PipelinePage() {
                 className="h-9"
               />
             </div>
-            <Button
-              className="w-full"
-              disabled={createMut.isPending}
-              onClick={() => createMut.mutate()}
-            >
-              Create
-            </Button>
+            <div className="sticky bottom-0 flex gap-2 border-t bg-background py-3">
+              <Button
+                variant="outline"
+                className="flex-1"
+                disabled={createMut.isPending}
+                onClick={() => createMut.mutate({ again: true })}
+              >
+                Save & add another
+              </Button>
+              <Button
+                className="flex-1"
+                disabled={createMut.isPending}
+                onClick={() => createMut.mutate({})}
+              >
+                Create
+              </Button>
+            </div>
+
           </div>
         </SheetContent>
       </Sheet>
