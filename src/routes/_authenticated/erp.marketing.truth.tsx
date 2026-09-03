@@ -561,23 +561,13 @@ function CampaignTruthPage() {
                 <thead className="sticky top-0 z-10 bg-muted/70 text-[11px] uppercase tracking-wide text-muted-foreground backdrop-blur">
                   <tr>
                     <th className="p-2 text-left">Campaign</th>
-                    <th className="p-2 text-left">Verdict</th>
                     <SortTh k="spend" label="Spend" {...{ sortKey, sortDesc, toggleSort }} />
-                    <th className="p-2 text-right">Meta purch.</th>
-                    <SortTh k="orders" label="Real orders" {...{ sortKey, sortDesc, toggleSort }} />
-                    <th className="p-2 text-right">Match</th>
-                    <th className="p-2 text-right">Delivered</th>
-                    <SortTh
-                      k="delivered_revenue"
-                      label="Delivered rev"
-                      {...{ sortKey, sortDesc, toggleSort }}
-                    />
-                    <SortTh k="gross_profit" label="Gross profit" {...{ sortKey, sortDesc, toggleSort }} />
-                    <SortTh k="net_profit" label="Net profit" {...{ sortKey, sortDesc, toggleSort }} />
-                    <SortTh k="net_margin" label="Margin" {...{ sortKey, sortDesc, toggleSort }} />
-                    <SortTh k="actual_roas" label="ROAS" {...{ sortKey, sortDesc, toggleSort }} />
-                    <SortTh k="profit_roas" label="Profit ROAS" {...{ sortKey, sortDesc, toggleSort }} />
+                    <SortTh k="orders" label="Orders funnel" {...{ sortKey, sortDesc, toggleSort }} />
+                    <th className="p-2 text-right">Collected</th>
+                    <th className="p-2 text-right">Realized profit</th>
+                    <th className="p-2 text-right">Status</th>
                   </tr>
+
                 </thead>
                 <tbody>
                   {rows.map((r) => {

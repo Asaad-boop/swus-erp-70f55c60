@@ -668,7 +668,35 @@ export type CampaignTruthRow = {
   /** Staff annotations */
   tags: string[];
   note: string | null;
+
+  /* ---- Cash truth (realized) ---- */
+  booked_order_count: number;
+  booked_value: number;
+  cancelled_count: number;
+  cancelled_value: number;
+  confirmed_count: number;
+  confirmed_value: number;
+  delivered_count: number;
+  delivered_order_value: number;
+  returned_count: number;
+  settled_delivered_count: number;
+  /** null = pending reconciliation, never fake 0 */
+  collected_amount: number | null;
+  expected_collectible: number | null;
+  collection_variance: number | null;
+  return_charge: number | null;
+  return_charge_is_estimate: boolean;
+  cogs_recovered: number;
+  settlement_coverage: number | null;
+  attribution_coverage: number | null;
+  attribution_source: string | null;
+  /** Collected cash − COGS(+recovered) − opex − return charge − ad spend. null when settlement pending. */
+  realized_profit: number | null;
+  /** Pipeline value still in flight (not cash) */
+  projected_profit: number;
+  truth_status: "profitable" | "breakeven" | "losing" | "too_early";
 };
+
 
 export type CampaignTrendPoint = {
   campaign_id: string;
@@ -762,6 +790,21 @@ export const getCampaignTruth = createServerFn({ method: "POST" })
       }
       const s = split.get(r.id);
       const ann = metaMap.get(r.id);
+      const numOrNull = (v: unknown) => (v === null || v === undefined ? null : Number(v));
+      const collected = numOrNull((r as any).collected_amount);
+      const returnCharge = numOrNull((r as any).return_charge);
+      const recovered = Number((r as any).cogs_recovered ?? 0);
+      const settlementCoverage = numOrNull((r as any).settlement_coverage);
+      const realized =
+        collected === null
+          ? null
+          : r2(collected - (p.cogs - recovered) - p.operating_cost - (returnCharge ?? 0) - r.spend);
+      let truthStatus: CampaignTruthRow["truth_status"] = "too_early";
+      if (realized !== null && r.spend > 0 && (settlementCoverage ?? 0) >= 50) {
+        if (Math.abs(realized) <= Math.max(200, r.spend * 0.05)) truthStatus = "breakeven";
+        else if (realized > 0) truthStatus = "profitable";
+        else truthStatus = "losing";
+      }
       return {
         ...r,
         cogs: r2(p.cogs),
@@ -779,9 +822,20 @@ export const getCampaignTruth = createServerFn({ method: "POST" })
         other_cost: Number(s?.other ?? 0),
         tags: ann?.tags ?? [],
         note: ann?.note ?? null,
+        collected_amount: collected,
+        expected_collectible: numOrNull((r as any).expected_collectible),
+        collection_variance: numOrNull((r as any).collection_variance),
+        return_charge: returnCharge,
+        cogs_recovered: recovered,
+        settlement_coverage: settlementCoverage,
+        attribution_coverage: numOrNull((r as any).attribution_coverage),
+        realized_profit: realized,
+        projected_profit: r2(net),
+        truth_status: truthStatus,
       };
     });
   });
+
 
 export const saveCampaignMeta = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
@@ -859,3 +913,83 @@ export const rerunCampaignMatching = createServerFn({ method: "POST" })
     };
   });
 
+
+/* ------------------------------------------------------------------ */
+/* Campaign order drill-through (cash truth)                            */
+/* ------------------------------------------------------------------ */
+
+export type CampaignOrderRow = {
+  order_id: string;
+  invoice_no: string | null;
+  created_at: string;
+  customer_name: string | null;
+  status: string;
+  confirmation_status: string | null;
+  order_value: number;
+  collected: number | null;
+  attr_source: string;
+  attr_confidence: number;
+};
+
+export const getCampaignOrders = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d: unknown) =>
+    z
+      .object({
+        campaignId: z.string().uuid(),
+        brandIds: z.array(z.string().uuid()).min(1),
+        from: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
+        to: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
+        limit: z.number().int().min(1).max(300).default(100),
+      })
+      .parse(d),
+  )
+  .handler(async ({ data, context }) => {
+    const { data: attrRaw, error: aErr } = await context.supabase.rpc(
+      "mkt_order_primary_campaign",
+      { _brand_ids: data.brandIds, _from: data.from, _to: data.to } as never,
+    );
+    if (aErr) throw aErr;
+    const attr = (Array.isArray(attrRaw) ? attrRaw : ([] as any[])).filter(
+      (a: any) => a?.campaign_id === data.campaignId,
+    ) as { order_id: string; source: string; confidence: number }[];
+    if (!attr.length) return [] as CampaignOrderRow[];
+    const ids = attr.slice(0, data.limit).map((a) => a.order_id);
+    const attrMap = new Map(attr.map((a) => [a.order_id, a]));
+
+    const { data: orders, error } = await context.supabase
+      .from("orders")
+      .select("id, invoice_no, created_at, customer_name, status, confirmation_status, total")
+      .in("id", ids)
+      .order("created_at", { ascending: false });
+    if (error) throw error;
+
+    const { data: recon } = await context.supabase
+      .from("erp_reconciliation_rows")
+      .select("matched_order_id, collected")
+      .in("matched_order_id", ids);
+    const collectedMap = new Map<string, number>();
+    for (const r of (recon ?? []) as any[]) {
+      if (!r?.matched_order_id) continue;
+      collectedMap.set(
+        r.matched_order_id,
+        (collectedMap.get(r.matched_order_id) ?? 0) + Number(r.collected ?? 0),
+      );
+    }
+
+    return ((orders ?? []) as any[]).map((o) => {
+      const a = attrMap.get(o.id);
+      return {
+        order_id: o.id as string,
+        invoice_no: (o.invoice_no as string) ?? null,
+        created_at: o.created_at as string,
+        customer_name: (o.customer_name as string) ?? null,
+        status: String(o.status ?? ""),
+        confirmation_status: (o.confirmation_status as string) ?? null,
+        order_value: Number(o.total ?? 0),
+        collected: collectedMap.has(o.id) ? (collectedMap.get(o.id) as number) : null,
+        attr_source: a?.source ?? "unattributed",
+        attr_confidence: Number(a?.confidence ?? 0),
+      } satisfies CampaignOrderRow;
+    });
+  });
