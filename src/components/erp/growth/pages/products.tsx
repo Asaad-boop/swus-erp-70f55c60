@@ -216,8 +216,9 @@ export function ProductPipelinePage() {
 
   const save = useMutation({
     mutationFn: async (d: Draft) => {
+      if (!activeBrand?.id) throw new Error("Select a specific brand before creating a product idea.");
       const row = {
-        brand_id: activeBrand?.id ?? null,
+        brand_id: activeBrand.id,
         title: d.title.trim(),
         description: d.description.trim() || null,
         image_url: d.image_url.trim() || null,
@@ -475,6 +476,10 @@ export function ProductPipelinePage() {
   };
 
   const openNew = () => {
+    if (!activeBrand) {
+      toast.error("Select a specific brand before creating a product idea.");
+      return;
+    }
     setDraft(emptyDraft());
     setOpen(true);
   };
@@ -601,7 +606,7 @@ export function ProductPipelinePage() {
                 <Columns3 className="h-4 w-4" />
               </button>
             </div>
-            <Button size="sm" onClick={openNew}>
+            <Button size="sm" onClick={openNew} disabled={!activeBrand} title={!activeBrand ? "Select a specific brand first" : undefined}>
               <Plus className="mr-1.5 h-4 w-4" /> New idea
             </Button>
           </>

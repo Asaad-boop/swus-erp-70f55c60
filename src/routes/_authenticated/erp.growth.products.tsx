@@ -1,5 +1,5 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { z } from "zod";
@@ -73,11 +73,17 @@ function ProductLabPage() {
     queryFn: () => fetchProducts({ data: { brandIds, from: range.from, to: range.to } }),
   });
 
-  const [query, sort] = useMemo(() => ["", "profit" as SortKey], []);
+  const [query, setQuery] = useState("");
+  const [sort, setSort] = useState<SortKey>("profit");
+  const rangeDays = useMemo(() => {
+    const from = new Date(`${range.from}T00:00:00`);
+    const to = new Date(`${range.to}T00:00:00`);
+    return Math.max(1, Math.round((to.getTime() - from.getTime()) / 86_400_000) + 1);
+  }, [range.from, range.to]);
   const rows = useMemo(() => {
     const list = (productsQ.data ?? []) as MktProductRow[];
-    const filtered = query
-      ? list.filter((r) => `${r.title} ${r.sku ?? ""}`.toLowerCase().includes(query.toLowerCase()))
+    const filtered = query.trim()
+      ? list.filter((r) => `${r.title} ${r.sku ?? ""}`.toLowerCase().includes(query.trim().toLowerCase()))
       : list;
     return [...filtered].sort((a, b) => {
       if (sort === "revenue") return b.delivered_revenue - a.delivered_revenue;
@@ -174,9 +180,14 @@ function ProductLabPage() {
                 <div className="flex flex-wrap items-center gap-2">
                   <div className="relative">
                     <Search className="pointer-events-none absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
-                    <Input placeholder="Search product or SKU" className="h-9 w-[220px] pl-8" />
+                    <Input
+                      value={query}
+                      onChange={(event) => setQuery(event.target.value)}
+                      placeholder="Search product or SKU"
+                      className="h-9 w-[220px] pl-8"
+                    />
                   </div>
-                  <Select defaultValue="profit">
+                  <Select value={sort} onValueChange={(value) => setSort(value as SortKey)}>
                     <SelectTrigger className="h-9 w-[140px]"><SelectValue /></SelectTrigger>
                     <SelectContent>
                       <SelectItem value="profit">Net profit</SelectItem>
