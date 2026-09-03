@@ -1478,7 +1478,16 @@ function ItemSheet({
           </TabsContent>
 
           <TabsContent value="prod" className="space-y-3 pt-3">
+            <div>
+              <Label className="text-[11px]">Product assign</Label>
+              <ProductPicker
+                products={products}
+                value={d.product_id}
+                onChange={(id) => set({ product_id: id })}
+              />
+            </div>
             <div className="grid grid-cols-2 gap-3">
+
               <div>
                 <Label className="text-[11px]">Stage</Label>
                 <Select value={d.stage} onValueChange={(v) => set({ stage: v })}>
