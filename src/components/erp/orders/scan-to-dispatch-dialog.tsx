@@ -93,12 +93,19 @@ export function ScanToDispatchDialog({ open, onClose, onStatusChange }: ScanToDi
 
   const push = (r: Omit<ScanResult, "at">) => setLog((prev) => [{ ...r, at: Date.now() }, ...prev].slice(0, 6));
 
-  const lookup = async (term: string) => {
+  const lookup = async (term: string, strict = false) => {
     const clean = term.trim();
     if (!clean) return null;
     let q = supabase.from("orders").select(SELECT_COLS).order("created_at", { ascending: false }).limit(6);
-    if (/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(clean)) {
+    const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(clean);
+    if (isUuid) {
       q = q.eq("id", clean);
+    } else if (strict) {
+      // Auto-fired (scanner/paste) input must match a whole invoice or phone —
+      // never a partial substring, which could hit a different order.
+      q = q.or(
+        `invoice_no.eq.${clean},shipping_phone.eq.${clean},guest_phone.eq.${clean}`,
+      );
     } else if (/^\d+$/.test(clean)) {
       q = q.or(`invoice_no.ilike.%${clean}%,shipping_phone.ilike.%${clean}%,guest_phone.ilike.%${clean}%`);
     } else {
@@ -110,8 +117,14 @@ export function ScanToDispatchDialog({ open, onClose, onStatusChange }: ScanToDi
     if (!rows.length) return null;
     // Prefer the row that is actionable for the current mode
     const wanted = mode === "ship" ? ["ready_to_ship", "packed"] : mode === "ready" ? ["packed"] : PACKABLE;
-    return rows.find((r) => wanted.includes(r.status)) ?? rows[0];
+    const actionable = rows.filter((r) => wanted.includes(r.status));
+    if (rows.length > 1 && actionable.length !== 1) {
+      // Ambiguous — refuse to act on a guess.
+      throw new Error(`Ekadhik order match korlo (${rows.length}) — puro invoice/phone din`);
+    }
+    return actionable[0] ?? rows[0];
   };
+
 
   const isCod = (o: OrderRow) => {
     const m = (o.payment_method ?? "").toLowerCase();
@@ -161,7 +174,7 @@ export function ScanToDispatchDialog({ open, onClose, onStatusChange }: ScanToDi
     toast.error(msg);
   };
 
-  const process = async (term: string) => {
+  const process = async (term: string, opts?: { auto?: boolean }) => {
     const clean = term.trim();
     if (!clean || busy) return;
     if (timerRef.current) clearTimeout(timerRef.current);
@@ -177,8 +190,10 @@ export function ScanToDispatchDialog({ open, onClose, onStatusChange }: ScanToDi
 
     setBusy(true);
     try {
-      const order = await lookup(clean);
+      const order = await lookup(clean, opts?.auto === true);
       if (!order) return fail(`Order not found: ${clean}`);
+
+
 
       if (mode === "ship") {
         const res = await shipOrder(order);
@@ -218,13 +233,16 @@ export function ScanToDispatchDialog({ open, onClose, onStatusChange }: ScanToDi
     if (timerRef.current) clearTimeout(timerRef.current);
     if (!auto) return;
     const clean = v.trim();
-    // Auto-fire when it looks complete: 11-digit phone, UUID, or >= 4 chars idle
+    // Auto-fire ONLY for a complete identifier (11-digit phone or UUID).
+    // Partial/hand-typed text must be confirmed with Enter — otherwise a
+    // half-typed number could match and mutate a different order.
     const complete =
       /^01\d{9}$/.test(clean) ||
       /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(clean);
-    if (clean.length < 3) return;
-    timerRef.current = setTimeout(() => process(clean), complete ? 80 : 550);
+    if (!complete) return;
+    timerRef.current = setTimeout(() => process(clean, { auto: true }), 120);
   };
+
 
   const onKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
     if (e.key === "Enter") {

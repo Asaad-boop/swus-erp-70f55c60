@@ -7,7 +7,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { useBrand } from "@/contexts/brand-context";
 import {
-  useOrdersQuery, useOrderStatusCounts, fetchAllMatchingOrderIds,
+  useOrdersInfinite, useOrderStatusCounts, fetchAllMatchingOrderIds,
   type OrdersFilter, type OrdersSortKey, type OrdersSortDir,
 } from "@/hooks/erp/use-orders-query";
 import { useCourierShipments, COURIER_BUCKET_META, type CourierBucket, type CourierShipmentRow } from "@/hooks/erp/use-courier-shipments";
@@ -185,23 +185,39 @@ function OrdersPage() {
     [filter, activeBrand?.id, isAllBrands, brandIds],
   );
 
-  // Infinite scroll: instead of pages we grow a single `limit`. The query
-  // always fetches rows [0, limit) so data stays contiguous and selection
-  // never breaks across "pages".
+  // Infinite scroll: each step fetches ONLY the next page and appends it.
+  // (Previously the query re-fetched rows [0, limit) on every scroll step.)
   const PAGE_CHUNK = 50;
-  const [limit, setLimit] = useState(PAGE_CHUNK);
   const filterSignature = useMemo(() => {
     const { page: _p, pageSize: _s, ...rest } = effective;
     return JSON.stringify(rest);
   }, [effective]);
-  useEffect(() => { setLimit(PAGE_CHUNK); }, [filterSignature]);
 
   const queryFilter = useMemo<OrdersFilter>(
-    () => ({ ...effective, page: 0, pageSize: limit }),
-    [effective, limit],
+    () => ({ ...effective, page: 0, pageSize: PAGE_CHUNK }),
+    [effective],
   );
 
-  const { data, isLoading, isFetching } = useOrdersQuery(queryFilter);
+  const {
+    data: pagedData,
+    isLoading,
+    isFetching,
+    fetchNextPage,
+    hasNextPage,
+    isFetchingNextPage,
+  } = useOrdersInfinite(queryFilter, PAGE_CHUNK);
+  const data = useMemo(
+    () =>
+      pagedData
+        ? {
+            rows: pagedData.pages.flatMap((p) => p.rows),
+            total: pagedData.pages[0]?.total ?? 0,
+          }
+        : undefined,
+    [pagedData],
+  );
+
+
 
   // Stable update helper that writes the next filter state to the URL.
   const filterRef = useRef(filter);
@@ -262,7 +278,7 @@ function OrdersPage() {
   const { data: shipmentsMap = {} } = useCourierShipments(pageOrderIds);
 
   const visibleRows = rows;
-  const hasMore = visibleRows.length < total;
+  const hasMore = hasNextPage === true;
 
   // Infinite scroll sentinel — auto-grows `limit` as the user scrolls down.
   const sentinelRef = useRef<HTMLDivElement>(null);
@@ -270,11 +286,11 @@ function OrdersPage() {
     const el = sentinelRef.current;
     if (!el || !hasMore) return;
     const io = new IntersectionObserver((entries) => {
-      if (entries[0]?.isIntersecting) setLimit((l) => l + PAGE_CHUNK);
+      if (entries[0]?.isIntersecting && !isFetchingNextPage) void fetchNextPage();
     }, { rootMargin: "600px" });
     io.observe(el);
     return () => io.disconnect();
-  }, [hasMore, filterSignature]);
+  }, [hasMore, filterSignature, isFetchingNextPage, fetchNextPage]);
 
   // Realtime: subscribe to courier_shipments UPDATE/INSERT
   const idsKey = useMemo(() => [...pageOrderIds].sort().join(","), [pageOrderIds]);
@@ -820,10 +836,10 @@ function OrdersPage() {
                   variant="outline"
                   size="sm"
                   className="h-8 rounded-xl text-[12px]"
-                  disabled={isFetching}
-                  onClick={() => setLimit((l) => l + PAGE_CHUNK)}
+                  disabled={isFetchingNextPage}
+                  onClick={() => void fetchNextPage()}
                 >
-                  {isFetching ? "Loading…" : `Load more (${(total - visibleRows.length).toLocaleString()} left)`}
+                  {isFetchingNextPage ? "Loading…" : `Load more (${(total - visibleRows.length).toLocaleString()} left)`}
                 </Button>
               </>
             ) : (

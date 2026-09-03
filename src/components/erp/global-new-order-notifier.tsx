@@ -56,14 +56,22 @@ export function GlobalNewOrderNotifier() {
       shipping_city: string | null;
       source: string | null;
       confirmation_status: string | null;
+      status: string | null;
+
     };
 
-    const announce = (row: OrderRowLite) => {
+    const announce = (row: OrderRowLite, opts?: { force?: boolean }) => {
       if (!row.brand_id || !allowed.has(row.brand_id)) return;
       if (seenRef.current.has(row.id)) return;
       // Manual "Awaiting Confirmation" orders are not a sale yet — chime only
       // once someone confirms them over the phone.
-      if (row.source === "manual" && row.confirmation_status !== "confirmed") return;
+      if (
+        !opts?.force &&
+        row.source === "manual" &&
+        row.confirmation_status !== "confirmed" &&
+        row.status !== "confirmed"
+      )
+        return;
       seenRef.current.add(row.id);
 
       try { playOrderSound(); } catch { /* audio blocked until user interacts */ }
@@ -99,12 +107,20 @@ export function GlobalNewOrderNotifier() {
           const row = payload.new as OrderRowLite;
           const old = payload.old as Partial<OrderRowLite>;
           if (row.source !== "manual") return;
-          if (row.confirmation_status !== "confirmed") return;
-          if (old?.confirmation_status === "confirmed") return;
-          announce(row);
+          // Confirmation happens either via confirmation_status = 'confirmed'
+          // (pre-order conversion) or, in the call-team flow, by moving the
+          // order status to 'confirmed' while confirmation_status stays pending.
+          const nowConfirmed =
+            row.confirmation_status === "confirmed" || row.status === "confirmed";
+          if (!nowConfirmed) return;
+          const wasConfirmed =
+            old?.confirmation_status === "confirmed" || old?.status === "confirmed";
+          if (wasConfirmed) return;
+          announce(row, { force: true });
         },
       )
       .subscribe();
+
     return () => { supabase.removeChannel(channel); };
   }, [brandsKey, brandIds, brands, navigate]);
 

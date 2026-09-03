@@ -1,4 +1,4 @@
-import { keepPreviousData, useQuery } from "@tanstack/react-query";
+import { keepPreviousData, useInfiniteQuery, useQuery } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { supabase } from "@/integrations/supabase/client";
 import type { OrderRow, OrderStatus } from "@/lib/erp/orders";
@@ -74,22 +74,27 @@ export type OrdersFilter = {
   advanceFilter?: "any" | "with" | "without";
 };
 
-export function useOrdersQuery(filter: OrdersFilter) {
-  const brandIds = filter.brandIds && filter.brandIds.length > 0
+function brandIdsOf(filter: OrdersFilter) {
+  return filter.brandIds && filter.brandIds.length > 0
     ? filter.brandIds
     : filter.brandId
       ? [filter.brandId]
       : [];
-  return useQuery({
-    queryKey: ["orders", filter],
-    enabled: brandIds.length > 0 && (filter.ids == null || filter.ids.length > 0),
-    placeholderData: keepPreviousData,
-    queryFn: async () => {
+}
+
+/** Fetch a single page of orders. Shared by the paged and infinite hooks. */
+export async function fetchOrdersPage(
+  filter: OrdersFilter,
+): Promise<{ rows: OrderRow[]; total: number }> {
+  const brandIds = brandIdsOf(filter);
+  {
+    {
       let bucketIds: string[] | null = null;
       if (filter.courierBucket) {
         bucketIds = await orderIdsForCourierBucket(filter.courierBucket);
         if (bucketIds.length === 0) return { rows: [] as OrderRow[], total: 0 };
       }
+
       let q = applyBrandScope(
         supabase
           .from("orders")
@@ -171,9 +176,39 @@ export function useOrdersQuery(filter: OrdersFilter) {
       }
 
       return { rows, total: count ?? 0 };
+    }
+  }
+}
+
+export function useOrdersQuery(filter: OrdersFilter) {
+  const brandIds = brandIdsOf(filter);
+  return useQuery({
+    queryKey: ["orders", filter],
+    enabled: brandIds.length > 0 && (filter.ids == null || filter.ids.length > 0),
+    placeholderData: keepPreviousData,
+    queryFn: () => fetchOrdersPage(filter),
+  });
+}
+
+/**
+ * Infinite-scroll variant: each scroll fetches ONLY the next page instead of
+ * re-fetching every row loaded so far (which was O(n^2) network + DB work).
+ */
+export function useOrdersInfinite(filter: Omit<OrdersFilter, "page">, pageSize = 50) {
+  const brandIds = brandIdsOf(filter as OrdersFilter);
+  return useInfiniteQuery({
+    queryKey: ["orders-infinite", { ...filter, pageSize }],
+    enabled: brandIds.length > 0 && (filter.ids == null || filter.ids.length > 0),
+    initialPageParam: 0,
+    queryFn: ({ pageParam }) =>
+      fetchOrdersPage({ ...(filter as OrdersFilter), page: pageParam as number, pageSize }),
+    getNextPageParam: (lastPage, allPages) => {
+      const loaded = allPages.reduce((s, p) => s + p.rows.length, 0);
+      return loaded < lastPage.total ? allPages.length : undefined;
     },
   });
 }
+
 
 export function useOrderDetail(orderId: string | null) {
   return useOrderDetailInner(orderId);

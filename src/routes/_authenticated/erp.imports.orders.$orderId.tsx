@@ -1,7 +1,7 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import {
   ArrowLeft, Truck, CheckCircle2, AlertTriangle, Wallet, Loader2,
   PackageCheck, Receipt, Trash2, Pencil, MoreHorizontal, Boxes, Repeat, ClipboardList, History,
@@ -41,7 +41,7 @@ import { EditPoDialog } from "@/components/erp/imports/po-detail/edit-po-dialog"
 import { CartonPlanDialog } from "@/components/erp/imports/po-detail/carton-plan-dialog";
 import { ActivityTimeline } from "@/components/erp/imports/po-detail/activity-timeline";
 import { NextActionBar } from "@/components/erp/imports/po-detail/next-action-bar";
-import { computePoMath } from "@/components/erp/imports/po-detail/po-math";
+import { computePoMath, PO_GOTO_EVENT } from "@/components/erp/imports/po-detail/po-math";
 
 export const Route = createFileRoute("/_authenticated/erp/imports/orders/$orderId")({
   head: () => ({ meta: [{ title: "Purchase Order — Imports" }] }),
@@ -88,6 +88,18 @@ function PoDetailPage() {
   const [editOpen, setEditOpen] = useState(false);
   const [cartonPlanOpen, setCartonPlanOpen] = useState(false);
   const [tab, setTab] = useState("overview");
+
+  // Guided next-step CTAs point at anchors inside other tabs; switch tab first.
+  useEffect(() => {
+    const onGoto = (e: Event) => {
+      const detail = (e as CustomEvent).detail as { tab?: string } | undefined;
+      if (detail?.tab) setTab(detail.tab);
+    };
+    window.addEventListener(PO_GOTO_EVENT, onGoto as EventListener);
+    return () => window.removeEventListener(PO_GOTO_EVENT, onGoto as EventListener);
+  }, []);
+
+
 
 
   const stageMut = useMutation({
