@@ -1338,6 +1338,17 @@ export const getCampaignMonthlyComparison = createServerFn({ method: "POST" })
           }
         }
 
+        // Courier share of canonical opex — excluded when cash is netted.
+        const { data: splitRaw } = await sb.rpc("mkt_campaign_cost_split", {
+          _brand_ids: data.brandIds,
+          _from: mo.from,
+          _to: mo.to,
+        } as never);
+        const split = new Map<string, any>();
+        for (const sp of (Array.isArray(splitRaw) ? splitRaw : []) as any[]) {
+          if (sp?.campaign_id) split.set(sp.campaign_id, sp);
+        }
+
         let spend = 0,
           orders = 0,
           delivered = 0,
