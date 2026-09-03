@@ -122,3 +122,16 @@ Lifecycle Funnel · Profit Ladder (realized) · Realized vs Projected · Collect
 - Implementation-এর আগে existing schema/functions/triggers inspect করে reuse করা হবে, duplicate financial logic লেখা হবে না।
 
 **Verification scenarios:** cancelled · confirmed · full delivery · partial delivery · full RTO · partial return · returned+resellable · returned+damaged · missing settlement · manual attribution overriding UTM · auto product suggestion · একই order একাধিক campaign-এ match হওয়ার সম্ভাবনা।
+
+## ১২. Non-negotiables (spec source of truth)
+
+- Missing financial data → `NULL` / Pending / Incomplete; কখনো `COALESCE(...,0)` দিয়ে ঢাকা হবে না।
+- Projected profit কখনো Realized profit বা verdict-কে প্রভাবিত করবে না।
+- Campaign ad spend ঠিক একবার বাদ; order-level Allocated Ad Cost শুধু informational।
+- Return COGS reversal শুধু actual inventory recovery (resellable) হলে; return charge-এর সাথে double-count নয়।
+- Partial delivery / partial return item-level হিসাব হবে যতটুকু existing order data support করে।
+- বিদ্যমান marketing/order/finance কিছুই ভাঙবে না; কোনো existing schema বা business rule এই spec-এর সাথে conflict করলে **parallel calculation না বানিয়ে আগে exact conflict জানানো হবে**।
+
+## ১৩. Post-implementation verification checklist
+
+এক order দুই campaign-এ যায় না · manual attribution overwrite হয় না · delivered revenue = actual collected cash · pending settlement ৳0 দেখায় না · COGS reversal শুধু recovered stock-এ · partial return-এ শুধু affected item · fallback courier charge "estimate" mark করা · ad spend একবার · projected profit verdict-এ প্রভাব ফেলে না · incomplete data → Too Early/Pending।
