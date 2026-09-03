@@ -411,6 +411,12 @@ function CampaignTruthPage() {
     );
 
   const totals = useMemo(() => sumRows(rows), [rows]);
+  const visibleSpendUsd = useMemo(
+    () => rows.reduce((sum, row) => sum + (Number(row.spend_usd) || 0), 0),
+    [rows],
+  );
+  const visibleSpendRate = visibleSpendUsd > 0 ? totals.spend / visibleSpendUsd : null;
+  const spendViewIsFiltered = rows.length !== all.length;
   const prevTotals = useMemo(
     () => (compare && prevQ.data ? sumRows(prevQ.data) : null),
     [compare, prevQ.data],
@@ -742,32 +748,46 @@ function CampaignTruthPage() {
           </div>
         </div>
 
-        {metaSpend && metaSpend.bdt_spend > 0 && (
+        {metaSpend && (totals.spend > 0 || metaSpend.bdt_spend > 0) && (
           <div className="flex flex-wrap items-center gap-x-5 gap-y-2 border-t px-4 py-2 text-[11px]">
             <span className="text-[10px] uppercase tracking-[0.12em] text-muted-foreground">
-              Meta ad spend
+              Meta ad spend · {spendViewIsFiltered ? "campaigns in view" : "all campaigns"}
             </span>
             <MicroStat
               label="Spent (USD)"
-              value={"$" + metaSpend.usd_spend.toLocaleString("en-US", { maximumFractionDigits: 2 })}
+              value={"$" + visibleSpendUsd.toLocaleString("en-US", { maximumFractionDigits: 2 })}
             />
-            <MicroStat label="Charged (BDT)" value={bdt(metaSpend.bdt_spend)} />
+            <MicroStat label="Charged (BDT)" value={bdt(totals.spend)} />
             <MicroStat
               label="Rate applied"
               value={
-                metaSpend.effective_rate
-                  ? `৳${metaSpend.effective_rate.toFixed(2)}/$`
+                visibleSpendRate
+                  ? `৳${visibleSpendRate.toFixed(2)}/$`
                   : metaSpend.fx_rate
                     ? `৳${metaSpend.fx_rate.toFixed(2)}/$`
                     : "—"
               }
             />
+            {!spendViewIsFiltered && (
+              <MicroStat
+                label="Wallet matched"
+                value={
+                  metaSpend.wallet_coverage_pct === null
+                    ? "—"
+                    : `${metaSpend.wallet_coverage_pct.toFixed(0)}%`
+                }
+              />
+            )}
             <MicroStat
-              label="Wallet matched"
+              label="Data through"
               value={
-                metaSpend.wallet_coverage_pct === null
-                  ? "—"
-                  : `${metaSpend.wallet_coverage_pct.toFixed(0)}%`
+                metaSpend.data_through
+                  ? new Date(`${metaSpend.data_through}T00:00:00+06:00`).toLocaleDateString("en-GB", {
+                      timeZone: "Asia/Dhaka",
+                      day: "2-digit",
+                      month: "short",
+                    })
+                  : "No data"
               }
             />
             <MicroStat
@@ -784,13 +804,19 @@ function CampaignTruthPage() {
                   : "কখনো না"
               }
             />
-            {metaSpend.bdt_from_fx > 0 && (
+            {!spendViewIsFiltered && metaSpend.bdt_from_fx > 0 && (
               <span
                 className="inline-flex items-center gap-1 text-amber-700"
                 title={`$${metaSpend.usd_unconverted.toFixed(2)} এখনো wallet purchase-এর সাথে মেলানো হয়নি — FX rate ৳${metaSpend.fx_rate.toFixed(2)} দিয়ে ধরা হয়েছে`}
               >
                 <AlertTriangle className="h-3 w-3" />
                 {bdt(metaSpend.bdt_from_fx)} FX estimate
+              </span>
+            )}
+            {metaSpend.data_through && metaSpend.data_through < range.to && (
+              <span className="inline-flex items-center gap-1 text-amber-700">
+                <AlertTriangle className="h-3 w-3" />
+                {metaSpend.data_through} পর্যন্ত spend data
               </span>
             )}
           </div>
