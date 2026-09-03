@@ -1375,7 +1375,8 @@ export const getCampaignMonthlyComparison = createServerFn({ method: "POST" })
           returnCharge += n(r.return_charge);
           grossProfit += p.gross_profit;
 
-          const rCollected = numOrNull(r.collected_amount);
+          const rCollectedGross = numOrNull(r.collected_amount);
+          const rCourierFee = n(r.courier_fee_settled);
           const rExpected = numOrNull(r.expected_collectible);
           const recovered = n(r.cogs_recovered);
           const deliveredOrderValue = n(r.delivered_order_value);
@@ -1384,16 +1385,20 @@ export const getCampaignMonthlyComparison = createServerFn({ method: "POST" })
               ? Math.min(1, Math.max(0, rExpected / deliveredOrderValue))
               : 1;
           const cogsSettled = (p.cogs - recovered) * settledShare;
-          const opexSettled = p.operating_cost * settledShare;
+          // Net cash model: courier charge already deducted from the collected
+          // cash, so drop the courier part of canonical opex to avoid double count.
+          const courierApplied = n(split.get(r.id)?.courier) * settledShare;
+          const opexSettled = Math.max(0, p.operating_cost * settledShare - courierApplied);
           cogsApplied += cogsSettled;
           opexApplied += opexSettled;
 
-          if (rCollected !== null) {
+          if (rCollectedGross !== null) {
             anyCollected = true;
-            collected += rCollected;
-            // Same realized formula as getCampaignTruth: collected cash − settled COGS
-            // − settled opex − return charge − ad spend.
-            realized += rCollected - cogsSettled - opexSettled - n(r.return_charge) - rSpend;
+            const rCollectedNet = rCollectedGross - rCourierFee;
+            collected += rCollectedNet;
+            // Same realized formula as getCampaignTruth: NET collected cash −
+            // settled COGS − settled opex (excl. courier) − return charge − ad spend.
+            realized += rCollectedNet - cogsSettled - opexSettled - n(r.return_charge) - rSpend;
             realizedSpend += rSpend;
             anyRealized = true;
           }
