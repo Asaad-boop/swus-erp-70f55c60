@@ -121,7 +121,15 @@ function ProductLabPage() {
       />
 
       {tab === "pipeline" ? (
-        <ProductPipelinePage />
+        <>
+          <GrowthHeader
+            title="Product Lab"
+            subtitle="Evaluate ideas, validate unit economics and move winners into launch"
+            range={range}
+            onRangeChange={setRange}
+          />
+          <ProductPipelinePage showHeader={false} />
+        </>
       ) : tab === "360" ? (
         <>
           <GrowthHeader
@@ -220,7 +228,7 @@ function ProductLabPage() {
                           <th className="px-3 py-3 text-right font-medium">ROAS</th>
                           <th className="px-3 py-3 text-right font-medium">CPA</th>
                           <th className="px-3 py-3 text-right font-medium">Daily sales</th>
-                          <th className="px-3 py-3 text-right font-medium">Stock</th>
+                          <th className="px-3 py-3 text-right font-medium">Available</th>
                           <th className="px-3 py-3 text-right font-medium">Cover</th>
                         </tr>
                       </thead>

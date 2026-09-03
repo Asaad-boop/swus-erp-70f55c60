@@ -169,7 +169,7 @@ function calcForecast(f: FDraft) {
   };
 }
 
-export function ProductPipelinePage() {
+export function ProductPipelinePage({ showHeader = true }: { showHeader?: boolean } = {}) {
   const { brandIds, activeBrand, isLoading: brandLoading } = useBrand();
   const { isAdmin } = useCurrentRole();
   const qc = useQueryClient();
@@ -440,8 +440,9 @@ export function ProductPipelinePage() {
 
   const clone = useMutation({
     mutationFn: async (i: HubIdea) => {
+      if (!activeBrand?.id) throw new Error("Select a specific brand before duplicating an idea.");
       const { error } = await supabase.from("hub_product_ideas").insert({
-        brand_id: i.brand_id,
+        brand_id: activeBrand.id,
         title: `${i.title} (copy)`,
         description: i.description,
         image_url: i.image_url,
@@ -527,7 +528,7 @@ export function ProductPipelinePage() {
 
   return (
     <div className="mx-auto max-w-[1500px] space-y-4 p-3 md:p-6">
-      <GrowthPageHeader
+      {showHeader && <GrowthPageHeader
         icon={Lightbulb}
         title="Product Pipeline"
         subtitle={
@@ -611,7 +612,13 @@ export function ProductPipelinePage() {
             </Button>
           </>
         }
-      />
+      />}
+
+      {!activeBrand && !brandLoading && (
+        <div className="rounded-lg border border-dashed border-border bg-muted/20 px-4 py-3 text-sm text-muted-foreground">
+          Select a specific brand to create or duplicate ideas. All Brands remains view-only so ideas stay correctly scoped.
+        </div>
+      )}
 
       {ideas.length > 0 && (
         <>
