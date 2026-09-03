@@ -133,7 +133,7 @@ const SORTS: { key: SortKey; label: string }[] = [
   { key: "impact", label: "Financial impact" },
   { key: "realized_profit", label: "Realized profit" },
   { key: "spend", label: "Spend" },
-  { key: "collected", label: "Collected" },
+  { key: "collected", label: "Collected (net)" },
   { key: "roas", label: "Realized ROAS" },
   { key: "delivery_rate", label: "Delivery rate" },
 ];
