@@ -213,6 +213,19 @@ export function PipelinePage() {
     return m;
   }, [filtered]);
 
+  /** Patch the cached list instantly so drag/stage moves feel native. */
+  const patchCache = (ids: string[], patch: Partial<ContentItem>) => {
+    const key = ["content-items", brandIds];
+    const prev = qc.getQueryData<ContentItem[]>(key);
+    if (prev) {
+      qc.setQueryData<ContentItem[]>(
+        key,
+        prev.map((i) => (ids.includes(i.id) ? { ...i, ...patch } : i)),
+      );
+    }
+    return { key, prev } as const;
+  };
+
   const saveMut = useMutation({
     mutationFn: async (patch: Partial<ContentItem> & { id: string }) => {
       const { id, ...rest } = patch;
@@ -222,11 +235,19 @@ export function PipelinePage() {
         .eq("id", id);
       if (error) throw error;
     },
+    onMutate: async (patch) => {
+      await qc.cancelQueries({ queryKey: ["content-items", brandIds] });
+      const { id, ...rest } = patch;
+      return patchCache([id], rest as Partial<ContentItem>);
+    },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["content-items"] });
       qc.invalidateQueries({ queryKey: ["content-intake"] });
     },
-    onError: (e: Error) => toast.error(e.message),
+    onError: (e: Error, _v, ctx) => {
+      if (ctx?.prev) qc.setQueryData(ctx.key, ctx.prev);
+      toast.error(e.message);
+    },
   });
 
   const bulkMut = useMutation({
@@ -239,13 +260,21 @@ export function PipelinePage() {
       if (error) throw error;
       return ids.length;
     },
+    onMutate: async (patch) => {
+      await qc.cancelQueries({ queryKey: ["content-items", brandIds] });
+      return patchCache([...selected], patch);
+    },
     onSuccess: (n) => {
       toast.success(`${n}টি content আপডেট হয়েছে`);
       setSelected(new Set());
       qc.invalidateQueries({ queryKey: ["content-items"] });
     },
-    onError: (e: Error) => toast.error(e.message),
+    onError: (e: Error, _v, ctx) => {
+      if (ctx?.prev) qc.setQueryData(ctx.key, ctx.prev);
+      toast.error(e.message);
+    },
   });
+
 
   const createMut = useMutation({
     mutationFn: async () => {
