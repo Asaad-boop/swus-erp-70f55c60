@@ -13881,6 +13881,10 @@ export type Database = {
           source: string
         }[]
       }
+      mkt_attribution_health: {
+        Args: { _brand_ids: string[]; _from: string; _to: string }
+        Returns: Json
+      }
       mkt_attribution_queue: {
         Args: { _brand_ids: string[]; _limit?: number }
         Returns: {

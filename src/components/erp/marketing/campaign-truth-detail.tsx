@@ -64,13 +64,13 @@ function Stat({ l, v }: { l: string; v: string }) {
 /** Revenue → net profit bridge. */
 function ProfitBridge({ row }: { row: CampaignTruthRow }) {
   const steps = [
-    { l: "Delivered revenue", v: row.delivered_revenue, tone: "text-foreground" },
+    { l: "Delivered line value (projected)", v: row.delivered_revenue, tone: "text-foreground" },
     { l: "− COGS", v: -row.cogs, tone: "text-rose-600" },
     { l: "− Operating cost", v: -row.operating_cost, tone: "text-rose-600" },
-    { l: "= Gross profit", v: row.gross_profit, tone: "font-semibold text-foreground" },
+    { l: "= Projected gross profit", v: row.gross_profit, tone: "font-semibold text-foreground" },
     { l: "− Ad spend", v: -row.spend, tone: "text-rose-600" },
     {
-      l: "= Net profit",
+      l: "= Projected net profit",
       v: row.net_profit,
       tone: row.net_profit >= 0 ? "font-semibold text-emerald-600" : "font-semibold text-rose-600",
     },
@@ -104,7 +104,7 @@ function CostAttribution({ row }: { row: CampaignTruthRow }) {
   if (base <= 0) {
     return (
       <div className="rounded-lg border bg-background p-3 text-xs text-muted-foreground">
-        Delivered revenue নেই — cost breakdown দেখানো যাচ্ছে না।
+        Delivered line value নেই — cost breakdown দেখানো যাচ্ছে না।
       </div>
     );
   }
@@ -112,7 +112,7 @@ function CostAttribution({ row }: { row: CampaignTruthRow }) {
   return (
     <div className="rounded-lg border bg-background p-3">
       <div className="mb-2 flex items-center justify-between text-xs">
-        <span className="font-medium">Cost attribution (per ৳100 delivered revenue)</span>
+        <span className="font-medium">Cost attribution (per ৳100 delivered line value)</span>
         <span className="tabular-nums text-muted-foreground">Base {bdt(base)}</span>
       </div>
       <div className="flex h-3 w-full overflow-hidden rounded-full bg-muted">
@@ -199,7 +199,7 @@ function TrendChart({ points }: { points: CampaignTrendPoint[] }) {
           <Area
             type="monotone"
             dataKey="revenue"
-            name="Delivered revenue"
+            name="Delivered line value"
             stroke="#6366F1"
             strokeWidth={2}
             fill="url(#revFill)"

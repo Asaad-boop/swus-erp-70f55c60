@@ -677,6 +677,8 @@ export type CampaignTruthRow = {
   meta_roas: number;
   orders: number;
   attributed_orders: number;
+  explicit_attributed_orders: number;
+  auto_attributed_orders: number;
   unlinked_orders: number;
   match_status: "linked" | "partial" | "utm_only" | "no_orders";
 
@@ -730,10 +732,17 @@ export type CampaignTruthRow = {
   return_charge_is_estimate: boolean;
   cogs_recovered: number;
   settlement_coverage: number | null;
+  courier_cost_coverage: number | null;
+  cogs_coverage: number | null;
   attribution_coverage: number | null;
+  attribution_confidence: number | null;
   attribution_source: string | null;
+  /** Weakest of attribution / settlement / COGS / courier coverage */
+  truth_coverage: number | null;
   /** Collected cash − COGS(+recovered) − opex − return charge − ad spend. null when settlement pending. */
   realized_profit: number | null;
+  /** Realized profit ROAS = realized profit ÷ ad spend */
+  realized_roas: number | null;
   /** Pipeline value still in flight (not cash) */
   projected_profit: number;
   truth_status: "profitable" | "breakeven" | "losing" | "too_early";
@@ -774,7 +783,13 @@ export const getCampaignTruth = createServerFn({ method: "POST" })
     const { getCampaignProfitMap } = await import("@/lib/erp/marketing/canonical.server");
     const profit = new Map<
       string,
-      { cogs: number; operating_cost: number; gross_profit: number; cost_missing_units: number }
+      {
+        cogs: number;
+        operating_cost: number;
+        gross_profit: number;
+        cost_missing_units: number;
+        delivered_units: number;
+      }
     >();
     for (const brandId of data.brandIds) {
       const m = await getCampaignProfitMap(context.supabase, brandId, data.from, data.to);
@@ -784,11 +799,13 @@ export const getCampaignTruth = createServerFn({ method: "POST" })
           operating_cost: 0,
           gross_profit: 0,
           cost_missing_units: 0,
+          delivered_units: 0,
         };
         cur.cogs += v.cogs;
         cur.operating_cost += v.operating_cost;
         cur.gross_profit += v.gross_profit;
         cur.cost_missing_units += v.cost_missing_units;
+        cur.delivered_units += v.delivered_units;
         profit.set(cid, cur);
       }
     }
@@ -819,17 +836,12 @@ export const getCampaignTruth = createServerFn({ method: "POST" })
         operating_cost: 0,
         gross_profit: 0,
         cost_missing_units: 0,
+        delivered_units: 0,
       };
+      // Projected (pipeline) profit — never cash, never drives the verdict.
       const net = p.gross_profit - r.spend;
       const contributionRate =
         p.gross_profit > 0 && r.delivered_revenue > 0 ? p.gross_profit / r.delivered_revenue : 0;
-      let verdict: CampaignTruthRow["verdict"] = "no_data";
-      if (r.spend > 0 || p.gross_profit !== 0) {
-        if (net > 0 && r.spend > 0 && p.gross_profit / r.spend >= 1.5) verdict = "scaling";
-        else if (net > 0) verdict = "profitable";
-        else if (Math.abs(net) <= Math.max(200, r.spend * 0.05)) verdict = "breakeven";
-        else verdict = "losing";
-      }
       const s = split.get(r.id);
       const ann = metaMap.get(r.id);
       const numOrNull = (v: unknown) => (v === null || v === undefined ? null : Number(v));
@@ -837,16 +849,50 @@ export const getCampaignTruth = createServerFn({ method: "POST" })
       const returnCharge = numOrNull((r as any).return_charge);
       const recovered = Number((r as any).cogs_recovered ?? 0);
       const settlementCoverage = numOrNull((r as any).settlement_coverage);
+      const courierCoverage = numOrNull((r as any).courier_cost_coverage);
+      const attributionCoverage = numOrNull((r as any).attribution_coverage);
+      const attributionConfidence = numOrNull((r as any).attribution_confidence);
+      const cogsCoverage =
+        p.delivered_units > 0
+          ? r2(100 * (1 - Math.min(1, p.cost_missing_units / p.delivered_units)))
+          : null;
+      const coverageParts = [
+        attributionCoverage,
+        settlementCoverage,
+        cogsCoverage,
+        courierCoverage,
+      ].filter((v): v is number => v !== null);
+      const truthCoverage = coverageParts.length > 0 ? Math.min(...coverageParts) : null;
+
+      // Realized = actual cash in − canonical COGS (net of resellable recovery)
+      //          − canonical opex − actual/fallback return charge − ad spend.
       const realized =
         collected === null
           ? null
           : r2(collected - (p.cogs - recovered) - p.operating_cost - (returnCharge ?? 0) - r.spend);
+
+      const dataSufficient =
+        realized !== null &&
+        r.spend > 0 &&
+        (settlementCoverage ?? 0) >= 50 &&
+        (cogsCoverage ?? 0) >= 80 &&
+        (attributionCoverage ?? 0) >= 50;
+
       let truthStatus: CampaignTruthRow["truth_status"] = "too_early";
-      if (realized !== null && r.spend > 0 && (settlementCoverage ?? 0) >= 50) {
+      if (dataSufficient && realized !== null) {
         if (Math.abs(realized) <= Math.max(200, r.spend * 0.05)) truthStatus = "breakeven";
         else if (realized > 0) truthStatus = "profitable";
         else truthStatus = "losing";
       }
+
+      // Verdict mirrors realized cash truth only — projected profit can never
+      // make a campaign "profitable".
+      let verdict: CampaignTruthRow["verdict"] = "no_data";
+      if (truthStatus === "profitable")
+        verdict = realized !== null && r.spend > 0 && realized / r.spend >= 0.5 ? "scaling" : "profitable";
+      else if (truthStatus === "breakeven") verdict = "breakeven";
+      else if (truthStatus === "losing") verdict = "losing";
+
       return {
         ...r,
         cogs: r2(p.cogs),
@@ -870,12 +916,55 @@ export const getCampaignTruth = createServerFn({ method: "POST" })
         return_charge: returnCharge,
         cogs_recovered: recovered,
         settlement_coverage: settlementCoverage,
-        attribution_coverage: numOrNull((r as any).attribution_coverage),
+        courier_cost_coverage: courierCoverage,
+        cogs_coverage: cogsCoverage,
+        attribution_coverage: attributionCoverage,
+        attribution_confidence: attributionConfidence,
+        truth_coverage: truthCoverage,
         realized_profit: realized,
+        realized_roas: realized !== null && r.spend > 0 ? r2(realized / r.spend) : null,
         projected_profit: r2(net),
         truth_status: truthStatus,
       };
     });
+  });
+
+export type AttributionHealth = {
+  total_orders: number;
+  attributed_orders: number;
+  explicit_orders: number;
+  auto_orders: number;
+  unattributed_orders: number;
+  coverage_pct: number | null;
+};
+
+export const getAttributionHealth = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d: unknown) =>
+    z
+      .object({
+        brandIds: z.array(z.string().uuid()).min(1),
+        from: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
+        to: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
+      })
+      .parse(d),
+  )
+  .handler(async ({ data, context }) => {
+    const { data: res, error } = await context.supabase.rpc("mkt_attribution_health", {
+      _brand_ids: data.brandIds,
+      _from: data.from,
+      _to: data.to,
+    } as never);
+    if (error) throw error;
+    const r = (res ?? {}) as Record<string, unknown>;
+    return {
+      total_orders: Number(r["total_orders"] ?? 0),
+      attributed_orders: Number(r["attributed_orders"] ?? 0),
+      explicit_orders: Number(r["explicit_orders"] ?? 0),
+      auto_orders: Number(r["auto_orders"] ?? 0),
+      unattributed_orders: Number(r["unattributed_orders"] ?? 0),
+      coverage_pct: r["coverage_pct"] === null || r["coverage_pct"] === undefined ? null : Number(r["coverage_pct"]),
+    } satisfies AttributionHealth;
   });
 
 
