@@ -304,6 +304,7 @@ function CampaignTruthPage() {
     const out = all.filter((r) => {
       if (r.spend < minSpend) return false;
       if (truthFilter !== "all" && r.truth_status !== truthFilter) return false;
+      if (metaStatus !== "all" && metaStatusBucket(r.status) !== metaStatus) return false;
       if (verdictFilter !== "all" && r.verdict !== verdictFilter) return false;
       if (!activityMatch(r, activity)) return false;
       if (hasOrders && r.orders <= 0) return false;
