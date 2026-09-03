@@ -51,7 +51,7 @@ export const Route = createFileRoute("/_authenticated/erp/marketing/truth")({
       {
         name: "description",
         content:
-          "Every synced campaign's Meta reported purchases against real ERP orders, delivered revenue, COGS, ad spend and true net profit.",
+          "Every synced campaign's Meta reported purchases against real ERP orders, actual collected cash, COGS, ad spend and realized profit.",
       },
       { property: "og:title", content: "Campaign Profit Truth — Marketing ERP" },
       {
@@ -356,11 +356,11 @@ function CampaignTruthPage() {
       "Delivered",
       "Returned",
       "Cancelled",
-      "Delivered revenue",
+      "Delivered line value (projected)",
       "COGS",
       "Operating cost",
-      "Gross profit",
-      "Net profit",
+      "Projected gross profit",
+      "Projected net profit",
       "Net margin %",
       "Actual ROAS",
       "Profit ROAS",
@@ -475,7 +475,7 @@ function CampaignTruthPage() {
             <div>
               <h1 className="text-xl font-semibold leading-tight">Campaign Profit Truth</h1>
               <p className="text-xs text-muted-foreground">
-                Meta যা বলছে বনাম বাস্তবে কত order, কত delivered revenue আর ad spend বাদ দিয়ে আসল
+                Meta যা বলছে বনাম বাস্তবে কত order, কত cash collect হলো আর ad spend বাদ দিয়ে আসল
                 profit কত
               </p>
             </div>
