@@ -290,6 +290,7 @@ export type CampaignProductChip = {
   product_id: string;
   title: string;
   sku: string | null;
+  image?: string | null;
   orders?: number;
   revenue?: number;
   share?: number | null;
