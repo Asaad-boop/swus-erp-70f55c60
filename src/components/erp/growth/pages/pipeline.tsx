@@ -76,6 +76,8 @@ import {
   usePersistedState,
 } from "@/components/erp/content/content-ui";
 import { BriefPanel } from "@/components/erp/content/brief-drawer";
+import { ProductPicker } from "@/components/erp/content/product-picker";
+
 import { cn } from "@/lib/utils";
 
 const emptyDraft = {
