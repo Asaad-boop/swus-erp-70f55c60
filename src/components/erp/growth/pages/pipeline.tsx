@@ -516,6 +516,16 @@ export function PipelinePage() {
               ))}
             </SelectContent>
           </Select>
+          <div className="w-[190px]">
+            <ProductPicker
+              size="sm"
+              products={productsQ.data ?? []}
+              value={null}
+              placeholder="Assign product"
+              onChange={(id) => bulkMut.mutate({ product_id: id })}
+            />
+          </div>
+
           <Button variant="ghost" size="sm" className="ml-auto h-8" onClick={() => setSelected(new Set())}>
             Clear
           </Button>
