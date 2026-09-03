@@ -748,7 +748,7 @@ function CampaignTruthPage() {
           </div>
         </div>
 
-        {metaSpend && (totals.spend > 0 || metaSpend.bdt_spend > 0) && (
+        {totals.spend > 0 && (
           <div className="flex flex-wrap items-center gap-x-5 gap-y-2 border-t px-4 py-2 text-[11px]">
             <span className="text-[10px] uppercase tracking-[0.12em] text-muted-foreground">
               Meta ad spend · {spendViewIsFiltered ? "campaigns in view" : "all campaigns"}
@@ -763,12 +763,12 @@ function CampaignTruthPage() {
               value={
                 visibleSpendRate
                   ? `৳${visibleSpendRate.toFixed(2)}/$`
-                  : metaSpend.fx_rate
+                  : metaSpend?.fx_rate
                     ? `৳${metaSpend.fx_rate.toFixed(2)}/$`
                     : "—"
               }
             />
-            {!spendViewIsFiltered && (
+            {!spendViewIsFiltered && metaSpend && (
               <MicroStat
                 label="Wallet matched"
                 value={
@@ -781,7 +781,7 @@ function CampaignTruthPage() {
             <MicroStat
               label="Data through"
               value={
-                metaSpend.data_through
+                metaSpend?.data_through
                   ? new Date(`${metaSpend.data_through}T00:00:00+06:00`).toLocaleDateString("en-GB", {
                       timeZone: "Asia/Dhaka",
                       day: "2-digit",
@@ -793,7 +793,7 @@ function CampaignTruthPage() {
             <MicroStat
               label="Last sync"
               value={
-                metaSpend.last_sync_at
+                metaSpend?.last_sync_at
                   ? new Date(metaSpend.last_sync_at).toLocaleString("en-GB", {
                       timeZone: "Asia/Dhaka",
                       day: "2-digit",
@@ -804,7 +804,7 @@ function CampaignTruthPage() {
                   : "কখনো না"
               }
             />
-            {!spendViewIsFiltered && metaSpend.bdt_from_fx > 0 && (
+            {!spendViewIsFiltered && metaSpend && metaSpend.bdt_from_fx > 0 && (
               <span
                 className="inline-flex items-center gap-1 text-amber-700"
                 title={`$${metaSpend.usd_unconverted.toFixed(2)} এখনো wallet purchase-এর সাথে মেলানো হয়নি — FX rate ৳${metaSpend.fx_rate.toFixed(2)} দিয়ে ধরা হয়েছে`}
@@ -813,7 +813,7 @@ function CampaignTruthPage() {
                 {bdt(metaSpend.bdt_from_fx)} FX estimate
               </span>
             )}
-            {metaSpend.data_through && metaSpend.data_through < range.to && (
+            {metaSpend?.data_through && metaSpend.data_through < range.to && (
               <span className="inline-flex items-center gap-1 text-amber-700">
                 <AlertTriangle className="h-3 w-3" />
                 {metaSpend.data_through} পর্যন্ত spend data
