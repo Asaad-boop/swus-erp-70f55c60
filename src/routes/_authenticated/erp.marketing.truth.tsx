@@ -920,7 +920,8 @@ function CampaignTruthPage() {
             >
               <div className="truncate text-sm font-semibold">{r.name}</div>
               <div className="mt-0.5 truncate text-[11px] text-muted-foreground">
-                {r.status} · {r.external_id ?? "no id"}
+                {r.status} · ID <span className="font-mono tabular-nums">{r.id.slice(0, 8)}</span>
+                {r.external_id ? ` · ${r.external_id}` : null}
               </div>
               <div
                 className={`mt-3 text-2xl font-semibold tabular-nums ${
@@ -996,6 +997,8 @@ function CampaignTruthPage() {
                             <div className="min-w-0">
                               <div className="truncate font-medium leading-tight">{r.name}</div>
                               <div className="mt-1 flex flex-wrap items-center gap-1.5 text-[11px] text-muted-foreground">
+                                <span className="font-mono tabular-nums" title={r.id}>ID {r.id.slice(0, 8)}</span>
+                                <span className="opacity-40">·</span>
                                 <span className="capitalize">{r.status}</span>
                                 <span className="opacity-40">·</span>
                                 <CampaignProductChips
