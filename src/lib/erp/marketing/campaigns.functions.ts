@@ -1342,3 +1342,62 @@ export const getCampaignMonthlyComparison = createServerFn({ method: "POST" })
 
     return rows;
   });
+
+/* ------------------------------------------------------------------ */
+/* Meta ad spend truth (USD spent, BDT charged, rate, last sync)        */
+/* ------------------------------------------------------------------ */
+
+export type MetaSpendSummary = {
+  usd_spend: number;
+  bdt_spend: number;
+  /** BDT matched to real wallet (FIFO) purchases */
+  bdt_from_wallet: number;
+  /** BDT converted with an FX rate because no wallet lot matched yet */
+  bdt_from_fx: number;
+  bdt_estimated: number;
+  usd_unconverted: number;
+  fx_rate: number;
+  /** Blended BDT per USD actually charged */
+  effective_rate: number | null;
+  wallet_coverage_pct: number | null;
+  rows: number;
+  last_insight_at: string | null;
+  last_sync_at: string | null;
+};
+
+export const getMetaSpendSummary = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d: unknown) =>
+    z
+      .object({
+        brandIds: z.array(z.string().uuid()).min(1),
+        from: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
+        to: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
+      })
+      .parse(d),
+  )
+  .handler(async ({ data, context }) => {
+    const { data: raw, error } = await context.supabase.rpc("mkt_meta_spend_summary", {
+      _brand_ids: data.brandIds,
+      _from: data.from,
+      _to: data.to,
+    } as never);
+    if (error) throw error;
+    const r = (raw ?? {}) as any;
+    const n = (v: unknown) => Number(v ?? 0) || 0;
+    const nn = (v: unknown) => (v === null || v === undefined ? null : Number(v));
+    return {
+      usd_spend: n(r.usd_spend),
+      bdt_spend: n(r.bdt_spend),
+      bdt_from_wallet: n(r.bdt_from_wallet),
+      bdt_from_fx: n(r.bdt_from_fx),
+      bdt_estimated: n(r.bdt_estimated),
+      usd_unconverted: n(r.usd_unconverted),
+      fx_rate: n(r.fx_rate),
+      effective_rate: nn(r.effective_rate),
+      wallet_coverage_pct: nn(r.wallet_coverage_pct),
+      rows: n(r.rows),
+      last_insight_at: (r.last_insight_at as string) ?? null,
+      last_sync_at: (r.last_sync_at as string) ?? null,
+    } satisfies MetaSpendSummary;
+  });
