@@ -587,9 +587,9 @@ export function PipelinePage() {
       <ItemSheet
         item={open}
         onClose={() => setOpen(null)}
-        onSave={(patch) => {
+        onSave={(patch, keepOpen) => {
           saveMut.mutate(patch);
-          setOpen(null);
+          if (!keepOpen) setOpen(null);
         }}
         onDelete={(id) => {
           deleteMut.mutate([id]);
@@ -597,11 +597,13 @@ export function PipelinePage() {
         }}
         creators={(creatorsQ.data ?? []).map((c) => ({ id: c.id, name: c.name }))}
         agencies={(agenciesQ.data ?? []).map((a) => ({ id: a.id, name: a.name }))}
+        products={productsQ.data ?? []}
         productLabel={open?.product_id ? (productName.get(open.product_id) ?? null) : null}
         brandLabel={
           brands.find((b) => b.id === open?.brand_id)?.name ?? activeBrand?.name ?? null
         }
       />
+
 
       <Sheet open={creating} onOpenChange={(o) => !o && setCreating(false)}>
         <SheetContent side="right" className="w-full overflow-y-auto sm:max-w-md">
