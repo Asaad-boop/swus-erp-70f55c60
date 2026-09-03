@@ -168,6 +168,23 @@ const activityMatch = (r: CampaignTruthRow, a: ActivityFilter) =>
 type ProductFilter = "all" | "manual" | "auto" | "none";
 type CoverageFilter = "all" | "high" | "low" | "pending";
 
+/** Meta campaign status bucket: active (running), paused, or anything else. */
+type MetaStatusFilter = "all" | "active" | "paused" | "other";
+
+const metaStatusBucket = (status: string | null | undefined): MetaStatusFilter => {
+  const s = (status ?? "").toLowerCase();
+  if (s === "active" || s === "enabled") return "active";
+  if (s === "paused") return "paused";
+  return "other";
+};
+
+const META_STATUS_FILTERS: { key: MetaStatusFilter; label: string }[] = [
+  { key: "all", label: "All status" },
+  { key: "active", label: "Active" },
+  { key: "paused", label: "Paused" },
+  { key: "other", label: "Other" },
+];
+
 /** Shift a YYYY-MM-DD range back by its own length — used for period comparison. */
 function previousRange(from: string, to: string) {
   const f = new Date(from + "T00:00:00Z");
