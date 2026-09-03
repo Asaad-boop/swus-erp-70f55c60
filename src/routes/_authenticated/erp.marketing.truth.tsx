@@ -1157,8 +1157,13 @@ function CampaignTruthPage() {
                         </td>
 
                         <td className="px-4 py-3.5 text-right tabular-nums">
-                          <div className="font-medium">{bdt(r.spend)}</div>
+                          <div className="text-sm font-semibold">{bdt(r.spend)}</div>
                           <div className="mt-0.5 text-[11px] text-muted-foreground">
+                            {r.spend_usd > 0 ? (
+                              <span title="Meta pocket-এর আসল ডলার খরচ">
+                                ${r.spend_usd.toLocaleString("en-US", { maximumFractionDigits: 2 })} ·{" "}
+                              </span>
+                            ) : null}
                             CPA {r.orders > 0 ? bdt(r.cpa) : "—"}
                           </div>
                         </td>
@@ -1179,7 +1184,7 @@ function CampaignTruthPage() {
                             </>
                           ) : (
                             <>
-                              <div className="font-medium">{bdt(r.collected_amount)}</div>
+                              <div className="text-sm font-semibold">{bdt(r.collected_amount)}</div>
                               <div className="mt-0.5 text-[11px] text-muted-foreground">
                                 Expected {bdt(r.expected_collectible ?? 0)} · Var{" "}
                                 {bdt(r.collection_variance ?? 0)}
@@ -1193,7 +1198,7 @@ function CampaignTruthPage() {
                           ) : (
                             <>
                               <div
-                                className={`text-base font-semibold ${r.realized_profit >= 0 ? "text-emerald-600" : "text-rose-600"}`}
+                                className={`text-sm font-semibold ${r.realized_profit >= 0 ? "text-emerald-600" : "text-rose-600"}`}
                               >
                                 {signedBdt(r.realized_profit)}
                               </div>
