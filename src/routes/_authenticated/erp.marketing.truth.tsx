@@ -16,6 +16,8 @@ import {
   LayoutGrid,
   Rows3,
   Check,
+  Plus,
+  X,
 } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
@@ -36,6 +38,9 @@ import {
   getCampaignTrend,
   getCampaignProductsSummary,
   getAttributionHealth,
+  searchProductsForCampaign,
+  linkCampaignProducts,
+  unlinkCampaignProduct,
   rerunCampaignMatching,
   type CampaignProductsSummary,
   type CampaignTrendPoint,
@@ -997,6 +1002,11 @@ function CampaignTruthPage() {
                                   entry={productMap[r.id]}
                                   loading={productsQ.isLoading}
                                 />
+                                <CampaignProductLinker
+                                  campaignId={r.id}
+                                  entry={productMap[r.id]}
+                                  onChanged={() => productsQ.refetch()}
+                                />
                                 <TagChips tags={r.tags ?? []} />
                               </div>
                             </div>
@@ -1343,7 +1353,7 @@ function CampaignProductLinker({
           />
           <div className="mt-2 max-h-[200px] space-y-1 overflow-y-auto">
             {searchQ.isLoading && <div className="p-2 text-[11px] text-muted-foreground">Loading…</div>}
-            {(searchQ.data ?? []).map((p) => (
+            {(searchQ.data ?? []).map((p: { id: string; title: string; sku: string | null; image: string | null }) => (
               <button
                 key={p.id}
                 type="button"
