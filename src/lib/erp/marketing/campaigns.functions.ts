@@ -1146,7 +1146,7 @@ export const getCampaignOrders = createServerFn({ method: "POST" })
 
     const { data: orders, error } = await context.supabase
       .from("orders")
-      .select("id, invoice_no, created_at, shipping_name, guest_name, status, confirmation_status, total, advance_amount")
+      .select("id, invoice_no, created_at, shipping_name, guest_name, status, confirmation_status, total, advance_amount, courier_fee")
       .in("id", ids)
       .order("created_at", { ascending: false });
     if (error) throw error;
@@ -1199,6 +1199,8 @@ export const getCampaignOrders = createServerFn({ method: "POST" })
       const advanceApplied = Math.min(advance, Math.max(total - courier, 0));
       const cash = courier + advanceApplied;
       const status = String(o.status ?? "");
+      const feeRaw = courierFee.get(o.id) ?? Number(o.courier_fee ?? 0);
+      const fee = feeRaw > 0 ? Math.round(feeRaw * 100) / 100 : null;
       // Settled or advance-paid → real number. Cancelled/fake with no cash → 0.
       // Otherwise still awaiting courier settlement → Pending (never fake ৳0).
       const collected =
@@ -1216,6 +1218,8 @@ export const getCampaignOrders = createServerFn({ method: "POST" })
         confirmation_status: (o.confirmation_status as string) ?? null,
         order_value: total,
         collected,
+        courier_fee: fee,
+        net_payout: collected === null || fee === null ? null : Math.round((collected - fee) * 100) / 100,
         attr_source: a?.source ?? "unattributed",
         attr_confidence: Number(a?.confidence ?? 0),
       } satisfies CampaignOrderRow;
