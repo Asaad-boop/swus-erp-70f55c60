@@ -1665,40 +1665,21 @@ function ItemSheet({
             <Trash2 className="h-4 w-4" />
           </Button>
           <Button variant="ghost" className="flex-1" onClick={onClose}>
-            Cancel
+            Close
           </Button>
           <Button
+            variant="outline"
             className="flex-1"
-            onClick={() =>
-              onSave({
-                id: d.id,
-                hook: d.hook,
-                angle: d.angle,
-                script: d.script,
-                caption: d.caption,
-                cta: d.cta,
-                hashtags: d.hashtags,
-                stage: d.stage,
-                status: d.status,
-                content_style: d.content_style,
-                creator_id: d.creator_id,
-                agency_id: d.agency_id,
-                due_date: d.due_date,
-                cost: d.cost,
-                video_url: d.video_url,
-                revision_note: d.revision_note,
-                published_url: d.published_url,
-                views: d.views,
-                likes: d.likes,
-                comments: d.comments,
-                shares: d.shares,
-                attributed_orders: d.attributed_orders,
-              })
-            }
+            disabled={!dirty}
+            onClick={() => onSave(buildPatch(d), true)}
           >
-            Save
+            Apply
+          </Button>
+          <Button className="flex-1" disabled={!dirty} onClick={() => onSave(buildPatch(d))}>
+            {dirty ? "Save" : "Saved"}
           </Button>
         </div>
+
       </SheetContent>
     </Sheet>
   );
