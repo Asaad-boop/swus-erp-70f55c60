@@ -15,6 +15,7 @@ import {
   ArrowUpDown,
   LayoutGrid,
   Rows3,
+  BarChart3,
   Check,
   Plus,
   X,
@@ -51,6 +52,7 @@ import {
   CampaignTruthDetail,
   TagChips,
 } from "@/components/erp/marketing/campaign-truth-detail";
+import { CampaignMonthlyDashboard } from "@/components/erp/marketing/campaign-monthly-dashboard";
 
 export const Route = createFileRoute("/_authenticated/erp/marketing/truth")({
   head: () => ({
@@ -215,7 +217,7 @@ function CampaignTruthPage() {
   const [hasOrders, setHasOrders] = useState(false);
   const [grain, setGrain] = useState<"day" | "week">("day");
   const [compare, setCompare] = useState(false);
-  const [view, setView] = useState<"table" | "performance">("table");
+  const [view, setView] = useState<"table" | "performance" | "monthly">("table");
 
   const brandIds = useMemo(() => {
     if (brandKey === "all") return brands.map((b) => b.id);
