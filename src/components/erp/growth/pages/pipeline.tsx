@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import {
@@ -1240,6 +1240,33 @@ function CalendarView({ items, onOpen }: { items: ContentItem[]; onOpen: (i: Con
 }
 
 /* ---------------- Detail sheet ---------------- */
+
+/** Editable fields in the detail sheet — used for dirty-check + save payload. */
+const FIELDS = [
+  "title",
+  "product_id",
+  "hook",
+  "angle",
+  "script",
+  "caption",
+  "cta",
+  "hashtags",
+  "stage",
+  "status",
+  "content_style",
+  "creator_id",
+  "agency_id",
+  "due_date",
+  "cost",
+  "video_url",
+  "revision_note",
+  "published_url",
+  "views",
+  "likes",
+  "comments",
+  "shares",
+  "attributed_orders",
+] as const satisfies readonly (keyof ContentItem)[];
 
 function ItemSheet({
   item,
