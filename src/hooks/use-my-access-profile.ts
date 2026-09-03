@@ -26,8 +26,15 @@ export function useMyAccessProfile(enabled = true) {
 
   const query = useQuery({
     queryKey: MY_ACCESS_QUERY_KEY,
-    queryFn: () => getProfile(),
+    // Re-check the session at call time: the tab may have signed out between
+    // the `enabled` gate and the actual fetch, which would 401 the server fn.
+    queryFn: async () => {
+      const { data } = await supabase.auth.getSession();
+      if (!data.session?.access_token) return null;
+      return getProfile();
+    },
     enabled: enabled && hasSession === true,
+
     staleTime: 0,
     refetchOnWindowFocus: "always",
     refetchInterval: 30_000,
