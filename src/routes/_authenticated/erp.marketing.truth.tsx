@@ -782,6 +782,26 @@ function CampaignTruthPage() {
           ))}
         </div>
 
+        <div className="flex flex-wrap items-center gap-1 rounded-lg border p-0.5">
+          {META_STATUS_FILTERS.map((s) => (
+            <button
+              key={s.key}
+              type="button"
+              onClick={() => setMetaStatus(s.key)}
+              className={`inline-flex items-center gap-1 rounded-md px-2.5 py-1 text-xs transition-colors ${
+                metaStatus === s.key
+                  ? "bg-primary text-primary-foreground"
+                  : "text-muted-foreground hover:bg-muted"
+              }`}
+            >
+              {s.key === "active" && <span className="h-1.5 w-1.5 rounded-full bg-emerald-500" />}
+              {s.key === "paused" && <span className="h-1.5 w-1.5 rounded-full bg-slate-400" />}
+              {s.label}
+              <span className="tabular-nums opacity-70">{metaStatusCounts[s.key] ?? 0}</span>
+            </button>
+          ))}
+        </div>
+
         <Popover>
           <PopoverTrigger asChild>
             <Button variant="outline" size="sm">
