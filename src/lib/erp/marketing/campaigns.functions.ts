@@ -1161,18 +1161,32 @@ export const getCampaignOrders = createServerFn({ method: "POST" })
       settleRows.set(id, (settleRows.get(id) ?? 0) + 1);
     };
 
+    // Courier charges deducted from that cash (delivery + COD fees etc).
+    const courierFee = new Map<string, number>();
+    const bumpFee = (id: string | null, amount: unknown) => {
+      const v = Number(amount ?? 0);
+      if (!id || !v) return;
+      courierFee.set(id, (courierFee.get(id) ?? 0) + v);
+    };
+
     const [{ data: recon }, { data: settle }] = await Promise.all([
       context.supabase
         .from("erp_reconciliation_rows")
-        .select("matched_order_id, collected")
+        .select("matched_order_id, collected, total_fee")
         .in("matched_order_id", ids),
       context.supabase
         .from("erp_courier_settlement_lines")
-        .select("matched_order_id, collected_amount")
+        .select("matched_order_id, collected_amount, final_fee")
         .in("matched_order_id", ids),
     ]);
-    for (const r of (recon ?? []) as any[]) bump(r?.matched_order_id ?? null, r?.collected);
-    for (const s of (settle ?? []) as any[]) bump(s?.matched_order_id ?? null, s?.collected_amount);
+    for (const r of (recon ?? []) as any[]) {
+      bump(r?.matched_order_id ?? null, r?.collected);
+      bumpFee(r?.matched_order_id ?? null, r?.total_fee);
+    }
+    for (const s of (settle ?? []) as any[]) {
+      bump(s?.matched_order_id ?? null, s?.collected_amount);
+      bumpFee(s?.matched_order_id ?? null, s?.final_fee);
+    }
 
     const CANCELLED = new Set(["cancelled", "fake"]);
 
