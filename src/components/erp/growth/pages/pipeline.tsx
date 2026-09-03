@@ -598,32 +598,34 @@ export function PipelinePage() {
           </SheetHeader>
           <div className="space-y-3 py-3">
             <div>
+              <Label className="text-[11px]">Product</Label>
+              <ProductPicker
+                products={productsQ.data ?? []}
+                value={draft.product_id || null}
+                onChange={(id) => {
+                  const p = (productsQ.data ?? []).find((x) => x.id === id);
+                  setDraft((d) => ({
+                    ...d,
+                    product_id: id ?? "",
+                    // product বাছলে title খালি থাকলে auto-fill
+                    title: d.title.trim() ? d.title : p ? `${p.title} — ${labelOf(CONTENT_TYPES, d.content_type)}` : d.title,
+                  }));
+                }}
+              />
+            </div>
+            <div>
               <Label className="text-[11px]">Title</Label>
               <Input
                 value={draft.title}
                 onChange={(e) => setDraft({ ...draft, title: e.target.value })}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter" && !createMut.isPending) createMut.mutate({});
+                }}
+                placeholder="যেমন: Rocket Launcher — UGC hook test"
                 className="h-9"
               />
             </div>
-            <div>
-              <Label className="text-[11px]">Product</Label>
-              <Select
-                value={draft.product_id || "none"}
-                onValueChange={(v) => setDraft({ ...draft, product_id: v === "none" ? "" : v })}
-              >
-                <SelectTrigger className="h-9 text-xs">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="none">No product</SelectItem>
-                  {(productsQ.data ?? []).map((p) => (
-                    <SelectItem key={p.id} value={p.id}>
-                      {p.title}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
+
             <BrandSelect
               value={draft.brand_id || activeBrand?.id || null}
               onChange={(v) => setDraft({ ...draft, brand_id: v ?? "" })}
