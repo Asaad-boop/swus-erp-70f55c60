@@ -618,13 +618,13 @@ function CampaignTruthPage() {
                           className="cursor-pointer border-t hover:bg-muted/30"
                           onClick={() => setOpenRow(open ? null : r.id)}
                         >
-                          <td className="max-w-[280px] p-2">
-                            <div className="flex items-center gap-1.5">
+                          <td className="max-w-[360px] p-2.5 align-top">
+                            <div className="flex items-start gap-1.5">
                               <ChevronRight
-                                className={`h-3.5 w-3.5 shrink-0 text-muted-foreground transition-transform ${open ? "rotate-90" : ""}`}
+                                className={`mt-1 h-3.5 w-3.5 shrink-0 text-muted-foreground transition-transform ${open ? "rotate-90" : ""}`}
                               />
-                              <div className="min-w-0">
-                                <div className="truncate font-medium">{r.name}</div>
+                              <div className="min-w-0 space-y-1">
+                                <div className="truncate font-medium leading-tight">{r.name}</div>
                                 <div className="flex flex-wrap items-center gap-1.5">
                                   <Badge variant="outline" className="h-4 px-1 text-[10px]">
                                     {r.status}
@@ -634,6 +634,10 @@ function CampaignTruthPage() {
                                     {r.external_id ?? "—"}
                                   </span>
                                 </div>
+                                <CampaignProductChips
+                                  entry={productMap[r.id]}
+                                  loading={productsQ.isLoading}
+                                />
                               </div>
                             </div>
                           </td>
