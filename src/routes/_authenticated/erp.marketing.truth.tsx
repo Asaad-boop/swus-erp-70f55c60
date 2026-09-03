@@ -32,6 +32,7 @@ import {
   getCampaignTruth,
   getCampaignTrend,
   getCampaignProductsSummary,
+  getAttributionHealth,
   rerunCampaignMatching,
   type CampaignProductsSummary,
   type CampaignTrendPoint,
@@ -168,6 +169,15 @@ function CampaignTruthPage() {
     refetchOnWindowFocus: false,
   });
 
+  const fetchHealth = useServerFn(getAttributionHealth);
+  const healthQ = useQuery({
+    queryKey: ["mkt-attribution-health", brandIds.slice().sort().join(","), range.from, range.to],
+    queryFn: () => fetchHealth({ data: { brandIds, from: range.from, to: range.to } }),
+    enabled: brandIds.length > 0,
+    staleTime: 60_000,
+    refetchOnWindowFocus: false,
+  });
+
   const fetchTrend = useServerFn(getCampaignTrend);
   const trendQ = useQuery({
     queryKey: ["mkt-campaign-trend", brandIds.slice().sort().join(","), range.from, range.to, grain],
@@ -250,14 +260,24 @@ function CampaignTruthPage() {
           a.opex += r.operating_cost;
           a.gp += r.gross_profit;
           a.net += r.net_profit;
-          a.linked += r.attributed_orders;
+          a.linked += r.explicit_attributed_orders ?? 0;
+          a.auto += r.auto_attributed_orders ?? 0;
           a.unmatched += r.unlinked_orders;
           a.missingCost += r.cost_missing_units;
+          a.booked += r.booked_value ?? 0;
           if (r.collected_amount !== null) {
             a.collected += r.collected_amount;
             a.collectedKnown = true;
           }
-          if (r.realized_profit !== null) a.realized += r.realized_profit;
+          if (r.expected_collectible !== null) a.expected += r.expected_collectible;
+          if (r.return_charge !== null) a.returnCharge += r.return_charge;
+          if (r.realized_profit !== null) {
+            a.realized += r.realized_profit;
+            a.realizedSpend += r.spend;
+            a.realizedKnown = true;
+          } else {
+            a.pendingCampaigns += 1;
+          }
           return a;
         },
         {
@@ -271,11 +291,18 @@ function CampaignTruthPage() {
           gp: 0,
           net: 0,
           linked: 0,
+          auto: 0,
           unmatched: 0,
           missingCost: 0,
+          booked: 0,
           collected: 0,
+          expected: 0,
+          returnCharge: 0,
           realized: 0,
+          realizedSpend: 0,
+          pendingCampaigns: 0,
           collectedKnown: false,
+          realizedKnown: false,
         },
       ),
     [rows],
@@ -301,10 +328,8 @@ function CampaignTruthPage() {
 
 
 
-  const matchHealth =
-    totals.linked + totals.unmatched > 0
-      ? Math.round((100 * totals.linked) / (totals.linked + totals.unmatched))
-      : 0;
+  const health = healthQ.data ?? null;
+  const matchHealth = health?.coverage_pct ?? 0;
 
   const toggleSort = (k: SortKey) => {
     if (k === sortKey) setSortDesc((d) => !d);
@@ -394,24 +419,47 @@ function CampaignTruthPage() {
     URL.revokeObjectURL(url);
   };
 
+  const variance = totals.expected - totals.collected;
   const kpis = [
     { l: "Ad spend", v: bdt(totals.spend), sub: `${num(totals.metaP)} Meta purchases` },
     {
-      l: "Delivered revenue",
-      v: bdt(totals.rev),
-      sub: `${num(totals.delivered)} / ${num(totals.orders)} orders delivered`,
+      l: "Order value (booked)",
+      v: bdt(totals.booked),
+      sub: `${num(totals.orders)} order · ${num(totals.delivered)} delivered`,
     },
-    { l: "Gross profit", v: bdt(totals.gp), sub: `COGS ${bdt(totals.cogs)} · Opex ${bdt(totals.opex)}` },
     {
-      l: "Net profit (after ads)",
+      l: "Actual collected (cash)",
+      v: totals.collectedKnown ? bdt(totals.collected) : "Pending",
+      sub: totals.collectedKnown
+        ? `Expected ${bdt(totals.expected)} · Variance ${bdt(variance)}`
+        : "Settlement/reconciliation বাকি",
+    },
+    {
+      l: "Realized profit (after ads)",
+      v: totals.realizedKnown ? bdt(totals.realized) : "Pending",
+      sub: totals.realizedKnown
+        ? `COGS ${bdt(totals.cogs)} · Opex ${bdt(totals.opex)} · Return ${bdt(totals.returnCharge)}`
+        : "কোনো campaign-এ cash data নেই",
+      tone: !totals.realizedKnown
+        ? "text-muted-foreground"
+        : totals.realized >= 0
+          ? "text-emerald-600"
+          : "text-rose-600",
+    },
+    {
+      l: "Realized ROAS",
+      v:
+        totals.realizedKnown && totals.realizedSpend > 0
+          ? (totals.realized / totals.realizedSpend).toFixed(2) + "x"
+          : "—",
+      sub: totals.collectedKnown && totals.spend > 0
+        ? `Cash ROAS ${(totals.collected / totals.spend).toFixed(2)}x`
+        : "—",
+    },
+    {
+      l: "Projected profit (pipeline)",
       v: bdt(totals.net),
-      sub: totals.rev > 0 ? `${((totals.net / totals.rev) * 100).toFixed(1)}% margin` : "—",
-      tone: totals.net >= 0 ? "text-emerald-600" : "text-rose-600",
-    },
-    {
-      l: "Profit ROAS",
-      v: totals.spend > 0 ? (totals.gp / totals.spend).toFixed(2) + "x" : "—",
-      sub: totals.spend > 0 ? `Revenue ROAS ${(totals.rev / totals.spend).toFixed(2)}x` : "—",
+      sub: `Cash নয় — delivered line value ভিত্তিক · ${num(totals.pendingCampaigns)} campaign pending`,
     },
   ];
 
@@ -454,7 +502,7 @@ function CampaignTruthPage() {
           </div>
         </div>
 
-        <div className="mt-4 grid grid-cols-2 gap-3 md:grid-cols-5">
+        <div className="mt-4 grid grid-cols-2 gap-3 md:grid-cols-6">
           {kpis.map((k) => (
             <div key={k.l} className="rounded-xl border bg-card/70 p-3 backdrop-blur">
               <div className="text-[11px] uppercase tracking-wide text-muted-foreground">{k.l}</div>
@@ -468,11 +516,13 @@ function CampaignTruthPage() {
       {/* Data health */}
       <Card>
         <CardContent className="flex flex-wrap items-center gap-4 p-3">
-          <div className="min-w-[220px] flex-1">
+          <div className="min-w-[260px] flex-1">
             <div className="mb-1 flex items-center justify-between text-xs">
               <span className="font-medium">Attribution health</span>
               <span className="tabular-nums text-muted-foreground">
-                {num(totals.linked)} linked · {num(totals.unmatched)} unmatched ({matchHealth}%)
+                {health
+                  ? `${num(health.attributed_orders)}/${num(health.total_orders)} order attributed (${matchHealth}%) · ✋ ${num(health.explicit_orders)} explicit · 🤖 ${num(health.auto_orders)} auto · ${num(health.unattributed_orders)} unattributed`
+                  : "Loading…"}
               </span>
             </div>
             <Progress value={matchHealth} className="h-2" />
