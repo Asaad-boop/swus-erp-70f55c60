@@ -613,101 +613,68 @@ function CampaignTruthPage() {
         <span className="ml-auto tabular-nums">{num(rows.length)} campaigns in view</span>
       </div>
 
-      {/* 2 — Financial truth hero */}
-      <section className="grid gap-px overflow-hidden rounded-xl border bg-border lg:grid-cols-[1.15fr_1fr]">
-        <div className="bg-card p-5 md:p-6">
-          <div className="text-[11px] font-medium uppercase tracking-[0.14em] text-muted-foreground">
-            Realized net profit
-          </div>
-          {q.isLoading ? (
-            <Skeleton className="mt-3 h-12 w-56" />
-          ) : (
-            <div
-              className={`mt-2 text-4xl font-semibold tabular-nums tracking-tight md:text-5xl ${
-                !totals.realizedKnown
-                  ? "text-muted-foreground"
-                  : totals.realized >= 0
-                    ? "text-emerald-600"
-                    : "text-rose-600"
-              }`}
-            >
-              {totals.realizedKnown ? signedBdt(totals.realized) : "Pending"}
+      {/* 2 — Compact truth strip */}
+      <section className="rounded-xl border bg-card">
+        <div className="flex flex-wrap items-center gap-x-6 gap-y-3 px-4 py-3">
+          <div className="min-w-[170px]">
+            <div className="text-[10px] uppercase tracking-[0.12em] text-muted-foreground">
+              Realized net profit
             </div>
-          )}
-          <p className="mt-2 max-w-md text-xs text-muted-foreground">
-            After actual collected cash, canonical costs, return charges &amp; ad spend.
-          </p>
-          <div className="mt-3 flex flex-wrap items-center gap-2 text-[11px]">
-            {compare && realizedDelta !== null && (
-              <span
-                className={`inline-flex items-center gap-1 rounded border px-2 py-0.5 tabular-nums ${
-                  realizedDelta >= 0
-                    ? "border-emerald-500/30 bg-emerald-500/5 text-emerald-600"
-                    : "border-rose-500/30 bg-rose-500/5 text-rose-600"
-                }`}
-              >
-                {realizedDelta >= 0 ? (
-                  <TrendingUp className="h-3 w-3" />
-                ) : (
-                  <TrendingDown className="h-3 w-3" />
+            {q.isLoading ? (
+              <Skeleton className="mt-1 h-6 w-28" />
+            ) : (
+              <div className="flex items-baseline gap-2">
+                <span
+                  className={`text-xl font-semibold tabular-nums ${
+                    !totals.realizedKnown
+                      ? "text-muted-foreground"
+                      : totals.realized >= 0
+                        ? "text-emerald-600"
+                        : "text-rose-600"
+                  }`}
+                >
+                  {totals.realizedKnown ? signedBdt(totals.realized) : "Pending"}
+                </span>
+                {compare && realizedDelta !== null && (
+                  <span
+                    className={`inline-flex items-center gap-0.5 text-[11px] tabular-nums ${realizedDelta >= 0 ? "text-emerald-600" : "text-rose-600"}`}
+                  >
+                    {realizedDelta >= 0 ? (
+                      <TrendingUp className="h-3 w-3" />
+                    ) : (
+                      <TrendingDown className="h-3 w-3" />
+                    )}
+                    {realizedDelta.toFixed(1)}%
+                  </span>
                 )}
-                {realizedDelta >= 0 ? "+" : ""}
-                {realizedDelta.toFixed(1)}% vs previous period
-              </span>
-            )}
-            {totals.pendingCampaigns > 0 && (
-              <span className="rounded border border-amber-500/30 bg-amber-500/5 px-2 py-0.5 text-amber-700">
-                {num(totals.pendingCampaigns)} campaign settlement pending
-              </span>
+              </div>
             )}
           </div>
-        </div>
 
-        <div className="grid grid-cols-2 gap-px bg-border">
-          <HeroStat label="Ad spend" value={bdt(totals.spend)} sub={`${num(totals.metaP)} Meta purchases`} />
-          <HeroStat
-            label="Actual collected"
-            value={totals.collectedKnown ? bdt(totals.collected) : "Pending"}
-            sub={
-              totals.collectedKnown
-                ? `Expected ${bdt(totals.expected)} · Var ${bdt(totals.expected - totals.collected)}`
-                : "Settlement reconciliation pending"
-            }
-          />
-          <HeroStat
-            label="Gross contribution"
-            value={bdt(totals.gp)}
-            sub={`COGS ${bdt(totals.cogs)} · Opex ${bdt(totals.opex)}`}
-          />
-          <HeroStat
-            label="Profit ROAS"
-            value={
-              totals.realizedKnown && totals.realizedSpend > 0
-                ? (totals.realized / totals.realizedSpend).toFixed(2) + "x"
-                : "—"
-            }
-            sub={
-              totals.collectedKnown && totals.spend > 0
-                ? `Cash ROAS ${(totals.collected / totals.spend).toFixed(2)}x`
-                : "Realized cash based"
-            }
-          />
-        </div>
-      </section>
+          <div className="flex flex-wrap items-center gap-x-5 gap-y-2 text-[11px]">
+            <MicroStat label="Campaigns" value={`${num(rows.length)}`} />
+            <MicroStat label="Active spending" value={num(activityCounts["spending"] ?? 0)} />
+            <MicroStat label="Ad spend" value={bdt(totals.spend)} />
+            <MicroStat
+              label="Actual collected"
+              value={totals.collectedKnown ? bdt(totals.collected) : "Pending"}
+            />
+            <MicroStat
+              label="Profit ROAS"
+              value={
+                totals.realizedKnown && totals.realizedSpend > 0
+                  ? (totals.realized / totals.realizedSpend).toFixed(2) + "x"
+                  : "—"
+              }
+            />
+            <MicroStat label="Orders" value={`${num(totals.orders)} · ${num(totals.delivered)} del.`} />
+          </div>
 
-      {/* 3 — Truth confidence */}
-      <section className="rounded-xl border bg-card p-4">
-        <div className="flex flex-wrap items-center gap-x-6 gap-y-3">
-          <div className="min-w-[240px] flex-1">
-            <div className="flex items-baseline justify-between">
-              <span className="text-[11px] font-medium uppercase tracking-[0.14em] text-muted-foreground">
-                Truth confidence
-              </span>
-              <span className="text-lg font-semibold tabular-nums">
-                {coverage.overall === null ? "—" : `${coverage.overall}%`}
-              </span>
-            </div>
-            <div className="mt-2 h-1.5 w-full overflow-hidden rounded-full bg-muted">
+          <div className="ml-auto flex min-w-[150px] items-center gap-2">
+            <span className="text-[10px] uppercase tracking-[0.12em] text-muted-foreground">
+              Truth
+            </span>
+            <div className="h-1.5 w-20 overflow-hidden rounded-full bg-muted">
               <div
                 className={`h-full rounded-full ${
                   (coverage.overall ?? 0) >= 80
@@ -719,43 +686,38 @@ function CampaignTruthPage() {
                 style={{ width: `${coverage.overall ?? 0}%` }}
               />
             </div>
-          </div>
-          <div className="grid flex-[2] grid-cols-2 gap-x-6 gap-y-2 sm:grid-cols-4">
-            <CoverageBar label="Attribution" value={coverage.attribution} />
-            <CoverageBar label="Settlement" value={coverage.settlement} />
-            <CoverageBar label="COGS" value={coverage.cogs} />
-            <CoverageBar label="Courier cost" value={coverage.courier} />
+            <span
+              className="text-xs font-medium tabular-nums"
+              title={`Attribution ${coverage.attribution ?? "—"}% · Settlement ${coverage.settlement ?? "—"}% · COGS ${coverage.cogs ?? "—"}% · Courier ${coverage.courier ?? "—"}%`}
+            >
+              {coverage.overall === null ? "—" : `${coverage.overall}%`}
+            </span>
           </div>
         </div>
 
         {(pendingDelivered > 0 || totals.missingCost > 0 || (health?.unattributed_orders ?? 0) > 0) && (
-          <div className="mt-3 flex flex-wrap gap-2 border-t pt-3 text-xs">
+          <div className="flex flex-wrap items-center gap-x-4 gap-y-1 border-t px-4 py-2 text-[11px] text-muted-foreground">
             {pendingDelivered > 0 && (
               <button
                 type="button"
                 onClick={() => setCoverageFilter("pending")}
-                className="inline-flex items-center gap-1.5 rounded-lg border border-amber-500/30 bg-amber-500/5 px-2.5 py-1.5 text-amber-700 transition-colors hover:bg-amber-500/10"
+                className="inline-flex items-center gap-1 text-amber-700 hover:underline"
               >
-                <AlertTriangle className="h-3.5 w-3.5" />
-                {num(pendingDelivered)} delivered orders pending settlement — show{" "}
-                {num(pendingSettlementCampaigns.length)} campaigns
+                <AlertTriangle className="h-3 w-3" />
+                {num(pendingDelivered)} delivered pending settlement
               </button>
             )}
-            {totals.missingCost > 0 && (
-              <span className="inline-flex items-center gap-1.5 rounded-lg border px-2.5 py-1.5 text-muted-foreground">
-                <AlertTriangle className="h-3.5 w-3.5" />
-                {num(totals.missingCost)} unit cost data incomplete
-              </span>
-            )}
-            {health && health.unattributed_orders > 0 && (
-              <span className="inline-flex items-center gap-1.5 rounded-lg border px-2.5 py-1.5 text-muted-foreground">
-                {num(health.unattributed_orders)} orders not confidently matched · ✋
-                {num(health.explicit_orders)} manual · 🤖{num(health.auto_orders)} auto
+            {totals.missingCost > 0 && <span>{num(totals.missingCost)} unit cost incomplete</span>}
+            {health && (
+              <span>
+                ✋{num(health.explicit_orders)} manual · 🤖{num(health.auto_orders)} auto ·{" "}
+                {num(health.unattributed_orders)} unmatched
               </span>
             )}
           </div>
         )}
       </section>
+
 
       {/* 4 — Filters */}
       <div className="flex flex-wrap items-center gap-2">
