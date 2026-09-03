@@ -1171,3 +1171,174 @@ export const getCampaignOrders = createServerFn({ method: "POST" })
       } satisfies CampaignOrderRow;
     });
   });
+
+/* ------------------------------------------------------------------ */
+/* Monthly comparison dashboard (cash truth, month-over-month)          */
+/* ------------------------------------------------------------------ */
+
+export type CampaignMonthRow = {
+  /** YYYY-MM (Dhaka) */
+  month: string;
+  label: string;
+  from: string;
+  to: string;
+  is_current: boolean;
+  campaigns: number;
+  spend: number;
+  orders: number;
+  delivered_orders: number;
+  booked_value: number;
+  /** null = no settled delivered orders this month */
+  collected_amount: number | null;
+  expected_collectible: number;
+  /** Canonical COGS (net of resellable recovery) pro-rated to the settled slice */
+  cogs_applied: number;
+  operating_cost_applied: number;
+  return_charge: number;
+  /** Projected (pipeline) gross profit on delivered lines — not cash */
+  gross_profit: number;
+  /** Sum of realized profit over settled campaigns; null when nothing settled */
+  realized_profit: number | null;
+  realized_roas: number | null;
+};
+
+/** Month ranges in Asia/Dhaka (UTC+6, no DST). Oldest first; current month ends today. */
+function dhakaMonthRanges(count: number) {
+  const dhakaNow = new Date(Date.now() + 6 * 3600_000);
+  const y = dhakaNow.getUTCFullYear();
+  const m = dhakaNow.getUTCMonth();
+  const todayStr = dhakaNow.toISOString().slice(0, 10);
+  const out: { month: string; label: string; from: string; to: string; is_current: boolean }[] = [];
+  for (let i = count - 1; i >= 0; i--) {
+    const d = new Date(Date.UTC(y, m - i, 1));
+    const yy = d.getUTCFullYear();
+    const mm = d.getUTCMonth();
+    const from = `${yy}-${String(mm + 1).padStart(2, "0")}-01`;
+    const lastDay = new Date(Date.UTC(yy, mm + 1, 0)).getUTCDate();
+    let to = `${yy}-${String(mm + 1).padStart(2, "0")}-${String(lastDay).padStart(2, "0")}`;
+    const isCurrent = i === 0;
+    if (isCurrent) to = todayStr;
+    const label = d.toLocaleString("en-US", { month: "short", year: "numeric", timeZone: "UTC" });
+    out.push({ month: from.slice(0, 7), label, from, to, is_current: isCurrent });
+  }
+  return out;
+}
+
+export const getCampaignMonthlyComparison = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d: unknown) =>
+    z
+      .object({
+        brandIds: z.array(z.string().uuid()).min(1),
+        months: z.number().int().min(2).max(12).default(6),
+      })
+      .parse(d),
+  )
+  .handler(async ({ data, context }) => {
+    const sb = context.supabase;
+    const months = dhakaMonthRanges(data.months);
+    const { getCampaignProfitMap } = await import("@/lib/erp/marketing/canonical.server");
+    const n = (v: unknown) => (v === null || v === undefined ? 0 : Number(v) || 0);
+    const numOrNull = (v: unknown) => (v === null || v === undefined ? null : Number(v));
+    const r2 = (x: number) => Math.round(x * 100) / 100;
+
+    const rows = await Promise.all(
+      months.map(async (mo) => {
+        const { data: raw, error } = await sb.rpc("mkt_campaign_truth", {
+          _brand_ids: data.brandIds,
+          _from: mo.from,
+          _to: mo.to,
+        } as never);
+        if (error) throw error;
+        const base = (Array.isArray(raw) ? raw : []) as any[];
+
+        const profit = new Map<
+          string,
+          { cogs: number; operating_cost: number; gross_profit: number }
+        >();
+        for (const brandId of data.brandIds) {
+          const pm = await getCampaignProfitMap(sb, brandId, mo.from, mo.to);
+          for (const [cid, v] of pm) {
+            const cur = profit.get(cid) ?? { cogs: 0, operating_cost: 0, gross_profit: 0 };
+            cur.cogs += v.cogs;
+            cur.operating_cost += v.operating_cost;
+            cur.gross_profit += v.gross_profit;
+            profit.set(cid, cur);
+          }
+        }
+
+        let spend = 0,
+          orders = 0,
+          delivered = 0,
+          booked = 0,
+          collected = 0,
+          expected = 0,
+          cogsApplied = 0,
+          opexApplied = 0,
+          returnCharge = 0,
+          grossProfit = 0,
+          realized = 0,
+          realizedSpend = 0,
+          anyCollected = false,
+          anyRealized = false;
+
+        for (const r of base) {
+          const p = profit.get(r.id) ?? { cogs: 0, operating_cost: 0, gross_profit: 0 };
+          const rSpend = n(r.spend);
+          spend += rSpend;
+          orders += n(r.orders);
+          delivered += n(r.delivered_orders);
+          booked += n(r.booked_value);
+          expected += n(r.expected_collectible);
+          returnCharge += n(r.return_charge);
+          grossProfit += p.gross_profit;
+
+          const rCollected = numOrNull(r.collected_amount);
+          const rExpected = numOrNull(r.expected_collectible);
+          const recovered = n(r.cogs_recovered);
+          const deliveredOrderValue = n(r.delivered_order_value);
+          const settledShare =
+            deliveredOrderValue > 0 && rExpected !== null
+              ? Math.min(1, Math.max(0, rExpected / deliveredOrderValue))
+              : 1;
+          const cogsSettled = (p.cogs - recovered) * settledShare;
+          const opexSettled = p.operating_cost * settledShare;
+          cogsApplied += cogsSettled;
+          opexApplied += opexSettled;
+
+          if (rCollected !== null) {
+            anyCollected = true;
+            collected += rCollected;
+            // Same realized formula as getCampaignTruth: collected cash − settled COGS
+            // − settled opex − return charge − ad spend.
+            realized += rCollected - cogsSettled - opexSettled - n(r.return_charge) - rSpend;
+            realizedSpend += rSpend;
+            anyRealized = true;
+          }
+        }
+
+        return {
+          month: mo.month,
+          label: mo.label,
+          from: mo.from,
+          to: mo.to,
+          is_current: mo.is_current,
+          campaigns: base.length,
+          spend: r2(spend),
+          orders,
+          delivered_orders: delivered,
+          booked_value: r2(booked),
+          collected_amount: anyCollected ? r2(collected) : null,
+          expected_collectible: r2(expected),
+          cogs_applied: r2(cogsApplied),
+          operating_cost_applied: r2(opexApplied),
+          return_charge: r2(returnCharge),
+          gross_profit: r2(grossProfit),
+          realized_profit: anyRealized ? r2(realized) : null,
+          realized_roas: anyRealized && realizedSpend > 0 ? r2(realized / realizedSpend) : null,
+        } satisfies CampaignMonthRow;
+      }),
+    );
+
+    return rows;
+  });

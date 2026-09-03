@@ -15,6 +15,7 @@ import {
   ArrowUpDown,
   LayoutGrid,
   Rows3,
+  BarChart3,
   Check,
   Plus,
   X,
@@ -51,6 +52,7 @@ import {
   CampaignTruthDetail,
   TagChips,
 } from "@/components/erp/marketing/campaign-truth-detail";
+import { CampaignMonthlyDashboard } from "@/components/erp/marketing/campaign-monthly-dashboard";
 
 export const Route = createFileRoute("/_authenticated/erp/marketing/truth")({
   head: () => ({
@@ -215,7 +217,7 @@ function CampaignTruthPage() {
   const [hasOrders, setHasOrders] = useState(false);
   const [grain, setGrain] = useState<"day" | "week">("day");
   const [compare, setCompare] = useState(false);
-  const [view, setView] = useState<"table" | "performance">("table");
+  const [view, setView] = useState<"table" | "performance" | "monthly">("table");
 
   const brandIds = useMemo(() => {
     if (brandKey === "all") return brands.map((b) => b.id);
@@ -940,12 +942,22 @@ function CampaignTruthPage() {
             >
               <LayoutGrid className="h-3.5 w-3.5" />
             </button>
+            <button
+              type="button"
+              onClick={() => setView("monthly")}
+              className={`rounded-md p-1.5 ${view === "monthly" ? "bg-muted text-foreground" : "text-muted-foreground"}`}
+              title="Monthly comparison dashboard"
+            >
+              <BarChart3 className="h-3.5 w-3.5" />
+            </button>
           </div>
         </div>
       </div>
 
       {/* 5 — Campaign performance */}
-      {q.isLoading ? (
+      {view === "monthly" ? (
+        <CampaignMonthlyDashboard brandIds={brandIds} />
+      ) : q.isLoading ? (
         <div className="space-y-2 rounded-xl border bg-card p-4">
           {Array.from({ length: 7 }).map((_, i) => (
             <Skeleton key={i} className="h-12 w-full" />
