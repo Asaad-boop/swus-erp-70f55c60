@@ -16,6 +16,8 @@ import {
   LayoutGrid,
   Rows3,
   Check,
+  Plus,
+  X,
 } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
@@ -36,6 +38,9 @@ import {
   getCampaignTrend,
   getCampaignProductsSummary,
   getAttributionHealth,
+  searchProductsForCampaign,
+  linkCampaignProducts,
+  unlinkCampaignProduct,
   rerunCampaignMatching,
   type CampaignProductsSummary,
   type CampaignTrendPoint,
@@ -997,6 +1002,11 @@ function CampaignTruthPage() {
                                   entry={productMap[r.id]}
                                   loading={productsQ.isLoading}
                                 />
+                                <CampaignProductLinker
+                                  campaignId={r.id}
+                                  entry={productMap[r.id]}
+                                  onChanged={() => productsQ.refetch()}
+                                />
                                 <TagChips tags={r.tags ?? []} />
                               </div>
                             </div>
@@ -1211,6 +1221,172 @@ function CampaignProductThumb({
       className="h-10 w-10 shrink-0 rounded-md border object-cover"
     />
   );
+}
+
+/**
+ * Product assign / link control for a campaign. Always available — even when the
+ * campaign has no product yet. Manual links can be added or removed, and auto
+ * suggestions can be confirmed into a manual link with one click.
+ */
+function CampaignProductLinker({
+  campaignId,
+  entry,
+  onChanged,
+}: {
+  campaignId: string;
+  entry: CampaignProductsSummary[string] | undefined;
+  onChanged: () => void;
+}) {
+  const [open, setOpen] = useState(false);
+  const [term, setTerm] = useState("");
+  const manual = entry?.manual ?? [];
+  const auto = entry?.auto ?? [];
+
+  const search = useServerFn(searchProductsForCampaign);
+  const link = useServerFn(linkCampaignProducts);
+  const unlink = useServerFn(unlinkCampaignProduct);
+
+  const searchQ = useQuery({
+    queryKey: ["mkt-product-search", term],
+    queryFn: () => search({ data: { q: term } }),
+    enabled: open,
+    staleTime: 30_000,
+  });
+
+  const linkM = useMutation({
+    mutationFn: (productId: string) => link({ data: { campaignId, productIds: [productId], weight: 1 } }),
+    onSuccess: () => {
+      toast.success("Product link kora hoyeche");
+      onChanged();
+    },
+    onError: (e: unknown) => toast.error(e instanceof Error ? e.message : "Link failed"),
+  });
+
+  const unlinkM = useMutation({
+    mutationFn: (productId: string) => unlink({ data: { campaignId, productId } }),
+    onSuccess: () => {
+      toast.success("Link সরানো হয়েছে");
+      onChanged();
+    },
+    onError: (e: unknown) => toast.error(e instanceof Error ? e.message : "Unlink failed"),
+  });
+
+  const linkedIds = new Set(manual.map((p) => p.product_id));
+  const busy = linkM.isPending || unlinkM.isPending;
+
+  return (
+    <Popover open={open} onOpenChange={setOpen}>
+      <PopoverTrigger asChild>
+        <button
+          type="button"
+          onClick={(e) => e.stopPropagation()}
+          className="inline-flex items-center gap-1 rounded border border-dashed px-1.5 py-0.5 text-[10px] text-muted-foreground transition hover:border-primary/50 hover:text-primary"
+        >
+          <Plus className="h-3 w-3" />
+          {manual.length > 0 ? "Manage" : "Assign product"}
+        </button>
+      </PopoverTrigger>
+      <PopoverContent
+        align="start"
+        className="w-[320px] p-0"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div className="border-b px-3 py-2 text-[11px] font-medium">Campaign product link</div>
+
+        {manual.length > 0 && (
+          <div className="max-h-[140px] space-y-1 overflow-y-auto border-b p-2">
+            {manual.map((p) => (
+              <div key={p.product_id} className="flex items-center gap-2 rounded px-1 py-1 text-xs">
+                <ProductAvatar src={p.image} alt={p.title} />
+                <span className="min-w-0 flex-1 truncate">✋ {p.title}</span>
+                <button
+                  type="button"
+                  disabled={busy}
+                  onClick={() => unlinkM.mutate(p.product_id)}
+                  className="text-[10px] text-muted-foreground hover:text-rose-600"
+                >
+                  <X className="h-3.5 w-3.5" />
+                </button>
+              </div>
+            ))}
+          </div>
+        )}
+
+        {auto.length > 0 && (
+          <div className="space-y-1 border-b p-2">
+            <div className="text-[10px] uppercase tracking-[0.12em] text-muted-foreground">
+              🤖 Auto suggested
+            </div>
+            {auto.slice(0, 4).map((p) =>
+              linkedIds.has(p.product_id) ? null : (
+                <div key={p.product_id} className="flex items-center gap-2 text-xs">
+                  <ProductAvatar src={p.image} alt={p.title} />
+                  <span className="min-w-0 flex-1 truncate" title={p.title}>
+                    {p.title}
+                    <span className="ml-1 text-[10px] text-muted-foreground">
+                      {p.orders ?? 0} orders
+                      {p.share !== null && p.share !== undefined ? ` · ${p.share}%` : ""}
+                    </span>
+                  </span>
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    className="h-6 px-2 text-[10px]"
+                    disabled={busy}
+                    onClick={() => linkM.mutate(p.product_id)}
+                  >
+                    Confirm
+                  </Button>
+                </div>
+              ),
+            )}
+          </div>
+        )}
+
+        <div className="p-2">
+          <Input
+            autoFocus
+            value={term}
+            onChange={(e) => setTerm(e.target.value)}
+            placeholder="Product খুঁজুন (title / SKU)…"
+            className="h-8 text-xs"
+          />
+          <div className="mt-2 max-h-[200px] space-y-1 overflow-y-auto">
+            {searchQ.isLoading && <div className="p-2 text-[11px] text-muted-foreground">Loading…</div>}
+            {(searchQ.data ?? []).map((p: { id: string; title: string; sku: string | null; image: string | null }) => (
+              <button
+                key={p.id}
+                type="button"
+                disabled={busy || linkedIds.has(p.id)}
+                onClick={() => linkM.mutate(p.id)}
+                className="flex w-full items-center gap-2 rounded px-1 py-1 text-left text-xs hover:bg-muted disabled:opacity-50"
+              >
+                <ProductAvatar src={p.image} alt={p.title} />
+                <span className="min-w-0 flex-1 truncate">
+                  {p.title}
+                  <span className="ml-1 text-[10px] text-muted-foreground">{p.sku ?? "no sku"}</span>
+                </span>
+                {linkedIds.has(p.id) ? (
+                  <Check className="h-3.5 w-3.5 text-primary" />
+                ) : (
+                  <Plus className="h-3.5 w-3.5 text-muted-foreground" />
+                )}
+              </button>
+            ))}
+            {!searchQ.isLoading && (searchQ.data ?? []).length === 0 && (
+              <div className="p-2 text-[11px] text-muted-foreground">কোনো product পাওয়া যায়নি।</div>
+            )}
+          </div>
+        </div>
+      </PopoverContent>
+    </Popover>
+  );
+}
+
+function ProductAvatar({ src, alt }: { src?: string | null; alt: string }) {
+  if (!src)
+    return <span className="h-6 w-6 shrink-0 rounded border border-dashed bg-muted/40" aria-hidden />;
+  return <img src={src} alt={alt} loading="lazy" className="h-6 w-6 shrink-0 rounded border object-cover" />;
 }
 
 /** Linked (manual) or auto-detected products shown right under the campaign name. */
