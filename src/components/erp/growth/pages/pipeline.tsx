@@ -1248,15 +1248,17 @@ function ItemSheet({
   onDelete,
   creators,
   agencies,
+  products,
   productLabel,
   brandLabel,
 }: {
   item: ContentItem | null;
   onClose: () => void;
-  onSave: (patch: Partial<ContentItem> & { id: string }) => void;
+  onSave: (patch: Partial<ContentItem> & { id: string }, keepOpen?: boolean) => void;
   onDelete: (id: string) => void;
   creators: { id: string; name: string }[];
   agencies: { id: string; name: string }[];
+  products: { id: string; title: string; sku: string | null; image: string | null; price: number | null; stock: number }[];
   productLabel: string | null;
   brandLabel?: string | null;
 }) {
@@ -1267,6 +1269,28 @@ function ItemSheet({
     setSeed(key);
     setD(item);
   }
+
+  const dirty = !!item && !!d && FIELDS.some((f) => (item[f] ?? null) !== (d[f] ?? null));
+
+  const buildPatch = (cur: ContentItem) => {
+    const patch = { id: cur.id } as Partial<ContentItem> & { id: string };
+    for (const f of FIELDS) (patch as Record<string, unknown>)[f] = cur[f];
+    return patch;
+  };
+
+  // ⌘/Ctrl + S দিয়ে save
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === "s" && d) {
+        e.preventDefault();
+        onSave(buildPatch(d));
+      }
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [d]);
+
   if (!item || !d) return null;
 
   const set = (patch: Partial<ContentItem>) => setD({ ...d, ...patch });
@@ -1280,19 +1304,63 @@ function ItemSheet({
   ];
   const ready = checklist.filter((c) => c.ok).length;
   const er = engagementRate(d);
+  const stageIdx = PIPELINE_STAGES.findIndex((s) => s.key === d.stage);
+  const currentProduct = products.find((p) => p.id === d.product_id) ?? null;
 
   return (
     <Sheet open onOpenChange={(o) => !o && onClose()}>
-      <SheetContent side="right" className="w-full overflow-y-auto sm:max-w-xl">
-        <SheetHeader>
-          <SheetTitle className="text-base">{d.title}</SheetTitle>
+      <SheetContent side="right" className="flex w-full flex-col overflow-y-auto sm:max-w-xl">
+        <SheetHeader className="space-y-2">
+          <SheetTitle className="sr-only">{d.title}</SheetTitle>
+          <Input
+            value={d.title}
+            onChange={(e) => set({ title: e.target.value })}
+            className="h-9 border-transparent bg-muted/40 px-2 text-base font-semibold focus-visible:border-input"
+          />
           <p className="text-[11px] text-muted-foreground">
-            {d.code} · {productLabel ?? "No product"} · {labelOf(PIPELINE_STAGES, d.stage)}
+            {d.code} · {labelOf(CONTENT_TYPES, d.content_type)} · {labelOf(PLATFORMS, d.platform)}
+            {dirty && <span className="ml-2 font-medium text-amber-600">● unsaved</span>}
           </p>
-          <div className="pt-1">
+          <div className="flex flex-wrap items-center gap-2">
             <BrandTag brandId={d.brand_id} />
+            {currentProduct?.image && (
+              <img src={currentProduct.image} alt="" className="h-6 w-6 rounded object-cover" />
+            )}
+            <span className="truncate text-[11px] text-muted-foreground">
+              {currentProduct?.title ?? productLabel ?? "No product"}
+            </span>
+          </div>
+          {/* Quick stage stepper — এক ক্লিকে stage বদল, sheet খোলা থাকবে */}
+          <div className="flex flex-wrap gap-1 rounded-lg border border-border/70 bg-muted/30 p-1">
+            {PIPELINE_STAGES.map((s, idx) => (
+              <button
+                key={s.key}
+                type="button"
+                onClick={() => {
+                  const patch: Partial<ContentItem> & { id: string } = { id: d.id, stage: s.key };
+                  if (s.key === "published" && !d.published_at) {
+                    patch.published_at = new Date().toISOString();
+                    patch.status = "published";
+                  }
+                  set({ stage: s.key, ...(patch.status ? { status: patch.status } : {}) });
+                  onSave(patch, true);
+                  toast.success(`Stage → ${s.label}`);
+                }}
+                className={cn(
+                  "flex-1 whitespace-nowrap rounded-md px-2 py-1 text-[10px] font-medium transition-colors",
+                  idx === stageIdx
+                    ? "bg-primary text-primary-foreground"
+                    : idx < stageIdx
+                      ? "text-primary hover:bg-primary/10"
+                      : "text-muted-foreground hover:bg-muted",
+                )}
+              >
+                {s.label}
+              </button>
+            ))}
           </div>
         </SheetHeader>
+
         <Tabs defaultValue="script" className="py-3">
           <TabsList className="grid w-full grid-cols-4">
             <TabsTrigger value="script" className="text-xs">
