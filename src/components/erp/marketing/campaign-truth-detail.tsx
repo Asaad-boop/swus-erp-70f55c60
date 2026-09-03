@@ -275,20 +275,168 @@ function TagNoteEditor({
   );
 }
 
+function CashTruth({ row }: { row: CampaignTruthRow }) {
+  const rows: { l: string; v: string; tone?: string }[] = [
+    { l: "Collected cash", v: row.collected_amount === null ? "Pending reconciliation" : bdt(row.collected_amount) },
+    { l: "Expected collectible", v: row.expected_collectible === null ? "Pending" : bdt(row.expected_collectible) },
+    {
+      l: "Collection variance",
+      v: row.collection_variance === null ? "Pending" : bdt(row.collection_variance),
+      tone: (row.collection_variance ?? 0) > 0 ? "text-amber-600" : undefined,
+    },
+    { l: "− COGS (delivered)", v: bdt(row.cogs) },
+    ...(row.cogs_recovered > 0
+      ? [{ l: "+ COGS recovered (resellable return)", v: bdt(row.cogs_recovered), tone: "text-emerald-600" }]
+      : []),
+    { l: "− Operating cost", v: bdt(row.operating_cost) },
+    {
+      l: `− Return / RTO charge${row.return_charge_is_estimate ? " (estimate)" : ""}`,
+      v: row.return_charge === null ? "Pending" : bdt(row.return_charge),
+    },
+    { l: "− Ad spend", v: bdt(row.spend) },
+  ];
+  return (
+    <div className="rounded-xl border">
+      <div className="border-b px-3 py-2 text-[11px] uppercase tracking-wide text-muted-foreground">
+        Realized cash ladder
+      </div>
+      <div className="divide-y text-xs">
+        {rows.map((r) => (
+          <div key={r.l} className="flex items-center justify-between px-3 py-1.5">
+            <span className="text-muted-foreground">{r.l}</span>
+            <span className={`tabular-nums ${r.tone ?? ""}`}>{r.v}</span>
+          </div>
+        ))}
+        <div className="flex items-center justify-between px-3 py-2 text-sm font-semibold">
+          <span>Realized profit</span>
+          <span
+            className={`tabular-nums ${row.realized_profit === null ? "text-muted-foreground" : row.realized_profit >= 0 ? "text-emerald-600" : "text-rose-600"}`}
+          >
+            {row.realized_profit === null ? "Pending reconciliation" : bdt(row.realized_profit)}
+          </span>
+        </div>
+        <div className="flex items-center justify-between px-3 py-1.5 text-[11px] text-muted-foreground">
+          <span>Projected (pipeline, not cash)</span>
+          <span className="tabular-nums">{bdt(row.projected_profit)}</span>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function Lifecycle({ row }: { row: CampaignTruthRow }) {
+  const steps = [
+    { l: "Booked", n: row.orders, v: row.booked_value ?? row.booked_revenue },
+    { l: "Confirmed", n: row.confirmed_orders, v: row.confirmed_value ?? 0 },
+    { l: "Delivered", n: row.delivered_orders, v: row.delivered_order_value ?? row.delivered_revenue },
+    { l: "Returned", n: row.returned_orders, v: null },
+    { l: "Cancelled", n: row.cancelled_orders, v: row.cancelled_value ?? 0 },
+  ];
+  return (
+    <div className="grid grid-cols-2 gap-2 sm:grid-cols-5">
+      {steps.map((s) => (
+        <div key={s.l} className="rounded-lg border p-2">
+          <div className="text-[10px] uppercase tracking-wide text-muted-foreground">{s.l}</div>
+          <div className="text-base font-semibold tabular-nums">{s.n}</div>
+          {s.v !== null && (
+            <div className="text-[10px] tabular-nums text-muted-foreground">{bdt(s.v)}</div>
+          )}
+        </div>
+      ))}
+    </div>
+  );
+}
+
+function OrderDrill({
+  row,
+  brandIds,
+  range,
+}: {
+  row: CampaignTruthRow;
+  brandIds: string[];
+  range: { from: string; to: string };
+}) {
+  const fetchOrders = useServerFn(getCampaignOrders);
+  const q = useQuery({
+    queryKey: ["mkt-campaign-orders", row.id, range.from, range.to],
+    queryFn: () =>
+      fetchOrders({ data: { campaignId: row.id, brandIds, from: range.from, to: range.to, limit: 100 } }),
+    enabled: brandIds.length > 0,
+    staleTime: 60_000,
+  });
+  if (q.isLoading) return <div className="p-3 text-xs text-muted-foreground">Order load হচ্ছে…</div>;
+  const orders = q.data ?? [];
+  if (!orders.length) return null;
+  return (
+    <div className="overflow-x-auto rounded-xl border">
+      <table className="w-full text-xs">
+        <thead className="bg-muted/50 text-[10px] uppercase text-muted-foreground">
+          <tr>
+            <th className="p-2 text-left">Order</th>
+            <th className="p-2 text-left">Status</th>
+            <th className="p-2 text-right">Order value</th>
+            <th className="p-2 text-right">Collected</th>
+            <th className="p-2 text-left">Attribution</th>
+          </tr>
+        </thead>
+        <tbody>
+          {orders.map((o) => (
+            <tr key={o.order_id} className="border-t">
+              <td className="p-2">
+                <div className="font-medium">{o.invoice_no ?? o.order_id.slice(0, 8)}</div>
+                <div className="text-[10px] text-muted-foreground">{o.customer_name ?? "—"}</div>
+              </td>
+              <td className="p-2">
+                {o.status}
+                {o.confirmation_status ? (
+                  <span className="ml-1 text-[10px] text-muted-foreground">
+                    {o.confirmation_status}
+                  </span>
+                ) : null}
+              </td>
+              <td className="p-2 text-right tabular-nums">{bdt(o.order_value)}</td>
+              <td className="p-2 text-right tabular-nums">
+                {o.collected === null ? (
+                  <span className="text-muted-foreground">Pending</span>
+                ) : (
+                  bdt(o.collected)
+                )}
+              </td>
+              <td className="p-2">
+                <Badge variant="outline" className="h-4 px-1 text-[10px]">
+                  {o.attr_source === "manual" ? "✋ Manual" : o.attr_source}
+                </Badge>
+              </td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  );
+}
+
 export function CampaignTruthDetail({
   row,
   trend,
   brandId,
+  brandIds,
+  range,
   onSaved,
 }: {
   row: CampaignTruthRow;
   trend: CampaignTrendPoint[];
   brandId?: string | null;
+  brandIds?: string[];
+  range?: { from: string; to: string };
   onSaved: () => void;
 }) {
   return (
     <div className="space-y-3">
-      <ProfitBridge row={row} />
+      <Lifecycle row={row} />
+      <div className="grid gap-3 lg:grid-cols-[1fr_1fr]">
+        <CashTruth row={row} />
+        <ProfitBridge row={row} />
+      </div>
       <div className="grid gap-3 lg:grid-cols-[1.4fr_1fr]">
         <TrendChart points={trend} />
         <div className="space-y-3">
@@ -302,14 +450,21 @@ export function CampaignTruthDetail({
             <Stat l="CPA (all orders)" v={row.cpa ? bdt(row.cpa) : "—"} />
             <Stat l="Return / cancel" v={`${row.returned_orders} / ${row.cancelled_orders}`} />
             <Stat l="In progress" v={String(row.in_progress_orders)} />
-            <Stat l="Meta value" v={bdt(row.meta_purchase_value)} />
+            <Stat
+              l="Settlement coverage"
+              v={row.settlement_coverage === null ? "Pending" : `${row.settlement_coverage}%`}
+            />
           </div>
         </div>
       </div>
+      {brandIds && brandIds.length > 0 && range ? (
+        <OrderDrill row={row} brandIds={brandIds} range={range} />
+      ) : null}
       <TagNoteEditor row={row} brandId={brandId} onSaved={onSaved} />
     </div>
   );
 }
+
 
 export function TagChips({ tags }: { tags: string[] }) {
   if (!tags?.length) return null;
