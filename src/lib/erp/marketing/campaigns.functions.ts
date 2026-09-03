@@ -1001,7 +1001,7 @@ export const getCampaignOrders = createServerFn({ method: "POST" })
 
     const { data: orders, error } = await context.supabase
       .from("orders")
-      .select("id, invoice_no, created_at, customer_name, status, confirmation_status, total")
+      .select("id, invoice_no, created_at, shipping_name, guest_name, status, confirmation_status, total")
       .in("id", ids)
       .order("created_at", { ascending: false });
     if (error) throw error;
@@ -1025,7 +1025,7 @@ export const getCampaignOrders = createServerFn({ method: "POST" })
         order_id: o.id as string,
         invoice_no: (o.invoice_no as string) ?? null,
         created_at: o.created_at as string,
-        customer_name: (o.customer_name as string) ?? null,
+        customer_name: ((o.shipping_name ?? o.guest_name) as string) ?? null,
         status: String(o.status ?? ""),
         confirmation_status: (o.confirmation_status as string) ?? null,
         order_value: Number(o.total ?? 0),
