@@ -281,8 +281,23 @@ function TagNoteEditor({
 }
 
 function CashTruth({ row }: { row: CampaignTruthRow }) {
-  const rows: { l: string; v: string; tone?: string }[] = [
-    { l: "Collected cash", v: row.collected_amount === null ? "Pending reconciliation" : bdt(row.collected_amount) },
+  const rows: { l: string; v: string; tone?: string; strong?: boolean }[] = [
+    {
+      l: "Collected cash (gross COD)",
+      v: row.collected_gross === null ? "Pending reconciliation" : bdt(row.collected_gross),
+    },
+    ...(row.courier_fee_settled > 0
+      ? [{
+          l: `− Courier charge (deducted by courier${row.courier_fee_estimated ? ", partly estimated" : ""})`,
+          v: bdt(-row.courier_fee_settled),
+          tone: "text-rose-600",
+        }]
+      : []),
+    {
+      l: "Net cash received",
+      v: row.collected_amount === null ? "Pending reconciliation" : bdt(row.collected_amount),
+      strong: true,
+    },
     { l: "Expected collectible", v: row.expected_collectible === null ? "Pending" : bdt(row.expected_collectible) },
     {
       l: "Collection variance",
@@ -296,7 +311,7 @@ function CashTruth({ row }: { row: CampaignTruthRow }) {
     ...(row.cogs_recovered > 0
       ? [{ l: "incl. COGS recovered (resellable return)", v: bdt(row.cogs_recovered), tone: "text-emerald-600" }]
       : []),
-    { l: "− Operating cost (settled)", v: bdt(row.operating_cost_applied) },
+    { l: "− Operating cost (settled, excl. courier)", v: bdt(row.operating_cost_applied) },
 
     {
       l: `− Return / RTO charge${row.return_charge_is_estimate ? " (estimate)" : ""}`,
