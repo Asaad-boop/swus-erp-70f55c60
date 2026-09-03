@@ -281,8 +281,23 @@ function TagNoteEditor({
 }
 
 function CashTruth({ row }: { row: CampaignTruthRow }) {
-  const rows: { l: string; v: string; tone?: string }[] = [
-    { l: "Collected cash", v: row.collected_amount === null ? "Pending reconciliation" : bdt(row.collected_amount) },
+  const rows: { l: string; v: string; tone?: string; strong?: boolean }[] = [
+    {
+      l: "Collected cash (gross COD)",
+      v: row.collected_gross === null ? "Pending reconciliation" : bdt(row.collected_gross),
+    },
+    ...(row.courier_fee_settled > 0
+      ? [{
+          l: `− Courier charge (deducted by courier${row.courier_fee_estimated ? ", partly estimated" : ""})`,
+          v: bdt(-row.courier_fee_settled),
+          tone: "text-rose-600",
+        }]
+      : []),
+    {
+      l: "Net cash received",
+      v: row.collected_amount === null ? "Pending reconciliation" : bdt(row.collected_amount),
+      strong: true,
+    },
     { l: "Expected collectible", v: row.expected_collectible === null ? "Pending" : bdt(row.expected_collectible) },
     {
       l: "Collection variance",
@@ -296,7 +311,7 @@ function CashTruth({ row }: { row: CampaignTruthRow }) {
     ...(row.cogs_recovered > 0
       ? [{ l: "incl. COGS recovered (resellable return)", v: bdt(row.cogs_recovered), tone: "text-emerald-600" }]
       : []),
-    { l: "− Operating cost (settled)", v: bdt(row.operating_cost_applied) },
+    { l: "− Operating cost (settled, excl. courier)", v: bdt(row.operating_cost_applied) },
 
     {
       l: `− Return / RTO charge${row.return_charge_is_estimate ? " (estimate)" : ""}`,
@@ -311,7 +326,10 @@ function CashTruth({ row }: { row: CampaignTruthRow }) {
       </div>
       <div className="divide-y text-xs">
         {rows.map((r) => (
-          <div key={r.l} className="flex items-center justify-between px-3 py-1.5">
+          <div
+            key={r.l}
+            className={`flex items-center justify-between px-3 py-1.5 ${r.strong ? "bg-muted/40 font-medium" : ""}`}
+          >
             <span className="text-muted-foreground">{r.l}</span>
             <span className={`tabular-nums ${r.tone ?? ""}`}>{r.v}</span>
           </div>
@@ -407,18 +425,15 @@ function OrderDrill({
               <td className="p-2 text-right tabular-nums">
                 {o.collected === null ? (
                   <span className="text-muted-foreground">Pending</span>
-                ) : (
+                ) : o.net_payout !== null ? (
                   <>
-                    <div>{bdt(o.collected)}</div>
-                    {o.courier_fee ? (
-                      <div
-                        className="text-[10px] text-muted-foreground"
-                        title="Courier charge বাদ দিয়ে হাতে আসা টাকা"
-                      >
-                        net {bdt(o.net_payout ?? 0)} · courier −{bdt(o.courier_fee)}
-                      </div>
-                    ) : null}
+                    <div title="Courier charge বাদ দিয়ে হাতে আসা টাকা">{bdt(o.net_payout)}</div>
+                    <div className="text-[10px] text-muted-foreground">
+                      gross {bdt(o.collected)} · courier −{bdt(o.courier_fee ?? 0)}
+                    </div>
                   </>
+                ) : (
+                  <div>{bdt(o.collected)}</div>
                 )}
               </td>
               <td className="p-2">

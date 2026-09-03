@@ -753,8 +753,14 @@ export type CampaignTruthRow = {
   delivered_order_value: number;
   returned_count: number;
   settled_delivered_count: number;
-  /** null = pending reconciliation, never fake 0 */
+  /** Net cash received from courier (gross COD − courier charge). null = pending reconciliation, never fake 0 */
   collected_amount: number | null;
+  /** Gross cash collected from the customer before courier deduction */
+  collected_gross: number | null;
+  /** Courier charge deducted from the settled cash (actual settlement fee, else order courier_fee) */
+  courier_fee_settled: number;
+  /** true when some settled orders had no known courier fee — net is partially estimated */
+  courier_fee_estimated: boolean;
   expected_collectible: number | null;
   collection_variance: number | null;
   return_charge: number | null;
@@ -880,7 +886,9 @@ export const getCampaignTruth = createServerFn({ method: "POST" })
       const s = split.get(r.id);
       const ann = metaMap.get(r.id);
       const numOrNull = (v: unknown) => (v === null || v === undefined ? null : Number(v));
-      const collected = numOrNull((r as any).collected_amount);
+      const collectedGross = numOrNull((r as any).collected_amount);
+      const courierFeeSettled = Number((r as any).courier_fee_settled ?? 0);
+      const courierFeeEstimated = Boolean((r as any).courier_fee_estimated);
       const returnCharge = numOrNull((r as any).return_charge);
       const recovered = Number((r as any).cogs_recovered ?? 0);
       const settlementCoverage = numOrNull((r as any).settlement_coverage);
@@ -899,8 +907,10 @@ export const getCampaignTruth = createServerFn({ method: "POST" })
       ].filter((v): v is number => v !== null);
       const truthCoverage = coverageParts.length > 0 ? Math.min(...coverageParts) : null;
 
-      // Realized = actual cash in − canonical COGS (net of resellable recovery)
-      //          − canonical opex − actual/fallback return charge − ad spend.
+      // Realized = NET cash received from courier (gross COD − actual courier
+      // charge) − canonical COGS (net of resellable recovery) − canonical opex
+      // EXCLUDING courier (already netted out of the cash, so counting it again
+      // would double-deduct) − actual/fallback return charge − ad spend.
       // Collected cash only covers *settled* delivered orders, so canonical
       // delivered-line costs are pro-rated to the same settled slice — otherwise
       // partial settlement would subtract full COGS from partial cash.
@@ -910,12 +920,16 @@ export const getCampaignTruth = createServerFn({ method: "POST" })
         deliveredOrderValue > 0 && expectedCollectible !== null
           ? Math.min(1, Math.max(0, expectedCollectible / deliveredOrderValue))
           : 1;
+      const collectedNet =
+        collectedGross === null ? null : r2(collectedGross - courierFeeSettled);
       const cogsSettled = (p.cogs - recovered) * settledShare;
-      const opexSettled = p.operating_cost * settledShare;
+      // Courier part of canonical opex, pro-rated to the settled slice.
+      const courierApplied = Number(s?.courier ?? 0) * settledShare;
+      const opexSettled = Math.max(0, p.operating_cost * settledShare - courierApplied);
       const realized =
-        collected === null
+        collectedNet === null
           ? null
-          : r2(collected - cogsSettled - opexSettled - (returnCharge ?? 0) - r.spend);
+          : r2(collectedNet - cogsSettled - opexSettled - (returnCharge ?? 0) - r.spend);
 
       const dataSufficient =
         realized !== null &&
@@ -958,7 +972,10 @@ export const getCampaignTruth = createServerFn({ method: "POST" })
         other_cost: Number(s?.other ?? 0),
         tags: ann?.tags ?? [],
         note: ann?.note ?? null,
-        collected_amount: collected,
+        collected_amount: collectedNet,
+        collected_gross: collectedGross,
+        courier_fee_settled: r2(courierFeeSettled),
+        courier_fee_estimated: courierFeeEstimated,
         expected_collectible: numOrNull((r as any).expected_collectible),
         collection_variance: numOrNull((r as any).collection_variance),
         return_charge: returnCharge,
@@ -1321,6 +1338,17 @@ export const getCampaignMonthlyComparison = createServerFn({ method: "POST" })
           }
         }
 
+        // Courier share of canonical opex — excluded when cash is netted.
+        const { data: splitRaw } = await sb.rpc("mkt_campaign_cost_split", {
+          _brand_ids: data.brandIds,
+          _from: mo.from,
+          _to: mo.to,
+        } as never);
+        const split = new Map<string, any>();
+        for (const sp of (Array.isArray(splitRaw) ? splitRaw : []) as any[]) {
+          if (sp?.campaign_id) split.set(sp.campaign_id, sp);
+        }
+
         let spend = 0,
           orders = 0,
           delivered = 0,
@@ -1347,7 +1375,8 @@ export const getCampaignMonthlyComparison = createServerFn({ method: "POST" })
           returnCharge += n(r.return_charge);
           grossProfit += p.gross_profit;
 
-          const rCollected = numOrNull(r.collected_amount);
+          const rCollectedGross = numOrNull(r.collected_amount);
+          const rCourierFee = n(r.courier_fee_settled);
           const rExpected = numOrNull(r.expected_collectible);
           const recovered = n(r.cogs_recovered);
           const deliveredOrderValue = n(r.delivered_order_value);
@@ -1356,16 +1385,20 @@ export const getCampaignMonthlyComparison = createServerFn({ method: "POST" })
               ? Math.min(1, Math.max(0, rExpected / deliveredOrderValue))
               : 1;
           const cogsSettled = (p.cogs - recovered) * settledShare;
-          const opexSettled = p.operating_cost * settledShare;
+          // Net cash model: courier charge already deducted from the collected
+          // cash, so drop the courier part of canonical opex to avoid double count.
+          const courierApplied = n(split.get(r.id)?.courier) * settledShare;
+          const opexSettled = Math.max(0, p.operating_cost * settledShare - courierApplied);
           cogsApplied += cogsSettled;
           opexApplied += opexSettled;
 
-          if (rCollected !== null) {
+          if (rCollectedGross !== null) {
             anyCollected = true;
-            collected += rCollected;
-            // Same realized formula as getCampaignTruth: collected cash − settled COGS
-            // − settled opex − return charge − ad spend.
-            realized += rCollected - cogsSettled - opexSettled - n(r.return_charge) - rSpend;
+            const rCollectedNet = rCollectedGross - rCourierFee;
+            collected += rCollectedNet;
+            // Same realized formula as getCampaignTruth: NET collected cash −
+            // settled COGS − settled opex (excl. courier) − return charge − ad spend.
+            realized += rCollectedNet - cogsSettled - opexSettled - n(r.return_charge) - rSpend;
             realizedSpend += rSpend;
             anyRealized = true;
           }

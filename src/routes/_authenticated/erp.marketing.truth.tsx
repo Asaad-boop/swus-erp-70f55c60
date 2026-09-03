@@ -133,7 +133,7 @@ const SORTS: { key: SortKey; label: string }[] = [
   { key: "impact", label: "Financial impact" },
   { key: "realized_profit", label: "Realized profit" },
   { key: "spend", label: "Spend" },
-  { key: "collected", label: "Collected" },
+  { key: "collected", label: "Collected (net)" },
   { key: "roas", label: "Realized ROAS" },
   { key: "delivery_rate", label: "Delivery rate" },
 ];
@@ -1066,8 +1066,11 @@ function CampaignTruthPage() {
                   <div className="tabular-nums text-foreground">{bdt(r.spend)}</div>
                 </div>
                 <div>
-                  <div className="uppercase tracking-wide">Collected</div>
-                  <div className="tabular-nums text-foreground">
+                  <div className="uppercase tracking-wide">Collected (net)</div>
+                  <div
+                    className="tabular-nums text-foreground"
+                    title={r.courier_fee_settled > 0 ? `Gross ৳${r.collected_gross ?? "—"} · courier −৳${r.courier_fee_settled}` : undefined}
+                  >
                     {r.collected_amount === null ? "Pending" : bdt(r.collected_amount)}
                   </div>
                 </div>
