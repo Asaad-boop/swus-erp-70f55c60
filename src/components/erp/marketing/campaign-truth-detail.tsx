@@ -19,8 +19,12 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { cn } from "@/lib/utils";
+import { useQuery } from "@tanstack/react-query";
+import { useServerFn } from "@tanstack/react-start";
 import {
+  getCampaignOrders,
   saveCampaignMeta,
+  type CampaignOrderRow,
   type CampaignTrendPoint,
   type CampaignTruthRow,
 } from "@/lib/erp/marketing/campaigns.functions";
@@ -380,7 +384,7 @@ function OrderDrill({
           </tr>
         </thead>
         <tbody>
-          {orders.map((o) => (
+          {orders.map((o: CampaignOrderRow) => (
             <tr key={o.order_id} className="border-t">
               <td className="p-2">
                 <div className="font-medium">{o.invoice_no ?? o.order_id.slice(0, 8)}</div>
