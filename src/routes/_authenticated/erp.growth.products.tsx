@@ -180,9 +180,9 @@ function ProductLabPage() {
             <Card className="shadow-none">
               <CardHeader className="gap-3 border-b border-border pb-4 md:flex-row md:items-center md:justify-between">
                 <div>
-                  <CardTitle className="text-sm">Live product performance ({rows.length})</CardTitle>
+              <CardTitle className="text-sm">Live product performance ({rows.length})</CardTitle>
                   <p className="mt-1 text-xs text-muted-foreground">
-                    Delivered sales and profitability from the canonical product marketing source.
+                    Delivered sales and profitability from the canonical product marketing source. Stock is available after reservations.
                   </p>
                 </div>
                 <div className="flex flex-wrap items-center gap-2">
@@ -254,9 +254,9 @@ function ProductLabPage() {
                             <td className="px-3 py-3 text-right tabular-nums">{metric(r.roas, "x")}</td>
                             <td className="px-3 py-3 text-right tabular-nums">{bdt(r.cpa)}</td>
                             <td className="px-3 py-3 text-right tabular-nums">{metric(r.delivered_units / rangeDays)}</td>
-                            <td className="px-3 py-3 text-right tabular-nums">{number(r.stock)}</td>
+                            <td className="px-3 py-3 text-right tabular-nums">{number(r.available_stock)}</td>
                             <td className="px-3 py-3 text-right">
-                              <Badge variant={r.stock_cover_days != null && r.stock_cover_days <= Math.max(7, r.low_stock_threshold ?? 0) ? "destructive" : "outline"}>
+                              <Badge variant={r.available_stock <= (r.low_stock_threshold ?? 5) || (r.stock_cover_days != null && r.stock_cover_days <= 7) ? "destructive" : "outline"}>
                                 {r.stock_cover_days == null ? "—" : `${Math.floor(r.stock_cover_days)}d`}
                               </Badge>
                             </td>
