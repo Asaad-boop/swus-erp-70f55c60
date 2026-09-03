@@ -96,8 +96,29 @@ export function computePoMath(args: {
   };
 }
 
+/** Anchors that live inside a specific PO detail tab. */
+const SECTION_TAB: Record<string, string> = {
+  "release-section": "shipment",
+  "cartons-section": "shipment",
+  "freight-section": "shipment",
+};
+
+export const PO_GOTO_EVENT = "po-detail-goto-section";
+
 export function scrollToSection(id: string) {
-  const el = document.getElementById(id);
-  if (!el) return;
-  el.scrollIntoView({ behavior: "smooth", block: "start" });
+  const tab = SECTION_TAB[id];
+  if (tab && typeof window !== "undefined") {
+    window.dispatchEvent(new CustomEvent(PO_GOTO_EVENT, { detail: { id, tab } }));
+  }
+  // The target may live in a tab that is still mounting — retry a few frames.
+  const attempt = (n: number) => {
+    const el = document.getElementById(id);
+    if (el) {
+      el.scrollIntoView({ behavior: "smooth", block: "start" });
+      return;
+    }
+    if (n < 30) requestAnimationFrame(() => attempt(n + 1));
+  };
+  attempt(0);
 }
+

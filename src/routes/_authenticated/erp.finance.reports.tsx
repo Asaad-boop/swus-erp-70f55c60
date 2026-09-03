@@ -152,7 +152,12 @@ function toPL(o: FinanceOverview): PL {
     expense_accounts,
     total_income: income_accounts.reduce((s, r) => s + r.amount, 0),
     total_expense: expense_accounts.reduce((s, r) => s + r.amount, 0),
-    net_profit: pnl.net,
+    // Net must equal the totals shown above (pnl.net excludes other income
+    // and refund/return loss, which are listed as income/expense lines here).
+    net_profit:
+      income_accounts.reduce((s, r) => s + r.amount, 0) -
+      expense_accounts.reduce((s, r) => s + r.amount, 0),
+
     capital_outflow: pnl.capitalOutflow,
     cogs_missing_units: pnl.cogsMissingUnits,
   };

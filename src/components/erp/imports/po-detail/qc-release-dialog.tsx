@@ -65,7 +65,12 @@ export function QcReleaseDialog({
 
   const qcModeCourier = ((release?.local_courier_source ?? "release") === "qc");
   const lcNum = Math.max(0, Number(lcAmount) || 0);
+  // Server-side cost allocation divides by good pcs only (extra pcs stock e
+  // 0 cost e jog hoy), tai preview-o shudhu good pcs diye bhag korte hobe.
   const draftGood = (release?.items ?? []).reduce(
+    (s: number, ri: any) => s + (draft[ri.id]?.good ?? 0), 0,
+  );
+  const draftStocked = (release?.items ?? []).reduce(
     (s: number, ri: any) => s + (draft[ri.id]?.good ?? 0) + (draft[ri.id]?.extra ?? 0), 0,
   );
   const draftReleaseCost = (release?.items ?? []).reduce(
@@ -74,6 +79,7 @@ export function QcReleaseDialog({
     0,
   );
   const finalPerPc = draftGood > 0 ? (draftReleaseCost + (qcModeCourier ? lcNum : 0)) / draftGood : 0;
+
 
   const mut = useMutation({
     mutationFn: () =>
@@ -250,7 +256,7 @@ export function QcReleaseDialog({
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 text-xs">
               <Tile label="Goods + freight" value={fmtBdt(draftReleaseCost)} />
               <Tile label="Local courier" value={fmtBdt(qcModeCourier ? lcNum : 0)} />
-              <Tile label="Good pcs" value={`${draftGood} pcs`} />
+              <Tile label="Good pcs" value={draftStocked !== draftGood ? `${draftGood} pcs (stock ${draftStocked})` : `${draftGood} pcs`} />
               <Tile label="Final / pc" value={fmtBdt(finalPerPc)} className="text-emerald-700 dark:text-emerald-300" />
             </div>
             <p className="text-[11px] text-muted-foreground mt-2">
