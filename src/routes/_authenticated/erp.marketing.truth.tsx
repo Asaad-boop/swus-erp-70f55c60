@@ -31,7 +31,9 @@ import {
 import {
   getCampaignTruth,
   getCampaignTrend,
+  getCampaignProductsSummary,
   rerunCampaignMatching,
+  type CampaignProductsSummary,
   type CampaignTrendPoint,
   type CampaignTruthRow,
 } from "@/lib/erp/marketing/campaigns.functions";
