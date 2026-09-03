@@ -197,6 +197,15 @@ export async function runStructureSync(supabase: any, accountId: string) {
             .from("mkt_campaigns")
             .upsert(rows, { onConflict: "account_id,external_id" });
           if (error) throw error;
+
+          // Campaigns Meta no longer returns (deleted/archived) must not stay
+          // ACTIVE in our copy — otherwise the Active filter over-counts.
+          const liveIds = camps.map((c) => c.id);
+          await supabase
+            .from("mkt_campaigns")
+            .update({ status: "ARCHIVED", effective_status: "ARCHIVED" })
+            .eq("account_id", acc.id)
+            .not("external_id", "in", `(${liveIds.join(",")})`);
         }
 
         const { data: campRows } = await supabase
