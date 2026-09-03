@@ -213,17 +213,41 @@ export const linkCampaignProducts = createServerFn({ method: "POST" })
     const sb = context.supabase;
     const { data: camp, error: cErr } = await sb
       .from("mkt_campaigns")
-      .select("brand_id")
+      .select("brand_id, account_id")
       .eq("id", data.campaignId)
       .maybeSingle();
     if (cErr) throw cErr;
-    if (!camp?.brand_id) throw new Error("Campaign-e brand assign kora nei — age brand assign korun.");
+    if (!camp) throw new Error("Campaign khuje pawa jayni.");
+
+    // Campaign row-e brand na thakle: ad account -> product theke resolve kori.
+    let brandId: string | null = camp.brand_id ?? null;
+    if (!brandId && camp.account_id) {
+      const { data: acct } = await sb
+        .from("mkt_ad_accounts")
+        .select("brand_id")
+        .eq("id", camp.account_id)
+        .maybeSingle();
+      brandId = acct?.brand_id ?? null;
+    }
+    if (!brandId) {
+      const { data: prod } = await sb
+        .from("products")
+        .select("brand_id")
+        .in("id", data.productIds)
+        .not("brand_id", "is", null)
+        .limit(1)
+        .maybeSingle();
+      brandId = (prod as { brand_id: string | null } | null)?.brand_id ?? null;
+    }
+    if (!brandId) throw new Error("Brand resolve kora gelo na — campaign ba product-e brand set korun.");
+
     const rows = data.productIds.map((pid) => ({
       campaign_id: data.campaignId,
       product_id: pid,
-      brand_id: camp.brand_id,
+      brand_id: brandId,
       weight: data.weight,
     }));
+
     const { error } = await sb
       .from("mkt_campaign_products")
       .upsert(rows as never, { onConflict: "campaign_id,product_id" });
