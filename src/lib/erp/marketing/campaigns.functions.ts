@@ -1108,7 +1108,12 @@ export type CampaignOrderRow = {
   status: string;
   confirmation_status: string | null;
   order_value: number;
+  /** Gross cash collected from the customer (COD + advance) */
   collected: number | null;
+  /** Courier charges deducted from the collected cash (null = unknown) */
+  courier_fee: number | null;
+  /** Net remittance actually received = collected − courier fee (null when unknown) */
+  net_payout: number | null;
   attr_source: string;
   attr_confidence: number;
 };
@@ -1141,7 +1146,7 @@ export const getCampaignOrders = createServerFn({ method: "POST" })
 
     const { data: orders, error } = await context.supabase
       .from("orders")
-      .select("id, invoice_no, created_at, shipping_name, guest_name, status, confirmation_status, total, advance_amount")
+      .select("id, invoice_no, created_at, shipping_name, guest_name, status, confirmation_status, total, advance_amount, courier_fee")
       .in("id", ids)
       .order("created_at", { ascending: false });
     if (error) throw error;
@@ -1156,18 +1161,32 @@ export const getCampaignOrders = createServerFn({ method: "POST" })
       settleRows.set(id, (settleRows.get(id) ?? 0) + 1);
     };
 
+    // Courier charges deducted from that cash (delivery + COD fees etc).
+    const courierFee = new Map<string, number>();
+    const bumpFee = (id: string | null, amount: unknown) => {
+      const v = Number(amount ?? 0);
+      if (!id || !v) return;
+      courierFee.set(id, (courierFee.get(id) ?? 0) + v);
+    };
+
     const [{ data: recon }, { data: settle }] = await Promise.all([
       context.supabase
         .from("erp_reconciliation_rows")
-        .select("matched_order_id, collected")
+        .select("matched_order_id, collected, total_fee")
         .in("matched_order_id", ids),
       context.supabase
         .from("erp_courier_settlement_lines")
-        .select("matched_order_id, collected_amount")
+        .select("matched_order_id, collected_amount, final_fee")
         .in("matched_order_id", ids),
     ]);
-    for (const r of (recon ?? []) as any[]) bump(r?.matched_order_id ?? null, r?.collected);
-    for (const s of (settle ?? []) as any[]) bump(s?.matched_order_id ?? null, s?.collected_amount);
+    for (const r of (recon ?? []) as any[]) {
+      bump(r?.matched_order_id ?? null, r?.collected);
+      bumpFee(r?.matched_order_id ?? null, r?.total_fee);
+    }
+    for (const s of (settle ?? []) as any[]) {
+      bump(s?.matched_order_id ?? null, s?.collected_amount);
+      bumpFee(s?.matched_order_id ?? null, s?.final_fee);
+    }
 
     const CANCELLED = new Set(["cancelled", "fake"]);
 
@@ -1180,6 +1199,8 @@ export const getCampaignOrders = createServerFn({ method: "POST" })
       const advanceApplied = Math.min(advance, Math.max(total - courier, 0));
       const cash = courier + advanceApplied;
       const status = String(o.status ?? "");
+      const feeRaw = courierFee.get(o.id) ?? Number(o.courier_fee ?? 0);
+      const fee = feeRaw > 0 ? Math.round(feeRaw * 100) / 100 : null;
       // Settled or advance-paid → real number. Cancelled/fake with no cash → 0.
       // Otherwise still awaiting courier settlement → Pending (never fake ৳0).
       const collected =
@@ -1197,6 +1218,8 @@ export const getCampaignOrders = createServerFn({ method: "POST" })
         confirmation_status: (o.confirmation_status as string) ?? null,
         order_value: total,
         collected,
+        courier_fee: fee,
+        net_payout: collected === null || fee === null ? null : Math.round((collected - fee) * 100) / 100,
         attr_source: a?.source ?? "unattributed",
         attr_confidence: Number(a?.confidence ?? 0),
       } satisfies CampaignOrderRow;

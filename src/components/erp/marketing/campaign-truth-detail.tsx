@@ -384,7 +384,7 @@ function OrderDrill({
             <th className="p-2 text-left">Order</th>
             <th className="p-2 text-left">Status</th>
             <th className="p-2 text-right">Order value</th>
-            <th className="p-2 text-right">Collected</th>
+            <th className="p-2 text-right">Collected (net)</th>
             <th className="p-2 text-left">Attribution</th>
           </tr>
         </thead>
@@ -408,7 +408,17 @@ function OrderDrill({
                 {o.collected === null ? (
                   <span className="text-muted-foreground">Pending</span>
                 ) : (
-                  bdt(o.collected)
+                  <>
+                    <div>{bdt(o.collected)}</div>
+                    {o.courier_fee ? (
+                      <div
+                        className="text-[10px] text-muted-foreground"
+                        title="Courier charge বাদ দিয়ে হাতে আসা টাকা"
+                      >
+                        net {bdt(o.net_payout ?? 0)} · courier −{bdt(o.courier_fee)}
+                      </div>
+                    ) : null}
+                  </>
                 )}
               </td>
               <td className="p-2">
