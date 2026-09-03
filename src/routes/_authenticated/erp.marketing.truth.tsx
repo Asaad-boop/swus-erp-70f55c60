@@ -3,7 +3,6 @@ import { Fragment, useMemo, useState } from "react";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import {
-  Scale,
   RefreshCcw,
   Download,
   Search,
@@ -12,15 +11,19 @@ import {
   TrendingDown,
   ChevronRight,
   AlertTriangle,
+  SlidersHorizontal,
   ArrowUpDown,
+  LayoutGrid,
+  Rows3,
+  Check,
 } from "lucide-react";
 import { toast } from "sonner";
-import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Progress } from "@/components/ui/progress";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Separator } from "@/components/ui/separator";
 import { useBrand } from "@/contexts/brand-context";
 import { BrandTabs } from "@/components/erp/marketing/marketing-shell";
 import {
@@ -51,12 +54,12 @@ export const Route = createFileRoute("/_authenticated/erp/marketing/truth")({
       {
         name: "description",
         content:
-          "Every synced campaign's Meta reported purchases against real ERP orders, actual collected cash, COGS, ad spend and realized profit.",
+          "Actual collected cash, real costs, and campaign profitability across every synced campaign.",
       },
       { property: "og:title", content: "Campaign Profit Truth — Marketing ERP" },
       {
         property: "og:description",
-        content: "Meta purchases vs real orders, plus true net profit per campaign.",
+        content: "Actual collected cash, real costs, and campaign profitability.",
       },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary" },
@@ -66,58 +69,75 @@ export const Route = createFileRoute("/_authenticated/erp/marketing/truth")({
 });
 
 const bdt = (n: number) => "৳" + Math.round(n).toLocaleString("en-IN");
+const signedBdt = (n: number) => (n >= 0 ? "+" : "−") + "৳" + Math.abs(Math.round(n)).toLocaleString("en-IN");
 const num = (n: number) => n.toLocaleString("en-IN");
 
-type MatchStatus = CampaignTruthRow["match_status"];
 type Verdict = CampaignTruthRow["verdict"];
+type TruthStatus = CampaignTruthRow["truth_status"];
 
-function matchLabel(s: MatchStatus) {
-  if (s === "linked") return "Matched";
-  if (s === "partial") return "Partial";
-  if (s === "utm_only") return "UTM only";
-  return "No orders";
-}
+const TRUTH_FILTERS: { key: TruthStatus | "all"; label: string }[] = [
+  { key: "all", label: "All campaigns" },
+  { key: "profitable", label: "Profitable" },
+  { key: "breakeven", label: "Break-even" },
+  { key: "losing", label: "Losing" },
+  { key: "too_early", label: "Too early" },
+];
 
-function truthLabel(s: CampaignTruthRow["truth_status"]) {
+function truthLabel(s: TruthStatus) {
   if (s === "profitable") return "Profitable";
   if (s === "breakeven") return "Break-even";
   if (s === "losing") return "Losing";
   return "Too early";
 }
 
-function truthTone(s: CampaignTruthRow["truth_status"]) {
-  if (s === "profitable") return "border-emerald-500/40 bg-emerald-500/10 text-emerald-600";
-  if (s === "breakeven") return "border-amber-500/40 bg-amber-500/10 text-amber-600";
-  if (s === "losing") return "border-rose-500/40 bg-rose-500/10 text-rose-600";
-  return "border-slate-500/30 bg-slate-500/10 text-muted-foreground";
+function truthTone(s: TruthStatus) {
+  if (s === "profitable") return "border-emerald-500/30 bg-emerald-500/10 text-emerald-700";
+  if (s === "breakeven") return "border-amber-500/30 bg-amber-500/10 text-amber-700";
+  if (s === "losing") return "border-rose-500/30 bg-rose-500/10 text-rose-700";
+  return "border-border bg-muted/50 text-muted-foreground";
 }
 
-function matchTone(s: MatchStatus) {
-  if (s === "linked") return "border-emerald-500/40 bg-emerald-500/10 text-emerald-600";
-  if (s === "partial") return "border-amber-500/40 bg-amber-500/10 text-amber-600";
-  if (s === "utm_only") return "border-sky-500/40 bg-sky-500/10 text-sky-600";
-  return "border-rose-500/40 bg-rose-500/10 text-rose-600";
+function truthDot(s: TruthStatus) {
+  if (s === "profitable") return "bg-emerald-500";
+  if (s === "breakeven") return "bg-amber-500";
+  if (s === "losing") return "bg-rose-500";
+  return "bg-muted-foreground/50";
 }
 
-const VERDICTS: { key: Verdict; label: string; tone: string }[] = [
-  { key: "scaling", label: "Scale করার মতো", tone: "border-emerald-500/40 bg-emerald-500/10 text-emerald-600" },
-  { key: "profitable", label: "Profitable", tone: "border-teal-500/40 bg-teal-500/10 text-teal-600" },
-  { key: "breakeven", label: "Break-even", tone: "border-amber-500/40 bg-amber-500/10 text-amber-600" },
-  { key: "losing", label: "Loss করছে", tone: "border-rose-500/40 bg-rose-500/10 text-rose-600" },
-  { key: "no_data", label: "No data", tone: "border-muted bg-muted/40 text-muted-foreground" },
+function rowAccent(s: TruthStatus) {
+  if (s === "profitable") return "border-l-emerald-500/60";
+  if (s === "losing") return "border-l-rose-500/60";
+  if (s === "breakeven") return "border-l-amber-500/50";
+  return "border-l-transparent";
+}
+
+const VERDICTS: { key: Verdict; label: string }[] = [
+  { key: "scaling", label: "Scaling" },
+  { key: "profitable", label: "Profitable" },
+  { key: "breakeven", label: "Break-even" },
+  { key: "losing", label: "Losing" },
+  { key: "no_data", label: "No data" },
 ];
 
-const verdictMeta = (v: Verdict) => VERDICTS.find((x) => x.key === v) ?? VERDICTS[4];
+type SortKey = "impact" | "realized_profit" | "spend" | "collected" | "roas" | "delivery_rate";
 
-type SortKey =
-  | "spend"
-  | "delivered_revenue"
-  | "gross_profit"
-  | "net_profit"
-  | "orders"
-  | "actual_roas"
-  | "profit_roas"
-  | "net_margin";
+const SORTS: { key: SortKey; label: string }[] = [
+  { key: "impact", label: "Financial impact" },
+  { key: "realized_profit", label: "Realized profit" },
+  { key: "spend", label: "Spend" },
+  { key: "collected", label: "Collected" },
+  { key: "roas", label: "Realized ROAS" },
+  { key: "delivery_rate", label: "Delivery rate" },
+];
+
+const sortValue = (r: CampaignTruthRow, k: SortKey) => {
+  if (k === "impact") return Math.abs(r.realized_profit ?? r.projected_profit ?? 0);
+  if (k === "realized_profit") return r.realized_profit ?? Number.NEGATIVE_INFINITY;
+  if (k === "spend") return r.spend;
+  if (k === "collected") return r.collected_amount ?? -1;
+  if (k === "roas") return r.realized_roas ?? Number.NEGATIVE_INFINITY;
+  return r.delivery_rate;
+};
 
 type ActivityFilter = "all" | "spending" | "no_spend" | "with_orders" | "spend_no_orders";
 
@@ -140,19 +160,39 @@ const activityMatch = (r: CampaignTruthRow, a: ActivityFilter) =>
           ? r.orders > 0
           : r.spend > 0 && r.orders <= 0;
 
+type ProductFilter = "all" | "manual" | "auto" | "none";
+type CoverageFilter = "all" | "high" | "low" | "pending";
+
+/** Shift a YYYY-MM-DD range back by its own length — used for period comparison. */
+function previousRange(from: string, to: string) {
+  const f = new Date(from + "T00:00:00Z");
+  const t = new Date(to + "T00:00:00Z");
+  const days = Math.max(1, Math.round((t.getTime() - f.getTime()) / 86400000) + 1);
+  const pf = new Date(f.getTime() - days * 86400000);
+  const pt = new Date(f.getTime() - 86400000);
+  const iso = (d: Date) => d.toISOString().slice(0, 10);
+  return { from: iso(pf), to: iso(pt) };
+}
+
 function CampaignTruthPage() {
   const { brands } = useBrand();
   const [brandKey, setBrandKey] = useState("all");
   const [range, setRange] = useState<MktRangeValue>(() => buildPreset("30d"));
   const [search, setSearch] = useState("");
-  const [verdictFilter, setVerdictFilter] = useState<Verdict | "all">("all");
+  const [truthFilter, setTruthFilter] = useState<TruthStatus | "all">("all");
   const [minSpend, setMinSpend] = useState(0);
-  const [sortKey, setSortKey] = useState<SortKey>("spend");
+  const [sortKey, setSortKey] = useState<SortKey>("impact");
   const [sortDesc, setSortDesc] = useState(true);
   const [openRow, setOpenRow] = useState<string | null>(null);
   const [tagFilter, setTagFilter] = useState<string[]>([]);
   const [activity, setActivity] = useState<ActivityFilter>("all");
+  const [verdictFilter, setVerdictFilter] = useState<Verdict | "all">("all");
+  const [productFilter, setProductFilter] = useState<ProductFilter>("all");
+  const [coverageFilter, setCoverageFilter] = useState<CoverageFilter>("all");
+  const [hasOrders, setHasOrders] = useState(false);
   const [grain, setGrain] = useState<"day" | "week">("day");
+  const [compare, setCompare] = useState(false);
+  const [view, setView] = useState<"table" | "performance">("table");
 
   const brandIds = useMemo(() => {
     if (brandKey === "all") return brands.map((b) => b.id);
@@ -160,11 +200,25 @@ function CampaignTruthPage() {
     return b ? [b.id] : brands.map((x) => x.id);
   }, [brandKey, brands]);
 
+  const brandLabel =
+    brandKey === "all"
+      ? "All brands"
+      : (brands.find((x) => x.slug === brandKey || x.id === brandKey)?.name ?? "Brand");
+
   const fetchTruth = useServerFn(getCampaignTruth);
   const q = useQuery({
     queryKey: ["mkt-campaign-truth", brandIds.slice().sort().join(","), range.from, range.to],
     queryFn: () => fetchTruth({ data: { brandIds, from: range.from, to: range.to } }),
     enabled: brandIds.length > 0,
+    staleTime: 60_000,
+    refetchOnWindowFocus: false,
+  });
+
+  const prev = useMemo(() => previousRange(range.from, range.to), [range.from, range.to]);
+  const prevQ = useQuery({
+    queryKey: ["mkt-campaign-truth-prev", brandIds.slice().sort().join(","), prev.from, prev.to],
+    queryFn: () => fetchTruth({ data: { brandIds, from: prev.from, to: prev.to } }),
+    enabled: compare && brandIds.length > 0,
     staleTime: 60_000,
     refetchOnWindowFocus: false,
   });
@@ -197,10 +251,7 @@ function CampaignTruthPage() {
     return m;
   }, [trendQ.data]);
 
-  const campaignIds = useMemo(
-    () => (q.data ?? []).map((r) => r.id).slice(0, 500),
-    [q.data],
-  );
+  const campaignIds = useMemo(() => (q.data ?? []).map((r) => r.id).slice(0, 500), [q.data]);
   const fetchProducts = useServerFn(getCampaignProductsSummary);
   const productsQ = useQuery({
     queryKey: ["mkt-campaign-products-summary", campaignIds.join(","), range.from, range.to],
@@ -210,7 +261,6 @@ function CampaignTruthPage() {
     refetchOnWindowFocus: false,
   });
   const productMap: CampaignProductsSummary = productsQ.data ?? {};
-
 
   const runRematch = useServerFn(rerunCampaignMatching);
   const rerun = useMutation({
@@ -230,12 +280,25 @@ function CampaignTruthPage() {
     const s = search.trim().toLowerCase();
     const out = all.filter((r) => {
       if (r.spend < minSpend) return false;
+      if (truthFilter !== "all" && r.truth_status !== truthFilter) return false;
       if (verdictFilter !== "all" && r.verdict !== verdictFilter) return false;
-      if (activity === "spending" && r.spend <= 0) return false;
-      if (activity === "no_spend" && r.spend > 0) return false;
-      if (activity === "with_orders" && r.orders <= 0) return false;
-      if (activity === "spend_no_orders" && !(r.spend > 0 && r.orders <= 0)) return false;
+      if (!activityMatch(r, activity)) return false;
+      if (hasOrders && r.orders <= 0) return false;
       if (tagFilter.length > 0 && !tagFilter.every((t) => (r.tags ?? []).includes(t))) return false;
+      if (productFilter !== "all") {
+        const e = productMap[r.id];
+        const manual = e?.manual?.length ?? 0;
+        const auto = e?.auto?.length ?? 0;
+        if (productFilter === "manual" && manual === 0) return false;
+        if (productFilter === "auto" && !(manual === 0 && auto > 0)) return false;
+        if (productFilter === "none" && (manual > 0 || auto > 0)) return false;
+      }
+      if (coverageFilter !== "all") {
+        const c = r.truth_coverage;
+        if (coverageFilter === "pending" && c !== null) return false;
+        if (coverageFilter === "high" && (c === null || c < 80)) return false;
+        if (coverageFilter === "low" && (c === null || c >= 80)) return false;
+      }
       if (!s) return true;
       return (
         r.name.toLowerCase().includes(s) ||
@@ -244,73 +307,80 @@ function CampaignTruthPage() {
       );
     });
     const dir = sortDesc ? -1 : 1;
-    return out.sort((a, b) => (Number(a[sortKey]) - Number(b[sortKey])) * dir);
-  }, [all, search, verdictFilter, minSpend, sortKey, sortDesc, activity, tagFilter]);
+    return out.sort((a, b) => (sortValue(a, sortKey) - sortValue(b, sortKey)) * dir);
+  }, [
+    all,
+    search,
+    truthFilter,
+    verdictFilter,
+    minSpend,
+    sortKey,
+    sortDesc,
+    activity,
+    tagFilter,
+    hasOrders,
+    productFilter,
+    coverageFilter,
+    productMap,
+  ]);
 
-  const totals = useMemo(
-    () =>
-      rows.reduce(
-        (a, r) => {
-          a.spend += r.spend;
-          a.metaP += r.meta_purchases;
-          a.orders += r.orders;
-          a.delivered += r.delivered_orders;
-          a.rev += r.delivered_revenue;
-          a.cogs += r.cogs;
-          a.opex += r.operating_cost;
-          a.gp += r.gross_profit;
-          a.net += r.net_profit;
-          a.linked += r.explicit_attributed_orders ?? 0;
-          a.auto += r.auto_attributed_orders ?? 0;
-          a.unmatched += r.unlinked_orders;
-          a.missingCost += r.cost_missing_units;
-          a.booked += r.booked_value ?? 0;
-          if (r.collected_amount !== null) {
-            a.collected += r.collected_amount;
-            a.collectedKnown = true;
-          }
-          if (r.expected_collectible !== null) a.expected += r.expected_collectible;
-          if (r.return_charge !== null) a.returnCharge += r.return_charge;
-          if (r.realized_profit !== null) {
-            a.realized += r.realized_profit;
-            a.realizedSpend += r.spend;
-            a.realizedKnown = true;
-          } else {
-            a.pendingCampaigns += 1;
-          }
-          return a;
-        },
-        {
-          spend: 0,
-          metaP: 0,
-          orders: 0,
-          delivered: 0,
-          rev: 0,
-          cogs: 0,
-          opex: 0,
-          gp: 0,
-          net: 0,
-          linked: 0,
-          auto: 0,
-          unmatched: 0,
-          missingCost: 0,
-          booked: 0,
-          collected: 0,
-          expected: 0,
-          returnCharge: 0,
-          realized: 0,
-          realizedSpend: 0,
-          pendingCampaigns: 0,
-          collectedKnown: false,
-          realizedKnown: false,
-        },
-      ),
-    [rows],
+  const sumRows = (list: CampaignTruthRow[]) =>
+    list.reduce(
+      (a, r) => {
+        a.spend += r.spend;
+        a.metaP += r.meta_purchases;
+        a.orders += r.orders;
+        a.delivered += r.delivered_orders;
+        a.cogs += r.cogs;
+        a.opex += r.operating_cost;
+        a.gp += r.gross_profit;
+        a.net += r.net_profit;
+        a.missingCost += r.cost_missing_units;
+        a.booked += r.booked_value ?? 0;
+        if (r.collected_amount !== null) {
+          a.collected += r.collected_amount;
+          a.collectedKnown = true;
+        }
+        if (r.expected_collectible !== null) a.expected += r.expected_collectible;
+        if (r.return_charge !== null) a.returnCharge += r.return_charge;
+        if (r.realized_profit !== null) {
+          a.realized += r.realized_profit;
+          a.realizedSpend += r.spend;
+          a.realizedKnown = true;
+        } else a.pendingCampaigns += 1;
+        return a;
+      },
+      {
+        spend: 0,
+        metaP: 0,
+        orders: 0,
+        delivered: 0,
+        cogs: 0,
+        opex: 0,
+        gp: 0,
+        net: 0,
+        missingCost: 0,
+        booked: 0,
+        collected: 0,
+        expected: 0,
+        returnCharge: 0,
+        realized: 0,
+        realizedSpend: 0,
+        pendingCampaigns: 0,
+        collectedKnown: false,
+        realizedKnown: false,
+      },
+    );
+
+  const totals = useMemo(() => sumRows(rows), [rows]);
+  const prevTotals = useMemo(
+    () => (compare && prevQ.data ? sumRows(prevQ.data) : null),
+    [compare, prevQ.data],
   );
 
-  const verdictCounts = useMemo(() => {
-    const m: Record<string, number> = {};
-    for (const r of all) m[r.verdict] = (m[r.verdict] ?? 0) + 1;
+  const truthCounts = useMemo(() => {
+    const m: Record<string, number> = { all: all.length };
+    for (const r of all) m[r.truth_status] = (m[r.truth_status] ?? 0) + 1;
     return m;
   }, [all]);
 
@@ -326,17 +396,61 @@ function CampaignTruthPage() {
     return m;
   }, [all]);
 
-
-
   const health = healthQ.data ?? null;
-  const matchHealth = health?.coverage_pct ?? 0;
 
-  const toggleSort = (k: SortKey) => {
-    if (k === sortKey) setSortDesc((d) => !d);
-    else {
-      setSortKey(k);
-      setSortDesc(true);
-    }
+  /** Coverage rollup — weighted by spend so big campaigns dominate confidence. */
+  const coverage = useMemo(() => {
+    const pick = (f: (r: CampaignTruthRow) => number | null) => {
+      let w = 0;
+      let acc = 0;
+      for (const r of rows) {
+        const v = f(r);
+        if (v === null) continue;
+        const weight = Math.max(1, r.spend);
+        acc += v * weight;
+        w += weight;
+      }
+      return w > 0 ? Math.round(acc / w) : null;
+    };
+    const attribution = health?.coverage_pct ?? pick((r) => r.attribution_coverage);
+    const settlement = pick((r) => r.settlement_coverage);
+    const cogs = pick((r) => r.cogs_coverage);
+    const courier = pick((r) => r.courier_cost_coverage);
+    const parts = [attribution, settlement, cogs, courier].filter((v): v is number => v !== null);
+    return {
+      attribution,
+      settlement,
+      cogs,
+      courier,
+      overall: parts.length ? Math.min(...parts) : null,
+    };
+  }, [rows, health]);
+
+  const pendingSettlementCampaigns = useMemo(
+    () => rows.filter((r) => r.collected_amount === null && r.delivered_orders > 0),
+    [rows],
+  );
+  const pendingDelivered = pendingSettlementCampaigns.reduce((a, r) => a + r.delivered_orders, 0);
+
+  const advancedActive =
+    (activity !== "all" ? 1 : 0) +
+    (verdictFilter !== "all" ? 1 : 0) +
+    (productFilter !== "all" ? 1 : 0) +
+    (coverageFilter !== "all" ? 1 : 0) +
+    (minSpend > 0 ? 1 : 0) +
+    (hasOrders ? 1 : 0) +
+    (tagFilter.length > 0 ? 1 : 0) +
+    (grain !== "day" ? 1 : 0);
+
+  const resetAdvanced = () => {
+    setActivity("all");
+    setVerdictFilter("all");
+    setProductFilter("all");
+    setCoverageFilter("all");
+    setMinSpend(0);
+    setHasOrders(false);
+    setTagFilter([]);
+    setGrain("day");
   };
 
   const exportCsv = () => {
@@ -347,7 +461,8 @@ function CampaignTruthPage() {
       "Verdict",
       "Match status",
       "Attributed orders",
-      "Unmatched orders",
+      "Explicit attributed",
+      "Auto attributed",
       "Spend",
       "Meta purchases",
       "Meta value",
@@ -390,7 +505,8 @@ function CampaignTruthPage() {
         r.verdict,
         r.match_status,
         r.attributed_orders,
-        r.unlinked_orders,
+        r.explicit_attributed_orders,
+        r.auto_attributed_orders,
         r.spend,
         r.meta_purchases,
         r.meta_purchase_value,
@@ -435,418 +551,695 @@ function CampaignTruthPage() {
     URL.revokeObjectURL(url);
   };
 
-  const variance = totals.expected - totals.collected;
-  const kpis = [
-    { l: "Ad spend", v: bdt(totals.spend), sub: `${num(totals.metaP)} Meta purchases` },
-    {
-      l: "Order value (booked)",
-      v: bdt(totals.booked),
-      sub: `${num(totals.orders)} order · ${num(totals.delivered)} delivered`,
-    },
-    {
-      l: "Actual collected (cash)",
-      v: totals.collectedKnown ? bdt(totals.collected) : "Pending",
-      sub: totals.collectedKnown
-        ? `Expected ${bdt(totals.expected)} · Variance ${bdt(variance)}`
-        : "Settlement/reconciliation বাকি",
-    },
-    {
-      l: "Realized profit (after ads)",
-      v: totals.realizedKnown ? bdt(totals.realized) : "Pending",
-      sub: totals.realizedKnown
-        ? `COGS ${bdt(totals.cogs)} · Opex ${bdt(totals.opex)} · Return ${bdt(totals.returnCharge)}`
-        : "কোনো campaign-এ cash data নেই",
-      tone: !totals.realizedKnown
-        ? "text-muted-foreground"
-        : totals.realized >= 0
-          ? "text-emerald-600"
-          : "text-rose-600",
-    },
-    {
-      l: "Realized ROAS",
-      v:
-        totals.realizedKnown && totals.realizedSpend > 0
-          ? (totals.realized / totals.realizedSpend).toFixed(2) + "x"
-          : "—",
-      sub: totals.collectedKnown && totals.spend > 0
-        ? `Cash ROAS ${(totals.collected / totals.spend).toFixed(2)}x`
-        : "—",
-    },
-    {
-      l: "Projected profit (pipeline)",
-      v: bdt(totals.net),
-      sub: `Cash নয় — delivered line value ভিত্তিক · ${num(totals.pendingCampaigns)} campaign pending`,
-    },
-  ];
+  const realizedDelta =
+    prevTotals && prevTotals.realizedKnown && Math.abs(prevTotals.realized) > 0
+      ? ((totals.realized - prevTotals.realized) / Math.abs(prevTotals.realized)) * 100
+      : null;
 
   return (
-    <div className="mx-auto max-w-[1600px] space-y-4 p-4 md:p-6">
-      {/* Hero */}
-      <div className="relative overflow-hidden rounded-2xl border bg-gradient-to-br from-primary/10 via-background to-background p-4 md:p-5">
-        <div className="flex flex-wrap items-start justify-between gap-3">
-          <div className="flex items-center gap-3">
-            <div className="rounded-xl bg-primary/15 p-2.5 text-primary">
-              <Scale className="h-6 w-6" />
-            </div>
-            <div>
-              <h1 className="text-xl font-semibold leading-tight">Campaign Profit Truth</h1>
-              <p className="text-xs text-muted-foreground">
-                Meta যা বলছে বনাম বাস্তবে কত order, কত cash collect হলো আর ad spend বাদ দিয়ে আসল
-                profit কত
-              </p>
-            </div>
-          </div>
-          <div className="flex flex-wrap items-center gap-2">
-            <BrandTabs value={brandKey} onChange={setBrandKey} />
-            <DateRangePicker value={range} onChange={setRange} />
-            <Button
-              size="sm"
-              onClick={() => rerun.mutate()}
-              disabled={rerun.isPending || brandIds.length === 0}
-            >
-              <Wand2 className="mr-1.5 h-3.5 w-3.5" />
-              {rerun.isPending ? "Matching…" : "Re-run matching"}
-            </Button>
-            <Button variant="outline" size="sm" onClick={() => q.refetch()}>
-              <RefreshCcw className={`mr-1.5 h-3.5 w-3.5 ${q.isFetching ? "animate-spin" : ""}`} />
-              Refresh
-            </Button>
-            <Button variant="outline" size="sm" onClick={exportCsv} disabled={rows.length === 0}>
-              <Download className="mr-1.5 h-3.5 w-3.5" />
-              CSV
-            </Button>
-          </div>
+    <div className="mx-auto max-w-[1600px] space-y-5 p-4 md:p-6">
+      {/* 1 — Header */}
+      <header className="grid grid-cols-[minmax(0,1fr)_auto] items-start gap-4 sm:flex sm:flex-wrap sm:justify-between">
+        <div className="min-w-0">
+          <h1 className="truncate text-lg font-semibold tracking-tight md:text-xl">
+            Campaign Profit Truth
+          </h1>
+          <p className="mt-0.5 text-xs text-muted-foreground">
+            Actual collected cash, real costs, and campaign profitability.
+          </p>
         </div>
+        <div className="flex flex-wrap items-center gap-2">
+          <BrandTabs value={brandKey} onChange={setBrandKey} />
+          <DateRangePicker value={range} onChange={setRange} />
+          <Button
+            variant={compare ? "secondary" : "ghost"}
+            size="sm"
+            onClick={() => setCompare((c) => !c)}
+          >
+            Compare
+          </Button>
+          <Button variant="ghost" size="sm" onClick={() => q.refetch()}>
+            <RefreshCcw className={`mr-1.5 h-3.5 w-3.5 ${q.isFetching ? "animate-spin" : ""}`} />
+            Refresh
+          </Button>
+          <Button variant="ghost" size="sm" onClick={exportCsv} disabled={rows.length === 0}>
+            <Download className="mr-1.5 h-3.5 w-3.5" />
+            Export
+          </Button>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => rerun.mutate()}
+            disabled={rerun.isPending || brandIds.length === 0}
+          >
+            <Wand2 className="mr-1.5 h-3.5 w-3.5" />
+            {rerun.isPending ? "Matching…" : "Re-run matching"}
+          </Button>
+        </div>
+      </header>
 
-        <div className="mt-4 grid grid-cols-2 gap-3 md:grid-cols-6">
-          {kpis.map((k) => (
-            <div key={k.l} className="rounded-xl border bg-card/70 p-3 backdrop-blur">
-              <div className="text-[11px] uppercase tracking-wide text-muted-foreground">{k.l}</div>
-              <div className={`mt-1 text-xl font-semibold tabular-nums ${k.tone ?? ""}`}>{k.v}</div>
-              <div className="mt-0.5 truncate text-[11px] text-muted-foreground">{k.sub}</div>
-            </div>
-          ))}
-        </div>
+      {/* Context bar */}
+      <div className="flex flex-wrap items-center gap-x-2 gap-y-1 text-[11px] text-muted-foreground">
+        <span className="rounded border bg-muted/40 px-2 py-0.5 text-foreground">{brandLabel}</span>
+        <span className="rounded border px-2 py-0.5">{range.label ?? "Custom range"}</span>
+        <span className="rounded border px-2 py-0.5 tabular-nums">
+          {range.from} → {range.to}
+        </span>
+        {compare && (
+          <span className="rounded border border-indigo-500/30 bg-indigo-500/5 px-2 py-0.5 tabular-nums text-indigo-600">
+            vs {prev.from} → {prev.to}
+          </span>
+        )}
+        <span className="ml-auto tabular-nums">{num(rows.length)} campaigns in view</span>
       </div>
 
-      {/* Data health */}
-      <Card>
-        <CardContent className="flex flex-wrap items-center gap-4 p-3">
-          <div className="min-w-[260px] flex-1">
-            <div className="mb-1 flex items-center justify-between text-xs">
-              <span className="font-medium">Attribution health</span>
-              <span className="tabular-nums text-muted-foreground">
-                {health
-                  ? `${num(health.attributed_orders)}/${num(health.total_orders)} order attributed (${matchHealth}%) · ✋ ${num(health.explicit_orders)} explicit · 🤖 ${num(health.auto_orders)} auto · ${num(health.unattributed_orders)} unattributed`
-                  : "Loading…"}
-              </span>
-            </div>
-            <Progress value={matchHealth} className="h-2" />
+      {/* 2 — Financial truth hero */}
+      <section className="grid gap-px overflow-hidden rounded-xl border bg-border lg:grid-cols-[1.15fr_1fr]">
+        <div className="bg-card p-5 md:p-6">
+          <div className="text-[11px] font-medium uppercase tracking-[0.14em] text-muted-foreground">
+            Realized net profit
           </div>
-          {totals.missingCost > 0 && (
-            <div className="flex items-center gap-1.5 rounded-lg border border-amber-500/40 bg-amber-500/10 px-2.5 py-1.5 text-xs text-amber-700">
-              <AlertTriangle className="h-3.5 w-3.5" />
-              {num(totals.missingCost)} unit-এর cost price নেই — profit কম/বেশি দেখাতে পারে
+          {q.isLoading ? (
+            <Skeleton className="mt-3 h-12 w-56" />
+          ) : (
+            <div
+              className={`mt-2 text-4xl font-semibold tabular-nums tracking-tight md:text-5xl ${
+                !totals.realizedKnown
+                  ? "text-muted-foreground"
+                  : totals.realized >= 0
+                    ? "text-emerald-600"
+                    : "text-rose-600"
+              }`}
+            >
+              {totals.realizedKnown ? signedBdt(totals.realized) : "Pending"}
             </div>
           )}
-        </CardContent>
-      </Card>
+          <p className="mt-2 max-w-md text-xs text-muted-foreground">
+            After actual collected cash, canonical costs, return charges &amp; ad spend.
+          </p>
+          <div className="mt-3 flex flex-wrap items-center gap-2 text-[11px]">
+            {compare && realizedDelta !== null && (
+              <span
+                className={`inline-flex items-center gap-1 rounded border px-2 py-0.5 tabular-nums ${
+                  realizedDelta >= 0
+                    ? "border-emerald-500/30 bg-emerald-500/5 text-emerald-600"
+                    : "border-rose-500/30 bg-rose-500/5 text-rose-600"
+                }`}
+              >
+                {realizedDelta >= 0 ? (
+                  <TrendingUp className="h-3 w-3" />
+                ) : (
+                  <TrendingDown className="h-3 w-3" />
+                )}
+                {realizedDelta >= 0 ? "+" : ""}
+                {realizedDelta.toFixed(1)}% vs previous period
+              </span>
+            )}
+            {totals.pendingCampaigns > 0 && (
+              <span className="rounded border border-amber-500/30 bg-amber-500/5 px-2 py-0.5 text-amber-700">
+                {num(totals.pendingCampaigns)} campaign settlement pending
+              </span>
+            )}
+          </div>
+        </div>
 
-      {/* Filters */}
+        <div className="grid grid-cols-2 gap-px bg-border">
+          <HeroStat label="Ad spend" value={bdt(totals.spend)} sub={`${num(totals.metaP)} Meta purchases`} />
+          <HeroStat
+            label="Actual collected"
+            value={totals.collectedKnown ? bdt(totals.collected) : "Pending"}
+            sub={
+              totals.collectedKnown
+                ? `Expected ${bdt(totals.expected)} · Var ${bdt(totals.expected - totals.collected)}`
+                : "Settlement reconciliation pending"
+            }
+          />
+          <HeroStat
+            label="Gross contribution"
+            value={bdt(totals.gp)}
+            sub={`COGS ${bdt(totals.cogs)} · Opex ${bdt(totals.opex)}`}
+          />
+          <HeroStat
+            label="Profit ROAS"
+            value={
+              totals.realizedKnown && totals.realizedSpend > 0
+                ? (totals.realized / totals.realizedSpend).toFixed(2) + "x"
+                : "—"
+            }
+            sub={
+              totals.collectedKnown && totals.spend > 0
+                ? `Cash ROAS ${(totals.collected / totals.spend).toFixed(2)}x`
+                : "Realized cash based"
+            }
+          />
+        </div>
+      </section>
+
+      {/* 3 — Truth confidence */}
+      <section className="rounded-xl border bg-card p-4">
+        <div className="flex flex-wrap items-center gap-x-6 gap-y-3">
+          <div className="min-w-[240px] flex-1">
+            <div className="flex items-baseline justify-between">
+              <span className="text-[11px] font-medium uppercase tracking-[0.14em] text-muted-foreground">
+                Truth confidence
+              </span>
+              <span className="text-lg font-semibold tabular-nums">
+                {coverage.overall === null ? "—" : `${coverage.overall}%`}
+              </span>
+            </div>
+            <div className="mt-2 h-1.5 w-full overflow-hidden rounded-full bg-muted">
+              <div
+                className={`h-full rounded-full ${
+                  (coverage.overall ?? 0) >= 80
+                    ? "bg-emerald-500"
+                    : (coverage.overall ?? 0) >= 50
+                      ? "bg-amber-500"
+                      : "bg-rose-500"
+                }`}
+                style={{ width: `${coverage.overall ?? 0}%` }}
+              />
+            </div>
+          </div>
+          <div className="grid flex-[2] grid-cols-2 gap-x-6 gap-y-2 sm:grid-cols-4">
+            <CoverageBar label="Attribution" value={coverage.attribution} />
+            <CoverageBar label="Settlement" value={coverage.settlement} />
+            <CoverageBar label="COGS" value={coverage.cogs} />
+            <CoverageBar label="Courier cost" value={coverage.courier} />
+          </div>
+        </div>
+
+        {(pendingDelivered > 0 || totals.missingCost > 0 || (health?.unattributed_orders ?? 0) > 0) && (
+          <div className="mt-3 flex flex-wrap gap-2 border-t pt-3 text-xs">
+            {pendingDelivered > 0 && (
+              <button
+                type="button"
+                onClick={() => setCoverageFilter("pending")}
+                className="inline-flex items-center gap-1.5 rounded-lg border border-amber-500/30 bg-amber-500/5 px-2.5 py-1.5 text-amber-700 transition-colors hover:bg-amber-500/10"
+              >
+                <AlertTriangle className="h-3.5 w-3.5" />
+                {num(pendingDelivered)} delivered orders pending settlement — show{" "}
+                {num(pendingSettlementCampaigns.length)} campaigns
+              </button>
+            )}
+            {totals.missingCost > 0 && (
+              <span className="inline-flex items-center gap-1.5 rounded-lg border px-2.5 py-1.5 text-muted-foreground">
+                <AlertTriangle className="h-3.5 w-3.5" />
+                {num(totals.missingCost)} unit cost data incomplete
+              </span>
+            )}
+            {health && health.unattributed_orders > 0 && (
+              <span className="inline-flex items-center gap-1.5 rounded-lg border px-2.5 py-1.5 text-muted-foreground">
+                {num(health.unattributed_orders)} orders not confidently matched · ✋
+                {num(health.explicit_orders)} manual · 🤖{num(health.auto_orders)} auto
+              </span>
+            )}
+          </div>
+        )}
+      </section>
+
+      {/* 4 — Filters */}
       <div className="flex flex-wrap items-center gap-2">
         <div className="relative w-full max-w-xs">
           <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
           <Input
             className="pl-8"
-            placeholder="Campaign name বা campaign id…"
+            placeholder="Search campaign or ID…"
             value={search}
             onChange={(e) => setSearch(e.target.value)}
           />
         </div>
-        <Button
-          variant={verdictFilter === "all" ? "default" : "outline"}
-          size="sm"
-          onClick={() => setVerdictFilter("all")}
-        >
-          All ({all.length})
-        </Button>
-        {VERDICTS.map((v) => (
-          <Button
-            key={v.key}
-            variant={verdictFilter === v.key ? "default" : "outline"}
-            size="sm"
-            onClick={() => setVerdictFilter(v.key)}
-          >
-            {v.label} ({verdictCounts[v.key] ?? 0})
-          </Button>
-        ))}
-        <div className="ml-auto flex items-center gap-1.5 text-xs text-muted-foreground">
-          Min spend
-          <Input
-            type="number"
-            className="h-8 w-24"
-            value={minSpend || ""}
-            placeholder="0"
-            onChange={(e) => setMinSpend(Number(e.target.value) || 0)}
-          />
-        </div>
-      </div>
-
-      {/* Activity + tag filters */}
-      <div className="flex flex-wrap items-center gap-2">
-        <span className="text-[11px] uppercase tracking-wide text-muted-foreground">Activity</span>
-        {ACTIVITY_FILTERS.map((a) => (
-          <Button
-            key={a.key}
-            variant={activity === a.key ? "default" : "outline"}
-            size="sm"
-            onClick={() => setActivity(a.key)}
-          >
-            {a.label} ({activityCounts[a.key] ?? 0})
-          </Button>
-        ))}
-        <span className="ml-3 text-[11px] uppercase tracking-wide text-muted-foreground">Tags</span>
-        {CAMPAIGN_TAGS.map((t) => {
-          const on = tagFilter.includes(t.key);
-          return (
-            <Button
+        <div className="flex flex-wrap items-center gap-1 rounded-lg border p-0.5">
+          {TRUTH_FILTERS.map((t) => (
+            <button
               key={t.key}
-              variant={on ? "default" : "outline"}
-              size="sm"
-              onClick={() =>
-                setTagFilter((cur) =>
-                  cur.includes(t.key) ? cur.filter((x) => x !== t.key) : [...cur, t.key],
-                )
-              }
+              type="button"
+              onClick={() => setTruthFilter(t.key)}
+              className={`rounded-md px-2.5 py-1 text-xs transition-colors ${
+                truthFilter === t.key
+                  ? "bg-primary text-primary-foreground"
+                  : "text-muted-foreground hover:bg-muted"
+              }`}
             >
-              {t.label} ({tagCounts[t.key] ?? 0})
+              {t.label}
+              <span className="ml-1 tabular-nums opacity-70">{truthCounts[t.key] ?? 0}</span>
+            </button>
+          ))}
+        </div>
+
+        <Popover>
+          <PopoverTrigger asChild>
+            <Button variant="outline" size="sm">
+              <SlidersHorizontal className="mr-1.5 h-3.5 w-3.5" />
+              Filters
+              {advancedActive > 0 && (
+                <span className="ml-1.5 rounded bg-primary/10 px-1 text-[10px] tabular-nums text-primary">
+                  {advancedActive} active
+                </span>
+              )}
             </Button>
-          );
-        })}
-        {tagFilter.length > 0 && (
-          <Button variant="ghost" size="sm" onClick={() => setTagFilter([])}>
-            Clear tags
-          </Button>
-        )}
-        <div className="ml-auto flex items-center gap-1">
-          <span className="text-[11px] uppercase tracking-wide text-muted-foreground">Trend</span>
-          <Button
-            variant={grain === "day" ? "default" : "outline"}
-            size="sm"
-            onClick={() => setGrain("day")}
-          >
-            Daily
-          </Button>
-          <Button
-            variant={grain === "week" ? "default" : "outline"}
-            size="sm"
-            onClick={() => setGrain("week")}
-          >
-            Weekly
-          </Button>
+          </PopoverTrigger>
+          <PopoverContent align="start" className="w-[320px] space-y-3 p-3">
+            <FilterGroup label="Activity">
+              {ACTIVITY_FILTERS.map((a) => (
+                <MiniToggle
+                  key={a.key}
+                  on={activity === a.key}
+                  onClick={() => setActivity(a.key)}
+                  label={`${a.label} (${activityCounts[a.key] ?? 0})`}
+                />
+              ))}
+            </FilterGroup>
+            <FilterGroup label="Match status">
+              <MiniToggle on={verdictFilter === "all"} onClick={() => setVerdictFilter("all")} label="All" />
+              {VERDICTS.map((v) => (
+                <MiniToggle
+                  key={v.key}
+                  on={verdictFilter === v.key}
+                  onClick={() => setVerdictFilter(v.key)}
+                  label={v.label}
+                />
+              ))}
+            </FilterGroup>
+            <FilterGroup label="Product assignment">
+              {(
+                [
+                  ["all", "All"],
+                  ["manual", "✋ Manual linked"],
+                  ["auto", "🤖 Auto suggested"],
+                  ["none", "Not assigned"],
+                ] as [ProductFilter, string][]
+              ).map(([k, l]) => (
+                <MiniToggle key={k} on={productFilter === k} onClick={() => setProductFilter(k)} label={l} />
+              ))}
+            </FilterGroup>
+            <FilterGroup label="Truth coverage">
+              {(
+                [
+                  ["all", "All"],
+                  ["high", "≥ 80%"],
+                  ["low", "< 80%"],
+                  ["pending", "Pending"],
+                ] as [CoverageFilter, string][]
+              ).map(([k, l]) => (
+                <MiniToggle key={k} on={coverageFilter === k} onClick={() => setCoverageFilter(k)} label={l} />
+              ))}
+            </FilterGroup>
+            <FilterGroup label="Tags">
+              {CAMPAIGN_TAGS.map((t) => (
+                <MiniToggle
+                  key={t.key}
+                  on={tagFilter.includes(t.key)}
+                  onClick={() =>
+                    setTagFilter((cur) =>
+                      cur.includes(t.key) ? cur.filter((x) => x !== t.key) : [...cur, t.key],
+                    )
+                  }
+                  label={`${t.label} (${tagCounts[t.key] ?? 0})`}
+                />
+              ))}
+            </FilterGroup>
+            <Separator />
+            <div className="flex items-center justify-between gap-2">
+              <label className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                Min spend
+                <Input
+                  type="number"
+                  className="h-8 w-24"
+                  value={minSpend || ""}
+                  placeholder="0"
+                  onChange={(e) => setMinSpend(Number(e.target.value) || 0)}
+                />
+              </label>
+              <MiniToggle on={hasOrders} onClick={() => setHasOrders((v) => !v)} label="Has orders" />
+            </div>
+            <div className="flex items-center justify-between gap-2">
+              <FilterGroup label="Trend">
+                <MiniToggle on={grain === "day"} onClick={() => setGrain("day")} label="Daily" />
+                <MiniToggle on={grain === "week"} onClick={() => setGrain("week")} label="Weekly" />
+              </FilterGroup>
+              <Button variant="ghost" size="sm" onClick={resetAdvanced}>
+                Reset
+              </Button>
+            </div>
+          </PopoverContent>
+        </Popover>
+
+        <div className="ml-auto flex items-center gap-2">
+          <Popover>
+            <PopoverTrigger asChild>
+              <Button variant="ghost" size="sm">
+                <ArrowUpDown className="mr-1.5 h-3.5 w-3.5" />
+                {SORTS.find((s) => s.key === sortKey)?.label}
+                <span className="ml-1 text-[10px] opacity-60">{sortDesc ? "↓" : "↑"}</span>
+              </Button>
+            </PopoverTrigger>
+            <PopoverContent align="end" className="w-52 p-1">
+              {SORTS.map((s) => (
+                <button
+                  key={s.key}
+                  type="button"
+                  onClick={() => (s.key === sortKey ? setSortDesc((d) => !d) : (setSortKey(s.key), setSortDesc(true)))}
+                  className="flex w-full items-center justify-between rounded-md px-2 py-1.5 text-xs hover:bg-muted"
+                >
+                  {s.label}
+                  {sortKey === s.key && <Check className="h-3.5 w-3.5 text-primary" />}
+                </button>
+              ))}
+            </PopoverContent>
+          </Popover>
+          <div className="flex items-center rounded-lg border p-0.5">
+            <button
+              type="button"
+              onClick={() => setView("table")}
+              className={`rounded-md p-1.5 ${view === "table" ? "bg-muted text-foreground" : "text-muted-foreground"}`}
+              title="Table view"
+            >
+              <Rows3 className="h-3.5 w-3.5" />
+            </button>
+            <button
+              type="button"
+              onClick={() => setView("performance")}
+              className={`rounded-md p-1.5 ${view === "performance" ? "bg-muted text-foreground" : "text-muted-foreground"}`}
+              title="Performance view"
+            >
+              <LayoutGrid className="h-3.5 w-3.5" />
+            </button>
+          </div>
         </div>
       </div>
 
-      {/* Table */}
-      <Card>
-        <CardContent className="p-0">
-          {q.isLoading ? (
-            <div className="space-y-2 p-4">
-              {Array.from({ length: 7 }).map((_, i) => (
-                <Skeleton key={i} className="h-10 w-full" />
-              ))}
-            </div>
-          ) : rows.length === 0 ? (
-            <div className="p-10 text-center text-sm text-muted-foreground">
-              এই filter/range-এ কোনো campaign নেই।
-            </div>
-          ) : (
-            <div className="overflow-x-auto">
-              <table className="w-full text-sm">
-                <thead className="sticky top-0 z-10 bg-muted/70 text-[11px] uppercase tracking-wide text-muted-foreground backdrop-blur">
-                  <tr>
-                    <th className="p-2.5 text-left">Campaign</th>
-                    <SortTh k="spend" label="Spend" {...{ sortKey, sortDesc, toggleSort }} />
-                    <SortTh k="orders" label="Orders funnel" {...{ sortKey, sortDesc, toggleSort }} />
-                    <th className="p-2.5 text-right">Collected</th>
-                    <th className="p-2.5 text-right">Realized profit</th>
-                    <th className="p-2.5 text-right">Status</th>
-                  </tr>
-
-                </thead>
-                <tbody>
-                  {rows.map((r) => {
-                    const vm = verdictMeta(r.verdict);
-                    const open = openRow === r.id;
-                    return (
-                      <Fragment key={r.id}>
-                        <tr
-                          className="cursor-pointer border-t align-top transition-colors hover:bg-muted/40"
-                          onClick={() => setOpenRow(open ? null : r.id)}
-                        >
-                          <td className="max-w-[360px] p-2.5 align-top">
-                            <div className="flex items-start gap-1.5">
-                              <ChevronRight
-                                className={`mt-1 h-3.5 w-3.5 shrink-0 text-muted-foreground transition-transform ${open ? "rotate-90" : ""}`}
-                              />
-                              <div className="min-w-0 space-y-1">
-                                <div className="truncate font-medium leading-tight">{r.name}</div>
-                                <div className="flex flex-wrap items-center gap-1.5">
-                                  <Badge variant="outline" className="h-4 px-1 text-[10px]">
-                                    {r.status}
-                                  </Badge>
-                                  <TagChips tags={r.tags ?? []} />
-                                  <span className="truncate font-mono text-[10px] text-muted-foreground">
-                                    {r.external_id ?? "—"}
-                                  </span>
-                                </div>
+      {/* 5 — Campaign performance */}
+      {q.isLoading ? (
+        <div className="space-y-2 rounded-xl border bg-card p-4">
+          {Array.from({ length: 7 }).map((_, i) => (
+            <Skeleton key={i} className="h-12 w-full" />
+          ))}
+        </div>
+      ) : rows.length === 0 ? (
+        <div className="rounded-xl border bg-card p-12 text-center text-sm text-muted-foreground">
+          এই filter/range-এ কোনো campaign নেই।
+        </div>
+      ) : view === "performance" ? (
+        <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
+          {rows.map((r) => (
+            <button
+              key={r.id}
+              type="button"
+              onClick={() => {
+                setView("table");
+                setOpenRow(r.id);
+              }}
+              className={`rounded-xl border border-l-2 bg-card p-4 text-left transition-colors hover:bg-muted/40 ${rowAccent(r.truth_status)}`}
+            >
+              <div className="truncate text-sm font-semibold">{r.name}</div>
+              <div className="mt-0.5 truncate text-[11px] text-muted-foreground">
+                {r.status} · {r.external_id ?? "no id"}
+              </div>
+              <div
+                className={`mt-3 text-2xl font-semibold tabular-nums ${
+                  r.realized_profit === null
+                    ? "text-muted-foreground"
+                    : r.realized_profit >= 0
+                      ? "text-emerald-600"
+                      : "text-rose-600"
+                }`}
+              >
+                {r.realized_profit === null ? "Settlement pending" : signedBdt(r.realized_profit)}
+              </div>
+              <div className="mt-3 grid grid-cols-3 gap-2 text-[11px] text-muted-foreground">
+                <div>
+                  <div className="uppercase tracking-wide">Spend</div>
+                  <div className="tabular-nums text-foreground">{bdt(r.spend)}</div>
+                </div>
+                <div>
+                  <div className="uppercase tracking-wide">Collected</div>
+                  <div className="tabular-nums text-foreground">
+                    {r.collected_amount === null ? "Pending" : bdt(r.collected_amount)}
+                  </div>
+                </div>
+                <div>
+                  <div className="uppercase tracking-wide">Delivery</div>
+                  <div className="tabular-nums text-foreground">{r.delivery_rate}%</div>
+                </div>
+              </div>
+              <div className="mt-3">
+                <Badge variant="outline" className={`h-5 px-1.5 text-[10px] ${truthTone(r.truth_status)}`}>
+                  {truthLabel(r.truth_status)}
+                </Badge>
+              </div>
+            </button>
+          ))}
+        </div>
+      ) : (
+        <div className="overflow-hidden rounded-xl border bg-card">
+          <div className="overflow-x-auto">
+            <table className="w-full min-w-[900px] text-sm">
+              <thead className="border-b bg-muted/30 text-[10px] uppercase tracking-[0.12em] text-muted-foreground">
+                <tr>
+                  <th className="px-4 py-3 text-left font-medium">Campaign</th>
+                  <th className="px-4 py-3 text-right font-medium">Spend</th>
+                  <th className="px-4 py-3 text-left font-medium">Lifecycle</th>
+                  <th className="px-4 py-3 text-right font-medium">Actual collected</th>
+                  <th className="px-4 py-3 text-right font-medium">Realized profit</th>
+                  <th className="px-4 py-3 text-right font-medium">Verdict</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y">
+                {rows.map((r) => {
+                  const open = openRow === r.id;
+                  const margin =
+                    r.realized_profit !== null && (r.collected_amount ?? 0) > 0
+                      ? (r.realized_profit / (r.collected_amount as number)) * 100
+                      : null;
+                  return (
+                    <Fragment key={r.id}>
+                      <tr
+                        className={`cursor-pointer border-l-2 align-top transition-colors hover:bg-muted/30 ${rowAccent(r.truth_status)} ${open ? "bg-muted/30" : ""}`}
+                        onClick={() => setOpenRow(open ? null : r.id)}
+                      >
+                        <td className="max-w-[380px] px-4 py-3.5">
+                          <div className="flex items-start gap-2">
+                            <ChevronRight
+                              className={`mt-1 h-3.5 w-3.5 shrink-0 text-muted-foreground transition-transform ${open ? "rotate-90" : ""}`}
+                            />
+                            <div className="min-w-0">
+                              <div className="truncate font-medium leading-tight">{r.name}</div>
+                              <div className="mt-1 flex flex-wrap items-center gap-1.5 text-[11px] text-muted-foreground">
+                                <span className="capitalize">{r.status}</span>
+                                <span className="opacity-40">·</span>
                                 <CampaignProductChips
                                   entry={productMap[r.id]}
                                   loading={productsQ.isLoading}
                                 />
+                                <TagChips tags={r.tags ?? []} />
                               </div>
                             </div>
-                          </td>
-                          <td className="p-2.5 align-top text-right tabular-nums">
-                            <div>{bdt(r.spend)}</div>
-                            <div className="text-[10px] text-muted-foreground">
-                              CPA {r.orders > 0 ? bdt(r.cpa) : "—"}
-                            </div>
-                          </td>
-                          <td className="p-2.5 align-top text-right">
-                            <div className="flex flex-wrap items-center justify-end gap-1 text-[10px]">
-                              <span className="rounded border px-1 tabular-nums">
-                                Booked {r.orders}
-                              </span>
-                              <span className="rounded border px-1 tabular-nums">
-                                Conf {r.confirmed_orders}
-                              </span>
-                              <span className="rounded border border-emerald-500/40 bg-emerald-500/10 px-1 tabular-nums text-emerald-600">
-                                Dlv {r.delivered_orders}
-                              </span>
-                              {r.returned_orders > 0 && (
-                                <span className="rounded border border-amber-500/40 bg-amber-500/10 px-1 tabular-nums text-amber-600">
-                                  Ret {r.returned_orders}
-                                </span>
-                              )}
-                              {r.cancelled_orders > 0 && (
-                                <span className="rounded border border-rose-500/40 bg-rose-500/10 px-1 tabular-nums text-rose-600">
-                                  Cnl {r.cancelled_orders}
-                                </span>
-                              )}
-                            </div>
-                            <div className="mt-0.5 text-[10px] text-muted-foreground">
-                              Delivery {r.delivery_rate}% · ✋{r.explicit_attributed_orders} 🤖
-                              {r.auto_attributed_orders}
-                              {r.attribution_confidence === null
-                                ? ""
-                                : ` · conf ${r.attribution_confidence}%`}
-                            </div>
-                          </td>
-                          <td className="p-2.5 align-top text-right tabular-nums">
-                            {r.collected_amount === null ? (
-                              <Badge variant="outline" className="h-5 px-1.5 text-[10px]">
+                          </div>
+                        </td>
+                        <td className="px-4 py-3.5 text-right tabular-nums">
+                          <div className="font-medium">{bdt(r.spend)}</div>
+                          <div className="mt-0.5 text-[11px] text-muted-foreground">
+                            CPA {r.orders > 0 ? bdt(r.cpa) : "—"}
+                          </div>
+                        </td>
+                        <td className="px-4 py-3.5">
+                          <MiniFunnel row={r} />
+                        </td>
+                        <td className="px-4 py-3.5 text-right tabular-nums">
+                          {r.collected_amount === null ? (
+                            <>
+                              <div className="text-[11px] font-medium text-amber-700">
                                 Pending reconciliation
-                              </Badge>
-                            ) : (
-                              <>
-                                <div className="font-medium">{bdt(r.collected_amount)}</div>
-                                <div className="text-[10px] text-muted-foreground">
-                                  Expected {bdt(r.expected_collectible ?? 0)} · Var{" "}
-                                  {bdt(r.collection_variance ?? 0)}
-                                </div>
-                              </>
-                            )}
-                          </td>
-                          <td className="p-2.5 align-top text-right tabular-nums">
-                            {r.realized_profit === null ? (
-                              <span className="text-[11px] text-muted-foreground">—</span>
-                            ) : (
-                              <span
-                                className={`inline-flex items-center gap-1 font-semibold ${r.realized_profit >= 0 ? "text-emerald-600" : "text-rose-600"}`}
+                              </div>
+                              <div className="mt-0.5 text-[11px] text-muted-foreground">
+                                {r.expected_collectible === null
+                                  ? "Expected unknown"
+                                  : `Expected ${bdt(r.expected_collectible)}`}
+                              </div>
+                            </>
+                          ) : (
+                            <>
+                              <div className="font-medium">{bdt(r.collected_amount)}</div>
+                              <div className="mt-0.5 text-[11px] text-muted-foreground">
+                                Expected {bdt(r.expected_collectible ?? 0)} · Var{" "}
+                                {bdt(r.collection_variance ?? 0)}
+                              </div>
+                            </>
+                          )}
+                        </td>
+                        <td className="px-4 py-3.5 text-right tabular-nums">
+                          {r.realized_profit === null ? (
+                            <span className="text-[11px] text-muted-foreground">Settlement pending</span>
+                          ) : (
+                            <>
+                              <div
+                                className={`text-base font-semibold ${r.realized_profit >= 0 ? "text-emerald-600" : "text-rose-600"}`}
                               >
-                                {r.realized_profit >= 0 ? (
-                                  <TrendingUp className="h-3 w-3" />
-                                ) : (
-                                  <TrendingDown className="h-3 w-3" />
-                                )}
-                                {bdt(r.realized_profit)}
-                              </span>
-                            )}
-                            <div className="text-[10px] text-muted-foreground">
-                              Projected {bdt(r.projected_profit)}
-                            </div>
-                          </td>
-                          <td className="p-2.5 align-top text-right">
-                            <div className="flex flex-col items-end gap-0.5">
-                              <Badge
-                                variant="outline"
-                                className={`h-5 px-1.5 text-[10px] ${truthTone(r.truth_status)}`}
-                              >
-                                {truthLabel(r.truth_status)}
-                              </Badge>
-                              <span
-                                className="text-[10px] text-muted-foreground"
-                                title={`Attribution ${r.attribution_coverage ?? "—"}% · Settlement ${r.settlement_coverage ?? "—"}% · COGS ${r.cogs_coverage ?? "—"}% · Courier ${r.courier_cost_coverage ?? "—"}%`}
-                              >
-                                {r.truth_coverage === null
-                                  ? "coverage pending"
-                                  : `truth coverage ${r.truth_coverage}%`}
-                              </span>
-                              <Badge
-                                variant="outline"
-                                className={`h-4 px-1 text-[10px] ${vm.tone}`}
-                                title="Verdict — realized cash based"
-                              >
-                                {vm.label}
-                              </Badge>
-                            </div>
+                                {signedBdt(r.realized_profit)}
+                              </div>
+                              <div className="mt-0.5 text-[11px] text-muted-foreground">
+                                {margin === null ? "Margin —" : `Margin ${margin.toFixed(1)}%`}
+                              </div>
+                            </>
+                          )}
+                        </td>
+                        <td className="px-4 py-3.5 text-right">
+                          <div className="flex flex-col items-end gap-1">
+                            <span
+                              className={`inline-flex items-center gap-1.5 rounded-full border px-2 py-0.5 text-[11px] ${truthTone(r.truth_status)}`}
+                            >
+                              <span className={`h-1.5 w-1.5 rounded-full ${truthDot(r.truth_status)}`} />
+                              {truthLabel(r.truth_status)}
+                            </span>
+                            <span
+                              className="text-[10px] text-muted-foreground"
+                              title={`Attribution ${r.attribution_coverage ?? "—"}% · Settlement ${r.settlement_coverage ?? "—"}% · COGS ${r.cogs_coverage ?? "—"}% · Courier ${r.courier_cost_coverage ?? "—"}%`}
+                            >
+                              {r.truth_coverage === null
+                                ? "Settlement pending"
+                                : `Truth ${r.truth_coverage}%`}
+                            </span>
+                          </div>
+                        </td>
+                      </tr>
+                      {open && (
+                        <tr className="border-l-2 border-l-primary/40 bg-muted/20">
+                          <td colSpan={6} className="px-4 py-4">
+                            <CampaignTruthDetail
+                              row={r}
+                              trend={trendByCampaign.get(r.id) ?? []}
+                              brandId={brandIds.length === 1 ? brandIds[0] : null}
+                              brandIds={brandIds}
+                              range={{ from: range.from, to: range.to }}
+                              products={productMap[r.id]}
+                              onSaved={() => q.refetch()}
+                            />
                           </td>
                         </tr>
-                        {open && (
-                          <tr className="border-t bg-muted/20">
-                            <td colSpan={6} className="p-3">
-                              <CampaignTruthDetail
-                                row={r}
-                                trend={trendByCampaign.get(r.id) ?? []}
-                                brandId={brandIds.length === 1 ? brandIds[0] : null}
-                                brandIds={brandIds}
-                                range={{ from: range.from, to: range.to }}
-                                onSaved={() => q.refetch()}
-                              />
-                            </td>
-                          </tr>
-                        )}
-                      </Fragment>
-                    );
-                  })}
-                </tbody>
-                <tfoot className="border-t-2 bg-muted/40 text-xs font-semibold">
-                  <tr>
-                    <td className="p-2">Total ({rows.length})</td>
-                    <td className="p-2.5 align-top text-right tabular-nums">{bdt(totals.spend)}</td>
-                    <td className="p-2.5 align-top text-right tabular-nums">
-                      {num(totals.orders)} booked · {num(totals.delivered)} delivered
-                    </td>
-                    <td className="p-2.5 align-top text-right tabular-nums">
-                      {totals.collectedKnown ? bdt(totals.collected) : "Pending"}
-                    </td>
-                    <td
-                      className={`p-2 text-right tabular-nums ${totals.realized >= 0 ? "text-emerald-600" : "text-rose-600"}`}
-                    >
-                      {totals.collectedKnown ? bdt(totals.realized) : "—"}
-                    </td>
-                    <td className="p-2 text-right tabular-nums text-muted-foreground">
-                      Projected {bdt(totals.net)}
-                    </td>
-                  </tr>
-                </tfoot>
+                      )}
+                    </Fragment>
+                  );
+                })}
+              </tbody>
+              <tfoot className="border-t bg-muted/30 text-xs">
+                <tr>
+                  <td className="px-4 py-3 font-medium">Total · {rows.length} campaigns</td>
+                  <td className="px-4 py-3 text-right font-medium tabular-nums">{bdt(totals.spend)}</td>
+                  <td className="px-4 py-3 tabular-nums text-muted-foreground">
+                    {num(totals.orders)} booked · {num(totals.delivered)} delivered
+                  </td>
+                  <td className="px-4 py-3 text-right font-medium tabular-nums">
+                    {totals.collectedKnown ? bdt(totals.collected) : "Pending"}
+                  </td>
+                  <td
+                    className={`px-4 py-3 text-right font-semibold tabular-nums ${totals.realized >= 0 ? "text-emerald-600" : "text-rose-600"}`}
+                  >
+                    {totals.realizedKnown ? signedBdt(totals.realized) : "—"}
+                  </td>
+                  <td className="px-4 py-3 text-right tabular-nums text-muted-foreground">
+                    Projected {bdt(totals.net)}
+                  </td>
+                </tr>
+              </tfoot>
+            </table>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
 
-              </table>
+function HeroStat({ label, value, sub }: { label: string; value: string; sub: string }) {
+  return (
+    <div className="bg-card p-4">
+      <div className="text-[10px] uppercase tracking-[0.12em] text-muted-foreground">{label}</div>
+      <div className="mt-1 text-lg font-semibold tabular-nums">{value}</div>
+      <div className="mt-0.5 truncate text-[11px] text-muted-foreground" title={sub}>
+        {sub}
+      </div>
+    </div>
+  );
+}
+
+function CoverageBar({ label, value }: { label: string; value: number | null }) {
+  return (
+    <div>
+      <div className="flex items-baseline justify-between text-[11px]">
+        <span className="text-muted-foreground">{label}</span>
+        <span className="tabular-nums">{value === null ? "—" : `${value}%`}</span>
+      </div>
+      <div className="mt-1 h-1 w-full overflow-hidden rounded-full bg-muted">
+        <div
+          className={`h-full rounded-full ${
+            value === null
+              ? "bg-muted-foreground/30"
+              : value >= 80
+                ? "bg-emerald-500"
+                : value >= 50
+                  ? "bg-amber-500"
+                  : "bg-rose-500"
+          }`}
+          style={{ width: `${value ?? 0}%` }}
+        />
+      </div>
+    </div>
+  );
+}
+
+function FilterGroup({ label, children }: { label: string; children: React.ReactNode }) {
+  return (
+    <div>
+      <div className="mb-1.5 text-[10px] uppercase tracking-[0.12em] text-muted-foreground">
+        {label}
+      </div>
+      <div className="flex flex-wrap gap-1">{children}</div>
+    </div>
+  );
+}
+
+function MiniToggle({ on, onClick, label }: { on: boolean; onClick: () => void; label: string }) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className={`rounded-md border px-2 py-0.5 text-[11px] transition-colors ${
+        on ? "border-primary/40 bg-primary/10 text-primary" : "text-muted-foreground hover:bg-muted"
+      }`}
+    >
+      {label}
+    </button>
+  );
+}
+
+/** Compact lifecycle funnel — booked → confirmed → delivered, with return/cancel tail. */
+function MiniFunnel({ row }: { row: CampaignTruthRow }) {
+  const booked = Math.max(row.orders, 1);
+  const stages = [
+    { l: "Booked", n: row.orders, tone: "bg-slate-400" },
+    { l: "Confirmed", n: row.confirmed_orders, tone: "bg-indigo-500" },
+    { l: "Delivered", n: row.delivered_orders, tone: "bg-emerald-500" },
+  ];
+  return (
+    <div className="min-w-[170px]">
+      <div className="flex items-end gap-1">
+        {stages.map((s) => (
+          <div key={s.l} className="flex-1">
+            <div className="text-[11px] font-medium tabular-nums">{s.n}</div>
+            <div className="mt-1 h-1 w-full overflow-hidden rounded-full bg-muted">
+              <div
+                className={`h-full rounded-full ${s.tone}`}
+                style={{ width: `${Math.min(100, (s.n / booked) * 100)}%` }}
+              />
             </div>
-          )}
-        </CardContent>
-      </Card>
+            <div className="mt-0.5 text-[10px] text-muted-foreground">{s.l}</div>
+          </div>
+        ))}
+      </div>
+      <div className="mt-1 flex flex-wrap items-center gap-2 text-[10px] text-muted-foreground">
+        <span>Delivery {row.delivery_rate}%</span>
+        {row.returned_orders > 0 && <span className="text-amber-600">↩ {row.returned_orders} returned</span>}
+        {row.cancelled_orders > 0 && <span className="opacity-70">✕ {row.cancelled_orders} cancelled</span>}
+      </div>
     </div>
   );
 }
@@ -859,86 +1252,46 @@ function CampaignProductChips({
   entry: CampaignProductsSummary[string] | undefined;
   loading: boolean;
 }) {
-  if (loading && !entry) return <Skeleton className="h-3.5 w-32" />;
+  if (loading && !entry) return <Skeleton className="h-3.5 w-24" />;
   const manual = entry?.manual ?? [];
   const auto = entry?.auto ?? [];
 
   if (manual.length > 0) {
-    const show = manual.slice(0, 3);
+    const show = manual.slice(0, 2);
     return (
-      <div className="flex flex-wrap items-center gap-1">
-        <span className="text-[10px] text-muted-foreground">✋</span>
+      <span className="inline-flex flex-wrap items-center gap-1">
         {show.map((p) => (
           <span
             key={p.product_id}
             title={p.sku ? `${p.title} · ${p.sku}` : p.title}
-            className="max-w-[150px] truncate rounded border border-primary/30 bg-primary/5 px-1 text-[10px] text-primary"
+            className="max-w-[140px] truncate rounded border border-primary/25 bg-primary/5 px-1 text-[10px] text-primary"
           >
-            {p.title}
+            ✋ {p.title}
           </span>
         ))}
-        {manual.length > show.length && (
-          <span className="text-[10px] text-muted-foreground">+{manual.length - show.length}</span>
-        )}
-      </div>
+        {manual.length > show.length && <span className="text-[10px]">+{manual.length - show.length}</span>}
+      </span>
     );
   }
 
   if (auto.length > 0) {
     const show = auto.slice(0, 2);
     return (
-      <div className="flex flex-wrap items-center gap-1">
-        <span className="text-[10px] text-muted-foreground" title="Auto detected — link kore confirm korun">
-          🤖
-        </span>
+      <span className="inline-flex flex-wrap items-center gap-1">
         {show.map((p) => (
           <span
             key={p.product_id}
-            title={`${p.title}${p.sku ? " · " + p.sku : ""} — ${p.orders ?? 0} order`}
-            className="max-w-[150px] truncate rounded border border-dashed border-muted-foreground/40 px-1 text-[10px] text-muted-foreground"
+            title={`${p.title}${p.sku ? " · " + p.sku : ""} — ${p.orders ?? 0} orders`}
+            className="max-w-[140px] truncate rounded border border-dashed px-1 text-[10px]"
           >
-            {p.title}
+            🤖 {p.title}
             {p.share !== null && p.share !== undefined ? ` ${p.share}%` : ""}
           </span>
         ))}
-        {auto.length > show.length && (
-          <span className="text-[10px] text-muted-foreground">+{auto.length - show.length}</span>
-        )}
-      </div>
+        {auto.length > show.length && <span className="text-[10px]">+{auto.length - show.length}</span>}
+      </span>
     );
   }
 
-  return <span className="text-[10px] text-muted-foreground">Product link নেই</span>;
+  return <span className="text-[10px] italic">Product not assigned</span>;
 }
-
-
-function SortTh({
-  k,
-  label,
-  sortKey,
-  sortDesc,
-  toggleSort,
-}: {
-  k: SortKey;
-  label: string;
-  sortKey: SortKey;
-  sortDesc: boolean;
-  toggleSort: (k: SortKey) => void;
-}) {
-  const active = sortKey === k;
-  return (
-    <th className="p-2.5 text-right">
-      <button
-        type="button"
-        onClick={() => toggleSort(k)}
-        className={`inline-flex items-center gap-1 uppercase ${active ? "text-foreground" : ""}`}
-      >
-        {label}
-        <ArrowUpDown className="h-3 w-3 opacity-60" />
-        {active && <span className="text-[9px]">{sortDesc ? "↓" : "↑"}</span>}
-      </button>
-    </th>
-  );
-}
-
-
