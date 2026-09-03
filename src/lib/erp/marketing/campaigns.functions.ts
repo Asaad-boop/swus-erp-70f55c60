@@ -907,8 +907,10 @@ export const getCampaignTruth = createServerFn({ method: "POST" })
       ].filter((v): v is number => v !== null);
       const truthCoverage = coverageParts.length > 0 ? Math.min(...coverageParts) : null;
 
-      // Realized = actual cash in − canonical COGS (net of resellable recovery)
-      //          − canonical opex − actual/fallback return charge − ad spend.
+      // Realized = NET cash received from courier (gross COD − actual courier
+      // charge) − canonical COGS (net of resellable recovery) − canonical opex
+      // EXCLUDING courier (already netted out of the cash, so counting it again
+      // would double-deduct) − actual/fallback return charge − ad spend.
       // Collected cash only covers *settled* delivered orders, so canonical
       // delivered-line costs are pro-rated to the same settled slice — otherwise
       // partial settlement would subtract full COGS from partial cash.
@@ -918,12 +920,16 @@ export const getCampaignTruth = createServerFn({ method: "POST" })
         deliveredOrderValue > 0 && expectedCollectible !== null
           ? Math.min(1, Math.max(0, expectedCollectible / deliveredOrderValue))
           : 1;
+      const collectedNet =
+        collectedGross === null ? null : r2(collectedGross - courierFeeSettled);
       const cogsSettled = (p.cogs - recovered) * settledShare;
-      const opexSettled = p.operating_cost * settledShare;
+      // Courier part of canonical opex, pro-rated to the settled slice.
+      const courierApplied = Number(s?.courier ?? 0) * settledShare;
+      const opexSettled = Math.max(0, p.operating_cost * settledShare - courierApplied);
       const realized =
-        collected === null
+        collectedNet === null
           ? null
-          : r2(collected - cogsSettled - opexSettled - (returnCharge ?? 0) - r.spend);
+          : r2(collectedNet - cogsSettled - opexSettled - (returnCharge ?? 0) - r.spend);
 
       const dataSufficient =
         realized !== null &&
@@ -966,7 +972,10 @@ export const getCampaignTruth = createServerFn({ method: "POST" })
         other_cost: Number(s?.other ?? 0),
         tags: ann?.tags ?? [],
         note: ann?.note ?? null,
-        collected_amount: collected,
+        collected_amount: collectedNet,
+        collected_gross: collectedGross,
+        courier_fee_settled: r2(courierFeeSettled),
+        courier_fee_estimated: courierFeeEstimated,
         expected_collectible: numOrNull((r as any).expected_collectible),
         collection_variance: numOrNull((r as any).collection_variance),
         return_charge: returnCharge,
