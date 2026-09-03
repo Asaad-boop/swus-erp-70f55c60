@@ -1448,6 +1448,8 @@ export type MetaSpendSummary = {
   effective_rate: number | null;
   wallet_coverage_pct: number | null;
   rows: number;
+  data_from: string | null;
+  data_through: string | null;
   last_insight_at: string | null;
   last_sync_at: string | null;
 };
@@ -1484,6 +1486,8 @@ export const getMetaSpendSummary = createServerFn({ method: "POST" })
       effective_rate: nn(r.effective_rate),
       wallet_coverage_pct: nn(r.wallet_coverage_pct),
       rows: n(r.rows),
+      data_from: (r.data_from as string) ?? null,
+      data_through: (r.data_through as string) ?? null,
       last_insight_at: (r.last_insight_at as string) ?? null,
       last_sync_at: (r.last_sync_at as string) ?? null,
     } satisfies MetaSpendSummary;
