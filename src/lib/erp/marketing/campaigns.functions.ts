@@ -891,16 +891,28 @@ export const getCampaignTruth = createServerFn({ method: "POST" })
 
       // Realized = actual cash in − canonical COGS (net of resellable recovery)
       //          − canonical opex − actual/fallback return charge − ad spend.
+      // Collected cash only covers *settled* delivered orders, so canonical
+      // delivered-line costs are pro-rated to the same settled slice — otherwise
+      // partial settlement would subtract full COGS from partial cash.
+      const deliveredOrderValue = Number((r as any).delivered_order_value ?? 0);
+      const expectedCollectible = numOrNull((r as any).expected_collectible);
+      const settledShare =
+        deliveredOrderValue > 0 && expectedCollectible !== null
+          ? Math.min(1, Math.max(0, expectedCollectible / deliveredOrderValue))
+          : 1;
+      const cogsSettled = (p.cogs - recovered) * settledShare;
+      const opexSettled = p.operating_cost * settledShare;
       const realized =
         collected === null
           ? null
-          : r2(collected - (p.cogs - recovered) - p.operating_cost - (returnCharge ?? 0) - r.spend);
+          : r2(collected - cogsSettled - opexSettled - (returnCharge ?? 0) - r.spend);
 
       const dataSufficient =
         realized !== null &&
         r.spend > 0 &&
         (settlementCoverage ?? 0) >= 50 &&
         (cogsCoverage ?? 0) >= 80 &&
+        (courierCoverage ?? 0) >= 50 &&
         (attributionCoverage ?? 0) >= 50;
 
       let truthStatus: CampaignTruthRow["truth_status"] = "too_early";
@@ -909,6 +921,7 @@ export const getCampaignTruth = createServerFn({ method: "POST" })
         else if (realized > 0) truthStatus = "profitable";
         else truthStatus = "losing";
       }
+
 
       // Verdict mirrors realized cash truth only — projected profit can never
       // make a campaign "profitable".
