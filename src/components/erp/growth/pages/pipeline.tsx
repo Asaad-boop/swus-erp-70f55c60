@@ -873,10 +873,11 @@ function BoardView({
               </Badge>
             </div>
           )}
-          <div className="flex snap-x gap-3 overflow-x-auto pb-2 md:grid md:grid-cols-5 md:overflow-visible">
+          <div className="flex snap-x gap-5 overflow-x-auto pb-2 md:grid md:grid-cols-5 md:gap-5 md:overflow-visible">
             {PIPELINE_STAGES.map((st) => {
               const list = lane.items.filter((i) => i.stage === st.key);
               const dropKey = `${lane.key}:${st.key}`;
+              const empty = list.length === 0;
               return (
                 <div
                   key={st.key}
@@ -890,22 +891,37 @@ function BoardView({
                     onDrop(st.key);
                   }}
                   className={cn(
-                    "w-[86vw] shrink-0 snap-start rounded-xl border border-border/60 bg-muted/25 p-2 transition-colors md:w-auto",
-                    dragOver === dropKey && "border-primary/50 bg-primary/5 ring-1 ring-primary/20",
+                    "flex w-[84vw] shrink-0 snap-start flex-col md:w-auto",
+                    empty && !dragOver && "opacity-70",
                   )}
                 >
-                  <div className="mb-2 flex items-center justify-between px-1">
-                    <span className="text-xs font-semibold">{st.label}</span>
-                    <Badge variant="secondary" className="text-[10px] tabular-nums">
+                  {/* Column header — rule line, no box */}
+                  <div
+                    className={cn(
+                      "mb-3 flex items-center justify-between border-b px-1 pb-2 transition-colors",
+                      dragOver === dropKey ? "border-primary" : "border-border",
+                    )}
+                  >
+                    <span className="text-[11px] font-bold uppercase tracking-wide">
+                      {st.label}
+                    </span>
+                    <span className="rounded-full bg-muted px-2 py-0.5 text-[10px] font-bold tabular-nums text-muted-foreground">
                       {swimlane === "none" ? (stageCounts.get(st.key) ?? 0) : list.length}
-                    </Badge>
+                    </span>
                   </div>
-                  <div className="space-y-2">
+                  <div className="flex flex-col gap-3">
                     {list.map((i) => (
                       <PipelineCard key={i.id} item={i} {...cardProps} />
                     ))}
-                    {list.length === 0 && (
-                      <p className="px-1 py-6 text-center text-[11px] text-muted-foreground">খালি</p>
+                    {empty && (
+                      <div
+                        className={cn(
+                          "flex h-32 items-center justify-center rounded-lg border-2 border-dashed text-[11px] text-muted-foreground transition-colors",
+                          dragOver === dropKey ? "border-primary bg-primary/5" : "border-border/60",
+                        )}
+                      >
+                        এখানে ড্রপ করো
+                      </div>
                     )}
                   </div>
                 </div>
@@ -917,6 +933,15 @@ function BoardView({
     </div>
   );
 }
+
+/** Stage → left accent color (flat, token-based). */
+const STAGE_ACCENT: Record<string, string> = {
+  ideation: "border-l-muted-foreground/30",
+  create: "border-l-sky-500",
+  editing: "border-l-amber-500",
+  published: "border-l-primary",
+  performance: "border-l-emerald-500",
+};
 
 function PipelineCard({
   item: i,
@@ -938,67 +963,104 @@ function PipelineCard({
       draggable
       onDragStart={() => onDragStart(i.id)}
       className={cn(
-        "group cursor-grab rounded-lg border bg-card p-2.5 shadow-sm transition-all hover:-translate-y-0.5 hover:border-primary/40 hover:shadow-md active:cursor-grabbing",
-        overdue ? "border-destructive/40" : "border-border/70",
-        isSel && "ring-1 ring-primary/40",
+        "group cursor-grab rounded-lg border border-l-4 bg-card p-4 transition-colors hover:border-primary/50 active:cursor-grabbing",
+        overdue ? "border-destructive/40" : "border-border",
+        STAGE_ACCENT[i.stage] ?? "border-l-muted-foreground/30",
+        isSel && "border-primary bg-primary/5",
       )}
     >
-      <div className="flex items-start gap-2">
+      <div className="flex items-start gap-3">
         <Checkbox
           checked={isSel}
           onCheckedChange={() => onToggle(i.id)}
-          className="mt-0.5 h-3.5 w-3.5"
+          className="mt-0.5 h-4 w-4 shrink-0"
         />
         <button className="min-w-0 flex-1 text-left" onClick={() => onOpen(i)} type="button">
-          <p className="line-clamp-2 text-xs font-semibold">{i.title}</p>
-          <p className="mt-0.5 truncate text-[10px] text-muted-foreground">
-            {i.code} · {labelOf(CONTENT_TYPES, i.content_type)} · {labelOf(PLATFORMS, i.platform)}
-          </p>
-          <div className="mt-1">
-            <BrandTag brandId={i.brand_id} />
+          <p className="line-clamp-2 text-[13px] font-semibold leading-tight">{i.title}</p>
+
+          {/* Mono meta line with dot separators */}
+          <div className="mt-1.5 flex flex-wrap items-center gap-1.5 font-mono text-[10px] uppercase tracking-tight text-muted-foreground">
+            <span>{i.code}</span>
+            <span className="h-1 w-1 rounded-full bg-border" />
+            <span>{labelOf(CONTENT_TYPES, i.content_type)}</span>
+            <span className="h-1 w-1 rounded-full bg-border" />
+            <span>{labelOf(PLATFORMS, i.platform)}</span>
           </div>
-          {i.product_id && productName.get(i.product_id) && (
-            <p className="mt-1 truncate text-[10px] text-muted-foreground">
-              📦 {productName.get(i.product_id)}
-            </p>
-          )}
-          {i.creator_id && creatorName.get(i.creator_id) && (
-            <p className="truncate text-[10px] text-muted-foreground">
-              🎬 {creatorName.get(i.creator_id)}
-            </p>
-          )}
-          <div className="mt-1.5 flex flex-wrap items-center gap-1">
-            <Badge variant="outline" className="text-[10px]">
+
+          {/* Relation rows */}
+          <div className="mt-3 flex flex-col gap-1.5">
+            <BrandTag brandId={i.brand_id} />
+            {i.product_id && productName.get(i.product_id) && (
+              <div className="flex items-center gap-2">
+                <span className="grid h-4 w-4 shrink-0 place-items-center rounded-sm border border-border bg-muted">
+                  <Package className="h-2.5 w-2.5 text-muted-foreground" />
+                </span>
+                <span className="truncate text-[11px] text-muted-foreground">
+                  {productName.get(i.product_id)}
+                </span>
+              </div>
+            )}
+            {i.creator_id && creatorName.get(i.creator_id) && (
+              <div className="flex items-center gap-2">
+                <span className="grid h-4 w-4 shrink-0 place-items-center rounded-sm border border-border bg-muted">
+                  <Users className="h-2.5 w-2.5 text-muted-foreground" />
+                </span>
+                <span className="truncate text-[11px] text-muted-foreground">
+                  {creatorName.get(i.creator_id)}
+                </span>
+              </div>
+            )}
+          </div>
+
+          {/* Flat badge row */}
+          <div className="mt-3 flex flex-wrap items-center gap-1.5">
+            <span className="rounded border border-border px-2 py-0.5 text-[10px] font-semibold text-muted-foreground">
               {labelOf(ITEM_STATUSES, i.status)}
-            </Badge>
+            </span>
             {i.content_style && (
-              <Badge variant="secondary" className="text-[10px]">
+              <span className="rounded border border-border px-2 py-0.5 text-[10px] font-semibold text-muted-foreground">
                 {labelOf(CONTENT_STYLES, i.content_style)}
-              </Badge>
+              </span>
             )}
             {i.cost > 0 && (
-              <Badge variant="outline" className="text-[10px]">
+              <span className="rounded border border-border px-2 py-0.5 text-[10px] font-semibold tabular-nums text-foreground">
                 {bdt(i.cost)}
-              </Badge>
+              </span>
             )}
             {i.views > 0 && (
-              <Badge variant="secondary" className="text-[10px]">
+              <span className="rounded border border-border px-2 py-0.5 text-[10px] font-semibold tabular-nums text-muted-foreground">
                 {fmtNum(i.views)} views
-              </Badge>
+              </span>
             )}
             {due != null && !done && (
-              <Pill tone={overdue ? "bad" : due <= 2 ? "warn" : "default"}>
-                <Clock className="h-3 w-3" />
+              <span
+                className={cn(
+                  "inline-flex items-center gap-1 rounded border px-2 py-0.5 text-[10px] font-semibold",
+                  overdue
+                    ? "border-destructive/30 bg-destructive/10 text-destructive"
+                    : due <= 2
+                      ? "border-amber-500/30 bg-amber-500/10 text-amber-600 dark:text-amber-400"
+                      : "border-border text-muted-foreground",
+                )}
+              >
+                <Clock className="h-2.5 w-2.5" />
                 {overdue ? `${Math.abs(due)}d late` : `${due}d left`}
-              </Pill>
+              </span>
             )}
           </div>
         </button>
         <GripVertical className="mt-0.5 h-3.5 w-3.5 shrink-0 text-muted-foreground/40 opacity-0 transition-opacity group-hover:opacity-100" />
       </div>
-      <div className="mt-2 flex items-center justify-between">
-        <Button size="icon" variant="ghost" className="h-6 w-6" onClick={() => onMove(i, -1)}>
-          <ChevronLeft className="h-3.5 w-3.5" />
+
+      {/* Quiet footer — arrows appear on hover/focus */}
+      <div className="mt-3 flex items-center justify-between border-t border-border/60 pt-2 opacity-60 transition-opacity group-hover:opacity-100 focus-within:opacity-100">
+        <Button
+          size="icon"
+          variant="ghost"
+          className="h-6 w-6 text-muted-foreground hover:text-primary"
+          onClick={() => onMove(i, -1)}
+        >
+          <ChevronLeft className="h-4 w-4" />
         </Button>
         {i.video_url && (
           <a
@@ -1010,13 +1072,19 @@ function PipelineCard({
             <Play className="h-3.5 w-3.5" />
           </a>
         )}
-        <Button size="icon" variant="ghost" className="h-6 w-6" onClick={() => onMove(i, 1)}>
-          <ChevronRight className="h-3.5 w-3.5" />
+        <Button
+          size="icon"
+          variant="ghost"
+          className="h-6 w-6 text-muted-foreground hover:text-primary"
+          onClick={() => onMove(i, 1)}
+        >
+          <ChevronRight className="h-4 w-4" />
         </Button>
       </div>
     </div>
   );
 }
+
 
 /* ---------------- List ---------------- */
 
