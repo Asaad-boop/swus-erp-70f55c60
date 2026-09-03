@@ -1108,7 +1108,12 @@ export type CampaignOrderRow = {
   status: string;
   confirmation_status: string | null;
   order_value: number;
+  /** Gross cash collected from the customer (COD + advance) */
   collected: number | null;
+  /** Courier charges deducted from the collected cash (null = unknown) */
+  courier_fee: number | null;
+  /** Net remittance actually received = collected − courier fee (null when unknown) */
+  net_payout: number | null;
   attr_source: string;
   attr_confidence: number;
 };
