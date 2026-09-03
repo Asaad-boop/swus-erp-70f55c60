@@ -753,8 +753,14 @@ export type CampaignTruthRow = {
   delivered_order_value: number;
   returned_count: number;
   settled_delivered_count: number;
-  /** null = pending reconciliation, never fake 0 */
+  /** Net cash received from courier (gross COD − courier charge). null = pending reconciliation, never fake 0 */
   collected_amount: number | null;
+  /** Gross cash collected from the customer before courier deduction */
+  collected_gross: number | null;
+  /** Courier charge deducted from the settled cash (actual settlement fee, else order courier_fee) */
+  courier_fee_settled: number;
+  /** true when some settled orders had no known courier fee — net is partially estimated */
+  courier_fee_estimated: boolean;
   expected_collectible: number | null;
   collection_variance: number | null;
   return_charge: number | null;
@@ -880,7 +886,9 @@ export const getCampaignTruth = createServerFn({ method: "POST" })
       const s = split.get(r.id);
       const ann = metaMap.get(r.id);
       const numOrNull = (v: unknown) => (v === null || v === undefined ? null : Number(v));
-      const collected = numOrNull((r as any).collected_amount);
+      const collectedGross = numOrNull((r as any).collected_amount);
+      const courierFeeSettled = Number((r as any).courier_fee_settled ?? 0);
+      const courierFeeEstimated = Boolean((r as any).courier_fee_estimated);
       const returnCharge = numOrNull((r as any).return_charge);
       const recovered = Number((r as any).cogs_recovered ?? 0);
       const settlementCoverage = numOrNull((r as any).settlement_coverage);
