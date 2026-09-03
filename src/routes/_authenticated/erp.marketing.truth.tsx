@@ -781,6 +781,67 @@ function CampaignTruthPage() {
   );
 }
 
+/** Linked (manual) or auto-detected products shown right under the campaign name. */
+function CampaignProductChips({
+  entry,
+  loading,
+}: {
+  entry: CampaignProductsSummary[string] | undefined;
+  loading: boolean;
+}) {
+  if (loading && !entry) return <Skeleton className="h-3.5 w-32" />;
+  const manual = entry?.manual ?? [];
+  const auto = entry?.auto ?? [];
+
+  if (manual.length > 0) {
+    const show = manual.slice(0, 3);
+    return (
+      <div className="flex flex-wrap items-center gap-1">
+        <span className="text-[10px] text-muted-foreground">✋</span>
+        {show.map((p) => (
+          <span
+            key={p.product_id}
+            title={p.sku ? `${p.title} · ${p.sku}` : p.title}
+            className="max-w-[150px] truncate rounded border border-primary/30 bg-primary/5 px-1 text-[10px] text-primary"
+          >
+            {p.title}
+          </span>
+        ))}
+        {manual.length > show.length && (
+          <span className="text-[10px] text-muted-foreground">+{manual.length - show.length}</span>
+        )}
+      </div>
+    );
+  }
+
+  if (auto.length > 0) {
+    const show = auto.slice(0, 2);
+    return (
+      <div className="flex flex-wrap items-center gap-1">
+        <span className="text-[10px] text-muted-foreground" title="Auto detected — link kore confirm korun">
+          🤖
+        </span>
+        {show.map((p) => (
+          <span
+            key={p.product_id}
+            title={`${p.title}${p.sku ? " · " + p.sku : ""} — ${p.orders ?? 0} order`}
+            className="max-w-[150px] truncate rounded border border-dashed border-muted-foreground/40 px-1 text-[10px] text-muted-foreground"
+          >
+            {p.title}
+            {p.share !== null && p.share !== undefined ? ` ${p.share}%` : ""}
+          </span>
+        ))}
+        {auto.length > show.length && (
+          <span className="text-[10px] text-muted-foreground">+{auto.length - show.length}</span>
+        )}
+      </div>
+    );
+  }
+
+  return <span className="text-[10px] text-muted-foreground">Product link নেই</span>;
+}
+
+
 function SortTh({
   k,
   label,
