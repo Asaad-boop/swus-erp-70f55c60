@@ -245,10 +245,10 @@ function ProductLabPage() {
                             <td className="px-3 py-3 text-right tabular-nums">{metric(r.margin_pct, "%")}</td>
                             <td className="px-3 py-3 text-right tabular-nums">{metric(r.roas, "x")}</td>
                             <td className="px-3 py-3 text-right tabular-nums">{bdt(r.cpa)}</td>
-                            <td className="px-3 py-3 text-right tabular-nums">{metric(r.delivered_units / Math.max(1, range.days ?? 1))}</td>
+                            <td className="px-3 py-3 text-right tabular-nums">{metric(r.delivered_units / rangeDays)}</td>
                             <td className="px-3 py-3 text-right tabular-nums">{number(r.stock)}</td>
                             <td className="px-3 py-3 text-right">
-                              <Badge variant={r.stock_cover_days != null && r.stock_cover_days <= 7 ? "destructive" : "outline"}>
+                              <Badge variant={r.stock_cover_days != null && r.stock_cover_days <= Math.max(7, r.low_stock_threshold ?? 0) ? "destructive" : "outline"}>
                                 {r.stock_cover_days == null ? "—" : `${Math.floor(r.stock_cover_days)}d`}
                               </Badge>
                             </td>
