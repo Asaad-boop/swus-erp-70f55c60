@@ -326,7 +326,10 @@ function CashTruth({ row }: { row: CampaignTruthRow }) {
       </div>
       <div className="divide-y text-xs">
         {rows.map((r) => (
-          <div key={r.l} className="flex items-center justify-between px-3 py-1.5">
+          <div
+            key={r.l}
+            className={`flex items-center justify-between px-3 py-1.5 ${r.strong ? "bg-muted/40 font-medium" : ""}`}
+          >
             <span className="text-muted-foreground">{r.l}</span>
             <span className={`tabular-nums ${r.tone ?? ""}`}>{r.v}</span>
           </div>
@@ -422,18 +425,15 @@ function OrderDrill({
               <td className="p-2 text-right tabular-nums">
                 {o.collected === null ? (
                   <span className="text-muted-foreground">Pending</span>
-                ) : (
+                ) : o.net_payout !== null ? (
                   <>
-                    <div>{bdt(o.collected)}</div>
-                    {o.courier_fee ? (
-                      <div
-                        className="text-[10px] text-muted-foreground"
-                        title="Courier charge বাদ দিয়ে হাতে আসা টাকা"
-                      >
-                        net {bdt(o.net_payout ?? 0)} · courier −{bdt(o.courier_fee)}
-                      </div>
-                    ) : null}
+                    <div title="Courier charge বাদ দিয়ে হাতে আসা টাকা">{bdt(o.net_payout)}</div>
+                    <div className="text-[10px] text-muted-foreground">
+                      gross {bdt(o.collected)} · courier −{bdt(o.courier_fee ?? 0)}
+                    </div>
                   </>
+                ) : (
+                  <div>{bdt(o.collected)}</div>
                 )}
               </td>
               <td className="p-2">
