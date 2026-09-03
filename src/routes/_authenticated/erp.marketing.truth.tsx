@@ -31,7 +31,9 @@ import {
 import {
   getCampaignTruth,
   getCampaignTrend,
+  getCampaignProductsSummary,
   rerunCampaignMatching,
+  type CampaignProductsSummary,
   type CampaignTrendPoint,
   type CampaignTruthRow,
 } from "@/lib/erp/marketing/campaigns.functions";
@@ -184,6 +186,21 @@ function CampaignTruthPage() {
     }
     return m;
   }, [trendQ.data]);
+
+  const campaignIds = useMemo(
+    () => (q.data ?? []).map((r) => r.id).slice(0, 500),
+    [q.data],
+  );
+  const fetchProducts = useServerFn(getCampaignProductsSummary);
+  const productsQ = useQuery({
+    queryKey: ["mkt-campaign-products-summary", campaignIds.join(","), range.from, range.to],
+    queryFn: () => fetchProducts({ data: { campaignIds, from: range.from, to: range.to } }),
+    enabled: campaignIds.length > 0,
+    staleTime: 60_000,
+    refetchOnWindowFocus: false,
+  });
+  const productMap: CampaignProductsSummary = productsQ.data ?? {};
+
 
   const runRematch = useServerFn(rerunCampaignMatching);
   const rerun = useMutation({
@@ -582,12 +599,12 @@ function CampaignTruthPage() {
               <table className="w-full text-sm">
                 <thead className="sticky top-0 z-10 bg-muted/70 text-[11px] uppercase tracking-wide text-muted-foreground backdrop-blur">
                   <tr>
-                    <th className="p-2 text-left">Campaign</th>
+                    <th className="p-2.5 text-left">Campaign</th>
                     <SortTh k="spend" label="Spend" {...{ sortKey, sortDesc, toggleSort }} />
                     <SortTh k="orders" label="Orders funnel" {...{ sortKey, sortDesc, toggleSort }} />
-                    <th className="p-2 text-right">Collected</th>
-                    <th className="p-2 text-right">Realized profit</th>
-                    <th className="p-2 text-right">Status</th>
+                    <th className="p-2.5 text-right">Collected</th>
+                    <th className="p-2.5 text-right">Realized profit</th>
+                    <th className="p-2.5 text-right">Status</th>
                   </tr>
 
                 </thead>
@@ -598,16 +615,16 @@ function CampaignTruthPage() {
                     return (
                       <Fragment key={r.id}>
                         <tr
-                          className="cursor-pointer border-t hover:bg-muted/30"
+                          className="cursor-pointer border-t align-top transition-colors hover:bg-muted/40"
                           onClick={() => setOpenRow(open ? null : r.id)}
                         >
-                          <td className="max-w-[280px] p-2">
-                            <div className="flex items-center gap-1.5">
+                          <td className="max-w-[360px] p-2.5 align-top">
+                            <div className="flex items-start gap-1.5">
                               <ChevronRight
-                                className={`h-3.5 w-3.5 shrink-0 text-muted-foreground transition-transform ${open ? "rotate-90" : ""}`}
+                                className={`mt-1 h-3.5 w-3.5 shrink-0 text-muted-foreground transition-transform ${open ? "rotate-90" : ""}`}
                               />
-                              <div className="min-w-0">
-                                <div className="truncate font-medium">{r.name}</div>
+                              <div className="min-w-0 space-y-1">
+                                <div className="truncate font-medium leading-tight">{r.name}</div>
                                 <div className="flex flex-wrap items-center gap-1.5">
                                   <Badge variant="outline" className="h-4 px-1 text-[10px]">
                                     {r.status}
@@ -617,16 +634,20 @@ function CampaignTruthPage() {
                                     {r.external_id ?? "—"}
                                   </span>
                                 </div>
+                                <CampaignProductChips
+                                  entry={productMap[r.id]}
+                                  loading={productsQ.isLoading}
+                                />
                               </div>
                             </div>
                           </td>
-                          <td className="p-2 text-right tabular-nums">
+                          <td className="p-2.5 align-top text-right tabular-nums">
                             <div>{bdt(r.spend)}</div>
                             <div className="text-[10px] text-muted-foreground">
                               CPA {r.orders > 0 ? bdt(r.cpa) : "—"}
                             </div>
                           </td>
-                          <td className="p-2 text-right">
+                          <td className="p-2.5 align-top text-right">
                             <div className="flex flex-wrap items-center justify-end gap-1 text-[10px]">
                               <span className="rounded border px-1 tabular-nums">
                                 Booked {r.orders}
@@ -655,7 +676,7 @@ function CampaignTruthPage() {
                                 : `attr ${r.attribution_coverage}%`}
                             </div>
                           </td>
-                          <td className="p-2 text-right tabular-nums">
+                          <td className="p-2.5 align-top text-right tabular-nums">
                             {r.collected_amount === null ? (
                               <Badge variant="outline" className="h-5 px-1.5 text-[10px]">
                                 Pending reconciliation
@@ -670,7 +691,7 @@ function CampaignTruthPage() {
                               </>
                             )}
                           </td>
-                          <td className="p-2 text-right tabular-nums">
+                          <td className="p-2.5 align-top text-right tabular-nums">
                             {r.realized_profit === null ? (
                               <span className="text-[11px] text-muted-foreground">—</span>
                             ) : (
@@ -689,7 +710,7 @@ function CampaignTruthPage() {
                               Projected {bdt(r.projected_profit)}
                             </div>
                           </td>
-                          <td className="p-2 text-right">
+                          <td className="p-2.5 align-top text-right">
                             <div className="flex flex-col items-end gap-0.5">
                               <Badge
                                 variant="outline"
@@ -733,11 +754,11 @@ function CampaignTruthPage() {
                 <tfoot className="border-t-2 bg-muted/40 text-xs font-semibold">
                   <tr>
                     <td className="p-2">Total ({rows.length})</td>
-                    <td className="p-2 text-right tabular-nums">{bdt(totals.spend)}</td>
-                    <td className="p-2 text-right tabular-nums">
+                    <td className="p-2.5 align-top text-right tabular-nums">{bdt(totals.spend)}</td>
+                    <td className="p-2.5 align-top text-right tabular-nums">
                       {num(totals.orders)} booked · {num(totals.delivered)} delivered
                     </td>
-                    <td className="p-2 text-right tabular-nums">
+                    <td className="p-2.5 align-top text-right tabular-nums">
                       {totals.collectedKnown ? bdt(totals.collected) : "Pending"}
                     </td>
                     <td
@@ -760,6 +781,67 @@ function CampaignTruthPage() {
   );
 }
 
+/** Linked (manual) or auto-detected products shown right under the campaign name. */
+function CampaignProductChips({
+  entry,
+  loading,
+}: {
+  entry: CampaignProductsSummary[string] | undefined;
+  loading: boolean;
+}) {
+  if (loading && !entry) return <Skeleton className="h-3.5 w-32" />;
+  const manual = entry?.manual ?? [];
+  const auto = entry?.auto ?? [];
+
+  if (manual.length > 0) {
+    const show = manual.slice(0, 3);
+    return (
+      <div className="flex flex-wrap items-center gap-1">
+        <span className="text-[10px] text-muted-foreground">✋</span>
+        {show.map((p) => (
+          <span
+            key={p.product_id}
+            title={p.sku ? `${p.title} · ${p.sku}` : p.title}
+            className="max-w-[150px] truncate rounded border border-primary/30 bg-primary/5 px-1 text-[10px] text-primary"
+          >
+            {p.title}
+          </span>
+        ))}
+        {manual.length > show.length && (
+          <span className="text-[10px] text-muted-foreground">+{manual.length - show.length}</span>
+        )}
+      </div>
+    );
+  }
+
+  if (auto.length > 0) {
+    const show = auto.slice(0, 2);
+    return (
+      <div className="flex flex-wrap items-center gap-1">
+        <span className="text-[10px] text-muted-foreground" title="Auto detected — link kore confirm korun">
+          🤖
+        </span>
+        {show.map((p) => (
+          <span
+            key={p.product_id}
+            title={`${p.title}${p.sku ? " · " + p.sku : ""} — ${p.orders ?? 0} order`}
+            className="max-w-[150px] truncate rounded border border-dashed border-muted-foreground/40 px-1 text-[10px] text-muted-foreground"
+          >
+            {p.title}
+            {p.share !== null && p.share !== undefined ? ` ${p.share}%` : ""}
+          </span>
+        ))}
+        {auto.length > show.length && (
+          <span className="text-[10px] text-muted-foreground">+{auto.length - show.length}</span>
+        )}
+      </div>
+    );
+  }
+
+  return <span className="text-[10px] text-muted-foreground">Product link নেই</span>;
+}
+
+
 function SortTh({
   k,
   label,
@@ -775,7 +857,7 @@ function SortTh({
 }) {
   const active = sortKey === k;
   return (
-    <th className="p-2 text-right">
+    <th className="p-2.5 text-right">
       <button
         type="button"
         onClick={() => toggleSort(k)}

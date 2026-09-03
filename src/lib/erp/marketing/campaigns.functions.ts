@@ -286,6 +286,48 @@ export const getCampaignProductCounts = createServerFn({ method: "POST" })
     return out;
   });
 
+export type CampaignProductChip = {
+  product_id: string;
+  title: string;
+  sku: string | null;
+  orders?: number;
+  revenue?: number;
+  share?: number | null;
+};
+
+export type CampaignProductsSummary = Record<
+  string,
+  { manual: CampaignProductChip[]; manual_count: number; auto: CampaignProductChip[] }
+>;
+
+/**
+ * Manual links + auto-detected top products (from the campaign's own attributed
+ * orders) for many campaigns at once — used for the inline chips next to the
+ * campaign name. Auto rows are suggestions only, never used in any money math.
+ */
+export const getCampaignProductsSummary = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d: unknown) =>
+    z
+      .object({
+        campaignIds: z.array(z.string().uuid()).max(500),
+        from: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
+        to: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
+      })
+      .parse(d),
+  )
+  .handler(async ({ data, context }): Promise<CampaignProductsSummary> => {
+    if (data.campaignIds.length === 0) return {};
+    const { data: rows, error } = await context.supabase.rpc("mkt_campaign_products_summary", {
+      _campaign_ids: data.campaignIds,
+      _from: data.from,
+      _to: data.to,
+    } as never);
+    if (error) throw error;
+    return (rows ?? {}) as CampaignProductsSummary;
+  });
+
+
 /* ------------------------------------------------------------------ */
 /* Bulk product linking (SKU / CSV paste)                              */
 /* ------------------------------------------------------------------ */
