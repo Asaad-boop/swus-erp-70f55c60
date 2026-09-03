@@ -955,7 +955,9 @@ function CampaignTruthPage() {
       </div>
 
       {/* 5 — Campaign performance */}
-      {q.isLoading ? (
+      {view === "monthly" ? (
+        <CampaignMonthlyDashboard brandIds={brandIds} />
+      ) : q.isLoading ? (
         <div className="space-y-2 rounded-xl border bg-card p-4">
           {Array.from({ length: 7 }).map((_, i) => (
             <Skeleton key={i} className="h-12 w-full" />
