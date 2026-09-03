@@ -979,10 +979,14 @@ function CampaignTruthPage() {
                         className={`cursor-pointer border-l-2 align-top transition-colors hover:bg-muted/30 ${rowAccent(r.truth_status)} ${open ? "bg-muted/30" : ""}`}
                         onClick={() => setOpenRow(open ? null : r.id)}
                       >
-                        <td className="max-w-[380px] px-4 py-3.5">
-                          <div className="flex items-start gap-2">
+                        <td className="max-w-[420px] px-4 py-3.5">
+                          <div className="flex items-start gap-2.5">
                             <ChevronRight
-                              className={`mt-1 h-3.5 w-3.5 shrink-0 text-muted-foreground transition-transform ${open ? "rotate-90" : ""}`}
+                              className={`mt-2.5 h-3.5 w-3.5 shrink-0 text-muted-foreground transition-transform ${open ? "rotate-90" : ""}`}
+                            />
+                            <CampaignProductThumb
+                              entry={productMap[r.id]}
+                              loading={productsQ.isLoading}
                             />
                             <div className="min-w-0">
                               <div className="truncate font-medium leading-tight">{r.name}</div>
@@ -998,6 +1002,7 @@ function CampaignTruthPage() {
                             </div>
                           </div>
                         </td>
+
                         <td className="px-4 py-3.5 text-right tabular-nums">
                           <div className="font-medium">{bdt(r.spend)}</div>
                           <div className="mt-0.5 text-[11px] text-muted-foreground">
