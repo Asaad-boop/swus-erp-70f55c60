@@ -48,6 +48,7 @@ export type ProductRow = {
   delivered_revenue: number;
   gross_profit: number;
   stock: number;
+  available_stock?: number;
   low_stock_threshold: number | null;
 };
 
@@ -239,7 +240,7 @@ export function buildAlerts(input: IntelInput): GrowthAlert[] {
   for (const pr of input.products.filter((x) => x.delivered_units > 0).slice(0, 40)) {
     const daily = pr.delivered_units / Math.max(1, input.days);
     if (daily <= 0) continue;
-    const available = Number((pr as ProductAlertRow).available_stock ?? pr.stock);
+    const available = Number(pr.available_stock ?? pr.stock);
     const daysLeft = available / daily;
     if (daysLeft <= 7)
       add({

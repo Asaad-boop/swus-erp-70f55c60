@@ -180,7 +180,7 @@ function ProductLabPage() {
             <Card className="shadow-none">
               <CardHeader className="gap-3 border-b border-border pb-4 md:flex-row md:items-center md:justify-between">
                 <div>
-              <CardTitle className="text-sm">Live product performance ({rows.length})</CardTitle>
+                  <CardTitle className="text-sm">Live product performance ({rows.length})</CardTitle>
                   <p className="mt-1 text-xs text-muted-foreground">
                     Delivered sales and profitability from the canonical product marketing source. Stock is available after reservations.
                   </p>

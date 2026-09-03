@@ -158,6 +158,7 @@ export const getCommandCenter = createServerFn({ method: "POST" })
           delivered_revenue: (prev?.delivered_revenue ?? 0) + num(x.delivered_revenue),
           gross_profit: (prev?.gross_profit ?? 0) + num(x.gross_profit),
           stock: prev?.stock ?? 0,
+          available_stock: prev?.available_stock ?? 0,
           low_stock_threshold: prev?.low_stock_threshold ?? null,
         };
         skuMap.set(id, merged);
@@ -165,7 +166,7 @@ export const getCommandCenter = createServerFn({ method: "POST" })
     if (skuMap.size) {
       const { data: prods } = await sb
         .from("products")
-        .select("id,title,sku,stock,low_stock_threshold")
+        .select("id,title,sku,stock,available_stock,low_stock_threshold")
         .in("id", [...skuMap.keys()]);
       for (const p of ((prods as any[]) ?? [])) {
         const t = skuMap.get(String(p.id));
@@ -173,6 +174,7 @@ export const getCommandCenter = createServerFn({ method: "POST" })
         t.title = String(p.title ?? "Untitled");
         t.sku = p.sku ?? null;
         t.stock = num(p.stock);
+        t.available_stock = num(p.available_stock ?? p.stock);
         t.low_stock_threshold = nn(p.low_stock_threshold);
       }
     }
