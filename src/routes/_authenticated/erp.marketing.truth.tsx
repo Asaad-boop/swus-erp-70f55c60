@@ -39,6 +39,7 @@ import {
   getCampaignTrend,
   getCampaignProductsSummary,
   getAttributionHealth,
+  getMetaSpendSummary,
   searchProductsForCampaign,
   linkCampaignProducts,
   unlinkCampaignProduct,
