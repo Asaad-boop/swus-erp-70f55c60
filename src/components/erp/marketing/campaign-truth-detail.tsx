@@ -24,6 +24,8 @@ import {
   getCampaignOrders,
   saveCampaignMeta,
   type CampaignOrderRow,
+  type CampaignProductChip,
+
   type CampaignTrendPoint,
   type CampaignTruthRow,
 } from "@/lib/erp/marketing/campaigns.functions";
