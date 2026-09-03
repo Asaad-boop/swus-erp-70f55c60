@@ -114,10 +114,13 @@ export function IntakePage() {
   const rowsQ = useQuery({
     queryKey: ["content-intake", brandIds],
     queryFn: () => fetchIntake(brandIds),
+    staleTime: 60_000,
+    placeholderData: (prev) => prev,
   });
   const inspoQ = useQuery({
     queryKey: ["content-inspirations", brandIds],
     queryFn: () => fetchInspirations(brandIds),
+    staleTime: 5 * 60_000,
   });
   const skippedQ = useQuery({
     queryKey: ["content-intake-skipped", brandIds],
