@@ -384,7 +384,7 @@ function OrderDrill({
             <th className="p-2 text-left">Order</th>
             <th className="p-2 text-left">Status</th>
             <th className="p-2 text-right">Order value</th>
-            <th className="p-2 text-right">Collected</th>
+            <th className="p-2 text-right">Collected (net)</th>
             <th className="p-2 text-left">Attribution</th>
           </tr>
         </thead>
