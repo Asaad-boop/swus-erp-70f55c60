@@ -942,6 +942,14 @@ function CampaignTruthPage() {
             >
               <LayoutGrid className="h-3.5 w-3.5" />
             </button>
+            <button
+              type="button"
+              onClick={() => setView("monthly")}
+              className={`rounded-md p-1.5 ${view === "monthly" ? "bg-muted text-foreground" : "text-muted-foreground"}`}
+              title="Monthly comparison dashboard"
+            >
+              <BarChart3 className="h-3.5 w-3.5" />
+            </button>
           </div>
         </div>
       </div>
