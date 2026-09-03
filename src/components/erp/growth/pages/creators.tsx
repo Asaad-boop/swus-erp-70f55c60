@@ -131,18 +131,23 @@ function CreatorsPage() {
   const creatorsQ = useQuery({
     queryKey: ["content-creators", brandIds],
     queryFn: () => fetchCreators(brandIds),
+    staleTime: 5 * 60_000,
   });
   const agenciesQ = useQuery({
     queryKey: ["content-agencies", brandIds],
     queryFn: () => fetchAgencies(brandIds),
+    staleTime: 5 * 60_000,
   });
   const itemsQ = useQuery({
     queryKey: ["content-items", brandIds],
     queryFn: () => fetchItems(brandIds),
+    staleTime: 30_000,
+    placeholderData: (prev) => prev,
   });
   const shipmentsQ = useQuery({
     queryKey: ["content-shipments", brandIds],
     queryFn: () => fetchShipments(brandIds),
+    staleTime: 60_000,
   });
   const contactsQ = useQuery({
     queryKey: ["content-creator-contacts", open?.id],

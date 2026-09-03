@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import {
@@ -76,6 +76,8 @@ import {
   usePersistedState,
 } from "@/components/erp/content/content-ui";
 import { BriefPanel } from "@/components/erp/content/brief-drawer";
+import { ProductPicker } from "@/components/erp/content/product-picker";
+
 import { cn } from "@/lib/utils";
 
 const emptyDraft = {
@@ -119,15 +121,21 @@ export function PipelinePage() {
   const itemsQ = useQuery({
     queryKey: ["content-items", brandIds],
     queryFn: () => fetchItems(brandIds),
+    staleTime: 30_000,
+    placeholderData: (prev) => prev,
   });
   const productsQ = useQuery({
     queryKey: ["content-products", brandIds],
     queryFn: () => fetchProductsLite(brandIds),
+    staleTime: 5 * 60_000,
+    placeholderData: (prev) => prev,
   });
   const creatorsQ = useQuery({
     queryKey: ["content-creators", brandIds],
     queryFn: () => fetchCreators(brandIds),
+    staleTime: 5 * 60_000,
   });
+
   const agenciesQ = useQuery({
     queryKey: ["content-agencies", brandIds],
     queryFn: () => fetchAgencies(brandIds),
@@ -207,6 +215,19 @@ export function PipelinePage() {
     return m;
   }, [filtered]);
 
+  /** Patch the cached list instantly so drag/stage moves feel native. */
+  const patchCache = (ids: string[], patch: Partial<ContentItem>) => {
+    const key = ["content-items", brandIds];
+    const prev = qc.getQueryData<ContentItem[]>(key);
+    if (prev) {
+      qc.setQueryData<ContentItem[]>(
+        key,
+        prev.map((i) => (ids.includes(i.id) ? { ...i, ...patch } : i)),
+      );
+    }
+    return { key, prev } as const;
+  };
+
   const saveMut = useMutation({
     mutationFn: async (patch: Partial<ContentItem> & { id: string }) => {
       const { id, ...rest } = patch;
@@ -216,11 +237,19 @@ export function PipelinePage() {
         .eq("id", id);
       if (error) throw error;
     },
+    onMutate: async (patch) => {
+      await qc.cancelQueries({ queryKey: ["content-items", brandIds] });
+      const { id, ...rest } = patch;
+      return patchCache([id], rest as Partial<ContentItem>);
+    },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["content-items"] });
       qc.invalidateQueries({ queryKey: ["content-intake"] });
     },
-    onError: (e: Error) => toast.error(e.message),
+    onError: (e: Error, _v, ctx) => {
+      if (ctx?.prev) qc.setQueryData(ctx.key, ctx.prev);
+      toast.error(e.message);
+    },
   });
 
   const bulkMut = useMutation({
@@ -233,16 +262,24 @@ export function PipelinePage() {
       if (error) throw error;
       return ids.length;
     },
+    onMutate: async (patch) => {
+      await qc.cancelQueries({ queryKey: ["content-items", brandIds] });
+      return patchCache([...selected], patch);
+    },
     onSuccess: (n) => {
       toast.success(`${n}টি content আপডেট হয়েছে`);
       setSelected(new Set());
       qc.invalidateQueries({ queryKey: ["content-items"] });
     },
-    onError: (e: Error) => toast.error(e.message),
+    onError: (e: Error, _v, ctx) => {
+      if (ctx?.prev) qc.setQueryData(ctx.key, ctx.prev);
+      toast.error(e.message);
+    },
   });
 
+
   const createMut = useMutation({
-    mutationFn: async () => {
+    mutationFn: async (opts: { again?: boolean } = {}) => {
       if (!draft.title.trim()) throw new Error("Title দাও");
       if (!(draft.brand_id || activeBrand?.id)) throw new Error("Brand বাছাই করুন");
       const { error } = await supabase.from("content_items").insert({
@@ -259,15 +296,22 @@ export function PipelinePage() {
         cost: draft.cost,
       } as never);
       if (error) throw error;
+      return opts;
     },
-    onSuccess: () => {
+    onSuccess: (opts) => {
       toast.success("Content piece যোগ হয়েছে");
-      setCreating(false);
-      setDraft(emptyDraft);
+      if (opts?.again) {
+        // keep product/brand/type context, clear only the title for rapid entry
+        setDraft((d) => ({ ...d, title: "" }));
+      } else {
+        setCreating(false);
+        setDraft(emptyDraft);
+      }
       qc.invalidateQueries({ queryKey: ["content-items"] });
     },
     onError: (e: Error) => toast.error(e.message),
   });
+
 
   const deleteMut = useMutation({
     mutationFn: async (ids: string[]) => {
@@ -472,6 +516,16 @@ export function PipelinePage() {
               ))}
             </SelectContent>
           </Select>
+          <div className="w-[190px]">
+            <ProductPicker
+              size="sm"
+              products={productsQ.data ?? []}
+              value={null}
+              placeholder="Assign product"
+              onChange={(id) => bulkMut.mutate({ product_id: id })}
+            />
+          </div>
+
           <Button variant="ghost" size="sm" className="ml-auto h-8" onClick={() => setSelected(new Set())}>
             Clear
           </Button>
@@ -533,9 +587,9 @@ export function PipelinePage() {
       <ItemSheet
         item={open}
         onClose={() => setOpen(null)}
-        onSave={(patch) => {
+        onSave={(patch, keepOpen) => {
           saveMut.mutate(patch);
-          setOpen(null);
+          if (!keepOpen) setOpen(null);
         }}
         onDelete={(id) => {
           deleteMut.mutate([id]);
@@ -543,11 +597,13 @@ export function PipelinePage() {
         }}
         creators={(creatorsQ.data ?? []).map((c) => ({ id: c.id, name: c.name }))}
         agencies={(agenciesQ.data ?? []).map((a) => ({ id: a.id, name: a.name }))}
+        products={productsQ.data ?? []}
         productLabel={open?.product_id ? (productName.get(open.product_id) ?? null) : null}
         brandLabel={
           brands.find((b) => b.id === open?.brand_id)?.name ?? activeBrand?.name ?? null
         }
       />
+
 
       <Sheet open={creating} onOpenChange={(o) => !o && setCreating(false)}>
         <SheetContent side="right" className="w-full overflow-y-auto sm:max-w-md">
@@ -556,32 +612,34 @@ export function PipelinePage() {
           </SheetHeader>
           <div className="space-y-3 py-3">
             <div>
+              <Label className="text-[11px]">Product</Label>
+              <ProductPicker
+                products={productsQ.data ?? []}
+                value={draft.product_id || null}
+                onChange={(id) => {
+                  const p = (productsQ.data ?? []).find((x) => x.id === id);
+                  setDraft((d) => ({
+                    ...d,
+                    product_id: id ?? "",
+                    // product বাছলে title খালি থাকলে auto-fill
+                    title: d.title.trim() ? d.title : p ? `${p.title} — ${labelOf(CONTENT_TYPES, d.content_type)}` : d.title,
+                  }));
+                }}
+              />
+            </div>
+            <div>
               <Label className="text-[11px]">Title</Label>
               <Input
                 value={draft.title}
                 onChange={(e) => setDraft({ ...draft, title: e.target.value })}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter" && !createMut.isPending) createMut.mutate({});
+                }}
+                placeholder="যেমন: Rocket Launcher — UGC hook test"
                 className="h-9"
               />
             </div>
-            <div>
-              <Label className="text-[11px]">Product</Label>
-              <Select
-                value={draft.product_id || "none"}
-                onValueChange={(v) => setDraft({ ...draft, product_id: v === "none" ? "" : v })}
-              >
-                <SelectTrigger className="h-9 text-xs">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="none">No product</SelectItem>
-                  {(productsQ.data ?? []).map((p) => (
-                    <SelectItem key={p.id} value={p.id}>
-                      {p.title}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
+
             <BrandSelect
               value={draft.brand_id || activeBrand?.id || null}
               onChange={(v) => setDraft({ ...draft, brand_id: v ?? "" })}
@@ -724,13 +782,24 @@ export function PipelinePage() {
                 className="h-9"
               />
             </div>
-            <Button
-              className="w-full"
-              disabled={createMut.isPending}
-              onClick={() => createMut.mutate()}
-            >
-              Create
-            </Button>
+            <div className="sticky bottom-0 flex gap-2 border-t bg-background py-3">
+              <Button
+                variant="outline"
+                className="flex-1"
+                disabled={createMut.isPending}
+                onClick={() => createMut.mutate({ again: true })}
+              >
+                Save & add another
+              </Button>
+              <Button
+                className="flex-1"
+                disabled={createMut.isPending}
+                onClick={() => createMut.mutate({})}
+              >
+                Create
+              </Button>
+            </div>
+
           </div>
         </SheetContent>
       </Sheet>
@@ -1172,6 +1241,33 @@ function CalendarView({ items, onOpen }: { items: ContentItem[]; onOpen: (i: Con
 
 /* ---------------- Detail sheet ---------------- */
 
+/** Editable fields in the detail sheet — used for dirty-check + save payload. */
+const FIELDS = [
+  "title",
+  "product_id",
+  "hook",
+  "angle",
+  "script",
+  "caption",
+  "cta",
+  "hashtags",
+  "stage",
+  "status",
+  "content_style",
+  "creator_id",
+  "agency_id",
+  "due_date",
+  "cost",
+  "video_url",
+  "revision_note",
+  "published_url",
+  "views",
+  "likes",
+  "comments",
+  "shares",
+  "attributed_orders",
+] as const satisfies readonly (keyof ContentItem)[];
+
 function ItemSheet({
   item,
   onClose,
@@ -1179,15 +1275,17 @@ function ItemSheet({
   onDelete,
   creators,
   agencies,
+  products,
   productLabel,
   brandLabel,
 }: {
   item: ContentItem | null;
   onClose: () => void;
-  onSave: (patch: Partial<ContentItem> & { id: string }) => void;
+  onSave: (patch: Partial<ContentItem> & { id: string }, keepOpen?: boolean) => void;
   onDelete: (id: string) => void;
   creators: { id: string; name: string }[];
   agencies: { id: string; name: string }[];
+  products: { id: string; title: string; sku: string | null; image: string | null; price: number | null; stock: number }[];
   productLabel: string | null;
   brandLabel?: string | null;
 }) {
@@ -1198,6 +1296,28 @@ function ItemSheet({
     setSeed(key);
     setD(item);
   }
+
+  const dirty = !!item && !!d && FIELDS.some((f) => (item[f] ?? null) !== (d[f] ?? null));
+
+  const buildPatch = (cur: ContentItem) => {
+    const patch = { id: cur.id } as Partial<ContentItem> & { id: string };
+    for (const f of FIELDS) (patch as Record<string, unknown>)[f] = cur[f];
+    return patch;
+  };
+
+  // ⌘/Ctrl + S দিয়ে save
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === "s" && d) {
+        e.preventDefault();
+        onSave(buildPatch(d));
+      }
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [d]);
+
   if (!item || !d) return null;
 
   const set = (patch: Partial<ContentItem>) => setD({ ...d, ...patch });
@@ -1211,19 +1331,63 @@ function ItemSheet({
   ];
   const ready = checklist.filter((c) => c.ok).length;
   const er = engagementRate(d);
+  const stageIdx = PIPELINE_STAGES.findIndex((s) => s.key === d.stage);
+  const currentProduct = products.find((p) => p.id === d.product_id) ?? null;
 
   return (
     <Sheet open onOpenChange={(o) => !o && onClose()}>
-      <SheetContent side="right" className="w-full overflow-y-auto sm:max-w-xl">
-        <SheetHeader>
-          <SheetTitle className="text-base">{d.title}</SheetTitle>
+      <SheetContent side="right" className="flex w-full flex-col overflow-y-auto sm:max-w-xl">
+        <SheetHeader className="space-y-2">
+          <SheetTitle className="sr-only">{d.title}</SheetTitle>
+          <Input
+            value={d.title}
+            onChange={(e) => set({ title: e.target.value })}
+            className="h-9 border-transparent bg-muted/40 px-2 text-base font-semibold focus-visible:border-input"
+          />
           <p className="text-[11px] text-muted-foreground">
-            {d.code} · {productLabel ?? "No product"} · {labelOf(PIPELINE_STAGES, d.stage)}
+            {d.code} · {labelOf(CONTENT_TYPES, d.content_type)} · {labelOf(PLATFORMS, d.platform)}
+            {dirty && <span className="ml-2 font-medium text-amber-600">● unsaved</span>}
           </p>
-          <div className="pt-1">
+          <div className="flex flex-wrap items-center gap-2">
             <BrandTag brandId={d.brand_id} />
+            {currentProduct?.image && (
+              <img src={currentProduct.image} alt="" className="h-6 w-6 rounded object-cover" />
+            )}
+            <span className="truncate text-[11px] text-muted-foreground">
+              {currentProduct?.title ?? productLabel ?? "No product"}
+            </span>
+          </div>
+          {/* Quick stage stepper — এক ক্লিকে stage বদল, sheet খোলা থাকবে */}
+          <div className="flex flex-wrap gap-1 rounded-lg border border-border/70 bg-muted/30 p-1">
+            {PIPELINE_STAGES.map((s, idx) => (
+              <button
+                key={s.key}
+                type="button"
+                onClick={() => {
+                  const patch: Partial<ContentItem> & { id: string } = { id: d.id, stage: s.key };
+                  if (s.key === "published" && !d.published_at) {
+                    patch.published_at = new Date().toISOString();
+                    patch.status = "published";
+                  }
+                  set({ stage: s.key, ...(patch.status ? { status: patch.status } : {}) });
+                  onSave(patch, true);
+                  toast.success(`Stage → ${s.label}`);
+                }}
+                className={cn(
+                  "flex-1 whitespace-nowrap rounded-md px-2 py-1 text-[10px] font-medium transition-colors",
+                  idx === stageIdx
+                    ? "bg-primary text-primary-foreground"
+                    : idx < stageIdx
+                      ? "text-primary hover:bg-primary/10"
+                      : "text-muted-foreground hover:bg-muted",
+                )}
+              >
+                {s.label}
+              </button>
+            ))}
           </div>
         </SheetHeader>
+
         <Tabs defaultValue="script" className="py-3">
           <TabsList className="grid w-full grid-cols-4">
             <TabsTrigger value="script" className="text-xs">
@@ -1314,7 +1478,16 @@ function ItemSheet({
           </TabsContent>
 
           <TabsContent value="prod" className="space-y-3 pt-3">
+            <div>
+              <Label className="text-[11px]">Product assign</Label>
+              <ProductPicker
+                products={products}
+                value={d.product_id}
+                onChange={(id) => set({ product_id: id })}
+              />
+            </div>
             <div className="grid grid-cols-2 gap-3">
+
               <div>
                 <Label className="text-[11px]">Stage</Label>
                 <Select value={d.stage} onValueChange={(v) => set({ stage: v })}>
@@ -1501,40 +1674,21 @@ function ItemSheet({
             <Trash2 className="h-4 w-4" />
           </Button>
           <Button variant="ghost" className="flex-1" onClick={onClose}>
-            Cancel
+            Close
           </Button>
           <Button
+            variant="outline"
             className="flex-1"
-            onClick={() =>
-              onSave({
-                id: d.id,
-                hook: d.hook,
-                angle: d.angle,
-                script: d.script,
-                caption: d.caption,
-                cta: d.cta,
-                hashtags: d.hashtags,
-                stage: d.stage,
-                status: d.status,
-                content_style: d.content_style,
-                creator_id: d.creator_id,
-                agency_id: d.agency_id,
-                due_date: d.due_date,
-                cost: d.cost,
-                video_url: d.video_url,
-                revision_note: d.revision_note,
-                published_url: d.published_url,
-                views: d.views,
-                likes: d.likes,
-                comments: d.comments,
-                shares: d.shares,
-                attributed_orders: d.attributed_orders,
-              })
-            }
+            disabled={!dirty}
+            onClick={() => onSave(buildPatch(d), true)}
           >
-            Save
+            Apply
+          </Button>
+          <Button className="flex-1" disabled={!dirty} onClick={() => onSave(buildPatch(d))}>
+            {dirty ? "Save" : "Saved"}
           </Button>
         </div>
+
       </SheetContent>
     </Sheet>
   );
