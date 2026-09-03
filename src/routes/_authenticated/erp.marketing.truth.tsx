@@ -1121,11 +1121,25 @@ function CampaignTruthPage() {
                               loading={productsQ.isLoading}
                             />
                             <div className="min-w-0">
-                              <div className="truncate font-medium leading-tight">{r.name}</div>
+                              <div className="flex items-center gap-1.5">
+                                <span className="truncate text-sm font-medium leading-tight">{r.name}</span>
+                                {r.is_live ? (
+                                  <span className="inline-flex shrink-0 items-center gap-1 rounded-full border border-emerald-500/40 bg-emerald-500/10 px-1.5 py-px text-[10px] font-medium text-emerald-600">
+                                    <span className="relative flex h-1.5 w-1.5">
+                                      <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-500 opacity-60" />
+                                      <span className="relative inline-flex h-1.5 w-1.5 rounded-full bg-emerald-500" />
+                                    </span>
+                                    Live
+                                  </span>
+                                ) : (
+                                  <span className="inline-flex shrink-0 items-center gap-1 rounded-full border px-1.5 py-px text-[10px] capitalize text-muted-foreground">
+                                    <span className="h-1.5 w-1.5 rounded-full bg-slate-400" />
+                                    {String(r.status).toLowerCase()}
+                                  </span>
+                                )}
+                              </div>
                               <div className="mt-1 flex flex-wrap items-center gap-1.5 text-[11px] text-muted-foreground">
                                 <span className="font-mono tabular-nums" title={r.id}>ID {r.id.slice(0, 8)}</span>
-                                <span className="opacity-40">·</span>
-                                <span className="capitalize">{r.status}</span>
                                 <span className="opacity-40">·</span>
                                 <CampaignProductChips
                                   entry={productMap[r.id]}

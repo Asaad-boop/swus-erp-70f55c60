@@ -695,7 +695,11 @@ export type CampaignTruthRow = {
   name: string;
   status: string;
   external_id: string | null;
+  /** Meta effective_status ACTIVE — campaign is delivering right now */
+  is_live: boolean;
   spend: number;
+  /** Raw USD pocket spend (0 for BDT-currency accounts) */
+  spend_usd: number;
   clicks: number;
   meta_purchases: number;
   meta_purchase_value: number;
