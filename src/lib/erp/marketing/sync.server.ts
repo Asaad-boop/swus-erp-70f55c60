@@ -397,13 +397,30 @@ export async function runInsightsSync(
         let fifoConsumed = 0;
         let fifoFallback = 0;
         try {
-          const { data: freshRows } = await supabase
+          const { data: freshRows, error: freshRowsError } = await supabase
             .from("mkt_insights_daily")
-            .select("id,date,spend,ad_id,adset_id,campaign_id")
+            .select("id,date,spend,ad_id,adset_id,campaign_id,spend_bdt_fifo")
             .eq("account_id", acc.id)
             .gte("date", since)
             .lte("date", until);
-          for (const r of freshRows ?? []) {
+          if (freshRowsError) throw freshRowsError;
+
+          // A previous run may have created the wallet consumption but failed
+          // before writing it back to the insight row. Revisit every stranded
+          // row so a rolling sync window cannot leave a permanent cost gap.
+          const { data: strandedRows, error: strandedRowsError } = await supabase
+            .from("mkt_insights_daily")
+            .select("id,date,spend,ad_id,adset_id,campaign_id,spend_bdt_fifo")
+            .eq("account_id", acc.id)
+            .is("spend_bdt_fifo", null)
+            .gt("spend", 0);
+          if (strandedRowsError) throw strandedRowsError;
+
+          const rowsToCost = Array.from(
+            new Map([...(freshRows ?? []), ...(strandedRows ?? [])].map((row) => [row.id, row])).values(),
+          );
+          const fifoErrors: string[] = [];
+          for (const r of rowsToCost) {
             const usd = Number(r.spend) || 0;
             const spendRef = `meta:${acc.id}:${r.date}:${
               r.ad_id ? "ad" : r.adset_id ? "adset" : "campaign"
@@ -418,7 +435,10 @@ export async function runInsightsSync(
                 _insight_id: r.id,
               },
             );
-            if (fifoErr) continue;
+            if (fifoErr) {
+              fifoErrors.push(`${r.id}: ${fifoErr.message}`);
+              continue;
+            }
 
             // Re-read the canonical consumption row to capture cumulative BDT cost.
             const { data: consRow } = await supabase
@@ -434,7 +454,7 @@ export async function runInsightsSync(
               | "manual";
             const bdt = Number(consRow?.bdt_cost ?? 0);
 
-            await supabase
+            const { error: insightUpdateError } = await supabase
               .from("mkt_insights_daily")
               .update({
                 spend_bdt_fifo: bdt,
@@ -444,9 +464,16 @@ export async function runInsightsSync(
                 fifo_consumed_at: new Date().toISOString(),
               })
               .eq("id", r.id);
+            if (insightUpdateError) {
+              fifoErrors.push(`${r.id}: ${insightUpdateError.message}`);
+              continue;
+            }
 
             fifoConsumed++;
             if (conv === "fx_fallback") fifoFallback++;
+          }
+          if (fifoErrors.length > 0) {
+            throw new Error(`FIFO costing incomplete (${fifoErrors.length} rows): ${fifoErrors[0]}`);
           }
         } catch {
           // Non-fatal — insights sync still succeeds.
