@@ -424,6 +424,7 @@ export function CampaignTruthDetail({
   brandId,
   brandIds,
   range,
+  products,
   onSaved,
 }: {
   row: CampaignTruthRow;
@@ -431,6 +432,7 @@ export function CampaignTruthDetail({
   brandId?: string | null;
   brandIds?: string[];
   range?: { from: string; to: string };
+  products?: { manual: CampaignProductChip[]; manual_count: number; auto: CampaignProductChip[] };
   onSaved: () => void;
 }) {
   return (
@@ -440,11 +442,13 @@ export function CampaignTruthDetail({
         <CashTruth row={row} />
         <ProfitBridge row={row} />
       </div>
+      {products ? <LinkedProducts products={products} /> : null}
       <div className="grid gap-3 lg:grid-cols-[1.4fr_1fr]">
         <TrendChart points={trend} />
         <div className="space-y-3">
           <CostAttribution row={row} />
           <div className="grid grid-cols-2 gap-2 text-xs">
+
             <Stat
               l="Break-even ROAS"
               v={row.breakeven_roas ? row.breakeven_roas.toFixed(2) + "x" : "—"}
