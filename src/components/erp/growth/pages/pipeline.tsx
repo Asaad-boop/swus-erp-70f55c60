@@ -119,15 +119,21 @@ export function PipelinePage() {
   const itemsQ = useQuery({
     queryKey: ["content-items", brandIds],
     queryFn: () => fetchItems(brandIds),
+    staleTime: 30_000,
+    placeholderData: (prev) => prev,
   });
   const productsQ = useQuery({
     queryKey: ["content-products", brandIds],
     queryFn: () => fetchProductsLite(brandIds),
+    staleTime: 5 * 60_000,
+    placeholderData: (prev) => prev,
   });
   const creatorsQ = useQuery({
     queryKey: ["content-creators", brandIds],
     queryFn: () => fetchCreators(brandIds),
+    staleTime: 5 * 60_000,
   });
+
   const agenciesQ = useQuery({
     queryKey: ["content-agencies", brandIds],
     queryFn: () => fetchAgencies(brandIds),
