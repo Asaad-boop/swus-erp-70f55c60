@@ -239,7 +239,8 @@ export function buildAlerts(input: IntelInput): GrowthAlert[] {
   for (const pr of input.products.filter((x) => x.delivered_units > 0).slice(0, 40)) {
     const daily = pr.delivered_units / Math.max(1, input.days);
     if (daily <= 0) continue;
-    const daysLeft = pr.stock / daily;
+    const available = Number((pr as ProductAlertRow).available_stock ?? pr.stock);
+    const daysLeft = available / daily;
     if (daysLeft <= 7)
       add({
         id: `low_stock_${pr.product_id}`,
@@ -247,11 +248,11 @@ export function buildAlerts(input: IntelInput): GrowthAlert[] {
         kind: "problem",
         severity: daysLeft <= 3 ? "critical" : "warning",
         title: `${pr.title} — ${Math.floor(daysLeft)}d stock left`,
-        problem: `${pr.stock} pcs in stock while selling ${daily.toFixed(1)} pcs/day.`,
+        problem: `${available} pcs available after reservations while selling ${daily.toFixed(1)} pcs/day.`,
         why: `${pr.delivered_units} pcs delivered over the last ${input.days} day(s).`,
         recommended_action: "Reorder now or the ads will spend on a product you cannot ship.",
         supporting_metrics: [
-          { label: "Stock", value: String(pr.stock) },
+          { label: "Available", value: String(available) },
           { label: "Daily sales", value: daily.toFixed(1) },
         ],
         entity_type: "product",
