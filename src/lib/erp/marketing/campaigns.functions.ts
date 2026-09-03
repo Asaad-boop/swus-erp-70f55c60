@@ -762,6 +762,12 @@ export type CampaignTruthRow = {
   attribution_coverage: number | null;
   attribution_confidence: number | null;
   attribution_source: string | null;
+  /** Share of delivered order value that is actually settled (0-1) */
+  settled_share: number;
+  /** COGS (net of recovery) pro-rated to the settled slice — matches realized profit */
+  cogs_applied: number;
+  /** Operating cost pro-rated to the settled slice */
+  operating_cost_applied: number;
   /** Weakest of attribution / settlement / COGS / courier coverage */
   truth_coverage: number | null;
   /** Collected cash − COGS(+recovered) − opex − return charge − ad spend. null when settlement pending. */
@@ -959,6 +965,9 @@ export const getCampaignTruth = createServerFn({ method: "POST" })
         attribution_coverage: attributionCoverage,
         attribution_confidence: attributionConfidence,
         truth_coverage: truthCoverage,
+        settled_share: r2(settledShare),
+        cogs_applied: r2(cogsSettled),
+        operating_cost_applied: r2(opexSettled),
         realized_profit: realized,
         realized_roas: realized !== null && r.spend > 0 ? r2(realized / r.spend) : null,
         projected_profit: r2(net),
