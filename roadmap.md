@@ -14,3 +14,7 @@
 - [ ] UI: flat Midnight Indigo table + drawer (funnel, profit ladder, reconciliation, returns, products, attribution, drill-through, trend, coverage, notes)
 - [ ] New server fns `getCampaignOrders`, `autoLinkCampaignProducts` (requireSupabaseAuth)
 - [ ] Verify 12 realistic scenarios (cancel, partial delivery, RTO, damaged return, missing settlement, manual override, multi-campaign match…)
+- [ ] Deterministic attribution rank CTE (priority ASC, confidence DESC, attributed_at DESC, campaign_id ASC) — never bare DISTINCT ON(order_id)
+- [ ] Missing financial data stays NULL/Pending (never coalesced to 0)
+- [ ] Item-level partial delivery / partial return support where order data allows
+- [ ] Surface (not silently work around) any schema/business-rule conflict with this spec
