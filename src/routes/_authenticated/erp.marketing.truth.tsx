@@ -1184,6 +1184,35 @@ function MiniFunnel({ row }: { row: CampaignTruthRow }) {
   );
 }
 
+/** Product photo shown beside the campaign name (manual link first, else auto match). */
+function CampaignProductThumb({
+  entry,
+  loading,
+}: {
+  entry: CampaignProductsSummary[string] | undefined;
+  loading: boolean;
+}) {
+  if (loading && !entry) return <Skeleton className="h-10 w-10 shrink-0 rounded-md" />;
+  const p = entry?.manual?.[0] ?? entry?.auto?.[0];
+  const manual = (entry?.manual?.length ?? 0) > 0;
+  if (!p?.image) {
+    return (
+      <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-md border border-dashed text-[9px] text-muted-foreground">
+        No img
+      </div>
+    );
+  }
+  return (
+    <img
+      src={p.image}
+      alt={p.title}
+      loading="lazy"
+      title={`${manual ? "✋ Manual" : "🤖 Auto"} · ${p.title}`}
+      className="h-10 w-10 shrink-0 rounded-md border object-cover"
+    />
+  );
+}
+
 /** Linked (manual) or auto-detected products shown right under the campaign name. */
 function CampaignProductChips({
   entry,
