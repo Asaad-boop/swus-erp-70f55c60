@@ -41,20 +41,31 @@ Settlement এখনো আসেনি → **"Pending Reconciliation"** দে�
 
 ## ৪. Attribution priority — এক order, এক campaign
 
-Priority (উপর থেকে নিচে, প্রথম match জিতবে):
-1. Manual campaign override
-2. Explicit linked campaign (`mkt_order_attributions`)
-3. `fb_campaign_id`
-4. UTM campaign id
-5. UTM campaign name
-6. Click/pixel attribution
-7. Product-based inference
-8. Unattributed
+প্রথমে প্রতিটা order-এর সব সম্ভাব্য attribution **candidate** বের হবে, প্রতিটার সাথে explicit `priority` rank:
 
-- Manual override কখনোই auto attribution দিয়ে overwrite হবে না।
-- বিদ্যমান `linked_cid → utm_cid` fallback অক্ষত থাকবে, শুধু উপরের ladder-এর ভিতরে বসবে।
-- এক order-এর revenue/COGS/profit একাধিক campaign-এ যোগ হতে পারবে না (RPC-তে `DISTINCT ON (order_id)` primary attribution)।
+| priority | source |
+|---|---|
+| 1 | Manual campaign override |
+| 2 | Explicit linked campaign (`mkt_order_attributions`) |
+| 3 | `fb_campaign_id` |
+| 4 | UTM campaign id |
+| 5 | UTM campaign name |
+| 6 | Click / pixel attribution |
+| 7 | Product-based inference |
+| 8 | Unattributed |
+
+তারপর order-প্রতি ঠিক একটা primary campaign বাছা হবে **deterministic ordering** দিয়ে:
+
+```
+ORDER BY priority ASC, confidence DESC, attributed_at DESC, campaign_id ASC
+```
+
+- বিনা explicit ORDER BY-তে `DISTINCT ON (order_id)` ব্যবহার হবে না — ranked CTE (`ROW_NUMBER()`) দিয়ে stable, reproducible primary বাছা হবে।
+- Manual override কখনোই auto attribution দিয়ে overwrite হবে না (auto-matcher manual row skip করবে)।
+- বিদ্যমান `linked_cid → utm_cid` fallback অক্ষত থাকবে, শুধু এই ladder-এর ভিতরে priority 2 ও 4/5 হিসেবে বসবে।
+- এক order-এর revenue/COGS/profit একাধিক campaign-এ যোগ হতে পারবে না — aggregation শুধু primary attribution-এর উপর।
 - প্রতিটা row-এ attribution source + confidence দেখাবে।
+
 
 ## ৫. Auto Product Attribution
 
@@ -111,3 +122,16 @@ Lifecycle Funnel · Profit Ladder (realized) · Realized vs Projected · Collect
 - Implementation-এর আগে existing schema/functions/triggers inspect করে reuse করা হবে, duplicate financial logic লেখা হবে না।
 
 **Verification scenarios:** cancelled · confirmed · full delivery · partial delivery · full RTO · partial return · returned+resellable · returned+damaged · missing settlement · manual attribution overriding UTM · auto product suggestion · একই order একাধিক campaign-এ match হওয়ার সম্ভাবনা।
+
+## ১২. Non-negotiables (spec source of truth)
+
+- Missing financial data → `NULL` / Pending / Incomplete; কখনো `COALESCE(...,0)` দিয়ে ঢাকা হবে না।
+- Projected profit কখনো Realized profit বা verdict-কে প্রভাবিত করবে না।
+- Campaign ad spend ঠিক একবার বাদ; order-level Allocated Ad Cost শুধু informational।
+- Return COGS reversal শুধু actual inventory recovery (resellable) হলে; return charge-এর সাথে double-count নয়।
+- Partial delivery / partial return item-level হিসাব হবে যতটুকু existing order data support করে।
+- বিদ্যমান marketing/order/finance কিছুই ভাঙবে না; কোনো existing schema বা business rule এই spec-এর সাথে conflict করলে **parallel calculation না বানিয়ে আগে exact conflict জানানো হবে**।
+
+## ১৩. Post-implementation verification checklist
+
+এক order দুই campaign-এ যায় না · manual attribution overwrite হয় না · delivered revenue = actual collected cash · pending settlement ৳0 দেখায় না · COGS reversal শুধু recovered stock-এ · partial return-এ শুধু affected item · fallback courier charge "estimate" mark করা · ad spend একবার · projected profit verdict-এ প্রভাব ফেলে না · incomplete data → Too Early/Pending।
