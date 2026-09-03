@@ -420,7 +420,54 @@ function OrderDrill({
   );
 }
 
+/** Manually linked vs auto-suggested products for this campaign (display only). */
+function LinkedProducts({
+  products,
+}: {
+  products: { manual: CampaignProductChip[]; manual_count: number; auto: CampaignProductChip[] };
+}) {
+  const manual = products.manual ?? [];
+  const auto = products.auto ?? [];
+  if (manual.length === 0 && auto.length === 0) return null;
+  const list = manual.length > 0 ? manual : auto;
+  const isManual = manual.length > 0;
+  return (
+    <div className="rounded-lg border bg-card p-3">
+      <div className="mb-2 flex items-center justify-between">
+        <span className="text-[10px] uppercase tracking-[0.12em] text-muted-foreground">
+          Linked products
+        </span>
+        <span className="text-[10px] text-muted-foreground">
+          {isManual ? "✋ Manually linked" : "🤖 Auto suggested — attribution only, financials unaffected"}
+        </span>
+      </div>
+      <div className="grid gap-1.5 sm:grid-cols-2 lg:grid-cols-3">
+        {list.map((p) => (
+          <div
+            key={p.product_id}
+            className="flex items-center justify-between gap-2 rounded-md border px-2 py-1.5 text-xs"
+          >
+            <div className="min-w-0">
+              <div className="truncate font-medium">{p.title}</div>
+              <div className="truncate text-[10px] text-muted-foreground">
+                {p.sku ?? "no sku"}
+                {p.orders !== undefined ? ` · ${p.orders} orders` : ""}
+              </div>
+            </div>
+            {p.share !== null && p.share !== undefined && (
+              <span className="shrink-0 tabular-nums text-[10px] text-muted-foreground">
+                {p.share}%
+              </span>
+            )}
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
 export function CampaignTruthDetail({
+
   row,
   trend,
   brandId,
