@@ -289,11 +289,15 @@ function CashTruth({ row }: { row: CampaignTruthRow }) {
       v: row.collection_variance === null ? "Pending" : bdt(row.collection_variance),
       tone: (row.collection_variance ?? 0) > 0 ? "text-amber-600" : undefined,
     },
-    { l: "− COGS (delivered)", v: bdt(row.cogs) },
+    {
+      l: `− COGS (settled delivered${row.settled_share < 1 ? ` · ${Math.round(row.settled_share * 100)}% of delivered` : ""})`,
+      v: bdt(row.cogs_applied),
+    },
     ...(row.cogs_recovered > 0
-      ? [{ l: "+ COGS recovered (resellable return)", v: bdt(row.cogs_recovered), tone: "text-emerald-600" }]
+      ? [{ l: "incl. COGS recovered (resellable return)", v: bdt(row.cogs_recovered), tone: "text-emerald-600" }]
       : []),
-    { l: "− Operating cost", v: bdt(row.operating_cost) },
+    { l: "− Operating cost (settled)", v: bdt(row.operating_cost_applied) },
+
     {
       l: `− Return / RTO charge${row.return_charge_is_estimate ? " (estimate)" : ""}`,
       v: row.return_charge === null ? "Pending" : bdt(row.return_charge),
