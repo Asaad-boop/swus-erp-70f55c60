@@ -26,6 +26,9 @@ export type MktProductRow = {
   aov: number;
   margin_pct: number;
   cost_missing_units: number;
+  stock: number;
+  low_stock_threshold: number | null;
+  stock_cover_days: number | null;
 };
 
 export type MktAcquisitionSummary = {
