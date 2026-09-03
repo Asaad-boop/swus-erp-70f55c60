@@ -202,6 +202,7 @@ function CampaignTruthPage() {
   const [range, setRange] = useState<MktRangeValue>(() => buildPreset("30d"));
   const [search, setSearch] = useState("");
   const [truthFilter, setTruthFilter] = useState<TruthStatus | "all">("all");
+  const [metaStatus, setMetaStatus] = useState<MetaStatusFilter>("all");
   const [minSpend, setMinSpend] = useState(0);
   const [sortKey, setSortKey] = useState<SortKey>("impact");
   const [sortDesc, setSortDesc] = useState(true);
