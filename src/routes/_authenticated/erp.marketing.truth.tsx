@@ -1111,39 +1111,12 @@ function CampaignTruthPage() {
   );
 }
 
-function HeroStat({ label, value, sub }: { label: string; value: string; sub: string }) {
+/** Tiny inline label/value pair used in the compact truth strip. */
+function MicroStat({ label, value }: { label: string; value: string | number }) {
   return (
-    <div className="bg-card p-4">
+    <div className="leading-tight">
       <div className="text-[10px] uppercase tracking-[0.12em] text-muted-foreground">{label}</div>
-      <div className="mt-1 text-lg font-semibold tabular-nums">{value}</div>
-      <div className="mt-0.5 truncate text-[11px] text-muted-foreground" title={sub}>
-        {sub}
-      </div>
-    </div>
-  );
-}
-
-function CoverageBar({ label, value }: { label: string; value: number | null }) {
-  return (
-    <div>
-      <div className="flex items-baseline justify-between text-[11px]">
-        <span className="text-muted-foreground">{label}</span>
-        <span className="tabular-nums">{value === null ? "—" : `${value}%`}</span>
-      </div>
-      <div className="mt-1 h-1 w-full overflow-hidden rounded-full bg-muted">
-        <div
-          className={`h-full rounded-full ${
-            value === null
-              ? "bg-muted-foreground/30"
-              : value >= 80
-                ? "bg-emerald-500"
-                : value >= 50
-                  ? "bg-amber-500"
-                  : "bg-rose-500"
-          }`}
-          style={{ width: `${value ?? 0}%` }}
-        />
-      </div>
+      <div className="text-xs font-medium tabular-nums">{value}</div>
     </div>
   );
 }
