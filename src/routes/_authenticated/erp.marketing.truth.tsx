@@ -75,6 +75,20 @@ function matchLabel(s: MatchStatus) {
   return "No orders";
 }
 
+function truthLabel(s: CampaignTruthRow["truth_status"]) {
+  if (s === "profitable") return "Profitable";
+  if (s === "breakeven") return "Break-even";
+  if (s === "losing") return "Losing";
+  return "Too early";
+}
+
+function truthTone(s: CampaignTruthRow["truth_status"]) {
+  if (s === "profitable") return "border-emerald-500/40 bg-emerald-500/10 text-emerald-600";
+  if (s === "breakeven") return "border-amber-500/40 bg-amber-500/10 text-amber-600";
+  if (s === "losing") return "border-rose-500/40 bg-rose-500/10 text-rose-600";
+  return "border-slate-500/30 bg-slate-500/10 text-muted-foreground";
+}
+
 function matchTone(s: MatchStatus) {
   if (s === "linked") return "border-emerald-500/40 bg-emerald-500/10 text-emerald-600";
   if (s === "partial") return "border-amber-500/40 bg-amber-500/10 text-amber-600";
@@ -222,6 +236,11 @@ function CampaignTruthPage() {
           a.linked += r.attributed_orders;
           a.unmatched += r.unlinked_orders;
           a.missingCost += r.cost_missing_units;
+          if (r.collected_amount !== null) {
+            a.collected += r.collected_amount;
+            a.collectedKnown = true;
+          }
+          if (r.realized_profit !== null) a.realized += r.realized_profit;
           return a;
         },
         {
@@ -237,6 +256,9 @@ function CampaignTruthPage() {
           linked: 0,
           unmatched: 0,
           missingCost: 0,
+          collected: 0,
+          realized: 0,
+          collectedKnown: false,
         },
       ),
     [rows],

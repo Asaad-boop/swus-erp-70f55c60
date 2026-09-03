@@ -18,3 +18,13 @@
 - [ ] Missing financial data stays NULL/Pending (never coalesced to 0)
 - [ ] Item-level partial delivery / partial return support where order data allows
 - [ ] Surface (not silently work around) any schema/business-rule conflict with this spec
+
+## Campaign Profit Truth — done (this turn)
+- [x] mkt_order_primary_campaign (deterministic ranked attribution, one campaign/order)
+- [x] mkt_delivered_line_costs uses primary campaign (no double count)
+- [x] mkt_campaign_cash: lifecycle counts/values, collected cash, variance, return charge (+estimate flag), resellable COGS recovery, settlement coverage; NULL = Pending
+- [x] mkt_campaign_truth extended (old keys kept) + attribution coverage/source
+- [x] Auto matcher never overwrites manual attribution
+- [x] getCampaignOrders drill-through; realized vs projected profit + truth_status in getCampaignTruth
+- [x] Truth table: Campaign | Spend | Orders funnel | Collected | Realized profit | Status; drawer: lifecycle, cash ladder, profit bridge, trend, coverage, orders, tags/note
+- [ ] Live authenticated UI verification pending (external Supabase — no preview session available)
