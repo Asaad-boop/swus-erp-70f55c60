@@ -561,23 +561,13 @@ function CampaignTruthPage() {
                 <thead className="sticky top-0 z-10 bg-muted/70 text-[11px] uppercase tracking-wide text-muted-foreground backdrop-blur">
                   <tr>
                     <th className="p-2 text-left">Campaign</th>
-                    <th className="p-2 text-left">Verdict</th>
                     <SortTh k="spend" label="Spend" {...{ sortKey, sortDesc, toggleSort }} />
-                    <th className="p-2 text-right">Meta purch.</th>
-                    <SortTh k="orders" label="Real orders" {...{ sortKey, sortDesc, toggleSort }} />
-                    <th className="p-2 text-right">Match</th>
-                    <th className="p-2 text-right">Delivered</th>
-                    <SortTh
-                      k="delivered_revenue"
-                      label="Delivered rev"
-                      {...{ sortKey, sortDesc, toggleSort }}
-                    />
-                    <SortTh k="gross_profit" label="Gross profit" {...{ sortKey, sortDesc, toggleSort }} />
-                    <SortTh k="net_profit" label="Net profit" {...{ sortKey, sortDesc, toggleSort }} />
-                    <SortTh k="net_margin" label="Margin" {...{ sortKey, sortDesc, toggleSort }} />
-                    <SortTh k="actual_roas" label="ROAS" {...{ sortKey, sortDesc, toggleSort }} />
-                    <SortTh k="profit_roas" label="Profit ROAS" {...{ sortKey, sortDesc, toggleSort }} />
+                    <SortTh k="orders" label="Orders funnel" {...{ sortKey, sortDesc, toggleSort }} />
+                    <th className="p-2 text-right">Collected</th>
+                    <th className="p-2 text-right">Realized profit</th>
+                    <th className="p-2 text-right">Status</th>
                   </tr>
+
                 </thead>
                 <tbody>
                   {rows.map((r) => {
@@ -608,76 +598,107 @@ function CampaignTruthPage() {
                               </div>
                             </div>
                           </td>
-                          <td className="p-2">
-                            <Badge variant="outline" className={`h-5 px-1.5 text-[10px] ${vm.tone}`}>
-                              {vm.label}
-                            </Badge>
+                          <td className="p-2 text-right tabular-nums">
+                            <div>{bdt(r.spend)}</div>
+                            <div className="text-[10px] text-muted-foreground">
+                              CPA {r.orders > 0 ? bdt(r.cpa) : "—"}
+                            </div>
                           </td>
-                          <td className="p-2 text-right tabular-nums">{bdt(r.spend)}</td>
-                          <td className="p-2 text-right tabular-nums text-muted-foreground">
-                            {r.meta_purchases}
+                          <td className="p-2 text-right">
+                            <div className="flex flex-wrap items-center justify-end gap-1 text-[10px]">
+                              <span className="rounded border px-1 tabular-nums">
+                                Booked {r.orders}
+                              </span>
+                              <span className="rounded border px-1 tabular-nums">
+                                Conf {r.confirmed_orders}
+                              </span>
+                              <span className="rounded border border-emerald-500/40 bg-emerald-500/10 px-1 tabular-nums text-emerald-600">
+                                Dlv {r.delivered_orders}
+                              </span>
+                              {r.returned_orders > 0 && (
+                                <span className="rounded border border-amber-500/40 bg-amber-500/10 px-1 tabular-nums text-amber-600">
+                                  Ret {r.returned_orders}
+                                </span>
+                              )}
+                              {r.cancelled_orders > 0 && (
+                                <span className="rounded border border-rose-500/40 bg-rose-500/10 px-1 tabular-nums text-rose-600">
+                                  Cnl {r.cancelled_orders}
+                                </span>
+                              )}
+                            </div>
+                            <div className="mt-0.5 text-[10px] text-muted-foreground">
+                              Delivery {r.delivery_rate}% ·{" "}
+                              {r.attribution_coverage === null
+                                ? "attribution pending"
+                                : `attr ${r.attribution_coverage}%`}
+                            </div>
                           </td>
-                          <td className="p-2 text-right font-medium tabular-nums">
-                            {r.orders}
-                            <span
-                              className={`ml-1 text-[10px] ${r.purchase_gap >= 0 ? "text-emerald-600" : "text-rose-600"}`}
-                            >
-                              {r.purchase_gap > 0 ? "+" : ""}
-                              {r.purchase_gap}
-                            </span>
+                          <td className="p-2 text-right tabular-nums">
+                            {r.collected_amount === null ? (
+                              <Badge variant="outline" className="h-5 px-1.5 text-[10px]">
+                                Pending reconciliation
+                              </Badge>
+                            ) : (
+                              <>
+                                <div className="font-medium">{bdt(r.collected_amount)}</div>
+                                <div className="text-[10px] text-muted-foreground">
+                                  Expected {bdt(r.expected_collectible ?? 0)} · Var{" "}
+                                  {bdt(r.collection_variance ?? 0)}
+                                </div>
+                              </>
+                            )}
+                          </td>
+                          <td className="p-2 text-right tabular-nums">
+                            {r.realized_profit === null ? (
+                              <span className="text-[11px] text-muted-foreground">—</span>
+                            ) : (
+                              <span
+                                className={`inline-flex items-center gap-1 font-semibold ${r.realized_profit >= 0 ? "text-emerald-600" : "text-rose-600"}`}
+                              >
+                                {r.realized_profit >= 0 ? (
+                                  <TrendingUp className="h-3 w-3" />
+                                ) : (
+                                  <TrendingDown className="h-3 w-3" />
+                                )}
+                                {bdt(r.realized_profit)}
+                              </span>
+                            )}
+                            <div className="text-[10px] text-muted-foreground">
+                              Projected {bdt(r.projected_profit)}
+                            </div>
                           </td>
                           <td className="p-2 text-right">
                             <div className="flex flex-col items-end gap-0.5">
                               <Badge
                                 variant="outline"
-                                className={`h-4 px-1 text-[10px] ${matchTone(r.match_status)}`}
+                                className={`h-5 px-1.5 text-[10px] ${truthTone(r.truth_status)}`}
                               >
-                                {matchLabel(r.match_status)}
+                                {truthLabel(r.truth_status)}
                               </Badge>
-                              <span className="text-[10px] tabular-nums text-muted-foreground">
-                                {r.attributed_orders}/{r.unlinked_orders}
+                              <span className="text-[10px] text-muted-foreground">
+                                {r.settlement_coverage === null
+                                  ? "settlement pending"
+                                  : `settled ${r.settlement_coverage}%`}
                               </span>
+                              <Badge
+                                variant="outline"
+                                className={`h-4 px-1 text-[10px] ${vm.tone}`}
+                                title="Projected verdict (delivered-based)"
+                              >
+                                {vm.label}
+                              </Badge>
                             </div>
-                          </td>
-                          <td className="p-2 text-right tabular-nums">
-                            {r.delivered_orders}
-                            <span className="ml-1 text-[10px] text-muted-foreground">
-                              {r.delivery_rate}%
-                            </span>
-                          </td>
-                          <td className="p-2 text-right tabular-nums">{bdt(r.delivered_revenue)}</td>
-                          <td className="p-2 text-right tabular-nums">{bdt(r.gross_profit)}</td>
-                          <td
-                            className={`p-2 text-right font-semibold tabular-nums ${r.net_profit >= 0 ? "text-emerald-600" : "text-rose-600"}`}
-                          >
-                            <span className="inline-flex items-center gap-1">
-                              {r.net_profit >= 0 ? (
-                                <TrendingUp className="h-3 w-3" />
-                              ) : (
-                                <TrendingDown className="h-3 w-3" />
-                              )}
-                              {bdt(r.net_profit)}
-                            </span>
-                          </td>
-                          <td
-                            className={`p-2 text-right tabular-nums ${r.net_margin >= 0 ? "text-emerald-600" : "text-rose-600"}`}
-                          >
-                            {r.net_margin.toFixed(1)}%
-                          </td>
-                          <td className="p-2 text-right tabular-nums">{r.actual_roas.toFixed(2)}x</td>
-                          <td
-                            className={`p-2 text-right font-medium tabular-nums ${r.profit_roas >= 1 ? "text-emerald-600" : "text-rose-600"}`}
-                          >
-                            {r.profit_roas.toFixed(2)}x
                           </td>
                         </tr>
                         {open && (
                           <tr className="border-t bg-muted/20">
-                            <td colSpan={13} className="p-3">
+                            <td colSpan={6} className="p-3">
                               <CampaignTruthDetail
                                 row={r}
                                 trend={trendByCampaign.get(r.id) ?? []}
                                 brandId={brandIds.length === 1 ? brandIds[0] : null}
+                                brandIds={brandIds}
+                                range={{ from: range.from, to: range.to }}
                                 onSaved={() => q.refetch()}
                               />
                             </td>
@@ -690,30 +711,24 @@ function CampaignTruthPage() {
                 <tfoot className="border-t-2 bg-muted/40 text-xs font-semibold">
                   <tr>
                     <td className="p-2">Total ({rows.length})</td>
-                    <td />
                     <td className="p-2 text-right tabular-nums">{bdt(totals.spend)}</td>
-                    <td className="p-2 text-right tabular-nums">{num(totals.metaP)}</td>
-                    <td className="p-2 text-right tabular-nums">{num(totals.orders)}</td>
-                    <td />
-                    <td className="p-2 text-right tabular-nums">{num(totals.delivered)}</td>
-                    <td className="p-2 text-right tabular-nums">{bdt(totals.rev)}</td>
-                    <td className="p-2 text-right tabular-nums">{bdt(totals.gp)}</td>
+                    <td className="p-2 text-right tabular-nums">
+                      {num(totals.orders)} booked · {num(totals.delivered)} delivered
+                    </td>
+                    <td className="p-2 text-right tabular-nums">
+                      {totals.collectedKnown ? bdt(totals.collected) : "Pending"}
+                    </td>
                     <td
-                      className={`p-2 text-right tabular-nums ${totals.net >= 0 ? "text-emerald-600" : "text-rose-600"}`}
+                      className={`p-2 text-right tabular-nums ${totals.realized >= 0 ? "text-emerald-600" : "text-rose-600"}`}
                     >
-                      {bdt(totals.net)}
+                      {totals.collectedKnown ? bdt(totals.realized) : "—"}
                     </td>
-                    <td className="p-2 text-right tabular-nums">
-                      {totals.rev > 0 ? ((totals.net / totals.rev) * 100).toFixed(1) + "%" : "—"}
-                    </td>
-                    <td className="p-2 text-right tabular-nums">
-                      {totals.spend > 0 ? (totals.rev / totals.spend).toFixed(2) + "x" : "—"}
-                    </td>
-                    <td className="p-2 text-right tabular-nums">
-                      {totals.spend > 0 ? (totals.gp / totals.spend).toFixed(2) + "x" : "—"}
+                    <td className="p-2 text-right tabular-nums text-muted-foreground">
+                      Projected {bdt(totals.net)}
                     </td>
                   </tr>
                 </tfoot>
+
               </table>
             </div>
           )}

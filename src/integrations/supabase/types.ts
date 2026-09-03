@@ -13908,6 +13908,10 @@ export type Database = {
         Args: { _brand_ids: string[]; _from: string; _to: string }
         Returns: Json
       }
+      mkt_campaign_cash: {
+        Args: { _brand_ids: string[]; _from: string; _to: string }
+        Returns: Json
+      }
       mkt_campaign_cost_split: {
         Args: { _brand_ids: string[]; _from: string; _to: string }
         Returns: Json
@@ -14187,6 +14191,16 @@ export type Database = {
       mkt_lock_order_attribution: {
         Args: { _order_id: string }
         Returns: undefined
+      }
+      mkt_order_primary_campaign: {
+        Args: { _brand_ids: string[]; _from: string; _to: string }
+        Returns: {
+          campaign_id: string
+          confidence: number
+          order_id: string
+          priority: number
+          source: string
+        }[]
       }
       mkt_product_campaign_report: {
         Args: { p_brand_id: string; p_from: string; p_to: string }
