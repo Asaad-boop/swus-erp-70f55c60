@@ -168,6 +168,23 @@ const activityMatch = (r: CampaignTruthRow, a: ActivityFilter) =>
 type ProductFilter = "all" | "manual" | "auto" | "none";
 type CoverageFilter = "all" | "high" | "low" | "pending";
 
+/** Meta campaign status bucket: active (running), paused, or anything else. */
+type MetaStatusFilter = "all" | "active" | "paused" | "other";
+
+const metaStatusBucket = (status: string | null | undefined): MetaStatusFilter => {
+  const s = (status ?? "").toLowerCase();
+  if (s === "active" || s === "enabled") return "active";
+  if (s === "paused") return "paused";
+  return "other";
+};
+
+const META_STATUS_FILTERS: { key: MetaStatusFilter; label: string }[] = [
+  { key: "all", label: "All status" },
+  { key: "active", label: "Active" },
+  { key: "paused", label: "Paused" },
+  { key: "other", label: "Other" },
+];
+
 /** Shift a YYYY-MM-DD range back by its own length — used for period comparison. */
 function previousRange(from: string, to: string) {
   const f = new Date(from + "T00:00:00Z");
@@ -185,6 +202,7 @@ function CampaignTruthPage() {
   const [range, setRange] = useState<MktRangeValue>(() => buildPreset("30d"));
   const [search, setSearch] = useState("");
   const [truthFilter, setTruthFilter] = useState<TruthStatus | "all">("all");
+  const [metaStatus, setMetaStatus] = useState<MetaStatusFilter>("all");
   const [minSpend, setMinSpend] = useState(0);
   const [sortKey, setSortKey] = useState<SortKey>("impact");
   const [sortDesc, setSortDesc] = useState(true);
@@ -286,6 +304,7 @@ function CampaignTruthPage() {
     const out = all.filter((r) => {
       if (r.spend < minSpend) return false;
       if (truthFilter !== "all" && r.truth_status !== truthFilter) return false;
+      if (metaStatus !== "all" && metaStatusBucket(r.status) !== metaStatus) return false;
       if (verdictFilter !== "all" && r.verdict !== verdictFilter) return false;
       if (!activityMatch(r, activity)) return false;
       if (hasOrders && r.orders <= 0) return false;
@@ -317,6 +336,7 @@ function CampaignTruthPage() {
     all,
     search,
     truthFilter,
+    metaStatus,
     verdictFilter,
     minSpend,
     sortKey,
@@ -386,6 +406,15 @@ function CampaignTruthPage() {
   const truthCounts = useMemo(() => {
     const m: Record<string, number> = { all: all.length };
     for (const r of all) m[r.truth_status] = (m[r.truth_status] ?? 0) + 1;
+    return m;
+  }, [all]);
+
+  const metaStatusCounts = useMemo(() => {
+    const m: Record<string, number> = { all: all.length };
+    for (const r of all) {
+      const b = metaStatusBucket(r.status);
+      m[b] = (m[b] ?? 0) + 1;
+    }
     return m;
   }, [all]);
 
@@ -749,6 +778,26 @@ function CampaignTruthPage() {
             >
               {t.label}
               <span className="ml-1 tabular-nums opacity-70">{truthCounts[t.key] ?? 0}</span>
+            </button>
+          ))}
+        </div>
+
+        <div className="flex flex-wrap items-center gap-1 rounded-lg border p-0.5">
+          {META_STATUS_FILTERS.map((s) => (
+            <button
+              key={s.key}
+              type="button"
+              onClick={() => setMetaStatus(s.key)}
+              className={`inline-flex items-center gap-1 rounded-md px-2.5 py-1 text-xs transition-colors ${
+                metaStatus === s.key
+                  ? "bg-primary text-primary-foreground"
+                  : "text-muted-foreground hover:bg-muted"
+              }`}
+            >
+              {s.key === "active" && <span className="h-1.5 w-1.5 rounded-full bg-emerald-500" />}
+              {s.key === "paused" && <span className="h-1.5 w-1.5 rounded-full bg-slate-400" />}
+              {s.label}
+              <span className="tabular-nums opacity-70">{metaStatusCounts[s.key] ?? 0}</span>
             </button>
           ))}
         </div>
