@@ -56,6 +56,8 @@ import {
 } from "@/components/erp/marketing/campaign-truth-detail";
 import { CampaignMonthlyDashboard } from "@/components/erp/marketing/campaign-monthly-dashboard";
 import { DailyPerformancePanel } from "@/components/erp/marketing/daily-performance-panel";
+import { TodayPulse } from "@/components/erp/marketing/today-pulse";
+
 
 export const Route = createFileRoute("/_authenticated/erp/marketing/truth")({
   head: () => ({
