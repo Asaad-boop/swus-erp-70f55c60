@@ -7,7 +7,7 @@
  */
 import {
   LayoutDashboard, Globe, PlusCircle, Boxes, Wallet, Truck, Settings, Users, UserCog, Radio, Fingerprint, Package,
-  TrendingDown, TrendingUp, PackagePlus, Megaphone, Container, Heart, Image as ImageIcon, GitBranch, Plug,
+  TrendingDown, TrendingUp, PackagePlus, Megaphone, Container, Heart, GitBranch, Plug,
   ChevronsLeft, ChevronRight, Sparkles, ClipboardList, ClipboardCheck, PackageSearch,
   Activity, BarChart3, RotateCcw, FileSpreadsheet, Zap, Briefcase, Stethoscope, ChevronDown,
   Star, Filter, X, Receipt, BookOpen, Landmark, Coins, ArrowDownCircle, ArrowUpCircle, HandCoins, Scale,
@@ -152,13 +152,11 @@ export const NAV_GROUPS: Group[] = [
         icon: Megaphone,
         items: [
           { to: "/erp/marketing", label: "Overview", icon: LayoutDashboard, exact: true },
-          { to: "/erp/marketing/campaigns", label: "Campaigns", icon: Target },
-          { to: "/erp/marketing/creatives", label: "Creative Library", icon: ImageIcon },
+          { to: "/erp/marketing/truth", label: "Campaign Workspace", icon: Target },
           { to: "/erp/marketing/attribution", label: "Attribution & Funnel", icon: GitBranch },
           { to: "/erp/marketing/products", label: "Product & LTV", icon: PackagePlus },
-          { to: "/erp/marketing/planning", label: "Budgets & Calendar", icon: CalendarClock },
+          { to: "/erp/marketing/calendar", label: "Calendar & Experiments", icon: CalendarClock },
           { to: "/erp/marketing/alerts", label: "Alerts & Intelligence", icon: BellRing },
-          { to: "/erp/marketing/daily", label: "Daily Performance", icon: BarChart3 },
           { to: "/erp/marketing/channels", label: "Ad Channels", icon: Plug },
           { to: "/erp/marketing/reports", label: "Reports & Exports", icon: FileBarChart },
           { to: "/erp/marketing/settings", label: "Marketing Settings", icon: Settings },

@@ -3,21 +3,17 @@ import { useEffect, useRef, type ReactNode } from "react";
 import {
   LayoutDashboard,
   Target,
-  Image as ImageIcon,
   GitBranch,
   ScanSearch,
-  Scale,
-
   PackagePlus,
-  CalendarClock,
   CalendarDays,
   BellRing,
-  BarChart3,
   Plug,
   FileBarChart,
   Settings,
   type LucideIcon,
 } from "lucide-react";
+
 import { Skeleton } from "@/components/ui/skeleton";
 import { useBrand } from "@/contexts/brand-context";
 
@@ -37,25 +33,17 @@ export const MARKETING_NAV: MarketingNavItem[] = [
     icon: LayoutDashboard,
     exact: true,
   },
-  { to: "/erp/marketing/daily", label: "Daily Performance", short: "Daily", icon: BarChart3 },
-  { to: "/erp/marketing/campaigns", label: "Campaign Workspace", short: "Campaigns", icon: Target },
   {
-    to: "/erp/marketing/creatives",
-    label: "Creative Library",
-    short: "Creatives",
-    icon: ImageIcon,
+    to: "/erp/marketing/truth",
+    label: "Campaign Workspace",
+    short: "Campaigns",
+    icon: Target,
   },
   {
     to: "/erp/marketing/attribution",
     label: "Attribution & Funnel",
     short: "Attribution",
     icon: GitBranch,
-  },
-  {
-    to: "/erp/marketing/truth",
-    label: "Meta vs Actual",
-    short: "Meta vs Actual",
-    icon: Scale,
   },
   {
     to: "/erp/marketing/audit",
@@ -65,12 +53,6 @@ export const MARKETING_NAV: MarketingNavItem[] = [
   },
 
   { to: "/erp/marketing/products", label: "Product & LTV", short: "Products", icon: PackagePlus },
-  {
-    to: "/erp/marketing/planning",
-    label: "Budget Pacing",
-    short: "Pacing",
-    icon: CalendarClock,
-  },
   {
     to: "/erp/marketing/calendar",
     label: "Calendar & Experiments",

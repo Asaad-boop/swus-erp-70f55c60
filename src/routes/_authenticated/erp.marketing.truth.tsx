@@ -19,6 +19,7 @@ import {
   Check,
   Plus,
   X,
+  ChevronDown,
 } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
@@ -54,17 +55,18 @@ import {
   TagChips,
 } from "@/components/erp/marketing/campaign-truth-detail";
 import { CampaignMonthlyDashboard } from "@/components/erp/marketing/campaign-monthly-dashboard";
+import { DailyPerformancePanel } from "@/components/erp/marketing/daily-performance-panel";
 
 export const Route = createFileRoute("/_authenticated/erp/marketing/truth")({
   head: () => ({
     meta: [
-      { title: "Campaign Profit Truth — Marketing ERP" },
+      { title: "Campaign Workspace — Marketing ERP" },
       {
         name: "description",
         content:
           "Actual collected cash, real costs, and campaign profitability across every synced campaign.",
       },
-      { property: "og:title", content: "Campaign Profit Truth — Marketing ERP" },
+      { property: "og:title", content: "Campaign Workspace — Marketing ERP" },
       {
         property: "og:description",
         content: "Actual collected cash, real costs, and campaign profitability.",
@@ -219,6 +221,7 @@ function CampaignTruthPage() {
   const [grain, setGrain] = useState<"day" | "week">("day");
   const [compare, setCompare] = useState(false);
   const [view, setView] = useState<"table" | "performance" | "monthly">("table");
+  const [dailyOpen, setDailyOpen] = useState(false);
 
   const brandIds = useMemo(() => {
     if (brandKey === "all") return brands.map((b) => b.id);
@@ -615,7 +618,7 @@ function CampaignTruthPage() {
       <header className="grid grid-cols-[minmax(0,1fr)_auto] items-start gap-4 sm:flex sm:flex-wrap sm:justify-between">
         <div className="min-w-0">
           <h1 className="truncate text-lg font-semibold tracking-tight md:text-xl">
-            Campaign Profit Truth
+            Campaign Workspace
           </h1>
           <p className="mt-0.5 text-xs text-muted-foreground">
             Actual collected cash, real costs, and campaign profitability.
@@ -1299,9 +1302,36 @@ function CampaignTruthPage() {
           </div>
         </div>
       )}
+
+      {/* 6 — Daily performance (collapsible) */}
+      {brandIds.length > 0 && (
+        <section className="rounded-xl border bg-card">
+          <button
+            type="button"
+            onClick={() => setDailyOpen((o) => !o)}
+            className="flex w-full items-center justify-between gap-3 px-4 py-3 text-left"
+          >
+            <span className="min-w-0">
+              <span className="block text-sm font-semibold">Daily performance</span>
+              <span className="block text-[11px] text-muted-foreground">
+                Day-by-day real spend vs Meta reported · {range.from} → {range.to}
+              </span>
+            </span>
+            <ChevronDown
+              className={`h-4 w-4 shrink-0 text-muted-foreground transition-transform ${dailyOpen ? "rotate-180" : ""}`}
+            />
+          </button>
+          {dailyOpen && (
+            <div className="border-t p-4">
+              <DailyPerformancePanel brandIds={brandIds} from={range.from} to={range.to} />
+            </div>
+          )}
+        </section>
+      )}
     </div>
   );
 }
+
 
 /** Tiny inline label/value pair used in the compact truth strip. */
 function MicroStat({ label, value }: { label: string; value: string | number }) {

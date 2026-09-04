@@ -1,19 +1,8 @@
-import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useMemo, useState } from "react";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
-import { z } from "zod";
-import { zodValidator, fallback } from "@tanstack/zod-adapter";
 import { toast } from "sonner";
-import {
-  RefreshCcw,
-  Download,
-  Plus,
-  AlertTriangle,
-  TrendingUp,
-  Loader2,
-  BarChart3 as PageIcon,
-} from "lucide-react";
+import { RefreshCcw, Download, Plus, AlertTriangle, TrendingUp, Loader2 } from "lucide-react";
 import {
   ResponsiveContainer,
   LineChart,
@@ -41,44 +30,7 @@ import {
 } from "@/components/ui/dialog";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { cn } from "@/lib/utils";
-import { useBrand } from "@/contexts/brand-context";
-import { BrandTabs } from "@/components/erp/marketing/marketing-shell";
-
-import {
-  DateRangePicker,
-  buildPreset,
-  type MktRangeValue,
-} from "@/components/erp/marketing/date-range-picker";
 import { getDailyPerformance, quickAddDollarPurchase } from "@/lib/erp/marketing/daily.functions";
-
-const searchSchema = z.object({
-  brand: fallback(z.string(), "all").default("all"),
-  from: fallback(z.string(), "").default(""),
-  to: fallback(z.string(), "").default(""),
-  view: fallback(z.enum(["table", "chart"]), "table").default("table"),
-});
-
-export const Route = createFileRoute("/_authenticated/erp/marketing/daily")({
-  head: () => ({
-    meta: [
-      { title: "Daily Performance — Marketing ERP" },
-      {
-        name: "description",
-        content:
-          "Day-by-day marketing performance: real ad spend versus Meta reported spend, delivered revenue, ROAS, CPO and dollar purchase drift.",
-      },
-      { property: "og:title", content: "Daily Performance — Marketing ERP" },
-      {
-        property: "og:description",
-        content: "Track daily spend drift between real dollar cost and Meta reported numbers.",
-      },
-      { property: "og:type", content: "website" },
-      { name: "twitter:card", content: "summary" },
-    ],
-  }),
-  validateSearch: zodValidator(searchSchema),
-  component: DailyPerformancePage,
-});
 
 const bdt = (n: number) => "৳" + Math.round(n).toLocaleString("en-IN");
 
@@ -91,48 +43,36 @@ function isRecentDay(day: string): boolean {
   return ageMs < 3 * 86400000;
 }
 
-function DailyPerformancePage() {
-  const search = Route.useSearch();
-  const navigate = useNavigate({ from: Route.fullPath });
-  const { brands } = useBrand();
-
-  const selection = useMemo(() => {
-    if (search.brand === "all") return { key: "all", label: "All", ids: brands.map((b) => b.id) };
-    const b = brands.find((x) => x.slug === search.brand || x.id === search.brand);
-    if (b) return { key: b.slug, label: b.name, ids: [b.id] };
-    return { key: "all", label: "All", ids: brands.map((b) => b.id) };
-  }, [search.brand, brands]);
-
-  // Range — default last 30 days; URL overrides if valid
-  const range: MktRangeValue = useMemo(() => {
-    if (search.from && search.to)
-      return { presetKey: "custom", label: "Custom", from: search.from, to: search.to };
-    return buildPreset("30d");
-  }, [search.from, search.to]);
-
-  const setRange = (v: MktRangeValue) =>
-    navigate({
-      search: (prev: any) => ({ ...prev, from: v.from, to: v.to }),
-      replace: true,
-    });
-  const setBrand = (nextSlug: string) =>
-    navigate({ search: (prev: any) => ({ ...prev, brand: nextSlug }), replace: true });
-  const setView = (v: "table" | "chart") =>
-    navigate({ search: (prev: any) => ({ ...prev, view: v }), replace: true });
+/**
+ * Daily performance (real spend vs Meta reported) — embedded inside the
+ * campaign workspace. Range + brand come from the parent page.
+ */
+export function DailyPerformancePanel({
+  brandIds,
+  from,
+  to,
+}: {
+  brandIds: string[];
+  from: string;
+  to: string;
+}) {
+  const [view, setView] = useState<"table" | "chart">("table");
+  const range = useMemo(() => ({ from, to }), [from, to]);
 
   const fetchDaily = useServerFn(getDailyPerformance);
   const q = useQuery({
-    queryKey: ["mkt-daily", selection.ids.slice().sort().join(","), range.from, range.to],
+    queryKey: ["mkt-daily", brandIds.slice().sort().join(","), range.from, range.to],
     queryFn: () =>
       fetchDaily({
-        data: { brandIds: selection.ids, from: range.from, to: range.to },
+        data: { brandIds, from: range.from, to: range.to },
       }),
-    enabled: selection.ids.length > 0,
+    enabled: brandIds.length > 0,
     staleTime: 30_000,
     refetchOnWindowFocus: false,
   });
 
   const [addOpen, setAddOpen] = useState(false);
+
 
   function exportCsv() {
     const rows = q.data?.rows ?? [];
@@ -185,46 +125,30 @@ function DailyPerformancePage() {
   }
 
   return (
-    <div className="mx-auto max-w-[1500px] space-y-4 p-4 md:p-6">
-      {/* Header */}
-      <div className="flex flex-wrap items-end justify-between gap-3">
-        <div className="flex min-w-0 items-center gap-2.5">
-          <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-primary/10 text-primary">
-            <PageIcon className="h-4.5 w-4.5" />
-          </span>
-          <div className="min-w-0">
-            <h1 className="font-display text-xl font-bold tracking-tight">Daily Performance</h1>
-            <p className="text-xs text-muted-foreground">
-              {selection.label} · {range.label} · real vs Meta drift
-            </p>
-          </div>
-        </div>
-        <div className="flex flex-wrap items-center gap-2">
-          <BrandTabs value={selection.key} onChange={setBrand} />
-          <DateRangePicker value={range} onChange={setRange} />
-          <Tabs value={search.view} onValueChange={(v) => setView(v as any)}>
-            <TabsList className="h-9">
-              <TabsTrigger value="table" className="text-xs">
-                Table
-              </TabsTrigger>
-              <TabsTrigger value="chart" className="text-xs">
-                Chart
-              </TabsTrigger>
-            </TabsList>
-          </Tabs>
-          <Button size="sm" variant="outline" onClick={() => q.refetch()} disabled={q.isFetching}>
-            <RefreshCcw className={cn("h-3.5 w-3.5 mr-1.5", q.isFetching && "animate-spin")} />
-            Refresh
-          </Button>
-          <Button size="sm" variant="outline" onClick={exportCsv}>
-            <Download className="h-3.5 w-3.5 mr-1.5" />
-            CSV
-          </Button>
-          <Button size="sm" onClick={() => setAddOpen(true)}>
-            <Plus className="h-3.5 w-3.5 mr-1.5" />
-            Add dollar purchase
-          </Button>
-        </div>
+    <div className="space-y-3">
+      <div className="flex flex-wrap items-center justify-end gap-2">
+        <Tabs value={view} onValueChange={(v) => setView(v as "table" | "chart")}>
+          <TabsList className="h-8">
+            <TabsTrigger value="table" className="text-xs">
+              Table
+            </TabsTrigger>
+            <TabsTrigger value="chart" className="text-xs">
+              Chart
+            </TabsTrigger>
+          </TabsList>
+        </Tabs>
+        <Button size="sm" variant="outline" onClick={() => q.refetch()} disabled={q.isFetching}>
+          <RefreshCcw className={cn("h-3.5 w-3.5 mr-1.5", q.isFetching && "animate-spin")} />
+          Refresh
+        </Button>
+        <Button size="sm" variant="outline" onClick={exportCsv}>
+          <Download className="h-3.5 w-3.5 mr-1.5" />
+          CSV
+        </Button>
+        <Button size="sm" onClick={() => setAddOpen(true)}>
+          <Plus className="h-3.5 w-3.5 mr-1.5" />
+          Add dollar purchase
+        </Button>
       </div>
 
       {q.error && (
@@ -235,7 +159,7 @@ function DailyPerformancePage() {
         </Card>
       )}
 
-      {search.view === "chart" ? (
+      {view === "chart" ? (
         <ChartView loading={q.isLoading} rows={q.data?.rows ?? []} />
       ) : (
         <TableView loading={q.isLoading} rows={q.data?.rows ?? []} totals={q.data?.totals} />
@@ -244,12 +168,13 @@ function DailyPerformancePage() {
       <QuickAddDialog
         open={addOpen}
         onOpenChange={setAddOpen}
-        brandIds={selection.ids}
+        brandIds={brandIds}
         onDone={() => q.refetch()}
       />
     </div>
   );
 }
+
 
 type Row = Awaited<ReturnType<typeof getDailyPerformance>>["rows"][number];
 type Totals = Awaited<ReturnType<typeof getDailyPerformance>>["totals"];
