@@ -669,7 +669,11 @@ function CampaignTruthPage() {
         <span className="ml-auto tabular-nums">{num(rows.length)} campaigns in view</span>
       </div>
 
+      {/* 1.5 — Today pulse (always Dhaka today, independent of range) */}
+      <TodayPulse brandIds={brandIds} />
+
       {/* 2 — Compact truth strip */}
+
       <section className="rounded-xl border bg-card">
         <div className="flex flex-wrap items-center gap-x-6 gap-y-3 px-4 py-3">
           <div className="min-w-[170px]">
