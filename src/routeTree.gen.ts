@@ -93,11 +93,7 @@ import { Route as AuthenticatedErpMarketingTruthRouteImport } from './routes/_au
 import { Route as AuthenticatedErpMarketingSettingsRouteImport } from './routes/_authenticated/erp.marketing.settings'
 import { Route as AuthenticatedErpMarketingReportsRouteImport } from './routes/_authenticated/erp.marketing.reports'
 import { Route as AuthenticatedErpMarketingProductsRouteImport } from './routes/_authenticated/erp.marketing.products'
-import { Route as AuthenticatedErpMarketingPlanningRouteImport } from './routes/_authenticated/erp.marketing.planning'
-import { Route as AuthenticatedErpMarketingDailyRouteImport } from './routes/_authenticated/erp.marketing.daily'
-import { Route as AuthenticatedErpMarketingCreativesRouteImport } from './routes/_authenticated/erp.marketing.creatives'
 import { Route as AuthenticatedErpMarketingChannelsRouteImport } from './routes/_authenticated/erp.marketing.channels'
-import { Route as AuthenticatedErpMarketingCampaignsRouteImport } from './routes/_authenticated/erp.marketing.campaigns'
 import { Route as AuthenticatedErpMarketingCalendarRouteImport } from './routes/_authenticated/erp.marketing.calendar'
 import { Route as AuthenticatedErpMarketingAuditRouteImport } from './routes/_authenticated/erp.marketing.audit'
 import { Route as AuthenticatedErpMarketingAttributionRouteImport } from './routes/_authenticated/erp.marketing.attribution'
@@ -635,34 +631,10 @@ const AuthenticatedErpMarketingProductsRoute =
     path: '/products',
     getParentRoute: () => AuthenticatedErpMarketingRoute,
   } as any)
-const AuthenticatedErpMarketingPlanningRoute =
-  AuthenticatedErpMarketingPlanningRouteImport.update({
-    id: '/planning',
-    path: '/planning',
-    getParentRoute: () => AuthenticatedErpMarketingRoute,
-  } as any)
-const AuthenticatedErpMarketingDailyRoute =
-  AuthenticatedErpMarketingDailyRouteImport.update({
-    id: '/daily',
-    path: '/daily',
-    getParentRoute: () => AuthenticatedErpMarketingRoute,
-  } as any)
-const AuthenticatedErpMarketingCreativesRoute =
-  AuthenticatedErpMarketingCreativesRouteImport.update({
-    id: '/creatives',
-    path: '/creatives',
-    getParentRoute: () => AuthenticatedErpMarketingRoute,
-  } as any)
 const AuthenticatedErpMarketingChannelsRoute =
   AuthenticatedErpMarketingChannelsRouteImport.update({
     id: '/channels',
     path: '/channels',
-    getParentRoute: () => AuthenticatedErpMarketingRoute,
-  } as any)
-const AuthenticatedErpMarketingCampaignsRoute =
-  AuthenticatedErpMarketingCampaignsRouteImport.update({
-    id: '/campaigns',
-    path: '/campaigns',
     getParentRoute: () => AuthenticatedErpMarketingRoute,
   } as any)
 const AuthenticatedErpMarketingCalendarRoute =
@@ -1090,11 +1062,7 @@ export interface FileRoutesByFullPath {
   '/erp/marketing/attribution': typeof AuthenticatedErpMarketingAttributionRoute
   '/erp/marketing/audit': typeof AuthenticatedErpMarketingAuditRoute
   '/erp/marketing/calendar': typeof AuthenticatedErpMarketingCalendarRoute
-  '/erp/marketing/campaigns': typeof AuthenticatedErpMarketingCampaignsRoute
   '/erp/marketing/channels': typeof AuthenticatedErpMarketingChannelsRoute
-  '/erp/marketing/creatives': typeof AuthenticatedErpMarketingCreativesRoute
-  '/erp/marketing/daily': typeof AuthenticatedErpMarketingDailyRoute
-  '/erp/marketing/planning': typeof AuthenticatedErpMarketingPlanningRoute
   '/erp/marketing/products': typeof AuthenticatedErpMarketingProductsRoute
   '/erp/marketing/reports': typeof AuthenticatedErpMarketingReportsRoute
   '/erp/marketing/settings': typeof AuthenticatedErpMarketingSettingsRoute
@@ -1226,11 +1194,7 @@ export interface FileRoutesByTo {
   '/erp/marketing/attribution': typeof AuthenticatedErpMarketingAttributionRoute
   '/erp/marketing/audit': typeof AuthenticatedErpMarketingAuditRoute
   '/erp/marketing/calendar': typeof AuthenticatedErpMarketingCalendarRoute
-  '/erp/marketing/campaigns': typeof AuthenticatedErpMarketingCampaignsRoute
   '/erp/marketing/channels': typeof AuthenticatedErpMarketingChannelsRoute
-  '/erp/marketing/creatives': typeof AuthenticatedErpMarketingCreativesRoute
-  '/erp/marketing/daily': typeof AuthenticatedErpMarketingDailyRoute
-  '/erp/marketing/planning': typeof AuthenticatedErpMarketingPlanningRoute
   '/erp/marketing/products': typeof AuthenticatedErpMarketingProductsRoute
   '/erp/marketing/reports': typeof AuthenticatedErpMarketingReportsRoute
   '/erp/marketing/settings': typeof AuthenticatedErpMarketingSettingsRoute
@@ -1374,11 +1338,7 @@ export interface FileRoutesById {
   '/_authenticated/erp/marketing/attribution': typeof AuthenticatedErpMarketingAttributionRoute
   '/_authenticated/erp/marketing/audit': typeof AuthenticatedErpMarketingAuditRoute
   '/_authenticated/erp/marketing/calendar': typeof AuthenticatedErpMarketingCalendarRoute
-  '/_authenticated/erp/marketing/campaigns': typeof AuthenticatedErpMarketingCampaignsRoute
   '/_authenticated/erp/marketing/channels': typeof AuthenticatedErpMarketingChannelsRoute
-  '/_authenticated/erp/marketing/creatives': typeof AuthenticatedErpMarketingCreativesRoute
-  '/_authenticated/erp/marketing/daily': typeof AuthenticatedErpMarketingDailyRoute
-  '/_authenticated/erp/marketing/planning': typeof AuthenticatedErpMarketingPlanningRoute
   '/_authenticated/erp/marketing/products': typeof AuthenticatedErpMarketingProductsRoute
   '/_authenticated/erp/marketing/reports': typeof AuthenticatedErpMarketingReportsRoute
   '/_authenticated/erp/marketing/settings': typeof AuthenticatedErpMarketingSettingsRoute
@@ -1522,11 +1482,7 @@ export interface FileRouteTypes {
     | '/erp/marketing/attribution'
     | '/erp/marketing/audit'
     | '/erp/marketing/calendar'
-    | '/erp/marketing/campaigns'
     | '/erp/marketing/channels'
-    | '/erp/marketing/creatives'
-    | '/erp/marketing/daily'
-    | '/erp/marketing/planning'
     | '/erp/marketing/products'
     | '/erp/marketing/reports'
     | '/erp/marketing/settings'
@@ -1658,11 +1614,7 @@ export interface FileRouteTypes {
     | '/erp/marketing/attribution'
     | '/erp/marketing/audit'
     | '/erp/marketing/calendar'
-    | '/erp/marketing/campaigns'
     | '/erp/marketing/channels'
-    | '/erp/marketing/creatives'
-    | '/erp/marketing/daily'
-    | '/erp/marketing/planning'
     | '/erp/marketing/products'
     | '/erp/marketing/reports'
     | '/erp/marketing/settings'
@@ -1805,11 +1757,7 @@ export interface FileRouteTypes {
     | '/_authenticated/erp/marketing/attribution'
     | '/_authenticated/erp/marketing/audit'
     | '/_authenticated/erp/marketing/calendar'
-    | '/_authenticated/erp/marketing/campaigns'
     | '/_authenticated/erp/marketing/channels'
-    | '/_authenticated/erp/marketing/creatives'
-    | '/_authenticated/erp/marketing/daily'
-    | '/_authenticated/erp/marketing/planning'
     | '/_authenticated/erp/marketing/products'
     | '/_authenticated/erp/marketing/reports'
     | '/_authenticated/erp/marketing/settings'
@@ -2479,39 +2427,11 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedErpMarketingProductsRouteImport
       parentRoute: typeof AuthenticatedErpMarketingRoute
     }
-    '/_authenticated/erp/marketing/planning': {
-      id: '/_authenticated/erp/marketing/planning'
-      path: '/planning'
-      fullPath: '/erp/marketing/planning'
-      preLoaderRoute: typeof AuthenticatedErpMarketingPlanningRouteImport
-      parentRoute: typeof AuthenticatedErpMarketingRoute
-    }
-    '/_authenticated/erp/marketing/daily': {
-      id: '/_authenticated/erp/marketing/daily'
-      path: '/daily'
-      fullPath: '/erp/marketing/daily'
-      preLoaderRoute: typeof AuthenticatedErpMarketingDailyRouteImport
-      parentRoute: typeof AuthenticatedErpMarketingRoute
-    }
-    '/_authenticated/erp/marketing/creatives': {
-      id: '/_authenticated/erp/marketing/creatives'
-      path: '/creatives'
-      fullPath: '/erp/marketing/creatives'
-      preLoaderRoute: typeof AuthenticatedErpMarketingCreativesRouteImport
-      parentRoute: typeof AuthenticatedErpMarketingRoute
-    }
     '/_authenticated/erp/marketing/channels': {
       id: '/_authenticated/erp/marketing/channels'
       path: '/channels'
       fullPath: '/erp/marketing/channels'
       preLoaderRoute: typeof AuthenticatedErpMarketingChannelsRouteImport
-      parentRoute: typeof AuthenticatedErpMarketingRoute
-    }
-    '/_authenticated/erp/marketing/campaigns': {
-      id: '/_authenticated/erp/marketing/campaigns'
-      path: '/campaigns'
-      fullPath: '/erp/marketing/campaigns'
-      preLoaderRoute: typeof AuthenticatedErpMarketingCampaignsRouteImport
       parentRoute: typeof AuthenticatedErpMarketingRoute
     }
     '/_authenticated/erp/marketing/calendar': {
@@ -3096,11 +3016,7 @@ interface AuthenticatedErpMarketingRouteChildren {
   AuthenticatedErpMarketingAttributionRoute: typeof AuthenticatedErpMarketingAttributionRoute
   AuthenticatedErpMarketingAuditRoute: typeof AuthenticatedErpMarketingAuditRoute
   AuthenticatedErpMarketingCalendarRoute: typeof AuthenticatedErpMarketingCalendarRoute
-  AuthenticatedErpMarketingCampaignsRoute: typeof AuthenticatedErpMarketingCampaignsRoute
   AuthenticatedErpMarketingChannelsRoute: typeof AuthenticatedErpMarketingChannelsRoute
-  AuthenticatedErpMarketingCreativesRoute: typeof AuthenticatedErpMarketingCreativesRoute
-  AuthenticatedErpMarketingDailyRoute: typeof AuthenticatedErpMarketingDailyRoute
-  AuthenticatedErpMarketingPlanningRoute: typeof AuthenticatedErpMarketingPlanningRoute
   AuthenticatedErpMarketingProductsRoute: typeof AuthenticatedErpMarketingProductsRoute
   AuthenticatedErpMarketingReportsRoute: typeof AuthenticatedErpMarketingReportsRoute
   AuthenticatedErpMarketingSettingsRoute: typeof AuthenticatedErpMarketingSettingsRoute
@@ -3116,15 +3032,8 @@ const AuthenticatedErpMarketingRouteChildren: AuthenticatedErpMarketingRouteChil
     AuthenticatedErpMarketingAuditRoute: AuthenticatedErpMarketingAuditRoute,
     AuthenticatedErpMarketingCalendarRoute:
       AuthenticatedErpMarketingCalendarRoute,
-    AuthenticatedErpMarketingCampaignsRoute:
-      AuthenticatedErpMarketingCampaignsRoute,
     AuthenticatedErpMarketingChannelsRoute:
       AuthenticatedErpMarketingChannelsRoute,
-    AuthenticatedErpMarketingCreativesRoute:
-      AuthenticatedErpMarketingCreativesRoute,
-    AuthenticatedErpMarketingDailyRoute: AuthenticatedErpMarketingDailyRoute,
-    AuthenticatedErpMarketingPlanningRoute:
-      AuthenticatedErpMarketingPlanningRoute,
     AuthenticatedErpMarketingProductsRoute:
       AuthenticatedErpMarketingProductsRoute,
     AuthenticatedErpMarketingReportsRoute:
