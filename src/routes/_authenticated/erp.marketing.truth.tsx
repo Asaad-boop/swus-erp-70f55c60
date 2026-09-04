@@ -1299,9 +1299,36 @@ function CampaignTruthPage() {
           </div>
         </div>
       )}
+
+      {/* 6 — Daily performance (collapsible) */}
+      {brandIds.length > 0 && (
+        <section className="rounded-xl border bg-card">
+          <button
+            type="button"
+            onClick={() => setDailyOpen((o) => !o)}
+            className="flex w-full items-center justify-between gap-3 px-4 py-3 text-left"
+          >
+            <span className="min-w-0">
+              <span className="block text-sm font-semibold">Daily performance</span>
+              <span className="block text-[11px] text-muted-foreground">
+                Day-by-day real spend vs Meta reported · {range.from} → {range.to}
+              </span>
+            </span>
+            <ChevronDown
+              className={`h-4 w-4 shrink-0 text-muted-foreground transition-transform ${dailyOpen ? "rotate-180" : ""}`}
+            />
+          </button>
+          {dailyOpen && (
+            <div className="border-t p-4">
+              <DailyPerformancePanel brandIds={brandIds} from={range.from} to={range.to} />
+            </div>
+          )}
+        </section>
+      )}
     </div>
   );
 }
+
 
 /** Tiny inline label/value pair used in the compact truth strip. */
 function MicroStat({ label, value }: { label: string; value: string | number }) {
