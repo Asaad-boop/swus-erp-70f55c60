@@ -3,21 +3,17 @@ import { useEffect, useRef, type ReactNode } from "react";
 import {
   LayoutDashboard,
   Target,
-  Image as ImageIcon,
   GitBranch,
   ScanSearch,
-  Scale,
-
   PackagePlus,
-  CalendarClock,
   CalendarDays,
   BellRing,
-  BarChart3,
   Plug,
   FileBarChart,
   Settings,
   type LucideIcon,
 } from "lucide-react";
+
 import { Skeleton } from "@/components/ui/skeleton";
 import { useBrand } from "@/contexts/brand-context";
 
