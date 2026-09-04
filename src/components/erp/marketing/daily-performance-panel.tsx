@@ -125,46 +125,30 @@ export function DailyPerformancePanel({
   }
 
   return (
-    <div className="mx-auto max-w-[1500px] space-y-4 p-4 md:p-6">
-      {/* Header */}
-      <div className="flex flex-wrap items-end justify-between gap-3">
-        <div className="flex min-w-0 items-center gap-2.5">
-          <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-primary/10 text-primary">
-            <PageIcon className="h-4.5 w-4.5" />
-          </span>
-          <div className="min-w-0">
-            <h1 className="font-display text-xl font-bold tracking-tight">Daily Performance</h1>
-            <p className="text-xs text-muted-foreground">
-              {selection.label} · {range.label} · real vs Meta drift
-            </p>
-          </div>
-        </div>
-        <div className="flex flex-wrap items-center gap-2">
-          <BrandTabs value={selection.key} onChange={setBrand} />
-          <DateRangePicker value={range} onChange={setRange} />
-          <Tabs value={search.view} onValueChange={(v) => setView(v as any)}>
-            <TabsList className="h-9">
-              <TabsTrigger value="table" className="text-xs">
-                Table
-              </TabsTrigger>
-              <TabsTrigger value="chart" className="text-xs">
-                Chart
-              </TabsTrigger>
-            </TabsList>
-          </Tabs>
-          <Button size="sm" variant="outline" onClick={() => q.refetch()} disabled={q.isFetching}>
-            <RefreshCcw className={cn("h-3.5 w-3.5 mr-1.5", q.isFetching && "animate-spin")} />
-            Refresh
-          </Button>
-          <Button size="sm" variant="outline" onClick={exportCsv}>
-            <Download className="h-3.5 w-3.5 mr-1.5" />
-            CSV
-          </Button>
-          <Button size="sm" onClick={() => setAddOpen(true)}>
-            <Plus className="h-3.5 w-3.5 mr-1.5" />
-            Add dollar purchase
-          </Button>
-        </div>
+    <div className="space-y-3">
+      <div className="flex flex-wrap items-center justify-end gap-2">
+        <Tabs value={view} onValueChange={(v) => setView(v as "table" | "chart")}>
+          <TabsList className="h-8">
+            <TabsTrigger value="table" className="text-xs">
+              Table
+            </TabsTrigger>
+            <TabsTrigger value="chart" className="text-xs">
+              Chart
+            </TabsTrigger>
+          </TabsList>
+        </Tabs>
+        <Button size="sm" variant="outline" onClick={() => q.refetch()} disabled={q.isFetching}>
+          <RefreshCcw className={cn("h-3.5 w-3.5 mr-1.5", q.isFetching && "animate-spin")} />
+          Refresh
+        </Button>
+        <Button size="sm" variant="outline" onClick={exportCsv}>
+          <Download className="h-3.5 w-3.5 mr-1.5" />
+          CSV
+        </Button>
+        <Button size="sm" onClick={() => setAddOpen(true)}>
+          <Plus className="h-3.5 w-3.5 mr-1.5" />
+          Add dollar purchase
+        </Button>
       </div>
 
       {q.error && (
@@ -175,7 +159,7 @@ export function DailyPerformancePanel({
         </Card>
       )}
 
-      {search.view === "chart" ? (
+      {view === "chart" ? (
         <ChartView loading={q.isLoading} rows={q.data?.rows ?? []} />
       ) : (
         <TableView loading={q.isLoading} rows={q.data?.rows ?? []} totals={q.data?.totals} />
@@ -184,12 +168,13 @@ export function DailyPerformancePanel({
       <QuickAddDialog
         open={addOpen}
         onOpenChange={setAddOpen}
-        brandIds={selection.ids}
+        brandIds={brandIds}
         onDone={() => q.refetch()}
       />
     </div>
   );
 }
+
 
 type Row = Awaited<ReturnType<typeof getDailyPerformance>>["rows"][number];
 type Totals = Awaited<ReturnType<typeof getDailyPerformance>>["totals"];
