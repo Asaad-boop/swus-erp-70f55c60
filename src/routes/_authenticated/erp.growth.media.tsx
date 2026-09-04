@@ -60,7 +60,7 @@ function MediaCenterPage() {
             onRangeChange={setRange}
             actions={
               <Button asChild size="sm" variant="outline">
-                <Link to="/erp/marketing/campaigns">Open Marketing</Link>
+                <Link to="/erp/marketing/truth">Open Marketing</Link>
               </Button>
             }
           />
