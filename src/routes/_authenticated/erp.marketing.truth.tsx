@@ -54,17 +54,18 @@ import {
   TagChips,
 } from "@/components/erp/marketing/campaign-truth-detail";
 import { CampaignMonthlyDashboard } from "@/components/erp/marketing/campaign-monthly-dashboard";
+import { DailyPerformancePanel } from "@/components/erp/marketing/daily-performance-panel";
 
 export const Route = createFileRoute("/_authenticated/erp/marketing/truth")({
   head: () => ({
     meta: [
-      { title: "Campaign Profit Truth — Marketing ERP" },
+      { title: "Campaign Workspace — Marketing ERP" },
       {
         name: "description",
         content:
           "Actual collected cash, real costs, and campaign profitability across every synced campaign.",
       },
-      { property: "og:title", content: "Campaign Profit Truth — Marketing ERP" },
+      { property: "og:title", content: "Campaign Workspace — Marketing ERP" },
       {
         property: "og:description",
         content: "Actual collected cash, real costs, and campaign profitability.",
@@ -219,6 +220,7 @@ function CampaignTruthPage() {
   const [grain, setGrain] = useState<"day" | "week">("day");
   const [compare, setCompare] = useState(false);
   const [view, setView] = useState<"table" | "performance" | "monthly">("table");
+  const [dailyOpen, setDailyOpen] = useState(false);
 
   const brandIds = useMemo(() => {
     if (brandKey === "all") return brands.map((b) => b.id);
@@ -615,7 +617,7 @@ function CampaignTruthPage() {
       <header className="grid grid-cols-[minmax(0,1fr)_auto] items-start gap-4 sm:flex sm:flex-wrap sm:justify-between">
         <div className="min-w-0">
           <h1 className="truncate text-lg font-semibold tracking-tight md:text-xl">
-            Campaign Profit Truth
+            Campaign Workspace
           </h1>
           <p className="mt-0.5 text-xs text-muted-foreground">
             Actual collected cash, real costs, and campaign profitability.
