@@ -76,11 +76,8 @@ const sevClass = (s: string) =>
 function entityLink(a: MktAlert): { to: string; label: string } | null {
   if (a.entity_type === "campaign")
     return { to: "/erp/marketing/truth", label: "Open campaigns" };
-  if (a.entity_type === "creative")
-    return { to: "/erp/marketing/creatives", label: "Open creatives" };
   if (a.entity_type === "product")
     return { to: "/erp/marketing/products", label: "Open product P&L" };
-  if (a.entity_type === "budget") return { to: "/erp/marketing/planning", label: "Open budgets" };
   return null;
 }
 
