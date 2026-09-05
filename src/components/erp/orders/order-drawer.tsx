@@ -190,6 +190,8 @@ export function OrderDrawer({ orderId, onClose, mode = "fulfillment" }: Props) {
   const lockState = useOrderLock(orderId);
   const logCall = useLogCallAttempt();
   const [note, setNote] = useState("");
+  const [tab, setTab] = useState<"details" | "activity">("details");
+
   const [advOpen, setAdvOpen] = useState(false);
   const [preorderOpen, setPreorderOpen] = useState(false);
   const [advAmount, setAdvAmount] = useState("");
