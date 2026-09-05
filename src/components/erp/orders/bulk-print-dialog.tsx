@@ -11,15 +11,26 @@ import { customerName, customerPhone, invoiceDisplay } from "@/lib/erp/orders";
 import { DEFAULT_INVOICE_CONFIG, formatMoney, type InvoiceConfig } from "@/lib/erp/invoice-config";
 import { markOrdersPrinted } from "@/lib/erp/mark-printed";
 import { useQueryClient } from "@tanstack/react-query";
+import { useState } from "react";
+import {
+  PackSheet, PickSheet, DEFAULT_SHEET_OPTIONS,
+  type SheetMode, type SheetOptions, type SheetOrder,
+} from "@/components/erp/dispatch/pack-pick-sheet";
 
 export type PrintMode = "invoice" | "sticker" | "picking" | "sheet";
 
 const MODE_LABEL: Record<PrintMode, string> = {
   invoice: "Invoices",
   sticker: "Shipping stickers",
-  picking: "Picking list",
+  picking: "Pack & Pick",
   sheet: "Order sheet",
 };
+
+const SHEET_TOGGLES: { key: SheetMode; label: string; hint: string }[] = [
+  { key: "order", label: "Order-wise", hint: "Pack list — per order" },
+  { key: "product", label: "Product-wise", hint: "Pick list — per product" },
+  { key: "sku", label: "SKU-wise", hint: "Compact — SKU + qty only" },
+];
 
 export function BulkPrintDialog({
   open,
@@ -36,6 +47,8 @@ export function BulkPrintDialog({
   const { data: cfg } = useInvoiceConfig(activeBrand?.id);
   const config = cfg ?? DEFAULT_INVOICE_CONFIG;
   const qc = useQueryClient();
+  const [sheets, setSheets] = useState<Record<SheetMode, boolean>>({ order: false, product: true, sku: false });
+  const [sheetOpts, setSheetOpts] = useState<SheetOptions>(DEFAULT_SHEET_OPTIONS);
 
   const { data, isLoading } = useQuery({
     queryKey: ["bulk-print", mode, orderIds.sort().join(",")],
@@ -102,10 +115,44 @@ export function BulkPrintDialog({
               {orderIds.length} order{orderIds.length === 1 ? "" : "s"} selected.
               {mode === "invoice" && " Each invoice prints on its own page using the active brand's invoice settings."}
               {mode === "sticker" && " 4 stickers per A4 page — fold and attach to parcel."}
-              {mode === "picking" && " Packer-friendly list grouped per order."}
+              {mode === "picking" && " Pack list + picking list — choose one or more views below."}
               {mode === "sheet" && " One condensed table of all selected orders."}
             </DialogDescription>
           </DialogHeader>
+          {mode === "picking" && (
+            <div className="rounded-md border bg-muted/30 px-3 py-2 space-y-2">
+              <div className="flex flex-wrap gap-1.5">
+                {SHEET_TOGGLES.map((t) => {
+                  const on = sheets[t.key];
+                  return (
+                    <button
+                      key={t.key}
+                      type="button"
+                      onClick={() => setSheets((s) => ({ ...s, [t.key]: !s[t.key] }))}
+                      className={`rounded-full border px-2.5 py-1 text-[11px] font-medium transition-colors ${on ? "bg-primary text-primary-foreground border-primary" : "bg-background hover:border-foreground/40"}`}
+                      title={t.hint}
+                    >
+                      {t.label}
+                    </button>
+                  );
+                })}
+              </div>
+              <div className="flex flex-wrap gap-x-3 gap-y-1 text-[11px] text-muted-foreground">
+                <label className="inline-flex items-center gap-1.5 cursor-pointer">
+                  <input type="checkbox" className="accent-current" checked={sheetOpts.showImages} onChange={(e) => setSheetOpts((o) => ({ ...o, showImages: e.target.checked }))} /> Images
+                </label>
+                <label className="inline-flex items-center gap-1.5 cursor-pointer">
+                  <input type="checkbox" className="accent-current" checked={sheetOpts.showBarcodes} onChange={(e) => setSheetOpts((o) => ({ ...o, showBarcodes: e.target.checked }))} /> Barcodes
+                </label>
+                <label className="inline-flex items-center gap-1.5 cursor-pointer">
+                  <input type="checkbox" className="accent-current" checked={sheetOpts.showBins} onChange={(e) => setSheetOpts((o) => ({ ...o, showBins: e.target.checked }))} /> Bin line
+                </label>
+                <label className="inline-flex items-center gap-1.5 cursor-pointer">
+                  <input type="checkbox" className="accent-current" checked={sheetOpts.paper === "a5"} onChange={(e) => setSheetOpts((o) => ({ ...o, paper: e.target.checked ? "a5" : "a4" }))} /> A5 paper
+                </label>
+              </div>
+            </div>
+          )}
           <div className="rounded-md border bg-muted/30 px-3 py-2 text-xs space-y-2">
             <div className="flex items-start justify-between gap-3">
               <span className="text-muted-foreground pt-0.5">Brands</span>
@@ -168,9 +215,33 @@ export function BulkPrintDialog({
           {mode === "sticker" && (
             <StickerSheet orders={orders} brandName={activeBrand?.name ?? ""} cfg={config} />
           )}
-          {mode === "picking" && (
-            <PickingList orders={orders} itemsByOrder={itemsByOrder} brandName={activeBrand?.name ?? ""} />
-          )}
+          {mode === "picking" && (() => {
+            const sheetOrders: SheetOrder[] = orders.map((o) => ({
+              ...(o as object),
+              items: (itemsByOrder.get(o.id) ?? []).map((it: any) => ({
+                name: it.name ?? "",
+                variant_label: it.variant_label ?? null,
+                quantity: Number(it.quantity || 0),
+                price: it.price ?? null,
+                image: it.image ?? null,
+                sku: it.sku || null,
+              })),
+            })) as SheetOrder[];
+            const brandName = activeBrand?.name ?? null;
+            return (
+              <>
+                {sheets.order && (
+                  <div className="print-page"><PackSheet orders={sheetOrders} options={sheetOpts} brandName={brandName} /></div>
+                )}
+                {sheets.product && (
+                  <div className="print-page"><PickSheet orders={sheetOrders} by="product" options={sheetOpts} brandName={brandName} /></div>
+                )}
+                {sheets.sku && (
+                  <div className="print-page"><PickSheet orders={sheetOrders} by="sku" options={sheetOpts} brandName={brandName} /></div>
+                )}
+              </>
+            );
+          })()}
           {mode === "sheet" && (
             <OrderSheet orders={orders} itemsByOrder={itemsByOrder} brandName={activeBrand?.name ?? ""} cfg={config} />
           )}
@@ -217,183 +288,6 @@ function StickerSheet({ orders, brandName, cfg }: { orders: any[]; brandName: st
           ))}
         </div>
       ))}
-    </>
-  );
-}
-
-/* ---------------------------- Picking List ---------------------------- */
-
-function PickingList({ orders, itemsByOrder, brandName }: { orders: any[]; itemsByOrder: Map<string, any[]>; brandName: string }) {
-  // Build flat lines: one per order_item, enriched with order context
-  type Line = { sku: string; name: string; variant: string; qty: number; image: string | null; order: any };
-  const lines: Line[] = [];
-  for (const o of orders) {
-    for (const it of itemsByOrder.get(o.id) ?? []) {
-      lines.push({
-        sku: (it.sku || "").trim(),
-        name: it.name ?? "",
-        variant: it.variant_label ?? "",
-        qty: Number(it.quantity || 0),
-        image: it.image ?? null,
-        order: o,
-      });
-    }
-  }
-
-  // Group by product name, then split into variant sub-groups
-  type Variant = { sku: string; variant: string; lines: Line[]; qty: number; image: string | null };
-  type Group = { name: string; variants: Map<string, Variant>; totalQty: number; orderIds: Set<string>; image: string | null };
-  const groups = new Map<string, Group>();
-  for (const l of lines) {
-    let g = groups.get(l.name);
-    if (!g) { g = { name: l.name, variants: new Map(), totalQty: 0, orderIds: new Set(), image: l.image }; groups.set(l.name, g); }
-    if (!g.image && l.image) g.image = l.image;
-    const vKey = `${l.sku}::${l.variant}`;
-    let v = g.variants.get(vKey);
-    if (!v) { v = { sku: l.sku, variant: l.variant, lines: [], qty: 0, image: l.image }; g.variants.set(vKey, v); }
-    if (!v.image && l.image) v.image = l.image;
-    v.lines.push(l);
-    v.qty += l.qty;
-    g.totalQty += l.qty;
-    g.orderIds.add(l.order.id);
-  }
-  const sortedGroups = Array.from(groups.values()).sort((a, b) => b.totalQty - a.totalQty);
-  for (const g of sortedGroups) {
-    for (const v of g.variants.values()) v.lines.sort((a, b) => b.qty - a.qty);
-  }
-  const grandQty = sortedGroups.reduce((s, g) => s + g.totalQty, 0);
-  const totalSkus = sortedGroups.reduce((s, g) => s + g.variants.size, 0);
-  const genId = `PICK-${format(new Date(), "yyMMdd-HHmm")}`;
-  let serial = 0;
-
-  return (
-    <>
-      <style>{`@media print { @page { size: A4; margin: 12mm; } .pk-row,.pk-group{break-inside:avoid;} img{-webkit-print-color-adjust:exact;print-color-adjust:exact;} }`}</style>
-      <div style={{ color: "#000", background: "#fff", padding: "18mm 14mm", fontSize: 12, lineHeight: 1.35, fontFamily: "ui-sans-serif, system-ui, -apple-system, sans-serif" }}>
-        {/* Header */}
-        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-end", borderBottom: "2px solid #000", paddingBottom: 10, marginBottom: 14 }}>
-          <div>
-            <div style={{ fontSize: 10, letterSpacing: 3, fontWeight: 700, color: "#555" }}>
-              {brandName ? `${brandName.toUpperCase()} · ` : ""}WAREHOUSE · PICK SHEET
-            </div>
-            <h1 style={{ fontSize: 26, fontWeight: 800, margin: "4px 0 0", letterSpacing: -0.5 }}>Picking List</h1>
-          </div>
-          <div style={{ textAlign: "right", fontSize: 11 }}>
-            <div style={{ fontFamily: "ui-monospace, Menlo, monospace", fontWeight: 700 }}>{genId}</div>
-            <div style={{ color: "#555" }}>{format(new Date(), "PPP · p")}</div>
-            <div style={{ marginTop: 6, fontSize: 10, color: "#555" }}>
-              Picker: ______________ &nbsp;·&nbsp; Checker: ______________
-            </div>
-          </div>
-        </div>
-
-        {/* KPI strip */}
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 8, marginBottom: 14 }}>
-          {[
-            { label: "Orders", value: orders.length },
-            { label: "Products", value: sortedGroups.length },
-            { label: "Unique SKUs", value: totalSkus },
-            { label: "Total Units", value: grandQty },
-          ].map((k) => (
-            <div key={k.label} style={{ border: "1px solid #ddd", borderRadius: 6, padding: "8px 10px" }}>
-              <div style={{ fontSize: 9, letterSpacing: 1.5, color: "#666", fontWeight: 700 }}>{k.label.toUpperCase()}</div>
-              <div style={{ fontSize: 22, fontWeight: 800, lineHeight: 1.1, marginTop: 2, fontVariantNumeric: "tabular-nums" }}>{k.value}</div>
-            </div>
-          ))}
-        </div>
-
-        {/* Groups */}
-        {sortedGroups.map((g, gi) => {
-          const variants = Array.from(g.variants.values()).sort((a, b) => b.qty - a.qty);
-          return (
-            <div key={g.name} className="pk-group" style={{ marginBottom: 14, border: "1px solid #bbb", borderRadius: 6, overflow: "hidden" }}>
-              {/* Product header */}
-              <div style={{ background: "#111", color: "#fff", padding: "8px 12px", display: "flex", justifyContent: "space-between", alignItems: "center", gap: 10 }}>
-                <div style={{ display: "flex", gap: 10, alignItems: "center", minWidth: 0 }}>
-                  {g.image ? (
-                    <img src={g.image} alt="" style={{ width: 40, height: 40, objectFit: "cover", borderRadius: 4, background: "#fff", flexShrink: 0 }} />
-                  ) : (
-                    <div style={{ width: 40, height: 40, borderRadius: 4, background: "#333", flexShrink: 0 }} />
-                  )}
-                  <span style={{ fontFamily: "ui-monospace, Menlo, monospace", fontSize: 11, color: "#9ca3af", fontWeight: 700 }}>
-                    {String(gi + 1).padStart(2, "0")}
-                  </span>
-                  <span style={{ fontWeight: 800, fontSize: 14, letterSpacing: -0.2 }}>{g.name}</span>
-                </div>
-                <div style={{ display: "flex", gap: 14, alignItems: "baseline", fontSize: 11, whiteSpace: "nowrap" }}>
-                  <span style={{ opacity: 0.8 }}>{g.orderIds.size} order{g.orderIds.size === 1 ? "" : "s"}</span>
-                  <span style={{ opacity: 0.8 }}>{variants.length} SKU{variants.length === 1 ? "" : "s"}</span>
-                  <span style={{ fontWeight: 800, fontSize: 16, fontVariantNumeric: "tabular-nums" }}>{g.totalQty} pc</span>
-                </div>
-              </div>
-
-              {variants.map((v, vi) => (
-                <div key={vi}>
-                  {/* Variant subheader */}
-                  <div style={{ background: "#f3f4f6", padding: "6px 12px", display: "flex", justifyContent: "space-between", alignItems: "center", borderTop: vi === 0 ? undefined : "1px solid #ddd", gap: 10 }}>
-                    <div style={{ display: "flex", gap: 8, alignItems: "center", fontSize: 11, minWidth: 0 }}>
-                      {v.image ? (
-                        <img src={v.image} alt="" style={{ width: 28, height: 28, objectFit: "cover", borderRadius: 3, border: "1px solid #ddd", background: "#fff", flexShrink: 0 }} />
-                      ) : null}
-                      <span style={{ fontFamily: "ui-monospace, Menlo, monospace", fontWeight: 700, color: "#111" }}>{v.sku || "—"}</span>
-                      {v.variant && <span style={{ color: "#444" }}>↳ {v.variant}</span>}
-                    </div>
-                    <div style={{ fontSize: 11, fontWeight: 700, fontVariantNumeric: "tabular-nums" }}>
-                      {v.lines.length} line{v.lines.length === 1 ? "" : "s"} · {v.qty} pc
-                    </div>
-                  </div>
-                  <table style={{ width: "100%", borderCollapse: "collapse" }}>
-                    <thead>
-                      <tr style={{ background: "#fafafa" }}>
-                        <th style={{ ...th, width: 26, textAlign: "center" }}>✓</th>
-                        <th style={{ ...th, width: 32 }}>#</th>
-                        <th style={{ ...th, width: 110 }}>Invoice</th>
-                        <th style={th}>Customer</th>
-                        <th style={{ ...th, width: 110 }}>Phone</th>
-                        <th style={th}>Area</th>
-                        <th style={{ ...th, textAlign: "right", width: 50 }}>Qty</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {v.lines.map((l, li) => {
-                        serial += 1;
-                        return (
-                          <tr key={`${l.order.id}-${li}`} className="pk-row" style={{ borderTop: "1px dashed #eee", background: li % 2 === 0 ? "#fff" : "#fcfcfc" }}>
-                            <td style={{ ...td, textAlign: "center" }}>
-                              <span style={{ display: "inline-block", width: 12, height: 12, border: "1.5px solid #111", borderRadius: 2, verticalAlign: "middle" }} />
-                            </td>
-                            <td style={{ ...td, fontFamily: "ui-monospace, Menlo, monospace", color: "#666" }}>{serial}</td>
-                            <td style={{ ...td, fontFamily: "ui-monospace, Menlo, monospace", fontSize: 11 }}>#{invoiceDisplay(l.order)}</td>
-                            <td style={{ ...td, fontWeight: 600 }}>{customerName(l.order)}</td>
-                            <td style={{ ...td, fontFamily: "ui-monospace, Menlo, monospace", fontSize: 11 }}>{customerPhone(l.order)}</td>
-                            <td style={{ ...td, fontSize: 10, color: "#555" }}>
-                              {[l.order.shipping_thana, l.order.shipping_city].filter(Boolean).join(", ")}
-                            </td>
-                            <td style={{ ...td, textAlign: "right", fontWeight: 800, fontSize: 14, fontVariantNumeric: "tabular-nums" }}>{l.qty}</td>
-                          </tr>
-                        );
-                      })}
-                    </tbody>
-                  </table>
-                </div>
-              ))}
-            </div>
-          );
-        })}
-
-        {/* Grand total */}
-        <div style={{ marginTop: 6, padding: "10px 12px", borderTop: "2px solid #000", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-          <div style={{ fontSize: 11, letterSpacing: 1.5, fontWeight: 700, color: "#333" }}>GRAND TOTAL</div>
-          <div style={{ fontSize: 22, fontWeight: 900, fontVariantNumeric: "tabular-nums" }}>{grandQty} pc</div>
-        </div>
-
-        {/* Signatures */}
-        <div style={{ marginTop: 28, display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 24, fontSize: 10, color: "#555" }}>
-          {["Picked by", "Checked by", "Dispatched by"].map((l) => (
-            <div key={l} style={{ borderTop: "1px solid #000", paddingTop: 4, textAlign: "center" }}>{l}</div>
-          ))}
-        </div>
-      </div>
     </>
   );
 }
