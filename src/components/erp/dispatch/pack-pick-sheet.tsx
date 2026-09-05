@@ -486,11 +486,11 @@ export function PickSheet({
           ))}
         </tbody>
         <tfoot>
-          <tr style={{ borderTop: "2px solid #111", background: "#f4f4f5" }}>
-            <td colSpan={options.showImages ? 6 : 5} style={{ ...td("right"), fontWeight: 900, letterSpacing: 1.5, fontSize: 10.5 }}>
+          <tr style={{ borderTop: "2px solid #18181b", background: "#fafafa" }}>
+            <td colSpan={options.showImages ? 6 : 5} style={{ ...td("right"), fontWeight: 800, letterSpacing: 1.5, fontSize: 10, color: "#3f3f46" }}>
               GRAND TOTAL
             </td>
-            <td style={{ ...td("right"), fontSize: 18, fontWeight: 900, fontVariantNumeric: "tabular-nums" }}>
+            <td style={{ ...td("right"), fontSize: 16, fontWeight: 800, fontVariantNumeric: "tabular-nums" }}>
               {totalQty}
             </td>
             {options.showBins && <td style={td()} />}
