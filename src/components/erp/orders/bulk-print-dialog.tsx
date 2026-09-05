@@ -115,10 +115,44 @@ export function BulkPrintDialog({
               {orderIds.length} order{orderIds.length === 1 ? "" : "s"} selected.
               {mode === "invoice" && " Each invoice prints on its own page using the active brand's invoice settings."}
               {mode === "sticker" && " 4 stickers per A4 page — fold and attach to parcel."}
-              {mode === "picking" && " Packer-friendly list grouped per order."}
+              {mode === "picking" && " Pack list + picking list — choose one or more views below."}
               {mode === "sheet" && " One condensed table of all selected orders."}
             </DialogDescription>
           </DialogHeader>
+          {mode === "picking" && (
+            <div className="rounded-md border bg-muted/30 px-3 py-2 space-y-2">
+              <div className="flex flex-wrap gap-1.5">
+                {SHEET_TOGGLES.map((t) => {
+                  const on = sheets[t.key];
+                  return (
+                    <button
+                      key={t.key}
+                      type="button"
+                      onClick={() => setSheets((s) => ({ ...s, [t.key]: !s[t.key] }))}
+                      className={`rounded-full border px-2.5 py-1 text-[11px] font-medium transition-colors ${on ? "bg-primary text-primary-foreground border-primary" : "bg-background hover:border-foreground/40"}`}
+                      title={t.hint}
+                    >
+                      {t.label}
+                    </button>
+                  );
+                })}
+              </div>
+              <div className="flex flex-wrap gap-x-3 gap-y-1 text-[11px] text-muted-foreground">
+                <label className="inline-flex items-center gap-1.5 cursor-pointer">
+                  <input type="checkbox" className="accent-current" checked={sheetOpts.showImages} onChange={(e) => setSheetOpts((o) => ({ ...o, showImages: e.target.checked }))} /> Images
+                </label>
+                <label className="inline-flex items-center gap-1.5 cursor-pointer">
+                  <input type="checkbox" className="accent-current" checked={sheetOpts.showBarcodes} onChange={(e) => setSheetOpts((o) => ({ ...o, showBarcodes: e.target.checked }))} /> Barcodes
+                </label>
+                <label className="inline-flex items-center gap-1.5 cursor-pointer">
+                  <input type="checkbox" className="accent-current" checked={sheetOpts.showBins} onChange={(e) => setSheetOpts((o) => ({ ...o, showBins: e.target.checked }))} /> Bin line
+                </label>
+                <label className="inline-flex items-center gap-1.5 cursor-pointer">
+                  <input type="checkbox" className="accent-current" checked={sheetOpts.paper === "a5"} onChange={(e) => setSheetOpts((o) => ({ ...o, paper: e.target.checked ? "a5" : "a4" }))} /> A5 paper
+                </label>
+              </div>
+            </div>
+          )}
           <div className="rounded-md border bg-muted/30 px-3 py-2 text-xs space-y-2">
             <div className="flex items-start justify-between gap-3">
               <span className="text-muted-foreground pt-0.5">Brands</span>
