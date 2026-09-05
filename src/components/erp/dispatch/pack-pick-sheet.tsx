@@ -546,8 +546,8 @@ export function PackSheet({
             <div
               key={o.id}
               style={{
-                border: "1.5px solid #111",
-                borderLeft: "5px solid #111",
+                border: "1px solid #d4d4d8",
+                borderLeft: "4px solid #18181b",
                 borderRadius: 8,
                 overflow: "hidden",
                 pageBreakInside: "avoid",
@@ -562,7 +562,7 @@ export function PackSheet({
                     top: 30,
                     fontSize: 30,
                     fontWeight: 900,
-                    color: "rgba(0,0,0,0.06)",
+                    color: "rgba(0,0,0,0.05)",
                     letterSpacing: 4,
                   }}
                 >
@@ -575,26 +575,12 @@ export function PackSheet({
                   display: "flex",
                   alignItems: "center",
                   gap: 10,
-                  padding: "7px 12px",
-                  background: "#f4f4f5",
-                  borderBottom: "1.5px solid #111",
+                  padding: "6px 12px",
+                  background: "#fafafa",
+                  borderBottom: "1px solid #d4d4d8",
                 }}
               >
-                <span
-                  style={{
-                    fontSize: 17,
-                    fontWeight: 900,
-                    minWidth: 32,
-                    height: 32,
-                    lineHeight: "32px",
-                    textAlign: "center",
-                    background: "#111",
-                    color: "#fff",
-                    borderRadius: 8,
-                  }}
-                >
-                  {i + 1}
-                </span>
+                <SerialChip n={i + 1} size={28} />
                 <div style={{ minWidth: 0, flex: 1 }}>
                   <div style={{ display: "flex", alignItems: "center", gap: 6, flexWrap: "wrap" }}>
                     <span style={{ fontFamily: "ui-monospace, Menlo, monospace", fontWeight: 800, fontSize: 13 }}>
