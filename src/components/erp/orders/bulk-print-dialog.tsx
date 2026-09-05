@@ -213,7 +213,7 @@ export function BulkPrintDialog({
             <Button variant="outline" size="sm" onClick={() => onOpenChange(false)}>
               <X className="h-3.5 w-3.5" /> Cancel
             </Button>
-            <Button size="sm" disabled={!ready} onClick={() => {
+            <Button size="sm" disabled={!ready || (mode === "picking" && !sheets.order && !sheets.product && !sheets.sku)} onClick={() => {
               window.print();
               void markOrdersPrinted(orders.map((o: { id: string }) => o.id)).then(() => {
                 qc.invalidateQueries({ queryKey: ["orders"] });
