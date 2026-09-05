@@ -142,8 +142,8 @@ export function BulkPrintDialog({
             </DialogDescription>
           </DialogHeader>
           {mode === "picking" && (
-            <div className="rounded-md border bg-muted/30 px-3 py-2 space-y-2">
-              <div className="flex flex-wrap gap-1.5">
+            <div className="space-y-2.5">
+              <div className="grid grid-cols-3 gap-1.5">
                 {SHEET_TOGGLES.map((t) => {
                   const on = sheets[t.key];
                   return (
@@ -151,28 +151,33 @@ export function BulkPrintDialog({
                       key={t.key}
                       type="button"
                       onClick={() => setSheets((s) => ({ ...s, [t.key]: !s[t.key] }))}
-                      className={`rounded-full border px-2.5 py-1 text-[11px] font-medium transition-colors ${on ? "bg-primary text-primary-foreground border-primary" : "bg-background hover:border-foreground/40"}`}
                       title={t.hint}
+                      className={`rounded-xl border px-2 py-2.5 text-left transition-colors ${
+                        on
+                          ? "border-primary bg-primary/10"
+                          : "bg-card hover:border-foreground/30"
+                      }`}
                     >
-                      {t.label}
+                      <div className="flex items-center justify-between">
+                        <t.icon className={`h-4 w-4 ${on ? "text-primary" : "text-muted-foreground"}`} />
+                        {on && <CheckCheck className="h-3.5 w-3.5 text-primary" />}
+                      </div>
+                      <div className={`mt-1.5 text-[11px] font-semibold ${on ? "text-primary" : ""}`}>{t.label}</div>
+                      <div className="text-[9.5px] leading-tight text-muted-foreground mt-0.5">{t.hint}</div>
                     </button>
                   );
                 })}
               </div>
-              <div className="flex flex-wrap gap-x-3 gap-y-1 text-[11px] text-muted-foreground">
-                <label className="inline-flex items-center gap-1.5 cursor-pointer">
-                  <input type="checkbox" className="accent-current" checked={sheetOpts.showImages} onChange={(e) => setSheetOpts((o) => ({ ...o, showImages: e.target.checked }))} /> Images
-                </label>
-                <label className="inline-flex items-center gap-1.5 cursor-pointer">
-                  <input type="checkbox" className="accent-current" checked={sheetOpts.showBarcodes} onChange={(e) => setSheetOpts((o) => ({ ...o, showBarcodes: e.target.checked }))} /> Barcodes
-                </label>
-                <label className="inline-flex items-center gap-1.5 cursor-pointer">
-                  <input type="checkbox" className="accent-current" checked={sheetOpts.showBins} onChange={(e) => setSheetOpts((o) => ({ ...o, showBins: e.target.checked }))} /> Bin line
-                </label>
-                <label className="inline-flex items-center gap-1.5 cursor-pointer">
-                  <input type="checkbox" className="accent-current" checked={sheetOpts.paper === "a5"} onChange={(e) => setSheetOpts((o) => ({ ...o, paper: e.target.checked ? "a5" : "a4" }))} /> A5 paper
-                </label>
+              <div className="flex flex-wrap items-center gap-1.5">
+                <span className="text-[10px] uppercase tracking-wider text-muted-foreground mr-0.5">Options</span>
+                <SheetOptionChip checked={sheetOpts.showImages} onChange={(v) => setSheetOpts((o) => ({ ...o, showImages: v }))} icon={ImageIcon} label="Images" />
+                <SheetOptionChip checked={sheetOpts.showBarcodes} onChange={(v) => setSheetOpts((o) => ({ ...o, showBarcodes: v }))} icon={Barcode} label="Barcodes" />
+                <SheetOptionChip checked={sheetOpts.showBins} onChange={(v) => setSheetOpts((o) => ({ ...o, showBins: v }))} label="Bin line" />
+                <SheetOptionChip checked={sheetOpts.paper === "a5"} onChange={(v) => setSheetOpts((o) => ({ ...o, paper: v ? "a5" : "a4" }))} label="A5 paper" />
               </div>
+              {!sheets.order && !sheets.product && !sheets.sku && (
+                <p className="text-[11px] text-rose-600 dark:text-rose-400">কমপক্ষে একটা view সিলেক্ট করো।</p>
+              )}
             </div>
           )}
           <div className="rounded-md border bg-muted/30 px-3 py-2 text-xs space-y-2">
