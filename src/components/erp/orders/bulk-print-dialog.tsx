@@ -254,24 +254,34 @@ export function BulkPrintDialog({
                 sku: it.sku || null,
               })),
             })) as SheetOrder[];
-            // Prefer the active brand; otherwise use the dominant brand of the selected orders
-            const fallbackBrandId = brandBreakdown[0]?.id ?? null;
-            const sheetBrand =
-              activeBrand ??
-              (fallbackBrandId ? brands.find((b) => b.id === fallbackBrandId) ?? null : null);
-            const brandName = sheetBrand?.name ?? null;
-            const brandLogo = sheetBrand?.logo_url ?? null;
+            // Split sheets per brand — each brand gets its own pages with its own logo
+            const fallbackBrandId = activeBrand?.id ?? brandBreakdown[0]?.id ?? null;
+            const groups = new Map<string, SheetOrder[]>();
+            for (const o of sheetOrders) {
+              const key = (o as any).brand_id ?? fallbackBrandId ?? "unknown";
+              const list = groups.get(key) ?? [];
+              list.push(o);
+              groups.set(key, list);
+            }
+            const brandGroups = Array.from(groups.entries()).map(([id, orders]) => {
+              const b = brands.find((x) => x.id === id) ?? activeBrand ?? null;
+              return { id, orders, name: b?.name ?? null, logo: b?.logo_url ?? null };
+            });
             return (
               <>
-                {sheets.order && (
-                  <div className="print-page"><PackSheet orders={sheetOrders} options={sheetOpts} brandName={brandName} brandLogo={brandLogo} /></div>
-                )}
-                {sheets.product && (
-                  <div className="print-page"><PickSheet orders={sheetOrders} by="product" options={sheetOpts} brandName={brandName} brandLogo={brandLogo} /></div>
-                )}
-                {sheets.sku && (
-                  <div className="print-page"><PickSheet orders={sheetOrders} by="sku" options={sheetOpts} brandName={brandName} brandLogo={brandLogo} /></div>
-                )}
+                {brandGroups.map((g) => (
+                  <div key={g.id}>
+                    {sheets.order && (
+                      <div className="print-page"><PackSheet orders={g.orders} options={sheetOpts} brandName={g.name} brandLogo={g.logo} /></div>
+                    )}
+                    {sheets.product && (
+                      <div className="print-page"><PickSheet orders={g.orders} by="product" options={sheetOpts} brandName={g.name} brandLogo={g.logo} /></div>
+                    )}
+                    {sheets.sku && (
+                      <div className="print-page"><PickSheet orders={g.orders} by="sku" options={sheetOpts} brandName={g.name} brandLogo={g.logo} /></div>
+                    )}
+                  </div>
+                ))}
               </>
             );
           })()}
