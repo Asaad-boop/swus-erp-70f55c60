@@ -1,4 +1,6 @@
 import { format } from "date-fns";
+// eslint-disable-next-line no-unused-vars
+const _noop = 0;
 import { useEffect, useState } from "react";
 import { User, Phone, MapPin, Package, Clock, Loader2, Hash, Calendar, Globe, UserCog, ListChecks, StickyNote, Send, AlertTriangle, Truck, Pencil, Lock, ShieldAlert, Save, X, CalendarClock, PhoneCall, Copy, MessageCircle, CheckCircle2, PauseCircle, PhoneOff, Wallet, History, Tag as TagIcon, ClipboardCopy, ShieldCheck, Command, Repeat2, UserCheck } from "lucide-react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
