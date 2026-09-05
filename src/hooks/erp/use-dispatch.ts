@@ -39,7 +39,7 @@ export type DispatchOrder = {
   shipping_note?: string | null;
   customer_note?: string | null;
   advance_amount?: number | null;
-  items?: Array<{ name: string; variant_label: string | null; quantity: number; price: number; image: string | null; sku?: string | null }>;
+  items?: Array<{ name: string; variant_label: string | null; quantity: number; price: number; image: string | null; product?: { sku: string | null } | null; variant?: { sku: string | null } | null }>;
 };
 
 export type DispatchData = Record<DispatchStage, DispatchOrder[]>;
@@ -148,7 +148,7 @@ export function preflight(o: DispatchOrder): string[] {
 }
 
 const SELECT =
-  "id, invoice_no, brand_id, status, total, payment_method, courier_name, shipping_name, guest_name, shipping_phone, guest_phone, shipping_address, shipping_thana, shipping_city, shipping_district, tracking_number, printed_at, updated_at, created_at, packaged_at, shipping_note, customer_note, advance_amount, items:order_items(name, variant_label, quantity, price, image, sku)";
+  "id, invoice_no, brand_id, status, total, payment_method, courier_name, shipping_name, guest_name, shipping_phone, guest_phone, shipping_address, shipping_thana, shipping_city, shipping_district, tracking_number, printed_at, updated_at, created_at, packaged_at, shipping_note, customer_note, advance_amount, items:order_items(name, variant_label, quantity, price, image, product:products(sku), variant:product_variants(sku))";
 
 const EMPTY: DispatchData = { pending: [], packed: [], ready: [], shipped: [], hold: [] };
 
