@@ -63,7 +63,7 @@ export function TodayCommandPanel({ brandIds, enabled }: { brandIds: string[]; e
 
   const items = [
     { icon: ShoppingCart, label: "Need Confirmation", v: data?.needConfirm ?? 0, tone: "amber", to: "/erp/orders/web" },
-    { icon: PackageCheck, label: "Need Packing", v: data?.needPack ?? 0, tone: "blue", to: "/erp/dispatch" },
+    { icon: PackageCheck, label: "Need Packing", v: data?.needPack ?? 0, tone: "blue", to: "/erp/orders/list", search: { tab: "packing" } },
     { icon: Boxes, label: "Low Stock", v: data?.lowStock ?? 0, tone: "rose", to: "/erp/inventory" },
     { icon: Truck, label: "Courier Issue", v: data?.courierIssue ?? 0, tone: "rose", to: "/erp/courier" },
     { icon: Banknote, label: "COD Pending", v: data?.codAmount ?? 0, money: true, tone: "amber", to: "/erp/reconciliation" },
@@ -86,6 +86,7 @@ export function TodayCommandPanel({ brandIds, enabled }: { brandIds: string[]; e
           <li key={it.label}>
             <Link
               to={it.to as any}
+              search={("search" in it ? it.search : undefined) as any}
               className="flex items-center justify-between gap-3 px-4 py-2.5 hover:bg-muted/40 transition-colors"
             >
               <div className="flex items-center gap-3 min-w-0">

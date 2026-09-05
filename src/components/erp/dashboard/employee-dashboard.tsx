@@ -174,7 +174,7 @@ export function EmployeeDashboard() {
 
   const tasks = [
     { label: "Orders to confirm", v: queues?.toConfirm ?? 0, to: "/erp/orders/list", show: can("/erp/orders/list") },
-    { label: "Ready to pack", v: queues?.toPack ?? 0, to: "/erp/dispatch", show: can("/erp/dispatch") },
+    { label: "Ready to pack", v: queues?.toPack ?? 0, to: "/erp/orders/list", search: { tab: "packing" }, show: can("/erp/orders/list") },
     { label: "In transit", v: queues?.inTransit ?? 0, to: "/erp/courier", show: can("/erp/courier") },
   ].filter((t) => t.show);
 
@@ -420,6 +420,7 @@ export function EmployeeDashboard() {
                 <li key={t.label}>
                   <Link
                     to={t.to as any}
+                    search={("search" in t ? t.search : undefined) as any}
                     className="flex items-center justify-between px-5 py-3 hover:bg-muted/40 transition-colors"
                   >
                     <span className="text-sm">{t.label}</span>
