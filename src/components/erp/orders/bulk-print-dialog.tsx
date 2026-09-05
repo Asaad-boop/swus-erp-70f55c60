@@ -215,9 +215,33 @@ export function BulkPrintDialog({
           {mode === "sticker" && (
             <StickerSheet orders={orders} brandName={activeBrand?.name ?? ""} cfg={config} />
           )}
-          {mode === "picking" && (
-            <PickingList orders={orders} itemsByOrder={itemsByOrder} brandName={activeBrand?.name ?? ""} />
-          )}
+          {mode === "picking" && (() => {
+            const sheetOrders: SheetOrder[] = orders.map((o) => ({
+              ...(o as object),
+              items: (itemsByOrder.get(o.id) ?? []).map((it: any) => ({
+                name: it.name ?? "",
+                variant_label: it.variant_label ?? null,
+                quantity: Number(it.quantity || 0),
+                price: it.price ?? null,
+                image: it.image ?? null,
+                sku: it.sku || null,
+              })),
+            })) as SheetOrder[];
+            const brandName = activeBrand?.name ?? null;
+            return (
+              <>
+                {sheets.order && (
+                  <div className="print-page"><PackSheet orders={sheetOrders} options={sheetOpts} brandName={brandName} /></div>
+                )}
+                {sheets.product && (
+                  <div className="print-page"><PickSheet orders={sheetOrders} by="product" options={sheetOpts} brandName={brandName} /></div>
+                )}
+                {sheets.sku && (
+                  <div className="print-page"><PickSheet orders={sheetOrders} by="sku" options={sheetOpts} brandName={brandName} /></div>
+                )}
+              </>
+            );
+          })()}
           {mode === "sheet" && (
             <OrderSheet orders={orders} itemsByOrder={itemsByOrder} brandName={activeBrand?.name ?? ""} cfg={config} />
           )}
