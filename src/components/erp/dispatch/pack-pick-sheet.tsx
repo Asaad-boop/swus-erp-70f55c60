@@ -227,20 +227,20 @@ function Header({
           justifyContent: "space-between",
           alignItems: "stretch",
           gap: 14,
-          paddingBottom: 12,
-          marginBottom: 12,
-          borderBottom: "3px double #111",
+          paddingBottom: 10,
+          marginBottom: 10,
+          borderBottom: "2px solid #18181b",
         }}
       >
-        <div style={{ display: "flex", alignItems: "center", gap: 12, minWidth: 0 }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 11, minWidth: 0 }}>
           <div
             style={{
-              width: 44,
-              height: 44,
-              borderRadius: 10,
-              background: "#111",
+              width: 38,
+              height: 38,
+              borderRadius: 9,
+              background: "#18181b",
               color: "#fff",
-              fontSize: 22,
+              fontSize: 19,
               fontWeight: 900,
               display: "flex",
               alignItems: "center",
@@ -254,7 +254,7 @@ function Header({
             <div style={{ fontSize: 8.5, letterSpacing: 3, fontWeight: 800, color: "#4F46E5" }}>
               {b.company.toUpperCase()} · {kicker}
             </div>
-            <h1 style={{ fontSize: 24, fontWeight: 900, margin: "2px 0 0", letterSpacing: -0.6, lineHeight: 1.1 }}>
+            <h1 style={{ fontSize: 20, fontWeight: 800, margin: "2px 0 0", letterSpacing: -0.4, lineHeight: 1.15 }}>
               {title}
             </h1>
             {brandName && (
