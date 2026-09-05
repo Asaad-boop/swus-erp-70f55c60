@@ -487,8 +487,9 @@ export function PackSheet({
             <div
               key={o.id}
               style={{
-                border: "1px solid #ccc",
-                borderRadius: 6,
+                border: "1.5px solid #111",
+                borderLeft: "5px solid #111",
+                borderRadius: 8,
                 overflow: "hidden",
                 pageBreakInside: "avoid",
                 position: "relative",
