@@ -39,7 +39,6 @@ import { Route as AuthenticatedErpHrRouteImport } from './routes/_authenticated/
 import { Route as AuthenticatedErpGrowthRouteImport } from './routes/_authenticated/erp.growth'
 import { Route as AuthenticatedErpFinanceRouteImport } from './routes/_authenticated/erp.finance'
 import { Route as AuthenticatedErpExtensionRouteImport } from './routes/_authenticated/erp.extension'
-import { Route as AuthenticatedErpDispatchRouteImport } from './routes/_authenticated/erp.dispatch'
 import { Route as AuthenticatedErpDiagnosticsRouteImport } from './routes/_authenticated/erp.diagnostics'
 import { Route as AuthenticatedErpDeploySyncRouteImport } from './routes/_authenticated/erp.deploy-sync'
 import { Route as AuthenticatedErpCrmRouteImport } from './routes/_authenticated/erp.crm'
@@ -311,12 +310,6 @@ const AuthenticatedErpExtensionRoute =
   AuthenticatedErpExtensionRouteImport.update({
     id: '/extension',
     path: '/extension',
-    getParentRoute: () => AuthenticatedErpRoute,
-  } as any)
-const AuthenticatedErpDispatchRoute =
-  AuthenticatedErpDispatchRouteImport.update({
-    id: '/dispatch',
-    path: '/dispatch',
     getParentRoute: () => AuthenticatedErpRoute,
   } as any)
 const AuthenticatedErpDiagnosticsRoute =
@@ -986,7 +979,6 @@ export interface FileRoutesByFullPath {
   '/erp/crm': typeof AuthenticatedErpCrmRouteWithChildren
   '/erp/deploy-sync': typeof AuthenticatedErpDeploySyncRoute
   '/erp/diagnostics': typeof AuthenticatedErpDiagnosticsRoute
-  '/erp/dispatch': typeof AuthenticatedErpDispatchRoute
   '/erp/extension': typeof AuthenticatedErpExtensionRoute
   '/erp/finance': typeof AuthenticatedErpFinanceRouteWithChildren
   '/erp/growth': typeof AuthenticatedErpGrowthRouteWithChildren
@@ -1126,7 +1118,6 @@ export interface FileRoutesByTo {
   '/erp/courier': typeof AuthenticatedErpCourierRoute
   '/erp/deploy-sync': typeof AuthenticatedErpDeploySyncRoute
   '/erp/diagnostics': typeof AuthenticatedErpDiagnosticsRoute
-  '/erp/dispatch': typeof AuthenticatedErpDispatchRoute
   '/erp/extension': typeof AuthenticatedErpExtensionRoute
   '/erp/inventory': typeof AuthenticatedErpInventoryRouteWithChildren
   '/erp/inventory-reports': typeof AuthenticatedErpInventoryReportsRoute
@@ -1262,7 +1253,6 @@ export interface FileRoutesById {
   '/_authenticated/erp/crm': typeof AuthenticatedErpCrmRouteWithChildren
   '/_authenticated/erp/deploy-sync': typeof AuthenticatedErpDeploySyncRoute
   '/_authenticated/erp/diagnostics': typeof AuthenticatedErpDiagnosticsRoute
-  '/_authenticated/erp/dispatch': typeof AuthenticatedErpDispatchRoute
   '/_authenticated/erp/extension': typeof AuthenticatedErpExtensionRoute
   '/_authenticated/erp/finance': typeof AuthenticatedErpFinanceRouteWithChildren
   '/_authenticated/erp/growth': typeof AuthenticatedErpGrowthRouteWithChildren
@@ -1406,7 +1396,6 @@ export interface FileRouteTypes {
     | '/erp/crm'
     | '/erp/deploy-sync'
     | '/erp/diagnostics'
-    | '/erp/dispatch'
     | '/erp/extension'
     | '/erp/finance'
     | '/erp/growth'
@@ -1546,7 +1535,6 @@ export interface FileRouteTypes {
     | '/erp/courier'
     | '/erp/deploy-sync'
     | '/erp/diagnostics'
-    | '/erp/dispatch'
     | '/erp/extension'
     | '/erp/inventory'
     | '/erp/inventory-reports'
@@ -1681,7 +1669,6 @@ export interface FileRouteTypes {
     | '/_authenticated/erp/crm'
     | '/_authenticated/erp/deploy-sync'
     | '/_authenticated/erp/diagnostics'
-    | '/_authenticated/erp/dispatch'
     | '/_authenticated/erp/extension'
     | '/_authenticated/erp/finance'
     | '/_authenticated/erp/growth'
@@ -2047,13 +2034,6 @@ declare module '@tanstack/react-router' {
       path: '/extension'
       fullPath: '/erp/extension'
       preLoaderRoute: typeof AuthenticatedErpExtensionRouteImport
-      parentRoute: typeof AuthenticatedErpRoute
-    }
-    '/_authenticated/erp/dispatch': {
-      id: '/_authenticated/erp/dispatch'
-      path: '/dispatch'
-      fullPath: '/erp/dispatch'
-      preLoaderRoute: typeof AuthenticatedErpDispatchRouteImport
       parentRoute: typeof AuthenticatedErpRoute
     }
     '/_authenticated/erp/diagnostics': {
@@ -3129,7 +3109,6 @@ interface AuthenticatedErpRouteChildren {
   AuthenticatedErpCrmRoute: typeof AuthenticatedErpCrmRouteWithChildren
   AuthenticatedErpDeploySyncRoute: typeof AuthenticatedErpDeploySyncRoute
   AuthenticatedErpDiagnosticsRoute: typeof AuthenticatedErpDiagnosticsRoute
-  AuthenticatedErpDispatchRoute: typeof AuthenticatedErpDispatchRoute
   AuthenticatedErpExtensionRoute: typeof AuthenticatedErpExtensionRoute
   AuthenticatedErpFinanceRoute: typeof AuthenticatedErpFinanceRouteWithChildren
   AuthenticatedErpGrowthRoute: typeof AuthenticatedErpGrowthRouteWithChildren
@@ -3169,7 +3148,6 @@ const AuthenticatedErpRouteChildren: AuthenticatedErpRouteChildren = {
   AuthenticatedErpCrmRoute: AuthenticatedErpCrmRouteWithChildren,
   AuthenticatedErpDeploySyncRoute: AuthenticatedErpDeploySyncRoute,
   AuthenticatedErpDiagnosticsRoute: AuthenticatedErpDiagnosticsRoute,
-  AuthenticatedErpDispatchRoute: AuthenticatedErpDispatchRoute,
   AuthenticatedErpExtensionRoute: AuthenticatedErpExtensionRoute,
   AuthenticatedErpFinanceRoute: AuthenticatedErpFinanceRouteWithChildren,
   AuthenticatedErpGrowthRoute: AuthenticatedErpGrowthRouteWithChildren,
