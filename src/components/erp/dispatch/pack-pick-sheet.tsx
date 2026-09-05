@@ -142,6 +142,53 @@ export function aggregateRows(orders: SheetOrder[], by: "product" | "sku"): Pick
 
 /* -------------------------------------------------------------- primitives */
 
+/** Clean tick box — rounded square with a faint inner ✓ guide for the pen. */
+export function TickBox({ size = 15 }: { size?: number }) {
+  return (
+    <span
+      style={{
+        display: "inline-flex",
+        alignItems: "center",
+        justifyContent: "center",
+        width: size,
+        height: size,
+        border: "1.5px solid #3f3f46",
+        borderRadius: 4,
+        background: "#fff",
+        color: "#d4d4d8",
+        fontSize: size - 5,
+        fontWeight: 900,
+        lineHeight: 1,
+      }}
+    >
+      ✓
+    </span>
+  );
+}
+
+/** Serial number chip — calm black rounded square, consistent sizing. */
+export function SerialChip({ n, size = 28 }: { n: number; size?: number }) {
+  return (
+    <span
+      style={{
+        display: "inline-block",
+        minWidth: size,
+        height: size,
+        lineHeight: `${size}px`,
+        textAlign: "center",
+        background: "#18181b",
+        color: "#fff",
+        borderRadius: 7,
+        fontSize: size * 0.52,
+        fontWeight: 800,
+        fontVariantNumeric: "tabular-nums",
+      }}
+    >
+      {n}
+    </span>
+  );
+}
+
 function Barcode({ value, height = 26 }: { value: string; height?: number }) {
   const bars = React.useMemo(() => code128Bars(value), [value]);
   if (bars.length === 0) return null;
