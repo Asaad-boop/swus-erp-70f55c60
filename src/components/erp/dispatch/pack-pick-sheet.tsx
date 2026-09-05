@@ -142,6 +142,53 @@ export function aggregateRows(orders: SheetOrder[], by: "product" | "sku"): Pick
 
 /* -------------------------------------------------------------- primitives */
 
+/** Clean tick box — rounded square with a faint inner ✓ guide for the pen. */
+export function TickBox({ size = 15 }: { size?: number }) {
+  return (
+    <span
+      style={{
+        display: "inline-flex",
+        alignItems: "center",
+        justifyContent: "center",
+        width: size,
+        height: size,
+        border: "1.5px solid #3f3f46",
+        borderRadius: 4,
+        background: "#fff",
+        color: "#d4d4d8",
+        fontSize: size - 5,
+        fontWeight: 900,
+        lineHeight: 1,
+      }}
+    >
+      ✓
+    </span>
+  );
+}
+
+/** Serial number chip — calm black rounded square, consistent sizing. */
+export function SerialChip({ n, size = 28 }: { n: number; size?: number }) {
+  return (
+    <span
+      style={{
+        display: "inline-block",
+        minWidth: size,
+        height: size,
+        lineHeight: `${size}px`,
+        textAlign: "center",
+        background: "#18181b",
+        color: "#fff",
+        borderRadius: 7,
+        fontSize: size * 0.52,
+        fontWeight: 800,
+        fontVariantNumeric: "tabular-nums",
+      }}
+    >
+      {n}
+    </span>
+  );
+}
+
 function Barcode({ value, height = 26 }: { value: string; height?: number }) {
   const bars = React.useMemo(() => code128Bars(value), [value]);
   if (bars.length === 0) return null;
@@ -180,20 +227,20 @@ function Header({
           justifyContent: "space-between",
           alignItems: "stretch",
           gap: 14,
-          paddingBottom: 12,
-          marginBottom: 12,
-          borderBottom: "3px double #111",
+          paddingBottom: 10,
+          marginBottom: 10,
+          borderBottom: "2px solid #18181b",
         }}
       >
-        <div style={{ display: "flex", alignItems: "center", gap: 12, minWidth: 0 }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 11, minWidth: 0 }}>
           <div
             style={{
-              width: 44,
-              height: 44,
-              borderRadius: 10,
-              background: "#111",
+              width: 38,
+              height: 38,
+              borderRadius: 9,
+              background: "#18181b",
               color: "#fff",
-              fontSize: 22,
+              fontSize: 19,
               fontWeight: 900,
               display: "flex",
               alignItems: "center",
@@ -207,7 +254,7 @@ function Header({
             <div style={{ fontSize: 8.5, letterSpacing: 3, fontWeight: 800, color: "#4F46E5" }}>
               {b.company.toUpperCase()} · {kicker}
             </div>
-            <h1 style={{ fontSize: 24, fontWeight: 900, margin: "2px 0 0", letterSpacing: -0.6, lineHeight: 1.1 }}>
+            <h1 style={{ fontSize: 20, fontWeight: 800, margin: "2px 0 0", letterSpacing: -0.4, lineHeight: 1.15 }}>
               {title}
             </h1>
             {brandName && (
@@ -248,24 +295,36 @@ function Header({
           <div style={{ fontSize: 9.5, color: "#555" }}>Picker: __________ · Checker: __________</div>
         </div>
       </div>
-      <div style={{ display: "grid", gridTemplateColumns: `repeat(${kpis.length}, 1fr)`, gap: 8, marginBottom: 14 }}>
-        {kpis.map((k) => (
+      <div
+        style={{
+          display: "flex",
+          gap: 0,
+          marginBottom: 12,
+          border: "1px solid #e4e4e7",
+          borderRadius: 8,
+          overflow: "hidden",
+        }}
+      >
+        {kpis.map((k, i) => (
           <div
             key={k.label}
             style={{
-              border: "1px solid #d4d4d8",
-              borderTop: "3px solid #111",
-              borderRadius: 8,
-              padding: "7px 12px 8px",
+              flex: 1,
+              padding: "5px 12px 6px",
               background: "#fafafa",
+              borderLeft: i === 0 ? undefined : "1px solid #e4e4e7",
+              display: "flex",
+              alignItems: "baseline",
+              justifyContent: "space-between",
+              gap: 8,
             }}
           >
-            <div style={{ fontSize: 8.5, letterSpacing: 1.6, color: "#666", fontWeight: 800 }}>
+            <span style={{ fontSize: 8.5, letterSpacing: 1.4, color: "#71717a", fontWeight: 700 }}>
               {k.label.toUpperCase()}
-            </div>
-            <div style={{ fontSize: 22, fontWeight: 900, lineHeight: 1.1, marginTop: 2, fontVariantNumeric: "tabular-nums" }}>
+            </span>
+            <span style={{ fontSize: 15, fontWeight: 800, fontVariantNumeric: "tabular-nums", lineHeight: 1 }}>
               {k.value}
-            </div>
+            </span>
           </div>
         ))}
       </div>
@@ -364,17 +423,17 @@ export function PickSheet({
         ]}
       />
 
-      <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 12, border: "1.5px solid #111", borderRadius: 8 }}>
+      <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 12, border: "1px solid #d4d4d8" }}>
         <thead>
-          <tr style={{ background: "#111", color: "#fff" }}>
-            <th style={{ ...th(30), borderTopLeftRadius: 6 }}>✓</th>
+          <tr style={{ background: "#18181b", color: "#fff" }}>
+            <th style={th(30)}>✓</th>
             <th style={th(34)}>#</th>
             {options.showImages && <th style={th(46)} />}
             <th style={{ ...th(), textAlign: "left" }}>Product / Variant</th>
             <th style={{ ...th(options.showBarcodes ? 150 : 110), textAlign: "left" }}>SKU</th>
             <th style={th(60)}>Orders</th>
             <th style={{ ...th(60), textAlign: "right" }}>Qty</th>
-            {options.showBins && <th style={{ ...th(64), textAlign: "left", borderTopRightRadius: 6 }}>Bin</th>}
+            {options.showBins && <th style={{ ...th(64), textAlign: "left" }}>Bin</th>}
           </tr>
         </thead>
         <tbody>
@@ -383,16 +442,16 @@ export function PickSheet({
               key={`${r.sku ?? r.name}-${i}`}
               style={{
                 background: i % 2 === 0 ? "#fff" : "#fafafa",
-                borderBottom: "1px solid #e5e5e5",
+                borderBottom: "1px solid #e4e4e7",
                 pageBreakInside: "avoid",
               }}
             >
               <td style={td("center")}>
-                <span
-                  style={{ display: "inline-block", width: 14, height: 14, border: "1.5px solid #111", borderRadius: 3 }}
-                />
+                <TickBox />
               </td>
-              <td style={{ ...td("center"), fontFamily: "ui-monospace, Menlo, monospace", fontWeight: 700 }}>{i + 1}</td>
+              <td style={td("center")}>
+                <SerialChip n={i + 1} size={22} />
+              </td>
               {options.showImages && (
                 <td style={td("center")}>
                   {r.image ? (
@@ -427,11 +486,11 @@ export function PickSheet({
           ))}
         </tbody>
         <tfoot>
-          <tr style={{ borderTop: "2px solid #111", background: "#f4f4f5" }}>
-            <td colSpan={options.showImages ? 6 : 5} style={{ ...td("right"), fontWeight: 900, letterSpacing: 1.5, fontSize: 10.5 }}>
+          <tr style={{ borderTop: "2px solid #18181b", background: "#fafafa" }}>
+            <td colSpan={options.showImages ? 6 : 5} style={{ ...td("right"), fontWeight: 800, letterSpacing: 1.5, fontSize: 10, color: "#3f3f46" }}>
               GRAND TOTAL
             </td>
-            <td style={{ ...td("right"), fontSize: 18, fontWeight: 900, fontVariantNumeric: "tabular-nums" }}>
+            <td style={{ ...td("right"), fontSize: 16, fontWeight: 800, fontVariantNumeric: "tabular-nums" }}>
               {totalQty}
             </td>
             {options.showBins && <td style={td()} />}
@@ -487,8 +546,8 @@ export function PackSheet({
             <div
               key={o.id}
               style={{
-                border: "1.5px solid #111",
-                borderLeft: "5px solid #111",
+                border: "1px solid #d4d4d8",
+                borderLeft: "4px solid #18181b",
                 borderRadius: 8,
                 overflow: "hidden",
                 pageBreakInside: "avoid",
@@ -503,7 +562,7 @@ export function PackSheet({
                     top: 30,
                     fontSize: 30,
                     fontWeight: 900,
-                    color: "rgba(0,0,0,0.06)",
+                    color: "rgba(0,0,0,0.05)",
                     letterSpacing: 4,
                   }}
                 >
@@ -516,26 +575,12 @@ export function PackSheet({
                   display: "flex",
                   alignItems: "center",
                   gap: 10,
-                  padding: "7px 12px",
-                  background: "#f4f4f5",
-                  borderBottom: "1.5px solid #111",
+                  padding: "6px 12px",
+                  background: "#fafafa",
+                  borderBottom: "1px solid #d4d4d8",
                 }}
               >
-                <span
-                  style={{
-                    fontSize: 17,
-                    fontWeight: 900,
-                    minWidth: 32,
-                    height: 32,
-                    lineHeight: "32px",
-                    textAlign: "center",
-                    background: "#111",
-                    color: "#fff",
-                    borderRadius: 8,
-                  }}
-                >
-                  {i + 1}
-                </span>
+                <SerialChip n={i + 1} size={28} />
                 <div style={{ minWidth: 0, flex: 1 }}>
                   <div style={{ display: "flex", alignItems: "center", gap: 6, flexWrap: "wrap" }}>
                     <span style={{ fontFamily: "ui-monospace, Menlo, monospace", fontWeight: 800, fontSize: 13 }}>
@@ -595,16 +640,16 @@ export function PackSheet({
                 <div
                   style={{
                     textAlign: "center",
-                    border: "1.5px solid #111",
+                    border: "1px solid #d4d4d8",
                     borderRadius: 8,
-                    padding: "3px 12px",
-                    background: isCod(o) ? "#fff" : "#dcfce7",
+                    padding: "3px 14px",
+                    background: isCod(o) ? "#fff" : "#f0fdf4",
                   }}
                 >
-                  <div style={{ fontSize: 8, letterSpacing: 1.4, color: "#555", fontWeight: 800 }}>
+                  <div style={{ fontSize: 8, letterSpacing: 1.4, color: "#71717a", fontWeight: 700 }}>
                     {isCod(o) ? "COD DUE" : "PREPAID"}
                   </div>
-                  <div style={{ fontSize: 17, fontWeight: 900, fontVariantNumeric: "tabular-nums", lineHeight: 1.15 }}>
+                  <div style={{ fontSize: 16, fontWeight: 800, fontVariantNumeric: "tabular-nums", lineHeight: 1.2 }}>
                     {isCod(o) ? money(codDue(o)) : money(0)}
                   </div>
                 </div>
@@ -632,9 +677,7 @@ export function PackSheet({
                   {items.map((it, ii) => (
                     <tr key={ii} style={{ borderBottom: ii === items.length - 1 ? undefined : "1px dashed #e5e5e5" }}>
                       <td style={{ ...td("center"), width: 26 }}>
-                        <span
-                          style={{ display: "inline-block", width: 13, height: 13, border: "1.5px solid #111", borderRadius: 3 }}
-                        />
+                        <TickBox size={14} />
                       </td>
                       {options.showImages && (
                         <td style={{ ...td("center"), width: 42 }}>
@@ -675,24 +718,28 @@ export function PackSheet({
                   justifyContent: "space-between",
                   alignItems: "center",
                   padding: "5px 12px",
-                  borderTop: "1.5px solid #111",
+                  borderTop: "1px solid #d4d4d8",
                   background: "#fafafa",
                   fontSize: 10.5,
                 }}
               >
-                <span style={{ color: "#555" }}>Packed by ____________ · Verified ☐</span>
-                <span style={{ fontWeight: 800, letterSpacing: 0.5 }}>
+                <span style={{ color: "#52525b", display: "inline-flex", alignItems: "center", gap: 6 }}>
+                  Packed by ____________ · Verified <TickBox size={13} />
+                </span>
+                <span style={{ fontWeight: 700, letterSpacing: 0.5, color: "#3f3f46", fontSize: 10 }}>
                   TOTAL PIECES{" "}
                   <span
                     style={{
                       display: "inline-block",
                       marginLeft: 6,
-                      fontSize: 15,
-                      fontWeight: 900,
-                      border: "1.5px solid #111",
+                      fontSize: 14,
+                      fontWeight: 800,
+                      color: "#18181b",
+                      border: "1px solid #a1a1aa",
                       borderRadius: 6,
-                      padding: "0 8px",
+                      padding: "1px 9px",
                       fontVariantNumeric: "tabular-nums",
+                      background: "#fff",
                     }}
                   >
                     {units}
