@@ -36,7 +36,10 @@ export type DispatchOrder = {
   updated_at: string | null;
   created_at: string | null;
   packaged_at: string | null;
-  items?: Array<{ name: string; variant_label: string | null; quantity: number; price: number; image: string | null }>;
+  shipping_note?: string | null;
+  customer_note?: string | null;
+  advance_amount?: number | null;
+  items?: Array<{ name: string; variant_label: string | null; quantity: number; price: number; image: string | null; sku?: string | null }>;
 };
 
 export type DispatchData = Record<DispatchStage, DispatchOrder[]>;
