@@ -69,7 +69,7 @@ function searchFromFilter(filter: OrdersFilter, view: "orders" | "incomplete" | 
     max: filter.amountMax ?? undefined,
     adv: filter.advanceFilter && filter.advanceFilter !== "any" ? filter.advanceFilter : undefined,
     printed: filter.printedFilter && filter.printedFilter !== "all" ? filter.printedFilter : undefined,
-    view: view === "incomplete" ? "incomplete" : undefined,
+    view: view === "orders" ? undefined : view,
   };
 }
 
