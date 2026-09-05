@@ -946,6 +946,29 @@ export function OrderDrawer({ orderId, onClose, mode = "fulfillment" }: Props) {
                     )}
 
                     <div className="mt-4 pt-3 border-t space-y-1.5 text-sm">
+                      <div className="flex items-center justify-between">
+                        <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Billing</span>
+                        {!billingEditing && (
+                          <button
+                            type="button"
+                            onClick={() => guardedAction(() => setBillingEditing(true))}
+                            className="inline-flex items-center gap-1 text-[11px] font-semibold text-primary hover:underline"
+                          >
+                            <Pencil className="h-3 w-3" /> Edit billing
+                          </button>
+                        )}
+                      </div>
+                      {billingEditing && orderId && (
+                        <OrderBillingEditor
+                          orderId={orderId}
+                          subtotal={subtotal}
+                          shippingFee={shippingFee}
+                          discountAmount={discountAmount}
+                          advanceAmount={advanceAmount}
+                          disabled={editingBlocked}
+                          onDone={() => setBillingEditing(false)}
+                        />
+                      )}
                       <div className="flex justify-between"><span className="text-muted-foreground">Subtotal</span><span className="tabular-nums">৳ {subtotal.toLocaleString()}</span></div>
                       <div className="flex justify-between"><span className="text-muted-foreground">Shipping</span><span className="tabular-nums">৳ {shippingFee.toLocaleString()}</span></div>
                       <div className="rounded-md border bg-muted/30 p-2.5 mt-1 space-y-1">
