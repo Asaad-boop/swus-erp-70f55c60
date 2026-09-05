@@ -47,6 +47,8 @@ export function BulkPrintDialog({
   const { data: cfg } = useInvoiceConfig(activeBrand?.id);
   const config = cfg ?? DEFAULT_INVOICE_CONFIG;
   const qc = useQueryClient();
+  const [sheets, setSheets] = useState<Record<SheetMode, boolean>>({ order: false, product: true, sku: false });
+  const [sheetOpts, setSheetOpts] = useState<SheetOptions>(DEFAULT_SHEET_OPTIONS);
 
   const { data, isLoading } = useQuery({
     queryKey: ["bulk-print", mode, orderIds.sort().join(",")],
