@@ -148,7 +148,7 @@ export function preflight(o: DispatchOrder): string[] {
 }
 
 const SELECT =
-  "id, invoice_no, brand_id, status, total, payment_method, courier_name, shipping_name, guest_name, shipping_phone, guest_phone, shipping_address, shipping_thana, shipping_city, shipping_district, tracking_number, printed_at, updated_at, created_at, packaged_at, items:order_items(name, variant_label, quantity, price, image)";
+  "id, invoice_no, brand_id, status, total, payment_method, courier_name, shipping_name, guest_name, shipping_phone, guest_phone, shipping_address, shipping_thana, shipping_city, shipping_district, tracking_number, printed_at, updated_at, created_at, packaged_at, shipping_note, customer_note, advance_amount, items:order_items(name, variant_label, quantity, price, image, sku)";
 
 const EMPTY: DispatchData = { pending: [], packed: [], ready: [], shipped: [], hold: [] };
 
