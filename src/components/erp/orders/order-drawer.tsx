@@ -520,39 +520,57 @@ export function OrderDrawer({ orderId, onClose, mode = "fulfillment" }: Props) {
 
   return (
     <Dialog open={!!orderId} onOpenChange={(o) => !o && onClose()}>
-      <DialogContent className="max-w-5xl w-[96vw] max-h-[92vh] overflow-hidden p-0 gap-0 border-border/60">
+      <DialogContent className="max-w-5xl w-[96vw] max-h-[92vh] overflow-hidden p-0 gap-0 border-border/60 rounded-2xl">
         {isLoading || !order ? (
           <div className="flex items-center justify-center h-60"><Loader2 className="h-6 w-6 animate-spin text-muted-foreground" /></div>
         ) : (
           <>
-            <DialogHeader className="px-6 pt-5 pb-4 bg-gradient-to-r from-primary/10 via-background to-background border-b">
-              <div className="flex items-center justify-between gap-4">
-                <div className="flex items-center gap-3 text-left">
-                  <div className="h-11 w-11 rounded-xl bg-primary/15 text-primary flex items-center justify-center shrink-0">
-                    <Hash className="h-5 w-5" />
-                  </div>
-                  <div className="space-y-0.5">
-                    <DialogTitle className="font-mono text-xl tracking-tight">#{invoiceDisplay(order)}</DialogTitle>
-                    <DialogDescription className="text-[11px] flex items-center gap-2 flex-wrap">
-                      <span className="inline-flex items-center gap-1"><Calendar className="h-3 w-3" />{format(new Date(order.created_at), "dd MMM yyyy, hh:mm a")}</span>
-                      <span className="text-muted-foreground/50">·</span>
-                      <span className="inline-flex items-center gap-1"><Globe className="h-3 w-3" />{order.source ?? "—"}</span>
-                    </DialogDescription>
-                  </div>
+            <DialogHeader className="border-b bg-card px-5 py-3.5">
+              <div className="flex flex-wrap items-center justify-between gap-3">
+                <div className="min-w-0 text-left">
+                  <DialogTitle className="flex flex-wrap items-center gap-2 font-mono text-[17px] tracking-tight">
+                    #{invoiceDisplay(order)}
+                    <Badge className={statusBadge(mode === "web" ? "confirmed" : order.status).className + " rounded-full px-2.5 py-0.5 text-[11px]"}>
+                      {mode === "web" ? webStatusLabel((order as { web_status?: string | null }).web_status) : statusBadge(order.status).label}
+                    </Badge>
+                  </DialogTitle>
+                  <DialogDescription className="mt-0.5 flex flex-wrap items-center gap-x-2 gap-y-0.5 text-[11px]">
+                    <span className="font-medium text-foreground">{customerName(order)}</span>
+                    <span className="text-muted-foreground/50">·</span>
+                    <span className="tabular-nums">{customerPhone(order)}</span>
+                    <span className="text-muted-foreground/50">·</span>
+                    <span className="inline-flex items-center gap-1"><Calendar className="h-3 w-3" />{format(new Date(order.created_at), "dd MMM yyyy, hh:mm a")}</span>
+                    <span className="text-muted-foreground/50">·</span>
+                    <span className="inline-flex items-center gap-1"><Globe className="h-3 w-3" />{order.source ?? "—"}</span>
+                  </DialogDescription>
                 </div>
-                <div className="flex items-center gap-3">
-                  <div className="text-right hidden sm:block">
-                    <div className="text-[10px] uppercase tracking-wider text-muted-foreground">Total</div>
-                    <div className="text-xl font-bold tabular-nums">৳ {payableTotal.toLocaleString()}</div>
+                <div className="flex items-center gap-2">
+                  <button
+                    type="button"
+                    onClick={copySummary}
+                    title="Copy order summary"
+                    className="grid h-8 w-8 place-items-center rounded-lg border text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+                  >
+                    <ClipboardCopy className="h-3.5 w-3.5" />
+                  </button>
+                  <button
+                    type="button"
+                    onClick={copyAddress}
+                    title="Copy address"
+                    className="grid h-8 w-8 place-items-center rounded-lg border text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+                  >
+                    <MapPin className="h-3.5 w-3.5" />
+                  </button>
+                  <div className="rounded-lg border bg-muted/40 px-3 py-1 text-right">
+                    <div className="text-[9px] uppercase tracking-wider text-muted-foreground">{advanceAmount > 0 ? "Due" : "Total"}</div>
+                    <div className="text-base font-bold tabular-nums leading-tight">৳ {payableTotal.toLocaleString()}</div>
                   </div>
-                  <Badge className={statusBadge(mode === "web" ? "confirmed" : order.status).className + " text-xs px-3 py-1 rounded-full"}>
-                    {mode === "web" ? webStatusLabel((order as { web_status?: string | null }).web_status) : statusBadge(order.status).label}
-                  </Badge>
                 </div>
               </div>
             </DialogHeader>
 
-            <div className="overflow-y-auto max-h-[calc(92vh-90px)] bg-muted/20">
+            <div className="overflow-y-auto max-h-[calc(92vh-80px)] bg-muted/20">
+
               {lockState.error && (
                 <div className="px-5 pt-4">
                   <div className="flex items-center gap-2 rounded-lg border border-rose-400/60 bg-rose-50 px-4 py-2.5 text-sm text-rose-800 shadow-sm dark:bg-rose-950/40 dark:text-rose-200">
