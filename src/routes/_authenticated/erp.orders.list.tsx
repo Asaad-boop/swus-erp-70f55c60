@@ -30,6 +30,7 @@ import { BulkPrintDialog, type PrintMode } from "@/components/erp/orders/bulk-pr
 import { CourierStatusSyncDialog } from "@/components/erp/orders/courier-status-sync-dialog";
 import { PhoneHistorySyncDialog } from "@/components/erp/orders/phone-history-sync-dialog";
 import { ScanToDispatchDialog } from "@/components/erp/orders/scan-to-dispatch-dialog";
+import { DispatchShell } from "@/components/erp/dispatch/dispatch-shell";
 import { downloadCsv, exportOrdersCsv, statusAge, statusSinceTs, tabForStatuses, RETURN_PENDING_STATUSES, STATUS_TABS, type OrderRow, type OrderStatus } from "@/lib/erp/orders";
 import { AlertTriangle, RefreshCcw } from "lucide-react";
 
@@ -569,7 +570,27 @@ function OrdersPage() {
 
   const activeTab =
     view === "incomplete" ? "incomplete"
+      : view === "dispatch" ? "ready_to_ship"
       : tabForStatuses(effective.statuses);
+
+  // Dispatch Center lives inside the Order List as a full-page view.
+  if (view === "dispatch") {
+    return (
+      <div className="p-4 md:p-6 min-h-screen bg-background">
+        <div className="mb-3 flex items-center gap-2">
+          <Button
+            variant="outline"
+            size="sm"
+            className="h-8 gap-1.5 rounded-xl text-[12px]"
+            onClick={() => navigate({ replace: true, search: { tab: "pending" } })}
+          >
+            ← Back to orders
+          </Button>
+        </div>
+        <DispatchShell />
+      </div>
+    );
+  }
 
   // Keyboard shortcuts: "/" focus search, "a" select page, "Esc" clear, "r" refresh.
   useEffect(() => {
