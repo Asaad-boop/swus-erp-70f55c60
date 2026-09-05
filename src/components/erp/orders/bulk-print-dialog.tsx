@@ -254,17 +254,20 @@ export function BulkPrintDialog({
                 sku: it.sku || null,
               })),
             })) as SheetOrder[];
-            const brandName = activeBrand?.name ?? null;
+            const onlyBrandId = brandBreakdown.length === 1 ? brandBreakdown[0].id : null;
+            const sheetBrand = activeBrand ?? (onlyBrandId ? brands.find((b) => b.id === onlyBrandId) ?? null : null);
+            const brandName = sheetBrand?.name ?? null;
+            const brandLogo = sheetBrand?.logo_url ?? null;
             return (
               <>
                 {sheets.order && (
-                  <div className="print-page"><PackSheet orders={sheetOrders} options={sheetOpts} brandName={brandName} /></div>
+                  <div className="print-page"><PackSheet orders={sheetOrders} options={sheetOpts} brandName={brandName} brandLogo={brandLogo} /></div>
                 )}
                 {sheets.product && (
-                  <div className="print-page"><PickSheet orders={sheetOrders} by="product" options={sheetOpts} brandName={brandName} /></div>
+                  <div className="print-page"><PickSheet orders={sheetOrders} by="product" options={sheetOpts} brandName={brandName} brandLogo={brandLogo} /></div>
                 )}
                 {sheets.sku && (
-                  <div className="print-page"><PickSheet orders={sheetOrders} by="sku" options={sheetOpts} brandName={brandName} /></div>
+                  <div className="print-page"><PickSheet orders={sheetOrders} by="sku" options={sheetOpts} brandName={brandName} brandLogo={brandLogo} /></div>
                 )}
               </>
             );
