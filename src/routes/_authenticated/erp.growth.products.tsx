@@ -245,18 +245,39 @@ function ProductLabPage() {
                                 </div>
                                 <div className="min-w-0">
                                   <p className="truncate font-medium">{r.title || "Untitled"}</p>
-                                  {r.sku && <p className="text-[11px] text-muted-foreground">{r.sku}</p>}
+                                  <div className="flex flex-wrap items-center gap-1.5 text-[11px] text-muted-foreground">
+                                    {r.sku && <span>{r.sku}</span>}
+                                    {r.cost_missing_units > 0 && (
+                                      <span
+                                        className="rounded border border-amber-500/40 px-1 text-amber-600 dark:text-amber-400"
+                                        title={`${number(r.cost_missing_units)} delivered units have no cost data — profit is incomplete`}
+                                      >
+                                        ⚠ cost data {r.cost_coverage_pct == null ? "incomplete" : `${Math.floor(r.cost_coverage_pct)}%`}
+                                      </span>
+                                    )}
+                                  </div>
                                 </div>
                               </div>
                             </td>
                             <td className="px-3 py-3 text-right tabular-nums">{number(r.delivered_orders)}</td>
                             <td className="px-3 py-3 text-right tabular-nums">{number(r.delivered_units)}</td>
                             <td className="px-3 py-3 text-right tabular-nums">{bdt(r.delivered_revenue)}</td>
-                            <td className="px-3 py-3 text-right font-medium tabular-nums">{bdt(r.net_profit)}</td>
+                            <td className="px-3 py-3 text-right tabular-nums">{r.ad_spend > 0 ? bdt(r.ad_spend) : "—"}</td>
+                            <td
+                              className={`px-3 py-3 text-right font-medium tabular-nums ${r.net_profit < 0 ? "text-destructive" : ""}`}
+                            >
+                              {bdt(r.net_profit)}
+                            </td>
                             <td className="px-3 py-3 text-right tabular-nums">{metric(r.margin_pct, "%")}</td>
                             <td className="px-3 py-3 text-right tabular-nums">{metric(r.roas, "x")}</td>
-                            <td className="px-3 py-3 text-right tabular-nums">{bdt(r.cpa)}</td>
+                            <td className="px-3 py-3 text-right tabular-nums">{r.cpa == null ? "—" : bdt(r.cpa)}</td>
+                            <td className="px-3 py-3 text-right text-xs tabular-nums text-muted-foreground">
+                              {r.delivery_rate == null ? "—" : `${Math.round(r.delivery_rate)}%`}
+                              {" / "}
+                              {r.return_rate == null ? "—" : `${Math.round(r.return_rate)}%`}
+                            </td>
                             <td className="px-3 py-3 text-right tabular-nums">{metric(r.delivered_units / rangeDays)}</td>
+
                             <td className="px-3 py-3 text-right tabular-nums">{number(r.available_stock)}</td>
                             <td className="px-3 py-3 text-right">
                               <Badge variant={r.available_stock <= (r.low_stock_threshold ?? 5) || (r.stock_cover_days != null && r.stock_cover_days <= 7) ? "destructive" : "outline"}>
