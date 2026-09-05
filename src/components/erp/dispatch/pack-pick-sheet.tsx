@@ -295,24 +295,36 @@ function Header({
           <div style={{ fontSize: 9.5, color: "#555" }}>Picker: __________ · Checker: __________</div>
         </div>
       </div>
-      <div style={{ display: "grid", gridTemplateColumns: `repeat(${kpis.length}, 1fr)`, gap: 8, marginBottom: 14 }}>
-        {kpis.map((k) => (
+      <div
+        style={{
+          display: "flex",
+          gap: 0,
+          marginBottom: 12,
+          border: "1px solid #e4e4e7",
+          borderRadius: 8,
+          overflow: "hidden",
+        }}
+      >
+        {kpis.map((k, i) => (
           <div
             key={k.label}
             style={{
-              border: "1px solid #d4d4d8",
-              borderTop: "3px solid #111",
-              borderRadius: 8,
-              padding: "7px 12px 8px",
+              flex: 1,
+              padding: "5px 12px 6px",
               background: "#fafafa",
+              borderLeft: i === 0 ? undefined : "1px solid #e4e4e7",
+              display: "flex",
+              alignItems: "baseline",
+              justifyContent: "space-between",
+              gap: 8,
             }}
           >
-            <div style={{ fontSize: 8.5, letterSpacing: 1.6, color: "#666", fontWeight: 800 }}>
+            <span style={{ fontSize: 8.5, letterSpacing: 1.4, color: "#71717a", fontWeight: 700 }}>
               {k.label.toUpperCase()}
-            </div>
-            <div style={{ fontSize: 22, fontWeight: 900, lineHeight: 1.1, marginTop: 2, fontVariantNumeric: "tabular-nums" }}>
+            </span>
+            <span style={{ fontSize: 15, fontWeight: 800, fontVariantNumeric: "tabular-nums", lineHeight: 1 }}>
               {k.value}
-            </div>
+            </span>
           </div>
         ))}
       </div>
