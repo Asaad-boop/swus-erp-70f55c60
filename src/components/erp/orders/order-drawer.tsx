@@ -1040,6 +1040,8 @@ export function OrderDrawer({ orderId, onClose, mode = "fulfillment" }: Props) {
                           <p className="text-[11px] text-muted-foreground italic">Courier sync er por automatic bose jabe, ba manually set koro.</p>
                         )}
                       </div>
+                      )}
+
                       {discountAmount > 0 && (
                         <div className="flex justify-between text-emerald-600 dark:text-emerald-400"><span>Discount</span><span className="tabular-nums">− ৳ {discountAmount.toLocaleString()}</span></div>
                       )}
