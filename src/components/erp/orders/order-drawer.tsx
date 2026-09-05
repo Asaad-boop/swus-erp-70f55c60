@@ -736,6 +736,10 @@ export function OrderDrawer({ orderId, onClose, mode = "fulfillment" }: Props) {
                 </div>
               </div>
 
+              <div className="px-5 pt-4">
+                <OrderCourierScoreStrip phone={phone} brandId={(order as { brand_id?: string | null }).brand_id ?? null} />
+              </div>
+
               {(risk || isDuplicateRisk) && (
                 <div className="flex flex-wrap gap-2 px-5 pt-4">
                   {risk && (
