@@ -260,7 +260,7 @@ export function OrderDrawer({ orderId, onClose, mode = "fulfillment" }: Props) {
     onError: (e: Error) => toast.error(e.message),
   });
 
-  useEffect(() => { setItemsEditing(false); }, [orderId]);
+  useEffect(() => { setItemsEditing(false); setBillingEditing(false); setCustomerEditing(false); setTab("details"); }, [orderId]);
 
   useEffect(() => {
     if (!order || customerEditing) return;
@@ -931,7 +931,7 @@ export function OrderDrawer({ orderId, onClose, mode = "fulfillment" }: Props) {
 
 
                   {/* Items */}
-                  <section className="rounded-xl border bg-card p-4 shadow-sm">
+                  <section className="rounded-xl border bg-card p-4">
                     <div className="mb-3 flex items-center justify-between gap-2">
                       <h3 className="text-xs font-bold uppercase tracking-wider text-muted-foreground flex items-center gap-1.5"><Package className="h-3.5 w-3.5" />Items ({items.length})</h3>
                       {!itemsEditing && (
@@ -1099,7 +1099,7 @@ export function OrderDrawer({ orderId, onClose, mode = "fulfillment" }: Props) {
                 <div className="space-y-4 lg:sticky lg:top-[132px] lg:self-start">
 
                   {/* Status + Assign */}
-                  <section className="rounded-xl border bg-card p-4 shadow-sm space-y-3">
+                  <section className="rounded-xl border bg-card p-4 space-y-3">
                     <h3 className="text-xs font-bold uppercase tracking-wider text-muted-foreground flex items-center gap-1.5"><ListChecks className="h-3.5 w-3.5" />Manage</h3>
                     <div>
                       <label className="text-[11px] font-semibold text-muted-foreground mb-1.5 block">Status</label>
@@ -1165,7 +1165,7 @@ export function OrderDrawer({ orderId, onClose, mode = "fulfillment" }: Props) {
                   </section>
 
                   {/* Notes */}
-                  <section className="rounded-xl border bg-card p-4 shadow-sm">
+                  <section className="rounded-xl border bg-card p-4">
                     <h3 className="text-xs font-bold uppercase tracking-wider text-muted-foreground mb-3 flex items-center gap-1.5"><StickyNote className="h-3.5 w-3.5" />Notes</h3>
                     <div className="space-y-2 mb-3">
                       <Textarea
