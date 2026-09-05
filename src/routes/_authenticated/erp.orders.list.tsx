@@ -44,7 +44,7 @@ type OrdersSearch = {
   min?: number; max?: number;
   adv?: "any" | "with" | "without";
   printed?: "all" | "printed" | "unprinted";
-  view?: "orders" | "incomplete";
+  view?: "orders" | "incomplete" | "dispatch";
 };
 
 function searchFromFilter(filter: OrdersFilter, view: "orders" | "incomplete"): OrdersSearch {
@@ -125,7 +125,7 @@ export const Route = createFileRoute("/_authenticated/erp/orders/list")({
     max: num(s['max']),
     adv: (["any", "with", "without"] as const).find((x) => x === s['adv']),
     printed: (["all", "printed", "unprinted"] as const).find((x) => x === s['printed']),
-    view: s['view'] === "incomplete" ? "incomplete" : undefined,
+    view: s['view'] === "incomplete" ? "incomplete" : s['view'] === "dispatch" ? "dispatch" : undefined,
   }),
   component: OrdersPage,
 });
@@ -138,7 +138,7 @@ function OrdersPage() {
 
   // URL is the single source of truth for filters and the active tab/view.
   const spKey = useMemo(() => JSON.stringify(sp), [sp]);
-  const view = sp.view === "incomplete" ? "incomplete" : "orders";
+  const view = sp.view === "dispatch" ? "dispatch" : sp.view === "incomplete" ? "incomplete" : "orders";
 
   const filter = useMemo<OrdersFilter>(
     () => {
