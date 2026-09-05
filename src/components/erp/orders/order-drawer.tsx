@@ -21,6 +21,7 @@ import { setOrderActualShippingCostFn } from "@/lib/erp/courier-sync.functions";
 import { confirmOrderAdvanceReceivedFn } from "@/lib/erp/finance/advance.functions";
 import { PreorderConvertDialog } from "@/components/erp/orders/preorder-convert-dialog";
 import { OrderItemsEditor } from "@/components/erp/orders/order-items-editor";
+import { OrderDeliveryIntel } from "@/components/erp/orders/order-delivery-intel";
 import { fireOrderSms } from "@/lib/erp/sms/notify";
 import { cn } from "@/lib/utils";
 
@@ -877,6 +878,17 @@ export function OrderDrawer({ orderId, onClose, mode = "fulfillment" }: Props) {
                       </div>
                     )}
                   </section>
+
+                  <OrderDeliveryIntel
+                    orderId={orderId}
+                    phone={phone}
+                    address={[order.shipping_address, order.shipping_thana, order.shipping_city, order.shipping_district]
+                      .filter(Boolean)
+                      .join(", ")}
+                    brandId={(order as { brand_id?: string | null }).brand_id ?? null}
+                  />
+
+
 
                   {/* Items */}
                   <section className="rounded-xl border bg-card p-4 shadow-sm">
