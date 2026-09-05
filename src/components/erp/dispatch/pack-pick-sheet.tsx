@@ -171,40 +171,101 @@ function Header({
   brandName?: string | null;
 }) {
   const b = getDocBranding();
+  const initial = (b.company || "S").trim().charAt(0).toUpperCase();
   return (
     <>
       <div
         style={{
           display: "flex",
           justifyContent: "space-between",
-          alignItems: "flex-end",
-          borderBottom: "2px solid #000",
-          paddingBottom: 10,
+          alignItems: "stretch",
+          gap: 14,
+          paddingBottom: 12,
           marginBottom: 12,
+          borderBottom: "3px double #111",
         }}
       >
-        <div>
-          <div style={{ fontSize: 9, letterSpacing: 3, fontWeight: 700, color: "#666" }}>
-            {b.company.toUpperCase()} · {kicker}
+        <div style={{ display: "flex", alignItems: "center", gap: 12, minWidth: 0 }}>
+          <div
+            style={{
+              width: 44,
+              height: 44,
+              borderRadius: 10,
+              background: "#111",
+              color: "#fff",
+              fontSize: 22,
+              fontWeight: 900,
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              flexShrink: 0,
+            }}
+          >
+            {initial}
           </div>
-          <h1 style={{ fontSize: 26, fontWeight: 800, margin: "3px 0 0", letterSpacing: -0.5 }}>{title}</h1>
-          {brandName && <div style={{ fontSize: 11, color: "#444", marginTop: 2 }}>Brand: {brandName}</div>}
+          <div style={{ minWidth: 0 }}>
+            <div style={{ fontSize: 8.5, letterSpacing: 3, fontWeight: 800, color: "#4F46E5" }}>
+              {b.company.toUpperCase()} · {kicker}
+            </div>
+            <h1 style={{ fontSize: 24, fontWeight: 900, margin: "2px 0 0", letterSpacing: -0.6, lineHeight: 1.1 }}>
+              {title}
+            </h1>
+            {brandName && (
+              <div
+                style={{
+                  display: "inline-block",
+                  marginTop: 4,
+                  fontSize: 9.5,
+                  fontWeight: 700,
+                  letterSpacing: 1,
+                  padding: "1px 8px",
+                  borderRadius: 999,
+                  border: "1px solid #111",
+                }}
+              >
+                BRAND · {brandName.toUpperCase()}
+              </div>
+            )}
+          </div>
         </div>
-        <div style={{ textAlign: "right", fontSize: 11 }}>
-          <div style={{ fontFamily: "ui-monospace, Menlo, monospace", fontWeight: 700 }}>{no}</div>
-          <div style={{ color: "#555" }}>{format(new Date(), "PPP · p")}</div>
-          <div style={{ marginTop: 6, fontSize: 10, color: "#555" }}>
-            Picker: ____________ · Checker: ____________
+        <div style={{ textAlign: "right", fontSize: 10.5, display: "flex", flexDirection: "column", justifyContent: "space-between" }}>
+          <div>
+            <div
+              style={{
+                display: "inline-block",
+                fontFamily: "ui-monospace, Menlo, monospace",
+                fontWeight: 800,
+                fontSize: 12,
+                padding: "3px 10px",
+                border: "1.5px solid #111",
+                borderRadius: 6,
+              }}
+            >
+              {no}
+            </div>
+            <div style={{ color: "#555", marginTop: 4 }}>{format(new Date(), "PPP · p")}</div>
           </div>
+          <div style={{ fontSize: 9.5, color: "#555" }}>Picker: __________ · Checker: __________</div>
         </div>
       </div>
-      <div style={{ display: "grid", gridTemplateColumns: `repeat(${kpis.length}, 1fr)`, gap: 8, marginBottom: 12 }}>
+      <div style={{ display: "grid", gridTemplateColumns: `repeat(${kpis.length}, 1fr)`, gap: 8, marginBottom: 14 }}>
         {kpis.map((k) => (
-          <div key={k.label} style={{ border: "1px solid #ddd", borderRadius: 6, padding: "6px 10px" }}>
-            <div style={{ fontSize: 8.5, letterSpacing: 1.4, color: "#666", fontWeight: 700 }}>
+          <div
+            key={k.label}
+            style={{
+              border: "1px solid #d4d4d8",
+              borderTop: "3px solid #111",
+              borderRadius: 8,
+              padding: "7px 12px 8px",
+              background: "#fafafa",
+            }}
+          >
+            <div style={{ fontSize: 8.5, letterSpacing: 1.6, color: "#666", fontWeight: 800 }}>
               {k.label.toUpperCase()}
             </div>
-            <div style={{ fontSize: 20, fontWeight: 800, lineHeight: 1.1, marginTop: 1 }}>{k.value}</div>
+            <div style={{ fontSize: 22, fontWeight: 900, lineHeight: 1.1, marginTop: 2, fontVariantNumeric: "tabular-nums" }}>
+              {k.value}
+            </div>
           </div>
         ))}
       </div>
@@ -212,23 +273,42 @@ function Header({
   );
 }
 
-function Signatures() {
+function Signatures({ sheetNoText }: { sheetNoText?: string }) {
   return (
-    <div
-      style={{
-        marginTop: 24,
-        display: "grid",
-        gridTemplateColumns: "repeat(3, 1fr)",
-        gap: 24,
-        fontSize: 10,
-        color: "#555",
-      }}
-    >
-      {["Picked by", "Checked by", "Dispatched by"].map((l) => (
-        <div key={l} style={{ borderTop: "1px solid #000", paddingTop: 4, textAlign: "center" }}>
-          {l}
-        </div>
-      ))}
+    <div style={{ marginTop: 26, pageBreakInside: "avoid" }}>
+      <div
+        style={{
+          display: "grid",
+          gridTemplateColumns: "repeat(3, 1fr)",
+          gap: 28,
+          fontSize: 10,
+          color: "#444",
+        }}
+      >
+        {["Picked by", "Checked by", "Dispatched by"].map((l) => (
+          <div key={l} style={{ textAlign: "center" }}>
+            <div style={{ borderTop: "1.5px solid #111", paddingTop: 4, fontWeight: 700, letterSpacing: 0.5 }}>
+              {l}
+            </div>
+            <div style={{ fontSize: 8.5, color: "#888", marginTop: 1 }}>Name & signature</div>
+          </div>
+        ))}
+      </div>
+      <div
+        style={{
+          marginTop: 14,
+          paddingTop: 6,
+          borderTop: "1px dashed #bbb",
+          display: "flex",
+          justifyContent: "space-between",
+          fontSize: 8.5,
+          color: "#999",
+          letterSpacing: 0.5,
+        }}
+      >
+        <span>{sheetNoText ?? ""}</span>
+        <span>Generated by SWUS ERP · {format(new Date(), "PP p")}</span>
+      </div>
     </div>
   );
 }
