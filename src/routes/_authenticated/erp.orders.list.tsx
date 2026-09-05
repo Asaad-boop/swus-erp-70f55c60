@@ -1,6 +1,6 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { Plus, Download, RefreshCw, Inbox, ScanLine } from "lucide-react";
+import { Plus, Download, RefreshCw, Inbox, ScanLine, PackageCheck } from "lucide-react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
@@ -652,6 +652,15 @@ function OrdersPage() {
             disabled={exporting}
           >
             <Download className={`h-3.5 w-3.5 ${exporting ? "animate-pulse" : ""}`} /> {exporting ? "Exporting…" : "Export"}
+          </Button>
+          <Button
+            variant="ghost"
+            size="sm"
+            className="h-9 gap-2 rounded-xl border border-[var(--panel-border)] bg-card px-3 text-[13px] font-medium text-foreground/80 hover:text-foreground"
+            onClick={() => navigate({ replace: true, search: { view: "dispatch" } })}
+            title="Dispatch Center"
+          >
+            <PackageCheck className="h-4 w-4" /> Dispatch
           </Button>
           <Link to="/erp/orders/new">
             <Button size="sm" className="h-9 gap-2 rounded-xl px-3.5 text-[13px] shadow-sm">
