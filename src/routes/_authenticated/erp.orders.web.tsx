@@ -1263,30 +1263,30 @@ function _WebOrdersPageBody() {
   const selectedOrderRows = rows.filter((r) => selectedIds.has(r.id));
 
   return (
-    <div className="px-5 md:px-8 py-6 md:py-8 max-w-[1600px] mx-auto">
-      {/* Header — refined, minimal */}
-      <header className="grid grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] items-center gap-4">
+    <div className="px-5 md:px-8 py-6 md:py-8 max-w-[1400px] mx-auto">
+      {/* Header — clean, focused */}
+      <header className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div className="min-w-0">
-          <div className="text-[11px] font-medium uppercase tracking-[0.14em] text-muted-foreground/70">
+          <div className="text-[11px] font-semibold uppercase tracking-[0.16em] text-primary/80">
             Orders
           </div>
-          <h1 className="mt-1 text-[26px] font-semibold tracking-tight leading-tight text-foreground">
+          <h1 className="mt-1 font-display text-[28px] font-bold tracking-tight leading-tight text-foreground">
             Web Orders
           </h1>
           <p className="mt-1 text-[13px] text-muted-foreground truncate">
             {isAllBrands ? `All Brands · ${brands.length}` : activeBrand?.name ?? "—"}
             {activeTab !== "incomplete" && totalRows > 0 && (
-              <span className="ml-2 text-muted-foreground/70">{rows.length} of {totalRows}</span>
+              <span className="ml-2 tabular-nums text-muted-foreground/70">{rows.length} of {totalRows}</span>
             )}
           </p>
         </div>
-        <div className="relative w-full sm:w-[420px] justify-self-center">
+        <div className="relative w-full sm:w-[380px]">
           <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground/80 pointer-events-none transition-colors" />
           <Input
             placeholder="Search invoice, name, phone…"
             value={searchInput}
             onChange={(e) => setSearchInput(e.target.value)}
-            className="h-10 pl-11 pr-9 rounded-full border-transparent bg-muted/50 hover:bg-muted/70 focus:bg-background text-[14px] font-semibold tracking-tight placeholder:font-medium placeholder:text-muted-foreground/60 shadow-none transition-all duration-200 ease-out focus-visible:ring-2 focus-visible:ring-ring/20 focus-visible:border-border/60 focus-visible:shadow-sm"
+            className="h-10 pl-11 pr-9 rounded-full border-transparent bg-muted/50 hover:bg-muted/70 focus:bg-background text-[14px] font-semibold tracking-tight placeholder:font-medium placeholder:text-muted-foreground/60 shadow-none transition-all duration-200 ease-out focus-visible:ring-2 focus-visible:ring-ring/25 focus-visible:border-border/60"
           />
           {searchInput && (
             <button
@@ -1298,42 +1298,43 @@ function _WebOrdersPageBody() {
             </button>
           )}
         </div>
-        <div aria-hidden className="hidden sm:block" />
       </header>
 
-      {/* Tabs — segmented underline, Linear/Notion-style */}
-      <div className="mt-6 flex items-center gap-1 overflow-x-auto -mx-1 px-1 border-b border-border/60 [scrollbar-width:thin]">
-        {STATUS_TABS.map((t) => {
-          const active = activeTab === t.key;
-          const count =
-            t.key === "incomplete"
-              ? incompleteCount ?? 0
-              : counts?.[t.key] ?? 0;
-          return (
-            <button
-              key={t.key}
-              onClick={() => setActiveTab(t.key)}
-              className={cn(
-                "relative shrink-0 inline-flex items-center gap-2 px-3 py-2.5 text-[13px] font-medium transition-colors -mb-px border-b-2",
-                active
-                  ? "border-foreground text-foreground"
-                  : "border-transparent text-muted-foreground hover:text-foreground",
-              )}
-            >
-              <span>{t.label}</span>
-              <span
+      {/* Tabs — segmented pills */}
+      <div className="mt-6 overflow-x-auto [scrollbar-width:thin]">
+        <div className="inline-flex items-center gap-1 rounded-xl border border-border/60 bg-muted/40 p-1">
+          {STATUS_TABS.map((t) => {
+            const active = activeTab === t.key;
+            const count =
+              t.key === "incomplete"
+                ? incompleteCount ?? 0
+                : counts?.[t.key] ?? 0;
+            return (
+              <button
+                key={t.key}
+                onClick={() => setActiveTab(t.key)}
                 className={cn(
-                  "tabular-nums inline-flex items-center justify-center rounded-md text-[10.5px] font-medium min-w-[20px] h-[18px] px-1.5",
+                  "shrink-0 inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-[13px] font-medium transition-all duration-150",
                   active
-                    ? "bg-foreground text-background"
-                    : "bg-muted/70 text-muted-foreground",
+                    ? "bg-card text-foreground shadow-sm ring-1 ring-border/60"
+                    : "text-muted-foreground hover:text-foreground hover:bg-card/60",
                 )}
               >
-                {count}
-              </span>
-            </button>
-          );
-        })}
+                <span>{t.label}</span>
+                <span
+                  className={cn(
+                    "tabular-nums inline-flex items-center justify-center rounded-full text-[10.5px] font-semibold min-w-[20px] h-[18px] px-1.5",
+                    active
+                      ? "bg-primary/10 text-primary"
+                      : "bg-muted text-muted-foreground/80",
+                  )}
+                >
+                  {count}
+                </span>
+              </button>
+            );
+          })}
+        </div>
       </div>
 
       {/* Filter row — tags inline + dropdowns right-aligned */}
@@ -1366,7 +1367,7 @@ function _WebOrdersPageBody() {
       <div className="mt-4 space-y-4">
 
       {activeTab === "incomplete" ? (
-        <div className="rounded-xl border border-border/60 bg-card overflow-hidden shadow-[0_1px_2px_rgba(0,0,0,0.02)]">
+        <div className="rounded-2xl border border-border/60 bg-card overflow-hidden shadow-sm">
           <IncompleteOrdersTable
             brandId={activeBrand?.id ?? null}
             brandIds={isAllBrands ? brandIds : activeBrand ? [activeBrand.id] : undefined}
@@ -1390,10 +1391,10 @@ function _WebOrdersPageBody() {
           </span>
         </div>
       )}
-      <div className="rounded-xl border border-border/60 bg-card overflow-x-auto shadow-[0_1px_2px_rgba(0,0,0,0.02)]">
+      <div className="rounded-2xl border border-border/60 bg-card overflow-x-auto shadow-sm">
         <Table>
           <TableHeader>
-            <TableRow className="bg-muted/30 hover:bg-muted/30 border-border/60">
+            <TableRow className="bg-muted/40 hover:bg-muted/40 border-border/60">
               <TableHead className="w-[36px] pl-3">
                 <Checkbox
                   checked={allVisibleSelected ? true : someVisibleSelected ? "indeterminate" : false}
