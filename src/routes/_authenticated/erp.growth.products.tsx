@@ -220,17 +220,20 @@ function ProductLabPage() {
                       <thead>
                         <tr className="border-b border-border text-left text-[11px] uppercase tracking-wide text-muted-foreground">
                           <th className="px-4 py-3 font-medium">Product</th>
-                          <th className="px-3 py-3 text-right font-medium">Orders</th>
+                          <th className="px-3 py-3 text-right font-medium">Delivered orders</th>
                           <th className="px-3 py-3 text-right font-medium">Units</th>
-                          <th className="px-3 py-3 text-right font-medium">Revenue</th>
+                          <th className="px-3 py-3 text-right font-medium">Delivered revenue</th>
+                          <th className="px-3 py-3 text-right font-medium">Ad spend</th>
                           <th className="px-3 py-3 text-right font-medium">Net profit</th>
                           <th className="px-3 py-3 text-right font-medium">Margin</th>
                           <th className="px-3 py-3 text-right font-medium">ROAS</th>
                           <th className="px-3 py-3 text-right font-medium">CPA</th>
+                          <th className="px-3 py-3 text-right font-medium">Delivery / Return</th>
                           <th className="px-3 py-3 text-right font-medium">Daily sales</th>
                           <th className="px-3 py-3 text-right font-medium">Available</th>
                           <th className="px-3 py-3 text-right font-medium">Cover</th>
                         </tr>
+
                       </thead>
                       <tbody>
                         {rows.map((r) => (
