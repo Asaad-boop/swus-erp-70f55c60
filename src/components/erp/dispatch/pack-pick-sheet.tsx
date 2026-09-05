@@ -423,17 +423,17 @@ export function PickSheet({
         ]}
       />
 
-      <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 12, border: "1.5px solid #111", borderRadius: 8 }}>
+      <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 12, border: "1px solid #d4d4d8" }}>
         <thead>
-          <tr style={{ background: "#111", color: "#fff" }}>
-            <th style={{ ...th(30), borderTopLeftRadius: 6 }}>✓</th>
+          <tr style={{ background: "#18181b", color: "#fff" }}>
+            <th style={th(30)}>✓</th>
             <th style={th(34)}>#</th>
             {options.showImages && <th style={th(46)} />}
             <th style={{ ...th(), textAlign: "left" }}>Product / Variant</th>
             <th style={{ ...th(options.showBarcodes ? 150 : 110), textAlign: "left" }}>SKU</th>
             <th style={th(60)}>Orders</th>
             <th style={{ ...th(60), textAlign: "right" }}>Qty</th>
-            {options.showBins && <th style={{ ...th(64), textAlign: "left", borderTopRightRadius: 6 }}>Bin</th>}
+            {options.showBins && <th style={{ ...th(64), textAlign: "left" }}>Bin</th>}
           </tr>
         </thead>
         <tbody>
@@ -442,16 +442,16 @@ export function PickSheet({
               key={`${r.sku ?? r.name}-${i}`}
               style={{
                 background: i % 2 === 0 ? "#fff" : "#fafafa",
-                borderBottom: "1px solid #e5e5e5",
+                borderBottom: "1px solid #e4e4e7",
                 pageBreakInside: "avoid",
               }}
             >
               <td style={td("center")}>
-                <span
-                  style={{ display: "inline-block", width: 14, height: 14, border: "1.5px solid #111", borderRadius: 3 }}
-                />
+                <TickBox />
               </td>
-              <td style={{ ...td("center"), fontFamily: "ui-monospace, Menlo, monospace", fontWeight: 700 }}>{i + 1}</td>
+              <td style={td("center")}>
+                <SerialChip n={i + 1} size={22} />
+              </td>
               {options.showImages && (
                 <td style={td("center")}>
                   {r.image ? (
