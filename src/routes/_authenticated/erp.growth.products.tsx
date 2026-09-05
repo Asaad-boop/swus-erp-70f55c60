@@ -174,9 +174,25 @@ function ProductLabPage() {
 
             <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
               <Summary label="Delivered revenue" value={rows.length ? bdt(totals.revenue) : "—"} />
-              <Summary label="Net profit" value={rows.length ? bdt(totals.profit) : "—"} />
-              <Summary label="Ad spend" value={rows.length ? bdt(totals.spend) : "—"} />
-              <Summary label="Delivered units" value={rows.length ? number(totals.units) : "—"} />
+              <Summary
+                label="Net profit"
+                value={rows.length ? bdt(totals.profit) : "—"}
+                hint={
+                  rows.length && totals.revenue > 0
+                    ? `${((totals.profit / totals.revenue) * 100).toFixed(1)}% margin`
+                    : undefined
+                }
+              />
+              <Summary
+                label="Ad spend"
+                value={rows.length ? bdt(totals.spend) : "—"}
+                hint={rows.length && totals.spend > 0 ? `${(totals.revenue / totals.spend).toFixed(2)}x ROAS` : undefined}
+              />
+              <Summary
+                label="Delivered units"
+                value={rows.length ? number(totals.units) : "—"}
+                hint={totals.missing > 0 ? `⚠ ${number(totals.missing)} units missing cost data` : undefined}
+              />
             </div>
 
             <Card className="shadow-none">
@@ -184,9 +200,10 @@ function ProductLabPage() {
                 <div>
                   <CardTitle className="text-sm">Live product performance ({rows.length})</CardTitle>
                   <p className="mt-1 text-xs text-muted-foreground">
-                    Delivered sales and profitability from the canonical product marketing source. Stock is available after reservations.
+                    Delivered sales and profit from the canonical source. Ad spend is the campaign spend in BDT, shared across the products of each attributed order. Stock is available after reservations.
                   </p>
                 </div>
+
                 <div className="flex flex-wrap items-center gap-2">
                   <div className="relative">
                     <Search className="pointer-events-none absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
