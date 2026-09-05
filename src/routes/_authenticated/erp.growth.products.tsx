@@ -102,9 +102,11 @@ function ProductLabPage() {
           profit: a.profit + Number(r.net_profit || 0),
           spend: a.spend + Number(r.ad_spend || 0),
           units: a.units + Number(r.delivered_units || 0),
+          missing: a.missing + Number(r.cost_missing_units || 0),
         }),
-        { revenue: 0, profit: 0, spend: 0, units: 0 },
+        { revenue: 0, profit: 0, spend: 0, units: 0, missing: 0 },
       ),
+
     [rows],
   );
 
