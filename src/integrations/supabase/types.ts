@@ -12813,6 +12813,10 @@ export type Database = {
         Returns: number
       }
       calculate_rfm_all_brands: { Args: never; Returns: undefined }
+      can_access_brand: {
+        Args: { _brand: string; _uid: string }
+        Returns: boolean
+      }
       cancel_meta_dollar_purchase: {
         Args: { _purchase_id: string; _reason?: string }
         Returns: Json
@@ -13546,6 +13550,7 @@ export type Database = {
         Returns: number
       }
       is_admin: { Args: never; Returns: boolean }
+      is_finance_admin: { Args: { _uid: string }; Returns: boolean }
       is_finance_staff: { Args: { _uid: string }; Returns: boolean }
       is_guest_order: { Args: { _order_id: string }; Returns: boolean }
       is_marketing_staff: { Args: { _uid: string }; Returns: boolean }
