@@ -142,46 +142,45 @@ export function aggregateRows(orders: SheetOrder[], by: "product" | "sku"): Pick
 
 /* -------------------------------------------------------------- primitives */
 
-/** Clean tick box — rounded square with a faint inner ✓ guide for the pen. */
-export function TickBox({ size = 15 }: { size?: number }) {
+const INK = "#111113";
+const LINE = "#dcdce1";
+const SOFT = "#f6f6f7";
+const MUTE = "#76767e";
+const MONO = "ui-monospace, SFMono-Regular, Menlo, monospace";
+
+/** Tick box — clean hairline square, generous for a pen tick. */
+export function TickBox({ size = 16 }: { size?: number }) {
   return (
     <span
       style={{
-        display: "inline-flex",
-        alignItems: "center",
-        justifyContent: "center",
+        display: "inline-block",
         width: size,
         height: size,
-        border: "1.5px solid #3f3f46",
-        borderRadius: 4,
+        border: `1.2px solid ${INK}`,
+        borderRadius: 3,
         background: "#fff",
-        color: "#d4d4d8",
-        fontSize: size - 5,
-        fontWeight: 900,
-        lineHeight: 1,
       }}
-    >
-      ✓
-    </span>
+    />
   );
 }
 
-/** Serial number chip — calm black rounded square, consistent sizing. */
-export function SerialChip({ n, size = 28 }: { n: number; size?: number }) {
+/** Serial — quiet outlined numeral, tabular so columns line up. */
+export function SerialChip({ n, size = 24 }: { n: number; size?: number }) {
   return (
     <span
       style={{
         display: "inline-block",
         minWidth: size,
         height: size,
-        lineHeight: `${size}px`,
+        lineHeight: `${size - 2}px`,
+        padding: "0 4px",
         textAlign: "center",
-        background: "#18181b",
-        color: "#fff",
-        borderRadius: 7,
-        fontSize: size * 0.52,
-        fontWeight: 800,
+        border: `1px solid ${INK}`,
+        borderRadius: 4,
+        fontSize: size * 0.5,
+        fontWeight: 700,
         fontVariantNumeric: "tabular-nums",
+        background: "#fff",
       }}
     >
       {n}
@@ -189,7 +188,33 @@ export function SerialChip({ n, size = 28 }: { n: number; size?: number }) {
   );
 }
 
-function Barcode({ value, height = 26 }: { value: string; height?: number }) {
+function Tag({ text, tone = "plain" }: { text: string; tone?: "plain" | "alert" | "note" | "good" }) {
+  const map = {
+    plain: { border: LINE, color: MUTE, bg: "#fff" },
+    alert: { border: INK, color: INK, bg: "#fff" },
+    note: { border: "#c8a600", color: "#7a5c00", bg: "#fffbe8" },
+    good: { border: "#1f8a4c", color: "#166534", bg: "#f2fbf5" },
+  }[tone];
+  return (
+    <span
+      style={{
+        fontSize: 8.5,
+        fontWeight: 700,
+        letterSpacing: 0.8,
+        padding: "1px 6px",
+        borderRadius: 3,
+        border: `1px solid ${map.border}`,
+        color: map.color,
+        background: map.bg,
+        whiteSpace: "nowrap",
+      }}
+    >
+      {text}
+    </span>
+  );
+}
+
+function Barcode({ value, height = 24 }: { value: string; height?: number }) {
   const bars = React.useMemo(() => code128Bars(value), [value]);
   if (bars.length === 0) return null;
   return (
@@ -197,7 +222,7 @@ function Barcode({ value, height = 26 }: { value: string; height?: number }) {
       {bars.map((w, i) => (
         <span
           key={i}
-          style={{ width: w, height: "100%", background: i % 2 === 0 ? "#000" : "transparent", display: "inline-block" }}
+          style={{ width: w, height: "100%", background: i % 2 === 0 ? INK : "transparent", display: "inline-block" }}
         />
       ))}
     </div>
@@ -218,179 +243,131 @@ function Header({
   brandName?: string | null;
 }) {
   const b = getDocBranding();
-  const initial = (b.company || "S").trim().charAt(0).toUpperCase();
   return (
-    <>
-      <div
-        style={{
-          display: "flex",
-          justifyContent: "space-between",
-          alignItems: "stretch",
-          gap: 14,
-          paddingBottom: 10,
-          marginBottom: 10,
-          borderBottom: "2px solid #18181b",
-        }}
-      >
-        <div style={{ display: "flex", alignItems: "center", gap: 11, minWidth: 0 }}>
-          <div
-            style={{
-              width: 38,
-              height: 38,
-              borderRadius: 9,
-              background: "#18181b",
-              color: "#fff",
-              fontSize: 19,
-              fontWeight: 900,
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              flexShrink: 0,
-            }}
-          >
-            {initial}
+    <div style={{ marginBottom: 12 }}>
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-end", gap: 16 }}>
+        <div style={{ minWidth: 0 }}>
+          <div style={{ fontSize: 8, letterSpacing: 2.6, fontWeight: 700, color: MUTE }}>
+            {(b.company || "SWUS").toUpperCase()} · {kicker}
           </div>
-          <div style={{ minWidth: 0 }}>
-            <div style={{ fontSize: 8.5, letterSpacing: 3, fontWeight: 800, color: "#4F46E5" }}>
-              {b.company.toUpperCase()} · {kicker}
-            </div>
-            <h1 style={{ fontSize: 20, fontWeight: 800, margin: "2px 0 0", letterSpacing: -0.4, lineHeight: 1.15 }}>
-              {title}
-            </h1>
-            {brandName && (
-              <div
-                style={{
-                  display: "inline-block",
-                  marginTop: 4,
-                  fontSize: 9.5,
-                  fontWeight: 700,
-                  letterSpacing: 1,
-                  padding: "1px 8px",
-                  borderRadius: 999,
-                  border: "1px solid #111",
-                }}
-              >
-                BRAND · {brandName.toUpperCase()}
-              </div>
-            )}
+          <h1 style={{ fontSize: 19, fontWeight: 700, margin: "3px 0 0", letterSpacing: -0.5, lineHeight: 1.1 }}>
+            {title}
+          </h1>
+          <div style={{ display: "flex", gap: 6, marginTop: 5 }}>
+            {brandName && <Tag text={brandName.toUpperCase()} />}
+            <Tag text={format(new Date(), "dd MMM yyyy · p").toUpperCase()} />
           </div>
         </div>
-        <div style={{ textAlign: "right", fontSize: 10.5, display: "flex", flexDirection: "column", justifyContent: "space-between" }}>
-          <div>
-            <div
-              style={{
-                display: "inline-block",
-                fontFamily: "ui-monospace, Menlo, monospace",
-                fontWeight: 800,
-                fontSize: 12,
-                padding: "3px 10px",
-                border: "1.5px solid #111",
-                borderRadius: 6,
-              }}
-            >
-              {no}
-            </div>
-            <div style={{ color: "#555", marginTop: 4 }}>{format(new Date(), "PPP · p")}</div>
-          </div>
-          <div style={{ fontSize: 9.5, color: "#555" }}>Picker: __________ · Checker: __________</div>
+        <div style={{ textAlign: "right", flexShrink: 0 }}>
+          <div style={{ fontFamily: MONO, fontWeight: 700, fontSize: 12.5, letterSpacing: 0.4 }}>{no}</div>
+          <div style={{ fontSize: 9, color: MUTE, marginTop: 3 }}>Picker ____________</div>
+          <div style={{ fontSize: 9, color: MUTE, marginTop: 2 }}>Checker ___________</div>
         </div>
       </div>
+
       <div
         style={{
+          marginTop: 9,
+          paddingTop: 6,
+          borderTop: `1.5px solid ${INK}`,
           display: "flex",
-          gap: 0,
-          marginBottom: 12,
-          border: "1px solid #e4e4e7",
-          borderRadius: 8,
-          overflow: "hidden",
+          alignItems: "baseline",
+          gap: 18,
+          flexWrap: "wrap",
         }}
       >
-        {kpis.map((k, i) => (
-          <div
-            key={k.label}
-            style={{
-              flex: 1,
-              padding: "5px 12px 6px",
-              background: "#fafafa",
-              borderLeft: i === 0 ? undefined : "1px solid #e4e4e7",
-              display: "flex",
-              alignItems: "baseline",
-              justifyContent: "space-between",
-              gap: 8,
-            }}
-          >
-            <span style={{ fontSize: 8.5, letterSpacing: 1.4, color: "#71717a", fontWeight: 700 }}>
+        {kpis.map((k) => (
+          <span key={k.label} style={{ display: "inline-flex", alignItems: "baseline", gap: 5 }}>
+            <span style={{ fontSize: 8, letterSpacing: 1.4, color: MUTE, fontWeight: 700 }}>
               {k.label.toUpperCase()}
             </span>
-            <span style={{ fontSize: 15, fontWeight: 800, fontVariantNumeric: "tabular-nums", lineHeight: 1 }}>
-              {k.value}
-            </span>
-          </div>
+            <span style={{ fontSize: 12.5, fontWeight: 700, fontVariantNumeric: "tabular-nums" }}>{k.value}</span>
+          </span>
         ))}
       </div>
-    </>
+    </div>
   );
 }
 
 function Signatures({ sheetNoText }: { sheetNoText?: string }) {
   return (
-    <div style={{ marginTop: 26, pageBreakInside: "avoid" }}>
-      <div
-        style={{
-          display: "grid",
-          gridTemplateColumns: "repeat(3, 1fr)",
-          gap: 28,
-          fontSize: 10,
-          color: "#444",
-        }}
-      >
+    <div style={{ marginTop: 22, pageBreakInside: "avoid" }}>
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 26, fontSize: 9.5 }}>
         {["Picked by", "Checked by", "Dispatched by"].map((l) => (
-          <div key={l} style={{ textAlign: "center" }}>
-            <div style={{ borderTop: "1.5px solid #111", paddingTop: 4, fontWeight: 700, letterSpacing: 0.5 }}>
-              {l}
-            </div>
-            <div style={{ fontSize: 8.5, color: "#888", marginTop: 1 }}>Name & signature</div>
+          <div key={l}>
+            <div style={{ height: 22 }} />
+            <div style={{ borderTop: `1px solid ${INK}`, paddingTop: 3, fontWeight: 600, letterSpacing: 0.4 }}>{l}</div>
           </div>
         ))}
       </div>
       <div
         style={{
-          marginTop: 14,
-          paddingTop: 6,
-          borderTop: "1px dashed #bbb",
+          marginTop: 12,
+          paddingTop: 5,
+          borderTop: `1px solid ${LINE}`,
           display: "flex",
           justifyContent: "space-between",
-          fontSize: 8.5,
-          color: "#999",
-          letterSpacing: 0.5,
+          fontSize: 8,
+          color: "#a1a1aa",
+          letterSpacing: 0.6,
         }}
       >
         <span>{sheetNoText ?? ""}</span>
-        <span>Generated by SWUS ERP · {format(new Date(), "PP p")}</span>
+        <span>SWUS ERP · {format(new Date(), "PP p")}</span>
       </div>
     </div>
   );
 }
 
 const pageStyle = (paper: "a4" | "a5"): React.CSSProperties => ({
-  padding: paper === "a4" ? "16mm 13mm" : "10mm 9mm",
-  fontSize: paper === "a4" ? 12 : 10.5,
+  padding: paper === "a4" ? "14mm 12mm" : "9mm 8mm",
+  fontSize: paper === "a4" ? 11.5 : 10,
   lineHeight: 1.35,
+  color: INK,
 });
 
-const th = (w?: number): React.CSSProperties => ({
-  padding: "7px 8px",
-  textAlign: "center",
-  fontSize: 9.5,
-  letterSpacing: 1,
+const th = (w?: number, align: "left" | "right" | "center" = "center"): React.CSSProperties => ({
+  padding: "5px 8px",
+  textAlign: align,
+  fontSize: 8,
+  letterSpacing: 1.4,
   fontWeight: 700,
+  color: MUTE,
   width: w,
+  borderBottom: `1px solid ${INK}`,
+  whiteSpace: "nowrap",
 });
 const td = (align: "left" | "right" | "center" = "left"): React.CSSProperties => ({
   padding: "7px 8px",
   textAlign: align,
-  verticalAlign: "top",
+  verticalAlign: "middle",
 });
+
+/** Big boxed quantity — the number pickers actually read. */
+function QtyBox({ n, size = 18 }: { n: number; size?: number }) {
+  return (
+    <span
+      style={{
+        display: "inline-block",
+        minWidth: size + 14,
+        padding: "1px 7px",
+        border: `1.2px solid ${INK}`,
+        borderRadius: 4,
+        fontSize: size,
+        fontWeight: 700,
+        lineHeight: 1.25,
+        fontVariantNumeric: "tabular-nums",
+        textAlign: "center",
+      }}
+    >
+      {n}
+    </span>
+  );
+}
+
+function BinLine({ w = 52 }: { w?: number }) {
+  return <span style={{ display: "inline-block", minWidth: w, borderBottom: `1px solid ${LINE}`, height: 13 }} />;
+}
 
 /* ------------------------------------------------------- product / sku sheet */
 
@@ -408,32 +385,35 @@ export function PickSheet({
   const rows = aggregateRows(orders, by);
   const totalQty = rows.reduce((s, r) => s + r.qty, 0);
   const no = sheetNo(by === "sku" ? "sku" : "product");
+  const isSku = by === "sku";
+  const showImages = options.showImages && !isSku;
 
   return (
     <div className="bg-white text-black font-sans" style={pageStyle(options.paper)}>
       <Header
-        kicker={by === "sku" ? "SKU PICK SHEET" : "WAREHOUSE PICK SHEET"}
-        title={by === "sku" ? "SKU-wise Picking List" : "Product-wise Picking List"}
+        kicker={isSku ? "SKU PICK SHEET" : "WAREHOUSE PICK SHEET"}
+        title={isSku ? "SKU-wise Picking List" : "Product-wise Picking List"}
         no={no}
         brandName={brandName}
         kpis={[
           { label: "Orders", value: orders.length },
-          { label: by === "sku" ? "SKUs" : "Products", value: rows.length },
-          { label: "Total Units", value: totalQty },
+          { label: isSku ? "SKUs" : "Products", value: rows.length },
+          { label: "Units", value: totalQty },
         ]}
       />
 
-      <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 12, border: "1px solid #d4d4d8" }}>
+      <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 11.5 }}>
         <thead>
-          <tr style={{ background: "#18181b", color: "#fff" }}>
-            <th style={th(30)}>✓</th>
-            <th style={th(34)}>#</th>
-            {options.showImages && <th style={th(46)} />}
-            <th style={{ ...th(), textAlign: "left" }}>Product / Variant</th>
-            <th style={{ ...th(options.showBarcodes ? 150 : 110), textAlign: "left" }}>SKU</th>
-            <th style={th(60)}>Orders</th>
-            <th style={{ ...th(60), textAlign: "right" }}>Qty</th>
-            {options.showBins && <th style={{ ...th(64), textAlign: "left" }}>Bin</th>}
+          <tr>
+            <th style={th(26)}>✓</th>
+            <th style={th(30)}>#</th>
+            {showImages && <th style={th(42)} />}
+            <th style={th(undefined, "left")}>{isSku ? "SKU" : "Product / Variant"}</th>
+            {!isSku && <th style={th(options.showBarcodes ? 140 : 104, "left")}>SKU</th>}
+            {isSku && options.showBarcodes && <th style={th(150, "left")}>Barcode</th>}
+            <th style={th(52)}>Orders</th>
+            <th style={th(58, "right")}>Qty</th>
+            {options.showBins && <th style={th(60, "left")}>Bin</th>}
           </tr>
         </thead>
         <tbody>
@@ -441,8 +421,8 @@ export function PickSheet({
             <tr
               key={`${r.sku ?? r.name}-${i}`}
               style={{
-                background: i % 2 === 0 ? "#fff" : "#fafafa",
-                borderBottom: "1px solid #e4e4e7",
+                borderBottom: `1px solid ${LINE}`,
+                background: i % 2 === 1 ? SOFT : "#fff",
                 pageBreakInside: "avoid",
               }}
             >
@@ -450,48 +430,70 @@ export function PickSheet({
                 <TickBox />
               </td>
               <td style={td("center")}>
-                <SerialChip n={i + 1} size={22} />
+                <SerialChip n={i + 1} size={21} />
               </td>
-              {options.showImages && (
+              {showImages && (
                 <td style={td("center")}>
                   {r.image ? (
                     <img
                       src={r.image}
                       alt=""
-                      style={{ width: 34, height: 34, objectFit: "cover", borderRadius: 4, border: "1px solid #ddd" }}
+                      style={{ width: 32, height: 32, objectFit: "cover", borderRadius: 3, border: `1px solid ${LINE}` }}
                     />
                   ) : (
-                    <span style={{ display: "inline-block", width: 34, height: 34, border: "1px dashed #ccc", borderRadius: 4 }} />
+                    <span
+                      style={{ display: "inline-block", width: 32, height: 32, border: `1px dashed ${LINE}`, borderRadius: 3 }}
+                    />
                   )}
                 </td>
               )}
               <td style={td()}>
-                <div style={{ fontWeight: 700, fontSize: 12.5, lineHeight: 1.25 }}>{r.name}</div>
-                {r.variant && <div style={{ color: "#444", fontSize: 10.5, marginTop: 1 }}>↳ {r.variant}</div>}
+                {isSku ? (
+                  <div style={{ fontFamily: MONO, fontWeight: 700, fontSize: 13, letterSpacing: 0.3 }}>
+                    {r.sku ?? "—"}
+                    <span style={{ fontFamily: "inherit", fontWeight: 500, color: MUTE, fontSize: 10, marginLeft: 8 }}>
+                      {r.name}
+                      {r.variant ? ` · ${r.variant}` : ""}
+                    </span>
+                  </div>
+                ) : (
+                  <>
+                    <div style={{ fontWeight: 600, fontSize: 12, lineHeight: 1.25 }}>{r.name}</div>
+                    {r.variant && <div style={{ color: MUTE, fontSize: 10, marginTop: 1 }}>{r.variant}</div>}
+                  </>
+                )}
               </td>
-              <td style={{ ...td(), fontFamily: "ui-monospace, Menlo, monospace", fontSize: 10.5 }}>
-                <div>{r.sku ?? "—"}</div>
-                {options.showBarcodes && r.sku && <Barcode value={r.sku} height={22} />}
-              </td>
-              <td style={{ ...td("center"), fontVariantNumeric: "tabular-nums" }}>{r.orders}</td>
-              <td style={{ ...td("right"), fontSize: 17, fontWeight: 800, fontVariantNumeric: "tabular-nums" }}>
-                {r.qty}
+              {!isSku && (
+                <td style={{ ...td(), fontFamily: MONO, fontSize: 10 }}>
+                  <div>{r.sku ?? "—"}</div>
+                  {options.showBarcodes && r.sku && <Barcode value={r.sku} height={20} />}
+                </td>
+              )}
+              {isSku && options.showBarcodes && (
+                <td style={td()}>{r.sku ? <Barcode value={r.sku} height={22} /> : null}</td>
+              )}
+              <td style={{ ...td("center"), fontVariantNumeric: "tabular-nums", color: MUTE }}>{r.orders}</td>
+              <td style={td("right")}>
+                <QtyBox n={r.qty} size={isSku ? 19 : 17} />
               </td>
               {options.showBins && (
                 <td style={td()}>
-                  <span style={{ display: "inline-block", minWidth: 48, borderBottom: "1px solid #999", height: 14 }} />
+                  <BinLine />
                 </td>
               )}
             </tr>
           ))}
         </tbody>
         <tfoot>
-          <tr style={{ borderTop: "2px solid #18181b", background: "#fafafa" }}>
-            <td colSpan={options.showImages ? 6 : 5} style={{ ...td("right"), fontWeight: 800, letterSpacing: 1.5, fontSize: 10, color: "#3f3f46" }}>
+          <tr style={{ borderTop: `1.5px solid ${INK}` }}>
+            <td
+              colSpan={2 + (showImages ? 1 : 0) + 1 + (isSku ? (options.showBarcodes ? 1 : 0) : 1) + 1}
+              style={{ ...td("right"), fontWeight: 700, letterSpacing: 1.4, fontSize: 9, color: MUTE }}
+            >
               GRAND TOTAL
             </td>
-            <td style={{ ...td("right"), fontSize: 16, fontWeight: 800, fontVariantNumeric: "tabular-nums" }}>
-              {totalQty}
+            <td style={td("right")}>
+              <QtyBox n={totalQty} size={19} />
             </td>
             {options.showBins && <td style={td()} />}
           </tr>
@@ -516,7 +518,9 @@ export function PackSheet({
 }) {
   const sorted = sortOrdersForPacking(orders);
   const totalUnits = sorted.reduce((s, o) => s + (o.items ?? []).reduce((t, i) => t + i.quantity, 0), 0);
-  const multi = sorted.filter((o) => new Set((o.items ?? []).map((i) => `${i.name}|${i.variant_label ?? ""}`)).size > 1).length;
+  const multi = sorted.filter(
+    (o) => new Set((o.items ?? []).map((i) => `${i.name}|${i.variant_label ?? ""}`)).size > 1,
+  ).length;
   const noted = sorted.filter((o) => !!orderNote(o)).length;
   const no = sheetNo("order");
 
@@ -530,25 +534,25 @@ export function PackSheet({
         kpis={[
           { label: "Orders", value: sorted.length },
           { label: "Multi-item", value: multi },
-          { label: "With note", value: noted },
-          { label: "Total Units", value: totalUnits },
+          { label: "Noted", value: noted },
+          { label: "Units", value: totalUnits },
         ]}
       />
 
-      <div style={{ display: "grid", gap: 8 }}>
+      <div style={{ display: "grid", gap: 7 }}>
         {sorted.map((o, i) => {
           const items = o.items ?? [];
           const units = items.reduce((s, it) => s + it.quantity, 0);
           const distinct = new Set(items.map((it) => `${it.name}|${it.variant_label ?? ""}`)).size;
           const note = orderNote(o);
           const inv = o.invoice_no ?? o.id.slice(0, 8);
+          const place = [o.shipping_thana, o.shipping_city].filter(Boolean).join(", ");
           return (
             <div
               key={o.id}
               style={{
-                border: "1px solid #d4d4d8",
-                borderLeft: "4px solid #18181b",
-                borderRadius: 8,
+                border: `1px solid ${LINE}`,
+                borderRadius: 5,
                 overflow: "hidden",
                 pageBreakInside: "avoid",
                 position: "relative",
@@ -558,153 +562,115 @@ export function PackSheet({
                 <span
                   style={{
                     position: "absolute",
-                    right: 10,
-                    top: 30,
-                    fontSize: 30,
-                    fontWeight: 900,
-                    color: "rgba(0,0,0,0.05)",
-                    letterSpacing: 4,
+                    right: 12,
+                    bottom: 6,
+                    fontSize: 9,
+                    fontWeight: 700,
+                    letterSpacing: 2,
+                    color: "#c4c4cc",
                   }}
                 >
                   REPRINT
                 </span>
               )}
-              {/* order head */}
-              <div
-                style={{
-                  display: "flex",
-                  alignItems: "center",
-                  gap: 10,
-                  padding: "6px 12px",
-                  background: "#fafafa",
-                  borderBottom: "1px solid #d4d4d8",
-                }}
-              >
-                <SerialChip n={i + 1} size={28} />
+
+              {/* head */}
+              <div style={{ display: "flex", alignItems: "flex-start", gap: 10, padding: "7px 11px 6px" }}>
+                <SerialChip n={i + 1} size={26} />
                 <div style={{ minWidth: 0, flex: 1 }}>
                   <div style={{ display: "flex", alignItems: "center", gap: 6, flexWrap: "wrap" }}>
-                    <span style={{ fontFamily: "ui-monospace, Menlo, monospace", fontWeight: 800, fontSize: 13 }}>
-                      #{inv}
-                    </span>
-                    {distinct > 1 && (
-                      <span
-                        style={{
-                          fontSize: 9,
-                          fontWeight: 800,
-                          padding: "1px 6px",
-                          borderRadius: 999,
-                          background: "#fee2e2",
-                          border: "1px solid #ef4444",
-                          color: "#991b1b",
-                        }}
-                      >
-                        ⚠ {distinct} ITEMS
-                      </span>
-                    )}
+                    <span style={{ fontFamily: MONO, fontWeight: 700, fontSize: 12.5 }}>#{inv}</span>
+                    {distinct > 1 && <Tag text={`${distinct} ITEMS`} tone="alert" />}
                     {Number(o.advance_amount ?? 0) > 0 && (
-                      <span
-                        style={{
-                          fontSize: 9,
-                          fontWeight: 800,
-                          padding: "1px 6px",
-                          borderRadius: 999,
-                          background: "#dcfce7",
-                          border: "1px solid #16a34a",
-                          color: "#166534",
-                        }}
-                      >
-                        ADVANCE {money(Number(o.advance_amount))}
-                      </span>
+                      <Tag text={`ADVANCE ${money(Number(o.advance_amount))}`} tone="good" />
                     )}
-                    {(o.status ?? "").includes("exchange") && (
-                      <span
-                        style={{
-                          fontSize: 9,
-                          fontWeight: 800,
-                          padding: "1px 6px",
-                          borderRadius: 999,
-                          background: "#fef9c3",
-                          border: "1px solid #ca8a04",
-                          color: "#854d0e",
-                        }}
-                      >
-                        EXCHANGE
-                      </span>
-                    )}
+                    {(o.status ?? "").includes("exchange") && <Tag text="EXCHANGE" tone="note" />}
                   </div>
-                  <div style={{ fontSize: 10.5, color: "#333", marginTop: 1 }}>
-                    {orderName(o)} · {orderPhone(o)} · {[o.shipping_thana, o.shipping_city].filter(Boolean).join(", ")}
-                    {o.courier_name ? ` · ${o.courier_name}` : ""}
+                  <div style={{ fontSize: 10.5, marginTop: 2, fontWeight: 600 }}>{orderName(o)}</div>
+                  <div style={{ fontSize: 9.5, color: MUTE, marginTop: 1 }}>
+                    {[orderPhone(o), place, o.courier_name].filter(Boolean).join("  ·  ")}
                   </div>
                 </div>
-                <div
-                  style={{
-                    textAlign: "center",
-                    border: "1px solid #d4d4d8",
-                    borderRadius: 8,
-                    padding: "3px 14px",
-                    background: isCod(o) ? "#fff" : "#f0fdf4",
-                  }}
-                >
-                  <div style={{ fontSize: 8, letterSpacing: 1.4, color: "#71717a", fontWeight: 700 }}>
+                <div style={{ textAlign: "right", flexShrink: 0 }}>
+                  <div style={{ fontSize: 8, letterSpacing: 1.4, color: MUTE, fontWeight: 700 }}>
                     {isCod(o) ? "COD DUE" : "PREPAID"}
                   </div>
-                  <div style={{ fontSize: 16, fontWeight: 800, fontVariantNumeric: "tabular-nums", lineHeight: 1.2 }}>
+                  <div style={{ fontSize: 16, fontWeight: 700, fontVariantNumeric: "tabular-nums", lineHeight: 1.25 }}>
                     {isCod(o) ? money(codDue(o)) : money(0)}
                   </div>
+                  {options.showBarcodes && (
+                    <div style={{ display: "flex", justifyContent: "flex-end", marginTop: 3 }}>
+                      <Barcode value={inv} height={20} />
+                    </div>
+                  )}
                 </div>
-                {options.showBarcodes && <Barcode value={inv} height={26} />}
               </div>
 
               {note && (
                 <div
                   style={{
-                    padding: "4px 10px",
-                    background: "#fefce8",
-                    borderBottom: "1px solid #fde68a",
-                    fontSize: 10.5,
-                    color: "#713f12",
+                    margin: "0 11px 6px",
+                    padding: "4px 8px",
+                    background: "#fffbe8",
+                    border: "1px solid #eddda0",
+                    borderRadius: 4,
+                    fontSize: 10,
+                    color: "#7a5c00",
                     fontWeight: 600,
                   }}
                 >
-                  📝 {note}
+                  NOTE · {note}
                 </div>
               )}
 
               {/* items */}
-              <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 11.5 }}>
+              <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 11 }}>
                 <tbody>
                   {items.map((it, ii) => (
-                    <tr key={ii} style={{ borderBottom: ii === items.length - 1 ? undefined : "1px dashed #e5e5e5" }}>
+                    <tr key={ii} style={{ borderTop: `1px solid ${LINE}`, background: ii % 2 === 1 ? SOFT : "#fff" }}>
                       <td style={{ ...td("center"), width: 26 }}>
-                        <TickBox size={14} />
+                        <TickBox size={15} />
                       </td>
                       {options.showImages && (
-                        <td style={{ ...td("center"), width: 42 }}>
+                        <td style={{ ...td("center"), width: 40 }}>
                           {it.image ? (
                             <img
                               src={it.image}
                               alt=""
-                              style={{ width: 30, height: 30, objectFit: "cover", borderRadius: 4, border: "1px solid #ddd" }}
+                              style={{
+                                width: 28,
+                                height: 28,
+                                objectFit: "cover",
+                                borderRadius: 3,
+                                border: `1px solid ${LINE}`,
+                              }}
                             />
                           ) : (
-                            <span style={{ display: "inline-block", width: 30, height: 30, border: "1px dashed #ccc", borderRadius: 4 }} />
+                            <span
+                              style={{
+                                display: "inline-block",
+                                width: 28,
+                                height: 28,
+                                border: `1px dashed ${LINE}`,
+                                borderRadius: 3,
+                              }}
+                            />
                           )}
                         </td>
                       )}
                       <td style={td()}>
-                        <div style={{ fontWeight: 700 }}>{it.name}</div>
-                        {it.variant_label && <div style={{ fontSize: 10, color: "#444" }}>↳ {it.variant_label}</div>}
+                        <div style={{ fontWeight: 600 }}>{it.name}</div>
+                        {it.variant_label && <div style={{ fontSize: 9.5, color: MUTE }}>{it.variant_label}</div>}
                       </td>
-                      <td style={{ ...td(), width: 120, fontFamily: "ui-monospace, Menlo, monospace", fontSize: 10 }}>
+                      <td style={{ ...td(), width: 116, fontFamily: MONO, fontSize: 9.5, color: MUTE }}>
                         {itemSku(it) ?? "—"}
                       </td>
-                      <td style={{ ...td("right"), width: 54, fontSize: 15, fontWeight: 800, fontVariantNumeric: "tabular-nums" }}>
-                        ×{it.quantity}
+                      <td style={{ ...td("right"), width: 54 }}>
+                        <QtyBox n={it.quantity} size={15} />
                       </td>
                       {options.showBins && (
-                        <td style={{ ...td(), width: 60 }}>
-                          <span style={{ display: "inline-block", minWidth: 44, borderBottom: "1px solid #999", height: 12 }} />
+                        <td style={{ ...td(), width: 56 }}>
+                          <BinLine w={44} />
                         </td>
                       )}
                     </tr>
@@ -717,33 +683,17 @@ export function PackSheet({
                   display: "flex",
                   justifyContent: "space-between",
                   alignItems: "center",
-                  padding: "5px 12px",
-                  borderTop: "1px solid #d4d4d8",
-                  background: "#fafafa",
-                  fontSize: 10.5,
+                  padding: "5px 11px",
+                  borderTop: `1px solid ${INK}`,
+                  fontSize: 9.5,
+                  color: MUTE,
                 }}
               >
-                <span style={{ color: "#52525b", display: "inline-flex", alignItems: "center", gap: 6 }}>
-                  Packed by ____________ · Verified <TickBox size={13} />
+                <span style={{ display: "inline-flex", alignItems: "center", gap: 6 }}>
+                  Packed ____________ · Verified <TickBox size={13} />
                 </span>
-                <span style={{ fontWeight: 700, letterSpacing: 0.5, color: "#3f3f46", fontSize: 10 }}>
-                  TOTAL PIECES{" "}
-                  <span
-                    style={{
-                      display: "inline-block",
-                      marginLeft: 6,
-                      fontSize: 14,
-                      fontWeight: 800,
-                      color: "#18181b",
-                      border: "1px solid #a1a1aa",
-                      borderRadius: 6,
-                      padding: "1px 9px",
-                      fontVariantNumeric: "tabular-nums",
-                      background: "#fff",
-                    }}
-                  >
-                    {units}
-                  </span>
+                <span style={{ display: "inline-flex", alignItems: "center", gap: 6, fontWeight: 700, letterSpacing: 1 }}>
+                  TOTAL PIECES <QtyBox n={units} size={14} />
                 </span>
               </div>
             </div>
