@@ -11,15 +11,26 @@ import { customerName, customerPhone, invoiceDisplay } from "@/lib/erp/orders";
 import { DEFAULT_INVOICE_CONFIG, formatMoney, type InvoiceConfig } from "@/lib/erp/invoice-config";
 import { markOrdersPrinted } from "@/lib/erp/mark-printed";
 import { useQueryClient } from "@tanstack/react-query";
+import { useState } from "react";
+import {
+  PackSheet, PickSheet, DEFAULT_SHEET_OPTIONS,
+  type SheetMode, type SheetOptions, type SheetOrder,
+} from "@/components/erp/dispatch/pack-pick-sheet";
 
 export type PrintMode = "invoice" | "sticker" | "picking" | "sheet";
 
 const MODE_LABEL: Record<PrintMode, string> = {
   invoice: "Invoices",
   sticker: "Shipping stickers",
-  picking: "Picking list",
+  picking: "Pack & Pick",
   sheet: "Order sheet",
 };
+
+const SHEET_TOGGLES: { key: SheetMode; label: string; hint: string }[] = [
+  { key: "order", label: "Order-wise", hint: "Pack list — per order" },
+  { key: "product", label: "Product-wise", hint: "Pick list — per product" },
+  { key: "sku", label: "SKU-wise", hint: "Compact — SKU + qty only" },
+];
 
 export function BulkPrintDialog({
   open,
