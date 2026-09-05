@@ -1069,9 +1069,11 @@ export function OrderDrawer({ orderId, onClose, mode = "fulfillment" }: Props) {
                       <div className="flex justify-between font-bold text-base pt-2 mt-1 border-t"><span>{advanceAmount > 0 ? "Due Total" : "Total"}</span><span className="tabular-nums text-primary">৳ {payableTotal.toLocaleString()}</span></div>
                     </div>
                   </section>
+                  </>)}
 
-                  {/* Timeline */}
-                  <section className="rounded-xl border bg-card p-4 shadow-sm">
+                  {tab === "activity" && (
+                  /* Timeline */
+                  <section className="rounded-xl border bg-card p-4">
                     <h3 className="text-xs font-bold uppercase tracking-wider text-muted-foreground mb-3 flex items-center gap-1.5"><Clock className="h-3.5 w-3.5" />Status Timeline</h3>
                     {history.length > 0 ? (
                       <div className="space-y-3 relative before:absolute before:left-[5px] before:top-2 before:bottom-2 before:w-px before:bg-border">
@@ -1090,10 +1092,12 @@ export function OrderDrawer({ orderId, onClose, mode = "fulfillment" }: Props) {
                       <p className="text-xs text-muted-foreground italic">No status changes recorded yet</p>
                     )}
                   </section>
+                  )}
                 </div>
 
                 {/* RIGHT — Actions + Notes */}
-                <div className="space-y-4">
+                <div className="space-y-4 lg:sticky lg:top-[132px] lg:self-start">
+
                   {/* Status + Assign */}
                   <section className="rounded-xl border bg-card p-4 shadow-sm space-y-3">
                     <h3 className="text-xs font-bold uppercase tracking-wider text-muted-foreground flex items-center gap-1.5"><ListChecks className="h-3.5 w-3.5" />Manage</h3>
