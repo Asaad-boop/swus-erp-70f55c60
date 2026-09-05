@@ -26,11 +26,33 @@ const MODE_LABEL: Record<PrintMode, string> = {
   sheet: "Order sheet",
 };
 
-const SHEET_TOGGLES: { key: SheetMode; label: string; hint: string }[] = [
-  { key: "order", label: "Order-wise", hint: "Pack list — per order" },
-  { key: "product", label: "Product-wise", hint: "Pick list — per product" },
-  { key: "sku", label: "SKU-wise", hint: "Compact — SKU + qty only" },
+const SHEET_TOGGLES: { key: SheetMode; label: string; hint: string; icon: React.ElementType }[] = [
+  { key: "order", label: "Order-wise", hint: "Pack list — এক অর্ডার এক ব্লক, প্যাকারদের জন্য", icon: Package },
+  { key: "product", label: "Product-wise", hint: "Pick list — প্রোডাক্ট ধরে গ্রুপ, গুদাম থেকে তোলার জন্য", icon: LayoutList },
+  { key: "sku", label: "SKU-wise", hint: "শুধু SKU + মোট পিস — সবচেয়ে কমপ্যাক্ট", icon: Barcode },
 ];
+
+function SheetOptionChip({
+  checked, onChange, icon: Icon, label,
+}: { checked: boolean; onChange: (v: boolean) => void; icon?: React.ElementType; label: string }) {
+  return (
+    <button
+      type="button"
+      role="checkbox"
+      aria-checked={checked}
+      onClick={() => onChange(!checked)}
+      className={`inline-flex items-center gap-1.5 h-7 rounded-full border px-2.5 text-[11px] font-medium transition-colors ${
+        checked
+          ? "border-primary bg-primary/10 text-primary"
+          : "bg-background text-muted-foreground hover:border-foreground/30"
+      }`}
+    >
+      {Icon && <Icon className="h-3 w-3" />}
+      {label}
+      {checked && <CheckCheck className="h-3 w-3" />}
+    </button>
+  );
+}
 
 export function BulkPrintDialog({
   open,
