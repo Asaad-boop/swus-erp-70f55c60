@@ -21,7 +21,8 @@ import { setOrderActualShippingCostFn } from "@/lib/erp/courier-sync.functions";
 import { confirmOrderAdvanceReceivedFn } from "@/lib/erp/finance/advance.functions";
 import { PreorderConvertDialog } from "@/components/erp/orders/preorder-convert-dialog";
 import { OrderItemsEditor } from "@/components/erp/orders/order-items-editor";
-import { OrderDeliveryIntel } from "@/components/erp/orders/order-delivery-intel";
+import { OrderCourierScoreStrip, OrderLocationIntel } from "@/components/erp/orders/order-delivery-intel";
+import { OrderBillingEditor } from "@/components/erp/orders/order-billing-editor";
 import { fireOrderSms } from "@/lib/erp/sms/notify";
 import { cn } from "@/lib/utils";
 
@@ -199,6 +200,7 @@ export function OrderDrawer({ orderId, onClose, mode = "fulfillment" }: Props) {
   const [feeAmount, setFeeAmount] = useState("");
   const [customerEditing, setCustomerEditing] = useState(false);
   const [itemsEditing, setItemsEditing] = useState(false);
+  const [billingEditing, setBillingEditing] = useState(false);
   const [customerDraft, setCustomerDraft] = useState<CustomerDraft>(EMPTY_CUSTOMER_DRAFT);
   const setFeeFn = useServerFn(setOrderActualShippingCostFn);
   const confirmAdvanceFn = useServerFn(confirmOrderAdvanceReceivedFn);
@@ -735,6 +737,10 @@ export function OrderDrawer({ orderId, onClose, mode = "fulfillment" }: Props) {
                 </div>
               </div>
 
+              <div className="px-5 pt-4">
+                <OrderCourierScoreStrip phone={phone} brandId={(order as { brand_id?: string | null }).brand_id ?? null} />
+              </div>
+
               {(risk || isDuplicateRisk) && (
                 <div className="flex flex-wrap gap-2 px-5 pt-4">
                   {risk && (
@@ -876,17 +882,17 @@ export function OrderDrawer({ orderId, onClose, mode = "fulfillment" }: Props) {
                           </div>
                         )}
                       </div>
-                    )}
+                     )}
+
+                    <OrderLocationIntel
+                      orderId={orderId}
+                      address={[order.shipping_address, order.shipping_thana, order.shipping_city, order.shipping_district]
+                        .filter(Boolean)
+                        .join(", ")}
+                    />
                   </section>
 
-                  <OrderDeliveryIntel
-                    orderId={orderId}
-                    phone={phone}
-                    address={[order.shipping_address, order.shipping_thana, order.shipping_city, order.shipping_district]
-                      .filter(Boolean)
-                      .join(", ")}
-                    brandId={(order as { brand_id?: string | null }).brand_id ?? null}
-                  />
+
 
 
 
@@ -940,6 +946,29 @@ export function OrderDrawer({ orderId, onClose, mode = "fulfillment" }: Props) {
                     )}
 
                     <div className="mt-4 pt-3 border-t space-y-1.5 text-sm">
+                      <div className="flex items-center justify-between">
+                        <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Billing</span>
+                        {!billingEditing && (
+                          <button
+                            type="button"
+                            onClick={() => guardedAction(() => setBillingEditing(true))}
+                            className="inline-flex items-center gap-1 text-[11px] font-semibold text-primary hover:underline"
+                          >
+                            <Pencil className="h-3 w-3" /> Edit billing
+                          </button>
+                        )}
+                      </div>
+                      {billingEditing && orderId && (
+                        <OrderBillingEditor
+                          orderId={orderId}
+                          subtotal={subtotal}
+                          shippingFee={shippingFee}
+                          discountAmount={discountAmount}
+                          advanceAmount={advanceAmount}
+                          disabled={editingBlocked}
+                          onDone={() => setBillingEditing(false)}
+                        />
+                      )}
                       <div className="flex justify-between"><span className="text-muted-foreground">Subtotal</span><span className="tabular-nums">৳ {subtotal.toLocaleString()}</span></div>
                       <div className="flex justify-between"><span className="text-muted-foreground">Shipping</span><span className="tabular-nums">৳ {shippingFee.toLocaleString()}</span></div>
                       <div className="rounded-md border bg-muted/30 p-2.5 mt-1 space-y-1">
