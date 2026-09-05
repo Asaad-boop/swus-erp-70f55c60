@@ -640,16 +640,16 @@ export function PackSheet({
                 <div
                   style={{
                     textAlign: "center",
-                    border: "1.5px solid #111",
+                    border: "1px solid #d4d4d8",
                     borderRadius: 8,
-                    padding: "3px 12px",
-                    background: isCod(o) ? "#fff" : "#dcfce7",
+                    padding: "3px 14px",
+                    background: isCod(o) ? "#fff" : "#f0fdf4",
                   }}
                 >
-                  <div style={{ fontSize: 8, letterSpacing: 1.4, color: "#555", fontWeight: 800 }}>
+                  <div style={{ fontSize: 8, letterSpacing: 1.4, color: "#71717a", fontWeight: 700 }}>
                     {isCod(o) ? "COD DUE" : "PREPAID"}
                   </div>
-                  <div style={{ fontSize: 17, fontWeight: 900, fontVariantNumeric: "tabular-nums", lineHeight: 1.15 }}>
+                  <div style={{ fontSize: 16, fontWeight: 800, fontVariantNumeric: "tabular-nums", lineHeight: 1.2 }}>
                     {isCod(o) ? money(codDue(o)) : money(0)}
                   </div>
                 </div>
@@ -677,9 +677,7 @@ export function PackSheet({
                   {items.map((it, ii) => (
                     <tr key={ii} style={{ borderBottom: ii === items.length - 1 ? undefined : "1px dashed #e5e5e5" }}>
                       <td style={{ ...td("center"), width: 26 }}>
-                        <span
-                          style={{ display: "inline-block", width: 13, height: 13, border: "1.5px solid #111", borderRadius: 3 }}
-                        />
+                        <TickBox size={14} />
                       </td>
                       {options.showImages && (
                         <td style={{ ...td("center"), width: 42 }}>
