@@ -1,6 +1,6 @@
 import { format } from "date-fns";
 import { useEffect, useState } from "react";
-import { User, Phone, MapPin, Package, Clock, Loader2, Hash, Calendar, Globe, UserCog, ListChecks, StickyNote, Send, AlertTriangle, Truck, Pencil, Lock, ShieldAlert, Save, X, CalendarClock, PhoneCall, Copy, MessageCircle, CheckCircle2, PauseCircle, PhoneOff, Wallet, History, Tag as TagIcon, ClipboardCopy, ShieldCheck, Command, Repeat2 } from "lucide-react";
+import { User, Phone, MapPin, Package, Clock, Loader2, Hash, Calendar, Globe, UserCog, ListChecks, StickyNote, Send, AlertTriangle, Truck, Pencil, Lock, ShieldAlert, Save, X, CalendarClock, PhoneCall, Copy, MessageCircle, CheckCircle2, PauseCircle, PhoneOff, Wallet, History, Tag as TagIcon, ClipboardCopy, ShieldCheck, Command, Repeat2, UserCheck } from "lucide-react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { toast } from "sonner";
@@ -686,6 +686,9 @@ export function OrderDrawer({ orderId, onClose, mode = "fulfillment" }: Props) {
 
                   {mode === "web" ? (
                     <>
+                      <Button size="sm" variant="outline" className="h-9 gap-1.5 border-amber-300 text-amber-700 hover:bg-amber-50 dark:border-amber-900 dark:text-amber-300" disabled={updateWebStatus.isPending} onClick={() => onPickWebStatus("good_but_no_response")}>
+                        <UserCheck className="h-3.5 w-3.5" /> Good, no response
+                      </Button>
                       <Button size="sm" variant="outline" className="h-9 gap-1.5" disabled={updateWebStatus.isPending} onClick={() => onPickWebStatus("no_response")}>
                         <PhoneOff className="h-3.5 w-3.5" /> No response
                       </Button>
@@ -857,62 +860,87 @@ export function OrderDrawer({ orderId, onClose, mode = "fulfillment" }: Props) {
                         </div>
                       </div>
                     ) : (
-                      <div className="space-y-2 text-sm">
-                        <div className="flex flex-wrap items-center gap-2">
-                          <span className="text-base font-semibold">{customerName(order)}</span>
-                          {footprint && footprint.total > 0 && (
-                            <span className="inline-flex items-center gap-1.5 rounded-full border bg-muted/50 px-2 py-0.5 text-[10px] font-medium">
-                              <History className="h-3 w-3" />
-                              {footprint.total} past
-                              <span className="text-emerald-600 dark:text-emerald-400">{footprint.delivered}✓</span>
-                              {footprint.returned > 0 && <span className="text-rose-600 dark:text-rose-400">{footprint.returned}↩</span>}
-                              {footprint.cancelled > 0 && <span className="text-muted-foreground">{footprint.cancelled}✕</span>}
-                            </span>
-                          )}
+                      <div className="text-sm">
+                        {/* Identity row */}
+                        <div className="flex items-center gap-3">
+                          <div className="grid h-11 w-11 shrink-0 place-items-center rounded-full bg-primary/10 text-base font-bold uppercase text-primary">
+                            {(customerName(order).trim()[0] ?? "?")}
+                          </div>
+                          <div className="min-w-0 flex-1">
+                            <div className="flex flex-wrap items-center gap-2">
+                              <span className="truncate text-[15px] font-semibold">{customerName(order)}</span>
+                              {footprint && footprint.total > 0 && (
+                                <span className="inline-flex items-center gap-1.5 rounded-full border bg-muted/50 px-2 py-0.5 text-[10px] font-medium">
+                                  <History className="h-3 w-3" />
+                                  {footprint.total} past
+                                  <span className="text-emerald-600 dark:text-emerald-400">{footprint.delivered}✓</span>
+                                  {footprint.returned > 0 && <span className="text-rose-600 dark:text-rose-400">{footprint.returned}↩</span>}
+                                  {footprint.cancelled > 0 && <span className="text-muted-foreground">{footprint.cancelled}✕</span>}
+                                </span>
+                              )}
+                            </div>
+                            <div className="mt-0.5 flex items-center gap-1.5">
+                              <a
+                                href={`tel:${customerPhone(order)}`}
+                                title="Call customer (logs a call attempt)"
+                                onClick={() => {
+                                  if (!orderId) return;
+                                  logCall.mutate({ orderId, attempts: callAttempts, currentStatus: callStatus });
+                                }}
+                                className="inline-flex items-center gap-1.5 text-[13px] font-semibold tabular-nums text-foreground transition-colors hover:text-primary"
+                              >
+                                <Phone className="h-3 w-3 text-muted-foreground" />{customerPhone(order)}
+                              </a>
+                              <button
+                                type="button"
+                                title="Copy phone"
+                                onClick={() => { navigator.clipboard.writeText(customerPhone(order)); toast.success("Phone copied"); }}
+                                className="text-muted-foreground transition-colors hover:text-foreground"
+                              >
+                                <Copy className="h-3 w-3" />
+                              </button>
+                            </div>
+                          </div>
                         </div>
 
-                        <div className="flex items-center gap-2">
-                          <a
-                            href={`tel:${customerPhone(order)}`}
-                            title="Call customer (logs a call attempt)"
-                            onClick={() => {
-                              if (!orderId) return;
-                              logCall.mutate({ orderId, attempts: callAttempts, currentStatus: callStatus });
-                            }}
-                            className={cn("flex items-center gap-2 text-foreground transition-colors hover:text-primary")}
-                          >
-                            <Phone className="h-3.5 w-3.5 text-muted-foreground" /><span className="font-medium tabular-nums">{customerPhone(order)}</span>
-                          </a>
+                        {/* Address block */}
+                        <div className="mt-3 flex items-start gap-2.5 rounded-lg border bg-muted/30 px-3 py-2.5">
+                          <MapPin className="mt-0.5 h-4 w-4 shrink-0 text-muted-foreground" />
+                          <div className="min-w-0 flex-1">
+                            <p className="leading-relaxed text-foreground">{order.shipping_address || "—"}</p>
+                            {[order.shipping_thana, order.shipping_city, order.shipping_district].filter(Boolean).length > 0 && (
+                              <p className="mt-0.5 text-xs text-muted-foreground">{[order.shipping_thana, order.shipping_city, order.shipping_district].filter(Boolean).join(" · ")}</p>
+                            )}
+                          </div>
                           <button
                             type="button"
-                            title="Copy phone"
-                            onClick={() => { navigator.clipboard.writeText(customerPhone(order)); toast.success("Phone copied"); }}
-                            className="text-muted-foreground transition-colors hover:text-foreground"
+                            title="Copy address"
+                            onClick={copyAddress}
+                            className="shrink-0 text-muted-foreground transition-colors hover:text-foreground"
                           >
                             <Copy className="h-3.5 w-3.5" />
                           </button>
                         </div>
 
-                        <div className="flex items-start gap-2 text-muted-foreground">
-                          <MapPin className="h-3.5 w-3.5 mt-0.5 shrink-0" />
-                          <span className="leading-relaxed">{order.shipping_address}, {[order.shipping_thana, order.shipping_city, order.shipping_district].filter(Boolean).join(", ")}</span>
-                        </div>
-                        {((order as { shipping_note?: string | null }).shipping_note ?? "").trim() && (
-                          <div className="mt-2 flex items-start gap-2 p-2 rounded-md border border-sky-300/60 bg-sky-50 dark:bg-sky-950/30 dark:border-sky-900/50">
-                            <StickyNote className="h-3.5 w-3.5 mt-0.5 shrink-0 text-sky-600 dark:text-sky-400" />
-                            <div className="flex-1 min-w-0">
-                              <div className="text-[10px] font-bold uppercase tracking-wider text-sky-700 dark:text-sky-300">Shipping Note</div>
-                              <p className="text-xs text-foreground leading-snug">{(order as { shipping_note?: string | null }).shipping_note}</p>
-                            </div>
-                          </div>
-                        )}
-                        {(order.customer_note ?? "").trim() && (
-                          <div className="mt-2 flex items-start gap-2 p-2 rounded-md border border-amber-300/60 bg-amber-50 dark:bg-amber-950/30 dark:border-amber-900/50">
-                            <StickyNote className="h-3.5 w-3.5 mt-0.5 shrink-0 text-amber-600 dark:text-amber-400" />
-                            <div className="flex-1 min-w-0">
-                              <div className="text-[10px] font-bold uppercase tracking-wider text-amber-700 dark:text-amber-300">Customer Note</div>
-                              <p className="text-xs text-foreground leading-snug">{order.customer_note}</p>
-                            </div>
+                        {/* Notes */}
+                        {(((order as { shipping_note?: string | null }).shipping_note ?? "").trim() || (order.customer_note ?? "").trim()) && (
+                          <div className="mt-2.5 grid gap-2 sm:grid-cols-2">
+                            {((order as { shipping_note?: string | null }).shipping_note ?? "").trim() && (
+                              <div className="rounded-lg border border-sky-200/70 bg-sky-50/70 p-2.5 dark:border-sky-900/50 dark:bg-sky-950/30">
+                                <div className="mb-0.5 flex items-center gap-1 text-[10px] font-bold uppercase tracking-wider text-sky-700 dark:text-sky-300">
+                                  <StickyNote className="h-3 w-3" />Shipping Note
+                                </div>
+                                <p className="text-xs leading-snug text-foreground">{(order as { shipping_note?: string | null }).shipping_note}</p>
+                              </div>
+                            )}
+                            {(order.customer_note ?? "").trim() && (
+                              <div className="rounded-lg border border-amber-200/70 bg-amber-50/70 p-2.5 dark:border-amber-900/50 dark:bg-amber-950/30">
+                                <div className="mb-0.5 flex items-center gap-1 text-[10px] font-bold uppercase tracking-wider text-amber-700 dark:text-amber-300">
+                                  <StickyNote className="h-3 w-3" />Customer Note
+                                </div>
+                                <p className="text-xs leading-snug text-foreground">{order.customer_note}</p>
+                              </div>
+                            )}
                           </div>
                         )}
                       </div>
@@ -963,17 +991,26 @@ export function OrderDrawer({ orderId, onClose, mode = "fulfillment" }: Props) {
                         }))}
                       />
                     ) : (
-                    <div className="space-y-2">
+                    <div className="overflow-hidden rounded-xl border divide-y divide-border/60">
                       {items.map((it) => (
-                        <div key={it.id} className="flex items-center justify-between gap-3 text-sm p-2.5 rounded-lg bg-muted/40 hover:bg-muted/70 transition-colors">
+                        <div key={it.id} className="flex items-center gap-3 bg-card px-3 py-2.5 text-sm transition-colors hover:bg-muted/40">
                           <ItemThumb src={(it as { image?: string | null }).image} alt={it.name ?? "item"} />
                           <div className="flex-1 min-w-0">
-
-                            <div className="font-medium truncate">{it.name}</div>
-                            {it.variant_label && <div className="text-xs text-muted-foreground mt-0.5">{it.variant_label}</div>}
-                            <div className="text-xs text-muted-foreground mt-0.5 tabular-nums">Qty: <span className="font-semibold text-foreground">{it.quantity}</span> × ৳ {Number(it.unit_price ?? it.price).toLocaleString()}</div>
+                            <div className="truncate text-[13px] font-semibold">{it.name}</div>
+                            <div className="mt-1 flex flex-wrap items-center gap-1.5 text-[11px] text-muted-foreground">
+                              {it.variant_label && (
+                                <span className="rounded-full border bg-muted/50 px-1.5 py-px">{it.variant_label}</span>
+                              )}
+                              <span className="inline-flex items-center gap-1 tabular-nums">
+                                <span className="rounded-full bg-muted px-1.5 py-px font-semibold text-foreground">×{it.quantity}</span>
+                                ৳{Number(it.unit_price ?? it.price).toLocaleString()}
+                              </span>
+                            </div>
                           </div>
-                          <div className="font-bold whitespace-nowrap tabular-nums">৳ {Number(it.line_total ?? Number(it.price) * it.quantity).toLocaleString()}</div>
+                          <div className="shrink-0 text-right">
+                            <div className="text-[13px] font-bold tabular-nums">৳{Number(it.line_total ?? Number(it.price) * it.quantity).toLocaleString()}</div>
+                            <div className="text-[10px] text-muted-foreground tabular-nums">৳{Number(it.unit_price ?? it.price).toLocaleString()} each</div>
+                          </div>
                         </div>
                       ))}
                     </div>
