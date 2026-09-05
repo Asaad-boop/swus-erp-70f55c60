@@ -718,24 +718,28 @@ export function PackSheet({
                   justifyContent: "space-between",
                   alignItems: "center",
                   padding: "5px 12px",
-                  borderTop: "1.5px solid #111",
+                  borderTop: "1px solid #d4d4d8",
                   background: "#fafafa",
                   fontSize: 10.5,
                 }}
               >
-                <span style={{ color: "#555" }}>Packed by ____________ · Verified ☐</span>
-                <span style={{ fontWeight: 800, letterSpacing: 0.5 }}>
+                <span style={{ color: "#52525b", display: "inline-flex", alignItems: "center", gap: 6 }}>
+                  Packed by ____________ · Verified <TickBox size={13} />
+                </span>
+                <span style={{ fontWeight: 700, letterSpacing: 0.5, color: "#3f3f46", fontSize: 10 }}>
                   TOTAL PIECES{" "}
                   <span
                     style={{
                       display: "inline-block",
                       marginLeft: 6,
-                      fontSize: 15,
-                      fontWeight: 900,
-                      border: "1.5px solid #111",
+                      fontSize: 14,
+                      fontWeight: 800,
+                      color: "#18181b",
+                      border: "1px solid #a1a1aa",
                       borderRadius: 6,
-                      padding: "0 8px",
+                      padding: "1px 9px",
                       fontVariantNumeric: "tabular-nums",
+                      background: "#fff",
                     }}
                   >
                     {units}
