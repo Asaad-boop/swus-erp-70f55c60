@@ -1,74 +1,63 @@
-# Picking List — Complete Redesign (Page + Workflow)
+# Pack List + Picking List — একসাথে, নতুন ডিজাইন
 
-## Goal
-Picking List এখন শুধু Batch Print dialog-এর ভেতরে একটা static print sheet। এটাকে একটা **full workflow** বানানো: Pick list তৈরি → picker assign → interactive picking (mobile-friendly) → redesigned print sheet → history। Order advance হবে **manual** (আজকের মতোই) — pick complete হলে auto-advance না।
+## লক্ষ্য
+এখনকার "Picking List" শুধু একটা static print sheet। এটাকে বানাবো একটা **Pack & Pick Sheet** — এক জায়গা থেকে তিনভাবে প্রিন্ট করা যাবে:
 
-## 1. Database (নতুন টেবিল)
+1. **Order-wise (Pack List)** — প্রতি অর্ডারের প্যাক করার শিট
+2. **Product-wise (Picking List)** — প্রোডাক্ট ধরে ধরে গুদাম থেকে তোলার শিট
+3. **SKU-wise** — শুধু SKU + মোট পিস, দ্রুত তোলার জন্য সবচেয়ে ছোট শিট
 
-**`pick_lists`** — একটা pick batch:
-- `list_no` (auto: `PICK-260905-01`), `brand_id`, `status` (`draft → assigned → picking → completed / cancelled`)
-- `assigned_to` (user id), `assigned_by`, `assigned_at`
-- `started_at`, `completed_at`, `notes`
-- GRANT authenticated + service_role, RLS: staff সব দেখতে পারবে; create/update admin/operations/warehouse_staff/packer; brand access scoped (`user_brand_access`)
+## ১. নতুন প্রিন্ট ডায়ালগ
 
-**`pick_list_items`** — list-এর ভেতরের consolidated item:
-- `pick_list_id`, `order_id`, `product_name`, `variant_label`, `sku`, `qty_needed`, `qty_picked`, `picked_at`
-- RLS parent list অনুযায়ী
+Batch Print-এর "Picking List" অপশনের জায়গায় নতুন **Pack & Pick** সেকশন:
 
-**`pick_list_orders`** (join) — কোন order-গুলো কোন list-এ আছে (এক order এক active list-এই থাকবে — unique partial index)
+- তিনটা মোড টগল: Order-wise · Product-wise · SKU-wise (একসাথে একাধিকও বাছা যাবে, একটার পর একটা প্রিন্ট হবে)
+- ছোট প্রিভিউ — প্রিন্টের আগে কেমন দেখাবে
+- অপশন চেকবক্স:
+  - ছবি দেখাবে কি না (কালি বাঁচাতে অফ করা যাবে)
+  - বারকোড দেখাবে কি না
+  - বিন/র‍্যাক কলাম
+  - কাগজ: A4 না A5
+- ব্র্যান্ড একাধিক হলে ব্র্যান্ড ধরে ধরে আলাদা সেকশন + আলাদা পৃষ্ঠা
 
-Migration tool দিয়ে; GRANT → RLS → policy order ঠিক রাখবো।
+## ২. সাজানোর নিয়ম (তুমি যেটা চেয়েছ)
 
-## 2. Picking page (নতুন screen)
+**Order-wise শিটে অর্ডারের ক্রম:**
+1. যে অর্ডারে **একাধিক আলাদা প্রোডাক্ট/SKU** আছে — সবার আগে (সবচেয়ে ভুল হওয়ার ঝুঁকি, তাই আগে হ্যান্ডেল)
+2. তারপর যে অর্ডারে **কাস্টম নোট** আছে (shipping note / customer note) — উপরে বড় হলুদ নোট ব্যাজ সহ
+3. তারপর একক-আইটেম সাধারণ অর্ডার
+4. প্রতিটা অর্ডারে বড় **সিরিয়াল নম্বর** (১, ২, ৩…) — শিটের ক্রম আর বাস্তবের বাক্সের ক্রম মিলে যাবে
 
-নতুন route: `src/routes/_authenticated/erp.dispatch.picking.tsx` — Dispatch Center-এ header action "Picking" + sidebar-এ entry।
+**Product-wise / SKU-wise শিটে ক্রম:**
+- যে SKU-তে সবচেয়ে বেশি অর্ডার/পিস এসেছে সেটা সবার উপরে, সিরিয়াল ১ থেকে
+- প্রতিটা রো-তে: সিরিয়াল · ছবি · প্রোডাক্ট + ভ্যারিয়েন্ট · SKU · কতগুলো অর্ডারে আছে · মোট পিস · টিক বক্স · বিন লাইন
+- নিচে গ্র্যান্ড টোটাল (মোট SKU, মোট পিস, মোট অর্ডার)
 
-**List view (default):**
-- সব pick list: status chip, picker, orders count, total units, progress bar, created/assigned time
-- Filter: status (Active / Completed / All), brand, date
-- "+ New pick list" → order picker dialog (pending/packed orders থেকে select — brand, courier, item count দেখে filter), নাম/assignee দিয়ে create
+## ৩. ডিজাইন আপডেট
 
-**Pick detail view (একটা list খুললে):**
-- Header: list no, status stepper (Draft → Assigned → Picking → Completed), picker assign/change, progress ring (picked/total units)
-- **Consolidated items table** — product-wise group + variant row (আজকের print sheet-এর মতো grouping), প্রতিটা row-তে: image, name, variant, SKU, qty needed, **tap-to-pick stepper বা scan input** (SKU scan করলে qty বাড়ে), `qty_picked` লাল/সবুজ badge
-- **Mobile-first**: বড় touch target (48px+), sticky progress bar নিচে, এক হাতে চলে — grid + min-w-0 pattern
-- Partial pick allowed — `qty_picked < qty_needed` হলে row warning tint
-- "Complete list" বাটন — শুধু list status completed হয়; order-গুলো **Dispatch board-এ অপরিবর্তিত** থাকে (manual advance)
-- Print বাটন — নতুন redesigned sheet
+- উপরে পরিষ্কার হেডার: কোম্পানি ব্র্যান্ডিং, শিটের ধরন, শিট নম্বর (`PACK-260905-01`), তারিখ-সময়, পিকার/চেকার লাইন
+- ছোট KPI স্ট্রিপ: Orders · Products · SKUs · Total Units
+- বড় পড়ার মতো ফন্ট, প্রতি রো-তে টিক বক্স, জোড়-বিজোড় হালকা শেড
+- **Code128 বারকোড** — SKU-তে (পিকিং) আর ইনভয়েসে (প্যাক লিস্ট), স্ক্যানার দিয়ে মিলিয়ে নেওয়া যাবে
+- একাধিক আইটেমের অর্ডারে "⚠ ৩ আইটেম" লাল ব্যাজ, নোট থাকলে হলুদ নোট ব্লক
+- পৃষ্ঠা ভাঙলে রো মাঝখানে কাটবে না; প্রতি পাতায় "Page x of y" + শিট নম্বর
+- নিচে Picked by / Checked by / Dispatched by সই ঘর
 
-**Live updates:** `pick_list_items`-এ Supabase Realtime subscribe (useEffect + cleanup) — দুইজন picker একই list-এ কাজ করলে progress live দেখা যায়।
+## ৪. অতিরিক্ত সুবিধা
 
-## 3. Print sheet redesign (`picking-list-print.tsx` পুনর্লিখন)
+- **Pack verify চেক**: প্যাক লিস্টে প্রতি অর্ডারের মোট পিস বড় করে — গুনে মিলিয়ে নেওয়া যায়
+- **COD টাকা** প্যাক শিটে বড় করে (ডেলিভারিতে কত নিতে হবে)
+- **Exchange / Advance paid / Fragile** থাকলে লাল-হলুদ ট্যাগ
+- ইতিমধ্যে প্রিন্ট হওয়া অর্ডারে "REPRINT" ওয়াটারমার্ক
+- একই SKU-র অর্ডারগুলো পাশাপাশি — একবারে তুলে একসাথে প্যাক
 
-- Brand-wise section (একাধিক brand হলে আলাদা block + brand header)
-- Row-তে **SKU barcode** (Code128, lightweight pure-JS renderer) — scanner দিয়ে invoice/SKU match করা যাবে
-- Bin column থাকবে, কিন্তু warehouse/bin data থাকলে pre-fill, না থাকলে blank line
-- বড় ফন্ট qty (A4-এ দূর থেকে পড়া যায়), product total row, grand total
-- Picker/Checker/Dispatcher signature + list no + assignee name printed
-- BatchPrintDialog-এর "Picking List" mode-টাও এই নতুন sheet ব্যবহার করবে
+## যেসব ফাইলে কাজ হবে
+- `src/components/erp/dispatch/pack-pick-sheet.tsx` — নতুন, তিন মোডের শিট
+- `src/components/erp/dispatch/picking-list-print.tsx` — নতুন শিটে রিডাইরেক্ট (পুরোনো কল ভাঙবে না)
+- `src/components/erp/dispatch/batch-print-dialog.tsx` — নতুন মোড টগল + অপশন
+- ছোট বারকোড হেল্পার (`src/lib/erp/utils/barcode.ts`) — হালকা pure-JS Code128
 
-## 4. Picker assignment + history
-
-- Assign dropdown: `user_roles`-এ `packer / warehouse_staff / operations / admin` যাদের আছে তাদের list
-- প্রতিটা list-এ duration track (started → completed) — picker performance: আজকের completed lists, avg time
-- "History" tab: completed/cancelled lists, search by list no / picker, পুরনো sheet আবার print করা যায়
-
-## 5. Integration + safety
-
-- Dispatch shell-এ print override / reports dialog-এর existing picking print flow নতুন sheet-এ point করবে — বাকি dispatch pipeline, packer mode, ship dialog কিছু ভাঙবে না
-- এক order দুইটা active list-এ যাবে না (DB unique index + UI-তে already-in-list disable)
-- Order cancel/hold হলে list item auto flagged, picker-কে warning দেখাবে
-- Server functions: `src/lib/erp/picking/picking.functions.ts` (requireSupabaseAuth + brand access check), data hooks `src/hooks/erp/use-picking.ts`
-
-## Files
-- `src/routes/_authenticated/erp.dispatch.picking.tsx` (নতুন)
-- `src/components/erp/picking/` — picking-shell, pick-list-table, pick-detail, new-pick-list-dialog, picker-assign, pick-history (নতুন)
-- `src/components/erp/dispatch/picking-list-print.tsx` (rewrite)
-- `src/lib/erp/picking/picking.functions.ts`, `src/hooks/erp/use-picking.ts` (নতুন)
-- `src/components/erp/dispatch/dispatch-shell.tsx` — header-এ Picking link (ছোট edit)
-- Migration: `pick_lists`, `pick_list_items`, `pick_list_orders`
-
-## Verify
-- `bunx tsgo --noEmit` পাস
-- নতুন list create → assign → কিছু item pick → print → complete — পুরো flow browser-এ চালিয়ে দেখবো
-- Dispatch board, batch print, packer mode আগের মতো কাজ করছে কিনা check
+## যাচাই
+- typecheck পাস
+- তিনটা মোডেই প্রিন্ট প্রিভিউ খুলে দেখা — ক্রম, সিরিয়াল, নোট, বারকোড ঠিক আছে কি না
+- ডিসপ্যাচ বোর্ড, ইনভয়েস প্রিন্ট, প্যাকার মোড আগের মতোই চলছে কি না
