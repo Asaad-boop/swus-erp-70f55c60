@@ -799,8 +799,10 @@ export function OrderDrawer({ orderId, onClose, mode = "fulfillment" }: Props) {
 
                 {/* LEFT — Customer + Items (2 cols) */}
                 <div className="lg:col-span-2 space-y-4">
+                  {tab === "details" && (<>
                   {/* Customer */}
-                  <section className="rounded-xl border bg-card p-4 shadow-sm">
+                  <section className="rounded-xl border bg-card p-4">
+
                     <div className="mb-3 flex items-center justify-between gap-2">
                       <h3 className="text-xs font-bold uppercase tracking-wider text-muted-foreground flex items-center gap-1.5"><User className="h-3.5 w-3.5" />Customer</h3>
                       {customerEditing ? (
