@@ -991,17 +991,26 @@ export function OrderDrawer({ orderId, onClose, mode = "fulfillment" }: Props) {
                         }))}
                       />
                     ) : (
-                    <div className="space-y-2">
+                    <div className="overflow-hidden rounded-xl border divide-y divide-border/60">
                       {items.map((it) => (
-                        <div key={it.id} className="flex items-center justify-between gap-3 text-sm p-2.5 rounded-lg bg-muted/40 hover:bg-muted/70 transition-colors">
+                        <div key={it.id} className="flex items-center gap-3 bg-card px-3 py-2.5 text-sm transition-colors hover:bg-muted/40">
                           <ItemThumb src={(it as { image?: string | null }).image} alt={it.name ?? "item"} />
                           <div className="flex-1 min-w-0">
-
-                            <div className="font-medium truncate">{it.name}</div>
-                            {it.variant_label && <div className="text-xs text-muted-foreground mt-0.5">{it.variant_label}</div>}
-                            <div className="text-xs text-muted-foreground mt-0.5 tabular-nums">Qty: <span className="font-semibold text-foreground">{it.quantity}</span> × ৳ {Number(it.unit_price ?? it.price).toLocaleString()}</div>
+                            <div className="truncate text-[13px] font-semibold">{it.name}</div>
+                            <div className="mt-1 flex flex-wrap items-center gap-1.5 text-[11px] text-muted-foreground">
+                              {it.variant_label && (
+                                <span className="rounded-full border bg-muted/50 px-1.5 py-px">{it.variant_label}</span>
+                              )}
+                              <span className="inline-flex items-center gap-1 tabular-nums">
+                                <span className="rounded-full bg-muted px-1.5 py-px font-semibold text-foreground">×{it.quantity}</span>
+                                ৳{Number(it.unit_price ?? it.price).toLocaleString()}
+                              </span>
+                            </div>
                           </div>
-                          <div className="font-bold whitespace-nowrap tabular-nums">৳ {Number(it.line_total ?? Number(it.price) * it.quantity).toLocaleString()}</div>
+                          <div className="shrink-0 text-right">
+                            <div className="text-[13px] font-bold tabular-nums">৳{Number(it.line_total ?? Number(it.price) * it.quantity).toLocaleString()}</div>
+                            <div className="text-[10px] text-muted-foreground tabular-nums">৳{Number(it.unit_price ?? it.price).toLocaleString()} each</div>
+                          </div>
                         </div>
                       ))}
                     </div>
