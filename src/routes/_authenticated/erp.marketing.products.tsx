@@ -337,9 +337,10 @@ function ProductMarketingPage() {
                       >
                         {bdt(r.net_profit)}
                       </td>
-                      <td>{r.margin_pct.toFixed(1)}%</td>
-                      <td>{r.roas > 0 ? `${r.roas.toFixed(2)}x` : "—"}</td>
-                      <td>{r.cpa > 0 ? bdt(r.cpa) : "—"}</td>
+                      <td>{r.margin_pct == null ? "—" : `${r.margin_pct.toFixed(1)}%`}</td>
+                      <td>{r.roas != null && r.roas > 0 ? `${r.roas.toFixed(2)}x` : "—"}</td>
+                      <td>{r.cpa != null && r.cpa > 0 ? bdt(r.cpa) : "—"}</td>
+
                     </tr>
                   ))}
                 </tbody>
