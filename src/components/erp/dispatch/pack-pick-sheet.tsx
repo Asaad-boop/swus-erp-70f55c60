@@ -171,40 +171,101 @@ function Header({
   brandName?: string | null;
 }) {
   const b = getDocBranding();
+  const initial = (b.company || "S").trim().charAt(0).toUpperCase();
   return (
     <>
       <div
         style={{
           display: "flex",
           justifyContent: "space-between",
-          alignItems: "flex-end",
-          borderBottom: "2px solid #000",
-          paddingBottom: 10,
+          alignItems: "stretch",
+          gap: 14,
+          paddingBottom: 12,
           marginBottom: 12,
+          borderBottom: "3px double #111",
         }}
       >
-        <div>
-          <div style={{ fontSize: 9, letterSpacing: 3, fontWeight: 700, color: "#666" }}>
-            {b.company.toUpperCase()} · {kicker}
+        <div style={{ display: "flex", alignItems: "center", gap: 12, minWidth: 0 }}>
+          <div
+            style={{
+              width: 44,
+              height: 44,
+              borderRadius: 10,
+              background: "#111",
+              color: "#fff",
+              fontSize: 22,
+              fontWeight: 900,
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              flexShrink: 0,
+            }}
+          >
+            {initial}
           </div>
-          <h1 style={{ fontSize: 26, fontWeight: 800, margin: "3px 0 0", letterSpacing: -0.5 }}>{title}</h1>
-          {brandName && <div style={{ fontSize: 11, color: "#444", marginTop: 2 }}>Brand: {brandName}</div>}
+          <div style={{ minWidth: 0 }}>
+            <div style={{ fontSize: 8.5, letterSpacing: 3, fontWeight: 800, color: "#4F46E5" }}>
+              {b.company.toUpperCase()} · {kicker}
+            </div>
+            <h1 style={{ fontSize: 24, fontWeight: 900, margin: "2px 0 0", letterSpacing: -0.6, lineHeight: 1.1 }}>
+              {title}
+            </h1>
+            {brandName && (
+              <div
+                style={{
+                  display: "inline-block",
+                  marginTop: 4,
+                  fontSize: 9.5,
+                  fontWeight: 700,
+                  letterSpacing: 1,
+                  padding: "1px 8px",
+                  borderRadius: 999,
+                  border: "1px solid #111",
+                }}
+              >
+                BRAND · {brandName.toUpperCase()}
+              </div>
+            )}
+          </div>
         </div>
-        <div style={{ textAlign: "right", fontSize: 11 }}>
-          <div style={{ fontFamily: "ui-monospace, Menlo, monospace", fontWeight: 700 }}>{no}</div>
-          <div style={{ color: "#555" }}>{format(new Date(), "PPP · p")}</div>
-          <div style={{ marginTop: 6, fontSize: 10, color: "#555" }}>
-            Picker: ____________ · Checker: ____________
+        <div style={{ textAlign: "right", fontSize: 10.5, display: "flex", flexDirection: "column", justifyContent: "space-between" }}>
+          <div>
+            <div
+              style={{
+                display: "inline-block",
+                fontFamily: "ui-monospace, Menlo, monospace",
+                fontWeight: 800,
+                fontSize: 12,
+                padding: "3px 10px",
+                border: "1.5px solid #111",
+                borderRadius: 6,
+              }}
+            >
+              {no}
+            </div>
+            <div style={{ color: "#555", marginTop: 4 }}>{format(new Date(), "PPP · p")}</div>
           </div>
+          <div style={{ fontSize: 9.5, color: "#555" }}>Picker: __________ · Checker: __________</div>
         </div>
       </div>
-      <div style={{ display: "grid", gridTemplateColumns: `repeat(${kpis.length}, 1fr)`, gap: 8, marginBottom: 12 }}>
+      <div style={{ display: "grid", gridTemplateColumns: `repeat(${kpis.length}, 1fr)`, gap: 8, marginBottom: 14 }}>
         {kpis.map((k) => (
-          <div key={k.label} style={{ border: "1px solid #ddd", borderRadius: 6, padding: "6px 10px" }}>
-            <div style={{ fontSize: 8.5, letterSpacing: 1.4, color: "#666", fontWeight: 700 }}>
+          <div
+            key={k.label}
+            style={{
+              border: "1px solid #d4d4d8",
+              borderTop: "3px solid #111",
+              borderRadius: 8,
+              padding: "7px 12px 8px",
+              background: "#fafafa",
+            }}
+          >
+            <div style={{ fontSize: 8.5, letterSpacing: 1.6, color: "#666", fontWeight: 800 }}>
               {k.label.toUpperCase()}
             </div>
-            <div style={{ fontSize: 20, fontWeight: 800, lineHeight: 1.1, marginTop: 1 }}>{k.value}</div>
+            <div style={{ fontSize: 22, fontWeight: 900, lineHeight: 1.1, marginTop: 2, fontVariantNumeric: "tabular-nums" }}>
+              {k.value}
+            </div>
           </div>
         ))}
       </div>
@@ -212,23 +273,42 @@ function Header({
   );
 }
 
-function Signatures() {
+function Signatures({ sheetNoText }: { sheetNoText?: string }) {
   return (
-    <div
-      style={{
-        marginTop: 24,
-        display: "grid",
-        gridTemplateColumns: "repeat(3, 1fr)",
-        gap: 24,
-        fontSize: 10,
-        color: "#555",
-      }}
-    >
-      {["Picked by", "Checked by", "Dispatched by"].map((l) => (
-        <div key={l} style={{ borderTop: "1px solid #000", paddingTop: 4, textAlign: "center" }}>
-          {l}
-        </div>
-      ))}
+    <div style={{ marginTop: 26, pageBreakInside: "avoid" }}>
+      <div
+        style={{
+          display: "grid",
+          gridTemplateColumns: "repeat(3, 1fr)",
+          gap: 28,
+          fontSize: 10,
+          color: "#444",
+        }}
+      >
+        {["Picked by", "Checked by", "Dispatched by"].map((l) => (
+          <div key={l} style={{ textAlign: "center" }}>
+            <div style={{ borderTop: "1.5px solid #111", paddingTop: 4, fontWeight: 700, letterSpacing: 0.5 }}>
+              {l}
+            </div>
+            <div style={{ fontSize: 8.5, color: "#888", marginTop: 1 }}>Name & signature</div>
+          </div>
+        ))}
+      </div>
+      <div
+        style={{
+          marginTop: 14,
+          paddingTop: 6,
+          borderTop: "1px dashed #bbb",
+          display: "flex",
+          justifyContent: "space-between",
+          fontSize: 8.5,
+          color: "#999",
+          letterSpacing: 0.5,
+        }}
+      >
+        <span>{sheetNoText ?? ""}</span>
+        <span>Generated by SWUS ERP · {format(new Date(), "PP p")}</span>
+      </div>
     </div>
   );
 }
@@ -284,17 +364,17 @@ export function PickSheet({
         ]}
       />
 
-      <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 12 }}>
+      <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 12, border: "1.5px solid #111", borderRadius: 8 }}>
         <thead>
           <tr style={{ background: "#111", color: "#fff" }}>
-            <th style={th(26)}>✓</th>
+            <th style={{ ...th(30), borderTopLeftRadius: 6 }}>✓</th>
             <th style={th(34)}>#</th>
             {options.showImages && <th style={th(46)} />}
             <th style={{ ...th(), textAlign: "left" }}>Product / Variant</th>
             <th style={{ ...th(options.showBarcodes ? 150 : 110), textAlign: "left" }}>SKU</th>
             <th style={th(60)}>Orders</th>
             <th style={{ ...th(60), textAlign: "right" }}>Qty</th>
-            {options.showBins && <th style={{ ...th(64), textAlign: "left" }}>Bin</th>}
+            {options.showBins && <th style={{ ...th(64), textAlign: "left", borderTopRightRadius: 6 }}>Bin</th>}
           </tr>
         </thead>
         <tbody>
@@ -347,11 +427,11 @@ export function PickSheet({
           ))}
         </tbody>
         <tfoot>
-          <tr style={{ borderTop: "2px solid #000" }}>
-            <td colSpan={options.showImages ? 6 : 5} style={{ ...td("right"), fontWeight: 800 }}>
+          <tr style={{ borderTop: "2px solid #111", background: "#f4f4f5" }}>
+            <td colSpan={options.showImages ? 6 : 5} style={{ ...td("right"), fontWeight: 900, letterSpacing: 1.5, fontSize: 10.5 }}>
               GRAND TOTAL
             </td>
-            <td style={{ ...td("right"), fontSize: 17, fontWeight: 900, fontVariantNumeric: "tabular-nums" }}>
+            <td style={{ ...td("right"), fontSize: 18, fontWeight: 900, fontVariantNumeric: "tabular-nums" }}>
               {totalQty}
             </td>
             {options.showBins && <td style={td()} />}
@@ -359,7 +439,7 @@ export function PickSheet({
         </tfoot>
       </table>
 
-      <Signatures />
+      <Signatures sheetNoText={no} />
     </div>
   );
 }
@@ -407,8 +487,9 @@ export function PackSheet({
             <div
               key={o.id}
               style={{
-                border: "1px solid #ccc",
-                borderRadius: 6,
+                border: "1.5px solid #111",
+                borderLeft: "5px solid #111",
+                borderRadius: 8,
                 overflow: "hidden",
                 pageBreakInside: "avoid",
                 position: "relative",
@@ -435,21 +516,22 @@ export function PackSheet({
                   display: "flex",
                   alignItems: "center",
                   gap: 10,
-                  padding: "6px 10px",
+                  padding: "7px 12px",
                   background: "#f4f4f5",
-                  borderBottom: "1px solid #ddd",
+                  borderBottom: "1.5px solid #111",
                 }}
               >
                 <span
                   style={{
-                    fontSize: 18,
+                    fontSize: 17,
                     fontWeight: 900,
-                    minWidth: 30,
-                    height: 30,
-                    lineHeight: "30px",
+                    minWidth: 32,
+                    height: 32,
+                    lineHeight: "32px",
                     textAlign: "center",
-                    border: "2px solid #111",
-                    borderRadius: 6,
+                    background: "#111",
+                    color: "#fff",
+                    borderRadius: 8,
                   }}
                 >
                   {i + 1}
@@ -510,11 +592,19 @@ export function PackSheet({
                     {o.courier_name ? ` · ${o.courier_name}` : ""}
                   </div>
                 </div>
-                <div style={{ textAlign: "right" }}>
-                  <div style={{ fontSize: 8.5, letterSpacing: 1.2, color: "#666", fontWeight: 700 }}>
+                <div
+                  style={{
+                    textAlign: "center",
+                    border: "1.5px solid #111",
+                    borderRadius: 8,
+                    padding: "3px 12px",
+                    background: isCod(o) ? "#fff" : "#dcfce7",
+                  }}
+                >
+                  <div style={{ fontSize: 8, letterSpacing: 1.4, color: "#555", fontWeight: 800 }}>
                     {isCod(o) ? "COD DUE" : "PREPAID"}
                   </div>
-                  <div style={{ fontSize: 16, fontWeight: 900, fontVariantNumeric: "tabular-nums" }}>
+                  <div style={{ fontSize: 17, fontWeight: 900, fontVariantNumeric: "tabular-nums", lineHeight: 1.15 }}>
                     {isCod(o) ? money(codDue(o)) : money(0)}
                   </div>
                 </div>
@@ -583,15 +673,30 @@ export function PackSheet({
                 style={{
                   display: "flex",
                   justifyContent: "space-between",
-                  padding: "4px 10px",
-                  borderTop: "1px solid #ddd",
+                  alignItems: "center",
+                  padding: "5px 12px",
+                  borderTop: "1.5px solid #111",
                   background: "#fafafa",
                   fontSize: 10.5,
                 }}
               >
                 <span style={{ color: "#555" }}>Packed by ____________ · Verified ☐</span>
-                <span style={{ fontWeight: 800 }}>
-                  Total pieces: <span style={{ fontSize: 14 }}>{units}</span>
+                <span style={{ fontWeight: 800, letterSpacing: 0.5 }}>
+                  TOTAL PIECES{" "}
+                  <span
+                    style={{
+                      display: "inline-block",
+                      marginLeft: 6,
+                      fontSize: 15,
+                      fontWeight: 900,
+                      border: "1.5px solid #111",
+                      borderRadius: 6,
+                      padding: "0 8px",
+                      fontVariantNumeric: "tabular-nums",
+                    }}
+                  >
+                    {units}
+                  </span>
                 </span>
               </div>
             </div>
@@ -599,7 +704,7 @@ export function PackSheet({
         })}
       </div>
 
-      <Signatures />
+      <Signatures sheetNoText={no} />
     </div>
   );
 }
