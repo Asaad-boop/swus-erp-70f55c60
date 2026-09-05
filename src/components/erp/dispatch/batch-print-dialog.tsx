@@ -68,17 +68,21 @@ export function BatchPrintDialog({
     brands.find((b) => b.id === id)?.name ?? (id ? "Unknown brand" : "Unbranded");
 
   const brandGroups = useMemo(() => {
-    if (!splitBrand) return [{ key: "__all__", name: null as string | null, orders: chosen }];
+    if (!splitBrand) return [{ key: "__all__", name: null as string | null, logo: null as string | null, orders: chosen }];
     const m = new Map<string, OrderRow[]>();
     for (const o of chosen) {
       const k = o.brand_id ?? "__none__";
       m.set(k, [...(m.get(k) ?? []), o]);
     }
-    const arr = Array.from(m.entries()).map(([k, list]) => ({
-      key: k,
-      name: m.size > 1 ? brandName(k === "__none__" ? null : k) : null,
-      orders: list,
-    }));
+    const arr = Array.from(m.entries()).map(([k, list]) => {
+      const brand = k === "__none__" ? null : brands.find((b) => b.id === k) ?? null;
+      return {
+        key: k,
+        name: m.size > 1 ? brandName(k === "__none__" ? null : k) : null,
+        logo: brand?.logo_url ?? null,
+        orders: list,
+      };
+    });
     return arr.sort((a, b) => (a.name ?? "").localeCompare(b.name ?? ""));
   }, [chosen, splitBrand, brands]);
 
@@ -231,19 +235,19 @@ export function BatchPrintDialog({
           {sheets.order &&
             brandGroups.map((g) => (
               <div className="print-page" key={`pack-${g.key}`}>
-                <PackSheet orders={g.orders} options={opts} brandName={g.name} />
+                <PackSheet orders={g.orders} options={opts} brandName={g.name} brandLogo={g.logo} />
               </div>
             ))}
           {sheets.product &&
             brandGroups.map((g) => (
               <div className="print-page" key={`pick-${g.key}`}>
-                <PickSheet orders={g.orders} by="product" options={opts} brandName={g.name} />
+                <PickSheet orders={g.orders} by="product" options={opts} brandName={g.name} brandLogo={g.logo} />
               </div>
             ))}
           {sheets.sku &&
             brandGroups.map((g) => (
               <div className="print-page" key={`sku-${g.key}`}>
-                <PickSheet orders={g.orders} by="sku" options={opts} brandName={g.name} />
+                <PickSheet orders={g.orders} by="sku" options={opts} brandName={g.name} brandLogo={g.logo} />
               </div>
             ))}
           {withManifest && chosen.length > 0 && (
