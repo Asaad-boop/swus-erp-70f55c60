@@ -11,6 +11,8 @@ export type MktProductRow = {
   image: string | null;
   orders: number;
   delivered_orders: number;
+  returned_orders: number;
+  cancelled_orders: number;
   delivered_units: number;
   delivered_revenue: number;
   booked_revenue: number;
@@ -21,16 +23,20 @@ export type MktProductRow = {
   net_profit: number;
   attributed_orders: number;
   attributed_delivered_orders: number;
-  roas: number;
-  cpa: number;
-  aov: number;
-  margin_pct: number;
+  roas: number | null;
+  cpa: number | null;
+  aov: number | null;
+  margin_pct: number | null;
+  delivery_rate: number | null;
+  return_rate: number | null;
   cost_missing_units: number;
+  cost_coverage_pct: number | null;
   stock: number;
   available_stock: number;
   low_stock_threshold: number | null;
   stock_cover_days: number | null;
 };
+
 
 export type MktAcquisitionSummary = {
   new_customers: number;

@@ -102,9 +102,11 @@ function ProductLabPage() {
           profit: a.profit + Number(r.net_profit || 0),
           spend: a.spend + Number(r.ad_spend || 0),
           units: a.units + Number(r.delivered_units || 0),
+          missing: a.missing + Number(r.cost_missing_units || 0),
         }),
-        { revenue: 0, profit: 0, spend: 0, units: 0 },
+        { revenue: 0, profit: 0, spend: 0, units: 0, missing: 0 },
       ),
+
     [rows],
   );
 
@@ -172,9 +174,25 @@ function ProductLabPage() {
 
             <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
               <Summary label="Delivered revenue" value={rows.length ? bdt(totals.revenue) : "—"} />
-              <Summary label="Net profit" value={rows.length ? bdt(totals.profit) : "—"} />
-              <Summary label="Ad spend" value={rows.length ? bdt(totals.spend) : "—"} />
-              <Summary label="Delivered units" value={rows.length ? number(totals.units) : "—"} />
+              <Summary
+                label="Net profit"
+                value={rows.length ? bdt(totals.profit) : "—"}
+                hint={
+                  rows.length && totals.revenue > 0
+                    ? `${((totals.profit / totals.revenue) * 100).toFixed(1)}% margin`
+                    : undefined
+                }
+              />
+              <Summary
+                label="Ad spend"
+                value={rows.length ? bdt(totals.spend) : "—"}
+                hint={rows.length && totals.spend > 0 ? `${(totals.revenue / totals.spend).toFixed(2)}x ROAS` : undefined}
+              />
+              <Summary
+                label="Delivered units"
+                value={rows.length ? number(totals.units) : "—"}
+                hint={totals.missing > 0 ? `⚠ ${number(totals.missing)} units missing cost data` : undefined}
+              />
             </div>
 
             <Card className="shadow-none">
@@ -182,9 +200,10 @@ function ProductLabPage() {
                 <div>
                   <CardTitle className="text-sm">Live product performance ({rows.length})</CardTitle>
                   <p className="mt-1 text-xs text-muted-foreground">
-                    Delivered sales and profitability from the canonical product marketing source. Stock is available after reservations.
+                    Delivered sales and profit from the canonical source. Ad spend is the campaign spend in BDT, shared across the products of each attributed order. Stock is available after reservations.
                   </p>
                 </div>
+
                 <div className="flex flex-wrap items-center gap-2">
                   <div className="relative">
                     <Search className="pointer-events-none absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
@@ -220,17 +239,20 @@ function ProductLabPage() {
                       <thead>
                         <tr className="border-b border-border text-left text-[11px] uppercase tracking-wide text-muted-foreground">
                           <th className="px-4 py-3 font-medium">Product</th>
-                          <th className="px-3 py-3 text-right font-medium">Orders</th>
+                          <th className="px-3 py-3 text-right font-medium">Delivered orders</th>
                           <th className="px-3 py-3 text-right font-medium">Units</th>
-                          <th className="px-3 py-3 text-right font-medium">Revenue</th>
+                          <th className="px-3 py-3 text-right font-medium">Delivered revenue</th>
+                          <th className="px-3 py-3 text-right font-medium">Ad spend</th>
                           <th className="px-3 py-3 text-right font-medium">Net profit</th>
                           <th className="px-3 py-3 text-right font-medium">Margin</th>
                           <th className="px-3 py-3 text-right font-medium">ROAS</th>
                           <th className="px-3 py-3 text-right font-medium">CPA</th>
+                          <th className="px-3 py-3 text-right font-medium">Delivery / Return</th>
                           <th className="px-3 py-3 text-right font-medium">Daily sales</th>
                           <th className="px-3 py-3 text-right font-medium">Available</th>
                           <th className="px-3 py-3 text-right font-medium">Cover</th>
                         </tr>
+
                       </thead>
                       <tbody>
                         {rows.map((r) => (
@@ -242,18 +264,39 @@ function ProductLabPage() {
                                 </div>
                                 <div className="min-w-0">
                                   <p className="truncate font-medium">{r.title || "Untitled"}</p>
-                                  {r.sku && <p className="text-[11px] text-muted-foreground">{r.sku}</p>}
+                                  <div className="flex flex-wrap items-center gap-1.5 text-[11px] text-muted-foreground">
+                                    {r.sku && <span>{r.sku}</span>}
+                                    {r.cost_missing_units > 0 && (
+                                      <span
+                                        className="rounded border border-amber-500/40 px-1 text-amber-600 dark:text-amber-400"
+                                        title={`${number(r.cost_missing_units)} delivered units have no cost data — profit is incomplete`}
+                                      >
+                                        ⚠ cost data {r.cost_coverage_pct == null ? "incomplete" : `${Math.floor(r.cost_coverage_pct)}%`}
+                                      </span>
+                                    )}
+                                  </div>
                                 </div>
                               </div>
                             </td>
                             <td className="px-3 py-3 text-right tabular-nums">{number(r.delivered_orders)}</td>
                             <td className="px-3 py-3 text-right tabular-nums">{number(r.delivered_units)}</td>
                             <td className="px-3 py-3 text-right tabular-nums">{bdt(r.delivered_revenue)}</td>
-                            <td className="px-3 py-3 text-right font-medium tabular-nums">{bdt(r.net_profit)}</td>
+                            <td className="px-3 py-3 text-right tabular-nums">{r.ad_spend > 0 ? bdt(r.ad_spend) : "—"}</td>
+                            <td
+                              className={`px-3 py-3 text-right font-medium tabular-nums ${r.net_profit < 0 ? "text-destructive" : ""}`}
+                            >
+                              {bdt(r.net_profit)}
+                            </td>
                             <td className="px-3 py-3 text-right tabular-nums">{metric(r.margin_pct, "%")}</td>
                             <td className="px-3 py-3 text-right tabular-nums">{metric(r.roas, "x")}</td>
-                            <td className="px-3 py-3 text-right tabular-nums">{bdt(r.cpa)}</td>
+                            <td className="px-3 py-3 text-right tabular-nums">{r.cpa == null ? "—" : bdt(r.cpa)}</td>
+                            <td className="px-3 py-3 text-right text-xs tabular-nums text-muted-foreground">
+                              {r.delivery_rate == null ? "—" : `${Math.round(r.delivery_rate)}%`}
+                              {" / "}
+                              {r.return_rate == null ? "—" : `${Math.round(r.return_rate)}%`}
+                            </td>
                             <td className="px-3 py-3 text-right tabular-nums">{metric(r.delivered_units / rangeDays)}</td>
+
                             <td className="px-3 py-3 text-right tabular-nums">{number(r.available_stock)}</td>
                             <td className="px-3 py-3 text-right">
                               <Badge variant={r.available_stock <= (r.low_stock_threshold ?? 5) || (r.stock_cover_days != null && r.stock_cover_days <= 7) ? "destructive" : "outline"}>
@@ -275,11 +318,13 @@ function ProductLabPage() {
   );
 }
 
-function Summary({ label, value }: { label: string; value: string }) {
+function Summary({ label, value, hint }: { label: string; value: string; hint?: string }) {
   return (
     <div className="rounded-lg border border-border bg-card px-4 py-3">
       <p className="text-[11px] uppercase tracking-wide text-muted-foreground">{label}</p>
       <p className="mt-1 font-display text-xl font-semibold tabular-nums">{value}</p>
+      {hint && <p className="mt-0.5 text-[11px] text-muted-foreground">{hint}</p>}
     </div>
   );
 }
+
