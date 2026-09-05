@@ -638,88 +638,84 @@ export function OrderDrawer({ orderId, onClose, mode = "fulfillment" }: Props) {
                 </div>
               ) : (
               <>
-              {/* QUICK ACTIONS — one tap status change */}
-              <div className="sticky top-0 z-20 border-b bg-background/95 px-5 py-3 backdrop-blur">
-                {/* Primary CTA — big, always first, full width on mobile */}
-                {mode === "web" ? (
-                  <Button
-                    size="lg"
-                    className="mb-2.5 h-12 w-full gap-2 rounded-xl bg-emerald-600 text-base font-bold text-white shadow-lg shadow-emerald-600/25 transition hover:bg-emerald-700 sm:w-auto sm:min-w-[16rem]"
-                    disabled={updateWebStatus.isPending}
-                    onClick={() => onPickWebStatus("complete")}
-                  >
-                    {updateWebStatus.isPending ? <Loader2 className="h-5 w-5 animate-spin" /> : <CheckCircle2 className="h-5 w-5" />} Confirm Order
-                  </Button>
-                ) : order.status !== "confirmed" && order.status !== "delivered" ? (
-                  <Button
-                    size="lg"
-                    className="mb-2.5 h-12 w-full gap-2 rounded-xl bg-emerald-600 text-base font-bold text-white shadow-lg shadow-emerald-600/25 transition hover:bg-emerald-700 sm:w-auto sm:min-w-[16rem]"
-                    disabled={updateStatus.isPending}
-                    onClick={() => guardedAction(() => updateStatus.mutate("confirmed" as OrderStatus))}
-                  >
-                    {updateStatus.isPending ? <Loader2 className="h-5 w-5 animate-spin" /> : <CheckCircle2 className="h-5 w-5" />} Confirm Order
-                  </Button>
-                ) : null}
+              {/* ACTION BAR — one compact row, sticky */}
+              <div className="sticky top-0 z-20 space-y-2 border-b bg-background/95 px-5 py-2.5 backdrop-blur">
                 <div className="flex flex-wrap items-center gap-1.5">
-                  <span className="mr-1 text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Quick actions</span>
                   {mode === "web" ? (
-                    <>
-                      <Button size="sm" variant="outline" className="h-8 gap-1.5" disabled={updateWebStatus.isPending} onClick={() => onPickWebStatus("good_but_no_response")}>
-                        <PhoneOff className="h-3.5 w-3.5" /> Good / No response
-                      </Button>
-                      <Button size="sm" variant="outline" className="h-8 gap-1.5" disabled={updateWebStatus.isPending} onClick={() => onPickWebStatus("no_response")}>
-                        <PhoneOff className="h-3.5 w-3.5" /> No response
-                      </Button>
-                      <Button size="sm" variant="outline" className="h-8 gap-1.5" disabled={updateWebStatus.isPending} onClick={() => onPickWebStatus("on_hold")}>
-                        <PauseCircle className="h-3.5 w-3.5" /> On hold
-                      </Button>
-                      <Button size="sm" variant="outline" className="h-8 gap-1.5 border-violet-300 text-violet-700 dark:border-violet-900 dark:text-violet-300" disabled={updateWebStatus.isPending} onClick={() => onPickWebStatus("advance_payment")}>
-                        <Wallet className="h-3.5 w-3.5" /> Advance
-                      </Button>
-                      <Button size="sm" variant="outline" className="h-8 gap-1.5 text-destructive" disabled={updateWebStatus.isPending} onClick={() => onPickWebStatus("cancelled")}>
-                        <X className="h-3.5 w-3.5" /> Cancel
-                      </Button>
-                    </>
-                  ) : (
+                    <Button
+                      className="h-9 gap-2 rounded-lg bg-emerald-600 px-4 font-semibold text-white transition hover:bg-emerald-700"
+                      disabled={updateWebStatus.isPending}
+                      onClick={() => onPickWebStatus("complete")}
+                    >
+                      {updateWebStatus.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <CheckCircle2 className="h-4 w-4" />} Confirm
+                    </Button>
+                  ) : order.status !== "confirmed" && order.status !== "delivered" ? (
+                    <Button
+                      className="h-9 gap-2 rounded-lg bg-emerald-600 px-4 font-semibold text-white transition hover:bg-emerald-700"
+                      disabled={updateStatus.isPending}
+                      onClick={() => guardedAction(() => updateStatus.mutate("confirmed" as OrderStatus))}
+                    >
+                      {updateStatus.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <CheckCircle2 className="h-4 w-4" />} Confirm
+                    </Button>
+                  ) : null}
 
-                    <>
-                      {(["confirmed", "packed", "ready_to_ship", "delivered"] as OrderStatus[])
-                        .filter((s) => s !== order.status && s !== "confirmed")
-
-                        .map((s) => (
-                          <Button key={s} size="sm" variant="outline" className="h-8 gap-1.5" disabled={updateStatus.isPending} onClick={() => guardedAction(() => updateStatus.mutate(s))}>
-                            {STATUS_BADGE[s]?.label ?? s.replace(/_/g, " ")}
-                          </Button>
-                        ))}
-                      <Button size="sm" variant="outline" className="h-8 gap-1.5 text-destructive" disabled={updateStatus.isPending} onClick={() => guardedAction(() => updateStatus.mutate("cancelled" as OrderStatus))}>
-                        <X className="h-3.5 w-3.5" /> Cancel
-                      </Button>
-                    </>
-                  )}
-                  <span className="mx-1 hidden h-5 w-px bg-border sm:block" />
                   {phone && (
                     <>
                       <a
                         href={`tel:${phone}`}
                         onClick={() => orderId && logCall.mutate({ orderId, attempts: callAttempts, currentStatus: callStatus })}
-                        className="inline-flex h-8 items-center gap-1.5 rounded-md border border-primary/40 bg-primary/10 px-3 text-xs font-semibold text-primary transition-colors hover:bg-primary/20"
+                        className="inline-flex h-9 items-center gap-1.5 rounded-lg border border-primary/40 bg-primary/10 px-3 text-xs font-semibold text-primary transition-colors hover:bg-primary/20"
                       >
-                        <PhoneCall className="h-3.5 w-3.5" /> Call now{callAttempts > 0 ? ` (${callAttempts})` : ""}
+                        <PhoneCall className="h-3.5 w-3.5" /> Call{callAttempts > 0 ? ` (${callAttempts})` : ""}
                       </a>
                       <a
                         href={`https://wa.me/88${phone.replace(/\D/g, "").slice(-11)}`}
                         target="_blank"
                         rel="noreferrer"
-                        className="inline-flex h-8 items-center gap-1.5 rounded-md border px-3 text-xs font-medium text-muted-foreground transition-colors hover:text-foreground"
+                        title="WhatsApp"
+                        className="grid h-9 w-9 place-items-center rounded-lg border text-muted-foreground transition-colors hover:text-foreground"
                       >
-                        <MessageCircle className="h-3.5 w-3.5" /> WhatsApp
+                        <MessageCircle className="h-4 w-4" />
                       </a>
                     </>
                   )}
+
+                  <span className="mx-0.5 hidden h-6 w-px bg-border sm:block" />
+
+                  {mode === "web" ? (
+                    <>
+                      <Button size="sm" variant="outline" className="h-9 gap-1.5" disabled={updateWebStatus.isPending} onClick={() => onPickWebStatus("no_response")}>
+                        <PhoneOff className="h-3.5 w-3.5" /> No response
+                      </Button>
+                      <Button size="sm" variant="outline" className="h-9 gap-1.5" disabled={updateWebStatus.isPending} onClick={() => onPickWebStatus("on_hold")}>
+                        <PauseCircle className="h-3.5 w-3.5" /> Hold
+                      </Button>
+                      <Button size="sm" variant="outline" className="h-9 gap-1.5 border-violet-300 text-violet-700 dark:border-violet-900 dark:text-violet-300" disabled={updateWebStatus.isPending} onClick={() => onPickWebStatus("advance_payment")}>
+                        <Wallet className="h-3.5 w-3.5" /> Advance
+                      </Button>
+                      <Button size="sm" variant="outline" className="h-9 gap-1.5 text-destructive" disabled={updateWebStatus.isPending} onClick={() => onPickWebStatus("cancelled")}>
+                        <X className="h-3.5 w-3.5" /> Cancel
+                      </Button>
+                    </>
+                  ) : (
+                    <>
+                      {(["packed", "ready_to_ship", "delivered"] as OrderStatus[])
+                        .filter((s) => s !== order.status)
+                        .map((s) => (
+                          <Button key={s} size="sm" variant="outline" className="h-9 gap-1.5" disabled={updateStatus.isPending} onClick={() => guardedAction(() => updateStatus.mutate(s))}>
+                            {STATUS_BADGE[s]?.label ?? s.replace(/_/g, " ")}
+                          </Button>
+                        ))}
+                      <Button size="sm" variant="outline" className="h-9 gap-1.5 text-destructive" disabled={updateStatus.isPending} onClick={() => guardedAction(() => updateStatus.mutate("cancelled" as OrderStatus))}>
+                        <X className="h-3.5 w-3.5" /> Cancel
+                      </Button>
+                    </>
+                  )}
+
                   <div className="ml-auto flex items-center gap-1.5">
                     <span className="text-[10px] uppercase tracking-wider text-muted-foreground">Call</span>
                     <Select value={callStatus} disabled={setCallStatus.isPending || editingBlocked} onValueChange={(v) => guardedAction(() => setCallStatus.mutate(v))}>
-                      <SelectTrigger className="h-8 w-[170px] text-xs"><SelectValue /></SelectTrigger>
+                      <SelectTrigger className="h-9 w-[160px] text-xs"><SelectValue /></SelectTrigger>
                       <SelectContent>
                         {CALL_STATUS_OPTIONS.map((o) => (
                           <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>
@@ -728,8 +724,9 @@ export function OrderDrawer({ orderId, onClose, mode = "fulfillment" }: Props) {
                     </Select>
                   </div>
                 </div>
+
                 {(lastCallAt || orderTags.length > 0 || trackingNumber) && (
-                  <div className="mt-2 flex flex-wrap items-center gap-2 text-[11px] text-muted-foreground">
+                  <div className="flex flex-wrap items-center gap-2 text-[11px] text-muted-foreground">
                     {lastCallAt && <span className="inline-flex items-center gap-1"><Clock className="h-3 w-3" />Last call {format(new Date(lastCallAt), "dd MMM, hh:mm a")}</span>}
                     {trackingNumber && (
                       <span className="inline-flex items-center gap-1"><Truck className="h-3 w-3" />{courierNameVal ?? "Courier"} · <span className="font-mono text-foreground">{trackingNumber}</span></span>
@@ -739,16 +736,30 @@ export function OrderDrawer({ orderId, onClose, mode = "fulfillment" }: Props) {
                     ))}
                   </div>
                 )}
-                <div className="mt-2 flex flex-wrap items-center gap-2">
-                  <Button size="sm" variant="ghost" className="h-7 gap-1.5 px-2 text-[11px] text-muted-foreground" onClick={copySummary}>
-                    <ClipboardCopy className="h-3.5 w-3.5" /> Copy summary
-                  </Button>
-                  <Button size="sm" variant="ghost" className="h-7 gap-1.5 px-2 text-[11px] text-muted-foreground" onClick={copyAddress}>
-                    <MapPin className="h-3.5 w-3.5" /> Copy address
-                  </Button>
+
+                {/* Tabs */}
+                <div className="flex items-center gap-1" role="tablist">
+                  {([
+                    ["details", `Details`],
+                    ["activity", `Activity${notes.length ? ` (${notes.length})` : ""}`],
+                  ] as const).map(([key, label]) => (
+                    <button
+                      key={key}
+                      type="button"
+                      role="tab"
+                      aria-selected={tab === key}
+                      onClick={() => setTab(key)}
+                      className={cn(
+                        "rounded-lg px-3 py-1.5 text-[12px] font-medium transition-colors",
+                        tab === key ? "bg-foreground text-background" : "text-muted-foreground hover:bg-muted",
+                      )}
+                    >
+                      {label}
+                    </button>
+                  ))}
                   <span className="ml-auto hidden items-center gap-1.5 text-[10px] text-muted-foreground md:inline-flex">
                     <Command className="h-3 w-3" />
-                    {(["C confirm", ...(mode === "web" ? ["A advance", "H hold", "R no-response"] : []), "P call", "Y copy"]).map((s) => (
+                    {(["C confirm", ...(mode === "web" ? ["A advance", "H hold"] : []), "P call"]).map((s) => (
                       <kbd key={s} className="rounded border bg-muted px-1.5 py-0.5 font-mono text-[9px]">{s}</kbd>
                     ))}
                   </span>
@@ -758,6 +769,7 @@ export function OrderDrawer({ orderId, onClose, mode = "fulfillment" }: Props) {
               <div className="px-5 pt-4">
                 <OrderCourierScoreStrip phone={phone} brandId={(order as { brand_id?: string | null }).brand_id ?? null} />
               </div>
+
 
               {(risk || isDuplicateRisk) && (
                 <div className="flex flex-wrap gap-2 px-5 pt-4">
