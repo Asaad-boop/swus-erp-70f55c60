@@ -200,6 +200,7 @@ export function OrderDrawer({ orderId, onClose, mode = "fulfillment" }: Props) {
   const [feeAmount, setFeeAmount] = useState("");
   const [customerEditing, setCustomerEditing] = useState(false);
   const [itemsEditing, setItemsEditing] = useState(false);
+  const [billingEditing, setBillingEditing] = useState(false);
   const [customerDraft, setCustomerDraft] = useState<CustomerDraft>(EMPTY_CUSTOMER_DRAFT);
   const setFeeFn = useServerFn(setOrderActualShippingCostFn);
   const confirmAdvanceFn = useServerFn(confirmOrderAdvanceReceivedFn);
