@@ -254,8 +254,11 @@ export function BulkPrintDialog({
                 sku: it.sku || null,
               })),
             })) as SheetOrder[];
-            const onlyBrandId = brandBreakdown.length === 1 ? brandBreakdown[0].id : null;
-            const sheetBrand = activeBrand ?? (onlyBrandId ? brands.find((b) => b.id === onlyBrandId) ?? null : null);
+            // Prefer the active brand; otherwise use the dominant brand of the selected orders
+            const fallbackBrandId = brandBreakdown[0]?.id ?? null;
+            const sheetBrand =
+              activeBrand ??
+              (fallbackBrandId ? brands.find((b) => b.id === fallbackBrandId) ?? null : null);
             const brandName = sheetBrand?.name ?? null;
             const brandLogo = sheetBrand?.logo_url ?? null;
             return (
