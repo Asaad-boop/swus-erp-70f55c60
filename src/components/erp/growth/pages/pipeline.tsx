@@ -39,6 +39,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
+import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   bdt,
@@ -1405,30 +1406,54 @@ function ItemSheet({
   const currentProduct = products.find((p) => p.id === d.product_id) ?? null;
 
   return (
-    <Sheet open onOpenChange={(o) => !o && onClose()}>
-      <SheetContent side="right" className="flex w-full flex-col overflow-y-auto sm:max-w-xl">
-        <SheetHeader className="space-y-2">
-          <SheetTitle className="sr-only">{d.title}</SheetTitle>
-          <Input
-            value={d.title}
-            onChange={(e) => set({ title: e.target.value })}
-            className="h-9 border-transparent bg-muted/40 px-2 text-base font-semibold focus-visible:border-input"
-          />
-          <p className="text-[11px] text-muted-foreground">
-            {d.code} · {labelOf(CONTENT_TYPES, d.content_type)} · {labelOf(PLATFORMS, d.platform)}
-            {dirty && <span className="ml-2 font-medium text-amber-600">● unsaved</span>}
-          </p>
-          <div className="flex flex-wrap items-center gap-2">
-            <BrandTag brandId={d.brand_id} />
-            {currentProduct?.image && (
-              <img src={currentProduct.image} alt="" className="h-6 w-6 rounded object-cover" />
+    <Dialog open onOpenChange={(o) => !o && onClose()}>
+      <DialogContent
+        className={cn(
+          "flex max-h-[92vh] w-[calc(100vw-2rem)] max-w-2xl flex-col gap-0 overflow-hidden rounded-2xl p-0",
+          "duration-300 data-[state=open]:animate-in data-[state=open]:fade-in-0 data-[state=open]:zoom-in-95 data-[state=open]:slide-in-from-bottom-2",
+          "data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=closed]:zoom-out-95",
+        )}
+      >
+        <DialogTitle className="sr-only">{d.title}</DialogTitle>
+
+        {/* Header — product context + title + stage stepper */}
+        <div className="space-y-3 border-b border-border bg-muted/20 px-5 pb-4 pt-5">
+          <div className="flex items-start gap-3 pr-8">
+            {currentProduct?.image ? (
+              <img
+                src={currentProduct.image}
+                alt=""
+                className="h-11 w-11 shrink-0 rounded-lg border border-border/60 object-cover"
+              />
+            ) : (
+              <div className="grid h-11 w-11 shrink-0 place-items-center rounded-lg border border-border/60 bg-muted/40 text-muted-foreground">
+                <Package className="h-5 w-5" />
+              </div>
             )}
-            <span className="truncate text-[11px] text-muted-foreground">
-              {currentProduct?.title ?? productLabel ?? "No product"}
-            </span>
+            <div className="min-w-0 flex-1 space-y-1">
+              <Input
+                value={d.title}
+                onChange={(e) => set({ title: e.target.value })}
+                className="h-9 border-transparent bg-background/60 px-2 text-base font-semibold transition-colors focus-visible:border-input"
+              />
+              <div className="flex flex-wrap items-center gap-x-2 gap-y-1 text-[11px] text-muted-foreground">
+                <span className="font-mono">{d.code}</span>
+                <span>·</span>
+                <span>{labelOf(CONTENT_TYPES, d.content_type)}</span>
+                <span>·</span>
+                <span>{labelOf(PLATFORMS, d.platform)}</span>
+                <BrandTag brandId={d.brand_id} />
+                <span className="truncate">
+                  {currentProduct?.title ?? productLabel ?? "No product"}
+                </span>
+                {dirty && (
+                  <span className="font-medium text-amber-600">● unsaved</span>
+                )}
+              </div>
+            </div>
           </div>
-          {/* Quick stage stepper — এক ক্লিকে stage বদল, sheet খোলা থাকবে */}
-          <div className="flex flex-wrap gap-1 rounded-lg border border-border/70 bg-muted/30 p-1">
+          {/* Quick stage stepper — এক ক্লিকে stage বদল, popup খোলা থাকবে */}
+          <div className="flex flex-wrap gap-1 rounded-xl border border-border/70 bg-background/70 p-1 shadow-sm">
             {PIPELINE_STAGES.map((s, idx) => (
               <button
                 key={s.key}
@@ -1444,9 +1469,9 @@ function ItemSheet({
                   toast.success(`Stage → ${s.label}`);
                 }}
                 className={cn(
-                  "flex-1 whitespace-nowrap rounded-md px-2 py-1 text-[10px] font-medium transition-colors",
+                  "flex-1 whitespace-nowrap rounded-lg px-2 py-1.5 text-[10px] font-medium transition-all duration-200",
                   idx === stageIdx
-                    ? "bg-primary text-primary-foreground"
+                    ? "bg-primary text-primary-foreground shadow-sm"
                     : idx < stageIdx
                       ? "text-primary hover:bg-primary/10"
                       : "text-muted-foreground hover:bg-muted",
@@ -1456,10 +1481,13 @@ function ItemSheet({
               </button>
             ))}
           </div>
-        </SheetHeader>
+        </div>
 
-        <Tabs defaultValue="script" className="py-3">
-          <TabsList className="grid w-full grid-cols-4">
+        {/* Body — scrollable */}
+        <div className="flex-1 overflow-y-auto px-5 pb-4">
+
+        <Tabs defaultValue="script" className="pb-3">
+          <TabsList className="sticky top-0 z-10 grid w-full grid-cols-4 rounded-xl bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/80 mt-3">
             <TabsTrigger value="script" className="text-xs">
               Script Studio
             </TabsTrigger>
@@ -1732,7 +1760,10 @@ function ItemSheet({
             </div>
           </TabsContent>
         </Tabs>
-        <div className="sticky bottom-0 flex gap-2 border-t bg-background py-3">
+        </div>
+
+        {/* Footer — sticky action bar */}
+        <div className="flex gap-2 border-t border-border bg-muted/20 px-5 py-3">
           <Button
             variant="ghost"
             size="icon"
@@ -1758,9 +1789,8 @@ function ItemSheet({
             {dirty ? "Save" : "Saved"}
           </Button>
         </div>
-
-      </SheetContent>
-    </Sheet>
+      </DialogContent>
+    </Dialog>
   );
 }
 
