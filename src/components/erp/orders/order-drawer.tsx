@@ -1005,7 +1005,9 @@ export function OrderDrawer({ orderId, onClose, mode = "fulfillment" }: Props) {
                       )}
                       <div className="flex justify-between"><span className="text-muted-foreground">Subtotal</span><span className="tabular-nums">৳ {subtotal.toLocaleString()}</span></div>
                       <div className="flex justify-between"><span className="text-muted-foreground">Shipping</span><span className="tabular-nums">৳ {shippingFee.toLocaleString()}</span></div>
+                      {(mode !== "web" || hasActual) && (
                       <div className="rounded-md border bg-muted/30 p-2.5 mt-1 space-y-1">
+
                         <div className="flex items-center justify-between text-[11px] uppercase tracking-wider text-muted-foreground">
                           <span className="inline-flex items-center gap-1"><Truck className="h-3 w-3" /> Courier Actual Charge</span>
                           <button onClick={openFeeDialog} className="text-primary hover:underline inline-flex items-center gap-0.5">
