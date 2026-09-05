@@ -190,6 +190,8 @@ export function OrderDrawer({ orderId, onClose, mode = "fulfillment" }: Props) {
   const lockState = useOrderLock(orderId);
   const logCall = useLogCallAttempt();
   const [note, setNote] = useState("");
+  const [tab, setTab] = useState<"details" | "activity">("details");
+
   const [advOpen, setAdvOpen] = useState(false);
   const [preorderOpen, setPreorderOpen] = useState(false);
   const [advAmount, setAdvAmount] = useState("");
@@ -258,7 +260,7 @@ export function OrderDrawer({ orderId, onClose, mode = "fulfillment" }: Props) {
     onError: (e: Error) => toast.error(e.message),
   });
 
-  useEffect(() => { setItemsEditing(false); }, [orderId]);
+  useEffect(() => { setItemsEditing(false); setBillingEditing(false); setCustomerEditing(false); setTab("details"); }, [orderId]);
 
   useEffect(() => {
     if (!order || customerEditing) return;
@@ -520,39 +522,57 @@ export function OrderDrawer({ orderId, onClose, mode = "fulfillment" }: Props) {
 
   return (
     <Dialog open={!!orderId} onOpenChange={(o) => !o && onClose()}>
-      <DialogContent className="max-w-5xl w-[96vw] max-h-[92vh] overflow-hidden p-0 gap-0 border-border/60">
+      <DialogContent className="max-w-5xl w-[96vw] max-h-[92vh] overflow-hidden p-0 gap-0 border-border/60 rounded-2xl">
         {isLoading || !order ? (
           <div className="flex items-center justify-center h-60"><Loader2 className="h-6 w-6 animate-spin text-muted-foreground" /></div>
         ) : (
           <>
-            <DialogHeader className="px-6 pt-5 pb-4 bg-gradient-to-r from-primary/10 via-background to-background border-b">
-              <div className="flex items-center justify-between gap-4">
-                <div className="flex items-center gap-3 text-left">
-                  <div className="h-11 w-11 rounded-xl bg-primary/15 text-primary flex items-center justify-center shrink-0">
-                    <Hash className="h-5 w-5" />
-                  </div>
-                  <div className="space-y-0.5">
-                    <DialogTitle className="font-mono text-xl tracking-tight">#{invoiceDisplay(order)}</DialogTitle>
-                    <DialogDescription className="text-[11px] flex items-center gap-2 flex-wrap">
-                      <span className="inline-flex items-center gap-1"><Calendar className="h-3 w-3" />{format(new Date(order.created_at), "dd MMM yyyy, hh:mm a")}</span>
-                      <span className="text-muted-foreground/50">·</span>
-                      <span className="inline-flex items-center gap-1"><Globe className="h-3 w-3" />{order.source ?? "—"}</span>
-                    </DialogDescription>
-                  </div>
+            <DialogHeader className="border-b bg-card px-5 py-3.5">
+              <div className="flex flex-wrap items-center justify-between gap-3">
+                <div className="min-w-0 text-left">
+                  <DialogTitle className="flex flex-wrap items-center gap-2 font-mono text-[17px] tracking-tight">
+                    #{invoiceDisplay(order)}
+                    <Badge className={statusBadge(mode === "web" ? "confirmed" : order.status).className + " rounded-full px-2.5 py-0.5 text-[11px]"}>
+                      {mode === "web" ? webStatusLabel((order as { web_status?: string | null }).web_status) : statusBadge(order.status).label}
+                    </Badge>
+                  </DialogTitle>
+                  <DialogDescription className="mt-0.5 flex flex-wrap items-center gap-x-2 gap-y-0.5 text-[11px]">
+                    <span className="font-medium text-foreground">{customerName(order)}</span>
+                    <span className="text-muted-foreground/50">·</span>
+                    <span className="tabular-nums">{customerPhone(order)}</span>
+                    <span className="text-muted-foreground/50">·</span>
+                    <span className="inline-flex items-center gap-1"><Calendar className="h-3 w-3" />{format(new Date(order.created_at), "dd MMM yyyy, hh:mm a")}</span>
+                    <span className="text-muted-foreground/50">·</span>
+                    <span className="inline-flex items-center gap-1"><Globe className="h-3 w-3" />{order.source ?? "—"}</span>
+                  </DialogDescription>
                 </div>
-                <div className="flex items-center gap-3">
-                  <div className="text-right hidden sm:block">
-                    <div className="text-[10px] uppercase tracking-wider text-muted-foreground">Total</div>
-                    <div className="text-xl font-bold tabular-nums">৳ {payableTotal.toLocaleString()}</div>
+                <div className="flex items-center gap-2">
+                  <button
+                    type="button"
+                    onClick={copySummary}
+                    title="Copy order summary"
+                    className="grid h-8 w-8 place-items-center rounded-lg border text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+                  >
+                    <ClipboardCopy className="h-3.5 w-3.5" />
+                  </button>
+                  <button
+                    type="button"
+                    onClick={copyAddress}
+                    title="Copy address"
+                    className="grid h-8 w-8 place-items-center rounded-lg border text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+                  >
+                    <MapPin className="h-3.5 w-3.5" />
+                  </button>
+                  <div className="rounded-lg border bg-muted/40 px-3 py-1 text-right">
+                    <div className="text-[9px] uppercase tracking-wider text-muted-foreground">{advanceAmount > 0 ? "Due" : "Total"}</div>
+                    <div className="text-base font-bold tabular-nums leading-tight">৳ {payableTotal.toLocaleString()}</div>
                   </div>
-                  <Badge className={statusBadge(mode === "web" ? "confirmed" : order.status).className + " text-xs px-3 py-1 rounded-full"}>
-                    {mode === "web" ? webStatusLabel((order as { web_status?: string | null }).web_status) : statusBadge(order.status).label}
-                  </Badge>
                 </div>
               </div>
             </DialogHeader>
 
-            <div className="overflow-y-auto max-h-[calc(92vh-90px)] bg-muted/20">
+            <div className="overflow-y-auto max-h-[calc(92vh-80px)] bg-muted/20">
+
               {lockState.error && (
                 <div className="px-5 pt-4">
                   <div className="flex items-center gap-2 rounded-lg border border-rose-400/60 bg-rose-50 px-4 py-2.5 text-sm text-rose-800 shadow-sm dark:bg-rose-950/40 dark:text-rose-200">
@@ -620,88 +640,84 @@ export function OrderDrawer({ orderId, onClose, mode = "fulfillment" }: Props) {
                 </div>
               ) : (
               <>
-              {/* QUICK ACTIONS — one tap status change */}
-              <div className="sticky top-0 z-20 border-b bg-background/95 px-5 py-3 backdrop-blur">
-                {/* Primary CTA — big, always first, full width on mobile */}
-                {mode === "web" ? (
-                  <Button
-                    size="lg"
-                    className="mb-2.5 h-12 w-full gap-2 rounded-xl bg-emerald-600 text-base font-bold text-white shadow-lg shadow-emerald-600/25 transition hover:bg-emerald-700 sm:w-auto sm:min-w-[16rem]"
-                    disabled={updateWebStatus.isPending}
-                    onClick={() => onPickWebStatus("complete")}
-                  >
-                    {updateWebStatus.isPending ? <Loader2 className="h-5 w-5 animate-spin" /> : <CheckCircle2 className="h-5 w-5" />} Confirm Order
-                  </Button>
-                ) : order.status !== "confirmed" && order.status !== "delivered" ? (
-                  <Button
-                    size="lg"
-                    className="mb-2.5 h-12 w-full gap-2 rounded-xl bg-emerald-600 text-base font-bold text-white shadow-lg shadow-emerald-600/25 transition hover:bg-emerald-700 sm:w-auto sm:min-w-[16rem]"
-                    disabled={updateStatus.isPending}
-                    onClick={() => guardedAction(() => updateStatus.mutate("confirmed" as OrderStatus))}
-                  >
-                    {updateStatus.isPending ? <Loader2 className="h-5 w-5 animate-spin" /> : <CheckCircle2 className="h-5 w-5" />} Confirm Order
-                  </Button>
-                ) : null}
+              {/* ACTION BAR — one compact row, sticky */}
+              <div className="sticky top-0 z-20 space-y-2 border-b bg-background/95 px-5 py-2.5 backdrop-blur">
                 <div className="flex flex-wrap items-center gap-1.5">
-                  <span className="mr-1 text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Quick actions</span>
                   {mode === "web" ? (
-                    <>
-                      <Button size="sm" variant="outline" className="h-8 gap-1.5" disabled={updateWebStatus.isPending} onClick={() => onPickWebStatus("good_but_no_response")}>
-                        <PhoneOff className="h-3.5 w-3.5" /> Good / No response
-                      </Button>
-                      <Button size="sm" variant="outline" className="h-8 gap-1.5" disabled={updateWebStatus.isPending} onClick={() => onPickWebStatus("no_response")}>
-                        <PhoneOff className="h-3.5 w-3.5" /> No response
-                      </Button>
-                      <Button size="sm" variant="outline" className="h-8 gap-1.5" disabled={updateWebStatus.isPending} onClick={() => onPickWebStatus("on_hold")}>
-                        <PauseCircle className="h-3.5 w-3.5" /> On hold
-                      </Button>
-                      <Button size="sm" variant="outline" className="h-8 gap-1.5 border-violet-300 text-violet-700 dark:border-violet-900 dark:text-violet-300" disabled={updateWebStatus.isPending} onClick={() => onPickWebStatus("advance_payment")}>
-                        <Wallet className="h-3.5 w-3.5" /> Advance
-                      </Button>
-                      <Button size="sm" variant="outline" className="h-8 gap-1.5 text-destructive" disabled={updateWebStatus.isPending} onClick={() => onPickWebStatus("cancelled")}>
-                        <X className="h-3.5 w-3.5" /> Cancel
-                      </Button>
-                    </>
-                  ) : (
+                    <Button
+                      className="h-9 gap-2 rounded-lg bg-emerald-600 px-4 font-semibold text-white transition hover:bg-emerald-700"
+                      disabled={updateWebStatus.isPending}
+                      onClick={() => onPickWebStatus("complete")}
+                    >
+                      {updateWebStatus.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <CheckCircle2 className="h-4 w-4" />} Confirm
+                    </Button>
+                  ) : order.status !== "confirmed" && order.status !== "delivered" ? (
+                    <Button
+                      className="h-9 gap-2 rounded-lg bg-emerald-600 px-4 font-semibold text-white transition hover:bg-emerald-700"
+                      disabled={updateStatus.isPending}
+                      onClick={() => guardedAction(() => updateStatus.mutate("confirmed" as OrderStatus))}
+                    >
+                      {updateStatus.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <CheckCircle2 className="h-4 w-4" />} Confirm
+                    </Button>
+                  ) : null}
 
-                    <>
-                      {(["confirmed", "packed", "ready_to_ship", "delivered"] as OrderStatus[])
-                        .filter((s) => s !== order.status && s !== "confirmed")
-
-                        .map((s) => (
-                          <Button key={s} size="sm" variant="outline" className="h-8 gap-1.5" disabled={updateStatus.isPending} onClick={() => guardedAction(() => updateStatus.mutate(s))}>
-                            {STATUS_BADGE[s]?.label ?? s.replace(/_/g, " ")}
-                          </Button>
-                        ))}
-                      <Button size="sm" variant="outline" className="h-8 gap-1.5 text-destructive" disabled={updateStatus.isPending} onClick={() => guardedAction(() => updateStatus.mutate("cancelled" as OrderStatus))}>
-                        <X className="h-3.5 w-3.5" /> Cancel
-                      </Button>
-                    </>
-                  )}
-                  <span className="mx-1 hidden h-5 w-px bg-border sm:block" />
                   {phone && (
                     <>
                       <a
                         href={`tel:${phone}`}
                         onClick={() => orderId && logCall.mutate({ orderId, attempts: callAttempts, currentStatus: callStatus })}
-                        className="inline-flex h-8 items-center gap-1.5 rounded-md border border-primary/40 bg-primary/10 px-3 text-xs font-semibold text-primary transition-colors hover:bg-primary/20"
+                        className="inline-flex h-9 items-center gap-1.5 rounded-lg border border-primary/40 bg-primary/10 px-3 text-xs font-semibold text-primary transition-colors hover:bg-primary/20"
                       >
-                        <PhoneCall className="h-3.5 w-3.5" /> Call now{callAttempts > 0 ? ` (${callAttempts})` : ""}
+                        <PhoneCall className="h-3.5 w-3.5" /> Call{callAttempts > 0 ? ` (${callAttempts})` : ""}
                       </a>
                       <a
                         href={`https://wa.me/88${phone.replace(/\D/g, "").slice(-11)}`}
                         target="_blank"
                         rel="noreferrer"
-                        className="inline-flex h-8 items-center gap-1.5 rounded-md border px-3 text-xs font-medium text-muted-foreground transition-colors hover:text-foreground"
+                        title="WhatsApp"
+                        className="grid h-9 w-9 place-items-center rounded-lg border text-muted-foreground transition-colors hover:text-foreground"
                       >
-                        <MessageCircle className="h-3.5 w-3.5" /> WhatsApp
+                        <MessageCircle className="h-4 w-4" />
                       </a>
                     </>
                   )}
+
+                  <span className="mx-0.5 hidden h-6 w-px bg-border sm:block" />
+
+                  {mode === "web" ? (
+                    <>
+                      <Button size="sm" variant="outline" className="h-9 gap-1.5" disabled={updateWebStatus.isPending} onClick={() => onPickWebStatus("no_response")}>
+                        <PhoneOff className="h-3.5 w-3.5" /> No response
+                      </Button>
+                      <Button size="sm" variant="outline" className="h-9 gap-1.5" disabled={updateWebStatus.isPending} onClick={() => onPickWebStatus("on_hold")}>
+                        <PauseCircle className="h-3.5 w-3.5" /> Hold
+                      </Button>
+                      <Button size="sm" variant="outline" className="h-9 gap-1.5 border-violet-300 text-violet-700 dark:border-violet-900 dark:text-violet-300" disabled={updateWebStatus.isPending} onClick={() => onPickWebStatus("advance_payment")}>
+                        <Wallet className="h-3.5 w-3.5" /> Advance
+                      </Button>
+                      <Button size="sm" variant="outline" className="h-9 gap-1.5 text-destructive" disabled={updateWebStatus.isPending} onClick={() => onPickWebStatus("cancelled")}>
+                        <X className="h-3.5 w-3.5" /> Cancel
+                      </Button>
+                    </>
+                  ) : (
+                    <>
+                      {(["packed", "ready_to_ship", "delivered"] as OrderStatus[])
+                        .filter((s) => s !== order.status)
+                        .map((s) => (
+                          <Button key={s} size="sm" variant="outline" className="h-9 gap-1.5" disabled={updateStatus.isPending} onClick={() => guardedAction(() => updateStatus.mutate(s))}>
+                            {STATUS_BADGE[s]?.label ?? s.replace(/_/g, " ")}
+                          </Button>
+                        ))}
+                      <Button size="sm" variant="outline" className="h-9 gap-1.5 text-destructive" disabled={updateStatus.isPending} onClick={() => guardedAction(() => updateStatus.mutate("cancelled" as OrderStatus))}>
+                        <X className="h-3.5 w-3.5" /> Cancel
+                      </Button>
+                    </>
+                  )}
+
                   <div className="ml-auto flex items-center gap-1.5">
                     <span className="text-[10px] uppercase tracking-wider text-muted-foreground">Call</span>
                     <Select value={callStatus} disabled={setCallStatus.isPending || editingBlocked} onValueChange={(v) => guardedAction(() => setCallStatus.mutate(v))}>
-                      <SelectTrigger className="h-8 w-[170px] text-xs"><SelectValue /></SelectTrigger>
+                      <SelectTrigger className="h-9 w-[160px] text-xs"><SelectValue /></SelectTrigger>
                       <SelectContent>
                         {CALL_STATUS_OPTIONS.map((o) => (
                           <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>
@@ -710,8 +726,9 @@ export function OrderDrawer({ orderId, onClose, mode = "fulfillment" }: Props) {
                     </Select>
                   </div>
                 </div>
+
                 {(lastCallAt || orderTags.length > 0 || trackingNumber) && (
-                  <div className="mt-2 flex flex-wrap items-center gap-2 text-[11px] text-muted-foreground">
+                  <div className="flex flex-wrap items-center gap-2 text-[11px] text-muted-foreground">
                     {lastCallAt && <span className="inline-flex items-center gap-1"><Clock className="h-3 w-3" />Last call {format(new Date(lastCallAt), "dd MMM, hh:mm a")}</span>}
                     {trackingNumber && (
                       <span className="inline-flex items-center gap-1"><Truck className="h-3 w-3" />{courierNameVal ?? "Courier"} · <span className="font-mono text-foreground">{trackingNumber}</span></span>
@@ -721,16 +738,30 @@ export function OrderDrawer({ orderId, onClose, mode = "fulfillment" }: Props) {
                     ))}
                   </div>
                 )}
-                <div className="mt-2 flex flex-wrap items-center gap-2">
-                  <Button size="sm" variant="ghost" className="h-7 gap-1.5 px-2 text-[11px] text-muted-foreground" onClick={copySummary}>
-                    <ClipboardCopy className="h-3.5 w-3.5" /> Copy summary
-                  </Button>
-                  <Button size="sm" variant="ghost" className="h-7 gap-1.5 px-2 text-[11px] text-muted-foreground" onClick={copyAddress}>
-                    <MapPin className="h-3.5 w-3.5" /> Copy address
-                  </Button>
+
+                {/* Tabs */}
+                <div className="flex items-center gap-1" role="tablist">
+                  {([
+                    ["details", `Details`],
+                    ["activity", `Activity${notes.length ? ` (${notes.length})` : ""}`],
+                  ] as const).map(([key, label]) => (
+                    <button
+                      key={key}
+                      type="button"
+                      role="tab"
+                      aria-selected={tab === key}
+                      onClick={() => setTab(key)}
+                      className={cn(
+                        "rounded-lg px-3 py-1.5 text-[12px] font-medium transition-colors",
+                        tab === key ? "bg-foreground text-background" : "text-muted-foreground hover:bg-muted",
+                      )}
+                    >
+                      {label}
+                    </button>
+                  ))}
                   <span className="ml-auto hidden items-center gap-1.5 text-[10px] text-muted-foreground md:inline-flex">
                     <Command className="h-3 w-3" />
-                    {(["C confirm", ...(mode === "web" ? ["A advance", "H hold", "R no-response"] : []), "P call", "Y copy"]).map((s) => (
+                    {(["C confirm", ...(mode === "web" ? ["A advance", "H hold"] : []), "P call"]).map((s) => (
                       <kbd key={s} className="rounded border bg-muted px-1.5 py-0.5 font-mono text-[9px]">{s}</kbd>
                     ))}
                   </span>
@@ -740,6 +771,7 @@ export function OrderDrawer({ orderId, onClose, mode = "fulfillment" }: Props) {
               <div className="px-5 pt-4">
                 <OrderCourierScoreStrip phone={phone} brandId={(order as { brand_id?: string | null }).brand_id ?? null} />
               </div>
+
 
               {(risk || isDuplicateRisk) && (
                 <div className="flex flex-wrap gap-2 px-5 pt-4">
@@ -767,8 +799,10 @@ export function OrderDrawer({ orderId, onClose, mode = "fulfillment" }: Props) {
 
                 {/* LEFT — Customer + Items (2 cols) */}
                 <div className="lg:col-span-2 space-y-4">
+                  {tab === "details" && (<>
                   {/* Customer */}
-                  <section className="rounded-xl border bg-card p-4 shadow-sm">
+                  <section className="rounded-xl border bg-card p-4">
+
                     <div className="mb-3 flex items-center justify-between gap-2">
                       <h3 className="text-xs font-bold uppercase tracking-wider text-muted-foreground flex items-center gap-1.5"><User className="h-3.5 w-3.5" />Customer</h3>
                       {customerEditing ? (
@@ -897,7 +931,7 @@ export function OrderDrawer({ orderId, onClose, mode = "fulfillment" }: Props) {
 
 
                   {/* Items */}
-                  <section className="rounded-xl border bg-card p-4 shadow-sm">
+                  <section className="rounded-xl border bg-card p-4">
                     <div className="mb-3 flex items-center justify-between gap-2">
                       <h3 className="text-xs font-bold uppercase tracking-wider text-muted-foreground flex items-center gap-1.5"><Package className="h-3.5 w-3.5" />Items ({items.length})</h3>
                       {!itemsEditing && (
@@ -971,7 +1005,9 @@ export function OrderDrawer({ orderId, onClose, mode = "fulfillment" }: Props) {
                       )}
                       <div className="flex justify-between"><span className="text-muted-foreground">Subtotal</span><span className="tabular-nums">৳ {subtotal.toLocaleString()}</span></div>
                       <div className="flex justify-between"><span className="text-muted-foreground">Shipping</span><span className="tabular-nums">৳ {shippingFee.toLocaleString()}</span></div>
+                      {(mode !== "web" || hasActual) && (
                       <div className="rounded-md border bg-muted/30 p-2.5 mt-1 space-y-1">
+
                         <div className="flex items-center justify-between text-[11px] uppercase tracking-wider text-muted-foreground">
                           <span className="inline-flex items-center gap-1"><Truck className="h-3 w-3" /> Courier Actual Charge</span>
                           <button onClick={openFeeDialog} className="text-primary hover:underline inline-flex items-center gap-0.5">
@@ -1004,6 +1040,8 @@ export function OrderDrawer({ orderId, onClose, mode = "fulfillment" }: Props) {
                           <p className="text-[11px] text-muted-foreground italic">Courier sync er por automatic bose jabe, ba manually set koro.</p>
                         )}
                       </div>
+                      )}
+
                       {discountAmount > 0 && (
                         <div className="flex justify-between text-emerald-600 dark:text-emerald-400"><span>Discount</span><span className="tabular-nums">− ৳ {discountAmount.toLocaleString()}</span></div>
                       )}
@@ -1035,9 +1073,11 @@ export function OrderDrawer({ orderId, onClose, mode = "fulfillment" }: Props) {
                       <div className="flex justify-between font-bold text-base pt-2 mt-1 border-t"><span>{advanceAmount > 0 ? "Due Total" : "Total"}</span><span className="tabular-nums text-primary">৳ {payableTotal.toLocaleString()}</span></div>
                     </div>
                   </section>
+                  </>)}
 
-                  {/* Timeline */}
-                  <section className="rounded-xl border bg-card p-4 shadow-sm">
+                  {tab === "activity" && (
+                  /* Timeline */
+                  <section className="rounded-xl border bg-card p-4">
                     <h3 className="text-xs font-bold uppercase tracking-wider text-muted-foreground mb-3 flex items-center gap-1.5"><Clock className="h-3.5 w-3.5" />Status Timeline</h3>
                     {history.length > 0 ? (
                       <div className="space-y-3 relative before:absolute before:left-[5px] before:top-2 before:bottom-2 before:w-px before:bg-border">
@@ -1056,12 +1096,14 @@ export function OrderDrawer({ orderId, onClose, mode = "fulfillment" }: Props) {
                       <p className="text-xs text-muted-foreground italic">No status changes recorded yet</p>
                     )}
                   </section>
+                  )}
                 </div>
 
                 {/* RIGHT — Actions + Notes */}
-                <div className="space-y-4">
+                <div className="space-y-4 lg:sticky lg:top-[132px] lg:self-start">
+
                   {/* Status + Assign */}
-                  <section className="rounded-xl border bg-card p-4 shadow-sm space-y-3">
+                  <section className="rounded-xl border bg-card p-4 space-y-3">
                     <h3 className="text-xs font-bold uppercase tracking-wider text-muted-foreground flex items-center gap-1.5"><ListChecks className="h-3.5 w-3.5" />Manage</h3>
                     <div>
                       <label className="text-[11px] font-semibold text-muted-foreground mb-1.5 block">Status</label>
@@ -1127,7 +1169,7 @@ export function OrderDrawer({ orderId, onClose, mode = "fulfillment" }: Props) {
                   </section>
 
                   {/* Notes */}
-                  <section className="rounded-xl border bg-card p-4 shadow-sm">
+                  <section className="rounded-xl border bg-card p-4">
                     <h3 className="text-xs font-bold uppercase tracking-wider text-muted-foreground mb-3 flex items-center gap-1.5"><StickyNote className="h-3.5 w-3.5" />Notes</h3>
                     <div className="space-y-2 mb-3">
                       <Textarea
