@@ -516,21 +516,22 @@ export function PackSheet({
                   display: "flex",
                   alignItems: "center",
                   gap: 10,
-                  padding: "6px 10px",
+                  padding: "7px 12px",
                   background: "#f4f4f5",
-                  borderBottom: "1px solid #ddd",
+                  borderBottom: "1.5px solid #111",
                 }}
               >
                 <span
                   style={{
-                    fontSize: 18,
+                    fontSize: 17,
                     fontWeight: 900,
-                    minWidth: 30,
-                    height: 30,
-                    lineHeight: "30px",
+                    minWidth: 32,
+                    height: 32,
+                    lineHeight: "32px",
                     textAlign: "center",
-                    border: "2px solid #111",
-                    borderRadius: 6,
+                    background: "#111",
+                    color: "#fff",
+                    borderRadius: 8,
                   }}
                 >
                   {i + 1}
@@ -591,11 +592,19 @@ export function PackSheet({
                     {o.courier_name ? ` · ${o.courier_name}` : ""}
                   </div>
                 </div>
-                <div style={{ textAlign: "right" }}>
-                  <div style={{ fontSize: 8.5, letterSpacing: 1.2, color: "#666", fontWeight: 700 }}>
+                <div
+                  style={{
+                    textAlign: "center",
+                    border: "1.5px solid #111",
+                    borderRadius: 8,
+                    padding: "3px 12px",
+                    background: isCod(o) ? "#fff" : "#dcfce7",
+                  }}
+                >
+                  <div style={{ fontSize: 8, letterSpacing: 1.4, color: "#555", fontWeight: 800 }}>
                     {isCod(o) ? "COD DUE" : "PREPAID"}
                   </div>
-                  <div style={{ fontSize: 16, fontWeight: 900, fontVariantNumeric: "tabular-nums" }}>
+                  <div style={{ fontSize: 17, fontWeight: 900, fontVariantNumeric: "tabular-nums", lineHeight: 1.15 }}>
                     {isCod(o) ? money(codDue(o)) : money(0)}
                   </div>
                 </div>
@@ -664,15 +673,30 @@ export function PackSheet({
                 style={{
                   display: "flex",
                   justifyContent: "space-between",
-                  padding: "4px 10px",
-                  borderTop: "1px solid #ddd",
+                  alignItems: "center",
+                  padding: "5px 12px",
+                  borderTop: "1.5px solid #111",
                   background: "#fafafa",
                   fontSize: 10.5,
                 }}
               >
                 <span style={{ color: "#555" }}>Packed by ____________ · Verified ☐</span>
-                <span style={{ fontWeight: 800 }}>
-                  Total pieces: <span style={{ fontSize: 14 }}>{units}</span>
+                <span style={{ fontWeight: 800, letterSpacing: 0.5 }}>
+                  TOTAL PIECES{" "}
+                  <span
+                    style={{
+                      display: "inline-block",
+                      marginLeft: 6,
+                      fontSize: 15,
+                      fontWeight: 900,
+                      border: "1.5px solid #111",
+                      borderRadius: 6,
+                      padding: "0 8px",
+                      fontVariantNumeric: "tabular-nums",
+                    }}
+                  >
+                    {units}
+                  </span>
                 </span>
               </div>
             </div>
@@ -680,7 +704,7 @@ export function PackSheet({
         })}
       </div>
 
-      <Signatures />
+      <Signatures sheetNoText={no} />
     </div>
   );
 }
