@@ -1,6 +1,6 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { Plus, Download, RefreshCw, Inbox, ScanLine } from "lucide-react";
+import { Plus, Download, RefreshCw, Inbox, ScanLine, PackageCheck } from "lucide-react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
@@ -30,6 +30,7 @@ import { BulkPrintDialog, type PrintMode } from "@/components/erp/orders/bulk-pr
 import { CourierStatusSyncDialog } from "@/components/erp/orders/courier-status-sync-dialog";
 import { PhoneHistorySyncDialog } from "@/components/erp/orders/phone-history-sync-dialog";
 import { ScanToDispatchDialog } from "@/components/erp/orders/scan-to-dispatch-dialog";
+import { DispatchShell } from "@/components/erp/dispatch/dispatch-shell";
 import { downloadCsv, exportOrdersCsv, statusAge, statusSinceTs, tabForStatuses, RETURN_PENDING_STATUSES, STATUS_TABS, type OrderRow, type OrderStatus } from "@/lib/erp/orders";
 import { AlertTriangle, RefreshCcw } from "lucide-react";
 
@@ -44,10 +45,10 @@ type OrdersSearch = {
   min?: number; max?: number;
   adv?: "any" | "with" | "without";
   printed?: "all" | "printed" | "unprinted";
-  view?: "orders" | "incomplete";
+  view?: "orders" | "incomplete" | "dispatch";
 };
 
-function searchFromFilter(filter: OrdersFilter, view: "orders" | "incomplete"): OrdersSearch {
+function searchFromFilter(filter: OrdersFilter, view: "orders" | "incomplete" | "dispatch"): OrdersSearch {
   const activeTabKey = view === "incomplete" ? "incomplete" : tabForStatuses(filter.statuses);
   return {
     q: filter.search || undefined,
@@ -69,7 +70,7 @@ function searchFromFilter(filter: OrdersFilter, view: "orders" | "incomplete"): 
     max: filter.amountMax ?? undefined,
     adv: filter.advanceFilter && filter.advanceFilter !== "any" ? filter.advanceFilter : undefined,
     printed: filter.printedFilter && filter.printedFilter !== "all" ? filter.printedFilter : undefined,
-    view: view === "incomplete" ? "incomplete" : undefined,
+    view: view === "orders" ? undefined : view,
   };
 }
 
@@ -125,7 +126,7 @@ export const Route = createFileRoute("/_authenticated/erp/orders/list")({
     max: num(s['max']),
     adv: (["any", "with", "without"] as const).find((x) => x === s['adv']),
     printed: (["all", "printed", "unprinted"] as const).find((x) => x === s['printed']),
-    view: s['view'] === "incomplete" ? "incomplete" : undefined,
+    view: s['view'] === "incomplete" ? "incomplete" : s['view'] === "dispatch" ? "dispatch" : undefined,
   }),
   component: OrdersPage,
 });
@@ -138,7 +139,7 @@ function OrdersPage() {
 
   // URL is the single source of truth for filters and the active tab/view.
   const spKey = useMemo(() => JSON.stringify(sp), [sp]);
-  const view = sp.view === "incomplete" ? "incomplete" : "orders";
+  const view = sp.view === "dispatch" ? "dispatch" : sp.view === "incomplete" ? "incomplete" : "orders";
 
   const filter = useMemo<OrdersFilter>(
     () => {
@@ -221,7 +222,7 @@ function OrdersPage() {
 
   // Stable update helper that writes the next filter state to the URL.
   const filterRef = useRef(filter);
-  const viewRef = useRef<"incomplete" | "orders">(view);
+  const viewRef = useRef<"incomplete" | "orders" | "dispatch">(view);
   filterRef.current = filter;
   viewRef.current = view;
   const spRef = useRef(sp);
@@ -569,7 +570,27 @@ function OrdersPage() {
 
   const activeTab =
     view === "incomplete" ? "incomplete"
+      : view === "dispatch" ? "ready_to_ship"
       : tabForStatuses(effective.statuses);
+
+  // Dispatch Center lives inside the Order List as a full-page view.
+  if (view === "dispatch") {
+    return (
+      <div className="p-4 md:p-6 min-h-screen bg-background">
+        <div className="mb-3 flex items-center gap-2">
+          <Button
+            variant="outline"
+            size="sm"
+            className="h-8 gap-1.5 rounded-xl text-[12px]"
+            onClick={() => navigate({ replace: true, search: { tab: "pending" } })}
+          >
+            ← Back to orders
+          </Button>
+        </div>
+        <DispatchShell />
+      </div>
+    );
+  }
 
   // Keyboard shortcuts: "/" focus search, "a" select page, "Esc" clear, "r" refresh.
   useEffect(() => {
@@ -631,6 +652,15 @@ function OrdersPage() {
             disabled={exporting}
           >
             <Download className={`h-3.5 w-3.5 ${exporting ? "animate-pulse" : ""}`} /> {exporting ? "Exporting…" : "Export"}
+          </Button>
+          <Button
+            variant="ghost"
+            size="sm"
+            className="h-9 gap-2 rounded-xl border border-[var(--panel-border)] bg-card px-3 text-[13px] font-medium text-foreground/80 hover:text-foreground"
+            onClick={() => navigate({ replace: true, search: { view: "dispatch" } })}
+            title="Dispatch Center"
+          >
+            <PackageCheck className="h-4 w-4" /> Dispatch
           </Button>
           <Link to="/erp/orders/new">
             <Button size="sm" className="h-9 gap-2 rounded-xl px-3.5 text-[13px] shadow-sm">
