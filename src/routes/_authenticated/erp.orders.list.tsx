@@ -47,7 +47,7 @@ type OrdersSearch = {
   view?: "orders" | "incomplete" | "dispatch";
 };
 
-function searchFromFilter(filter: OrdersFilter, view: "orders" | "incomplete"): OrdersSearch {
+function searchFromFilter(filter: OrdersFilter, view: "orders" | "incomplete" | "dispatch"): OrdersSearch {
   const activeTabKey = view === "incomplete" ? "incomplete" : tabForStatuses(filter.statuses);
   return {
     q: filter.search || undefined,
@@ -221,7 +221,7 @@ function OrdersPage() {
 
   // Stable update helper that writes the next filter state to the URL.
   const filterRef = useRef(filter);
-  const viewRef = useRef<"incomplete" | "orders">(view);
+  const viewRef = useRef<"incomplete" | "orders" | "dispatch">(view);
   filterRef.current = filter;
   viewRef.current = view;
   const spRef = useRef(sp);
