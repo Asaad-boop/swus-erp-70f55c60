@@ -686,6 +686,9 @@ export function OrderDrawer({ orderId, onClose, mode = "fulfillment" }: Props) {
 
                   {mode === "web" ? (
                     <>
+                      <Button size="sm" variant="outline" className="h-9 gap-1.5 border-amber-300 text-amber-700 hover:bg-amber-50 dark:border-amber-900 dark:text-amber-300" disabled={updateWebStatus.isPending} onClick={() => onPickWebStatus("good_but_no_response")}>
+                        <UserCheck className="h-3.5 w-3.5" /> Good, no response
+                      </Button>
                       <Button size="sm" variant="outline" className="h-9 gap-1.5" disabled={updateWebStatus.isPending} onClick={() => onPickWebStatus("no_response")}>
                         <PhoneOff className="h-3.5 w-3.5" /> No response
                       </Button>
