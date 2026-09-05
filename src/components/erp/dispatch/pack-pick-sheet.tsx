@@ -364,17 +364,17 @@ export function PickSheet({
         ]}
       />
 
-      <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 12 }}>
+      <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 12, border: "1.5px solid #111", borderRadius: 8 }}>
         <thead>
           <tr style={{ background: "#111", color: "#fff" }}>
-            <th style={th(26)}>✓</th>
+            <th style={{ ...th(30), borderTopLeftRadius: 6 }}>✓</th>
             <th style={th(34)}>#</th>
             {options.showImages && <th style={th(46)} />}
             <th style={{ ...th(), textAlign: "left" }}>Product / Variant</th>
             <th style={{ ...th(options.showBarcodes ? 150 : 110), textAlign: "left" }}>SKU</th>
             <th style={th(60)}>Orders</th>
             <th style={{ ...th(60), textAlign: "right" }}>Qty</th>
-            {options.showBins && <th style={{ ...th(64), textAlign: "left" }}>Bin</th>}
+            {options.showBins && <th style={{ ...th(64), textAlign: "left", borderTopRightRadius: 6 }}>Bin</th>}
           </tr>
         </thead>
         <tbody>
@@ -427,11 +427,11 @@ export function PickSheet({
           ))}
         </tbody>
         <tfoot>
-          <tr style={{ borderTop: "2px solid #000" }}>
-            <td colSpan={options.showImages ? 6 : 5} style={{ ...td("right"), fontWeight: 800 }}>
+          <tr style={{ borderTop: "2px solid #111", background: "#f4f4f5" }}>
+            <td colSpan={options.showImages ? 6 : 5} style={{ ...td("right"), fontWeight: 900, letterSpacing: 1.5, fontSize: 10.5 }}>
               GRAND TOTAL
             </td>
-            <td style={{ ...td("right"), fontSize: 17, fontWeight: 900, fontVariantNumeric: "tabular-nums" }}>
+            <td style={{ ...td("right"), fontSize: 18, fontWeight: 900, fontVariantNumeric: "tabular-nums" }}>
               {totalQty}
             </td>
             {options.showBins && <td style={td()} />}
@@ -439,7 +439,7 @@ export function PickSheet({
         </tfoot>
       </table>
 
-      <Signatures />
+      <Signatures sheetNoText={no} />
     </div>
   );
 }
