@@ -318,11 +318,13 @@ function ProductLabPage() {
   );
 }
 
-function Summary({ label, value }: { label: string; value: string }) {
+function Summary({ label, value, hint }: { label: string; value: string; hint?: string }) {
   return (
     <div className="rounded-lg border border-border bg-card px-4 py-3">
       <p className="text-[11px] uppercase tracking-wide text-muted-foreground">{label}</p>
       <p className="mt-1 font-display text-xl font-semibold tabular-nums">{value}</p>
+      {hint && <p className="mt-0.5 text-[11px] text-muted-foreground">{hint}</p>}
     </div>
   );
 }
+
