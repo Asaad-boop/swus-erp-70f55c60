@@ -235,20 +235,32 @@ function Header({
   no,
   kpis,
   brandName,
+  brandLogo,
 }: {
   title: string;
   kicker: string;
   no: string;
   kpis: Array<{ label: string; value: number | string }>;
   brandName?: string | null;
+  brandLogo?: string | null;
 }) {
   const b = getDocBranding();
+  const logo = brandLogo ?? b.logoUrl ?? "";
   return (
     <div style={{ marginBottom: 12 }}>
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-end", gap: 16 }}>
         <div style={{ minWidth: 0 }}>
-          <div style={{ fontSize: 8, letterSpacing: 2.6, fontWeight: 700, color: MUTE }}>
-            {(b.company || "SWUS").toUpperCase()} · {kicker}
+          <div style={{ display: "flex", alignItems: "center", gap: 8, minHeight: 24 }}>
+            {logo ? (
+              <img
+                src={logo}
+                alt=""
+                style={{ height: 22, maxWidth: 110, objectFit: "contain", objectPosition: "left center" }}
+              />
+            ) : null}
+            <div style={{ fontSize: 8, letterSpacing: 2.6, fontWeight: 700, color: MUTE }}>
+              {(b.company || "SWUS").toUpperCase()} · {kicker}
+            </div>
           </div>
           <h1 style={{ fontSize: 19, fontWeight: 700, margin: "3px 0 0", letterSpacing: -0.5, lineHeight: 1.1 }}>
             {title}
@@ -376,11 +388,13 @@ export function PickSheet({
   by = "product",
   options = DEFAULT_SHEET_OPTIONS,
   brandName,
+  brandLogo,
 }: {
   orders: SheetOrder[];
   by?: "product" | "sku";
   options?: SheetOptions;
   brandName?: string | null;
+  brandLogo?: string | null;
 }) {
   const rows = aggregateRows(orders, by);
   const totalQty = rows.reduce((s, r) => s + r.qty, 0);
@@ -395,6 +409,7 @@ export function PickSheet({
         title={isSku ? "SKU-wise Picking List" : "Product-wise Picking List"}
         no={no}
         brandName={brandName}
+        brandLogo={brandLogo}
         kpis={[
           { label: "Orders", value: orders.length },
           { label: isSku ? "SKUs" : "Products", value: rows.length },
@@ -511,10 +526,12 @@ export function PackSheet({
   orders,
   options = DEFAULT_SHEET_OPTIONS,
   brandName,
+  brandLogo,
 }: {
   orders: SheetOrder[];
   options?: SheetOptions;
   brandName?: string | null;
+  brandLogo?: string | null;
 }) {
   const sorted = sortOrdersForPacking(orders);
   const totalUnits = sorted.reduce((s, o) => s + (o.items ?? []).reduce((t, i) => t + i.quantity, 0), 0);
@@ -531,6 +548,7 @@ export function PackSheet({
         title="Order-wise Pack List"
         no={no}
         brandName={brandName}
+        brandLogo={brandLogo}
         kpis={[
           { label: "Orders", value: sorted.length },
           { label: "Multi-item", value: multi },
@@ -558,22 +576,6 @@ export function PackSheet({
                 position: "relative",
               }}
             >
-              {o.printed_at && (
-                <span
-                  style={{
-                    position: "absolute",
-                    right: 12,
-                    bottom: 6,
-                    fontSize: 9,
-                    fontWeight: 700,
-                    letterSpacing: 2,
-                    color: "#c4c4cc",
-                  }}
-                >
-                  REPRINT
-                </span>
-              )}
-
               {/* head */}
               <div style={{ display: "flex", alignItems: "flex-start", gap: 10, padding: "7px 11px 6px" }}>
                 <SerialChip n={i + 1} size={26} />
@@ -585,6 +587,7 @@ export function PackSheet({
                       <Tag text={`ADVANCE ${money(Number(o.advance_amount))}`} tone="good" />
                     )}
                     {(o.status ?? "").includes("exchange") && <Tag text="EXCHANGE" tone="note" />}
+                    {o.printed_at && <Tag text="REPRINT" tone="note" />}
                   </div>
                   <div style={{ fontSize: 10.5, marginTop: 2, fontWeight: 600 }}>{orderName(o)}</div>
                   <div style={{ fontSize: 9.5, color: MUTE, marginTop: 1 }}>
