@@ -4,7 +4,8 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { toast } from "sonner";
 import {
-  LogIn, LogOut, Clock, CalendarDays, ArrowRight, ListChecks, Coffee,
+  LogIn, LogOut, Clock, CalendarDays, ArrowRight, ListChecks, Coffee, Play,
+  Activity, ShoppingCart, CheckCircle2, Truck, PackageCheck, Timer, Flame,
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
@@ -17,8 +18,9 @@ import { NAV_PAGES } from "@/lib/erp/nav";
 import { useBrand } from "@/contexts/brand-context";
 import { applyBrandScope } from "@/lib/erp/apply-brand-scope";
 import {
-  getMyAttendanceToday, punchIn, punchOut,
+  getMyAttendanceToday, punchIn, punchOut, startBreak, endBreak,
 } from "@/lib/erp/hr/attendance.functions";
+import { getMyDaySummary } from "@/lib/erp/hr/my-day.functions";
 
 function greeting() {
   const h = new Date().getHours();
@@ -28,9 +30,43 @@ function greeting() {
 }
 
 const hhmm = (mins: number) =>
-  `${Math.floor(mins / 60)}h ${String(Math.round(mins % 60)).padStart(2, "0")}m`;
+  `${Math.floor(mins / 60)}h ${String(Math.floor(mins % 60)).padStart(2, "0")}m`;
 
-/** Personal, money-free dashboard for non-admin staff. */
+const clock = (iso?: string | null) =>
+  iso
+    ? new Date(iso).toLocaleTimeString("en-GB", {
+        hour: "2-digit", minute: "2-digit", timeZone: "Asia/Dhaka",
+      })
+    : "—";
+
+const STATUS_LABEL: Record<string, string> = {
+  confirmed: "Confirmed", packaging: "Packaging", packed: "Packed",
+  ready_to_ship: "Ready to ship", shipped: "Shipped", in_transit: "In transit",
+  delivered: "Delivered", returned: "Returned", cancelled: "Cancelled",
+  on_hold: "On hold", fake: "Fake", exchange: "Exchange",
+};
+const label = (s: string) => STATUS_LABEL[s] ?? s.replace(/_/g, " ");
+
+function Stat({ label: l, value, hint, icon: Icon, tone }: {
+  label: string; value: string; hint?: string;
+  icon?: typeof Clock; tone?: "default" | "good" | "warn";
+}) {
+  return (
+    <div className="rounded-xl border border-border/60 bg-card p-3">
+      <div className="flex items-center gap-1.5 text-[10px] uppercase tracking-wide text-muted-foreground">
+        {Icon && <Icon className="size-3.5" />} {l}
+      </div>
+      <div className={cn(
+        "mt-1 text-lg font-bold tabular-nums",
+        tone === "good" && "text-emerald-600",
+        tone === "warn" && "text-amber-600",
+      )}>{value}</div>
+      {hint && <div className="text-[11px] text-muted-foreground">{hint}</div>}
+    </div>
+  );
+}
+
+/** Personal, money-free workspace for non-admin staff. */
 export function EmployeeDashboard() {
   const { roles } = useCurrentRole();
   const { allowedPages, pageMode } = useMyAllowedPages();
@@ -39,13 +75,16 @@ export function EmployeeDashboard() {
   const [tick, setTick] = useState(0);
 
   useEffect(() => {
-    const t = setInterval(() => setTick((n) => n + 1), 30_000);
+    const t = setInterval(() => setTick((n) => n + 1), 15_000);
     return () => clearInterval(t);
   }, []);
 
   const fetchToday = useServerFn(getMyAttendanceToday);
   const inFn = useServerFn(punchIn);
   const outFn = useServerFn(punchOut);
+  const breakInFn = useServerFn(startBreak);
+  const breakOutFn = useServerFn(endBreak);
+  const dayFn = useServerFn(getMyDaySummary);
 
   const { data: att, isLoading: attLoading } = useQuery({
     queryKey: ["hr-my-attendance"],
@@ -53,29 +92,61 @@ export function EmployeeDashboard() {
     refetchInterval: 60_000,
   });
 
+  const { data: day, isLoading: dayLoading } = useQuery({
+    queryKey: ["my-day-summary", brandIds.join(",")],
+    queryFn: () => dayFn({ data: { brandIds } }),
+    refetchInterval: 60_000,
+    staleTime: 30_000,
+  });
+
+  const invalidate = () => {
+    void qc.invalidateQueries({ queryKey: ["hr-my-attendance"] });
+    void qc.invalidateQueries({ queryKey: ["my-day-summary"] });
+  };
+
   const punch = useMutation<unknown, Error, "in" | "out">({
     mutationFn: async (kind) => (kind === "in" ? await inFn() : await outFn()),
     onSuccess: (_d, kind) => {
       toast.success(kind === "in" ? "Check in hoyeche" : "Check out hoyeche");
-      void qc.invalidateQueries({ queryKey: ["hr-my-attendance"] });
+      invalidate();
+    },
+    onError: (e: Error) => toast.error(e.message),
+  });
+
+  const brk = useMutation<unknown, Error, "start" | "end">({
+    mutationFn: async (kind) => (kind === "start" ? await breakInFn({ data: {} }) : await breakOutFn()),
+    onSuccess: (_d, kind) => {
+      toast.success(kind === "start" ? "Break shuru" : "Break sesh");
+      invalidate();
     },
     onError: (e: Error) => toast.error(e.message),
   });
 
   const entries = att?.entries ?? [];
   const open = entries.find((e: any) => !e.check_out);
-  const workMins = useMemo(() => {
+  const onBreak = open?.breaks?.find((b: any) => !b.break_end) ?? null;
+
+  const { workMins, breakMins } = useMemo(() => {
     void tick;
     const now = Date.now();
-    let ms = 0;
+    let workMs = 0;
+    let breakMs = 0;
     for (const e of entries as any[]) {
-      ms += (e.check_out ? Date.parse(e.check_out) : now) - Date.parse(e.check_in);
+      workMs += (e.check_out ? Date.parse(e.check_out) : now) - Date.parse(e.check_in);
       for (const b of e.breaks ?? []) {
-        ms -= (b.break_end ? Date.parse(b.break_end) : now) - Date.parse(b.break_start);
+        breakMs += (b.break_end ? Date.parse(b.break_end) : now) - Date.parse(b.break_start);
       }
     }
-    return Math.max(0, ms / 60000);
+    return {
+      workMins: Math.max(0, (workMs - breakMs) / 60000),
+      breakMins: Math.max(0, breakMs / 60000),
+    };
   }, [entries, tick]);
+
+  const shift = (att?.employee as any)?.schedule as
+    | { shiftStart?: string | null; shiftEnd?: string | null }
+    | undefined;
+  const firstIn = entries[0]?.check_in ?? null;
 
   // ---- role-scoped work queues (counts only, no money) ----
   const can = (p: string) => resolveAccess(roles, allowedPages, p, pageMode);
@@ -151,6 +222,10 @@ export function EmployeeDashboard() {
     },
   });
 
+  const trend = day?.trend ?? [];
+  const trendMax = Math.max(1, ...trend.map((t) => t.count));
+  const byStatus = Object.entries(day?.byStatus ?? {}).sort((a, b) => b[1] - a[1]).slice(0, 6);
+
   return (
     <div className="min-h-screen bg-muted/20">
       <div className="border-b border-border/60 bg-background/90 sticky top-0 z-20 backdrop-blur">
@@ -161,16 +236,26 @@ export function EmployeeDashboard() {
             </h1>
             <p className="text-[12px] text-muted-foreground">
               {new Date().toLocaleDateString("en-GB", { weekday: "long", month: "short", day: "numeric" })}
+              {shift?.shiftStart && (
+                <> · Shift {shift.shiftStart}{shift.shiftEnd ? `–${shift.shiftEnd}` : ""}</>
+              )}
             </p>
           </div>
-          <span className="shrink-0 rounded-full bg-emerald-100 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wider text-emerald-700">
-            My workspace
+          <span
+            className={cn(
+              "shrink-0 rounded-full px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wider",
+              onBreak ? "bg-amber-100 text-amber-700"
+                : open ? "bg-emerald-100 text-emerald-700"
+                : "bg-muted text-muted-foreground",
+            )}
+          >
+            {onBreak ? "On break" : open ? "Working" : "Off duty"}
           </span>
         </div>
       </div>
 
       <div className="px-4 md:px-6 py-4 max-w-[1200px] mx-auto space-y-4">
-        {/* MY DAY */}
+        {/* MY DAY — check in / out / break */}
         <section className="rounded-2xl border border-border/60 bg-card p-5">
           <div className="text-[10px] uppercase tracking-[0.18em] text-muted-foreground font-semibold">
             My day
@@ -182,22 +267,30 @@ export function EmployeeDashboard() {
               Tomar account kono employee profile er sathe link kora nei. HR ke bolo.
             </p>
           ) : (
-            <div className="mt-3 flex flex-wrap items-center gap-4">
+            <div className="mt-3 flex flex-wrap items-center gap-5">
               <div>
                 <div className="text-[11px] uppercase tracking-wide text-muted-foreground flex items-center gap-1">
                   <Clock className="size-3.5" /> Worked today
                 </div>
                 <div className="font-bold text-3xl tabular-nums leading-tight">{hhmm(workMins)}</div>
-              </div>
-              <div>
-                <div className="text-[11px] uppercase tracking-wide text-muted-foreground flex items-center gap-1">
-                  <Coffee className="size-3.5" /> Status
-                </div>
-                <div className={cn("font-semibold text-sm", open ? "text-emerald-600" : "text-muted-foreground")}>
-                  {open ? "Checked in" : entries.length ? "Checked out" : "Not started"}
+                <div className="text-[11px] text-muted-foreground">
+                  In {clock(firstIn)} · Break {hhmm(breakMins)}
                 </div>
               </div>
-              <div className="ml-auto flex items-center gap-2">
+
+              <div className="ml-auto flex flex-wrap items-center gap-2">
+                {open && (
+                  <Button
+                    size="sm"
+                    variant={onBreak ? "default" : "outline"}
+                    disabled={brk.isPending}
+                    onClick={() => brk.mutate(onBreak ? "end" : "start")}
+                    className="gap-1.5"
+                  >
+                    {onBreak ? <Play className="size-4" /> : <Coffee className="size-4" />}
+                    {onBreak ? "Resume work" : "Break"}
+                  </Button>
+                )}
                 <Button
                   size="sm"
                   disabled={punch.isPending}
@@ -218,21 +311,99 @@ export function EmployeeDashboard() {
           )}
         </section>
 
-        {/* MY TASKS */}
-        {employeeLinked && (
-          <section className="grid grid-cols-2 md:grid-cols-5 gap-3">
-            {[
-              { label: "Present days", v: String(mine?.present ?? 0) },
-              { label: "Worked (month)", v: hhmm(mine?.workedMins ?? 0) },
-              { label: "Overtime", v: hhmm(mine?.otMins ?? 0) },
-              { label: "Late days", v: String(mine?.lateDays ?? 0) },
-              { label: "Leave pending", v: String(mine?.pendingLeaves ?? 0) },
-            ].map((s) => (
-              <div key={s.label} className="rounded-xl border border-border/60 bg-card p-3">
-                <div className="text-[10px] uppercase tracking-wide text-muted-foreground">{s.label}</div>
-                <div className="mt-1 text-lg font-bold tabular-nums">{s.v}</div>
+        {/* TODAY'S BOOKINGS */}
+        <section className="space-y-2">
+          <div className="text-[10px] uppercase tracking-[0.18em] text-muted-foreground font-semibold">
+            Today's orders
+          </div>
+          {dayLoading ? (
+            <Skeleton className="h-20 w-full" />
+          ) : (
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+              <Stat label="New bookings" value={String(day?.bookings.placed ?? 0)} icon={ShoppingCart} />
+              <Stat label="Confirmed" value={String(day?.bookings.confirmed ?? 0)} icon={CheckCircle2} tone="good" />
+              <Stat label="Shipped" value={String(day?.bookings.shipped ?? 0)} icon={Truck} />
+              <Stat label="Delivered" value={String(day?.bookings.delivered ?? 0)} icon={PackageCheck} tone="good" />
+            </div>
+          )}
+        </section>
+
+        {/* MY PERFORMANCE */}
+        <section className="space-y-2">
+          <div className="text-[10px] uppercase tracking-[0.18em] text-muted-foreground font-semibold">
+            My performance
+          </div>
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+            <Stat label="My actions today" value={String(day?.myActionsToday ?? 0)} icon={Activity} tone="good" />
+            <Stat label="Last 7 days" value={String(day?.myActionsWeek ?? 0)} icon={Flame} />
+            <Stat label="Worked (month)" value={hhmm(mine?.workedMins ?? 0)} icon={Timer} />
+            <Stat
+              label="Present days"
+              value={String(mine?.present ?? 0)}
+              hint={`${mine?.lateDays ?? 0} late · OT ${hhmm(mine?.otMins ?? 0)}`}
+              icon={CalendarDays}
+            />
+          </div>
+
+          {trend.length > 0 && (
+            <div className="rounded-2xl border border-border/60 bg-card p-4">
+              <div className="flex items-end gap-2 h-24">
+                {trend.map((t) => (
+                  <div key={t.day} className="flex-1 flex flex-col items-center gap-1">
+                    <div className="w-full flex-1 flex items-end">
+                      <div
+                        className="w-full rounded-t bg-emerald-500/70"
+                        style={{ height: `${Math.max(4, (t.count / trendMax) * 100)}%` }}
+                        title={`${t.count} action${t.count === 1 ? "" : "s"}`}
+                      />
+                    </div>
+                    <span className="text-[10px] text-muted-foreground">
+                      {new Date(`${t.day}T00:00:00+06:00`).toLocaleDateString("en-GB", {
+                        weekday: "short", timeZone: "Asia/Dhaka",
+                      })}
+                    </span>
+                  </div>
+                ))}
               </div>
-            ))}
+            </div>
+          )}
+
+          {byStatus.length > 0 && (
+            <div className="flex flex-wrap gap-2">
+              {byStatus.map(([s, n]) => (
+                <span key={s} className="rounded-full border border-border/60 bg-card px-3 py-1 text-xs">
+                  {label(s)} <span className="font-semibold tabular-nums">{n}</span>
+                </span>
+              ))}
+            </div>
+          )}
+        </section>
+
+        {/* WHAT I DID TODAY */}
+        {(day?.recent?.length ?? 0) > 0 && (
+          <section className="rounded-2xl border border-border/60 bg-card overflow-hidden">
+            <div className="px-5 py-3 border-b border-border/60 flex items-center gap-2">
+              <Activity className="size-4 text-muted-foreground" />
+              <span className="text-[10px] uppercase tracking-[0.18em] text-muted-foreground font-semibold">
+                What I did today
+              </span>
+            </div>
+            <ul className="divide-y divide-border/60">
+              {day!.recent.map((a) => (
+                <li key={a.id} className="px-5 py-2.5 flex items-center justify-between gap-3">
+                  <div className="min-w-0">
+                    <div className="text-sm truncate">
+                      <span className="font-medium">{a.invoiceNo ?? "Order"}</span>
+                      {a.customer && <span className="text-muted-foreground"> · {a.customer}</span>}
+                    </div>
+                    <div className="text-[11px] text-muted-foreground">
+                      {a.fromStatus ? `${label(a.fromStatus)} → ` : ""}{label(a.toStatus)}
+                    </div>
+                  </div>
+                  <span className="shrink-0 text-[11px] text-muted-foreground tabular-nums">{clock(a.at)}</span>
+                </li>
+              ))}
+            </ul>
           </section>
         )}
 
