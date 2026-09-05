@@ -259,14 +259,13 @@ function Header({
               />
             ) : null}
             <div style={{ fontSize: 8, letterSpacing: 2.6, fontWeight: 700, color: MUTE }}>
-              {(b.company || "SWUS").toUpperCase()} · {kicker}
+              {(brandName || b.company || "SWUS").toUpperCase()} · {kicker}
             </div>
           </div>
           <h1 style={{ fontSize: 19, fontWeight: 700, margin: "3px 0 0", letterSpacing: -0.5, lineHeight: 1.1 }}>
             {title}
           </h1>
           <div style={{ display: "flex", gap: 6, marginTop: 5 }}>
-            {brandName && <Tag text={brandName.toUpperCase()} />}
             <Tag text={format(new Date(), "dd MMM yyyy · p").toUpperCase()} />
           </div>
         </div>
