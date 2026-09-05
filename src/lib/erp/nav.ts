@@ -79,7 +79,6 @@ export const NAV_GROUPS: Group[] = [
         icon: Truck,
         items: [
           { to: "/erp/courier", label: "Courier", icon: Truck },
-          { to: "/erp/dispatch", label: "Dispatch", icon: PackageCheck },
           { to: "/erp/returns", label: "Returns", icon: RotateCcw },
           { to: "/erp/reconciliation", label: "COD Reconciliation", icon: FileSpreadsheet },
         ],
