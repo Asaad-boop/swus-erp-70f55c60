@@ -1367,7 +1367,7 @@ function _WebOrdersPageBody() {
       <div className="mt-4 space-y-4">
 
       {activeTab === "incomplete" ? (
-        <div className="rounded-xl border border-border/60 bg-card overflow-hidden shadow-[0_1px_2px_rgba(0,0,0,0.02)]">
+        <div className="rounded-2xl border border-border/60 bg-card overflow-hidden shadow-sm">
           <IncompleteOrdersTable
             brandId={activeBrand?.id ?? null}
             brandIds={isAllBrands ? brandIds : activeBrand ? [activeBrand.id] : undefined}
@@ -1391,10 +1391,10 @@ function _WebOrdersPageBody() {
           </span>
         </div>
       )}
-      <div className="rounded-xl border border-border/60 bg-card overflow-x-auto shadow-[0_1px_2px_rgba(0,0,0,0.02)]">
+      <div className="rounded-2xl border border-border/60 bg-card overflow-x-auto shadow-sm">
         <Table>
           <TableHeader>
-            <TableRow className="bg-muted/30 hover:bg-muted/30 border-border/60">
+            <TableRow className="bg-muted/40 hover:bg-muted/40 border-border/60">
               <TableHead className="w-[36px] pl-3">
                 <Checkbox
                   checked={allVisibleSelected ? true : someVisibleSelected ? "indeterminate" : false}
