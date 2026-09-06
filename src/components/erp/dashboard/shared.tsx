@@ -63,9 +63,9 @@ export function greeting() {
 export function SectionLabel({ title, hint }: { title: string; hint?: string }) {
   return (
     <div className="flex items-baseline gap-2 pt-2">
-      <h2 className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">{title}</h2>
-      {hint ? <span className="text-[11px] text-slate-400 truncate">{hint}</span> : null}
-      <div className="flex-1 h-px bg-slate-200" />
+      <h2 className="text-[11px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">{title}</h2>
+      {hint ? <span className="text-[11px] text-muted-foreground/70 truncate">{hint}</span> : null}
+      <div className="flex-1 h-px bg-border/70" />
     </div>
   );
 }
@@ -83,7 +83,7 @@ export const OWNER_TABS: { key: OwnerTab; label: string; icon: typeof TrendingUp
 
 export function OwnerTabs({ value, onChange }: { value: OwnerTab; onChange: (v: OwnerTab) => void }) {
   return (
-    <div className="flex items-center gap-1 overflow-x-auto rounded-lg border border-slate-200 bg-slate-50 p-1">
+    <div className="flex items-center gap-1 overflow-x-auto rounded-xl border border-border/60 bg-muted/40 p-1">
       {OWNER_TABS.map((t) => {
         const Icon = t.icon;
         const active = value === t.key;
@@ -93,8 +93,10 @@ export function OwnerTabs({ value, onChange }: { value: OwnerTab; onChange: (v: 
             type="button"
             onClick={() => onChange(t.key)}
             className={cn(
-              "inline-flex shrink-0 items-center gap-1.5 rounded-md px-3 py-1.5 text-[12px] font-medium transition-colors",
-              active ? "bg-white text-slate-900 shadow-sm ring-1 ring-slate-200" : "text-slate-500 hover:text-slate-800",
+              "inline-flex shrink-0 items-center gap-1.5 rounded-lg px-3 py-1.5 text-[12px] font-medium transition-all duration-150 ease-out",
+              active
+                ? "bg-card text-foreground ring-1 ring-border"
+                : "text-muted-foreground hover:text-foreground hover:bg-card/70",
             )}
           >
             <Icon className="size-3.5" />
@@ -275,13 +277,13 @@ export function KpiCard({
       onClick={() => clickable && onNav(to!)}
       type="button"
       className={cn(
-        "group text-left rounded-lg border border-slate-200 bg-white p-3 transition-colors",
-        "hover:border-slate-300 hover:shadow-sm",
-        clickable ? "cursor-pointer" : "cursor-default",
+        "group text-left rounded-xl border border-border/60 bg-card p-3.5 transition-all duration-200 ease-out",
+        "hover:border-border hover:-translate-y-px focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/50",
+        clickable ? "cursor-pointer active:scale-[0.99]" : "cursor-default",
       )}
     >
       <div className="flex items-center justify-between gap-2 mb-2">
-        <span className="text-[10.5px] font-medium uppercase tracking-wider text-slate-500 truncate">
+        <span className="text-[10.5px] font-medium uppercase tracking-wider text-muted-foreground truncate">
           {label}
         </span>
         <Icon className={cn("size-3.5 shrink-0", toneFg(tone))} />
@@ -292,7 +294,7 @@ export function KpiCard({
       ) : (
         <div
           className={cn(
-            "tabular-nums leading-none tracking-tight font-semibold text-slate-900 text-[22px]",
+            "tabular-nums leading-none tracking-tight font-semibold text-foreground text-[22px]",
             typeof amount === "number" && moneyTier(amount),
           )}
         >
@@ -302,7 +304,7 @@ export function KpiCard({
 
       <div className="mt-2 flex items-center gap-1.5 min-h-[16px]">
         {typeof trend === "number" && <TrendChip trend={trend} />}
-        <span className="text-[11px] text-slate-500 truncate">{sub}</span>
+        <span className="text-[11px] text-muted-foreground/80 truncate">{sub}</span>
       </div>
     </button>
   );
@@ -443,7 +445,7 @@ export function BrandComparison({ brands, range }: { brands: Brand[]; range: Ret
             return (
               <div
                 key={b.id}
-                className="group relative rounded-xl border border-border/60 bg-card p-4 hover:shadow-sm hover:-translate-y-0.5 transition-all overflow-hidden"
+                className="group relative rounded-xl border border-border/60 bg-card p-4 hover:border-border hover:-translate-y-0.5 transition-all duration-200 ease-out overflow-hidden"
               >
                 <div className="absolute -top-10 -right-10 size-32 rounded-full bg-primary/5 blur-2xl pointer-events-none" />
                 {/* Brand header */}
@@ -574,7 +576,7 @@ export function TrendChart({
           {(["revenue","orders","both"] as const).map(m => (
             <button key={m} onClick={() => setMode(m)}
               className={cn("text-xs px-2.5 py-1 rounded capitalize transition",
-                mode === m ? "bg-background shadow-sm" : "text-muted-foreground")}>
+                mode === m ? "bg-background ring-1 ring-border" : "text-muted-foreground hover:text-foreground")}>
               {m}
             </button>
           ))}
@@ -883,7 +885,7 @@ export function FinanceSection({ brandIds, enabled, range }: { brandIds: string[
             </div>
             <div className="grid grid-cols-2 md:grid-cols-4 gap-2.5">
               {wallets.map(({ label, Icon, value }) => (
-                <div key={label} className="group relative rounded-xl border border-border/60 bg-card p-3 transition-all hover:border-border hover:shadow-sm">
+                <div key={label} className="group relative rounded-xl border border-border/60 bg-card p-3 transition-all duration-200 ease-out hover:border-border hover:-translate-y-px">
                   <div className="flex items-center justify-between mb-1.5">
                     <Icon className="size-4 text-muted-foreground" />
                     <span className="text-[10px] font-medium uppercase tracking-wider text-muted-foreground">{label}</span>
@@ -1573,7 +1575,7 @@ export function TodayAnalytics({ brandIds, enabled, range, rangeLabel }: { brand
   const xInterval = mode === "hourly" ? 2 : Math.max(0, Math.floor(series.length / 10));
 
   return (
-    <section className="rounded-2xl border border-border/60 bg-card shadow-sm overflow-hidden">
+    <section className="rounded-2xl border border-border/60 bg-card overflow-hidden">
       <header className="px-5 py-3.5 flex items-center justify-between border-b border-border/60">
         <div className="flex items-center gap-2.5 min-w-0">
           <div className="size-7 grid place-items-center rounded-md bg-muted border border-border/60 shrink-0">
@@ -1808,11 +1810,11 @@ export function HourlyOrdersComparison({ brandIds, enabled }: { brandIds: string
   const isLoading = todayQ.isLoading || prevQ.isLoading;
 
   return (
-    <section className="rounded-2xl border border-border/60 bg-card shadow-sm overflow-hidden">
+    <section className="rounded-2xl border border-border/60 bg-card overflow-hidden">
       <header className="px-5 py-4 border-b border-border/60">
         <div className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-3">
           <div className="flex items-center gap-3 min-w-0">
-            <div className="size-9 grid place-items-center rounded-xl bg-gradient-to-br from-indigo-500 to-indigo-600 shadow-sm shrink-0">
+            <div className="size-9 grid place-items-center rounded-xl bg-gradient-to-br from-indigo-500 to-indigo-600 shrink-0">
               <Clock className="size-4 text-white" />
             </div>
             <div className="min-w-0">
@@ -1975,7 +1977,7 @@ export function HourlyChartCard({
   const gradPrevId = `gradPrev-${title.replace(/\s+/g, "")}`;
 
   return (
-    <div className="group relative rounded-2xl border border-border/60 bg-card p-5 shadow-sm hover:shadow-md transition-shadow overflow-hidden">
+    <div className="group relative rounded-2xl border border-border/60 bg-card p-5 hover:border-border transition-colors duration-200 overflow-hidden">
       {/* subtle accent glow */}
       <div
         className="absolute -top-16 -right-16 size-40 rounded-full opacity-40 blur-3xl pointer-events-none"
@@ -2177,35 +2179,37 @@ export function DashboardShell({
   const { activeBrand, isAllBrands, brands } = useBrand();
   const name = useMyName();
   return (
-    <div className="min-h-screen bg-white text-slate-900">
-      <div className="border-b border-slate-200 bg-white/90 sticky top-0 z-20 backdrop-blur supports-[backdrop-filter]:bg-white/75">
+    <div className="min-h-screen bg-background text-foreground">
+      <div className="border-b border-border/60 bg-background/85 sticky top-0 z-20 backdrop-blur supports-[backdrop-filter]:bg-background/70">
         <div className="px-4 md:px-6 py-3 max-w-[1600px] mx-auto">
           <div className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-3 sm:flex sm:flex-wrap sm:justify-between">
             <div className="min-w-0 flex items-baseline gap-3 flex-wrap">
-              <h1 className="text-[15px] font-semibold tracking-tight text-slate-900 truncate">
+              <h1 className="text-[15px] font-semibold tracking-tight truncate">
                 {greeting()}, {name}
               </h1>
               <span
                 className={cn(
-                  "shrink-0 rounded-full px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wider",
-                  badgeTone === "owner" ? "bg-amber-100 text-amber-700" : "bg-indigo-100 text-indigo-700",
+                  "shrink-0 rounded-full px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wider ring-1 ring-inset",
+                  badgeTone === "owner"
+                    ? "bg-amber-500/10 text-amber-600 ring-amber-500/20 dark:text-amber-400"
+                    : "bg-indigo-500/10 text-indigo-600 ring-indigo-500/20 dark:text-indigo-400",
                 )}
               >
                 {badge}
               </span>
-              <span className="text-[12px] text-slate-500 truncate">
+              <span className="text-[12px] text-muted-foreground truncate">
                 {isAllBrands ? `All Brands · ${brands.length}` : activeBrand?.name ?? ""}
-                <span className="mx-1.5 text-slate-300">·</span>
+                <span className="mx-1.5 text-border">·</span>
                 {new Date().toLocaleDateString("en-GB", { weekday: "short", month: "short", day: "numeric" })}
               </span>
             </div>
             <div className="flex flex-wrap items-center gap-1.5 shrink-0">
               {actions}
-              <span className="hidden md:inline-flex items-center gap-1.5 text-[11px] text-slate-500">
-                <span className="size-1.5 rounded-full bg-emerald-500" />
+              <span className="hidden md:inline-flex items-center gap-1.5 text-[11px] text-muted-foreground">
+                <span className="size-1.5 rounded-full bg-emerald-500 motion-safe:animate-pulse" />
                 Updated {timeAgo(lastSync)}
               </span>
-              <Button size="sm" variant="ghost" onClick={onRefresh} className="gap-1.5 h-8 px-2 text-slate-600 hover:text-slate-900">
+              <Button size="sm" variant="ghost" onClick={onRefresh} className="gap-1.5 h-8 px-2 text-muted-foreground hover:text-foreground transition-colors">
                 <RefreshCw className="size-3.5" />
                 <span className="hidden sm:inline">Refresh</span>
               </Button>

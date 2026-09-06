@@ -53,7 +53,7 @@ export function OrderFlowTodayCard({ brandIds, enabled }: { brandIds: string[]; 
   });
 
   return (
-    <Card className="border-slate-200 shadow-none">
+    <Card className="border-border/60 shadow-none">
       <CardHeader className="flex flex-row items-center justify-between pb-2">
         <CardTitle className="flex items-center gap-1.5 text-[13px] font-semibold">
           <PackageCheck className="size-3.5 text-indigo-600" /> Order flow today
@@ -107,7 +107,7 @@ export function CourierReturnTodayCard({ brandIds, enabled }: { brandIds: string
   });
 
   return (
-    <Card className="border-slate-200 shadow-none">
+    <Card className="border-border/60 shadow-none">
       <CardHeader className="flex flex-row items-center justify-between pb-2">
         <CardTitle className="flex items-center gap-1.5 text-[13px] font-semibold">
           <Truck className="size-3.5 text-indigo-600" /> Courier & returns today
@@ -143,8 +143,8 @@ function Metric({
   tone?: "emerald" | "amber" | "rose";
 }) {
   return (
-    <div className="rounded-md border border-slate-200 bg-slate-50/60 p-2">
-      <div className="text-[10px] uppercase tracking-wide text-slate-500">{label}</div>
+    <div className="rounded-md border border-border/60 bg-muted/40 p-2">
+      <div className="text-[10px] uppercase tracking-wide text-muted-foreground">{label}</div>
       <div
         className={cn(
           "text-lg font-bold tabular-nums",

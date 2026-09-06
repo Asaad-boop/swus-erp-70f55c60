@@ -20,7 +20,7 @@ const STATE: Record<LiveEmployee["state"], { label: string; cls: string }> = {
   present: { label: "Working", cls: "bg-emerald-50 text-emerald-700 border-emerald-200" },
   on_break: { label: "On break", cls: "bg-amber-50 text-amber-700 border-amber-200" },
   left: { label: "Left", cls: "bg-sky-50 text-sky-700 border-sky-200" },
-  not_in: { label: "Not in", cls: "bg-slate-50 text-slate-500 border-slate-200" },
+  not_in: { label: "Not in", cls: "bg-muted/40 text-muted-foreground border-border/60" },
 };
 
 /** Admin view: who came to office today and who is actually working right now. */
@@ -47,7 +47,7 @@ export function TeamTodayCard() {
   });
 
   return (
-    <Card className="border-slate-200 shadow-none">
+    <Card className="border-border/60 shadow-none">
       <CardHeader className="pb-2 flex flex-row items-center justify-between">
         <CardTitle className="text-[13px] font-semibold flex items-center gap-1.5">
           <Users className="size-3.5 text-indigo-600" /> Team today
@@ -60,7 +60,7 @@ export function TeamTodayCard() {
         {q.isLoading ? (
           <Skeleton className="h-28 w-full" />
         ) : rows.length === 0 ? (
-          <p className="text-[12px] text-slate-500">কোনো active employee নেই।</p>
+          <p className="text-[12px] text-muted-foreground">কোনো active employee নেই।</p>
         ) : (
           <>
             <div className="grid grid-cols-4 gap-2">
@@ -69,12 +69,12 @@ export function TeamTodayCard() {
               <Metric label="On break" value={counts.onBreak} tone="amber" />
               <Metric label="Not in" value={counts.notIn} tone="slate" />
             </div>
-            <ul className="mt-3 max-h-56 overflow-auto divide-y divide-slate-100">
+            <ul className="mt-3 max-h-56 overflow-auto divide-y divide-border/50">
               {ordered.map((r) => (
                 <li key={r.id} className="flex items-center justify-between gap-2 py-1.5 text-[12px]">
-                  <span className="truncate text-slate-700">{r.full_name}</span>
+                  <span className="truncate text-foreground/80">{r.full_name}</span>
                   <span className="flex shrink-0 items-center gap-2">
-                    <span className="tabular-nums text-slate-500">{clock(r.firstIn)}</span>
+                    <span className="tabular-nums text-muted-foreground">{clock(r.firstIn)}</span>
                     <span
                       className={cn(
                         "rounded-full border px-1.5 py-0.5 text-[10px] font-medium",
@@ -104,14 +104,14 @@ function Metric({
   tone?: "emerald" | "amber" | "slate";
 }) {
   return (
-    <div className="rounded-md border border-slate-200 bg-slate-50/60 p-2">
-      <div className="text-[10px] uppercase tracking-wide text-slate-500">{label}</div>
+    <div className="rounded-md border border-border/60 bg-muted/40 p-2">
+      <div className="text-[10px] uppercase tracking-wide text-muted-foreground">{label}</div>
       <div
         className={cn(
           "text-lg font-bold tabular-nums",
           tone === "emerald" && "text-emerald-600",
           tone === "amber" && "text-amber-600",
-          tone === "slate" && "text-slate-400",
+          tone === "slate" && "text-muted-foreground/70",
         )}
       >
         {value}
