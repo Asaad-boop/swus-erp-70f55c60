@@ -2184,30 +2184,32 @@ export function DashboardShell({
         <div className="px-4 md:px-6 py-3 max-w-[1600px] mx-auto">
           <div className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-3 sm:flex sm:flex-wrap sm:justify-between">
             <div className="min-w-0 flex items-baseline gap-3 flex-wrap">
-              <h1 className="text-[15px] font-semibold tracking-tight text-slate-900 truncate">
+              <h1 className="text-[15px] font-semibold tracking-tight truncate">
                 {greeting()}, {name}
               </h1>
               <span
                 className={cn(
-                  "shrink-0 rounded-full px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wider",
-                  badgeTone === "owner" ? "bg-amber-100 text-amber-700" : "bg-indigo-100 text-indigo-700",
+                  "shrink-0 rounded-full px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wider ring-1 ring-inset",
+                  badgeTone === "owner"
+                    ? "bg-amber-500/10 text-amber-600 ring-amber-500/20 dark:text-amber-400"
+                    : "bg-indigo-500/10 text-indigo-600 ring-indigo-500/20 dark:text-indigo-400",
                 )}
               >
                 {badge}
               </span>
-              <span className="text-[12px] text-slate-500 truncate">
+              <span className="text-[12px] text-muted-foreground truncate">
                 {isAllBrands ? `All Brands · ${brands.length}` : activeBrand?.name ?? ""}
-                <span className="mx-1.5 text-slate-300">·</span>
+                <span className="mx-1.5 text-border">·</span>
                 {new Date().toLocaleDateString("en-GB", { weekday: "short", month: "short", day: "numeric" })}
               </span>
             </div>
             <div className="flex flex-wrap items-center gap-1.5 shrink-0">
               {actions}
-              <span className="hidden md:inline-flex items-center gap-1.5 text-[11px] text-slate-500">
-                <span className="size-1.5 rounded-full bg-emerald-500" />
+              <span className="hidden md:inline-flex items-center gap-1.5 text-[11px] text-muted-foreground">
+                <span className="size-1.5 rounded-full bg-emerald-500 motion-safe:animate-pulse" />
                 Updated {timeAgo(lastSync)}
               </span>
-              <Button size="sm" variant="ghost" onClick={onRefresh} className="gap-1.5 h-8 px-2 text-slate-600 hover:text-slate-900">
+              <Button size="sm" variant="ghost" onClick={onRefresh} className="gap-1.5 h-8 px-2 text-muted-foreground hover:text-foreground transition-colors">
                 <RefreshCw className="size-3.5" />
                 <span className="hidden sm:inline">Refresh</span>
               </Button>
