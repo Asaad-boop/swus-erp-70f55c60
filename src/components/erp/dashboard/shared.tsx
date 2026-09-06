@@ -1575,7 +1575,7 @@ export function TodayAnalytics({ brandIds, enabled, range, rangeLabel }: { brand
   const xInterval = mode === "hourly" ? 2 : Math.max(0, Math.floor(series.length / 10));
 
   return (
-    <section className="rounded-2xl border border-border/60 bg-card shadow-sm overflow-hidden">
+    <section className="rounded-2xl border border-border/60 bg-card overflow-hidden">
       <header className="px-5 py-3.5 flex items-center justify-between border-b border-border/60">
         <div className="flex items-center gap-2.5 min-w-0">
           <div className="size-7 grid place-items-center rounded-md bg-muted border border-border/60 shrink-0">
@@ -1810,7 +1810,7 @@ export function HourlyOrdersComparison({ brandIds, enabled }: { brandIds: string
   const isLoading = todayQ.isLoading || prevQ.isLoading;
 
   return (
-    <section className="rounded-2xl border border-border/60 bg-card shadow-sm overflow-hidden">
+    <section className="rounded-2xl border border-border/60 bg-card overflow-hidden">
       <header className="px-5 py-4 border-b border-border/60">
         <div className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-3">
           <div className="flex items-center gap-3 min-w-0">
@@ -2179,8 +2179,8 @@ export function DashboardShell({
   const { activeBrand, isAllBrands, brands } = useBrand();
   const name = useMyName();
   return (
-    <div className="min-h-screen bg-white text-slate-900">
-      <div className="border-b border-slate-200 bg-white/90 sticky top-0 z-20 backdrop-blur supports-[backdrop-filter]:bg-white/75">
+    <div className="min-h-screen bg-background text-foreground">
+      <div className="border-b border-border/60 bg-background/85 sticky top-0 z-20 backdrop-blur supports-[backdrop-filter]:bg-background/70">
         <div className="px-4 md:px-6 py-3 max-w-[1600px] mx-auto">
           <div className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-3 sm:flex sm:flex-wrap sm:justify-between">
             <div className="min-w-0 flex items-baseline gap-3 flex-wrap">
