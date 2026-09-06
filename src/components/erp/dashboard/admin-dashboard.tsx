@@ -51,9 +51,22 @@ export function AdminDashboard({ actions }: { actions?: React.ReactNode }) {
         <LiveVisitors />
       </div>
 
+      <SectionLabel title="Team today" hint="Attendance live" />
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
+        <TeamTodayCard />
+        <TeamActivityCard brandIds={brandIds} enabled={enabled} />
+      </div>
+
+      <SectionLabel title="Today's operations" hint="Order · courier · return" />
+      <div className="grid grid-cols-1 gap-3">
+        <OrderFlowTodayCard brandIds={brandIds} enabled={enabled} />
+        <CourierReturnTodayCard brandIds={brandIds} enabled={enabled} />
+      </div>
+
       <SectionLabel title="Order flow" hint={mktRange.label} />
       <KpiStrip brandIds={brandIds} enabled={enabled} range={range} onNav={(to) => navigate({ to: to as never })} />
       <WebsiteOrdersOverview brandIds={brandIds} enabled={enabled} range={range} rangeLabel={mktRange.label} />
+
 
       <SectionLabel title="Needs action" />
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
