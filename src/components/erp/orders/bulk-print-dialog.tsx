@@ -13,7 +13,7 @@ import { markOrdersPrinted } from "@/lib/erp/mark-printed";
 import { useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 import {
-  PackSheet, PickSheet, DEFAULT_SHEET_OPTIONS,
+  PackSheet, PickSheet, DEFAULT_SHEET_OPTIONS, sortOrdersForDispatch, dispatchSerialMap,
   type SheetMode, type SheetOptions, type SheetOrder,
 } from "@/components/erp/dispatch/pack-pick-sheet";
 
@@ -71,6 +71,9 @@ export function BulkPrintDialog({
   const qc = useQueryClient();
   const [sheets, setSheets] = useState<Record<SheetMode, boolean>>({ order: false, product: true, sku: false });
   const [sheetOpts, setSheetOpts] = useState<SheetOptions>(DEFAULT_SHEET_OPTIONS);
+  // Invoice mode: attach the packing paperwork in the exact same serial flow.
+  const [withPack, setWithPack] = useState(true);
+  const [withPick, setWithPick] = useState(true);
 
   const { data, isLoading } = useQuery({
     queryKey: ["bulk-print", mode, orderIds.sort().join(",")],
@@ -125,6 +128,40 @@ export function BulkPrintDialog({
     })).sort((a, b) => b.count - a.count);
   })();
 
+  const sheetOrders: SheetOrder[] = orders.map((o) => ({
+    ...(o as object),
+    items: (itemsByOrder.get(o.id) ?? []).map((it: any) => ({
+      name: it.name ?? "",
+      variant_label: it.variant_label ?? null,
+      quantity: Number(it.quantity || 0),
+      price: it.price ?? null,
+      image: it.image ?? null,
+      sku: it.sku || null,
+    })),
+  })) as SheetOrder[];
+
+  // One canonical flow: dominant-SKU groups first, extras stacked, serial shared
+  // by the invoices and by every sheet.
+  const dispatchRows = sortOrdersForDispatch(sheetOrders);
+  const serialMap = dispatchSerialMap(dispatchRows);
+  const flowOrders = dispatchRows.map((r) => r.order);
+  const metaById = new Map(dispatchRows.map((r) => [r.order.id, r]));
+
+  const fallbackBrandId = activeBrand?.id ?? brandBreakdown[0]?.id ?? null;
+  const groupBrand = (list: SheetOrder[]) => {
+    const groups = new Map<string, SheetOrder[]>();
+    for (const o of list) {
+      const key = (o as any).brand_id ?? fallbackBrandId ?? "unknown";
+      const arr = groups.get(key) ?? [];
+      arr.push(o);
+      groups.set(key, arr);
+    }
+    return Array.from(groups.entries()).map(([id, gOrders]) => {
+      const b = brands.find((x) => x.id === id) ?? activeBrand ?? null;
+      return { id, orders: gOrders, name: b?.name ?? null, logo: b?.logo_url ?? null };
+    });
+  };
+
   return (
     <>
       <Dialog open={open} onOpenChange={onOpenChange}>
@@ -135,12 +172,19 @@ export function BulkPrintDialog({
             </DialogTitle>
             <DialogDescription>
               {orderIds.length} order{orderIds.length === 1 ? "" : "s"} selected.
-              {mode === "invoice" && " Each invoice prints on its own page using the active brand's invoice settings."}
+              {mode === "invoice" && " Invoices print in packing flow order (highest-demand SKU first) with a matching pack/picking list."}
               {mode === "sticker" && " 4 stickers per A4 page — fold and attach to parcel."}
               {mode === "picking" && " Pack list + picking list — choose one or more views below."}
               {mode === "sheet" && " One condensed table of all selected orders."}
             </DialogDescription>
           </DialogHeader>
+          {mode === "invoice" && (
+            <div className="flex flex-wrap items-center gap-1.5">
+              <span className="text-[10px] uppercase tracking-wider text-muted-foreground mr-0.5">Attach</span>
+              <SheetOptionChip checked={withPack} onChange={setWithPack} icon={Package} label="Pack list (order-wise)" />
+              <SheetOptionChip checked={withPick} onChange={setWithPick} icon={LayoutList} label="Picking list" />
+            </div>
+          )}
           {mode === "picking" && (
             <div className="space-y-2.5">
               <div className="grid grid-cols-3 gap-1.5">
@@ -229,62 +273,65 @@ export function BulkPrintDialog({
       {/* Hidden print payload — only visible at print time via .print-area CSS */}
       {open && ready && (
         <div className="print-area" style={{ display: "none" }}>
-          {mode === "invoice" && orders.map((o) => (
-            <div key={o.id} className="print-page">
-              <PrintableInvoice
-                order={o as any}
-                items={(itemsByOrder.get(o.id) ?? []) as any}
-                visible
-                bulk
-              />
-            </div>
-          ))}
+          {mode === "invoice" && (
+            <>
+              {flowOrders.map((so) => {
+                const o = orders.find((x) => x.id === so.id)!;
+                const meta = metaById.get(so.id)!;
+                return (
+                  <div key={o.id} className="print-page">
+                    <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 10, marginBottom: 6, paddingBottom: 4, borderBottom: "1px solid #111113", color: "#111113" }}>
+                      <span style={{ display: "inline-flex", alignItems: "center", gap: 7 }}>
+                        <span style={{ display: "inline-block", minWidth: 24, padding: "1px 5px", border: "1px solid #111113", borderRadius: 4, fontSize: 12, fontWeight: 700, textAlign: "center", fontVariantNumeric: "tabular-nums" }}>
+                          {meta.serial}
+                        </span>
+                        <span style={{ fontSize: 8.5, letterSpacing: 1.2, fontWeight: 700, textTransform: "uppercase", color: "#76767e" }}>
+                          Pack serial · {meta.groupLabel}
+                        </span>
+                      </span>
+                      {meta.isMulti && (
+                        <span style={{ fontSize: 9, fontWeight: 800, letterSpacing: 1, border: "1.4px solid #111113", borderRadius: 3, padding: "1px 7px" }}>
+                          {meta.distinct > 1 ? `${meta.distinct} ITEMS · ` : ""}× {meta.units} PCS
+                        </span>
+                      )}
+                    </div>
+                    <PrintableInvoice
+                      order={o as any}
+                      items={(itemsByOrder.get(o.id) ?? []) as any}
+                      visible
+                      bulk
+                    />
+                  </div>
+                );
+              })}
+              {groupBrand(flowOrders).map((g) => (
+                <div key={`att-${g.id}`}>
+                  {withPack && (
+                    <div className="print-page"><PackSheet orders={g.orders} options={sheetOpts} brandName={g.name} brandLogo={g.logo} serials={serialMap} /></div>
+                  )}
+                  {withPick && (
+                    <div className="print-page"><PickSheet orders={g.orders} by="product" options={sheetOpts} brandName={g.name} brandLogo={g.logo} /></div>
+                  )}
+                </div>
+              ))}
+            </>
+          )}
           {mode === "sticker" && (
             <StickerSheet orders={orders} brandName={activeBrand?.name ?? ""} cfg={config} />
           )}
-          {mode === "picking" && (() => {
-            const sheetOrders: SheetOrder[] = orders.map((o) => ({
-              ...(o as object),
-              items: (itemsByOrder.get(o.id) ?? []).map((it: any) => ({
-                name: it.name ?? "",
-                variant_label: it.variant_label ?? null,
-                quantity: Number(it.quantity || 0),
-                price: it.price ?? null,
-                image: it.image ?? null,
-                sku: it.sku || null,
-              })),
-            })) as SheetOrder[];
-            // Split sheets per brand — each brand gets its own pages with its own logo
-            const fallbackBrandId = activeBrand?.id ?? brandBreakdown[0]?.id ?? null;
-            const groups = new Map<string, SheetOrder[]>();
-            for (const o of sheetOrders) {
-              const key = (o as any).brand_id ?? fallbackBrandId ?? "unknown";
-              const list = groups.get(key) ?? [];
-              list.push(o);
-              groups.set(key, list);
-            }
-            const brandGroups = Array.from(groups.entries()).map(([id, orders]) => {
-              const b = brands.find((x) => x.id === id) ?? activeBrand ?? null;
-              return { id, orders, name: b?.name ?? null, logo: b?.logo_url ?? null };
-            });
-            return (
-              <>
-                {brandGroups.map((g) => (
-                  <div key={g.id}>
-                    {sheets.order && (
-                      <div className="print-page"><PackSheet orders={g.orders} options={sheetOpts} brandName={g.name} brandLogo={g.logo} /></div>
-                    )}
-                    {sheets.product && (
-                      <div className="print-page"><PickSheet orders={g.orders} by="product" options={sheetOpts} brandName={g.name} brandLogo={g.logo} /></div>
-                    )}
-                    {sheets.sku && (
-                      <div className="print-page"><PickSheet orders={g.orders} by="sku" options={sheetOpts} brandName={g.name} brandLogo={g.logo} /></div>
-                    )}
-                  </div>
-                ))}
-              </>
-            );
-          })()}
+          {mode === "picking" && groupBrand(flowOrders).map((g) => (
+            <div key={g.id}>
+              {sheets.order && (
+                <div className="print-page"><PackSheet orders={g.orders} options={sheetOpts} brandName={g.name} brandLogo={g.logo} serials={serialMap} /></div>
+              )}
+              {sheets.product && (
+                <div className="print-page"><PickSheet orders={g.orders} by="product" options={sheetOpts} brandName={g.name} brandLogo={g.logo} /></div>
+              )}
+              {sheets.sku && (
+                <div className="print-page"><PickSheet orders={g.orders} by="sku" options={sheetOpts} brandName={g.name} brandLogo={g.logo} /></div>
+              )}
+            </div>
+          ))}
           {mode === "sheet" && (
             <OrderSheet orders={orders} itemsByOrder={itemsByOrder} brandName={activeBrand?.name ?? ""} cfg={config} />
           )}
