@@ -26,25 +26,8 @@ import { DateRangePicker, buildPreset, type MktRangeValue } from "@/components/e
 import { applyBrandScope } from "@/lib/erp/apply-brand-scope";
 import { moneyTier } from "@/lib/erp/money-tier";
 import { cn } from "@/lib/utils";
-import { useCurrentRole } from "@/hooks/use-current-role";
-import { hasAnyBackoffice } from "@/lib/erp/access";
-import {
-  NetProfitCard, CashPositionCard, CodRemittancePipelineCard, RoasComparisonCard,
-  AdWalletBalanceCard, StuckOrdersCard, ReturnRateByProductCard, CourierPerformanceCard,
-  AbandonedCartRecoveryCard, NewVsReturningCard,
-} from "@/components/erp/dashboard/widgets";
-import { WebsiteOrdersOverview } from "@/components/erp/dashboard/website-orders-overview";
-import {
-  TodayCommandPanel, LiveVisitors, ProfitQuality, ProductDangerZone,
-} from "@/components/erp/dashboard-command-center";
-import { EmployeeDashboard } from "@/components/erp/dashboard/employee-dashboard";
-import { TeamCostCard } from "@/components/erp/dashboard/team-cost-card";
-import { MonthPaceCard } from "@/components/erp/dashboard/month-pace-card";
-import {
-  ExecutiveKpi, NeedsYourAttention, PerformanceTrend, TargetForecast,
-  MarketingPerformance, OrderHealth, InventoryIntelligence, ProductPerformance,
-  CashAndFinance, ExpenseOverview, TeamOpsSummary, BusinessHealthScore, RecentActivity,
-} from "@/components/erp/dashboard/owner-suite";
+
+
 
 
 
