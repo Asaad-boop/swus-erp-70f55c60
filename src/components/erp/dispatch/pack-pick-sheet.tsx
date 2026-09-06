@@ -617,23 +617,45 @@ export function PickSheet({
 
 /* --------------------------------------------------------------- pack sheet */
 
+function GroupBar({ label, count, units }: { label: string; count: number; units: number }) {
+  return (
+    <div
+      style={{
+        display: "flex",
+        alignItems: "baseline",
+        justifyContent: "space-between",
+        gap: 10,
+        marginTop: 3,
+        paddingBottom: 3,
+        borderBottom: `1px solid ${INK}`,
+        pageBreakAfter: "avoid",
+      }}
+    >
+      <span style={{ fontSize: 9, fontWeight: 700, letterSpacing: 1.2, textTransform: "uppercase" }}>{label}</span>
+      <span style={{ fontSize: 8.5, color: MUTE, fontWeight: 700, letterSpacing: 1 }}>
+        {count} ORDER{count === 1 ? "" : "S"} · {units} PCS
+      </span>
+    </div>
+  );
+}
+
 export function PackSheet({
   orders,
   options = DEFAULT_SHEET_OPTIONS,
   brandName,
   brandLogo,
+  serials,
 }: {
   orders: SheetOrder[];
   options?: SheetOptions;
   brandName?: string | null;
   brandLogo?: string | null;
+  serials?: Map<string, number>;
 }) {
-  const sorted = sortOrdersForPacking(orders);
-  const totalUnits = sorted.reduce((s, o) => s + (o.items ?? []).reduce((t, i) => t + i.quantity, 0), 0);
-  const multi = sorted.filter(
-    (o) => new Set((o.items ?? []).map((i) => `${i.name}|${i.variant_label ?? ""}`)).size > 1,
-  ).length;
-  const noted = sorted.filter((o) => !!orderNote(o)).length;
+  const rows = sortOrdersForDispatch(orders);
+  const totalUnits = rows.reduce((s, r) => s + r.units, 0);
+  const multi = rows.filter((r) => r.isMulti).length;
+  const noted = rows.filter((r) => !!orderNote(r.order)).length;
   const no = sheetNo("order");
 
   return (
@@ -645,26 +667,38 @@ export function PackSheet({
         brandName={brandName}
         brandLogo={brandLogo}
         kpis={[
-          { label: "Orders", value: sorted.length },
-          { label: "Multi-item", value: multi },
+          { label: "Orders", value: rows.length },
+          { label: "Multi / extra qty", value: multi },
           { label: "Noted", value: noted },
           { label: "Units", value: totalUnits },
         ]}
       />
 
       <div style={{ display: "grid", gap: 7 }}>
-        {sorted.map((o, i) => {
+        {rows.map((r, i) => {
+          const o = r.order;
           const items = o.items ?? [];
-          const units = items.reduce((s, it) => s + it.quantity, 0);
-          const distinct = new Set(items.map((it) => `${it.name}|${it.variant_label ?? ""}`)).size;
+          const units = r.units;
+          const distinct = r.distinct;
           const note = orderNote(o);
           const inv = o.invoice_no ?? o.id.slice(0, 8);
           const place = [o.shipping_thana, o.shipping_city].filter(Boolean).join(", ");
+          const serial = serials?.get(o.id) ?? r.serial;
+          const newGroup = i === 0 || rows[i - 1]!.groupKey !== r.groupKey;
+          const groupRows = newGroup ? rows.filter((x) => x.groupKey === r.groupKey) : [];
           return (
+            <React.Fragment key={o.id}>
+            {newGroup && (
+              <GroupBar
+                label={r.groupLabel}
+                count={groupRows.length}
+                units={groupRows.reduce((s, x) => s + x.units, 0)}
+              />
+            )}
             <div
-              key={o.id}
               style={{
-                border: `1px solid ${LINE}`,
+                border: `1px solid ${r.isMulti ? INK : LINE}`,
+                borderLeft: r.isMulti ? `4px solid ${INK}` : `1px solid ${LINE}`,
                 borderRadius: 5,
                 overflow: "hidden",
                 pageBreakInside: "avoid",
@@ -673,10 +707,11 @@ export function PackSheet({
             >
               {/* head */}
               <div style={{ display: "flex", alignItems: "flex-start", gap: 10, padding: "7px 11px 6px" }}>
-                <SerialChip n={i + 1} size={26} />
+                <SerialChip n={serial} size={26} />
                 <div style={{ minWidth: 0, flex: 1 }}>
                   <div style={{ display: "flex", alignItems: "center", gap: 6, flexWrap: "wrap" }}>
                     <span style={{ fontFamily: MONO, fontWeight: 700, fontSize: 12.5 }}>#{inv}</span>
+                    {units > 1 && <Tag text={`× ${units} PCS`} tone="alert" />}
                     {distinct > 1 && <Tag text={`${distinct} ITEMS`} tone="alert" />}
                     {Number(o.advance_amount ?? 0) > 0 && (
                       <Tag text={`ADVANCE ${money(Number(o.advance_amount))}`} tone="good" />
@@ -689,6 +724,7 @@ export function PackSheet({
                     {[orderPhone(o), place, o.courier_name].filter(Boolean).join("  ·  ")}
                   </div>
                 </div>
+
                 <div style={{ textAlign: "right", flexShrink: 0 }}>
                   <div style={{ fontSize: 8, letterSpacing: 1.4, color: MUTE, fontWeight: 700 }}>
                     {isCod(o) ? "COD DUE" : "PREPAID"}
