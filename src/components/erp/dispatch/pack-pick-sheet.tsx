@@ -831,6 +831,7 @@ export function PackSheet({
                 </span>
               </div>
             </div>
+            </React.Fragment>
           );
         })}
       </div>
