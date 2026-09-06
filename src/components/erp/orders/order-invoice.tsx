@@ -72,6 +72,9 @@ export function PrintableInvoice({
       el.style.overflow = "";
       // measure natural height
       const h = el.scrollHeight;
+      // Not measurable (hidden container) → leave the invoice untouched, otherwise
+      // the clamp below would clip a still-unlaid-out invoice into a blank page.
+      if (!h) return;
       // Always leave a tiny safety gap so sub-pixel rounding can't spill to a 2nd page.
       const target = availPx - 2;
       if (h > target) {
