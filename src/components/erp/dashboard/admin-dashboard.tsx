@@ -17,6 +17,11 @@ import {
   StuckOrdersCard, CourierPerformanceCard, AbandonedCartRecoveryCard, NewVsReturningCard,
 } from "@/components/erp/dashboard/widgets";
 import { WebsiteOrdersOverview } from "@/components/erp/dashboard/website-orders-overview";
+import { TeamTodayCard } from "@/components/erp/dashboard/admin/team-today-card";
+import {
+  OrderFlowTodayCard,
+  CourierReturnTodayCard,
+} from "@/components/erp/dashboard/admin/today-ops-cards";
 import { TodayCommandPanel, LiveVisitors } from "@/components/erp/dashboard-command-center";
 
 /**
