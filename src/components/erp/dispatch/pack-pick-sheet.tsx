@@ -106,6 +106,102 @@ export function sortOrdersForPacking(orders: SheetOrder[]): SheetOrder[] {
   });
 }
 
+/* ------------------------------------------------- unified dispatch ordering */
+
+export type DispatchRow = {
+  order: SheetOrder;
+  serial: number;
+  groupKey: string;
+  groupLabel: string;
+  distinct: number;
+  units: number;
+  isMulti: boolean;
+};
+
+function itemKey(it: SheetItem) {
+  return itemSku(it) ?? `${it.name}|${it.variant_label ?? ""}`;
+}
+function itemLabel(it: SheetItem) {
+  return itemSku(it) ?? [it.name, it.variant_label].filter(Boolean).join(" · ");
+}
+
+/**
+ * Canonical print flow shared by invoices + pack list + picking list.
+ * Orders are grouped by their dominant SKU (the SKU with the most orders prints
+ * first). Inside a group, single-piece orders come first and every multi-piece /
+ * multi-product order stacks together at the end. Mixed-product orders form a
+ * final group so packers handle them in one go.
+ */
+export function sortOrdersForDispatch(orders: SheetOrder[]): DispatchRow[] {
+  const skuOrders = new Map<string, number>();
+  const skuUnits = new Map<string, number>();
+  for (const o of orders) {
+    const seen = new Set<string>();
+    for (const it of o.items ?? []) {
+      const k = itemKey(it);
+      skuUnits.set(k, (skuUnits.get(k) ?? 0) + it.quantity);
+      if (!seen.has(k)) {
+        seen.add(k);
+        skuOrders.set(k, (skuOrders.get(k) ?? 0) + 1);
+      }
+    }
+  }
+
+  const MIXED = "\uffffMIXED";
+  const meta = orders.map((o) => {
+    const items = o.items ?? [];
+    const keys = new Set(items.map(itemKey));
+    const distinct = keys.size;
+    const units = items.reduce((s, i) => s + i.quantity, 0);
+    let primary = items[0] ? itemKey(items[0]) : "";
+    let label = items[0] ? itemLabel(items[0]) : "—";
+    let best = -1;
+    for (const it of items) {
+      const k = itemKey(it);
+      const c = skuOrders.get(k) ?? 0;
+      if (c > best) {
+        best = c;
+        primary = k;
+        label = itemLabel(it);
+      }
+    }
+    const mixed = distinct > 1;
+    return {
+      order: o,
+      groupKey: mixed ? MIXED : primary,
+      groupLabel: mixed ? "Mixed / multi-product" : label,
+      distinct,
+      units,
+      isMulti: mixed || units > 1,
+    };
+  });
+
+  const groupRank = (key: string) => (key === MIXED ? -1 : (skuOrders.get(key) ?? 0));
+  const groupUnits = (key: string) => (key === MIXED ? -1 : (skuUnits.get(key) ?? 0));
+
+  meta.sort((a, b) => {
+    if (a.groupKey !== b.groupKey) {
+      if (a.groupKey === MIXED) return 1;
+      if (b.groupKey === MIXED) return -1;
+      const r = groupRank(b.groupKey) - groupRank(a.groupKey);
+      if (r !== 0) return r;
+      const u = groupUnits(b.groupKey) - groupUnits(a.groupKey);
+      if (u !== 0) return u;
+      return a.groupKey.localeCompare(b.groupKey);
+    }
+    if (a.units !== b.units) return a.units - b.units; // singles first, extras stacked at the end
+    return (a.order.invoice_no ?? "").localeCompare(b.order.invoice_no ?? "");
+  });
+
+  return meta.map((m, i) => ({ ...m, serial: i + 1 }));
+}
+
+/** Serial lookup keyed by order id — keeps invoices and sheets in one flow. */
+export function dispatchSerialMap(rows: DispatchRow[]): Map<string, number> {
+  return new Map(rows.map((r) => [r.order.id, r.serial]));
+}
+
+
 type PickRow = {
   name: string;
   variant: string | null;
@@ -137,7 +233,8 @@ export function aggregateRows(orders: SheetOrder[], by: "product" | "sku"): Pick
       map.set(key, row);
     }
   }
-  return Array.from(map.values()).sort((a, b) => b.qty - a.qty || b.orders - a.orders || a.name.localeCompare(b.name));
+  // Same flow as the invoice/pack ordering: the SKU with the most orders first.
+  return Array.from(map.values()).sort((a, b) => b.orders - a.orders || b.qty - a.qty || a.name.localeCompare(b.name));
 }
 
 /* -------------------------------------------------------------- primitives */
@@ -472,7 +569,10 @@ export function PickSheet({
                   </div>
                 ) : (
                   <>
-                    <div style={{ fontWeight: 600, fontSize: 12, lineHeight: 1.25 }}>{r.name}</div>
+                    <div style={{ fontWeight: 600, fontSize: 12, lineHeight: 1.25, display: "flex", alignItems: "center", gap: 6 }}>
+                      <span>{r.name}</span>
+                      {r.qty > r.orders && <Tag text={`EXTRA QTY +${r.qty - r.orders}`} tone="alert" />}
+                    </div>
                     {r.variant && <div style={{ color: MUTE, fontSize: 10, marginTop: 1 }}>{r.variant}</div>}
                   </>
                 )}
@@ -521,23 +621,45 @@ export function PickSheet({
 
 /* --------------------------------------------------------------- pack sheet */
 
+function GroupBar({ label, count, units }: { label: string; count: number; units: number }) {
+  return (
+    <div
+      style={{
+        display: "flex",
+        alignItems: "baseline",
+        justifyContent: "space-between",
+        gap: 10,
+        marginTop: 3,
+        paddingBottom: 3,
+        borderBottom: `1px solid ${INK}`,
+        pageBreakAfter: "avoid",
+      }}
+    >
+      <span style={{ fontSize: 9, fontWeight: 700, letterSpacing: 1.2, textTransform: "uppercase" }}>{label}</span>
+      <span style={{ fontSize: 8.5, color: MUTE, fontWeight: 700, letterSpacing: 1 }}>
+        {count} ORDER{count === 1 ? "" : "S"} · {units} PCS
+      </span>
+    </div>
+  );
+}
+
 export function PackSheet({
   orders,
   options = DEFAULT_SHEET_OPTIONS,
   brandName,
   brandLogo,
+  serials,
 }: {
   orders: SheetOrder[];
   options?: SheetOptions;
   brandName?: string | null;
   brandLogo?: string | null;
+  serials?: Map<string, number>;
 }) {
-  const sorted = sortOrdersForPacking(orders);
-  const totalUnits = sorted.reduce((s, o) => s + (o.items ?? []).reduce((t, i) => t + i.quantity, 0), 0);
-  const multi = sorted.filter(
-    (o) => new Set((o.items ?? []).map((i) => `${i.name}|${i.variant_label ?? ""}`)).size > 1,
-  ).length;
-  const noted = sorted.filter((o) => !!orderNote(o)).length;
+  const rows = sortOrdersForDispatch(orders);
+  const totalUnits = rows.reduce((s, r) => s + r.units, 0);
+  const multi = rows.filter((r) => r.isMulti).length;
+  const noted = rows.filter((r) => !!orderNote(r.order)).length;
   const no = sheetNo("order");
 
   return (
@@ -549,26 +671,38 @@ export function PackSheet({
         brandName={brandName}
         brandLogo={brandLogo}
         kpis={[
-          { label: "Orders", value: sorted.length },
-          { label: "Multi-item", value: multi },
+          { label: "Orders", value: rows.length },
+          { label: "Multi / extra qty", value: multi },
           { label: "Noted", value: noted },
           { label: "Units", value: totalUnits },
         ]}
       />
 
       <div style={{ display: "grid", gap: 7 }}>
-        {sorted.map((o, i) => {
+        {rows.map((r, i) => {
+          const o = r.order;
           const items = o.items ?? [];
-          const units = items.reduce((s, it) => s + it.quantity, 0);
-          const distinct = new Set(items.map((it) => `${it.name}|${it.variant_label ?? ""}`)).size;
+          const units = r.units;
+          const distinct = r.distinct;
           const note = orderNote(o);
           const inv = o.invoice_no ?? o.id.slice(0, 8);
           const place = [o.shipping_thana, o.shipping_city].filter(Boolean).join(", ");
+          const serial = serials?.get(o.id) ?? r.serial;
+          const newGroup = i === 0 || rows[i - 1]!.groupKey !== r.groupKey;
+          const groupRows = newGroup ? rows.filter((x) => x.groupKey === r.groupKey) : [];
           return (
+            <React.Fragment key={o.id}>
+            {newGroup && (
+              <GroupBar
+                label={r.groupLabel}
+                count={groupRows.length}
+                units={groupRows.reduce((s, x) => s + x.units, 0)}
+              />
+            )}
             <div
-              key={o.id}
               style={{
-                border: `1px solid ${LINE}`,
+                border: `1px solid ${r.isMulti ? INK : LINE}`,
+                borderLeft: r.isMulti ? `4px solid ${INK}` : `1px solid ${LINE}`,
                 borderRadius: 5,
                 overflow: "hidden",
                 pageBreakInside: "avoid",
@@ -577,10 +711,11 @@ export function PackSheet({
             >
               {/* head */}
               <div style={{ display: "flex", alignItems: "flex-start", gap: 10, padding: "7px 11px 6px" }}>
-                <SerialChip n={i + 1} size={26} />
+                <SerialChip n={serial} size={26} />
                 <div style={{ minWidth: 0, flex: 1 }}>
                   <div style={{ display: "flex", alignItems: "center", gap: 6, flexWrap: "wrap" }}>
                     <span style={{ fontFamily: MONO, fontWeight: 700, fontSize: 12.5 }}>#{inv}</span>
+                    {units > 1 && <Tag text={`× ${units} PCS`} tone="alert" />}
                     {distinct > 1 && <Tag text={`${distinct} ITEMS`} tone="alert" />}
                     {Number(o.advance_amount ?? 0) > 0 && (
                       <Tag text={`ADVANCE ${money(Number(o.advance_amount))}`} tone="good" />
@@ -593,6 +728,7 @@ export function PackSheet({
                     {[orderPhone(o), place, o.courier_name].filter(Boolean).join("  ·  ")}
                   </div>
                 </div>
+
                 <div style={{ textAlign: "right", flexShrink: 0 }}>
                   <div style={{ fontSize: 8, letterSpacing: 1.4, color: MUTE, fontWeight: 700 }}>
                     {isCod(o) ? "COD DUE" : "PREPAID"}
@@ -699,6 +835,7 @@ export function PackSheet({
                 </span>
               </div>
             </div>
+            </React.Fragment>
           );
         })}
       </div>
