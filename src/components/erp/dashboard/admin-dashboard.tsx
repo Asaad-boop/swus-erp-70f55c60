@@ -141,12 +141,12 @@ function TeamActivityCard({ brandIds, enabled }: { brandIds: string[]; enabled: 
   });
 
   return (
-    <Card className="border-slate-200 shadow-none">
+    <Card className="border-border/60 shadow-none">
       <CardHeader className="pb-2 flex flex-row items-center justify-between">
         <CardTitle className="text-[13px] font-semibold flex items-center gap-1.5">
           <Users className="size-3.5 text-indigo-600" /> Team activity
         </CardTitle>
-        <span className="text-[11px] text-slate-500">
+        <span className="text-[11px] text-muted-foreground">
           {q.data ? `${q.data.presentCount} present` : ""}
         </span>
       </CardHeader>
@@ -154,11 +154,11 @@ function TeamActivityCard({ brandIds, enabled }: { brandIds: string[]; enabled: 
         {q.isLoading ? (
           <Skeleton className="h-20 w-full" />
         ) : !q.data?.rows.length ? (
-          <p className="text-[12px] text-slate-500">আজ এখনো কোনো order movement নেই।</p>
+          <p className="text-[12px] text-muted-foreground">আজ এখনো কোনো order movement নেই।</p>
         ) : (
           q.data.rows.map((r) => (
-            <div key={r.id} className="flex items-center justify-between text-[12px] py-1 border-b border-slate-100 last:border-0">
-              <span className="truncate text-slate-700">{r.name}</span>
+            <div key={r.id} className="flex items-center justify-between text-[12px] py-1 border-b border-border/50 last:border-0">
+              <span className="truncate text-foreground/80">{r.name}</span>
               <span className="flex items-center gap-3 shrink-0 tabular-nums">
                 <span className="text-emerald-600 inline-flex items-center gap-1">
                   <CheckCircle2 className="size-3" />{r.confirmed}
@@ -202,7 +202,7 @@ function ReconciliationPendingCard({ brandIds, enabled }: { brandIds: string[]; 
   });
 
   return (
-    <Card className="border-slate-200 shadow-none">
+    <Card className="border-border/60 shadow-none">
       <CardHeader className="pb-2 flex flex-row items-center justify-between">
         <CardTitle className="text-[13px] font-semibold flex items-center gap-1.5">
           <Wallet2 className="size-3.5 text-amber-600" /> Reconciliation pending
@@ -234,8 +234,8 @@ function ReconciliationPendingCard({ brandIds, enabled }: { brandIds: string[]; 
 function Metric({ label, value, tone }: { label: string; value: string; tone?: "amber" }) {
   return (
     <div>
-      <div className="text-[10px] uppercase tracking-wider text-slate-500">{label}</div>
-      <div className={"text-[16px] font-semibold tabular-nums " + (tone === "amber" ? "text-amber-600" : "text-slate-900")}>
+      <div className="text-[10px] uppercase tracking-wider text-muted-foreground">{label}</div>
+      <div className={"text-[16px] font-semibold tabular-nums " + (tone === "amber" ? "text-amber-600" : "text-foreground")}>
         {value}
       </div>
     </div>
