@@ -233,7 +233,8 @@ export function aggregateRows(orders: SheetOrder[], by: "product" | "sku"): Pick
       map.set(key, row);
     }
   }
-  return Array.from(map.values()).sort((a, b) => b.qty - a.qty || b.orders - a.orders || a.name.localeCompare(b.name));
+  // Same flow as the invoice/pack ordering: the SKU with the most orders first.
+  return Array.from(map.values()).sort((a, b) => b.orders - a.orders || b.qty - a.qty || a.name.localeCompare(b.name));
 }
 
 /* -------------------------------------------------------------- primitives */
@@ -568,7 +569,10 @@ export function PickSheet({
                   </div>
                 ) : (
                   <>
-                    <div style={{ fontWeight: 600, fontSize: 12, lineHeight: 1.25 }}>{r.name}</div>
+                    <div style={{ fontWeight: 600, fontSize: 12, lineHeight: 1.25, display: "flex", alignItems: "center", gap: 6 }}>
+                      <span>{r.name}</span>
+                      {r.qty > r.orders && <Tag text={`EXTRA QTY +${r.qty - r.orders}`} tone="alert" />}
+                    </div>
                     {r.variant && <div style={{ color: MUTE, fontSize: 10, marginTop: 1 }}>{r.variant}</div>}
                   </>
                 )}
