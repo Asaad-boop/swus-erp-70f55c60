@@ -1,6 +1,11 @@
 import { useQuery } from "@tanstack/react-query";
 import { format } from "date-fns";
-import { Loader2, Printer, X, Package, LayoutList, Barcode, Image as ImageIcon, CheckCheck } from "lucide-react";
+import { Loader2, Printer, X, Package, LayoutList, Barcode, Image as ImageIcon, CheckCheck, RotateCcw } from "lucide-react";
+
+/** Live preview shows only the first few orders to stay fast. */
+const PREVIEW_LIMIT = 6;
+/** A4 (210mm) scaled down to fit the preview pane. */
+const PREVIEW_SCALE = 0.62;
 import { supabase } from "@/integrations/supabase/client";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
@@ -74,6 +79,8 @@ export function BulkPrintDialog({
   // Invoice mode: attach the packing paperwork in the exact same serial flow.
   const [withPack, setWithPack] = useState(true);
   const [withPick, setWithPick] = useState(true);
+  // Orders the user removed from this print batch inside the dialog.
+  const [excluded, setExcluded] = useState<Set<string>>(new Set());
 
   const { data, isLoading } = useQuery({
     queryKey: ["bulk-print", mode, orderIds.sort().join(",")],
