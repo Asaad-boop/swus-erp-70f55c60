@@ -8,30 +8,26 @@ import { useBrand } from "@/contexts/brand-context";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
-  DashboardShell, useDashboardShellState, SectionLabel, KpiStrip, TrendChart,
-  CourierCard, CodOutstandingCard, ReturnsCard, ImportsCard, InventoryHealth,
-  LowStockList, MarketingCard, TopProducts, NeedsAttention, LiveOrdersFeed,
-  TodayAnalytics, HourlyOrdersComparison, SystemFooter,
+  DashboardShell, useDashboardShellState, SectionLabel, KpiStrip,
+  InventoryHealth, LowStockList, NeedsAttention,
+  CourierCard, CodOutstandingCard, ReturnsCard, ImportsCard, SystemFooter,
 } from "@/components/erp/dashboard/shared";
-import {
-  StuckOrdersCard, CourierPerformanceCard, AbandonedCartRecoveryCard, NewVsReturningCard,
-} from "@/components/erp/dashboard/widgets";
+import { StuckOrdersCard, CourierPerformanceCard } from "@/components/erp/dashboard/widgets";
 import { WebsiteOrdersOverview } from "@/components/erp/dashboard/website-orders-overview";
 import { TeamTodayCard } from "@/components/erp/dashboard/admin/team-today-card";
 import {
   OrderFlowTodayCard,
   CourierReturnTodayCard,
 } from "@/components/erp/dashboard/admin/today-ops-cards";
-import { TodayCommandPanel, LiveVisitors } from "@/components/erp/dashboard-command-center";
 
 /**
  * ADMIN DASHBOARD — "Operations Control".
- * Operational controller view. Deliberately does NOT mount any owner-only
- * widget (net profit, cash position, payroll, profit RPCs), so that data is
- * never fetched here — not merely hidden.
+ * Lean operational view: team, today's order/courier flow, things that need
+ * action, inventory. Deliberately mounts no owner-only widget (net profit,
+ * cash, payroll) and no vanity charts — only what an admin acts on daily.
  */
 export function AdminDashboard({ actions }: { actions?: React.ReactNode }) {
-  const { brandIds, brands, isAllBrands } = useBrand();
+  const { brandIds } = useBrand();
   const navigate = useNavigate();
   const enabled = brandIds.length > 0;
   const { mktRange, setMktRange, range, lastSync, refreshAll } = useDashboardShellState();
@@ -46,11 +42,6 @@ export function AdminDashboard({ actions }: { actions?: React.ReactNode }) {
       onRefresh={refreshAll}
       actions={actions}
     >
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
-        <TodayCommandPanel brandIds={brandIds} enabled={enabled} />
-        <LiveVisitors />
-      </div>
-
       <SectionLabel title="Team today" hint="Attendance live" />
       <TeamTodayCard />
 
@@ -63,7 +54,6 @@ export function AdminDashboard({ actions }: { actions?: React.ReactNode }) {
       <SectionLabel title="Order flow" hint={mktRange.label} />
       <KpiStrip brandIds={brandIds} enabled={enabled} range={range} onNav={(to) => navigate({ to: to as never })} />
       <WebsiteOrdersOverview brandIds={brandIds} enabled={enabled} range={range} rangeLabel={mktRange.label} />
-
 
       <SectionLabel title="Needs action" />
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
@@ -78,6 +68,14 @@ export function AdminDashboard({ actions }: { actions?: React.ReactNode }) {
         <ReconciliationPendingCard brandIds={brandIds} enabled={enabled} />
       </div>
 
+      <SectionLabel title="Courier & money movement" hint={mktRange.label} />
+      <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-3">
+        <CourierCard brandIds={brandIds} enabled={enabled} range={range} />
+        <CodOutstandingCard brandIds={brandIds} enabled={enabled} range={range} />
+        <ReturnsCard brandIds={brandIds} enabled={enabled} range={range} />
+        <ImportsCard brandIds={brandIds} enabled={enabled} range={range} />
+      </div>
+
       <SectionLabel title="Inventory" />
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-3">
         <InventoryHealth brandIds={brandIds} enabled={enabled} />
@@ -85,24 +83,6 @@ export function AdminDashboard({ actions }: { actions?: React.ReactNode }) {
           <LowStockList brandIds={brandIds} enabled={enabled} />
         </div>
       </div>
-
-      <SectionLabel title="Activity" />
-      <TrendChart brandIds={brandIds} enabled={enabled} range={range} brands={brands} isAllBrands={isAllBrands} />
-      <TodayAnalytics brandIds={brandIds} enabled={enabled} range={range} rangeLabel={mktRange.label} />
-      <HourlyOrdersComparison brandIds={brandIds} enabled={enabled} />
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
-        <NewVsReturningCard brandIds={brandIds} enabled={enabled} range={range} />
-        <AbandonedCartRecoveryCard brandIds={brandIds} enabled={enabled} />
-      </div>
-      <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-3">
-        <CourierCard brandIds={brandIds} enabled={enabled} range={range} />
-        <CodOutstandingCard brandIds={brandIds} enabled={enabled} range={range} />
-        <ReturnsCard brandIds={brandIds} enabled={enabled} range={range} />
-        <ImportsCard brandIds={brandIds} enabled={enabled} range={range} />
-      </div>
-      <MarketingCard brandIds={brandIds} enabled={enabled} range={range} />
-      <TopProducts brandIds={brandIds} enabled={enabled} range={range} />
-      <LiveOrdersFeed brandIds={brandIds} enabled={enabled} />
 
       <SystemFooter lastSync={lastSync} />
     </DashboardShell>
