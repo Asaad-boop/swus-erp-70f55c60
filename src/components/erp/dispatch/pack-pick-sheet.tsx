@@ -106,6 +106,102 @@ export function sortOrdersForPacking(orders: SheetOrder[]): SheetOrder[] {
   });
 }
 
+/* ------------------------------------------------- unified dispatch ordering */
+
+export type DispatchRow = {
+  order: SheetOrder;
+  serial: number;
+  groupKey: string;
+  groupLabel: string;
+  distinct: number;
+  units: number;
+  isMulti: boolean;
+};
+
+function itemKey(it: SheetItem) {
+  return itemSku(it) ?? `${it.name}|${it.variant_label ?? ""}`;
+}
+function itemLabel(it: SheetItem) {
+  return itemSku(it) ?? [it.name, it.variant_label].filter(Boolean).join(" · ");
+}
+
+/**
+ * Canonical print flow shared by invoices + pack list + picking list.
+ * Orders are grouped by their dominant SKU (the SKU with the most orders prints
+ * first). Inside a group, single-piece orders come first and every multi-piece /
+ * multi-product order stacks together at the end. Mixed-product orders form a
+ * final group so packers handle them in one go.
+ */
+export function sortOrdersForDispatch(orders: SheetOrder[]): DispatchRow[] {
+  const skuOrders = new Map<string, number>();
+  const skuUnits = new Map<string, number>();
+  for (const o of orders) {
+    const seen = new Set<string>();
+    for (const it of o.items ?? []) {
+      const k = itemKey(it);
+      skuUnits.set(k, (skuUnits.get(k) ?? 0) + it.quantity);
+      if (!seen.has(k)) {
+        seen.add(k);
+        skuOrders.set(k, (skuOrders.get(k) ?? 0) + 1);
+      }
+    }
+  }
+
+  const MIXED = "\uffffMIXED";
+  const meta = orders.map((o) => {
+    const items = o.items ?? [];
+    const keys = new Set(items.map(itemKey));
+    const distinct = keys.size;
+    const units = items.reduce((s, i) => s + i.quantity, 0);
+    let primary = items[0] ? itemKey(items[0]) : "";
+    let label = items[0] ? itemLabel(items[0]) : "—";
+    let best = -1;
+    for (const it of items) {
+      const k = itemKey(it);
+      const c = skuOrders.get(k) ?? 0;
+      if (c > best) {
+        best = c;
+        primary = k;
+        label = itemLabel(it);
+      }
+    }
+    const mixed = distinct > 1;
+    return {
+      order: o,
+      groupKey: mixed ? MIXED : primary,
+      groupLabel: mixed ? "Mixed / multi-product" : label,
+      distinct,
+      units,
+      isMulti: mixed || units > 1,
+    };
+  });
+
+  const groupRank = (key: string) => (key === MIXED ? -1 : (skuOrders.get(key) ?? 0));
+  const groupUnits = (key: string) => (key === MIXED ? -1 : (skuUnits.get(key) ?? 0));
+
+  meta.sort((a, b) => {
+    if (a.groupKey !== b.groupKey) {
+      if (a.groupKey === MIXED) return 1;
+      if (b.groupKey === MIXED) return -1;
+      const r = groupRank(b.groupKey) - groupRank(a.groupKey);
+      if (r !== 0) return r;
+      const u = groupUnits(b.groupKey) - groupUnits(a.groupKey);
+      if (u !== 0) return u;
+      return a.groupKey.localeCompare(b.groupKey);
+    }
+    if (a.units !== b.units) return a.units - b.units; // singles first, extras stacked at the end
+    return (a.order.invoice_no ?? "").localeCompare(b.order.invoice_no ?? "");
+  });
+
+  return meta.map((m, i) => ({ ...m, serial: i + 1 }));
+}
+
+/** Serial lookup keyed by order id — keeps invoices and sheets in one flow. */
+export function dispatchSerialMap(rows: DispatchRow[]): Map<string, number> {
+  return new Map(rows.map((r) => [r.order.id, r.serial]));
+}
+
+
 type PickRow = {
   name: string;
   variant: string | null;
