@@ -17,6 +17,11 @@ import {
   StuckOrdersCard, CourierPerformanceCard, AbandonedCartRecoveryCard, NewVsReturningCard,
 } from "@/components/erp/dashboard/widgets";
 import { WebsiteOrdersOverview } from "@/components/erp/dashboard/website-orders-overview";
+import { TeamTodayCard } from "@/components/erp/dashboard/admin/team-today-card";
+import {
+  OrderFlowTodayCard,
+  CourierReturnTodayCard,
+} from "@/components/erp/dashboard/admin/today-ops-cards";
 import { TodayCommandPanel, LiveVisitors } from "@/components/erp/dashboard-command-center";
 
 /**
@@ -46,9 +51,19 @@ export function AdminDashboard({ actions }: { actions?: React.ReactNode }) {
         <LiveVisitors />
       </div>
 
+      <SectionLabel title="Team today" hint="Attendance live" />
+      <TeamTodayCard />
+
+      <SectionLabel title="Today's operations" hint="Order · courier · return" />
+      <div className="grid grid-cols-1 gap-3">
+        <OrderFlowTodayCard brandIds={brandIds} enabled={enabled} />
+        <CourierReturnTodayCard brandIds={brandIds} enabled={enabled} />
+      </div>
+
       <SectionLabel title="Order flow" hint={mktRange.label} />
       <KpiStrip brandIds={brandIds} enabled={enabled} range={range} onNav={(to) => navigate({ to: to as never })} />
       <WebsiteOrdersOverview brandIds={brandIds} enabled={enabled} range={range} rangeLabel={mktRange.label} />
+
 
       <SectionLabel title="Needs action" />
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
