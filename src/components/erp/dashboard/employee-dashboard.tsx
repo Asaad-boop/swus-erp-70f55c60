@@ -435,6 +435,12 @@ export function EmployeeDashboard() {
           </section>
         )}
 
+        {/* MY PROFILE + SALARY (own row only) */}
+        <MyProfileSalary employeeId={employeeId} />
+
+        {/* ROLE-SPECIFIC WORK PANELS */}
+        <RolePanels roles={roles} brandIds={brandIds} userId={userId} />
+
         {/* QUICK LINKS */}
         <section className="rounded-2xl border border-border/60 bg-card p-5">
           <div className="text-[10px] uppercase tracking-[0.18em] text-muted-foreground font-semibold mb-3">
