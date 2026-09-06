@@ -28,3 +28,10 @@
 - [x] getCampaignOrders drill-through; realized vs projected profit + truth_status in getCampaignTruth
 - [x] Truth table: Campaign | Spend | Orders funnel | Collected | Realized profit | Status; drawer: lifecycle, cash ladder, profit bridge, trend, coverage, orders, tags/note
 - [ ] Live authenticated UI verification pending (external Supabase — no preview session available)
+
+## Dashboard split — Owner / Admin / Staff
+- [x] Phase 1: erp.index.tsx = resolver only; shared.tsx + owner/admin/staff dashboards
+- [x] Phase 2: Admin = ops only (command panel, funnel, team activity, courier, inventory, reconciliation); no profit/cash/payroll fetch
+- [x] Phase 3: Owner view switcher (Owner | Admin | Staff), presentation-only
+- [ ] Phase 3b: Owner Leak Panel + Risk Alerts consolidated section
+- [ ] Phase 4: Staff dashboard — announcements/holidays + deeper role-adaptive queues
