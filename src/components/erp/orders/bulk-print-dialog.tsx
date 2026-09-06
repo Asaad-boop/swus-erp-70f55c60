@@ -110,8 +110,9 @@ export function BulkPrintDialog({
     },
   });
 
-  const orders = data?.orders ?? [];
+  const allOrders = data?.orders ?? [];
   const itemsByOrder = data?.itemsByOrder ?? new Map<string, any[]>();
+  const orders = allOrders.filter((o: any) => !excluded.has(o.id));
   const ready = !isLoading && orders.length > 0;
 
   // Per-brand breakdown of selected orders (works across "All brands" view too)
@@ -162,110 +163,258 @@ export function BulkPrintDialog({
     });
   };
 
+  const totalUnits = dispatchRows.reduce((s, r) => s + r.units, 0);
+  const multiCount = dispatchRows.filter((r) => r.isMulti).length;
+  const canPrint = ready && !(mode === "picking" && !sheets.order && !sheets.product && !sheets.sku);
+
+  const payload = (limit?: number) => {
+    const flow = typeof limit === "number" ? flowOrders.slice(0, limit) : flowOrders;
+    return (
+      <>
+        {mode === "invoice" && (
+          <>
+            {flow.map((so) => {
+              const o = orders.find((x) => x.id === so.id)!;
+              const meta = metaById.get(so.id)!;
+              return (
+                <div key={o.id} className="print-page">
+                  <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 10, marginBottom: 6, paddingBottom: 4, borderBottom: "1px solid #111113", color: "#111113" }}>
+                    <span style={{ display: "inline-flex", alignItems: "center", gap: 7 }}>
+                      <span style={{ display: "inline-block", minWidth: 24, padding: "1px 5px", border: "1px solid #111113", borderRadius: 4, fontSize: 12, fontWeight: 700, textAlign: "center", fontVariantNumeric: "tabular-nums" }}>
+                        {meta.serial}
+                      </span>
+                      <span style={{ fontSize: 8.5, letterSpacing: 1.2, fontWeight: 700, textTransform: "uppercase", color: "#76767e" }}>
+                        Pack serial · {meta.groupLabel}
+                      </span>
+                    </span>
+                    {meta.isMulti && (
+                      <span style={{ fontSize: 9, fontWeight: 800, letterSpacing: 1, border: "1.4px solid #111113", borderRadius: 3, padding: "1px 7px" }}>
+                        {meta.distinct > 1 ? `${meta.distinct} ITEMS · ` : ""}× {meta.units} PCS
+                      </span>
+                    )}
+                  </div>
+                  <PrintableInvoice
+                    order={o as any}
+                    items={(itemsByOrder.get(o.id) ?? []) as any}
+                    visible
+                    bulk
+                  />
+                </div>
+              );
+            })}
+            {groupBrand(flow).map((g) => (
+              <div key={`att-${g.id}`}>
+                {withPack && (
+                  <div className="print-page"><PackSheet orders={g.orders} options={sheetOpts} brandName={g.name} brandLogo={g.logo} serials={serialMap} /></div>
+                )}
+                {withPick && (
+                  <div className="print-page"><PickSheet orders={g.orders} by="product" options={sheetOpts} brandName={g.name} brandLogo={g.logo} /></div>
+                )}
+              </div>
+            ))}
+          </>
+        )}
+        {mode === "sticker" && (
+          <StickerSheet orders={typeof limit === "number" ? orders.slice(0, limit) : orders} brandName={activeBrand?.name ?? ""} cfg={config} />
+        )}
+        {mode === "picking" && groupBrand(flow).map((g) => (
+          <div key={g.id}>
+            {sheets.order && (
+              <div className="print-page"><PackSheet orders={g.orders} options={sheetOpts} brandName={g.name} brandLogo={g.logo} serials={serialMap} /></div>
+            )}
+            {sheets.product && (
+              <div className="print-page"><PickSheet orders={g.orders} by="product" options={sheetOpts} brandName={g.name} brandLogo={g.logo} /></div>
+            )}
+            {sheets.sku && (
+              <div className="print-page"><PickSheet orders={g.orders} by="sku" options={sheetOpts} brandName={g.name} brandLogo={g.logo} /></div>
+            )}
+          </div>
+        ))}
+        {mode === "sheet" && (
+          <OrderSheet orders={typeof limit === "number" ? orders.slice(0, limit) : orders} itemsByOrder={itemsByOrder} brandName={activeBrand?.name ?? ""} cfg={config} />
+        )}
+      </>
+    );
+  };
+
   return (
     <>
       <Dialog open={open} onOpenChange={onOpenChange}>
-        <DialogContent className="max-w-md">
-          <DialogHeader>
-            <DialogTitle className="flex items-center gap-2">
-              <Printer className="h-4 w-4" /> Print {MODE_LABEL[mode]}
-            </DialogTitle>
-            <DialogDescription>
-              {orderIds.length} order{orderIds.length === 1 ? "" : "s"} selected.
-              {mode === "invoice" && " Invoices print in packing flow order (highest-demand SKU first) with a matching pack/picking list."}
-              {mode === "sticker" && " 4 stickers per A4 page — fold and attach to parcel."}
-              {mode === "picking" && " Pack list + picking list — choose one or more views below."}
-              {mode === "sheet" && " One condensed table of all selected orders."}
-            </DialogDescription>
-          </DialogHeader>
-          {mode === "invoice" && (
-            <div className="flex flex-wrap items-center gap-1.5">
-              <span className="text-[10px] uppercase tracking-wider text-muted-foreground mr-0.5">Attach</span>
-              <SheetOptionChip checked={withPack} onChange={setWithPack} icon={Package} label="Pack list (order-wise)" />
-              <SheetOptionChip checked={withPick} onChange={setWithPick} icon={LayoutList} label="Picking list" />
+        <DialogContent className="max-w-[1100px] w-[95vw] p-0 gap-0 overflow-hidden">
+          <div className="grid md:grid-cols-[380px_1fr] max-h-[86vh]">
+            {/* ── Left: controls ── */}
+            <div className="flex flex-col min-h-0 border-r">
+              <DialogHeader className="px-5 pt-5 pb-3 space-y-1">
+                <DialogTitle className="flex items-center gap-2 text-base">
+                  <Printer className="h-4 w-4" /> Print {MODE_LABEL[mode]}
+                </DialogTitle>
+                <DialogDescription className="text-xs">
+                  {mode === "invoice" && "Invoices print in packing flow order (highest-demand SKU first) with a matching pack & picking list."}
+                  {mode === "sticker" && "4 stickers per A4 page — fold and attach to parcel."}
+                  {mode === "picking" && "Pack list + picking list — choose one or more views below."}
+                  {mode === "sheet" && "One condensed table of all selected orders."}
+                </DialogDescription>
+              </DialogHeader>
+
+              <div className="px-5 pb-4 space-y-4 overflow-y-auto min-h-0">
+                {/* KPI strip */}
+                <div className="grid grid-cols-3 gap-1.5">
+                  {[
+                    { label: "Orders", value: orders.length },
+                    { label: "Pieces", value: totalUnits },
+                    { label: "Multi-qty", value: multiCount },
+                  ].map((k) => (
+                    <div key={k.label} className="rounded-lg border bg-muted/30 px-2.5 py-2">
+                      <div className="text-[9px] uppercase tracking-wider text-muted-foreground">{k.label}</div>
+                      <div className="text-lg font-semibold tabular-nums leading-tight">{isLoading ? "…" : k.value}</div>
+                    </div>
+                  ))}
+                </div>
+
+                {mode === "invoice" && (
+                  <div className="flex flex-wrap items-center gap-1.5">
+                    <span className="text-[10px] uppercase tracking-wider text-muted-foreground mr-0.5">Attach</span>
+                    <SheetOptionChip checked={withPack} onChange={setWithPack} icon={Package} label="Pack list" />
+                    <SheetOptionChip checked={withPick} onChange={setWithPick} icon={LayoutList} label="Picking list" />
+                  </div>
+                )}
+
+                {mode === "picking" && (
+                  <div className="space-y-2.5">
+                    <div className="grid grid-cols-3 gap-1.5">
+                      {SHEET_TOGGLES.map((t) => {
+                        const on = sheets[t.key];
+                        return (
+                          <button
+                            key={t.key}
+                            type="button"
+                            onClick={() => setSheets((s) => ({ ...s, [t.key]: !s[t.key] }))}
+                            title={t.hint}
+                            className={`rounded-xl border px-2 py-2.5 text-left transition-colors ${
+                              on ? "border-primary bg-primary/10" : "bg-card hover:border-foreground/30"
+                            }`}
+                          >
+                            <div className="flex items-center justify-between">
+                              <t.icon className={`h-4 w-4 ${on ? "text-primary" : "text-muted-foreground"}`} />
+                              {on && <CheckCheck className="h-3.5 w-3.5 text-primary" />}
+                            </div>
+                            <div className={`mt-1.5 text-[11px] font-semibold ${on ? "text-primary" : ""}`}>{t.label}</div>
+                          </button>
+                        );
+                      })}
+                    </div>
+                    {!sheets.order && !sheets.product && !sheets.sku && (
+                      <p className="text-[11px] text-rose-600 dark:text-rose-400">কমপক্ষে একটা view সিলেক্ট করো।</p>
+                    )}
+                  </div>
+                )}
+
+                {(mode === "picking" || mode === "invoice") && (
+                  <div className="flex flex-wrap items-center gap-1.5">
+                    <span className="text-[10px] uppercase tracking-wider text-muted-foreground mr-0.5">Options</span>
+                    <SheetOptionChip checked={sheetOpts.showImages} onChange={(v) => setSheetOpts((o) => ({ ...o, showImages: v }))} icon={ImageIcon} label="Images" />
+                    <SheetOptionChip checked={sheetOpts.showBarcodes} onChange={(v) => setSheetOpts((o) => ({ ...o, showBarcodes: v }))} icon={Barcode} label="Barcodes" />
+                    <SheetOptionChip checked={sheetOpts.showBins} onChange={(v) => setSheetOpts((o) => ({ ...o, showBins: v }))} label="Bin line" />
+                    <SheetOptionChip checked={sheetOpts.paper === "a5"} onChange={(v) => setSheetOpts((o) => ({ ...o, paper: v ? "a5" : "a4" }))} label="A5 paper" />
+                  </div>
+                )}
+
+                {/* Brands */}
+                <div className="flex flex-wrap items-center gap-1.5">
+                  <span className="text-[10px] uppercase tracking-wider text-muted-foreground mr-0.5">Brands</span>
+                  {isLoading && <span className="text-xs text-muted-foreground">…</span>}
+                  {!isLoading && brandBreakdown.length === 0 && <span className="text-xs">—</span>}
+                  {!isLoading && brandBreakdown.map((b) => (
+                    <span key={b.id} className="inline-flex items-center gap-1 rounded-full border bg-background px-2 py-0.5 text-[11px] font-medium">
+                      {b.name}
+                      <span className="tabular-nums text-muted-foreground">× {b.count}</span>
+                    </span>
+                  ))}
+                </div>
+
+                {/* Selected orders list */}
+                <div className="rounded-xl border overflow-hidden">
+                  <div className="flex items-center justify-between px-3 py-2 border-b bg-muted/30">
+                    <span className="text-[10px] uppercase tracking-wider text-muted-foreground">Selected orders</span>
+                    {excluded.size > 0 && (
+                      <button type="button" className="text-[10px] text-primary hover:underline inline-flex items-center gap-1" onClick={() => setExcluded(new Set())}>
+                        <RotateCcw className="h-3 w-3" /> Restore {excluded.size}
+                      </button>
+                    )}
+                  </div>
+                  <div className="max-h-52 overflow-y-auto divide-y">
+                    {isLoading && <div className="px-3 py-3 text-xs text-muted-foreground">Loading…</div>}
+                    {!isLoading && allOrders.map((o: any) => {
+                      const off = excluded.has(o.id);
+                      const meta = metaById.get(o.id);
+                      return (
+                        <div key={o.id} className={`flex items-center gap-2 px-3 py-1.5 text-xs ${off ? "opacity-40" : ""}`}>
+                          <span className="w-6 shrink-0 tabular-nums text-[10px] text-muted-foreground">{meta?.serial ?? "—"}</span>
+                          <span className="font-medium truncate">{invoiceDisplay(o)}</span>
+                          <span className="truncate text-muted-foreground">{customerName(o)}</span>
+                          {meta?.isMulti && (
+                            <span className="ml-auto shrink-0 rounded border px-1 text-[9px] font-bold tabular-nums">×{meta.units}</span>
+                          )}
+                          <button
+                            type="button"
+                            aria-label={off ? "Restore order" : "Remove order"}
+                            className={`shrink-0 rounded p-1 hover:bg-muted ${meta?.isMulti ? "" : "ml-auto"}`}
+                            onClick={() => setExcluded((s) => {
+                              const n = new Set(s);
+                              if (n.has(o.id)) n.delete(o.id); else n.add(o.id);
+                              return n;
+                            })}
+                          >
+                            {off ? <RotateCcw className="h-3 w-3" /> : <X className="h-3 w-3" />}
+                          </button>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              </div>
+
+              <div className="flex items-center justify-end gap-2 border-t px-5 py-3 bg-muted/20">
+                <Button variant="outline" size="sm" onClick={() => onOpenChange(false)}>
+                  <X className="h-3.5 w-3.5" /> Cancel
+                </Button>
+                <Button size="sm" disabled={!canPrint} onClick={() => {
+                  window.print();
+                  void markOrdersPrinted(orders.map((o: { id: string }) => o.id)).then(() => {
+                    qc.invalidateQueries({ queryKey: ["orders"] });
+                  });
+                }}>
+                  {isLoading ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Printer className="h-3.5 w-3.5" />}
+                  Print {orders.length || ""}
+                </Button>
+              </div>
             </div>
-          )}
-          {mode === "picking" && (
-            <div className="space-y-2.5">
-              <div className="grid grid-cols-3 gap-1.5">
-                {SHEET_TOGGLES.map((t) => {
-                  const on = sheets[t.key];
-                  return (
-                    <button
-                      key={t.key}
-                      type="button"
-                      onClick={() => setSheets((s) => ({ ...s, [t.key]: !s[t.key] }))}
-                      title={t.hint}
-                      className={`rounded-xl border px-2 py-2.5 text-left transition-colors ${
-                        on
-                          ? "border-primary bg-primary/10"
-                          : "bg-card hover:border-foreground/30"
-                      }`}
+
+            {/* ── Right: live preview ── */}
+            <div className="hidden md:flex flex-col min-h-0 bg-muted/40">
+              <div className="flex items-center justify-between px-4 py-2 border-b bg-background/60">
+                <span className="text-[10px] uppercase tracking-wider text-muted-foreground">Live preview</span>
+                <span className="text-[10px] text-muted-foreground">
+                  {ready ? `প্রথম ${Math.min(PREVIEW_LIMIT, orders.length)} টা দেখানো হচ্ছে` : "—"}
+                </span>
+              </div>
+              <div className="flex-1 overflow-auto p-4">
+                {!ready ? (
+                  <div className="h-full grid place-items-center text-xs text-muted-foreground">
+                    {isLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : "কোনো অর্ডার নেই"}
+                  </div>
+                ) : (
+                  <div style={{ width: 210 * 3.78 * PREVIEW_SCALE, margin: "0 auto" }}>
+                    <div
+                      className="bg-white text-black shadow-sm rounded-sm"
+                      style={{ width: "210mm", transform: `scale(${PREVIEW_SCALE})`, transformOrigin: "top left", padding: "10mm" }}
                     >
-                      <div className="flex items-center justify-between">
-                        <t.icon className={`h-4 w-4 ${on ? "text-primary" : "text-muted-foreground"}`} />
-                        {on && <CheckCheck className="h-3.5 w-3.5 text-primary" />}
-                      </div>
-                      <div className={`mt-1.5 text-[11px] font-semibold ${on ? "text-primary" : ""}`}>{t.label}</div>
-                      <div className="text-[9.5px] leading-tight text-muted-foreground mt-0.5">{t.hint}</div>
-                    </button>
-                  );
-                })}
-              </div>
-              <div className="flex flex-wrap items-center gap-1.5">
-                <span className="text-[10px] uppercase tracking-wider text-muted-foreground mr-0.5">Options</span>
-                <SheetOptionChip checked={sheetOpts.showImages} onChange={(v) => setSheetOpts((o) => ({ ...o, showImages: v }))} icon={ImageIcon} label="Images" />
-                <SheetOptionChip checked={sheetOpts.showBarcodes} onChange={(v) => setSheetOpts((o) => ({ ...o, showBarcodes: v }))} icon={Barcode} label="Barcodes" />
-                <SheetOptionChip checked={sheetOpts.showBins} onChange={(v) => setSheetOpts((o) => ({ ...o, showBins: v }))} label="Bin line" />
-                <SheetOptionChip checked={sheetOpts.paper === "a5"} onChange={(v) => setSheetOpts((o) => ({ ...o, paper: v ? "a5" : "a4" }))} label="A5 paper" />
-              </div>
-              {!sheets.order && !sheets.product && !sheets.sku && (
-                <p className="text-[11px] text-rose-600 dark:text-rose-400">কমপক্ষে একটা view সিলেক্ট করো।</p>
-              )}
-            </div>
-          )}
-          <div className="rounded-md border bg-muted/30 px-3 py-2 text-xs space-y-2">
-            <div className="flex items-start justify-between gap-3">
-              <span className="text-muted-foreground pt-0.5">Brands</span>
-              <div className="flex flex-wrap justify-end gap-1.5">
-                {isLoading && <span className="text-muted-foreground">…</span>}
-                {!isLoading && brandBreakdown.length === 0 && <span className="font-medium">—</span>}
-                {!isLoading && brandBreakdown.map((b) => (
-                  <span
-                    key={b.id}
-                    className="inline-flex items-center gap-1 rounded-full border bg-background px-2 py-0.5 font-medium"
-                  >
-                    {b.name}
-                    <span className="tabular-nums text-muted-foreground">× {b.count}</span>
-                  </span>
-                ))}
+                      {payload(PREVIEW_LIMIT)}
+                    </div>
+                  </div>
+                )}
               </div>
             </div>
-            <div className="flex justify-between">
-              <span className="text-muted-foreground">Status</span>
-              <span className="font-medium">
-                {isLoading ? "Loading order data…" : `${orders.length} order${orders.length === 1 ? "" : "s"} ready`}
-              </span>
-            </div>
-            {!isLoading && brandBreakdown.length > 1 && (
-              <div className="text-[10px] text-muted-foreground pt-1 border-t">
-                Each invoice uses its own brand's invoice settings.
-              </div>
-            )}
-          </div>
-          <div className="flex justify-end gap-2 mt-2">
-            <Button variant="outline" size="sm" onClick={() => onOpenChange(false)}>
-              <X className="h-3.5 w-3.5" /> Cancel
-            </Button>
-            <Button size="sm" disabled={!ready || (mode === "picking" && !sheets.order && !sheets.product && !sheets.sku)} onClick={() => {
-              window.print();
-              void markOrdersPrinted(orders.map((o: { id: string }) => o.id)).then(() => {
-                qc.invalidateQueries({ queryKey: ["orders"] });
-              });
-            }}>
-              {isLoading ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Printer className="h-3.5 w-3.5" />}
-              Print {orders.length || ""}
-            </Button>
           </div>
         </DialogContent>
       </Dialog>
@@ -277,73 +426,13 @@ export function BulkPrintDialog({
           style={{ position: "fixed", left: -10000, top: 0, width: "210mm", pointerEvents: "none", opacity: 0 }}
           aria-hidden
         >
-          {mode === "invoice" && (
-            <>
-              {flowOrders.map((so) => {
-                const o = orders.find((x) => x.id === so.id)!;
-                const meta = metaById.get(so.id)!;
-                return (
-                  <div key={o.id} className="print-page">
-                    <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 10, marginBottom: 6, paddingBottom: 4, borderBottom: "1px solid #111113", color: "#111113" }}>
-                      <span style={{ display: "inline-flex", alignItems: "center", gap: 7 }}>
-                        <span style={{ display: "inline-block", minWidth: 24, padding: "1px 5px", border: "1px solid #111113", borderRadius: 4, fontSize: 12, fontWeight: 700, textAlign: "center", fontVariantNumeric: "tabular-nums" }}>
-                          {meta.serial}
-                        </span>
-                        <span style={{ fontSize: 8.5, letterSpacing: 1.2, fontWeight: 700, textTransform: "uppercase", color: "#76767e" }}>
-                          Pack serial · {meta.groupLabel}
-                        </span>
-                      </span>
-                      {meta.isMulti && (
-                        <span style={{ fontSize: 9, fontWeight: 800, letterSpacing: 1, border: "1.4px solid #111113", borderRadius: 3, padding: "1px 7px" }}>
-                          {meta.distinct > 1 ? `${meta.distinct} ITEMS · ` : ""}× {meta.units} PCS
-                        </span>
-                      )}
-                    </div>
-                    <PrintableInvoice
-                      order={o as any}
-                      items={(itemsByOrder.get(o.id) ?? []) as any}
-                      visible
-                      bulk
-                    />
-                  </div>
-                );
-              })}
-              {groupBrand(flowOrders).map((g) => (
-                <div key={`att-${g.id}`}>
-                  {withPack && (
-                    <div className="print-page"><PackSheet orders={g.orders} options={sheetOpts} brandName={g.name} brandLogo={g.logo} serials={serialMap} /></div>
-                  )}
-                  {withPick && (
-                    <div className="print-page"><PickSheet orders={g.orders} by="product" options={sheetOpts} brandName={g.name} brandLogo={g.logo} /></div>
-                  )}
-                </div>
-              ))}
-            </>
-          )}
-          {mode === "sticker" && (
-            <StickerSheet orders={orders} brandName={activeBrand?.name ?? ""} cfg={config} />
-          )}
-          {mode === "picking" && groupBrand(flowOrders).map((g) => (
-            <div key={g.id}>
-              {sheets.order && (
-                <div className="print-page"><PackSheet orders={g.orders} options={sheetOpts} brandName={g.name} brandLogo={g.logo} serials={serialMap} /></div>
-              )}
-              {sheets.product && (
-                <div className="print-page"><PickSheet orders={g.orders} by="product" options={sheetOpts} brandName={g.name} brandLogo={g.logo} /></div>
-              )}
-              {sheets.sku && (
-                <div className="print-page"><PickSheet orders={g.orders} by="sku" options={sheetOpts} brandName={g.name} brandLogo={g.logo} /></div>
-              )}
-            </div>
-          ))}
-          {mode === "sheet" && (
-            <OrderSheet orders={orders} itemsByOrder={itemsByOrder} brandName={activeBrand?.name ?? ""} cfg={config} />
-          )}
+          {payload()}
         </div>
       )}
     </>
   );
 }
+
 
 /* ---------------------------- Sticker Sheet ---------------------------- */
 
