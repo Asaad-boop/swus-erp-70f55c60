@@ -12,6 +12,8 @@ import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { cn } from "@/lib/utils";
 import { useCurrentRole } from "@/hooks/use-current-role";
+import { MyProfileSalary } from "@/components/erp/dashboard/staff/my-profile-salary";
+import { RolePanels } from "@/components/erp/dashboard/staff/role-panels";
 import { useMyAllowedPages } from "@/hooks/use-my-allowed-pages";
 import { resolveAccess } from "@/lib/erp/access";
 import { NAV_PAGES } from "@/lib/erp/nav";
@@ -68,7 +70,7 @@ function Stat({ label: l, value, hint, icon: Icon, tone }: {
 
 /** Personal, money-free workspace for non-admin staff. */
 export function EmployeeDashboard() {
-  const { roles } = useCurrentRole();
+  const { roles, userId } = useCurrentRole();
   const { allowedPages, pageMode } = useMyAllowedPages();
   const { brandIds } = useBrand();
   const qc = useQueryClient();
