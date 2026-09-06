@@ -1,63 +1,49 @@
-# 3-Level Dashboard: Owner / Admin-Staff / Staff
+# Role-wise Dashboard System — Owner / Admin / Staff (role-specific)
 
-এখন `/erp` এ role অনুযায়ী switch হয় কিন্তু admin আর owner প্রায় একই ২৩৮৮ লাইনের ভিউ পায়, আর staff view পাতলা। তিনটা পরিষ্কার আলাদা dashboard বানাবো — একই URL `/erp`, role resolver ঠিক করবে কে কোনটা দেখবে।
+লক্ষ্য: প্রত্যেক ইউজার login করলে **তার কাজের dashboard**-ই দেখবে — owner সব, admin পুরো operation control, আর staff শুধু তার নিজের role অনুযায়ী (packer, content, cargo, finance, supply chain ইত্যাদি)।
 
-## ১) Owner Dashboard — "Business Truth"
+## ১. Owner Dashboard (আগে থেকেই আছে — শুধু পালিশ)
+সব কিছু: profit, cash, payroll, brand comparison, marketing, inventory. কোনো বড় পরিবর্তন নয়।
 
-শুধু owner role. টাকা, profit, cash — সব এখানে।
+## ২. Admin / Manager Dashboard — "আজকের পুরো ছবি"
+এক স্ক্রিনে, চারটা ব্লকে:
 
-- **Money Header**: Net Profit (today / MTD), Profit Quality score, Cash Position (সব wallet + COD pipeline + দেনা)
-- **Brand Compare**: ব্র্যান্ড-ওয়াইজ revenue, delivered profit, margin %, trend sparkline
-- **Month Pace**: target vs actual projection, দিন-শেষে কোথায় ল্যান্ড করবে
-- **Marketing Efficiency**: ad spend, blended ROAS, CAC, top/worst campaign
-- **Leak Panel**: Product Danger Zone, return loss, courier variance, unreconciled COD
-- **Team Cost**: payroll total, cost per order — শুধু owner
-- **Risk Alerts**: stock-out ঝুঁকি, cash runway, দীর্ঘ pending advance
+- **Team today** — আজ কতজন office এসেছে (check-in), কতজন এখন কাজে (active/on break), কতজন late, কতজন ছুটিতে; প্রতিটি নাম + check-in সময় + এখন কী স্ট্যাটাসে। HR live attendance থেকে।
+- **Order flow today** — website থেকে কত order এসেছে, কতটা confirm, কতটা pending/no-response, কতটা cancel/fake, কতটা packing-এ, কতটা ready to ship।
+- **Courier & return today** — আজ কত parcel courier-এ গেল, কত in-transit, আজ কত delivered, আজ কত return এসেছে (এবং pending return কত), COD pending।
+- আগের Reconciliation pending, Stuck orders, Inventory health কার্ডগুলো থাকবে (নিচে)।
 
-## ২) Admin Dashboard — "Operations Control"
+কোনো profit / salary / cash কার্ড admin ভিউতে থাকবে না।
 
-admin role (owner নয়). Money KPI সীমিত — revenue/order দেখাবে, কিন্তু cash position, payroll, net profit নয়।
+## ৩. Staff Dashboard — role অনুযায়ী আলাদা
+সবার জন্য common উপরের অংশ (**My Work**):
+- Check in / Check out বাটন, আজকের duty time live counter, Break start/stop
+- আজকের/এই মাসের attendance summary (present, late, absent)
+- My performance: এই মাসের KPI (নিজের role-এর কাজের count)
+- My salary: fixed salary, এই মাসের আনুমানিক pay, শেষ payslip
+- My profile (নাম, designation, department, joining date)
 
-- **Today's Command Panel**: need confirm / need packing / low stock / courier issue / COD pending — clickable
-- **Order Funnel**: status breakdown, stuck orders (X ঘণ্টার বেশি একই status)
-- **Team Activity**: কে কয়টা order confirm/pack করলো আজ, live attendance count
-- **Courier Board**: Pathao/Steadfast delivery rate, in-transit aging, failed pickup
-- **Inventory Alerts**: low stock, reorder queue, incoming shipment ETA
-- **Website Orders + Live Visitors**
-- **Reconciliation Pending**: কত invoice mismatch, কত টাকা atke ache
+তার নিচে **role-specific work panel**:
 
-## ৩) Staff Dashboard — "My Work"
+| Role | কী দেখবে |
+| --- | --- |
+| Packer / warehouse | আজ pack করার order queue, তার নিজের আজকের packed count, scan/entry শর্টকাট, courier entry |
+| Content | তার assigned content tasks, due today, shoot/plan queue |
+| Cargo agent | তার PO / carton queue, in-transit, arrived BD |
+| Supply chain | reorder queue, low stock, incoming PO |
+| Finance / accountant | pending bills, reconciliation pending, receivables (profit নয়) |
+| Customer service | pending confirmation orders, no-response follow-up, abandoned cart |
+| Marketing | আজকের spend, campaign alerts |
 
-বাকি সব role (operations, packer, CS, warehouse, marketing, hr, employee…). কোনো money/profit/cash নেই।
+যে role নেই তার panel দেখাবে না (খালি কার্ড দেখাবে না)।
 
-- **My Day**: check-in/out button, আজকের attendance status, work hours, leave balance
-- **My Queue** (role-adaptive):
-  - packer → packing queue + আজ কয়টা pack করেছি
-  - CS/operations → orders to call, pending confirmations
-  - warehouse → receive/stocktake task
-  - marketing → আমার campaign task
-  - hr → pending leave approval
-- **My Numbers**: আজ/এই সপ্তাহে আমার completed task count, streak
-- **Quick Links**: শুধু আমার allowed pages
-- **Announcements + Holidays**
-
-## ৪) Permission wiring
-
-- `/erp` resolver: `owner` → Owner, `admin` → Admin, বাকি → Staff.
-- Owner চাইলে top-right এ view switcher ("Owner / Admin / Staff view") দিয়ে অন্য dashboard দেখতে পারবে — শুধু owner পাবে।
-- Custom page-grant mode এ থাকা user সবসময় Staff dashboard পাবে (তার allowed pages অনুযায়ী quick links)।
-- Data guard: Staff dashboard কোনো finance/payroll table query-ই করবে না; Admin dashboard cash/payroll/profit RPC কল করবে না। শুধু UI hide নয় — fetch-ও হবে না।
+## ৪. Access / Rules
+- `/erp/users` (Users & Access) পেজেই role assign হয় — এটাই একমাত্র জায়গা। প্রতিটি role-এর জন্য "এই role কী কী দেখে" পরিষ্কার লেখা থাকবে।
+- Role → module matrix (`access.ts`)-এ প্যাকার/কন্টেন্ট/কার্গো/finance ইত্যাদির গ্যাপ ঠিক করা হবে (যেমন packer আজ শুধু fulfillment পায় — তার order queue-ও দরকার)।
+- সব role-এর জন্য self-service পেজ (my attendance, my profile) সবসময় খোলা।
 
 ## Technical notes
-
-- `erp.index.tsx` (2388 লাইন) ভেঙে: `dashboard/owner-dashboard.tsx`, `dashboard/admin-dashboard.tsx`, `dashboard/staff-dashboard.tsx`; route ফাইল শুধু resolver + skeleton।
-- বিদ্যমান `owner-suite.tsx`, `widgets.tsx`, `month-pace-card.tsx`, `team-cost-card.tsx`, `website-orders-overview.tsx` reuse হবে; shared helper `dashboard/shared.tsx`-এ।
-- কোনো নতুন role/migration লাগবে না — `owner` enum + `useCurrentRole().isOwner` আগেই আছে।
-- Data logic অপরিবর্তিত; শুধু re-organize + role-gated fetch।
-
-## Rollout
-
-1. Split + resolver (কোনো visual পরিবর্তন নয়)
-2. Admin dashboard থেকে owner-only block বাদ + team activity/courier board যোগ
-3. Owner dashboard এ leak panel + risk alerts + view switcher
-4. Staff dashboard role-adaptive queue
+- `erp.index.tsx` resolver থাকবে: owner → Owner, admin → Admin, বাকি → Staff (role-aware)।
+- নতুন ফাইল: `dashboard/admin/team-today-card.tsx`, `admin/order-flow-today.tsx`, `admin/courier-return-today.tsx`; `dashboard/staff/my-work-header.tsx`, `staff/panels/*.tsx` (packer, content, cargo, supply, finance, cs, marketing)।
+- ডেটা: `hr_attendance`, `hr_breaks`, `hr_employees`, `orders`, `courier_shipments`, `erp_return_cases`, `imp_*`, `reorder_suggestions` — সব existing table, কোনো নতুন migration লাগবে না (KPI-র জন্য প্রয়োজন হলে পরে যোগ করব)।
+- Staff dashboard-এ profit/cash/payroll কোনো query হবে না; salary শুধু নিজের row থেকে।
