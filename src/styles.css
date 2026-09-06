@@ -365,7 +365,7 @@
   #print-invoice, #print-invoice * { visibility: visible !important; }
   #print-invoice { position: absolute !important; left: 0; top: 0; width: 100%; }
   .print-area, .print-area * { visibility: visible !important; }
-  .print-area { position: absolute !important; left: 0; top: 0; width: 100%; display: block !important; }
+  .print-area { position: absolute !important; left: 0 !important; top: 0 !important; width: 100% !important; display: block !important; opacity: 1 !important; }
   .print-page { break-inside: avoid; page-break-inside: avoid; }
   .print-page + .print-page { page-break-before: always; break-before: page; }
 }

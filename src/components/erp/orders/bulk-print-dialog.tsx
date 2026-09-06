@@ -272,7 +272,11 @@ export function BulkPrintDialog({
 
       {/* Hidden print payload — only visible at print time via .print-area CSS */}
       {open && ready && (
-        <div className="print-area" style={{ display: "none" }}>
+        <div
+          className="print-area"
+          style={{ position: "fixed", left: -10000, top: 0, width: "210mm", pointerEvents: "none", opacity: 0 }}
+          aria-hidden
+        >
           {mode === "invoice" && (
             <>
               {flowOrders.map((so) => {
