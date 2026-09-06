@@ -445,7 +445,7 @@ export function BrandComparison({ brands, range }: { brands: Brand[]; range: Ret
             return (
               <div
                 key={b.id}
-                className="group relative rounded-xl border border-border/60 bg-card p-4 hover:shadow-sm hover:-translate-y-0.5 transition-all overflow-hidden"
+                className="group relative rounded-xl border border-border/60 bg-card p-4 hover:border-border hover:-translate-y-0.5 transition-all duration-200 ease-out overflow-hidden"
               >
                 <div className="absolute -top-10 -right-10 size-32 rounded-full bg-primary/5 blur-2xl pointer-events-none" />
                 {/* Brand header */}
@@ -576,7 +576,7 @@ export function TrendChart({
           {(["revenue","orders","both"] as const).map(m => (
             <button key={m} onClick={() => setMode(m)}
               className={cn("text-xs px-2.5 py-1 rounded capitalize transition",
-                mode === m ? "bg-background shadow-sm" : "text-muted-foreground")}>
+                mode === m ? "bg-background ring-1 ring-border" : "text-muted-foreground hover:text-foreground")}>
               {m}
             </button>
           ))}
@@ -885,7 +885,7 @@ export function FinanceSection({ brandIds, enabled, range }: { brandIds: string[
             </div>
             <div className="grid grid-cols-2 md:grid-cols-4 gap-2.5">
               {wallets.map(({ label, Icon, value }) => (
-                <div key={label} className="group relative rounded-xl border border-border/60 bg-card p-3 transition-all hover:border-border hover:shadow-sm">
+                <div key={label} className="group relative rounded-xl border border-border/60 bg-card p-3 transition-all duration-200 ease-out hover:border-border hover:-translate-y-px">
                   <div className="flex items-center justify-between mb-1.5">
                     <Icon className="size-4 text-muted-foreground" />
                     <span className="text-[10px] font-medium uppercase tracking-wider text-muted-foreground">{label}</span>
@@ -1814,7 +1814,7 @@ export function HourlyOrdersComparison({ brandIds, enabled }: { brandIds: string
       <header className="px-5 py-4 border-b border-border/60">
         <div className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-3">
           <div className="flex items-center gap-3 min-w-0">
-            <div className="size-9 grid place-items-center rounded-xl bg-gradient-to-br from-indigo-500 to-indigo-600 shadow-sm shrink-0">
+            <div className="size-9 grid place-items-center rounded-xl bg-gradient-to-br from-indigo-500 to-indigo-600 shrink-0">
               <Clock className="size-4 text-white" />
             </div>
             <div className="min-w-0">
@@ -1977,7 +1977,7 @@ export function HourlyChartCard({
   const gradPrevId = `gradPrev-${title.replace(/\s+/g, "")}`;
 
   return (
-    <div className="group relative rounded-2xl border border-border/60 bg-card p-5 shadow-sm hover:shadow-md transition-shadow overflow-hidden">
+    <div className="group relative rounded-2xl border border-border/60 bg-card p-5 hover:border-border transition-colors duration-200 overflow-hidden">
       {/* subtle accent glow */}
       <div
         className="absolute -top-16 -right-16 size-40 rounded-full opacity-40 blur-3xl pointer-events-none"
