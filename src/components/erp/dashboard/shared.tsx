@@ -63,9 +63,9 @@ export function greeting() {
 export function SectionLabel({ title, hint }: { title: string; hint?: string }) {
   return (
     <div className="flex items-baseline gap-2 pt-2">
-      <h2 className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">{title}</h2>
-      {hint ? <span className="text-[11px] text-slate-400 truncate">{hint}</span> : null}
-      <div className="flex-1 h-px bg-slate-200" />
+      <h2 className="text-[11px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">{title}</h2>
+      {hint ? <span className="text-[11px] text-muted-foreground/70 truncate">{hint}</span> : null}
+      <div className="flex-1 h-px bg-border/70" />
     </div>
   );
 }
@@ -83,7 +83,7 @@ export const OWNER_TABS: { key: OwnerTab; label: string; icon: typeof TrendingUp
 
 export function OwnerTabs({ value, onChange }: { value: OwnerTab; onChange: (v: OwnerTab) => void }) {
   return (
-    <div className="flex items-center gap-1 overflow-x-auto rounded-lg border border-slate-200 bg-slate-50 p-1">
+    <div className="flex items-center gap-1 overflow-x-auto rounded-xl border border-border/60 bg-muted/40 p-1">
       {OWNER_TABS.map((t) => {
         const Icon = t.icon;
         const active = value === t.key;
@@ -93,8 +93,10 @@ export function OwnerTabs({ value, onChange }: { value: OwnerTab; onChange: (v: 
             type="button"
             onClick={() => onChange(t.key)}
             className={cn(
-              "inline-flex shrink-0 items-center gap-1.5 rounded-md px-3 py-1.5 text-[12px] font-medium transition-colors",
-              active ? "bg-white text-slate-900 shadow-sm ring-1 ring-slate-200" : "text-slate-500 hover:text-slate-800",
+              "inline-flex shrink-0 items-center gap-1.5 rounded-lg px-3 py-1.5 text-[12px] font-medium transition-all duration-150 ease-out",
+              active
+                ? "bg-card text-foreground ring-1 ring-border"
+                : "text-muted-foreground hover:text-foreground hover:bg-card/70",
             )}
           >
             <Icon className="size-3.5" />
@@ -275,13 +277,13 @@ export function KpiCard({
       onClick={() => clickable && onNav(to!)}
       type="button"
       className={cn(
-        "group text-left rounded-lg border border-slate-200 bg-white p-3 transition-colors",
-        "hover:border-slate-300 hover:shadow-sm",
-        clickable ? "cursor-pointer" : "cursor-default",
+        "group text-left rounded-xl border border-border/60 bg-card p-3.5 transition-all duration-200 ease-out",
+        "hover:border-border hover:-translate-y-px focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/50",
+        clickable ? "cursor-pointer active:scale-[0.99]" : "cursor-default",
       )}
     >
       <div className="flex items-center justify-between gap-2 mb-2">
-        <span className="text-[10.5px] font-medium uppercase tracking-wider text-slate-500 truncate">
+        <span className="text-[10.5px] font-medium uppercase tracking-wider text-muted-foreground truncate">
           {label}
         </span>
         <Icon className={cn("size-3.5 shrink-0", toneFg(tone))} />
@@ -292,7 +294,7 @@ export function KpiCard({
       ) : (
         <div
           className={cn(
-            "tabular-nums leading-none tracking-tight font-semibold text-slate-900 text-[22px]",
+            "tabular-nums leading-none tracking-tight font-semibold text-foreground text-[22px]",
             typeof amount === "number" && moneyTier(amount),
           )}
         >
@@ -302,7 +304,7 @@ export function KpiCard({
 
       <div className="mt-2 flex items-center gap-1.5 min-h-[16px]">
         {typeof trend === "number" && <TrendChip trend={trend} />}
-        <span className="text-[11px] text-slate-500 truncate">{sub}</span>
+        <span className="text-[11px] text-muted-foreground/80 truncate">{sub}</span>
       </div>
     </button>
   );
