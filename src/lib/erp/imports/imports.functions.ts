@@ -1437,8 +1437,9 @@ export const getCargoAgentDashboard = createServerFn({ method: "POST" })
     const [agentsRes, posRes] = await Promise.all([
       context.supabase
         .from("imp_cargo_agents")
-        .select("id, name, phone, contact_person, is_active")
-        .in("brand_id", ids)
+        .select("id, name, phone, contact_person, is_active, brand_id")
+        // Agents with no brand are shared across every brand.
+        .or(`brand_id.is.null,brand_id.in.(${ids.join(",")})`)
         .order("name"),
       context.supabase
         .from("imp_purchase_orders")
