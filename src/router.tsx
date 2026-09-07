@@ -52,13 +52,35 @@ if (typeof window !== "undefined") {
 }
 
 export const getRouter = () => {
-  const queryClient = new QueryClient();
+  const queryClient = new QueryClient({
+    defaultOptions: {
+      queries: {
+        // Instant back/forward + no re-fetch storms while navigating around the ERP.
+        staleTime: 60_000,
+        gcTime: 30 * 60_000,
+        refetchOnWindowFocus: false,
+        refetchOnMount: false,
+        refetchOnReconnect: true,
+        retry: 1,
+        networkMode: "offlineFirst",
+        // Keep old rows on screen while the next page loads → no layout flash.
+        placeholderData: (prev: unknown) => prev,
+      },
+      mutations: { retry: 0, networkMode: "offlineFirst" },
+    },
+  });
 
   const router = createRouter({
     routeTree,
     context: { queryClient },
     scrollRestoration: true,
-    defaultPreloadStaleTime: 0,
+    // Warm the next page (code chunk + loader) as soon as a link is hovered.
+    defaultPreload: "intent",
+    defaultPreloadDelay: 40,
+    defaultPreloadStaleTime: 30_000,
+    // Avoid spinner flicker on fast transitions.
+    defaultPendingMs: 250,
+    defaultPendingMinMs: 300,
     defaultErrorComponent: ({ error }) => {
       if (tryReloadForStaleChunk(error)) {
         return (
