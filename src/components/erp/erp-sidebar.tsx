@@ -451,7 +451,7 @@ function RailSection({
         onClick={onClick}
         aria-label={label}
         className={cn(
-          "relative mx-auto flex h-9 w-9 items-center justify-center rounded-md outline-none transition-colors duration-150 focus-visible:ring-2 focus-visible:ring-sidebar-ring",
+          "relative mx-auto flex h-9 w-9 items-center justify-center rounded-xl outline-none transition-all duration-200 ease-out focus-visible:ring-2 focus-visible:ring-sidebar-ring",
           hasActive
             ? "bg-sidebar-accent text-primary"
             : "text-muted-foreground hover:bg-sidebar-accent/60 hover:text-foreground",
