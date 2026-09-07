@@ -223,7 +223,7 @@ export function ErpSidebar({
         className={cn(
           "flex-col h-screen sticky top-0 shrink-0 border-r border-sidebar-border bg-sidebar",
           mobile ? "flex w-full border-r-0" : "hidden md:flex",
-          "transition-[width] duration-200 ease-out",
+          "transition-[width] duration-300 ease-[cubic-bezier(0.32,0.72,0,1)]",
           mobile ? "" : mini ? "w-[60px]" : "w-[248px]",
         )}
       >
@@ -304,7 +304,7 @@ export function ErpSidebar({
             <>
               <button
                 onClick={openSearch}
-                className="flex w-full items-center gap-2 rounded-md border border-sidebar-border bg-background/60 px-2.5 py-1.5 text-xs text-muted-foreground outline-none transition-colors hover:bg-sidebar-accent hover:text-foreground focus-visible:ring-2 focus-visible:ring-sidebar-ring"
+                className="flex w-full items-center gap-2 rounded-xl border border-sidebar-border bg-background/60 px-2.5 py-1.5 text-xs text-muted-foreground outline-none transition-all duration-200 hover:bg-sidebar-accent hover:text-foreground focus-visible:ring-2 focus-visible:ring-sidebar-ring"
               >
                 <Search className="h-3.5 w-3.5" />
                 <span className="flex-1 text-left">Search anything…</span>
@@ -319,7 +319,7 @@ export function ErpSidebar({
                   onChange={(e) => setFilter(e.target.value)}
                   placeholder="Filter menu"
                   aria-label="Filter menu"
-                  className="w-full rounded-md border border-sidebar-border bg-transparent py-1.5 pl-8 pr-7 text-xs outline-none transition-colors placeholder:text-muted-foreground/60 focus:border-primary/50 focus:bg-background"
+                  className="w-full rounded-xl border border-sidebar-border bg-transparent py-1.5 pl-8 pr-7 text-xs outline-none transition-all duration-200 placeholder:text-muted-foreground/60 focus:border-primary/50 focus:bg-background"
                 />
                 {filter && (
                   <button
@@ -394,15 +394,24 @@ export function ErpSidebar({
                           hasActive={hasActive}
                           onToggle={() => toggleGroup(s.key)}
                         />
-                        {open && (
-                          <div className="relative space-y-0.5 pt-0.5">
-                            <span
-                              aria-hidden
-                              className="absolute bottom-1 left-[18px] top-1 w-px bg-sidebar-border"
-                            />
-                            {s.items.map((i) => renderRow(i, { indented: true }))}
+                        <div
+                          className={cn(
+                            "grid transition-all duration-300 ease-[cubic-bezier(0.32,0.72,0,1)]",
+                            open
+                              ? "grid-rows-[1fr] opacity-100"
+                              : "grid-rows-[0fr] opacity-0",
+                          )}
+                        >
+                          <div className="min-h-0 overflow-hidden">
+                            <div className="relative space-y-0.5 pt-0.5">
+                              <span
+                                aria-hidden
+                                className="absolute bottom-1 left-[18px] top-1 w-px bg-sidebar-border"
+                              />
+                              {s.items.map((i) => renderRow(i, { indented: true }))}
+                            </div>
                           </div>
-                        )}
+                        </div>
                       </div>
                     );
                   })}
@@ -442,7 +451,7 @@ function RailSection({
         onClick={onClick}
         aria-label={label}
         className={cn(
-          "relative mx-auto flex h-9 w-9 items-center justify-center rounded-md outline-none transition-colors duration-150 focus-visible:ring-2 focus-visible:ring-sidebar-ring",
+          "relative mx-auto flex h-9 w-9 items-center justify-center rounded-xl outline-none transition-all duration-200 ease-out focus-visible:ring-2 focus-visible:ring-sidebar-ring",
           hasActive
             ? "bg-sidebar-accent text-primary"
             : "text-muted-foreground hover:bg-sidebar-accent/60 hover:text-foreground",
