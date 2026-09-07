@@ -43,17 +43,17 @@ export const NavLinkRow = memo(function NavLinkRow({
         onClick={onNavigate}
         aria-current={active ? "page" : undefined}
         className={cn(
-          "group/link relative flex items-center gap-2.5 rounded-md outline-none",
-          "transition-colors duration-150",
+          "group/link relative flex items-center gap-2.5 rounded-xl outline-none",
+          "transition-all duration-200 ease-out",
           "focus-visible:ring-2 focus-visible:ring-sidebar-ring focus-visible:ring-offset-0",
           mini
             ? "justify-center h-9 w-9 mx-auto"
             : indented
-              ? "pl-9 pr-8 py-1.5 text-[13px]"
+              ? "pl-9 pr-8 py-1.5 text-[13px] rounded-lg"
               : "px-2.5 py-2 pr-8 text-[13.5px] font-medium",
           active
-            ? "bg-sidebar-accent text-sidebar-accent-foreground font-semibold"
-            : "text-muted-foreground hover:bg-sidebar-accent/60 hover:text-sidebar-accent-foreground",
+            ? "bg-sidebar-accent text-sidebar-accent-foreground font-semibold shadow-[inset_0_0_0_1px_var(--sidebar-border)]"
+            : "text-muted-foreground hover:bg-sidebar-accent/60 hover:text-sidebar-accent-foreground hover:translate-x-0.5",
         )}
       >
         {!indented && (
@@ -122,18 +122,25 @@ export const SectionHeader = memo(function SectionHeader({
       onClick={onToggle}
       aria-expanded={open}
       className={cn(
-        "w-full flex items-center gap-2.5 rounded-md px-2.5 py-2 text-[13.5px] font-medium outline-none",
-        "transition-colors duration-150 hover:bg-sidebar-accent/50",
+        "w-full flex items-center gap-2.5 rounded-xl px-2.5 py-2 text-[13.5px] font-medium outline-none",
+        "transition-all duration-200 ease-out hover:bg-sidebar-accent/50",
         "focus-visible:ring-2 focus-visible:ring-sidebar-ring",
         hasActive ? "text-foreground" : "text-muted-foreground hover:text-foreground",
       )}
     >
-      <Icon className={cn("h-4 w-4 shrink-0", hasActive && "text-primary")} />
+      <Icon
+        className={cn(
+          "h-4 w-4 shrink-0 transition-colors duration-200",
+          hasActive && "text-primary",
+        )}
+      />
       <span className="flex-1 truncate text-left">{label}</span>
-      {!open && hasActive && <span className="h-1.5 w-1.5 rounded-full bg-primary" />}
+      {!open && hasActive && (
+        <span className="h-1.5 w-1.5 rounded-full bg-primary motion-safe:animate-pulse" />
+      )}
       <ChevronDown
         className={cn(
-          "h-3.5 w-3.5 shrink-0 text-muted-foreground/70 transition-transform duration-150",
+          "h-3.5 w-3.5 shrink-0 text-muted-foreground/70 transition-transform duration-300 ease-out",
           open && "rotate-180",
         )}
       />
