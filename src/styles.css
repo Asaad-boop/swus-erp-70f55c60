@@ -924,3 +924,140 @@
 @media (prefers-reduced-motion: reduce) {
   .v2-slide-up, .v2-drawer-in { animation: none !important; }
 }
+
+/* ═══════════════════════════════════════════════════════════════
+   Butter layer — app-wide smoothness (motion + scroll + paint)
+   ═══════════════════════════════════════════════════════════════ */
+
+:root {
+  --ease-butter: cubic-bezier(0.22, 1, 0.36, 1);
+  --ease-swift: cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+html {
+  scroll-behavior: smooth;
+  -webkit-text-size-adjust: 100%;
+}
+
+body {
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  text-rendering: optimizeLegibility;
+  overscroll-behavior-y: none;
+}
+
+/* Kill the 300ms tap delay + blue flash on touch devices */
+* {
+  -webkit-tap-highlight-color: transparent;
+}
+
+/* Every interactive surface eases instead of snapping */
+a,
+button,
+[role="button"],
+[role="tab"],
+[role="menuitem"],
+[role="option"],
+summary,
+label[for],
+input,
+textarea,
+select,
+.card,
+[data-slot="card"],
+[data-state] {
+  transition-property: color, background-color, border-color, outline-color,
+    text-decoration-color, fill, stroke, opacity, box-shadow, transform, filter,
+    backdrop-filter;
+  transition-duration: 180ms;
+  transition-timing-function: var(--ease-butter);
+}
+
+button:active,
+[role="button"]:active {
+  transform: translateY(0.5px) scale(0.994);
+}
+
+button:disabled,
+[aria-disabled="true"] {
+  transition-duration: 80ms;
+}
+
+/* Focus rings glide in */
+:where(a, button, input, textarea, select, [tabindex]):focus-visible {
+  outline-offset: 2px;
+  transition: outline-offset 140ms var(--ease-butter), box-shadow 140ms var(--ease-butter);
+}
+
+/* Scrollers: momentum + slim auto-hiding bars */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: color-mix(in oklab, currentColor 18%, transparent) transparent;
+}
+*::-webkit-scrollbar { width: 10px; height: 10px; }
+*::-webkit-scrollbar-track { background: transparent; }
+*::-webkit-scrollbar-thumb {
+  background: color-mix(in oklab, currentColor 14%, transparent);
+  border: 3px solid transparent;
+  background-clip: content-box;
+  border-radius: 9999px;
+  transition: background-color 200ms var(--ease-butter);
+}
+*:hover::-webkit-scrollbar-thumb {
+  background: color-mix(in oklab, currentColor 26%, transparent);
+  background-clip: content-box;
+}
+
+[data-scroll], .overflow-auto, .overflow-y-auto, .overflow-x-auto {
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior: contain;
+  scroll-behavior: smooth;
+}
+
+/* Page/route entrance — subtle, never janky */
+@keyframes butter-in {
+  from { opacity: 0; transform: translate3d(0, 6px, 0); }
+  to   { opacity: 1; transform: translate3d(0, 0, 0); }
+}
+.butter-in { animation: butter-in 260ms var(--ease-butter) both; }
+
+main > *, [data-page-enter] {
+  animation: butter-in 240ms var(--ease-butter) both;
+}
+
+/* Radix overlays/popovers/dialogs/dropdowns: consistent easing */
+[data-radix-popper-content-wrapper] { will-change: transform; }
+[data-state="open"][data-slot="dialog-content"],
+[data-state="open"][role="dialog"],
+[data-state="open"][role="menu"],
+[data-state="open"][role="listbox"] {
+  animation-timing-function: var(--ease-butter) !important;
+}
+
+/* Long lists/tables paint only what's on screen */
+.v2-table tbody tr,
+[data-virtual-row] {
+  content-visibility: auto;
+  contain-intrinsic-size: auto 44px;
+}
+
+/* Images fade in instead of popping */
+img { }
+img[data-loaded="false"] { opacity: 0; }
+img { transition: opacity 220ms var(--ease-butter); }
+
+/* Skeleton shimmer, smoothed */
+[data-slot="skeleton"], .skeleton {
+  animation: v2-fade-pulse 1.6s ease-in-out infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html { scroll-behavior: auto; }
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+  main > *, [data-page-enter], .butter-in { animation: none !important; }
+}
