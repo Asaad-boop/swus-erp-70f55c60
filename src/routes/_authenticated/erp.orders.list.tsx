@@ -367,6 +367,44 @@ function OrdersPage() {
     };
   }, [idsKey, qc]);
 
+  // Realtime: brand-new orders (INSERT) should appear instantly, even though
+  // their id is not on the current page yet.
+  const brandKey = useMemo(
+    () => (effective.brandIds ?? []).slice().sort().join(","),
+    [effective.brandIds],
+  );
+  useEffect(() => {
+    if (!brandKey) return;
+    const allowed = new Set(brandKey.split(","));
+    let pending: ReturnType<typeof setTimeout> | null = null;
+    const refresh = () => {
+      if (pending) return;
+      pending = setTimeout(() => {
+        pending = null;
+        qc.invalidateQueries({ queryKey: ["orders"] });
+        qc.invalidateQueries({ queryKey: ["orders-infinite"] });
+        qc.invalidateQueries({ queryKey: ["orders-status-counts"] });
+      }, 400);
+    };
+    const ch = supabase
+      .channel(`orders-new-${brandKey.slice(0, 32)}`)
+      .on(
+        "postgres_changes",
+        { event: "INSERT", schema: "public", table: "orders" },
+        (payload) => {
+          const row = payload.new as { brand_id?: string } | undefined;
+          if (row?.brand_id && !allowed.has(row.brand_id)) return;
+          refresh();
+        },
+      )
+      .subscribe();
+    return () => {
+      if (pending) clearTimeout(pending);
+      supabase.removeChannel(ch);
+    };
+  }, [brandKey, qc]);
+
+
   const courierFilterActive = courierStatusFilter !== "all";
 
   // Proactive nudge: stuck orders (3+ days in current status) on this page
