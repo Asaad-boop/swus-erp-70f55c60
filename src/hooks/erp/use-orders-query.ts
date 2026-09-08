@@ -318,7 +318,8 @@ export function useOrderStatusCounts(filter: OrdersFilter) {
   return useQuery({
     queryKey: ["orders-status-counts", brandIds, filter.search, filter.source, filter.courier, filter.dateFrom, filter.dateTo, filter.printedFilter],
     enabled: brandIds.length > 0,
-    staleTime: 0,
+    placeholderData: keepPreviousData,
+    staleTime: 30_000,
     queryFn: async () => {
       // Single grouped aggregate on the server instead of 17 separate
       // exact-count round trips (each of which scanned the whole table).
