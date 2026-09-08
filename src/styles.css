@@ -1008,8 +1008,6 @@ button:disabled,
 
 [data-scroll], .overflow-auto, .overflow-y-auto, .overflow-x-auto {
   -webkit-overflow-scrolling: touch;
-  overscroll-behavior: contain;
-  scroll-behavior: smooth;
 }
 
 /* Page/route entrance — subtle, never janky */
