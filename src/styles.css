@@ -935,7 +935,6 @@
 }
 
 html {
-  scroll-behavior: smooth;
   -webkit-text-size-adjust: 100%;
 }
 
@@ -943,7 +942,6 @@ body {
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
   text-rendering: optimizeLegibility;
-  overscroll-behavior-y: none;
 }
 
 /* Kill the 300ms tap delay + blue flash on touch devices */
@@ -1010,8 +1008,6 @@ button:disabled,
 
 [data-scroll], .overflow-auto, .overflow-y-auto, .overflow-x-auto {
   -webkit-overflow-scrolling: touch;
-  overscroll-behavior: contain;
-  scroll-behavior: smooth;
 }
 
 /* Page/route entrance — subtle, never janky */
