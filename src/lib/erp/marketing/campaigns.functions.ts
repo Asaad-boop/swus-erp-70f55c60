@@ -1154,7 +1154,7 @@ export const getCampaignOrders = createServerFn({ method: "POST" })
         brandIds: z.array(z.string().uuid()).min(1),
         from: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
         to: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
-        limit: z.number().int().min(1).max(300).default(100),
+        limit: z.number().int().min(1).max(1000).default(500),
       })
       .parse(d),
   )
