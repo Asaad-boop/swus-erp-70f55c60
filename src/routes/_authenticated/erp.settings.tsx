@@ -296,6 +296,8 @@ function SectionRouter({ section, brandId }: { section: SectionId; brandId: stri
       return <SmsSection key={brandId} brandId={brandId} />;
     case "integrations":
       return <IntegrationsSection key={brandId} brandId={brandId} />;
+    case "api":
+      return <ApiWebhooksSection />;
     case "analytics":
       return <AnalyticsSection key={brandId} brandId={brandId} />;
     case "tracking":
