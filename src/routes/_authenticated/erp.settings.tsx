@@ -14,6 +14,7 @@ import {
   BarChart3,
   Facebook,
   MessageSquare,
+  Webhook,
 } from "lucide-react";
 import { useBrand } from "@/contexts/brand-context";
 import { BusinessSettings } from "@/components/erp/settings/business-settings";
@@ -29,6 +30,7 @@ import { CrmCustomFieldsSection } from "@/components/erp/settings/sections/crm-s
 import { AnalyticsSection } from "@/components/erp/settings/sections/analytics-section";
 import { TrackingSection } from "@/components/erp/settings/sections/tracking-section";
 import { SmsSection } from "@/components/erp/settings/sections/sms-section";
+import { ApiWebhooksSection } from "@/components/erp/settings/sections/api-webhooks-section";
 import { cn } from "@/lib/utils";
 import { useCurrentRole } from "@/hooks/use-current-role";
 
@@ -46,6 +48,7 @@ type SectionId =
   | "notifications"
   | "sms"
   | "integrations"
+  | "api"
   | "analytics"
   | "tracking"
   | "crm"
@@ -117,6 +120,14 @@ const SECTIONS: SectionDef[] = [
     description: "Meta, Gemini, webhooks",
     icon: Plug,
     perBrand: true,
+  },
+  {
+    id: "api",
+    label: "API & Webhooks",
+    description: "Connect another site, order intake",
+    icon: Webhook,
+    perBrand: false,
+    adminOnly: true,
   },
   {
     id: "analytics",
@@ -285,6 +296,8 @@ function SectionRouter({ section, brandId }: { section: SectionId; brandId: stri
       return <SmsSection key={brandId} brandId={brandId} />;
     case "integrations":
       return <IntegrationsSection key={brandId} brandId={brandId} />;
+    case "api":
+      return <ApiWebhooksSection />;
     case "analytics":
       return <AnalyticsSection key={brandId} brandId={brandId} />;
     case "tracking":
