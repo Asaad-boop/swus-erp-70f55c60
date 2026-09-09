@@ -19,6 +19,7 @@ import { Route as Char91DotwellKnownChar93OauthProtectedResourceRouteImport } fr
 import { Route as Char91DotmcpChar93ListToolsRouteImport } from './routes/[.mcp]/list-tools'
 import { Route as AuthenticatedErpIndexRouteImport } from './routes/_authenticated/erp.index'
 import { Route as ApiWebhooksShopifyOrderRouteImport } from './routes/api/webhooks.shopify-order'
+import { Route as ApiPublicInventoryRouteImport } from './routes/api/public/inventory'
 import { Route as ApiPublicBuildInfoRouteImport } from './routes/api/public/build-info'
 import { Route as AuthenticatedErpUsersRouteImport } from './routes/_authenticated/erp.users'
 import { Route as AuthenticatedErpSuppliersRouteImport } from './routes/_authenticated/erp.suppliers'
@@ -69,6 +70,7 @@ import { Route as ApiPublicCronSyncPathaoInvoicesRouteImport } from './routes/ap
 import { Route as ApiPublicCronSyncMarketingRouteImport } from './routes/api/public/cron.sync-marketing'
 import { Route as ApiPublicCronSyncCourierRouteImport } from './routes/api/public/cron.sync-courier'
 import { Route as ApiPublicCronRunRecurringRouteImport } from './routes/api/public/cron.run-recurring'
+import { Route as ApiPublicCronDispatchWebhooksRouteImport } from './routes/api/public/cron.dispatch-webhooks'
 import { Route as ApiPublicCronBusinessSummaryRouteImport } from './routes/api/public/cron.business-summary'
 import { Route as ApiPublicCatalogBrandSlugRouteImport } from './routes/api/public/catalog.$brandSlug'
 import { Route as AuthenticatedErpStocktakeNewRouteImport } from './routes/_authenticated/erp.stocktake.new'
@@ -199,6 +201,11 @@ const AuthenticatedErpIndexRoute = AuthenticatedErpIndexRouteImport.update({
 const ApiWebhooksShopifyOrderRoute = ApiWebhooksShopifyOrderRouteImport.update({
   id: '/api/webhooks/shopify-order',
   path: '/api/webhooks/shopify-order',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiPublicInventoryRoute = ApiPublicInventoryRouteImport.update({
+  id: '/api/public/inventory',
+  path: '/api/public/inventory',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ApiPublicBuildInfoRoute = ApiPublicBuildInfoRouteImport.update({
@@ -484,6 +491,12 @@ const ApiPublicCronRunRecurringRoute =
   ApiPublicCronRunRecurringRouteImport.update({
     id: '/api/public/cron/run-recurring',
     path: '/api/public/cron/run-recurring',
+    getParentRoute: () => rootRouteImport,
+  } as any)
+const ApiPublicCronDispatchWebhooksRoute =
+  ApiPublicCronDispatchWebhooksRouteImport.update({
+    id: '/api/public/cron/dispatch-webhooks',
+    path: '/api/public/cron/dispatch-webhooks',
     getParentRoute: () => rootRouteImport,
   } as any)
 const ApiPublicCronBusinessSummaryRoute =
@@ -999,6 +1012,7 @@ export interface FileRoutesByFullPath {
   '/erp/suppliers': typeof AuthenticatedErpSuppliersRoute
   '/erp/users': typeof AuthenticatedErpUsersRoute
   '/api/public/build-info': typeof ApiPublicBuildInfoRoute
+  '/api/public/inventory': typeof ApiPublicInventoryRoute
   '/api/webhooks/shopify-order': typeof ApiWebhooksShopifyOrderRoute
   '/erp/': typeof AuthenticatedErpIndexRoute
   '/erp/analytics/live': typeof AuthenticatedErpAnalyticsLiveRoute
@@ -1078,6 +1092,7 @@ export interface FileRoutesByFullPath {
   '/erp/stocktake/new': typeof AuthenticatedErpStocktakeNewRoute
   '/api/public/catalog/$brandSlug': typeof ApiPublicCatalogBrandSlugRoute
   '/api/public/cron/business-summary': typeof ApiPublicCronBusinessSummaryRoute
+  '/api/public/cron/dispatch-webhooks': typeof ApiPublicCronDispatchWebhooksRoute
   '/api/public/cron/run-recurring': typeof ApiPublicCronRunRecurringRoute
   '/api/public/cron/sync-courier': typeof ApiPublicCronSyncCourierRoute
   '/api/public/cron/sync-marketing': typeof ApiPublicCronSyncMarketingRoute
@@ -1130,6 +1145,7 @@ export interface FileRoutesByTo {
   '/erp/suppliers': typeof AuthenticatedErpSuppliersRoute
   '/erp/users': typeof AuthenticatedErpUsersRoute
   '/api/public/build-info': typeof ApiPublicBuildInfoRoute
+  '/api/public/inventory': typeof ApiPublicInventoryRoute
   '/api/webhooks/shopify-order': typeof ApiWebhooksShopifyOrderRoute
   '/erp': typeof AuthenticatedErpIndexRoute
   '/erp/analytics/live': typeof AuthenticatedErpAnalyticsLiveRoute
@@ -1209,6 +1225,7 @@ export interface FileRoutesByTo {
   '/erp/stocktake/new': typeof AuthenticatedErpStocktakeNewRoute
   '/api/public/catalog/$brandSlug': typeof ApiPublicCatalogBrandSlugRoute
   '/api/public/cron/business-summary': typeof ApiPublicCronBusinessSummaryRoute
+  '/api/public/cron/dispatch-webhooks': typeof ApiPublicCronDispatchWebhooksRoute
   '/api/public/cron/run-recurring': typeof ApiPublicCronRunRecurringRoute
   '/api/public/cron/sync-courier': typeof ApiPublicCronSyncCourierRoute
   '/api/public/cron/sync-marketing': typeof ApiPublicCronSyncMarketingRoute
@@ -1273,6 +1290,7 @@ export interface FileRoutesById {
   '/_authenticated/erp/suppliers': typeof AuthenticatedErpSuppliersRoute
   '/_authenticated/erp/users': typeof AuthenticatedErpUsersRoute
   '/api/public/build-info': typeof ApiPublicBuildInfoRoute
+  '/api/public/inventory': typeof ApiPublicInventoryRoute
   '/api/webhooks/shopify-order': typeof ApiWebhooksShopifyOrderRoute
   '/_authenticated/erp/': typeof AuthenticatedErpIndexRoute
   '/_authenticated/erp/analytics/live': typeof AuthenticatedErpAnalyticsLiveRoute
@@ -1352,6 +1370,7 @@ export interface FileRoutesById {
   '/_authenticated/erp/stocktake/new': typeof AuthenticatedErpStocktakeNewRoute
   '/api/public/catalog/$brandSlug': typeof ApiPublicCatalogBrandSlugRoute
   '/api/public/cron/business-summary': typeof ApiPublicCronBusinessSummaryRoute
+  '/api/public/cron/dispatch-webhooks': typeof ApiPublicCronDispatchWebhooksRoute
   '/api/public/cron/run-recurring': typeof ApiPublicCronRunRecurringRoute
   '/api/public/cron/sync-courier': typeof ApiPublicCronSyncCourierRoute
   '/api/public/cron/sync-marketing': typeof ApiPublicCronSyncMarketingRoute
@@ -1416,6 +1435,7 @@ export interface FileRouteTypes {
     | '/erp/suppliers'
     | '/erp/users'
     | '/api/public/build-info'
+    | '/api/public/inventory'
     | '/api/webhooks/shopify-order'
     | '/erp/'
     | '/erp/analytics/live'
@@ -1495,6 +1515,7 @@ export interface FileRouteTypes {
     | '/erp/stocktake/new'
     | '/api/public/catalog/$brandSlug'
     | '/api/public/cron/business-summary'
+    | '/api/public/cron/dispatch-webhooks'
     | '/api/public/cron/run-recurring'
     | '/api/public/cron/sync-courier'
     | '/api/public/cron/sync-marketing'
@@ -1547,6 +1568,7 @@ export interface FileRouteTypes {
     | '/erp/suppliers'
     | '/erp/users'
     | '/api/public/build-info'
+    | '/api/public/inventory'
     | '/api/webhooks/shopify-order'
     | '/erp'
     | '/erp/analytics/live'
@@ -1626,6 +1648,7 @@ export interface FileRouteTypes {
     | '/erp/stocktake/new'
     | '/api/public/catalog/$brandSlug'
     | '/api/public/cron/business-summary'
+    | '/api/public/cron/dispatch-webhooks'
     | '/api/public/cron/run-recurring'
     | '/api/public/cron/sync-courier'
     | '/api/public/cron/sync-marketing'
@@ -1689,6 +1712,7 @@ export interface FileRouteTypes {
     | '/_authenticated/erp/suppliers'
     | '/_authenticated/erp/users'
     | '/api/public/build-info'
+    | '/api/public/inventory'
     | '/api/webhooks/shopify-order'
     | '/_authenticated/erp/'
     | '/_authenticated/erp/analytics/live'
@@ -1768,6 +1792,7 @@ export interface FileRouteTypes {
     | '/_authenticated/erp/stocktake/new'
     | '/api/public/catalog/$brandSlug'
     | '/api/public/cron/business-summary'
+    | '/api/public/cron/dispatch-webhooks'
     | '/api/public/cron/run-recurring'
     | '/api/public/cron/sync-courier'
     | '/api/public/cron/sync-marketing'
@@ -1808,9 +1833,11 @@ export interface RootRouteChildren {
   Char91DotwellKnownChar93OauthProtectedResourceRoute: typeof Char91DotwellKnownChar93OauthProtectedResourceRoute
   Char91DotmcpChar93InvokeToolToolRoute: typeof Char91DotmcpChar93InvokeToolToolRoute
   ApiPublicBuildInfoRoute: typeof ApiPublicBuildInfoRoute
+  ApiPublicInventoryRoute: typeof ApiPublicInventoryRoute
   ApiWebhooksShopifyOrderRoute: typeof ApiWebhooksShopifyOrderRoute
   ApiPublicCatalogBrandSlugRoute: typeof ApiPublicCatalogBrandSlugRoute
   ApiPublicCronBusinessSummaryRoute: typeof ApiPublicCronBusinessSummaryRoute
+  ApiPublicCronDispatchWebhooksRoute: typeof ApiPublicCronDispatchWebhooksRoute
   ApiPublicCronRunRecurringRoute: typeof ApiPublicCronRunRecurringRoute
   ApiPublicCronSyncCourierRoute: typeof ApiPublicCronSyncCourierRoute
   ApiPublicCronSyncMarketingRoute: typeof ApiPublicCronSyncMarketingRoute
@@ -1894,6 +1921,13 @@ declare module '@tanstack/react-router' {
       path: '/api/webhooks/shopify-order'
       fullPath: '/api/webhooks/shopify-order'
       preLoaderRoute: typeof ApiWebhooksShopifyOrderRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/public/inventory': {
+      id: '/api/public/inventory'
+      path: '/api/public/inventory'
+      fullPath: '/api/public/inventory'
+      preLoaderRoute: typeof ApiPublicInventoryRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/api/public/build-info': {
@@ -2244,6 +2278,13 @@ declare module '@tanstack/react-router' {
       path: '/api/public/cron/run-recurring'
       fullPath: '/api/public/cron/run-recurring'
       preLoaderRoute: typeof ApiPublicCronRunRecurringRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/public/cron/dispatch-webhooks': {
+      id: '/api/public/cron/dispatch-webhooks'
+      path: '/api/public/cron/dispatch-webhooks'
+      fullPath: '/api/public/cron/dispatch-webhooks'
+      preLoaderRoute: typeof ApiPublicCronDispatchWebhooksRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/api/public/cron/business-summary': {
@@ -3212,9 +3253,11 @@ const rootRouteChildren: RootRouteChildren = {
     Char91DotwellKnownChar93OauthProtectedResourceRoute,
   Char91DotmcpChar93InvokeToolToolRoute: Char91DotmcpChar93InvokeToolToolRoute,
   ApiPublicBuildInfoRoute: ApiPublicBuildInfoRoute,
+  ApiPublicInventoryRoute: ApiPublicInventoryRoute,
   ApiWebhooksShopifyOrderRoute: ApiWebhooksShopifyOrderRoute,
   ApiPublicCatalogBrandSlugRoute: ApiPublicCatalogBrandSlugRoute,
   ApiPublicCronBusinessSummaryRoute: ApiPublicCronBusinessSummaryRoute,
+  ApiPublicCronDispatchWebhooksRoute: ApiPublicCronDispatchWebhooksRoute,
   ApiPublicCronRunRecurringRoute: ApiPublicCronRunRecurringRoute,
   ApiPublicCronSyncCourierRoute: ApiPublicCronSyncCourierRoute,
   ApiPublicCronSyncMarketingRoute: ApiPublicCronSyncMarketingRoute,
