@@ -19,6 +19,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { cn } from "@/lib/utils";
+import { statusBadge } from "@/lib/erp/orders";
 import { useQuery } from "@tanstack/react-query";
 import {
   getCampaignOrders,
@@ -374,6 +375,52 @@ function Lifecycle({ row }: { row: CampaignTruthRow }) {
   );
 }
 
+const WEB_STATUS_LABEL: Record<string, string> = {
+  processing: "Processing",
+  incomplete: "Incomplete",
+  good_but_no_response: "Good / No response",
+  no_response: "No response",
+  advance_payment: "Advance payment",
+  on_hold: "On hold",
+  complete: "Confirmed (web)",
+  cancelled: "Cancelled (web)",
+};
+
+const WEB_STATUS_TONE: Record<string, string> = {
+  complete: "border-emerald-500/40 bg-emerald-500/10 text-emerald-600",
+  cancelled: "border-rose-500/40 bg-rose-500/10 text-rose-600",
+  no_response: "border-amber-500/40 bg-amber-500/10 text-amber-600",
+  good_but_no_response: "border-amber-500/40 bg-amber-500/10 text-amber-600",
+  incomplete: "border-slate-500/40 bg-slate-500/10 text-slate-600",
+  on_hold: "border-yellow-500/40 bg-yellow-500/10 text-yellow-700",
+  advance_payment: "border-sky-500/40 bg-sky-500/10 text-sky-600",
+  processing: "border-indigo-500/40 bg-indigo-500/10 text-indigo-600",
+};
+
+/** Coarse bucket used for the filter chips above the order table. */
+const bucketOf = (o: CampaignOrderRow): string => {
+  const s = o.status;
+  if (s === "cancelled" || s === "fake" || o.web_status === "cancelled") return "cancelled";
+  if (s === "delivered" || s === "partial_delivered" || s === "completed" || s === "paid") return "delivered";
+  if (s.includes("return")) return "returned";
+  if (s === "on_hold" || o.web_status === "on_hold") return "on_hold";
+  if (o.web_status === "no_response" || o.web_status === "good_but_no_response") return "no_response";
+  if (s === "new" || s === "incomplete" || o.web_status === "incomplete" || o.web_status === "processing")
+    return "pending";
+  return "in_progress";
+};
+
+const BUCKETS: { key: string; label: string; dot: string }[] = [
+  { key: "all", label: "All", dot: "bg-slate-400" },
+  { key: "pending", label: "Pending / new", dot: "bg-slate-500" },
+  { key: "no_response", label: "No response", dot: "bg-amber-500" },
+  { key: "in_progress", label: "In progress", dot: "bg-indigo-500" },
+  { key: "on_hold", label: "On hold", dot: "bg-yellow-500" },
+  { key: "delivered", label: "Delivered", dot: "bg-emerald-500" },
+  { key: "returned", label: "Returned", dot: "bg-orange-500" },
+  { key: "cancelled", label: "Cancelled", dot: "bg-rose-500" },
+];
+
 function OrderDrill({
   row,
   brandIds,
@@ -384,67 +431,164 @@ function OrderDrill({
   range: { from: string; to: string };
 }) {
   const fetchOrders = useServerFn(getCampaignOrders);
+  const [bucket, setBucket] = useState("all");
   const q = useQuery({
     queryKey: ["mkt-campaign-orders", row.id, range.from, range.to],
     queryFn: () =>
-      fetchOrders({ data: { campaignId: row.id, brandIds, from: range.from, to: range.to, limit: 100 } }),
+      fetchOrders({ data: { campaignId: row.id, brandIds, from: range.from, to: range.to, limit: 500 } }),
     enabled: brandIds.length > 0,
     staleTime: 60_000,
   });
+
+  const orders = (q.data ?? []) as CampaignOrderRow[];
+  const counts = useMemo(() => {
+    const m: Record<string, number> = { all: orders.length };
+    for (const o of orders) {
+      const b = bucketOf(o);
+      m[b] = (m[b] ?? 0) + 1;
+    }
+    return m;
+  }, [orders]);
+  const visible = useMemo(
+    () => (bucket === "all" ? orders : orders.filter((o) => bucketOf(o) === bucket)),
+    [orders, bucket],
+  );
+
   if (q.isLoading) return <div className="p-3 text-xs text-muted-foreground">Order load হচ্ছে…</div>;
-  const orders = q.data ?? [];
   if (!orders.length) return null;
+
   return (
-    <div className="overflow-x-auto rounded-xl border">
-      <table className="w-full text-xs">
-        <thead className="bg-muted/50 text-[10px] uppercase text-muted-foreground">
-          <tr>
-            <th className="p-2 text-left">Order</th>
-            <th className="p-2 text-left">Status</th>
-            <th className="p-2 text-right">Order value</th>
-            <th className="p-2 text-right">Collected (net)</th>
-            <th className="p-2 text-left">Attribution</th>
-          </tr>
-        </thead>
-        <tbody>
-          {orders.map((o: CampaignOrderRow) => (
-            <tr key={o.order_id} className="border-t">
-              <td className="p-2">
-                <div className="font-medium">{o.invoice_no ?? o.order_id.slice(0, 8)}</div>
-                <div className="text-[10px] text-muted-foreground">{o.customer_name ?? "—"}</div>
-              </td>
-              <td className="p-2">
-                {o.status}
-                {o.confirmation_status ? (
-                  <span className="ml-1 text-[10px] text-muted-foreground">
-                    {o.confirmation_status}
-                  </span>
-                ) : null}
-              </td>
-              <td className="p-2 text-right tabular-nums">{bdt(o.order_value)}</td>
-              <td className="p-2 text-right tabular-nums">
-                {o.collected === null ? (
-                  <span className="text-muted-foreground">Pending</span>
-                ) : o.net_payout !== null ? (
-                  <>
-                    <div title="Courier charge বাদ দিয়ে হাতে আসা টাকা">{bdt(o.net_payout)}</div>
-                    <div className="text-[10px] text-muted-foreground">
-                      gross {bdt(o.collected)} · courier −{bdt(o.courier_fee ?? 0)}
-                    </div>
-                  </>
-                ) : (
-                  <div>{bdt(o.collected)}</div>
-                )}
-              </td>
-              <td className="p-2">
-                <Badge variant="outline" className="h-4 px-1 text-[10px]">
-                  {o.attr_source === "manual" ? "✋ Manual" : o.attr_source}
-                </Badge>
-              </td>
+    <div className="rounded-xl border">
+      <div className="flex flex-wrap items-center gap-1.5 border-b px-3 py-2">
+        <span className="mr-1 text-[10px] uppercase tracking-[0.12em] text-muted-foreground">
+          Campaign orders
+        </span>
+        {BUCKETS.filter((b) => (counts[b.key] ?? 0) > 0).map((b) => (
+          <button
+            key={b.key}
+            type="button"
+            onClick={() => setBucket(b.key)}
+            className={cn(
+              "inline-flex items-center gap-1.5 rounded-full border px-2 py-0.5 text-[11px] transition",
+              bucket === b.key
+                ? "border-foreground/30 bg-foreground/5 text-foreground"
+                : "border-border text-muted-foreground hover:bg-muted",
+            )}
+          >
+            <span className={cn("h-1.5 w-1.5 rounded-full", b.dot)} />
+            {b.label}
+            <span className="tabular-nums font-medium">{counts[b.key] ?? 0}</span>
+          </button>
+        ))}
+      </div>
+
+      <div className="overflow-x-auto">
+        <table className="w-full text-xs">
+          <thead className="bg-muted/50 text-[10px] uppercase text-muted-foreground">
+            <tr>
+              <th className="p-2 text-left">Order</th>
+              <th className="p-2 text-left">ERP status</th>
+              <th className="p-2 text-left">Web status</th>
+              <th className="p-2 text-right">Order value</th>
+              <th className="p-2 text-right">Collected (net)</th>
+              <th className="p-2 text-left">Attribution</th>
             </tr>
-          ))}
-        </tbody>
-      </table>
+          </thead>
+          <tbody>
+            {visible.map((o: CampaignOrderRow) => {
+              const sb = statusBadge(o.status);
+              const isCancelled = bucketOf(o) === "cancelled";
+              const ws = o.web_status ?? null;
+              return (
+                <tr key={o.order_id} className={cn("border-t align-top", isCancelled && "bg-rose-500/[0.04]")}>
+                  <td className="p-2">
+                    <div className="font-medium">{o.invoice_no ?? o.order_id.slice(0, 8)}</div>
+                    <div className="text-[10px] text-muted-foreground">{o.customer_name ?? "—"}</div>
+                    <div className="text-[10px] text-muted-foreground">
+                      {new Date(o.created_at).toLocaleDateString("en-GB", {
+                        day: "2-digit",
+                        month: "short",
+                        timeZone: "Asia/Dhaka",
+                      })}
+                      {o.source ? ` · ${o.source}` : ""}
+                    </div>
+                  </td>
+                  <td className="p-2">
+                    <span
+                      className={cn(
+                        "inline-flex rounded-full px-1.5 py-0.5 text-[10px] font-medium",
+                        sb.className,
+                      )}
+                    >
+                      {sb.label}
+                    </span>
+                    <div className="mt-0.5 space-y-0.5 text-[10px] text-muted-foreground">
+                      {o.payment_status ? <div>Payment: {o.payment_status}</div> : null}
+                      {o.courier_name ? <div>{o.courier_name}</div> : null}
+                      {o.return_type ? <div>Return: {o.return_type}</div> : null}
+                      {o.hold_reason ? <div className="text-yellow-700">Hold: {o.hold_reason}</div> : null}
+                    </div>
+                  </td>
+                  <td className="p-2">
+                    {ws ? (
+                      <span
+                        className={cn(
+                          "inline-flex rounded-full border px-1.5 py-0.5 text-[10px] font-medium",
+                          WEB_STATUS_TONE[ws] ?? "border-border bg-muted/40 text-muted-foreground",
+                        )}
+                      >
+                        {WEB_STATUS_LABEL[ws] ?? ws.replace(/_/g, " ")}
+                      </span>
+                    ) : (
+                      <span className="text-[10px] text-muted-foreground">—</span>
+                    )}
+                    {o.call_status && o.call_status !== "not_called" ? (
+                      <div className="mt-0.5 text-[10px] text-muted-foreground">
+                        Call: {o.call_status.replace(/_/g, " ")}
+                      </div>
+                    ) : null}
+                    {isCancelled ? (
+                      <div className="mt-0.5 text-[10px] text-rose-600">
+                        {o.cancel_reason ? `Reason: ${o.cancel_reason}` : "Cancelled — reason নেই"}
+                        {o.cancelled_at
+                          ? ` · ${new Date(o.cancelled_at).toLocaleDateString("en-GB", {
+                              day: "2-digit",
+                              month: "short",
+                              timeZone: "Asia/Dhaka",
+                            })}`
+                          : ""}
+                      </div>
+                    ) : null}
+                  </td>
+                  <td className="p-2 text-right tabular-nums">{bdt(o.order_value)}</td>
+                  <td className="p-2 text-right tabular-nums">
+                    {o.collected === null ? (
+                      <span className="text-muted-foreground">Pending</span>
+                    ) : o.net_payout !== null ? (
+                      <>
+                        <div title="Courier charge বাদ দিয়ে হাতে আসা টাকা">{bdt(o.net_payout)}</div>
+                        <div className="text-[10px] text-muted-foreground">
+                          gross {bdt(o.collected)} · courier −{bdt(o.courier_fee ?? 0)}
+                        </div>
+                      </>
+                    ) : (
+                      <div>{bdt(o.collected)}</div>
+                    )}
+                  </td>
+                  <td className="p-2">
+                    <Badge variant="outline" className="h-4 px-1 text-[10px]">
+                      {o.attr_source === "manual" ? "✋ Manual" : o.attr_source}
+                    </Badge>
+                  </td>
+                </tr>
+              );
+            })}
+          </tbody>
+        </table>
+      </div>
+      <div className="border-t px-3 py-1.5 text-[10px] text-muted-foreground">
+        {visible.length} / {orders.length} orders দেখানো হচ্ছে
+      </div>
     </div>
   );
 }

@@ -1124,6 +1124,16 @@ export type CampaignOrderRow = {
   customer_name: string | null;
   status: string;
   confirmation_status: string | null;
+  /** Website-side workflow status (processing / no_response / cancelled …) */
+  web_status: string | null;
+  payment_status: string | null;
+  call_status: string | null;
+  cancel_reason: string | null;
+  cancelled_at: string | null;
+  hold_reason: string | null;
+  return_type: string | null;
+  courier_name: string | null;
+  source: string | null;
   order_value: number;
   /** Gross cash collected from the customer (COD + advance) */
   collected: number | null;
@@ -1144,7 +1154,7 @@ export const getCampaignOrders = createServerFn({ method: "POST" })
         brandIds: z.array(z.string().uuid()).min(1),
         from: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
         to: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
-        limit: z.number().int().min(1).max(300).default(100),
+        limit: z.number().int().min(1).max(1000).default(500),
       })
       .parse(d),
   )
@@ -1163,7 +1173,9 @@ export const getCampaignOrders = createServerFn({ method: "POST" })
 
     const { data: orders, error } = await context.supabase
       .from("orders")
-      .select("id, invoice_no, created_at, shipping_name, guest_name, status, confirmation_status, total, advance_amount, courier_fee")
+      .select(
+        "id, invoice_no, created_at, shipping_name, guest_name, status, confirmation_status, web_status, payment_status, call_status, cancel_reason, cancellation_reason, cancelled_at, hold_reason, return_type, courier_name, source, total, advance_amount, courier_fee",
+      )
       .in("id", ids)
       .order("created_at", { ascending: false });
     if (error) throw error;
@@ -1233,6 +1245,15 @@ export const getCampaignOrders = createServerFn({ method: "POST" })
         customer_name: ((o.shipping_name ?? o.guest_name) as string) ?? null,
         status,
         confirmation_status: (o.confirmation_status as string) ?? null,
+        web_status: (o.web_status as string) ?? null,
+        payment_status: (o.payment_status as string) ?? null,
+        call_status: (o.call_status as string) ?? null,
+        cancel_reason: ((o.cancel_reason ?? o.cancellation_reason) as string) ?? null,
+        cancelled_at: (o.cancelled_at as string) ?? null,
+        hold_reason: (o.hold_reason as string) ?? null,
+        return_type: (o.return_type as string) ?? null,
+        courier_name: (o.courier_name as string) ?? null,
+        source: (o.source as string) ?? null,
         order_value: total,
         collected,
         courier_fee: fee,
