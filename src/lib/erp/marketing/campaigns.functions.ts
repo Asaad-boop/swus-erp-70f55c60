@@ -1124,6 +1124,16 @@ export type CampaignOrderRow = {
   customer_name: string | null;
   status: string;
   confirmation_status: string | null;
+  /** Website-side workflow status (processing / no_response / cancelled …) */
+  web_status: string | null;
+  payment_status: string | null;
+  call_status: string | null;
+  cancel_reason: string | null;
+  cancelled_at: string | null;
+  hold_reason: string | null;
+  return_type: string | null;
+  courier_name: string | null;
+  source: string | null;
   order_value: number;
   /** Gross cash collected from the customer (COD + advance) */
   collected: number | null;
