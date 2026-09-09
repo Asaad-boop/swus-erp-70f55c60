@@ -61,6 +61,7 @@ import { Route as AuthenticatedErpContentIndexRouteImport } from './routes/_auth
 import { Route as AuthenticatedErpAnalyticsIndexRouteImport } from './routes/_authenticated/erp.analytics.index'
 import { Route as ApiPublicWebhooksShopifyOrderRouteImport } from './routes/api/public/webhooks.shopify-order'
 import { Route as ApiPublicWebhookPathaoRouteImport } from './routes/api/public/webhook.pathao'
+import { Route as ApiPublicOrdersCreateRouteImport } from './routes/api/public/orders.create'
 import { Route as ApiPublicMktTrackerDotjsRouteImport } from './routes/api/public/mkt.tracker[.]js'
 import { Route as ApiPublicMktTrackRouteImport } from './routes/api/public/mkt.track'
 import { Route as ApiPublicInstapayBackfillRouteImport } from './routes/api/public/instapay.backfill'
@@ -439,6 +440,11 @@ const ApiPublicWebhooksShopifyOrderRoute =
 const ApiPublicWebhookPathaoRoute = ApiPublicWebhookPathaoRouteImport.update({
   id: '/api/public/webhook/pathao',
   path: '/api/public/webhook/pathao',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiPublicOrdersCreateRoute = ApiPublicOrdersCreateRouteImport.update({
+  id: '/api/public/orders/create',
+  path: '/api/public/orders/create',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ApiPublicMktTrackerDotjsRoute =
@@ -1102,6 +1108,7 @@ export interface FileRoutesByFullPath {
   '/api/public/instapay/backfill': typeof ApiPublicInstapayBackfillRoute
   '/api/public/mkt/track': typeof ApiPublicMktTrackRoute
   '/api/public/mkt/tracker.js': typeof ApiPublicMktTrackerDotjsRoute
+  '/api/public/orders/create': typeof ApiPublicOrdersCreateRoute
   '/api/public/webhook/pathao': typeof ApiPublicWebhookPathaoRoute
   '/api/public/webhooks/shopify-order': typeof ApiPublicWebhooksShopifyOrderRoute
   '/erp/analytics/': typeof AuthenticatedErpAnalyticsIndexRoute
@@ -1235,6 +1242,7 @@ export interface FileRoutesByTo {
   '/api/public/instapay/backfill': typeof ApiPublicInstapayBackfillRoute
   '/api/public/mkt/track': typeof ApiPublicMktTrackRoute
   '/api/public/mkt/tracker.js': typeof ApiPublicMktTrackerDotjsRoute
+  '/api/public/orders/create': typeof ApiPublicOrdersCreateRoute
   '/api/public/webhook/pathao': typeof ApiPublicWebhookPathaoRoute
   '/api/public/webhooks/shopify-order': typeof ApiPublicWebhooksShopifyOrderRoute
   '/erp/analytics': typeof AuthenticatedErpAnalyticsIndexRoute
@@ -1380,6 +1388,7 @@ export interface FileRoutesById {
   '/api/public/instapay/backfill': typeof ApiPublicInstapayBackfillRoute
   '/api/public/mkt/track': typeof ApiPublicMktTrackRoute
   '/api/public/mkt/tracker.js': typeof ApiPublicMktTrackerDotjsRoute
+  '/api/public/orders/create': typeof ApiPublicOrdersCreateRoute
   '/api/public/webhook/pathao': typeof ApiPublicWebhookPathaoRoute
   '/api/public/webhooks/shopify-order': typeof ApiPublicWebhooksShopifyOrderRoute
   '/_authenticated/erp/analytics/': typeof AuthenticatedErpAnalyticsIndexRoute
@@ -1525,6 +1534,7 @@ export interface FileRouteTypes {
     | '/api/public/instapay/backfill'
     | '/api/public/mkt/track'
     | '/api/public/mkt/tracker.js'
+    | '/api/public/orders/create'
     | '/api/public/webhook/pathao'
     | '/api/public/webhooks/shopify-order'
     | '/erp/analytics/'
@@ -1658,6 +1668,7 @@ export interface FileRouteTypes {
     | '/api/public/instapay/backfill'
     | '/api/public/mkt/track'
     | '/api/public/mkt/tracker.js'
+    | '/api/public/orders/create'
     | '/api/public/webhook/pathao'
     | '/api/public/webhooks/shopify-order'
     | '/erp/analytics'
@@ -1802,6 +1813,7 @@ export interface FileRouteTypes {
     | '/api/public/instapay/backfill'
     | '/api/public/mkt/track'
     | '/api/public/mkt/tracker.js'
+    | '/api/public/orders/create'
     | '/api/public/webhook/pathao'
     | '/api/public/webhooks/shopify-order'
     | '/_authenticated/erp/analytics/'
@@ -1847,6 +1859,7 @@ export interface RootRouteChildren {
   ApiPublicInstapayBackfillRoute: typeof ApiPublicInstapayBackfillRoute
   ApiPublicMktTrackRoute: typeof ApiPublicMktTrackRoute
   ApiPublicMktTrackerDotjsRoute: typeof ApiPublicMktTrackerDotjsRoute
+  ApiPublicOrdersCreateRoute: typeof ApiPublicOrdersCreateRoute
   ApiPublicWebhookPathaoRoute: typeof ApiPublicWebhookPathaoRoute
   ApiPublicWebhooksShopifyOrderRoute: typeof ApiPublicWebhooksShopifyOrderRoute
 }
@@ -2215,6 +2228,13 @@ declare module '@tanstack/react-router' {
       path: '/api/public/webhook/pathao'
       fullPath: '/api/public/webhook/pathao'
       preLoaderRoute: typeof ApiPublicWebhookPathaoRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/public/orders/create': {
+      id: '/api/public/orders/create'
+      path: '/api/public/orders/create'
+      fullPath: '/api/public/orders/create'
+      preLoaderRoute: typeof ApiPublicOrdersCreateRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/api/public/mkt/tracker.js': {
@@ -3267,6 +3287,7 @@ const rootRouteChildren: RootRouteChildren = {
   ApiPublicInstapayBackfillRoute: ApiPublicInstapayBackfillRoute,
   ApiPublicMktTrackRoute: ApiPublicMktTrackRoute,
   ApiPublicMktTrackerDotjsRoute: ApiPublicMktTrackerDotjsRoute,
+  ApiPublicOrdersCreateRoute: ApiPublicOrdersCreateRoute,
   ApiPublicWebhookPathaoRoute: ApiPublicWebhookPathaoRoute,
   ApiPublicWebhooksShopifyOrderRoute: ApiPublicWebhooksShopifyOrderRoute,
 }
