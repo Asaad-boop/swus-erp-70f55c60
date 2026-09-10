@@ -56,6 +56,8 @@ type LineItem = {
   variant_id?: string | null;
   variant_label?: string | null;
   needsVariant?: boolean;
+  /** Per-product note — printed on the invoice. */
+  note?: string;
 };
 
 type ProductHit = {
@@ -93,10 +95,11 @@ function NewOrderPage() {
   const qc = useQueryClient();
   const { activeBrand, brands, isAllBrands } = useBrand();
   const [pickedBrandId, setPickedBrandId] = useState<string>("");
-  // In All-Brands mode user must pick a target brand for the new order.
-  // Outside of that mode, the active brand wins.
+  // Entry gate: operator first picks which brand this order belongs to.
+  const [brandChosen, setBrandChosen] = useState(false);
+  // Explicit gate pick always wins; otherwise fall back to the active brand.
   const effectiveBrand = useMemo(
-    () => activeBrand ?? brands.find((b) => b.id === pickedBrandId) ?? null,
+    () => brands.find((b) => b.id === pickedBrandId) ?? activeBrand ?? null,
     [activeBrand, brands, pickedBrandId],
   );
   const effectiveBrandId = effectiveBrand?.id ?? null;
@@ -108,6 +111,7 @@ function NewOrderPage() {
   const [shippingNote, setShippingNote] = useState(
     "🙏 মার্চেন্টের অনুমতি ছাড়া প্রোডাক্ট খোলা সম্পূর্ণ নিষিদ্ধ। খুলে দেখতে চাইলে আগে কল করুন।",
   );
+  const [customerNote, setCustomerNote] = useState("");
   const [deliveryMethod, setDeliveryMethod] = useState<DeliveryMethod>("pathao");
   const [isPreorder, setIsPreorder] = useState(false);
   const [preorderDays, setPreorderDays] = useState(15);
@@ -543,6 +547,12 @@ function NewOrderPage() {
 
       const awaitingConfirm = awaiting && !isPreorder;
 
+      // Customer note + per-product notes both go straight onto the invoice.
+      const productNotes = items
+        .filter((i) => (i.note ?? "").trim())
+        .map((i) => `${i.name}${i.variant_label ? ` (${i.variant_label})` : ""}: ${i.note!.trim()}`);
+      const invoiceNote = [customerNote.trim(), ...productNotes].filter(Boolean).join(" • ");
+
       const { data: orderData, error: orderErr } = await supabase
         .from("orders")
         .insert({
@@ -580,6 +590,7 @@ function NewOrderPage() {
           advance_txn_id: Number(advance) > 0 && advanceTxnId ? advanceTxnId : null,
           total: grandTotal,
           shipping_note: shippingNote || null,
+          customer_note: invoiceNote || null,
           is_preorder: isPreorder,
           is_cross_sale: isCrossSale,
           courier_name: deliveryMethod !== "manual" ? deliveryMethod : null,
@@ -673,7 +684,7 @@ function NewOrderPage() {
   // Reset in-place instead of a full page reload — next order starts instantly.
   const resetForm = useCallback(() => {
     setPhone(""); setName(""); setAddress("");
-    setPasteText(""); setItems([]); setProductSearch("");
+    setPasteText(""); setItems([]); setProductSearch(""); setCustomerNote("");
     setDiscount(0); setAdvance(0); setShippingFee(0);
     setAdvanceSource(""); setAdvanceNumber(""); setAdvanceTxnId("");
     setPaymentMethod("COD"); setOrderSource("");
@@ -719,8 +730,21 @@ function NewOrderPage() {
 
 
 
+  // ── Step 0: brand gate ────────────────────────────────────────────────
+  if (!brandChosen) {
+    return (
+      <BrandGate
+        brands={brands}
+        selectedId={pickedBrandId || activeBrand?.id || ""}
+        onSelect={setPickedBrandId}
+        onContinue={() => setBrandChosen(true)}
+        onBack={() => navigate({ to: "/erp/orders" })}
+      />
+    );
+  }
+
   return (
-    <div className="min-h-screen workspace-bg pb-44 md:pb-32">
+    <div className="min-h-screen workspace-bg pb-28 md:pb-24">
       {/* Top bar */}
       <div className="sticky top-0 z-10 border-b border-[var(--panel-border)] bg-[var(--aurora-header)] backdrop-blur-xl">
         <div className="mx-auto grid max-w-6xl grid-cols-[minmax(0,1fr)_auto] items-center gap-2 px-3 py-2.5 md:flex md:justify-between md:gap-3 md:px-6 md:py-3">
@@ -738,14 +762,18 @@ function NewOrderPage() {
             </div>
           </div>
           <div className="flex shrink-0 items-center gap-2">
-            {isAllBrands && (
-              <Select value={pickedBrandId} onValueChange={setPickedBrandId}>
-                <SelectTrigger className="h-9 w-[132px] sm:w-[180px]"><SelectValue placeholder="Choose brand *" /></SelectTrigger>
-                <SelectContent>
-                  {brands.map((b) => <SelectItem key={b.id} value={b.id}>{b.name}</SelectItem>)}
-                </SelectContent>
-              </Select>
-            )}
+            <Button
+              variant="outline"
+              size="sm"
+              className="h-9 gap-1.5 rounded-lg"
+              onClick={() => setBrandChosen(false)}
+              title="Change brand"
+            >
+              <span className="max-w-[110px] truncate text-[12px] font-semibold sm:max-w-[160px]">
+                {effectiveBrand?.name ?? "Pick brand"}
+              </span>
+              <ChevronsUpDown className="h-3.5 w-3.5 opacity-60" />
+            </Button>
             <div className="hidden items-center gap-1.5 rounded-full border bg-muted/40 px-3 py-1 text-[11px] text-muted-foreground md:flex">
               <Info className="h-3.5 w-3.5 text-sky-500" />
               Address likhle field গুলো auto-fill হবে।
@@ -977,6 +1005,37 @@ function NewOrderPage() {
                   </div>
                 </div>
               )}
+            </Card>
+
+            {/* Notes — customer details er thik niche; invoice-e print hobe */}
+            <Card className="overflow-hidden shadow-sm">
+              <CardContent className="space-y-3 p-4">
+                <SectionHeader icon={<Info className="h-3.5 w-3.5" />} accent="bg-sky-500" title="Notes" sub="নোট — invoice-এ যাবে" />
+                <div className="grid gap-3 md:grid-cols-2">
+                  <Field label="Customer Note" bn="কাস্টমারের নোট" hint={`${customerNote.length}/300`}>
+                    <Textarea
+                      rows={3}
+                      maxLength={300}
+                      placeholder="যেকোনো note থাকলে দিন — সরাসরি invoice-এ print হবে"
+                      value={customerNote}
+                      onChange={(e) => setCustomerNote(e.target.value)}
+                      className="resize-none bg-muted/30 focus-visible:bg-background"
+                    />
+                  </Field>
+                  <Field label="Shipping Note" bn="ডেলিভারি নোট" hint={`${shippingNote.length}/350`}>
+                    <Textarea
+                      rows={3}
+                      maxLength={350}
+                      value={shippingNote}
+                      onChange={(e) => setShippingNote(e.target.value)}
+                      className="resize-none bg-muted/30 focus-visible:bg-background"
+                    />
+                  </Field>
+                </div>
+                <p className="text-[11px] text-muted-foreground">
+                  প্রোডাক্ট-ভিত্তিক note নিচের product list-এ প্রতিটি item-এ দেওয়া যাবে — সেটাও invoice-এ যাবে।
+                </p>
+              </CardContent>
             </Card>
 
             {/* Ordered Products */}
@@ -2241,6 +2300,83 @@ function CourierProviderChip({ provider }: { provider: ProviderRow }) {
       <span className="rounded-md bg-muted/60 px-1.5 py-0.5 text-[10px] font-semibold tabular-nums text-muted-foreground">
         {provider.success}/{provider.total}
       </span>
+    </div>
+  );
+}
+/* ───────────────────────── Brand gate (step 0) ───────────────────────── */
+
+function BrandGate({
+  brands, selectedId, onSelect, onContinue, onBack,
+}: {
+  brands: { id: string; name: string; logo_url: string | null }[];
+  selectedId: string;
+  onSelect: (id: string) => void;
+  onContinue: () => void;
+  onBack: () => void;
+}) {
+  const canGo = !!selectedId && brands.some((b) => b.id === selectedId);
+  return (
+    <div className="flex min-h-screen items-center justify-center workspace-bg p-4">
+      <Card className="w-full max-w-2xl overflow-hidden">
+        <CardContent className="space-y-5 p-6 md:p-8">
+          <div className="flex items-start justify-between gap-3">
+            <div>
+              <div className="text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground">New Order</div>
+              <h1 className="font-display text-xl font-bold tracking-tight md:text-2xl">Brand select করুন</h1>
+              <p className="mt-1 text-[13px] text-muted-foreground">কোন brand-এর order? Select করে Continue চাপুন।</p>
+            </div>
+            <Button variant="ghost" size="icon" className="rounded-xl" onClick={onBack} aria-label="Back">
+              <ArrowLeft className="h-4 w-4" />
+            </Button>
+          </div>
+
+          {brands.length === 0 ? (
+            <div className="rounded-xl border border-dashed p-8 text-center text-sm text-muted-foreground">
+              কোনো active brand পাওয়া যায়নি।
+            </div>
+          ) : (
+            <div className="grid gap-2.5 sm:grid-cols-2">
+              {brands.map((b) => {
+                const active = b.id === selectedId;
+                return (
+                  <button
+                    key={b.id}
+                    type="button"
+                    onClick={() => onSelect(b.id)}
+                    onDoubleClick={() => { onSelect(b.id); onContinue(); }}
+                    className={cn(
+                      "flex items-center gap-3 rounded-xl border p-3 text-left transition-colors",
+                      active
+                        ? "border-indigo-500 bg-indigo-50/70 ring-1 ring-indigo-300 dark:bg-indigo-950/30"
+                        : "bg-background hover:bg-muted/50",
+                    )}
+                  >
+                    <div className="flex h-11 w-11 shrink-0 items-center justify-center overflow-hidden rounded-lg border bg-muted">
+                      {b.logo_url
+                        ? <img src={b.logo_url} alt="" className="h-full w-full object-contain" />
+                        : <span className="text-sm font-bold text-muted-foreground">{b.name.slice(0, 2).toUpperCase()}</span>}
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <div className="truncate text-sm font-semibold">{b.name}</div>
+                      <div className="text-[11px] text-muted-foreground">{active ? "Selected" : "Tap to select"}</div>
+                    </div>
+                    {active && <Check className="h-4 w-4 shrink-0 text-indigo-600" />}
+                  </button>
+                );
+              })}
+            </div>
+          )}
+
+          <Button
+            size="lg"
+            className="h-12 w-full gap-2 rounded-xl bg-emerald-600 text-[15px] font-bold text-white hover:bg-emerald-700"
+            disabled={!canGo}
+            onClick={onContinue}
+          >
+            Continue <ArrowRight className="h-4 w-4" />
+          </Button>
+        </CardContent>
+      </Card>
     </div>
   );
 }
