@@ -1007,6 +1007,37 @@ function NewOrderPage() {
               )}
             </Card>
 
+            {/* Notes — customer details er thik niche; invoice-e print hobe */}
+            <Card className="overflow-hidden shadow-sm">
+              <CardContent className="space-y-3 p-4">
+                <SectionHeader icon={<Info className="h-3.5 w-3.5" />} accent="bg-sky-500" title="Notes" sub="নোট — invoice-এ যাবে" />
+                <div className="grid gap-3 md:grid-cols-2">
+                  <Field label="Customer Note" bn="কাস্টমারের নোট" hint={`${customerNote.length}/300`}>
+                    <Textarea
+                      rows={3}
+                      maxLength={300}
+                      placeholder="যেকোনো note থাকলে দিন — সরাসরি invoice-এ print হবে"
+                      value={customerNote}
+                      onChange={(e) => setCustomerNote(e.target.value)}
+                      className="resize-none bg-muted/30 focus-visible:bg-background"
+                    />
+                  </Field>
+                  <Field label="Shipping Note" bn="ডেলিভারি নোট" hint={`${shippingNote.length}/350`}>
+                    <Textarea
+                      rows={3}
+                      maxLength={350}
+                      value={shippingNote}
+                      onChange={(e) => setShippingNote(e.target.value)}
+                      className="resize-none bg-muted/30 focus-visible:bg-background"
+                    />
+                  </Field>
+                </div>
+                <p className="text-[11px] text-muted-foreground">
+                  প্রোডাক্ট-ভিত্তিক note নিচের product list-এ প্রতিটি item-এ দেওয়া যাবে — সেটাও invoice-এ যাবে।
+                </p>
+              </CardContent>
+            </Card>
+
             {/* Ordered Products */}
             <Card className="overflow-hidden shadow-sm">
               <CardContent className="space-y-3.5 p-4">
