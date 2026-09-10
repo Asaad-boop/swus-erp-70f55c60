@@ -762,14 +762,18 @@ function NewOrderPage() {
             </div>
           </div>
           <div className="flex shrink-0 items-center gap-2">
-            {isAllBrands && (
-              <Select value={pickedBrandId} onValueChange={setPickedBrandId}>
-                <SelectTrigger className="h-9 w-[132px] sm:w-[180px]"><SelectValue placeholder="Choose brand *" /></SelectTrigger>
-                <SelectContent>
-                  {brands.map((b) => <SelectItem key={b.id} value={b.id}>{b.name}</SelectItem>)}
-                </SelectContent>
-              </Select>
-            )}
+            <Button
+              variant="outline"
+              size="sm"
+              className="h-9 gap-1.5 rounded-lg"
+              onClick={() => setBrandChosen(false)}
+              title="Change brand"
+            >
+              <span className="max-w-[110px] truncate text-[12px] font-semibold sm:max-w-[160px]">
+                {effectiveBrand?.name ?? "Pick brand"}
+              </span>
+              <ChevronsUpDown className="h-3.5 w-3.5 opacity-60" />
+            </Button>
             <div className="hidden items-center gap-1.5 rounded-full border bg-muted/40 px-3 py-1 text-[11px] text-muted-foreground md:flex">
               <Info className="h-3.5 w-3.5 text-sky-500" />
               Address likhle field গুলো auto-fill হবে।
