@@ -1110,6 +1110,13 @@ function NewOrderPage() {
                             className="h-9 w-24 pl-5 text-sm tabular-nums"
                           />
                         </div>
+                        <Input
+                          value={it.note ?? ""}
+                          maxLength={120}
+                          placeholder="Product note (invoice-এ যাবে)…"
+                          onChange={(e) => updateItem(idx, { note: e.target.value })}
+                          className="h-9 min-w-[160px] flex-1 text-[12px]"
+                        />
                         <div className="ml-auto text-right text-sm font-bold tabular-nums">
                           ৳{(it.unit_price * it.quantity).toLocaleString()}
                         </div>
