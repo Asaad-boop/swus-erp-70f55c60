@@ -353,6 +353,7 @@ function NewOrderPage() {
   const [items, setItems] = useState<LineItem[]>([]);
   const [productSearch, setProductSearch] = useState("");
   const [featuredOnly, setFeaturedOnly] = useState(false);
+  const [productPanelOpen, setProductPanelOpen] = useState(true);
   const searchRef = useRef<HTMLInputElement | null>(null);
 
   // Debounce so we don't hit Supabase on every keystroke — big speed win when
@@ -1110,6 +1111,13 @@ function NewOrderPage() {
                             className="h-9 w-24 pl-5 text-sm tabular-nums"
                           />
                         </div>
+                        <Input
+                          value={it.note ?? ""}
+                          maxLength={120}
+                          placeholder="Product note (invoice-এ যাবে)…"
+                          onChange={(e) => updateItem(idx, { note: e.target.value })}
+                          className="h-9 min-w-[160px] flex-1 text-[12px]"
+                        />
                         <div className="ml-auto text-right text-sm font-bold tabular-nums">
                           ৳{(it.unit_price * it.quantity).toLocaleString()}
                         </div>
@@ -1224,26 +1232,36 @@ function NewOrderPage() {
           <div className="order-1 lg:order-2 lg:col-span-4">
             {/* Quick add products — sticky so it stays reachable while scrolling */}
             <Card className="overflow-hidden shadow-sm lg:sticky lg:top-[72px] lg:z-[5]">
-              <CardContent className="space-y-3 p-4">
+              <CardContent className="space-y-2.5 p-3">
                 <div className="flex items-center justify-between gap-2">
-                  <div>
-                    <div className="text-sm font-semibold">Quick Add Products</div>
-                    <div className="text-[11px] text-muted-foreground">
+                  <div className="min-w-0">
+                    <div className="text-[13px] font-semibold">Quick Add Products</div>
+                    <div className="truncate text-[10px] text-muted-foreground">
                       {searching ? "Searching…" : `${products.length} product${products.length === 1 ? "" : "s"}`}
                       {" · "}
-                      <kbd className="rounded border bg-muted px-1 text-[9px] font-semibold">/</kbd> search ·{" "}
-                      <kbd className="rounded border bg-muted px-1 text-[9px] font-semibold">Enter</kbd> add
+                      <kbd className="rounded border bg-muted px-1 text-[9px] font-semibold">/</kbd> search
                     </div>
                   </div>
-                  <Button
-                    size="icon"
-                    variant={featuredOnly ? "default" : "outline"}
-                    className="h-8 w-8 shrink-0 rounded-lg"
-                    onClick={() => setFeaturedOnly((v) => !v)}
-                    title="Featured only"
-                  >
-                    <Star className={cn("h-4 w-4", featuredOnly && "fill-current")} />
-                  </Button>
+                  <div className="flex shrink-0 items-center gap-1">
+                    <Button
+                      size="icon"
+                      variant={featuredOnly ? "default" : "outline"}
+                      className="h-7 w-7 rounded-lg"
+                      onClick={() => setFeaturedOnly((v) => !v)}
+                      title="Featured only"
+                    >
+                      <Star className={cn("h-3.5 w-3.5", featuredOnly && "fill-current")} />
+                    </Button>
+                    <Button
+                      size="icon"
+                      variant="ghost"
+                      className="h-7 w-7 rounded-lg"
+                      onClick={() => setProductPanelOpen((v) => !v)}
+                      title={productPanelOpen ? "Minimize" : "Expand"}
+                    >
+                      <ChevronsUpDown className="h-3.5 w-3.5" />
+                    </Button>
+                  </div>
                 </div>
                 <div className="relative">
                   <Search className="absolute left-3 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-muted-foreground" />
@@ -1273,7 +1291,12 @@ function NewOrderPage() {
                   )}
                 </div>
 
-                <div className="max-h-[44vh] min-h-[180px] space-y-1 overflow-y-auto overscroll-contain rounded-xl border bg-muted/20 p-1.5 lg:max-h-[calc(100vh-320px)] lg:min-h-[220px]">
+                <div className={cn(
+                  "space-y-1 overflow-y-auto overscroll-contain rounded-xl border bg-muted/20 p-1.5 transition-[max-height] duration-300",
+                  productPanelOpen
+                    ? "max-h-[38vh] min-h-[160px] lg:max-h-[calc(100vh-300px)] lg:min-h-[200px]"
+                    : "max-h-[104px] min-h-0",
+                )}>
                   {searching && products.length === 0 && (
                     <div className="flex items-center gap-2 p-3 text-xs text-muted-foreground">
                       <Loader2 className="h-3.5 w-3.5 animate-spin" /> Searching…
@@ -1363,15 +1386,6 @@ function NewOrderPage() {
                       <SelectItem value="manual">Manual / Other</SelectItem>
                     </SelectContent>
                   </Select>
-                </Field>
-                <Field label="Shipping Note" hint={`${shippingNote.length}/350`}>
-                  <Textarea
-                    rows={4}
-                    maxLength={350}
-                    value={shippingNote}
-                    onChange={(e) => setShippingNote(e.target.value)}
-                    className="resize-none bg-muted/30 focus-visible:bg-background"
-                  />
                 </Field>
                 <div className="space-y-2">
                   <div className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground">Extra Options</div>
@@ -2097,20 +2111,42 @@ function CourierStatCard({
 }) {
   const v: CourierVariant = variant ?? (providerKey ? PROVIDER_VARIANT[providerKey] : undefined) ?? "neutral";
 
+  const r = 20;
+  const c = 2 * Math.PI * r;
+  const filled = Math.min(100, Math.max(0, successRate));
+  const tone = successRate >= 80 ? "stroke-emerald-500" : successRate >= 50 ? "stroke-amber-500" : "stroke-rose-500";
+
   return (
-    <div className="space-y-1" title={`${label}: ${success} delivered · ${cancelled} returned / cancelled`}>
-      <div className="flex items-baseline justify-between gap-2">
+    <div
+      className="flex items-center gap-2.5 rounded-lg border bg-background/60 p-2"
+      title={`${label}: ${success} delivered · ${cancelled} returned / cancelled`}
+    >
+      <div className="relative h-[52px] w-[52px] shrink-0">
+        <svg viewBox="0 0 52 52" className="h-full w-full -rotate-90">
+          <circle cx="26" cy="26" r={r} fill="none" strokeWidth="6" className="stroke-muted" />
+          <circle
+            cx="26" cy="26" r={r} fill="none" strokeWidth="6" strokeLinecap="round"
+            strokeDasharray={c} strokeDashoffset={c - (filled / 100) * c}
+            className={cn("transition-all duration-700", tone)}
+          />
+        </svg>
+        <div className="absolute inset-0 flex items-center justify-center">
+          <span className={cn("text-[11px] font-extrabold tabular-nums leading-none", rateTone(successRate))}>
+            {successRate}%
+          </span>
+        </div>
+      </div>
+      <div className="min-w-0 flex-1">
         <span className="inline-flex min-w-0 items-center gap-1.5">
           <span className={cn("h-1.5 w-1.5 shrink-0 rounded-full", COURIER_DOT[v])} />
-          <span className="truncate text-[11px] font-medium capitalize">{label}</span>
+          <span className="truncate text-[11px] font-semibold capitalize">{label}</span>
         </span>
-        <span className="shrink-0 text-[11px] tabular-nums text-muted-foreground">
-          <span className={cn("font-semibold", rateTone(successRate))}>{successRate}%</span>
-          <span className="ml-1">{success}/{total}</span>
-        </span>
-      </div>
-      <div className="h-[3px] overflow-hidden rounded-full bg-muted">
-        <div className={cn("h-full rounded-full transition-all", rateBar(successRate))} style={{ width: `${successRate}%` }} />
+        <div className="text-[10px] tabular-nums text-muted-foreground">
+          {success}/{total} delivered
+        </div>
+        {cancelled > 0 && (
+          <div className="text-[10px] tabular-nums text-rose-600">{cancelled} returned</div>
+        )}
       </div>
     </div>
   );
