@@ -1364,15 +1364,6 @@ function NewOrderPage() {
                     </SelectContent>
                   </Select>
                 </Field>
-                <Field label="Shipping Note" hint={`${shippingNote.length}/350`}>
-                  <Textarea
-                    rows={4}
-                    maxLength={350}
-                    value={shippingNote}
-                    onChange={(e) => setShippingNote(e.target.value)}
-                    className="resize-none bg-muted/30 focus-visible:bg-background"
-                  />
-                </Field>
                 <div className="space-y-2">
                   <div className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground">Extra Options</div>
                   <ToggleRow label="Pre-order Mode" checked={isPreorder} onChange={setIsPreorder} />
