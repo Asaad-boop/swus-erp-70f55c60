@@ -1231,26 +1231,36 @@ function NewOrderPage() {
           <div className="order-1 lg:order-2 lg:col-span-4">
             {/* Quick add products — sticky so it stays reachable while scrolling */}
             <Card className="overflow-hidden shadow-sm lg:sticky lg:top-[72px] lg:z-[5]">
-              <CardContent className="space-y-3 p-4">
+              <CardContent className="space-y-2.5 p-3">
                 <div className="flex items-center justify-between gap-2">
-                  <div>
-                    <div className="text-sm font-semibold">Quick Add Products</div>
-                    <div className="text-[11px] text-muted-foreground">
+                  <div className="min-w-0">
+                    <div className="text-[13px] font-semibold">Quick Add Products</div>
+                    <div className="truncate text-[10px] text-muted-foreground">
                       {searching ? "Searching…" : `${products.length} product${products.length === 1 ? "" : "s"}`}
                       {" · "}
-                      <kbd className="rounded border bg-muted px-1 text-[9px] font-semibold">/</kbd> search ·{" "}
-                      <kbd className="rounded border bg-muted px-1 text-[9px] font-semibold">Enter</kbd> add
+                      <kbd className="rounded border bg-muted px-1 text-[9px] font-semibold">/</kbd> search
                     </div>
                   </div>
-                  <Button
-                    size="icon"
-                    variant={featuredOnly ? "default" : "outline"}
-                    className="h-8 w-8 shrink-0 rounded-lg"
-                    onClick={() => setFeaturedOnly((v) => !v)}
-                    title="Featured only"
-                  >
-                    <Star className={cn("h-4 w-4", featuredOnly && "fill-current")} />
-                  </Button>
+                  <div className="flex shrink-0 items-center gap-1">
+                    <Button
+                      size="icon"
+                      variant={featuredOnly ? "default" : "outline"}
+                      className="h-7 w-7 rounded-lg"
+                      onClick={() => setFeaturedOnly((v) => !v)}
+                      title="Featured only"
+                    >
+                      <Star className={cn("h-3.5 w-3.5", featuredOnly && "fill-current")} />
+                    </Button>
+                    <Button
+                      size="icon"
+                      variant="ghost"
+                      className="h-7 w-7 rounded-lg"
+                      onClick={() => setProductPanelOpen((v) => !v)}
+                      title={productPanelOpen ? "Minimize" : "Expand"}
+                    >
+                      <ChevronsUpDown className="h-3.5 w-3.5" />
+                    </Button>
+                  </div>
                 </div>
                 <div className="relative">
                   <Search className="absolute left-3 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-muted-foreground" />
