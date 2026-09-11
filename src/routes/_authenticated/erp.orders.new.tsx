@@ -1291,7 +1291,12 @@ function NewOrderPage() {
                   )}
                 </div>
 
-                <div className="max-h-[44vh] min-h-[180px] space-y-1 overflow-y-auto overscroll-contain rounded-xl border bg-muted/20 p-1.5 lg:max-h-[calc(100vh-320px)] lg:min-h-[220px]">
+                <div className={cn(
+                  "space-y-1 overflow-y-auto overscroll-contain rounded-xl border bg-muted/20 p-1.5 transition-[max-height] duration-300",
+                  productPanelOpen
+                    ? "max-h-[38vh] min-h-[160px] lg:max-h-[calc(100vh-300px)] lg:min-h-[200px]"
+                    : "max-h-[104px] min-h-0",
+                )}>
                   {searching && products.length === 0 && (
                     <div className="flex items-center gap-2 p-3 text-xs text-muted-foreground">
                       <Loader2 className="h-3.5 w-3.5 animate-spin" /> Searching…
