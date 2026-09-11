@@ -2111,20 +2111,42 @@ function CourierStatCard({
 }) {
   const v: CourierVariant = variant ?? (providerKey ? PROVIDER_VARIANT[providerKey] : undefined) ?? "neutral";
 
+  const r = 20;
+  const c = 2 * Math.PI * r;
+  const filled = Math.min(100, Math.max(0, successRate));
+  const tone = successRate >= 80 ? "stroke-emerald-500" : successRate >= 50 ? "stroke-amber-500" : "stroke-rose-500";
+
   return (
-    <div className="space-y-1" title={`${label}: ${success} delivered · ${cancelled} returned / cancelled`}>
-      <div className="flex items-baseline justify-between gap-2">
+    <div
+      className="flex items-center gap-2.5 rounded-lg border bg-background/60 p-2"
+      title={`${label}: ${success} delivered · ${cancelled} returned / cancelled`}
+    >
+      <div className="relative h-[52px] w-[52px] shrink-0">
+        <svg viewBox="0 0 52 52" className="h-full w-full -rotate-90">
+          <circle cx="26" cy="26" r={r} fill="none" strokeWidth="6" className="stroke-muted" />
+          <circle
+            cx="26" cy="26" r={r} fill="none" strokeWidth="6" strokeLinecap="round"
+            strokeDasharray={c} strokeDashoffset={c - (filled / 100) * c}
+            className={cn("transition-all duration-700", tone)}
+          />
+        </svg>
+        <div className="absolute inset-0 flex items-center justify-center">
+          <span className={cn("text-[11px] font-extrabold tabular-nums leading-none", rateTone(successRate))}>
+            {successRate}%
+          </span>
+        </div>
+      </div>
+      <div className="min-w-0 flex-1">
         <span className="inline-flex min-w-0 items-center gap-1.5">
           <span className={cn("h-1.5 w-1.5 shrink-0 rounded-full", COURIER_DOT[v])} />
-          <span className="truncate text-[11px] font-medium capitalize">{label}</span>
+          <span className="truncate text-[11px] font-semibold capitalize">{label}</span>
         </span>
-        <span className="shrink-0 text-[11px] tabular-nums text-muted-foreground">
-          <span className={cn("font-semibold", rateTone(successRate))}>{successRate}%</span>
-          <span className="ml-1">{success}/{total}</span>
-        </span>
-      </div>
-      <div className="h-[3px] overflow-hidden rounded-full bg-muted">
-        <div className={cn("h-full rounded-full transition-all", rateBar(successRate))} style={{ width: `${successRate}%` }} />
+        <div className="text-[10px] tabular-nums text-muted-foreground">
+          {success}/{total} delivered
+        </div>
+        {cancelled > 0 && (
+          <div className="text-[10px] tabular-nums text-rose-600">{cancelled} returned</div>
+        )}
       </div>
     </div>
   );
