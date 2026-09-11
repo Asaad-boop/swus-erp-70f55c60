@@ -353,6 +353,7 @@ function NewOrderPage() {
   const [items, setItems] = useState<LineItem[]>([]);
   const [productSearch, setProductSearch] = useState("");
   const [featuredOnly, setFeaturedOnly] = useState(false);
+  const [productPanelOpen, setProductPanelOpen] = useState(true);
   const searchRef = useRef<HTMLInputElement | null>(null);
 
   // Debounce so we don't hit Supabase on every keystroke — big speed win when
