@@ -17,6 +17,29 @@ import { DEFAULT_INVOICE_CONFIG, formatMoney, type InvoiceConfig } from "@/lib/e
 import { markOrdersPrinted } from "@/lib/erp/mark-printed";
 import { useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
+import { createPortal } from "react-dom";
+
+/**
+ * Print a batch: mark <body> so the print stylesheet drops every other body
+ * child from layout (dialog overlay, app shell, toasts), fire the dialog, then
+ * restore. Without this the batch got clipped to a single page.
+ */
+function runBulkPrint() {
+  if (typeof document === "undefined") return;
+  const body = document.body;
+  body.classList.add("printing-bulk");
+  const cleanup = () => {
+    body.classList.remove("printing-bulk");
+    window.removeEventListener("afterprint", cleanup);
+  };
+  window.addEventListener("afterprint", cleanup);
+  // Let the class + layout settle before the (synchronous) print dialog.
+  requestAnimationFrame(() => {
+    window.print();
+    setTimeout(cleanup, 1000);
+  });
+}
+
 import {
   PackSheet, PickSheet, DEFAULT_SHEET_OPTIONS, sortOrdersForDispatch, dispatchSerialMap,
   type SheetMode, type SheetOptions, type SheetOrder,
