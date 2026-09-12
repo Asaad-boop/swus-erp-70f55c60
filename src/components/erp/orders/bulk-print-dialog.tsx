@@ -386,11 +386,12 @@ export function BulkPrintDialog({
                   <X className="h-3.5 w-3.5" /> Cancel
                 </Button>
                 <Button size="sm" disabled={!canPrint} onClick={() => {
-                  window.print();
+                  runBulkPrint();
                   void markOrdersPrinted(orders.map((o: { id: string }) => o.id)).then(() => {
                     qc.invalidateQueries({ queryKey: ["orders"] });
                   });
                 }}>
+
                   {isLoading ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Printer className="h-3.5 w-3.5" />}
                   Print {orders.length || ""}
                 </Button>
