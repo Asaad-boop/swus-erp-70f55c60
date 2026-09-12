@@ -361,14 +361,43 @@
 }
 
 @media print {
+  /* Nothing may clip or cap the printed flow — scroll containers, dialog
+     body-locks and fixed-height shells otherwise cut everything to page 1. */
+  html, body {
+    height: auto !important;
+    max-height: none !important;
+    overflow: visible !important;
+    position: static !important;
+  }
+  body * { overflow: visible !important; max-height: none !important; }
+  [data-sonner-toaster], [data-radix-popper-content-wrapper] { display: none !important; }
+
   body * { visibility: hidden !important; }
   #print-invoice, #print-invoice * { visibility: visible !important; }
   #print-invoice { position: absolute !important; left: 0; top: 0; width: 100%; }
   .print-area, .print-area * { visibility: visible !important; }
   .print-area { position: absolute !important; left: 0 !important; top: 0 !important; width: 100% !important; display: block !important; opacity: 1 !important; }
+
+  /* Bulk printing: the payload is portalled straight into <body> and every
+     other body child is dropped from layout, so multi-page batches flow
+     normally instead of stacking on one absolutely-positioned page. */
+  body.printing-bulk > *:not(.print-root) { display: none !important; }
+  body.printing-bulk .print-root,
+  body.printing-bulk .print-root * { visibility: visible !important; }
+  body.printing-bulk .print-root {
+    display: block !important;
+    position: static !important;
+    left: auto !important;
+    top: auto !important;
+    width: auto !important;
+    opacity: 1 !important;
+    pointer-events: auto !important;
+  }
+
   .print-page { break-inside: avoid; page-break-inside: avoid; }
   .print-page + .print-page { page-break-before: always; break-before: page; }
 }
+
 
 /* ERP sidebar: slim, fading scrollbar */
 .erp-sidebar-scroll {
