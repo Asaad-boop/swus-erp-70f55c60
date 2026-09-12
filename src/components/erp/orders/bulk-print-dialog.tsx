@@ -427,16 +427,19 @@ export function BulkPrintDialog({
         </DialogContent>
       </Dialog>
 
-      {/* Hidden print payload — only visible at print time via .print-area CSS */}
-      {open && ready && (
+      {/* Hidden print payload — portalled to <body> so no scroll container or
+          dialog body-lock can clip the batch to a single page. */}
+      {open && ready && typeof document !== "undefined" && createPortal(
         <div
-          className="print-area"
+          className="print-area print-root"
           style={{ position: "fixed", left: -10000, top: 0, width: "210mm", pointerEvents: "none", opacity: 0 }}
           aria-hidden
         >
           {payload()}
-        </div>
+        </div>,
+        document.body,
       )}
+
     </>
   );
 }
