@@ -17,6 +17,29 @@ import { DEFAULT_INVOICE_CONFIG, formatMoney, type InvoiceConfig } from "@/lib/e
 import { markOrdersPrinted } from "@/lib/erp/mark-printed";
 import { useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
+import { createPortal } from "react-dom";
+
+/**
+ * Print a batch: mark <body> so the print stylesheet drops every other body
+ * child from layout (dialog overlay, app shell, toasts), fire the dialog, then
+ * restore. Without this the batch got clipped to a single page.
+ */
+function runBulkPrint() {
+  if (typeof document === "undefined") return;
+  const body = document.body;
+  body.classList.add("printing-bulk");
+  const cleanup = () => {
+    body.classList.remove("printing-bulk");
+    window.removeEventListener("afterprint", cleanup);
+  };
+  window.addEventListener("afterprint", cleanup);
+  // Let the class + layout settle before the (synchronous) print dialog.
+  requestAnimationFrame(() => {
+    window.print();
+    setTimeout(cleanup, 1000);
+  });
+}
+
 import {
   PackSheet, PickSheet, DEFAULT_SHEET_OPTIONS, sortOrdersForDispatch, dispatchSerialMap,
   type SheetMode, type SheetOptions, type SheetOrder,
@@ -386,11 +409,12 @@ export function BulkPrintDialog({
                   <X className="h-3.5 w-3.5" /> Cancel
                 </Button>
                 <Button size="sm" disabled={!canPrint} onClick={() => {
-                  window.print();
+                  runBulkPrint();
                   void markOrdersPrinted(orders.map((o: { id: string }) => o.id)).then(() => {
                     qc.invalidateQueries({ queryKey: ["orders"] });
                   });
                 }}>
+
                   {isLoading ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Printer className="h-3.5 w-3.5" />}
                   Print {orders.length || ""}
                 </Button>
@@ -426,16 +450,19 @@ export function BulkPrintDialog({
         </DialogContent>
       </Dialog>
 
-      {/* Hidden print payload — only visible at print time via .print-area CSS */}
-      {open && ready && (
+      {/* Hidden print payload — portalled to <body> so no scroll container or
+          dialog body-lock can clip the batch to a single page. */}
+      {open && ready && typeof document !== "undefined" && createPortal(
         <div
-          className="print-area"
+          className="print-area print-root"
           style={{ position: "fixed", left: -10000, top: 0, width: "210mm", pointerEvents: "none", opacity: 0 }}
           aria-hidden
         >
           {payload()}
-        </div>
+        </div>,
+        document.body,
       )}
+
     </>
   );
 }
