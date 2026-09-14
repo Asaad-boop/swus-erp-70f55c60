@@ -3,12 +3,20 @@ import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 
 async function assertCourierRole(supabase: any, userId: string) {
-  const [{ data: admin }, { data: ops }, { data: cs }] = await Promise.all([
-    supabase.rpc("has_role", { _user_id: userId, _role: "admin" }),
-    supabase.rpc("has_role", { _user_id: userId, _role: "operations" }),
-    supabase.rpc("has_role", { _user_id: userId, _role: "customer_service" }),
-  ]);
-  if (!admin && !ops && !cs) throw new Error("Not authorized");
+  const allowedRoles = [
+    "owner",
+    "admin",
+    "operations",
+    "customer_service",
+    "warehouse_staff",
+    "packer",
+  ] as const;
+  const results = await Promise.all(
+    allowedRoles.map((role) =>
+      supabase.rpc("has_role", { _user_id: userId, _role: role }),
+    ),
+  );
+  if (!results.some(({ data }) => data === true)) throw new Error("Not authorized");
 }
 
 async function clientForBrand(supabase: any, brandId?: string | null) {
