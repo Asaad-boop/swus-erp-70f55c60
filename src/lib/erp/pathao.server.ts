@@ -309,8 +309,21 @@ export async function loadPathaoCreds(supabase: any, brandId?: string | null): P
     .select("brand_id, base_url, client_id, client_secret, username, password, store_id, is_active")
     .eq("provider", "pathao")
     .eq("is_active", true);
-  if (error) throw error;
-  const list: any[] = Array.isArray(rows) ? rows : [];
+  let list: any[] = Array.isArray(rows) ? rows : [];
+  // Non-admin staff (operations / CS / warehouse) can't read erp_courier_settings
+  // directly under RLS. When the direct read is blocked or empty, fall back to the
+  // role-gated security-definer RPC so booking/geo lookups still work for them.
+  if (error || list.length === 0) {
+    const { data: rpcRows, error: rpcError } = await supabase.rpc("get_courier_creds", {
+      _provider: "pathao",
+      _brand_id: brandId ?? null,
+    });
+    if (Array.isArray(rpcRows) && rpcRows.length > 0) {
+      list = rpcRows;
+    } else if (error && rpcError) {
+      throw error;
+    }
+  }
   const isComplete = (r: any) =>
     r && r.client_id && r.client_secret && r.username && r.password && r.store_id;
 

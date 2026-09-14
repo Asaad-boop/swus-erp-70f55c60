@@ -13319,6 +13319,21 @@ export type Database = {
           returned_orders: number
         }[]
       }
+      get_courier_creds: {
+        Args: { _brand_id?: string; _provider: string }
+        Returns: {
+          api_key: string
+          base_url: string
+          brand_id: string
+          client_id: string
+          client_secret: string
+          is_active: boolean
+          password: string
+          secret_key: string
+          store_id: string
+          username: string
+        }[]
+      }
       get_customer_stats: { Args: { p_user_id: string }; Returns: Json }
       get_finance_dashboard: {
         Args: { _brand_id: string; _from: string; _to: string }
