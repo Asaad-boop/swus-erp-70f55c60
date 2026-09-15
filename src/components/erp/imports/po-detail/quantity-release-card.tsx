@@ -824,6 +824,9 @@ export function QuantityReleaseCard({
                 {[
                   { k: "Goods (purchase) due", pu: effGoodsDuePerUnit, tot: previewGoodsDue },
                   { k: "Shipping / overhead due", pu: shipDuePerUnit, tot: previewShipDue },
+                  ...(arrearsTotal > 0
+                    ? [{ k: "Agher release-er baki (arrears)", pu: 0, tot: arrearsTotal }]
+                    : []),
                 ].map((r) => (
                   <TableRow key={r.k}>
                     <TableCell className="text-sm">{r.k}</TableCell>
