@@ -9,6 +9,7 @@ const DEFAULT_DAILY_LIMIT = 500;
 
 export const USAGE_KEY_PREFIX = "bdcourier_usage:";
 export const LIMIT_KEY = "bdcourier_daily_limit";
+export const API_KEY_SETTING = "bdcourier_api_key";
 
 export type BdCourierStat = {
   name: string;
