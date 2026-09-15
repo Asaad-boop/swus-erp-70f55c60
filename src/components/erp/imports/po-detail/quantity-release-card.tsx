@@ -321,8 +321,8 @@ export function QuantityReleaseCard({
           payment: payNow && payWallet && amt > 0
             ? {
                 wallet_id: payWallet,
-                goods_amount_bdt: +(previewGoodsDue * ratio).toFixed(2),
-                shipping_amount_bdt: +(previewShipDue * ratio).toFixed(2),
+                goods_amount_bdt: +((previewGoodsDue + arrearsGoods) * ratio).toFixed(2),
+                shipping_amount_bdt: +((previewShipDue + arrearsShip) * ratio).toFixed(2),
                 payment_date: new Date().toISOString().slice(0, 10),
                 idempotency_key: `qtyrel:${poId}:${Date.now()}`,
               }
