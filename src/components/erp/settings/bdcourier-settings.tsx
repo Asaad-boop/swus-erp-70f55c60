@@ -62,6 +62,20 @@ export function BdCourierSettings() {
     onError: (e: Error) => toast.error(e.message),
   });
 
+  const saveKey = useMutation({
+    mutationFn: async (clear?: boolean) => {
+      const v = clear ? null : apiKey.trim();
+      if (!clear && !v) throw new Error("API key din");
+      return await saveKeyFn({ data: { apiKey: v } });
+    },
+    onSuccess: (_r, clear) => {
+      setApiKey("");
+      toast.success(clear ? "API key remove kora hoyeche" : "BDCourier API key save hoyeche");
+      qc.invalidateQueries({ queryKey: ["bdcourier-quota"] });
+    },
+    onError: (e: Error) => toast.error(e.message),
+  });
+
   const used = quota?.used ?? 0;
   const max = quota?.limit ?? 500;
 
