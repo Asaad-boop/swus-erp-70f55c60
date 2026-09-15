@@ -112,18 +112,23 @@ export function QtyArrivedDialog({
   );
   const [customs, setCustoms] = useState<number>(initialCustoms);
   const [other, setOther] = useState<number>(initialOther);
-  const [payNow, setPayNow] = useState(false);
   const [amount, setAmount] = useState<number>(0);
   const [walletId, setWalletId] = useState("");
   const [ref, setRef] = useState("");
 
   const shipping = flat > 0 ? flat : +(weight * rate).toFixed(2);
+  // Flat bill + rate deoa thakle weight nije ber hoye jabe (bill ÷ rate).
+  const derivedWeight = flat > 0 && rate > 0 ? +(flat / rate).toFixed(2) : 0;
+  const effWeight = weight > 0 ? weight : derivedWeight;
+  // Payment tokhoni newa hobe jokhon amount ar wallet duitai deoa — na hole shudhu bill save hobe.
+  const wantsPay = amount > 0;
+  const payReady = wantsPay && !!walletId;
 
   const mut = useMutation({
     mutationFn: async () => {
       const payload: any = {
         po_id: poId,
-        total_weight_kg: weight || 0,
+        total_weight_kg: effWeight || 0,
         rate_per_kg_bdt: rate || 0,
         customs_duty_bdt: customs || 0,
         other_charges_bdt: other || 0,
@@ -131,7 +136,7 @@ export function QtyArrivedDialog({
         idempotency_key: newIdemKey("qarr"),
       };
       if (flat > 0) payload.shipping_total_bdt = flat;
-      if (payNow && walletId && amount > 0) {
+      if (payReady) {
         payload.shipping_payment = {
           amount, wallet_id: walletId,
           payment_date: new Date().toISOString().slice(0, 10),
