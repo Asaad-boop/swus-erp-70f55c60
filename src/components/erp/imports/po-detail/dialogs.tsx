@@ -112,18 +112,23 @@ export function QtyArrivedDialog({
   );
   const [customs, setCustoms] = useState<number>(initialCustoms);
   const [other, setOther] = useState<number>(initialOther);
-  const [payNow, setPayNow] = useState(false);
   const [amount, setAmount] = useState<number>(0);
   const [walletId, setWalletId] = useState("");
   const [ref, setRef] = useState("");
 
   const shipping = flat > 0 ? flat : +(weight * rate).toFixed(2);
+  // Flat bill + rate deoa thakle weight nije ber hoye jabe (bill ÷ rate).
+  const derivedWeight = flat > 0 && rate > 0 ? +(flat / rate).toFixed(2) : 0;
+  const effWeight = weight > 0 ? weight : derivedWeight;
+  // Payment tokhoni newa hobe jokhon amount ar wallet duitai deoa — na hole shudhu bill save hobe.
+  const wantsPay = amount > 0;
+  const payReady = wantsPay && !!walletId;
 
   const mut = useMutation({
     mutationFn: async () => {
       const payload: any = {
         po_id: poId,
-        total_weight_kg: weight || 0,
+        total_weight_kg: effWeight || 0,
         rate_per_kg_bdt: rate || 0,
         customs_duty_bdt: customs || 0,
         other_charges_bdt: other || 0,
@@ -131,7 +136,7 @@ export function QtyArrivedDialog({
         idempotency_key: newIdemKey("qarr"),
       };
       if (flat > 0) payload.shipping_total_bdt = flat;
-      if (payNow && walletId && amount > 0) {
+      if (payReady) {
         payload.shipping_payment = {
           amount, wallet_id: walletId,
           payment_date: new Date().toISOString().slice(0, 10),
@@ -162,29 +167,47 @@ export function QtyArrivedDialog({
             <div><Label className="text-xs">Customs / Duty (৳)</Label><Input type="number" step="0.01" value={customs} onChange={(e) => setCustoms(Number(e.target.value))} /></div>
             <div><Label className="text-xs">Other charges (৳)</Label><Input type="number" step="0.01" value={other} onChange={(e) => setOther(Number(e.target.value))} /></div>
           </div>
-          <div className="flex items-center justify-between text-sm p-2 rounded bg-muted/40">
-            <span className="text-muted-foreground">Shipping total:</span>
-            <span className="font-semibold tabular-nums">{fmtBdt(shipping)}</span>
+          <div className="rounded bg-muted/40 p-2 text-sm">
+            <div className="flex items-center justify-between">
+              <span className="text-muted-foreground">Shipping total:</span>
+              <span className="font-semibold tabular-nums">{fmtBdt(shipping)}</span>
+            </div>
+            {derivedWeight > 0 && weight <= 0 && (
+              <div className="mt-1 text-[11px] text-muted-foreground">
+                Bill ÷ rate = <b className="tabular-nums">{derivedWeight} kg</b> (auto hishab)
+              </div>
+            )}
+            {shipping <= 0 && (
+              <div className="mt-1 text-[11px] text-muted-foreground">
+                Bill chhara-o save kora jabe — pore edit kore weight/rate ba total boshate parben.
+              </div>
+            )}
           </div>
           <div className="border-t border-border pt-3">
             <div className="text-[11px] tracking-wider font-semibold text-muted-foreground mb-2">PAY SHIPPING NOW (OPTIONAL)</div>
             <div className="grid grid-cols-2 gap-3">
-              <div><Label className="text-xs">Amount</Label><Input type="number" step="0.01" value={amount} onChange={(e) => { setAmount(Number(e.target.value)); setPayNow(true); }} /></div>
+              <div><Label className="text-xs">Amount</Label><Input type="number" step="0.01" value={amount} onChange={(e) => setAmount(Number(e.target.value))} /></div>
               <div>
                 <Label className="text-xs">From wallet</Label>
-                <Select value={walletId} onValueChange={(v) => { setWalletId(v); setPayNow(true); }}>
+                <Select value={walletId} onValueChange={setWalletId}>
                   <SelectTrigger><SelectValue placeholder="Wallet" /></SelectTrigger>
                   <SelectContent>{wallets.filter((w) => w.is_active).map((w) => <SelectItem key={w.id} value={w.id}>{w.name} ({fmtBdt(w.current_balance)})</SelectItem>)}</SelectContent>
                 </Select>
               </div>
             </div>
             <div className="mt-2"><Label className="text-xs">Reference</Label><Input value={ref} onChange={(e) => setRef(e.target.value)} placeholder="Optional" /></div>
+            {wantsPay && !walletId && (
+              <div className="mt-2 text-[11px] text-amber-600 dark:text-amber-400">
+                Payment korte hole wallet select korun — na hole Amount 0 kore shudhu bill save korun.
+              </div>
+            )}
           </div>
         </div>
         <DialogFooter>
           <Button variant="ghost" onClick={onClose}>Cancel</Button>
-          <Button disabled={mut.isPending || (payNow && (!walletId || amount <= 0))} onClick={() => mut.mutate()}>
-            {mut.isPending && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}Save
+          <Button disabled={mut.isPending || (wantsPay && !walletId)} onClick={() => mut.mutate()}>
+            {mut.isPending && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
+            {payReady ? "Save & pay" : "Save bill"}
           </Button>
         </DialogFooter>
       </DialogContent>
