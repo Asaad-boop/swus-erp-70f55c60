@@ -9,6 +9,7 @@ const DEFAULT_DAILY_LIMIT = 500;
 
 export const USAGE_KEY_PREFIX = "bdcourier_usage:";
 export const LIMIT_KEY = "bdcourier_daily_limit";
+export const API_KEY_SETTING = "bdcourier_api_key";
 
 export type BdCourierStat = {
   name: string;
@@ -44,8 +45,20 @@ export function todayKey(): string {
   return USAGE_KEY_PREFIX + d.toISOString().slice(0, 10);
 }
 
+// app_settings is admin-only under RLS, so settings (quota + API key) are read
+// through the service-role client when available; the caller client is a fallback.
+async function db(supabase: any) {
+  try {
+    const { tryGetSupabaseAdmin } = await import("@/integrations/supabase/client.server");
+    return tryGetSupabaseAdmin() ?? supabase;
+  } catch {
+    return supabase;
+  }
+}
+
 async function readSetting(supabase: any, key: string): Promise<any> {
-  const { data } = await supabase.from("app_settings").select("value").eq("key", key).maybeSingle();
+  const client = await db(supabase);
+  const { data } = await client.from("app_settings").select("value").eq("key", key).maybeSingle();
   if (!data?.value) return null;
   try {
     return JSON.parse(data.value);
@@ -55,9 +68,29 @@ async function readSetting(supabase: any, key: string): Promise<any> {
 }
 
 async function writeSetting(supabase: any, key: string, value: unknown) {
-  await supabase
+  const client = await db(supabase);
+  await client
     .from("app_settings")
     .upsert({ key, value: JSON.stringify(value), updated_at: new Date().toISOString() }, { onConflict: "key" });
+}
+
+/** DB-saved key wins over the env secret so admins can rotate it from Settings. */
+export async function getBdCourierKey(supabase: any): Promise<{ token: string | null; source: "db" | "env" | null }> {
+  const saved = await readSetting(supabase, API_KEY_SETTING);
+  const fromDb = typeof saved === "string" ? saved.trim() : "";
+  if (fromDb) return { token: fromDb, source: "db" };
+  const fromEnv = (process.env.BDCOURIER_API_KEY || "").trim();
+  if (fromEnv) return { token: fromEnv, source: "env" };
+  return { token: null, source: null };
+}
+
+export function maskKey(token: string) {
+  if (token.length <= 8) return "••••";
+  return `${token.slice(0, 4)}••••${token.slice(-4)}`;
+}
+
+export async function saveBdCourierKey(supabase: any, token: string | null) {
+  await writeSetting(supabase, API_KEY_SETTING, token && token.trim() ? token.trim() : null);
 }
 
 // Short-lived memo so a burst of lookups doesn't re-read quota settings per phone.
@@ -77,7 +110,15 @@ export async function getBdCourierQuota(supabase: any) {
     };
   }
   const { limit, used } = quotaMemo;
-  return { limit, used, remaining: Math.max(0, limit - used), configured: !!process.env.BDCOURIER_API_KEY };
+  const { token, source } = await getBdCourierKey(supabase);
+  return {
+    limit,
+    used,
+    remaining: Math.max(0, limit - used),
+    configured: !!token,
+    keySource: source,
+    keyPreview: token ? maskKey(token) : null,
+  };
 }
 
 async function bumpUsage(supabase: any, by = 1) {
@@ -92,10 +133,10 @@ async function bumpUsage(supabase: any, by = 1) {
  * Returns non-Pathao providers only (Pathao comes from our own API).
  */
 export async function fetchBdCourierHistory(supabase: any, phone: string): Promise<BdCourierStat[]> {
-  const token = process.env.BDCOURIER_API_KEY;
+  const { token } = await getBdCourierKey(supabase);
   if (!token) {
     return [
-      { name: "bdcourier", label: "Other couriers", ok: false, total: 0, success: 0, cancelled: 0, error: "BDCourier API key set kora nei" },
+      { name: "bdcourier", label: "Other couriers", ok: false, total: 0, success: 0, cancelled: 0, error: "BDCourier API key set kora nei — Settings → Courier → BDCourier e key add korun" },
     ];
   }
 

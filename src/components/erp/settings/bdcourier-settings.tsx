@@ -8,16 +8,21 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
-import { bdCourierQuotaFn, fetchCourierHistoryFn } from "@/lib/erp/courier-history.functions";
+import { bdCourierQuotaFn, bdCourierSaveKeyFn, fetchCourierHistoryFn } from "@/lib/erp/courier-history.functions";
 import { saveAppSetting } from "@/lib/erp/settings/app-settings.functions";
+import { MaskedSecretInput } from "@/components/erp/settings/masked-secret-input";
+import { useCurrentRole } from "@/hooks/use-current-role";
 
 export function BdCourierSettings() {
   const qc = useQueryClient();
+  const { isAdmin } = useCurrentRole();
   const quotaFn = useServerFn(bdCourierQuotaFn);
   const saveFn = useServerFn(saveAppSetting);
+  const saveKeyFn = useServerFn(bdCourierSaveKeyFn);
   const historyFn = useServerFn(fetchCourierHistoryFn);
 
   const [limit, setLimit] = useState("");
+  const [apiKey, setApiKey] = useState("");
   const [testPhone, setTestPhone] = useState("");
   const [testResult, setTestResult] = useState<string | null>(null);
 
@@ -57,6 +62,20 @@ export function BdCourierSettings() {
     onError: (e: Error) => toast.error(e.message),
   });
 
+  const saveKey = useMutation({
+    mutationFn: async (clear?: boolean) => {
+      const v = clear ? null : apiKey.trim();
+      if (!clear && !v) throw new Error("API key din");
+      return await saveKeyFn({ data: { apiKey: v } });
+    },
+    onSuccess: (_r, clear) => {
+      setApiKey("");
+      toast.success(clear ? "API key remove kora hoyeche" : "BDCourier API key save hoyeche");
+      qc.invalidateQueries({ queryKey: ["bdcourier-quota"] });
+    },
+    onError: (e: Error) => toast.error(e.message),
+  });
+
   const used = quota?.used ?? 0;
   const max = quota?.limit ?? 500;
 
@@ -76,6 +95,40 @@ export function BdCourierSettings() {
         </div>
       </CardHeader>
       <CardContent className="space-y-5">
+        <div className="space-y-2 rounded-lg border p-3">
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <Label className="text-xs">BDCourier API key</Label>
+            {quota?.keyPreview ? (
+              <span className="text-[11px] text-muted-foreground">
+                Ekhon set ache: <code>{quota.keyPreview}</code>
+                {quota.keySource === "env" ? " (server secret)" : ""}
+              </span>
+            ) : null}
+          </div>
+          <MaskedSecretInput
+            value={apiKey}
+            onChange={setApiKey}
+            isAdmin={isAdmin}
+            placeholder={quota?.configured ? "Notun key dile purano ta replace hobe" : "bdcourier.com API token"}
+            disabled={saveKey.isPending}
+          />
+          {isAdmin && (
+            <div className="flex flex-wrap gap-2">
+              <Button size="sm" onClick={() => saveKey.mutate(false)} disabled={saveKey.isPending || !apiKey.trim()}>
+                {saveKey.isPending ? "Saving..." : "Save key"}
+              </Button>
+              {quota?.keySource === "db" && (
+                <Button size="sm" variant="outline" onClick={() => saveKey.mutate(true)} disabled={saveKey.isPending}>
+                  Remove key
+                </Button>
+              )}
+            </div>
+          )}
+          <p className="text-[11px] text-muted-foreground">
+            Key ta bdcourier.com dashboard → API section theke pawa jay. Ekhane save korle sob courier lookup abar kaj korbe.
+          </p>
+        </div>
+
         <div className="space-y-2">
           <div className="flex items-center justify-between text-sm">
             <span className="text-muted-foreground">Ajker search use</span>
