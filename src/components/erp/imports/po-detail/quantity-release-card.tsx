@@ -172,14 +172,17 @@ export function QuantityReleaseCard({
   const overheadPerUnit = poOverheadPerUnit + releaseOverheadPerUnit;
   const overheadTotal = poOverheadTotal;
 
-  // ---- Payment credit: type onujayi (goods vs shipping), ar release-wise ledger ----
-  // Purono bug: paid_bdt take shob ordered pcs-er upor bhag kora hoto, tai
-  // 3rd release-er shipping due kome (18,659) dekhato. Ekhon: joto pcs release
-  // hoyeche tar cumulative due theke joto paid hoyeche seta bad — tai per-release
-  // rate thik thake (100 pcs × ৳197.8 = ৳19,780).
+  // ---- Payment credit: advance PRO-RATA, release payment FIFO ----
+  // Purono bug: advance ke FIFO kore prothom release gulo-i puro kheye felto,
+  // tai sheshh release e 0% advance benefit — 200 pcs × full ৳81.4 ashto.
+  // Ekhon: advance PO-r shob pcs-er upor shoman bhag (e.g. 60% advance hole
+  // protita release e goods due = 40%), ar release-wise payment alada ledger.
   const payList = (payments ?? []).filter((p: any) => !p?.is_reversed);
-  const paidGoods = payList
-    .filter((p: any) => ["supplier_advance", "supplier_payment", "supplier_balance"].includes(p.payment_type))
+  const paidAdvance = payList
+    .filter((p: any) => p.payment_type === "supplier_advance")
+    .reduce((s: number, p: any) => s + Number(p.amount_bdt ?? 0), 0);
+  const paidGoodsRelease = payList
+    .filter((p: any) => ["supplier_payment", "supplier_balance"].includes(p.payment_type))
     .reduce((s: number, p: any) => s + Number(p.amount_bdt ?? 0), 0);
   const paidShipAll = payList
     .filter((p: any) => p.payment_type === "shipping")
@@ -190,22 +193,29 @@ export function QuantityReleaseCard({
   const shipTotalAll = overheadTotal + commissionPerUnit * totalOrdered;
   const shipPerUnitRate = totalOrdered > 0 ? shipTotalAll / totalOrdered : 0;
 
-  // Age-i release howa pcs-er due (ei gulor against-e paid ta age boshbe)
-  const priorGoodsValue = items.reduce(
-    (s, i) => s + goodsUnitFor(i) * (releasedByItem.get(i.id) ?? 0),
+  // Advance koto % cover kore — protita piece-e shoman bhabe boshbe
+  const advanceRatio = goodsTotalAll > 0 ? Math.min(1, paidAdvance / goodsTotalAll) : 0;
+  const netGoodsUnitFor = (i: any) => goodsUnitFor(i) * (1 - advanceRatio);
+
+  // Age-i release howa pcs-er net due (advance bad diye) — er against-e release payment boshbe
+  const priorNetGoods = items.reduce(
+    (s, i) => s + netGoodsUnitFor(i) * (releasedByItem.get(i.id) ?? 0),
     0,
   );
   const priorPcs = Array.from(releasedByItem.values()).reduce((s, n) => s + n, 0);
   const priorShipValue = priorPcs * shipPerUnitRate;
-  const goodsCredit = Math.max(0, paidGoods - priorGoodsValue);
+  const goodsCredit = Math.max(0, paidGoodsRelease - priorNetGoods);
   const shipCredit = Math.max(0, paidShipAll - priorShipValue);
+  // Agher release gulote joto kom deya hoyeche (arrears)
+  const goodsArrears = Math.max(0, priorNetGoods - paidGoodsRelease);
+  const shipArrears = Math.max(0, priorShipValue - paidShipAll);
 
-  // Ei draft-er gross value, tarpor baki credit bad diye due rate
+  // Ei draft-er net value, tarpor baki credit bad diye due rate
   const draftPcsAll = items.reduce((s, i) => s + lineTotal(i), 0);
-  const draftGoodsGross = items.reduce((s, i) => s + goodsUnitFor(i) * lineTotal(i), 0);
+  const draftGoodsGross = items.reduce((s, i) => s + netGoodsUnitFor(i) * lineTotal(i), 0);
   const goodsDueRatio =
     draftGoodsGross > 0 ? Math.min(1, Math.max(0, 1 - goodsCredit / draftGoodsGross)) : 0;
-  const goodsDuePerUnitFor = (i: any) => goodsUnitFor(i) * goodsDueRatio;
+  const goodsDuePerUnitFor = (i: any) => netGoodsUnitFor(i) * goodsDueRatio;
   const shipDuePerUnit =
     draftPcsAll > 0
       ? Math.max(0, draftPcsAll * shipPerUnitRate - shipCredit) / draftPcsAll
