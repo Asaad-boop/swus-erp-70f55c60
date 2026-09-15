@@ -8,16 +8,21 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
-import { bdCourierQuotaFn, fetchCourierHistoryFn } from "@/lib/erp/courier-history.functions";
+import { bdCourierQuotaFn, bdCourierSaveKeyFn, fetchCourierHistoryFn } from "@/lib/erp/courier-history.functions";
 import { saveAppSetting } from "@/lib/erp/settings/app-settings.functions";
+import { MaskedSecretInput } from "@/components/erp/settings/masked-secret-input";
+import { useCurrentRole } from "@/hooks/use-current-role";
 
 export function BdCourierSettings() {
   const qc = useQueryClient();
+  const { isAdmin } = useCurrentRole();
   const quotaFn = useServerFn(bdCourierQuotaFn);
   const saveFn = useServerFn(saveAppSetting);
+  const saveKeyFn = useServerFn(bdCourierSaveKeyFn);
   const historyFn = useServerFn(fetchCourierHistoryFn);
 
   const [limit, setLimit] = useState("");
+  const [apiKey, setApiKey] = useState("");
   const [testPhone, setTestPhone] = useState("");
   const [testResult, setTestResult] = useState<string | null>(null);
 
