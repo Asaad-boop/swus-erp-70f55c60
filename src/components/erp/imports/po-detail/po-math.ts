@@ -74,10 +74,14 @@ export function computePoMath(args: {
   const landedPerUnit = costUnits > 0 ? grandTotal / costUnits : 0;
 
   const lineSubtotal = items.reduce((s, i) => s + num(i.subtotal_bdt), 0);
+  // Freight lives in one of three legacy columns — take the largest, never the sum.
+  const freight = Math.max(
+    num(po.shipping_total_bdt),
+    num(po.shipping_cost_bdt),
+    num(po.freight_cost_bdt),
+  );
   const charges =
-    num(po.shipping_total_bdt) +
-    num(po.shipping_cost_bdt) +
-    num(po.freight_cost_bdt) +
+    freight +
     num(po.local_courier_total_bdt) +
     num(po.local_delivery_total_bdt) +
     num(po.customs_duty_bdt) +
