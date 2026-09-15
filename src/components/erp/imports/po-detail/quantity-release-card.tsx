@@ -894,6 +894,9 @@ export function QuantityReleaseCard({
               <RowLine label="Warehouse" value={(warehouses as any[]).find((w) => w.id === warehouseId)?.name ?? "—"} />
               <RowLine label="Purchase due (ei pcs)" value={fmtBdt(previewGoodsDue)} />
               <RowLine label="Shipping / overhead (ei pcs)" value={fmtBdt(previewShipDue)} />
+              {arrearsTotal > 0 && (
+                <RowLine label="Agher release-er baki (arrears)" value={fmtBdt(arrearsTotal)} />
+              )}
               {localDelivery > 0 && <RowLine label="Local delivery" value={fmtBdt(localDelivery)} />}
               <div className="flex justify-between pt-1.5 border-t border-border">
                 <span className="text-muted-foreground">Total due for ei release</span>
