@@ -133,10 +133,10 @@ async function bumpUsage(supabase: any, by = 1) {
  * Returns non-Pathao providers only (Pathao comes from our own API).
  */
 export async function fetchBdCourierHistory(supabase: any, phone: string): Promise<BdCourierStat[]> {
-  const token = process.env.BDCOURIER_API_KEY;
+  const { token } = await getBdCourierKey(supabase);
   if (!token) {
     return [
-      { name: "bdcourier", label: "Other couriers", ok: false, total: 0, success: 0, cancelled: 0, error: "BDCourier API key set kora nei" },
+      { name: "bdcourier", label: "Other couriers", ok: false, total: 0, success: 0, cancelled: 0, error: "BDCourier API key set kora nei — Settings → Courier → BDCourier e key add korun" },
     ];
   }
 
