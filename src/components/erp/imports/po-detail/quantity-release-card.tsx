@@ -172,14 +172,17 @@ export function QuantityReleaseCard({
   const overheadPerUnit = poOverheadPerUnit + releaseOverheadPerUnit;
   const overheadTotal = poOverheadTotal;
 
-  // ---- Payment credit: type onujayi (goods vs shipping), ar release-wise ledger ----
-  // Purono bug: paid_bdt take shob ordered pcs-er upor bhag kora hoto, tai
-  // 3rd release-er shipping due kome (18,659) dekhato. Ekhon: joto pcs release
-  // hoyeche tar cumulative due theke joto paid hoyeche seta bad — tai per-release
-  // rate thik thake (100 pcs × ৳197.8 = ৳19,780).
+  // ---- Payment credit: advance PRO-RATA, release payment FIFO ----
+  // Purono bug: advance ke FIFO kore prothom release gulo-i puro kheye felto,
+  // tai sheshh release e 0% advance benefit — 200 pcs × full ৳81.4 ashto.
+  // Ekhon: advance PO-r shob pcs-er upor shoman bhag (e.g. 60% advance hole
+  // protita release e goods due = 40%), ar release-wise payment alada ledger.
   const payList = (payments ?? []).filter((p: any) => !p?.is_reversed);
-  const paidGoods = payList
-    .filter((p: any) => ["supplier_advance", "supplier_payment", "supplier_balance"].includes(p.payment_type))
+  const paidAdvance = payList
+    .filter((p: any) => p.payment_type === "supplier_advance")
+    .reduce((s: number, p: any) => s + Number(p.amount_bdt ?? 0), 0);
+  const paidGoodsRelease = payList
+    .filter((p: any) => ["supplier_payment", "supplier_balance"].includes(p.payment_type))
     .reduce((s: number, p: any) => s + Number(p.amount_bdt ?? 0), 0);
   const paidShipAll = payList
     .filter((p: any) => p.payment_type === "shipping")
@@ -190,22 +193,29 @@ export function QuantityReleaseCard({
   const shipTotalAll = overheadTotal + commissionPerUnit * totalOrdered;
   const shipPerUnitRate = totalOrdered > 0 ? shipTotalAll / totalOrdered : 0;
 
-  // Age-i release howa pcs-er due (ei gulor against-e paid ta age boshbe)
-  const priorGoodsValue = items.reduce(
-    (s, i) => s + goodsUnitFor(i) * (releasedByItem.get(i.id) ?? 0),
+  // Advance koto % cover kore — protita piece-e shoman bhabe boshbe
+  const advanceRatio = goodsTotalAll > 0 ? Math.min(1, paidAdvance / goodsTotalAll) : 0;
+  const netGoodsUnitFor = (i: any) => goodsUnitFor(i) * (1 - advanceRatio);
+
+  // Age-i release howa pcs-er net due (advance bad diye) — er against-e release payment boshbe
+  const priorNetGoods = items.reduce(
+    (s, i) => s + netGoodsUnitFor(i) * (releasedByItem.get(i.id) ?? 0),
     0,
   );
   const priorPcs = Array.from(releasedByItem.values()).reduce((s, n) => s + n, 0);
   const priorShipValue = priorPcs * shipPerUnitRate;
-  const goodsCredit = Math.max(0, paidGoods - priorGoodsValue);
+  const goodsCredit = Math.max(0, paidGoodsRelease - priorNetGoods);
   const shipCredit = Math.max(0, paidShipAll - priorShipValue);
+  // Agher release gulote joto kom deya hoyeche (arrears)
+  const goodsArrears = Math.max(0, priorNetGoods - paidGoodsRelease);
+  const shipArrears = Math.max(0, priorShipValue - paidShipAll);
 
-  // Ei draft-er gross value, tarpor baki credit bad diye due rate
+  // Ei draft-er net value, tarpor baki credit bad diye due rate
   const draftPcsAll = items.reduce((s, i) => s + lineTotal(i), 0);
-  const draftGoodsGross = items.reduce((s, i) => s + goodsUnitFor(i) * lineTotal(i), 0);
+  const draftGoodsGross = items.reduce((s, i) => s + netGoodsUnitFor(i) * lineTotal(i), 0);
   const goodsDueRatio =
     draftGoodsGross > 0 ? Math.min(1, Math.max(0, 1 - goodsCredit / draftGoodsGross)) : 0;
-  const goodsDuePerUnitFor = (i: any) => goodsUnitFor(i) * goodsDueRatio;
+  const goodsDuePerUnitFor = (i: any) => netGoodsUnitFor(i) * goodsDueRatio;
   const shipDuePerUnit =
     draftPcsAll > 0
       ? Math.max(0, draftPcsAll * shipPerUnitRate - shipCredit) / draftPcsAll
@@ -248,7 +258,11 @@ export function QuantityReleaseCard({
   const previewShipDue = shipmentWiseMode
     ? releaseFreight
     : previewLines.reduce((s, l) => s + l.shipDue, 0);
-  const previewTotalDue = previewGoodsDue + previewShipDue;
+  // Agher release-er baki (arrears) ekhane alada kore dekhano hoy — shudhu draft thakle
+  const arrearsGoods = previewLines.length > 0 ? goodsArrears : 0;
+  const arrearsShip = previewLines.length > 0 && !shipmentWiseMode ? shipArrears : 0;
+  const arrearsTotal = arrearsGoods + arrearsShip;
+  const previewTotalDue = previewGoodsDue + previewShipDue + arrearsTotal;
   const previewPcs = previewLines.reduce((s, l) => s + l.qty + l.damaged + l.missing, 0);
   // Weighted (line-wise) effective rate for ei release
   const effGoodsDuePerUnit = previewPcs > 0 ? previewGoodsDue / previewPcs : goodsDuePerUnit;
@@ -307,8 +321,8 @@ export function QuantityReleaseCard({
           payment: payNow && payWallet && amt > 0
             ? {
                 wallet_id: payWallet,
-                goods_amount_bdt: +(previewGoodsDue * ratio).toFixed(2),
-                shipping_amount_bdt: +(previewShipDue * ratio).toFixed(2),
+                goods_amount_bdt: +((previewGoodsDue + arrearsGoods) * ratio).toFixed(2),
+                shipping_amount_bdt: +((previewShipDue + arrearsShip) * ratio).toFixed(2),
                 payment_date: new Date().toISOString().slice(0, 10),
                 idempotency_key: `qtyrel:${poId}:${Date.now()}`,
               }
@@ -472,10 +486,16 @@ export function QuantityReleaseCard({
                   Ei {draftTotal} pcs-er payment
                 </div>
                 <p className="text-[11px] text-muted-foreground mt-0.5">
-                  Purchase {fmtBdt(previewGoodsDue)} + shipping {fmtBdt(previewShipDue)} ={" "}
+                  Purchase {fmtBdt(previewGoodsDue)} + shipping {fmtBdt(previewShipDue)}
+                  {arrearsTotal > 0 && <> + agher release-er baki {fmtBdt(arrearsTotal)}</>} ={" "}
                   <span className="text-orange-600 font-semibold tabular-nums">{fmtBdt(previewTotalDue)}</span>
                   {localDelivery > 0 && <> · local delivery {fmtBdt(localDelivery)} alada</>}
                 </p>
+                {advanceRatio > 0 && (
+                  <p className="text-[11px] text-emerald-600 mt-0.5">
+                    Advance {Math.round(advanceRatio * 100)}% protita piece-e adjust kora hoyeche
+                  </p>
+                )}
               </div>
               <div className="inline-flex rounded-md border border-border overflow-hidden">
                 <button
@@ -804,6 +824,9 @@ export function QuantityReleaseCard({
                 {[
                   { k: "Goods (purchase) due", pu: effGoodsDuePerUnit, tot: previewGoodsDue },
                   { k: "Shipping / overhead due", pu: shipDuePerUnit, tot: previewShipDue },
+                  ...(arrearsTotal > 0
+                    ? [{ k: "Agher release-er baki (arrears)", pu: 0, tot: arrearsTotal }]
+                    : []),
                 ].map((r) => (
                   <TableRow key={r.k}>
                     <TableCell className="text-sm">{r.k}</TableCell>
@@ -871,6 +894,9 @@ export function QuantityReleaseCard({
               <RowLine label="Warehouse" value={(warehouses as any[]).find((w) => w.id === warehouseId)?.name ?? "—"} />
               <RowLine label="Purchase due (ei pcs)" value={fmtBdt(previewGoodsDue)} />
               <RowLine label="Shipping / overhead (ei pcs)" value={fmtBdt(previewShipDue)} />
+              {arrearsTotal > 0 && (
+                <RowLine label="Agher release-er baki (arrears)" value={fmtBdt(arrearsTotal)} />
+              )}
               {localDelivery > 0 && <RowLine label="Local delivery" value={fmtBdt(localDelivery)} />}
               <div className="flex justify-between pt-1.5 border-t border-border">
                 <span className="text-muted-foreground">Total due for ei release</span>
