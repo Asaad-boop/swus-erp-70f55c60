@@ -110,7 +110,15 @@ export async function getBdCourierQuota(supabase: any) {
     };
   }
   const { limit, used } = quotaMemo;
-  return { limit, used, remaining: Math.max(0, limit - used), configured: !!process.env.BDCOURIER_API_KEY };
+  const { token, source } = await getBdCourierKey(supabase);
+  return {
+    limit,
+    used,
+    remaining: Math.max(0, limit - used),
+    configured: !!token,
+    keySource: source,
+    keyPreview: token ? maskKey(token) : null,
+  };
 }
 
 async function bumpUsage(supabase: any, by = 1) {
