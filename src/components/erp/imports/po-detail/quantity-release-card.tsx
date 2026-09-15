@@ -486,10 +486,16 @@ export function QuantityReleaseCard({
                   Ei {draftTotal} pcs-er payment
                 </div>
                 <p className="text-[11px] text-muted-foreground mt-0.5">
-                  Purchase {fmtBdt(previewGoodsDue)} + shipping {fmtBdt(previewShipDue)} ={" "}
+                  Purchase {fmtBdt(previewGoodsDue)} + shipping {fmtBdt(previewShipDue)}
+                  {arrearsTotal > 0 && <> + agher release-er baki {fmtBdt(arrearsTotal)}</>} ={" "}
                   <span className="text-orange-600 font-semibold tabular-nums">{fmtBdt(previewTotalDue)}</span>
                   {localDelivery > 0 && <> · local delivery {fmtBdt(localDelivery)} alada</>}
                 </p>
+                {advanceRatio > 0 && (
+                  <p className="text-[11px] text-emerald-600 mt-0.5">
+                    Advance {Math.round(advanceRatio * 100)}% protita piece-e adjust kora hoyeche
+                  </p>
+                )}
               </div>
               <div className="inline-flex rounded-md border border-border overflow-hidden">
                 <button
