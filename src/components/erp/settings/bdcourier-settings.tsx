@@ -95,6 +95,40 @@ export function BdCourierSettings() {
         </div>
       </CardHeader>
       <CardContent className="space-y-5">
+        <div className="space-y-2 rounded-lg border p-3">
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <Label className="text-xs">BDCourier API key</Label>
+            {quota?.keyPreview ? (
+              <span className="text-[11px] text-muted-foreground">
+                Ekhon set ache: <code>{quota.keyPreview}</code>
+                {quota.keySource === "env" ? " (server secret)" : ""}
+              </span>
+            ) : null}
+          </div>
+          <MaskedSecretInput
+            value={apiKey}
+            onChange={setApiKey}
+            isAdmin={isAdmin}
+            placeholder={quota?.configured ? "Notun key dile purano ta replace hobe" : "bdcourier.com API token"}
+            disabled={saveKey.isPending}
+          />
+          {isAdmin && (
+            <div className="flex flex-wrap gap-2">
+              <Button size="sm" onClick={() => saveKey.mutate(false)} disabled={saveKey.isPending || !apiKey.trim()}>
+                {saveKey.isPending ? "Saving..." : "Save key"}
+              </Button>
+              {quota?.keySource === "db" && (
+                <Button size="sm" variant="outline" onClick={() => saveKey.mutate(true)} disabled={saveKey.isPending}>
+                  Remove key
+                </Button>
+              )}
+            </div>
+          )}
+          <p className="text-[11px] text-muted-foreground">
+            Key ta bdcourier.com dashboard → API section theke pawa jay. Ekhane save korle sob courier lookup abar kaj korbe.
+          </p>
+        </div>
+
         <div className="space-y-2">
           <div className="flex items-center justify-between text-sm">
             <span className="text-muted-foreground">Ajker search use</span>
