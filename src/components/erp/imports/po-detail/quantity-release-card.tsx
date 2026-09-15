@@ -258,7 +258,11 @@ export function QuantityReleaseCard({
   const previewShipDue = shipmentWiseMode
     ? releaseFreight
     : previewLines.reduce((s, l) => s + l.shipDue, 0);
-  const previewTotalDue = previewGoodsDue + previewShipDue;
+  // Agher release-er baki (arrears) ekhane alada kore dekhano hoy — shudhu draft thakle
+  const arrearsGoods = previewLines.length > 0 ? goodsArrears : 0;
+  const arrearsShip = previewLines.length > 0 && !shipmentWiseMode ? shipArrears : 0;
+  const arrearsTotal = arrearsGoods + arrearsShip;
+  const previewTotalDue = previewGoodsDue + previewShipDue + arrearsTotal;
   const previewPcs = previewLines.reduce((s, l) => s + l.qty + l.damaged + l.missing, 0);
   // Weighted (line-wise) effective rate for ei release
   const effGoodsDuePerUnit = previewPcs > 0 ? previewGoodsDue / previewPcs : goodsDuePerUnit;
