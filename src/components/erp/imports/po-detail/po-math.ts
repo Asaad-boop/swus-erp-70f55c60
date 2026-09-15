@@ -67,13 +67,23 @@ export function computePoMath(args: {
   const due = netDue(po.due_bdt ?? grandTotal - totalPaid);
   const paidPct = grandTotal > 0 ? Math.min(100, Math.round((totalPaid / grandTotal) * 100)) : 0;
 
-  const receivedUnits = qtyReleased > 0 ? qtyReleased : qtyOrdered;
-  const landedPerUnit = receivedUnits > 0 ? grandTotal / receivedUnits : 0;
+  // Landed cost is a PER-UNIT rate: always spread the PO grand total over the
+  // FULL ordered quantity. Dividing by only the released pcs inflated the rate
+  // on partially-released POs (e.g. 279,200 / 800 = 349 instead of 279.2).
+  const costUnits = qtyOrdered > 0 ? qtyOrdered : qtyReleased;
+  const landedPerUnit = costUnits > 0 ? grandTotal / costUnits : 0;
 
   const lineSubtotal = items.reduce((s, i) => s + num(i.subtotal_bdt), 0);
+  // Freight lives in one of three legacy columns — take the largest, never the sum.
+  const freight = Math.max(
+    num(po.shipping_total_bdt),
+    num(po.shipping_cost_bdt),
+    num(po.freight_cost_bdt),
+  );
   const charges =
-    num(po.shipping_total_bdt) +
+    freight +
     num(po.local_courier_total_bdt) +
+    num(po.local_delivery_total_bdt) +
     num(po.customs_duty_bdt) +
     num(po.other_charges_bdt);
   const expected = lineSubtotal + charges;
