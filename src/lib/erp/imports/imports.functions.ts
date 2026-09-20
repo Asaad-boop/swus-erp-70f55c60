@@ -1794,13 +1794,22 @@ export const releasePoQuantity = createServerFn({ method: "POST" })
       );
     }
 
-    // Update PO status based on total released
-    const totalReleased = Array.from(releasedMap.values()).reduce((s, n) => s + n, 0);
+    // Update PO status — DB theke fresh kore shob release count kori (stale in-memory hishab nয়)
+    const { data: allRelItems } = await context.supabase
+      .from("imp_po_release_items")
+      .select("quantity, damaged_qty, missing_qty, release:release_id!inner ( po_id )")
+      .eq("release.po_id", data.po_id);
+    const totalReleased = (allRelItems ?? []).reduce(
+      (s: number, r: any) =>
+        s + Number(r.quantity ?? 0) + Number(r.damaged_qty ?? 0) + Number(r.missing_qty ?? 0),
+      0,
+    );
     const nextStatus = totalReleased >= totalOrdered && totalOrdered > 0 ? "completed" : "partially_received";
     await context.supabase
       .from("imp_purchase_orders")
       .update({ status: nextStatus as any })
       .eq("id", data.po_id);
+
 
     return {
       ok: true,
