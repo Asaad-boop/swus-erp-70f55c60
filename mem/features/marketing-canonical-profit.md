@@ -9,11 +9,14 @@ type: feature
 - `get_sku_profit(brand, from, to)` — aggregated per product (brand-scoped, dedup'd)
 
 ## Cost fallback chain (order-sensitive)
-1. `order_items.unit_cost_snapshot`
+1. `NULLIF(order_items.unit_cost_snapshot, 0)` — 0 snapshot treated as missing
 2. `product_variants.weighted_avg_cost`
 3. `products.weighted_avg_cost`
 4. `products.cost_price`
 5. NULL → `cost_missing = true`, exposed as `cost_missing_units` count
+
+## Late-added cost rule (2026-09-21)
+Cost price পরে add হলে profit নিজে থেকে ঠিক হয়: snapshot 0/NULL হলে live WAC/cost_price fallback-এ যায়, আর `snapshot_order_item_profit_fields` ও `get_brand_profitability_rollup` দুটোই same fallback chain ব্যবহার করে। একবারের backfill-ও করা হয়েছে (0-snapshot items এ cost বসানো)।
 
 ## Revenue definition
 `delivered_revenue = SUM(order_items.line_total)` for delivered orders in window. Excludes shipping/discount (which sit on `orders.total`). Per-item safe, no attribution double-count.
