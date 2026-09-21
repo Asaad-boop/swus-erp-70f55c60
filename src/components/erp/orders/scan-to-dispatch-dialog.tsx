@@ -29,8 +29,8 @@ const MODES: { key: ScanMode; label: string; icon: React.ElementType; tone: stri
 ];
 
 const NEXT_STATUS: Partial<Record<OrderStatus, OrderStatus>> = {
-  confirmed: "packed",
-  ready_to_pack: "packed",
+  confirmed: "packaging",
+  ready_to_pack: "packaging",
   packaging: "packed",
   packed: "ready_to_ship",
   ready_to_ship: "shipped",
