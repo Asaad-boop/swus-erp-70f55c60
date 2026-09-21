@@ -54,6 +54,7 @@ import { BulkReorderDialog } from "@/components/erp/inventory/bulk-reorder-dialo
 import { ProductEditDialog } from "@/components/erp/inventory/product-edit-dialog";
 import { ProductAddDialog } from "@/components/erp/inventory/product-add-dialog";
 import { CatalogView } from "@/components/erp/inventory/catalog-view";
+import { ReserveStatusCard } from "@/components/erp/inventory/reserve-status-card";
 
 export const Route = createFileRoute("/_authenticated/erp/inventory")({
   validateSearch: (search: Record<string, unknown>): { tab?: string } =>
@@ -372,6 +373,9 @@ function InventoryPage() {
           active={filter.stockState === "oversold"}
         />
       </div>
+
+      {/* RESERVE PIPELINE */}
+      <ReserveStatusCard brandId={isAllBrands ? null : (activeBrand?.id ?? null)} />
 
       {/* TABS */}
       <Tabs defaultValue={tabParam === "catalog" ? "catalog" : "products"} className="space-y-6">
