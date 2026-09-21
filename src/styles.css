@@ -154,6 +154,8 @@
   --status-pending-glow: oklch(0.64 0.19 245 / 0.42);
   --status-packing: oklch(0.58 0.22 295);
   --status-packing-glow: oklch(0.58 0.22 295 / 0.44);
+  --status-packed: oklch(0.62 0.2 325);
+  --status-packed-glow: oklch(0.62 0.2 325 / 0.44);
   --status-ready-to-ship: oklch(0.65 0.16 195);
   --status-ready-to-ship-glow: oklch(0.65 0.16 195 / 0.42);
   --status-shipped: oklch(0.78 0.17 75);
@@ -264,6 +266,8 @@
   --status-pending-glow: oklch(0.7 0.22 245 / 0.55);
   --status-packing: oklch(0.65 0.24 295);
   --status-packing-glow: oklch(0.65 0.24 295 / 0.55);
+  --status-packed: oklch(0.7 0.22 325);
+  --status-packed-glow: oklch(0.7 0.22 325 / 0.55);
   --status-ready-to-ship: oklch(0.72 0.18 195);
   --status-ready-to-ship-glow: oklch(0.72 0.18 195 / 0.55);
   --status-shipped: oklch(0.85 0.18 75);

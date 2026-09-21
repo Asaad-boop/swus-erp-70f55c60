@@ -8,7 +8,7 @@ export type ConfirmationStatus = Database["public"]["Enums"]["confirmation_statu
 export const ORDER_STATUSES: OrderStatus[] = [
   "new",
   // Fulfillment
-  "confirmed", "packed", "shipped", "in_transit",
+  "confirmed", "packaging", "packed", "shipped", "in_transit",
   "delivered", "partial_delivered", "completed",
   // Return
   "pending_return", "return_in_transit", "returned", "partial_return",
@@ -24,7 +24,7 @@ export const STATUS_GROUPS: { key: StatusGroup; label: string; statuses: OrderSt
   { key: "intake", label: "New", statuses: ["new"] },
   {
     key: "fulfillment", label: "Fulfillment",
-    statuses: ["confirmed", "packed", "shipped", "in_transit", "delivered", "partial_delivered", "completed"],
+    statuses: ["confirmed", "packaging", "packed", "shipped", "in_transit", "delivered", "partial_delivered", "completed"],
   },
   { key: "return", label: "Return", statuses: ["pending_return", "return_in_transit", "returned", "partial_return"] },
   { key: "exchange", label: "Exchange", statuses: ["exchange", "exchanged"] },
@@ -33,13 +33,14 @@ export const STATUS_GROUPS: { key: StatusGroup; label: string; statuses: OrderSt
 
 // Top-of-page tabs (reference layout). Each tab maps to one or more of our statuses.
 export type StatusTabKey =
-  | "all" | "pending" | "packing" | "shipped" | "in_transit" | "delivered"
+  | "all" | "pending" | "packing" | "packed" | "shipped" | "in_transit" | "delivered"
   | "partial" | "pending_return" | "returned" | "paid_return" | "completed"
   | "exchange" | "on_hold" | "cancelled" | "incomplete" | "ready_to_ship";
 
 export const STATUS_TABS: { key: StatusTabKey; label: string; statuses: OrderStatus[] }[] = [
   { key: "pending", label: "Pending", statuses: ["confirmed"] },
-  { key: "packing", label: "Packing", statuses: ["packed"] },
+  { key: "packing", label: "Packing", statuses: ["packaging", "ready_to_pack"] },
+  { key: "packed", label: "Packed", statuses: ["packed"] },
   { key: "ready_to_ship", label: "RTS", statuses: ["ready_to_ship"] },
   { key: "shipped", label: "Shipped", statuses: ["shipped"] },
   { key: "in_transit", label: "In Transit", statuses: ["in_transit"] },
@@ -75,6 +76,7 @@ export function tabForStatuses(statuses: OrderStatus[]): StatusTabKey {
 export const STATUS_BADGE: Record<string, { label: string; className: string }> = {
   // Fulfillment
   confirmed: { label: "Pending", className: "bg-blue-100 text-blue-800 dark:bg-blue-950 dark:text-blue-300" },
+  packaging: { label: "Packing", className: "bg-fuchsia-100 text-fuchsia-800 dark:bg-fuchsia-950 dark:text-fuchsia-300" },
   ready_to_pack: { label: "Ready to Pack", className: "bg-indigo-100 text-indigo-800 dark:bg-indigo-950 dark:text-indigo-300" },
   packed: { label: "Packed", className: "bg-purple-100 text-purple-800 dark:bg-purple-950 dark:text-purple-300" },
   ready_to_ship: { label: "RTS", className: "bg-cyan-100 text-cyan-800 dark:bg-cyan-950 dark:text-cyan-300" },
@@ -102,7 +104,7 @@ export const STATUS_BADGE: Record<string, { label: string; className: string }> 
   // Legacy / fallbacks (still in DB enum)
   new: { label: "New", className: "bg-slate-100 text-slate-800 dark:bg-slate-900 dark:text-slate-300" },
   pre_order: { label: "Pre-order", className: "bg-indigo-100 text-indigo-800 dark:bg-indigo-950 dark:text-indigo-300" },
-  packaging: { label: "Packaging", className: "bg-purple-100 text-purple-800 dark:bg-purple-950 dark:text-purple-300" },
+
   fake: { label: "Fake", className: "bg-red-200 text-red-900 dark:bg-red-950 dark:text-red-300" },
 };
 
@@ -112,7 +114,7 @@ export function statusBadge(s: string) {
 
 /** Accent color (Tailwind hex-ish) for status, used as row left border. */
 export const STATUS_ACCENT: Record<string, string> = {
-  confirmed: "#3b82f6", ready_to_pack: "#6366f1", packed: "#a855f7",
+  confirmed: "#3b82f6", ready_to_pack: "#6366f1", packaging: "#d946ef", packed: "#a855f7",
   ready_to_ship: "#06b6d4", shipped: "#f59e0b", in_transit: "#f59e0b",
   delivered: "#10b981", partial_delivered: "#10b981",
   paid: "#0d9488",
