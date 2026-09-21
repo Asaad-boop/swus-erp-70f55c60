@@ -16,7 +16,7 @@ export const getReserveStatus = createServerFn({ method: "POST" })
   .inputValidator((d: unknown) => (d ?? {}) as { brandId?: string | null })
   .handler(async ({ data, context }) => {
     const { data: result, error } = await context.supabase.rpc("inv_reserve_status", {
-      _brand_id: data?.brandId ?? null,
+      _brand_id: data?.brandId ?? undefined,
     });
     if (error) throw error;
     return result as ReserveStatus;
