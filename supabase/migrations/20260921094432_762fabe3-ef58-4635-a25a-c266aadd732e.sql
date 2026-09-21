@@ -1,0 +1,1 @@
+REVOKE ALL ON public.crm_customers_mv FROM anon, authenticated;
