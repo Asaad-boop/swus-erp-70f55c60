@@ -2,7 +2,7 @@ import { useState } from "react";
 import { useServerFn } from "@tanstack/react-start";
 import { toast } from "sonner";
 import {
-  Printer, Package, CheckCheck, Truck, ChevronDown,
+  Printer, Package, PackageCheck, CheckCheck, Truck, ChevronDown,
   Loader2, AlertCircle, Send,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -19,7 +19,7 @@ import { steadfastBookOrderFn } from "@/lib/erp/steadfast.functions";
 import { supabase } from "@/integrations/supabase/client";
 import { dispatchFeedback, primeAudio } from "@/lib/erp/dispatch/feedback";
 
-export type DispatchMode = "pack" | "ready" | "ship";
+export type DispatchMode = "pack" | "packdone" | "ready" | "ship";
 
 const DISPATCHABLE: OrderStatus[] = [
   "confirmed",
@@ -30,8 +30,8 @@ const DISPATCHABLE: OrderStatus[] = [
 ];
 
 const NEXT_STATUS: Partial<Record<OrderStatus, OrderStatus>> = {
-  confirmed: "packed",
-  ready_to_pack: "packed",
+  confirmed: "packaging",
+  ready_to_pack: "packaging",
   packaging: "packed",
   packed: "ready_to_ship",
   ready_to_ship: "shipped",
@@ -39,12 +39,14 @@ const NEXT_STATUS: Partial<Record<OrderStatus, OrderStatus>> = {
 
 const MODE_ICON: Record<DispatchMode, React.ElementType> = {
   pack: Package,
+  packdone: PackageCheck,
   ready: CheckCheck,
   ship: Send,
 };
 
 const MODE_LABEL: Record<DispatchMode, string> = {
   pack: "Pack",
+  packdone: "Packed",
   ready: "RTS",
   ship: "Ship",
 };
@@ -58,7 +60,8 @@ const PROVIDERS = [
 type Provider = (typeof PROVIDERS)[number]["key"];
 
 function nextMode(status: OrderStatus): DispatchMode | null {
-  if (["confirmed", "ready_to_pack", "packaging"].includes(status)) return "pack";
+  if (["confirmed", "ready_to_pack"].includes(status)) return "pack";
+  if (status === "packaging") return "packdone";
   if (status === "packed") return "ready";
   if (status === "ready_to_ship") return "ship";
   return null;
@@ -77,7 +80,7 @@ export type DispatchActionsCellProps = {
 };
 
 export function DispatchActionsCell({ order, onStatusChange, onPrint, busy }: DispatchActionsCellProps) {
-  const [working, setWorking] = useState<"pack" | "ready" | "ship" | "print" | null>(null);
+  const [working, setWorking] = useState<DispatchMode | "print" | null>(null);
   const [provider, setProvider] = useState<Provider>("pathao");
   const bookPathao = useServerFn(pathaoBookOrderAutoFn);
   const bookSteadfast = useServerFn(steadfastBookOrderFn);
@@ -108,7 +111,7 @@ export function DispatchActionsCell({ order, onStatusChange, onPrint, busy }: Di
     setWorking(mode);
     try {
       await onStatusChange(order.id, next);
-      dispatchFeedback(mode === "pack" ? "pack" : "ready");
+      dispatchFeedback(mode === "ready" ? "ready" : "pack");
     } catch (e: any) {
       dispatchFeedback("error");
       toast.error(e?.message ?? "Update failed");

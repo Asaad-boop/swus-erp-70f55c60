@@ -6,6 +6,7 @@ import { STATUS_TABS, type OrderStatus, type StatusTabKey } from "@/lib/erp/orde
 const FLOW_KEYS: StatusTabKey[] = [
   "pending",
   "packing",
+  "packed",
   "ready_to_ship",
   "shipped",
   "in_transit",
@@ -29,6 +30,7 @@ const SETTLED_KEYS: StatusTabKey[] = [
 const ACCENT: Record<string, string> = {
   pending: "var(--status-pending)",
   packing: "var(--status-packing)",
+  packed: "var(--status-packed)",
   ready_to_ship: "var(--status-ready-to-ship)",
   shipped: "var(--status-shipped)",
   in_transit: "var(--status-in-transit)",

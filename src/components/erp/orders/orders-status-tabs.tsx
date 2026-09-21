@@ -11,6 +11,7 @@ const ICON: Record<string, LucideIcon> = {
   all: List,
   pending: Clock,
   packing: Package,
+  packed: PackageCheck,
   ready_to_ship: PackageCheck,
   shipped: Truck,
   in_transit: Send,
@@ -29,6 +30,7 @@ const ICON: Record<string, LucideIcon> = {
 const ACCENT_VAR: Record<string, string> = {
   pending: "var(--status-pending)",
   packing: "var(--status-packing)",
+  packed: "var(--status-packed)",
   ready_to_ship: "var(--status-ready-to-ship)",
   shipped: "var(--status-shipped)",
   in_transit: "var(--status-in-transit)",

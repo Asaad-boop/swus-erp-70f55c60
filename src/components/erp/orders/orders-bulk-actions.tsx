@@ -18,6 +18,7 @@ type Props = {
   onPreorder: () => void;
   onPrint: (mode: "invoice" | "sticker" | "picking" | "sheet") => void;
   onDispatchPack?: () => void;
+  onDispatchPacked?: () => void;
   onDispatchReady?: () => void;
   onDispatchShip?: () => void;
   onOpenScanner?: () => void;
@@ -26,7 +27,7 @@ type Props = {
 
 const RECENT_KEY = "erp.orders.bulk.recent";
 
-export function OrdersBulkActions({ selectedCount, totalCount, onSelectAll, onClear, onStatus, onExport, onSendToPathao, onSyncCourier, onPhoneHistory, onPreorder, onPrint, onDispatchPack, onDispatchReady, onDispatchShip, onOpenScanner, isPending }: Props) {
+export function OrdersBulkActions({ selectedCount, totalCount, onSelectAll, onClear, onStatus, onExport, onSendToPathao, onSyncCourier, onPhoneHistory, onPreorder, onPrint, onDispatchPack, onDispatchPacked, onDispatchReady, onDispatchShip, onOpenScanner, isPending }: Props) {
   const disabled = selectedCount === 0;
   const [open, setOpen] = useState(false);
   const [q, setQ] = useState("");
@@ -79,13 +80,14 @@ export function OrdersBulkActions({ selectedCount, totalCount, onSelectAll, onCl
       { id: "picking", label: "Print Picking", icon: ClipboardList, tone: "amber" as const, run: () => onPrint("picking") },
       { id: "sheet", label: "Print Sheet", icon: FileSpreadsheet, tone: "emerald" as const, run: () => onPrint("sheet") },
       { id: "export", label: "Export Excel", icon: Download, tone: "emerald" as const, run: onExport },
-      { id: "dispatch_pack", label: "Mark Packed", icon: Package, tone: "amber" as const, run: onDispatchPack },
+      { id: "dispatch_pack", label: "Mark Packing", icon: Package, tone: "amber" as const, run: onDispatchPack },
+      { id: "dispatch_packed", label: "Mark Packed", icon: PackageCheck, tone: "violet" as const, run: onDispatchPacked },
       { id: "dispatch_ready", label: "Mark Ready to Ship", icon: CheckCheck, tone: "violet" as const, run: onDispatchReady },
       { id: "dispatch_ship", label: "Mark Shipped", icon: Truck, tone: "emerald" as const, run: onDispatchShip },
       { id: "dispatch_scan", label: "Scan to Dispatch", icon: ScanLine, tone: "blue" as const, run: onOpenScanner },
     ];
     return new Map(list.map((a) => [a.id, a]));
-  }, [onStatus, onSendToPathao, onSyncCourier, onPhoneHistory, onPreorder, onPrint, onExport, onDispatchPack, onDispatchReady, onDispatchShip, onOpenScanner]);
+  }, [onStatus, onSendToPathao, onSyncCourier, onPhoneHistory, onPreorder, onPrint, onExport, onDispatchPack, onDispatchPacked, onDispatchReady, onDispatchShip, onOpenScanner]);
 
   const fire = useCallback((id: string) => {
     const a = actions.get(id);
@@ -264,9 +266,10 @@ export function OrdersBulkActions({ selectedCount, totalCount, onSelectAll, onCl
               </Section>
 
               {/* 2. Dispatch — pack/ready/ship pipeline */}
-              <Section label="Dispatch" hint="Pack → Ready → Ship">
-                <div className="grid grid-cols-3 gap-1 mb-1">
-                  <IconTile icon={Package} label="Mark Packed" tone="amber" onClick={() => fire("dispatch_pack")} disabled={disabled || !onDispatchPack} />
+              <Section label="Dispatch" hint="Packing → Packed → Ready → Ship">
+                <div className="grid grid-cols-2 gap-1 mb-1">
+                  <IconTile icon={Package} label="Mark Packing" tone="amber" onClick={() => fire("dispatch_pack")} disabled={disabled || !onDispatchPack} />
+                  <IconTile icon={PackageCheck} label="Mark Packed" tone="violet" onClick={() => fire("dispatch_packed")} disabled={disabled || !onDispatchPacked} />
                   <IconTile icon={CheckCheck} label="Mark Ready" tone="violet" onClick={() => fire("dispatch_ready")} disabled={disabled || !onDispatchReady} />
                   <IconTile icon={Truck} label="Mark Shipped" tone="emerald" onClick={() => fire("dispatch_ship")} disabled={disabled || !onDispatchShip} />
                 </div>

@@ -810,7 +810,8 @@ function OrdersPage() {
                   if (selectedIds.size === 0) return;
                   setPrintMode(mode);
                 }}
-                onDispatchPack={() => bulkStatus.mutate("packed")}
+                onDispatchPack={() => bulkStatus.mutate("packaging")}
+                onDispatchPacked={() => bulkStatus.mutate("packed")}
                 onDispatchReady={() => bulkStatus.mutate("ready_to_ship")}
                 onDispatchShip={() => bulkStatus.mutate("shipped")}
                 onOpenScanner={() => setScanOpen(true)}
