@@ -13713,6 +13713,7 @@ export type Database = {
           variant_id: string
         }[]
       }
+      inv_reserve_status: { Args: { _brand_id?: string }; Returns: Json }
       inv_take_snapshot: {
         Args: { _label: string; _note?: string }
         Returns: string
