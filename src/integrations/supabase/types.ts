@@ -15411,8 +15411,6 @@ export type Database = {
         }
         Returns: Json
       }
-      show_limit: { Args: never; Returns: number }
-      show_trgm: { Args: { "": string }; Returns: string[] }
       snapshot_order_item_profit_fields: {
         Args: { _order_id: string }
         Returns: undefined
