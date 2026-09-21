@@ -124,7 +124,7 @@ export function StockAdjustDialog({ product, mode, onClose, initialVariantId = n
           {belowReserved && (
             <div className="flex items-start gap-2 rounded-md border border-amber-400 bg-amber-50 dark:bg-amber-950/30 p-2 text-xs text-amber-800 dark:text-amber-300">
               <AlertTriangle className="h-4 w-4 shrink-0 mt-0.5" />
-              <span>Adjusting below reserved ({currentReserved}). Server will reject — confirmed orders will still need this stock.</span>
+              <span>Adjusting below reserved ({currentReserved}). Server will reject — packing stage orders will still need this stock.</span>
             </div>
           )}
         </div>
