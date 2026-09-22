@@ -1190,8 +1190,52 @@ function _WebOrdersPageBody() {
   // ============ FEATURE 1 + 2: status mutations ============
   const invalidateWebOrders = () => {
     queryClient.invalidateQueries({ queryKey: ["web-orders-page"] });
-    queryClient.invalidateQueries({ queryKey: ["web-orders-inf"] });
     queryClient.invalidateQueries({ queryKey: ["web-orders-counts"] });
+  };
+
+  /**
+   * Instant UI: patch the cached pages (drop rows that no longer belong to the
+   * active tab) and shift the tab counters before the server round-trip lands.
+   */
+  const applyLocalStatus = (ids: string[], status: WebStatusKey) => {
+    const idSet = new Set(ids);
+    const movedFrom: Record<string, number> = {};
+
+    queryClient.setQueriesData<{ pages: { rows: WebOrderRow[]; total: number }[]; pageParams: unknown[] }>(
+      { queryKey: ["web-orders-page"] },
+      (old) => {
+        if (!old) return old;
+        let dropped = 0;
+        const pages = old.pages.map((p) => {
+          const rows: WebOrderRow[] = [];
+          for (const r of p.rows) {
+            if (!idSet.has(r.id)) { rows.push(r); continue; }
+            movedFrom[r.web_status ?? "all"] = (movedFrom[r.web_status ?? "all"] ?? 0) + 1;
+            if (activeTab !== "all" && activeTab !== status) { dropped++; continue; }
+            rows.push({
+              ...r,
+              web_status: status as WebStatus,
+              status: status === "complete" ? "confirmed" : status === "cancelled" ? "cancelled" : r.status,
+            });
+          }
+          return { ...p, rows, total: Math.max(0, p.total - dropped) };
+        });
+        return { ...old, pages };
+      },
+    );
+
+    queryClient.setQueriesData<Record<string, number>>({ queryKey: ["web-orders-counts"] }, (old) => {
+      if (!old) return old;
+      const next = { ...old };
+      let moved = 0;
+      for (const [from, n] of Object.entries(movedFrom)) {
+        if (from === status) continue;
+        if (next[from] != null) next[from] = Math.max(0, next[from] - n);
+        moved += n;
+      }
+      if (moved > 0) next[status] = (next[status] ?? 0) + moved;
+      return next;
+    });
   };
 
   const bulkStatus = useMutation({
@@ -1217,13 +1261,21 @@ function _WebOrdersPageBody() {
       }
       return ids.length;
     },
-    onSuccess: (n, status) => {
-      toast.success(`Updated ${n} order${n === 1 ? "" : "s"}`);
-      if (status === "complete") fireOrderSmsMany(Array.from(selectedIds), "order_confirm");
+    onMutate: (status) => {
+      const ids = Array.from(selectedIds);
+      applyLocalStatus(ids, status);
       setSelectedIds(new Set());
+      return { ids };
+    },
+    onSuccess: (n, status, ctx) => {
+      toast.success(`Updated ${n} order${n === 1 ? "" : "s"}`);
+      if (status === "complete") fireOrderSmsMany(ctx?.ids ?? [], "order_confirm");
       invalidateWebOrders();
     },
-    onError: (e: Error) => toast.error(e.message),
+    onError: (e: Error) => {
+      toast.error(e.message);
+      invalidateWebOrders();
+    },
   });
 
   const bulkAddTag = useMutation({
