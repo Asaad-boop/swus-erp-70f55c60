@@ -125,7 +125,6 @@ export function PreorderConvertDialog({ open, onOpenChange, orderIds, brandId, o
       const skippedTotal = skipped + alreadyCount;
       if (skippedTotal > 0) toast.info(`${skippedTotal} order আগে থেকেই pre-order list-এ ছিল — duplicate হয়নি`);
       qc.invalidateQueries({ queryKey: ["orders"] });
-      qc.invalidateQueries({ queryKey: ["orders-status-counts"] });
       qc.invalidateQueries({ queryKey: ["web-orders"] });
       qc.invalidateQueries({ queryKey: ["web-orders-page"] });
       qc.invalidateQueries({ queryKey: ["preorders"] });
