@@ -1264,12 +1264,12 @@ function _WebOrdersPageBody() {
     onMutate: (status) => {
       const ids = Array.from(selectedIds);
       applyLocalStatus(ids, status);
-      setSelectedIds(new Set());
       return { ids };
     },
     onSuccess: (n, status, ctx) => {
       toast.success(`Updated ${n} order${n === 1 ? "" : "s"}`);
       if (status === "complete") fireOrderSmsMany(ctx?.ids ?? [], "order_confirm");
+      setSelectedIds(new Set());
       invalidateWebOrders();
     },
     onError: (e: Error) => {
