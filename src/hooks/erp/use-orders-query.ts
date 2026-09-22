@@ -183,7 +183,7 @@ export async function fetchOrdersPage(
 export function useOrdersQuery(filter: OrdersFilter) {
   const brandIds = brandIdsOf(filter);
   return useQuery({
-    queryKey: ["orders", filter],
+    queryKey: ["orders", "page", filter],
     enabled: brandIds.length > 0 && (filter.ids == null || filter.ids.length > 0),
     placeholderData: keepPreviousData,
     queryFn: () => fetchOrdersPage(filter),
@@ -197,7 +197,9 @@ export function useOrdersQuery(filter: OrdersFilter) {
 export function useOrdersInfinite(filter: Omit<OrdersFilter, "page">, pageSize = 50) {
   const brandIds = brandIdsOf(filter as OrdersFilter);
   return useInfiniteQuery({
-    queryKey: ["orders-infinite", { ...filter, pageSize }],
+    // Nested under the shared "orders" prefix so a single
+    // invalidateQueries({ queryKey: ["orders"] }) refreshes list + counts.
+    queryKey: ["orders", "infinite", { ...filter, pageSize }],
     enabled: brandIds.length > 0 && (filter.ids == null || filter.ids.length > 0),
     initialPageParam: 0,
     queryFn: ({ pageParam }) =>
@@ -316,7 +318,7 @@ export function useOrderStatusCounts(filter: OrdersFilter) {
       ? [filter.brandId]
       : [];
   return useQuery({
-    queryKey: ["orders-status-counts", brandIds, filter.search, filter.source, filter.courier, filter.dateFrom, filter.dateTo, filter.printedFilter],
+    queryKey: ["orders", "status-counts", brandIds, filter.search, filter.source, filter.courier, filter.dateFrom, filter.dateTo, filter.printedFilter],
     enabled: brandIds.length > 0,
     placeholderData: keepPreviousData,
     staleTime: 30_000,
