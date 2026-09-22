@@ -351,8 +351,6 @@ function OrdersPage() {
           const row = payload.new as { id?: string } | undefined;
           if (!row?.id || !orderIdSetRef.current.has(row.id)) return;
           qc.invalidateQueries({ queryKey: ["orders"] });
-          qc.invalidateQueries({ queryKey: ["orders-infinite"] });
-          qc.invalidateQueries({ queryKey: ["orders-status-counts"] });
           setFlashIds((s) => { const n = new Set(s); n.add(row.id!); return n; });
           const timer = setTimeout(() => {
             flashTimersRef.current.delete(timer);
@@ -383,8 +381,6 @@ function OrdersPage() {
       pending = setTimeout(() => {
         pending = null;
         qc.invalidateQueries({ queryKey: ["orders"] });
-        qc.invalidateQueries({ queryKey: ["orders-infinite"] });
-        qc.invalidateQueries({ queryKey: ["orders-status-counts"] });
       }, 400);
     };
     const ch = supabase
@@ -511,8 +507,6 @@ function OrdersPage() {
         const n = new Set(prev); n.delete(vars.id); return n;
       });
       qc.invalidateQueries({ queryKey: ["orders"] });
-      qc.invalidateQueries({ queryKey: ["orders-infinite"] });
-      qc.invalidateQueries({ queryKey: ["orders-status-counts"] });
     },
   });
 
@@ -535,8 +529,6 @@ function OrdersPage() {
       else toast.success(`${succeeded} orders updated`);
       setSelectedIds(new Set());
       qc.invalidateQueries({ queryKey: ["orders"] });
-      qc.invalidateQueries({ queryKey: ["orders-infinite"] });
-      qc.invalidateQueries({ queryKey: ["orders-status-counts"] });
     },
     onError: (e: Error) => toast.error(e.message),
   });
@@ -599,8 +591,6 @@ function OrdersPage() {
 
   const handleRefresh = () => {
     qc.invalidateQueries({ queryKey: ["orders"] });
-    qc.invalidateQueries({ queryKey: ["orders-infinite"] });
-    qc.invalidateQueries({ queryKey: ["orders-status-counts"] });
     qc.invalidateQueries({ queryKey: ["abandoned-carts"] });
     qc.invalidateQueries({ queryKey: ["abandoned-carts-count"] });
   };
@@ -925,8 +915,6 @@ function OrdersPage() {
         onDone={() => {
           setSelectedIds(new Set());
           qc.invalidateQueries({ queryKey: ["orders"] });
-          qc.invalidateQueries({ queryKey: ["orders-infinite"] });
-          qc.invalidateQueries({ queryKey: ["orders-status-counts"] });
         }}
       />
 

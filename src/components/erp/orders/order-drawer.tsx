@@ -332,7 +332,6 @@ export function OrderDrawer({ orderId, onClose, mode = "fulfillment" }: Props) {
       setCustomerEditing(false);
       qc.invalidateQueries({ queryKey: ["order-detail", orderId] });
       qc.invalidateQueries({ queryKey: ["orders"] });
-      qc.invalidateQueries({ queryKey: ["orders-status-counts"] });
       qc.invalidateQueries({ queryKey: ["web-orders"] });
       qc.invalidateQueries({ queryKey: ["web-orders-page"] });
       qc.invalidateQueries({ queryKey: ["web-orders-counts"] });
@@ -371,7 +370,6 @@ export function OrderDrawer({ orderId, onClose, mode = "fulfillment" }: Props) {
       qc.invalidateQueries({ queryKey: ["web-orders-inf"] });
       qc.invalidateQueries({ queryKey: ["web-orders-counts"] });
       qc.invalidateQueries({ queryKey: ["orders"] });
-      qc.invalidateQueries({ queryKey: ["orders-status-counts"] });
       qc.invalidateQueries({ queryKey: ["order-detail", orderId] });
       // Final actions (confirm/cancel) end the workflow for this order —
       // close the drawer so the user immediately sees the row leave the queue.

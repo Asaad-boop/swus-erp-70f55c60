@@ -234,7 +234,6 @@ export function CourierStatusSyncDialog({
       if (ok) toast.success(`${ok} orders updated`);
       if (fail) toast.error(`${fail} updates failed`);
       qc.invalidateQueries({ queryKey: ["orders"] });
-      qc.invalidateQueries({ queryKey: ["orders-status-counts"] });
       onOpenChange(false);
     },
     onError: (e: Error) => {

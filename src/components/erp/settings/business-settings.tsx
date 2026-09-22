@@ -187,7 +187,6 @@ export function BusinessSettings({ brandIdOverride }: { brandIdOverride?: string
       qc.invalidateQueries({ queryKey: ["brand-settings", brandId] });
       qc.invalidateQueries({ queryKey: ["brands"] });
       qc.invalidateQueries({ queryKey: ["orders"] });
-      qc.invalidateQueries({ queryKey: ["orders-status-counts"] });
     },
     onError: (e: Error) => toast.error(e.message),
   });
