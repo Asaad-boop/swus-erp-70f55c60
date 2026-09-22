@@ -371,6 +371,7 @@ function OrdersPage() {
       )
       .subscribe();
     return () => {
+      if (pendingRefresh) clearTimeout(pendingRefresh);
       supabase.removeChannel(channel);
       supabase.removeChannel(ordersChannel);
     };
