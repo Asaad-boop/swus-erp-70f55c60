@@ -341,7 +341,17 @@ function OrdersPage() {
         },
       )
       .subscribe();
-    // Also listen to orders UPDATE so status/payment_status changes reflect live
+    // Also listen to orders UPDATE so status/payment_status changes reflect live.
+    // Bulk updates fire one event per row — coalesce them into a single refetch
+    // so a 50-order status change does not trigger 50 queries.
+    let pendingRefresh: ReturnType<typeof setTimeout> | null = null;
+    const scheduleRefresh = () => {
+      if (pendingRefresh) return;
+      pendingRefresh = setTimeout(() => {
+        pendingRefresh = null;
+        qc.invalidateQueries({ queryKey: ["orders"] });
+      }, 350);
+    };
     const ordersChannel = supabase
       .channel(`orders-live-${idsKey.slice(0, 32)}`)
       .on(
@@ -350,7 +360,7 @@ function OrdersPage() {
         (payload) => {
           const row = payload.new as { id?: string } | undefined;
           if (!row?.id || !orderIdSetRef.current.has(row.id)) return;
-          qc.invalidateQueries({ queryKey: ["orders"] });
+          scheduleRefresh();
           setFlashIds((s) => { const n = new Set(s); n.add(row.id!); return n; });
           const timer = setTimeout(() => {
             flashTimersRef.current.delete(timer);
