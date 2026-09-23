@@ -49,10 +49,12 @@ export function OrderActivityFeed({
   orderId,
   createdAt,
   source,
+  createdById,
 }: {
   orderId: string;
   createdAt?: string | null;
   source?: string | null;
+  createdById?: string | null;
 }) {
   const qc = useQueryClient();
 
