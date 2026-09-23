@@ -954,6 +954,10 @@ export function OrderDrawer({ orderId, onClose, mode = "fulfillment" }: Props) {
                     />
                   </section>
 
+                  <CustomerHistoryCard phone={phone || null} currentOrderId={orderId} />
+
+
+
 
 
 
