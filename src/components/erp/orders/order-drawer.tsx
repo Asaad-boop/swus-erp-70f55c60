@@ -1027,13 +1027,15 @@ export function OrderDrawer({ orderId, onClose, mode = "fulfillment" }: Props) {
                       <div className="flex items-center justify-between">
                         <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Billing</span>
                         {!billingEditing && (
-                          <button
-                            type="button"
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            className="h-7 px-2 gap-1"
                             onClick={() => guardedAction(() => setBillingEditing(true))}
-                            className="inline-flex items-center gap-1 text-[11px] font-semibold text-primary hover:underline"
+                            disabled={editingBlocked}
                           >
-                            <Pencil className="h-3 w-3" /> Edit billing
-                          </button>
+                            <Pencil className="h-3.5 w-3.5" />Edit billing
+                          </Button>
                         )}
                       </div>
                       {billingEditing && orderId && (
@@ -1121,11 +1123,13 @@ export function OrderDrawer({ orderId, onClose, mode = "fulfillment" }: Props) {
                   )}
 
                   {tab === "activity" && orderId && (
-                    <OrderActivityFeed
-                      orderId={orderId}
-                      createdAt={order.created_at}
-                      source={(order as { source?: string | null }).source ?? null}
-                    />
+                    <div className="animate-in fade-in-0 slide-in-from-bottom-1 duration-200">
+                      <OrderActivityFeed
+                        orderId={orderId}
+                        createdAt={order.created_at}
+                        source={(order as { source?: string | null }).source ?? null}
+                      />
+                    </div>
                   )}
                 </div>
 
@@ -1133,7 +1137,7 @@ export function OrderDrawer({ orderId, onClose, mode = "fulfillment" }: Props) {
                 <div className="space-y-4 lg:sticky lg:top-[132px] lg:self-start">
 
                   {/* Status + Assign */}
-                  <section className="rounded-xl border bg-card p-4 space-y-3">
+                  <section className="rounded-2xl border bg-card p-4 space-y-3 shadow-sm transition-shadow duration-300 hover:shadow-md">
                     <h3 className="text-xs font-bold uppercase tracking-wider text-muted-foreground flex items-center gap-1.5"><ListChecks className="h-3.5 w-3.5" />Manage</h3>
                     <div>
                       <label className="text-[11px] font-semibold text-muted-foreground mb-1.5 block">Status</label>
@@ -1199,7 +1203,7 @@ export function OrderDrawer({ orderId, onClose, mode = "fulfillment" }: Props) {
                   </section>
 
                   {/* Notes */}
-                  <section className="rounded-xl border bg-card p-4">
+                  <section className="rounded-2xl border bg-card p-4 shadow-sm transition-shadow duration-300 hover:shadow-md">
                     <h3 className="text-xs font-bold uppercase tracking-wider text-muted-foreground mb-3 flex items-center gap-1.5"><StickyNote className="h-3.5 w-3.5" />Notes</h3>
                     <div className="space-y-2 mb-3">
                       <Textarea
