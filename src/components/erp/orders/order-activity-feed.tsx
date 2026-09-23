@@ -150,17 +150,19 @@ export function OrderActivityFeed({
     });
 
     if (createdAt) {
+      const creatorName = createdById ? names.get(createdById) : undefined;
       out.push({
         id: "created",
         at: createdAt,
         kind: "created",
         title: "Order placed",
-        actor: source ? `via ${source}` : "Customer",
+        actor: creatorName ?? (source ? `via ${source}` : "Customer"),
+        note: creatorName && source ? `Source: ${source}` : null,
       });
     }
 
     return out.sort((a, b) => new Date(b.at).getTime() - new Date(a.at).getTime());
-  }, [data, createdAt, source]);
+  }, [data, createdAt, source, createdById]);
 
   return (
     <section className="rounded-xl border bg-card p-4">
