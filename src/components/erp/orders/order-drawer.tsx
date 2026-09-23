@@ -1128,6 +1128,7 @@ export function OrderDrawer({ orderId, onClose, mode = "fulfillment" }: Props) {
                         orderId={orderId}
                         createdAt={order.created_at}
                         source={(order as { source?: string | null }).source ?? null}
+                        createdById={(order as { user_id?: string | null }).user_id ?? null}
                       />
                     </div>
                   )}
