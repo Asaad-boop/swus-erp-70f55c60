@@ -99,7 +99,7 @@ export async function fetchOrdersPage(
         supabase
           .from("orders")
           .select(
-            "id,invoice_no,created_at,updated_at,status,confirmation_status,total,subtotal,shipping_fee,discount_amount,advance_amount,payment_method,shipping_name,shipping_phone,shipping_address,shipping_city,shipping_district,shipping_thana,guest_name,guest_phone,is_guest_order,user_id,brand_id,source,courier_name,tracking_number,actual_shipping_cost,assigned_to,admin_notes,customer_note,shipping_note,call_status,call_attempt_count,delivered_at,shipped_at,confirmed_at,paid_at,cancelled_at,reconciliation_status,net_collected,printed_at,risk_flag,duplicate_flag,hold_reason,is_preorder,priority,payment_status,courier_fee,refund_amount,last_call_at,utm_source,utm_medium,utm_campaign,fb_campaign_id,fb_adset_id,fb_ad_id,attribution_landing_page,return_received_at,return_condition,items:order_items(id,name,image,quantity,variant_label,line_total)",
+            "id,invoice_no,created_at,updated_at,status,confirmation_status,total,subtotal,shipping_fee,discount_amount,advance_amount,payment_method,shipping_name,shipping_phone,shipping_address,shipping_city,shipping_district,shipping_thana,guest_name,guest_phone,is_guest_order,user_id,confirmed_by,brand_id,source,courier_name,tracking_number,actual_shipping_cost,assigned_to,admin_notes,customer_note,shipping_note,call_status,call_attempt_count,delivered_at,shipped_at,confirmed_at,paid_at,cancelled_at,reconciliation_status,net_collected,printed_at,risk_flag,duplicate_flag,hold_reason,is_preorder,priority,payment_status,courier_fee,refund_amount,last_call_at,utm_source,utm_medium,utm_campaign,fb_campaign_id,fb_adset_id,fb_ad_id,attribution_landing_page,return_received_at,return_condition,items:order_items(id,name,image,quantity,variant_label,line_total)",
             { count: "exact" },
           ),
         brandIds,
@@ -344,6 +344,31 @@ export function useOrderStatusCounts(filter: OrdersFilter) {
         total += c;
       }
       return { counts, total };
+    },
+  });
+}
+
+export type OrderListDailyPulse = {
+  orders: number;
+  pieces: number;
+  unique_customers: number;
+  repeat_customers: number;
+  top_products: { name: string; qty: number; orders: number; image: string | null }[];
+};
+
+export function useOrderListDailyPulse(brandId: string | null, brandIds?: string[]) {
+  const scopedBrandIds = brandIds && brandIds.length > 0 ? brandIds : brandId ? [brandId] : [];
+  return useQuery({
+    queryKey: ["orders", "daily-pulse", scopedBrandIds],
+    enabled: scopedBrandIds.length > 0,
+    staleTime: 30_000,
+    placeholderData: keepPreviousData,
+    queryFn: async () => {
+      const { data, error } = await supabase.rpc("erp_order_list_daily_pulse", {
+        p_brand_ids: scopedBrandIds,
+      });
+      if (error) throw error;
+      return data as unknown as OrderListDailyPulse;
     },
   });
 }

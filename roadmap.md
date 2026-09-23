@@ -37,7 +37,7 @@
 - [ ] Phase 4: Staff dashboard — announcements/holidays + deeper role-adaptive queues
 
 ## Order list compact control center
-- [ ] Compact and polish the status flow with stronger counts and smooth switching
-- [ ] Add concise daily KPIs: orders, units, customers, repeats, and top products
-- [ ] Show created/confirmed staff names on each order row
-- [ ] Verify desktop and mobile layouts plus status interactions
+- [x] Compact and polish the status flow with stronger counts and smooth switching
+- [x] Add concise daily KPIs: orders, units, customers, repeats, and top products
+- [x] Show created/confirmed staff names on each order row
+- [x] Verify compile/runtime state and responsive layout rules; authenticated visual check unavailable in sandbox
