@@ -156,21 +156,25 @@ export async function fetchOrdersPage(
         const ids = rows.map((r) => r.id);
         const { data: hist } = await supabase
           .from("order_status_history")
-          .select("order_id,to_status,created_at")
+          .select("order_id,to_status,created_at,changed_by")
           .in("order_id", ids)
           .order("created_at", { ascending: false });
         if (hist && hist.length > 0) {
           const latestMatch = new Map<string, string>();
+          const confirmerByOrder = new Map<string, string>();
           const statusById = new Map(rows.map((r) => [r.id, r.status]));
-          for (const h of hist as { order_id: string; to_status: string; created_at: string }[]) {
-            if (latestMatch.has(h.order_id)) continue;
-            if (h.to_status === statusById.get(h.order_id)) {
+          for (const h of hist as { order_id: string; to_status: string; created_at: string; changed_by: string | null }[]) {
+            if (!latestMatch.has(h.order_id) && h.to_status === statusById.get(h.order_id)) {
               latestMatch.set(h.order_id, h.created_at);
+            }
+            if (!confirmerByOrder.has(h.order_id) && h.to_status === "confirmed" && h.changed_by) {
+              confirmerByOrder.set(h.order_id, h.changed_by);
             }
           }
           for (const r of rows) {
             const ts = latestMatch.get(r.id);
             if (ts) (r as OrderRow & { status_since?: string }).status_since = ts;
+            if (!r.confirmed_by) r.confirmed_by = confirmerByOrder.get(r.id) ?? null;
           }
         }
       }
