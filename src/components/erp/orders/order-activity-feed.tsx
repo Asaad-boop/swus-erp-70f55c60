@@ -49,10 +49,12 @@ export function OrderActivityFeed({
   orderId,
   createdAt,
   source,
+  createdById,
 }: {
   orderId: string;
   createdAt?: string | null;
   source?: string | null;
+  createdById?: string | null;
 }) {
   const qc = useQueryClient();
 
@@ -84,7 +86,9 @@ export function OrderActivityFeed({
       }>;
 
       const ids = Array.from(
-        new Set([...hist.map((h) => h.changed_by), ...logs.map((l) => l.performed_by)].filter(Boolean)),
+        new Set(
+          [...hist.map((h) => h.changed_by), ...logs.map((l) => l.performed_by), createdById].filter(Boolean),
+        ),
       ) as string[];
       const names = new Map<string, string>();
       if (ids.length) {
@@ -146,17 +150,19 @@ export function OrderActivityFeed({
     });
 
     if (createdAt) {
+      const creatorName = createdById ? names.get(createdById) : undefined;
       out.push({
         id: "created",
         at: createdAt,
         kind: "created",
         title: "Order placed",
-        actor: source ? `via ${source}` : "Customer",
+        actor: creatorName ?? (source ? `via ${source}` : "Customer"),
+        note: creatorName && source ? `Source: ${source}` : null,
       });
     }
 
     return out.sort((a, b) => new Date(b.at).getTime() - new Date(a.at).getTime());
-  }, [data, createdAt, source]);
+  }, [data, createdAt, source, createdById]);
 
   return (
     <section className="rounded-xl border bg-card p-4">
