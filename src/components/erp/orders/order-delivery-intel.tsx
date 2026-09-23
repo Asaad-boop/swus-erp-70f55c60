@@ -93,59 +93,138 @@ function useCourierScore(phone: string | null, brandId?: string | null) {
   };
 }
 
-/** Slim full-width courier success-rate strip, meant to sit at the top of the order popup. */
+/** Colorful courier palette — data-viz colors, one per courier brand. */
+const PROVIDER_COLORS: Record<string, string> = {
+  pathao: "#10b981",
+  steadfast: "#0ea5e9",
+  redx: "#f43f5e",
+  paperfly: "#f59e0b",
+  ecourier: "#8b5cf6",
+};
+const FALLBACK_COLORS = ["#06b6d4", "#f97316", "#ec4899", "#84cc16"];
+
+function providerColor(name: string, idx: number) {
+  return PROVIDER_COLORS[name] ?? FALLBACK_COLORS[idx % FALLBACK_COLORS.length];
+}
+
+/** SVG doughnut ring — smooth animated arc, center content via children overlay. */
+function DonutRing({
+  rate,
+  size,
+  stroke,
+  color,
+  children,
+}: {
+  rate: number;
+  size: number;
+  stroke: number;
+  color: string;
+  children?: React.ReactNode;
+}) {
+  const clamped = Math.min(100, Math.max(0, rate));
+  const r = (size - stroke) / 2;
+  const c = 2 * Math.PI * r;
+  const off = c * (1 - clamped / 100);
+  return (
+    <div className="relative shrink-0" style={{ width: size, height: size }}>
+      <svg width={size} height={size} className="-rotate-90">
+        <circle cx={size / 2} cy={size / 2} r={r} fill="none" strokeWidth={stroke} className="stroke-muted" opacity={0.35} />
+        <circle
+          cx={size / 2}
+          cy={size / 2}
+          r={r}
+          fill="none"
+          stroke={color}
+          strokeWidth={stroke}
+          strokeDasharray={c}
+          strokeDashoffset={off}
+          strokeLinecap="round"
+          style={{ transition: "stroke-dashoffset 900ms cubic-bezier(0.22, 1, 0.36, 1)" }}
+        />
+      </svg>
+      {children && <div className="absolute inset-0 grid place-items-center">{children}</div>}
+    </div>
+  );
+}
+
+/** Courier success-rate card — big overall doughnut + colorful per-courier mini doughnuts. */
 export function OrderCourierScoreStrip({ phone, brandId }: { phone: string | null; brandId?: string | null }) {
   const { enabled, loading, providers, totals, rate, fetchedAt } = useCourierScore(phone, brandId);
   if (!enabled) return null;
   const tone = rateTone(rate ?? 0);
+  const overallColor = rate !== null ? (rate >= 80 ? "#10b981" : rate >= 50 ? "#f59e0b" : "#f43f5e") : "#94a3b8";
 
   return (
-    <div className={cn("flex flex-wrap items-center gap-x-4 gap-y-2 rounded-xl border px-3.5 py-2.5", rate !== null ? tone.ring : "bg-muted/30")}>
-      <span className="flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
-        {rate !== null && rate >= 80 ? <ShieldCheck className="h-3.5 w-3.5" /> : <AlertTriangle className="h-3.5 w-3.5" />}
-        Courier success rate
-      </span>
+    <section
+      className={cn(
+        "rounded-2xl border bg-card p-4 shadow-sm transition-shadow duration-300 hover:shadow-md animate-in fade-in-0 slide-in-from-bottom-1",
+        rate !== null && tone.ring,
+      )}
+    >
+      <div className="mb-3 flex flex-wrap items-center gap-2">
+        <span className="flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
+          {rate !== null && rate >= 80 ? <ShieldCheck className="h-3.5 w-3.5" /> : <AlertTriangle className="h-3.5 w-3.5" />}
+          Courier success rate
+        </span>
+        <span className="ml-auto flex items-center gap-2 text-[10px] text-muted-foreground">
+          {loading && <Loader2 className="h-3 w-3 animate-spin" />}
+          {fetchedAt && <>synced {format(new Date(fetchedAt), "dd MMM, hh:mm a")}</>}
+        </span>
+      </div>
 
       {rate === null ? (
-        <span className="text-xs text-muted-foreground">
-          {loading ? "Courier history আনা হচ্ছে…" : "এই নাম্বারে কোনো courier history নেই।"}
-        </span>
+        <div className="flex items-center gap-4">
+          <DonutRing rate={0} size={104} stroke={11} color="#94a3b8">
+            <span className="text-[10px] font-medium text-muted-foreground">No data</span>
+          </DonutRing>
+          <p className="text-sm text-muted-foreground">
+            {loading ? "Courier history আনা হচ্ছে…" : "এই নাম্বারে কোনো courier history নেই।"}
+          </p>
+        </div>
       ) : (
-        <>
-          <span className="flex items-baseline gap-1.5">
-            <span className={cn("text-xl font-bold leading-none tabular-nums", tone.text)}>{rate}%</span>
-            <span className="text-[11px] text-muted-foreground tabular-nums">
-              {totals.success}/{totals.total} delivered
-            </span>
-          </span>
-          <div className="h-1.5 w-28 overflow-hidden rounded-full bg-muted">
-            <div className={cn("h-full rounded-full", tone.bar)} style={{ width: `${Math.min(100, rate)}%` }} />
-          </div>
-          <div className="flex flex-wrap items-center gap-1.5">
-            {providers.map((p) => {
-              const r = p.total > 0 ? Math.round((p.success / p.total) * 100) : 0;
-              const t = rateTone(r);
-              return (
-                <span
-                  key={p.name}
-                  title={`${p.success} success · ${p.cancelled} cancel`}
-                  className="inline-flex items-center gap-1 rounded-full border bg-background/70 px-2 py-0.5 text-[10px] font-medium"
-                >
-                  {LABELS[p.name] ?? p.label ?? p.name}
-                  <span className={cn("font-bold tabular-nums", t.text)}>{r}%</span>
-                  <span className="text-muted-foreground tabular-nums">({p.total})</span>
-                </span>
-              );
-            })}
-          </div>
-        </>
-      )}
+        <div className="flex flex-wrap items-center gap-5">
+          {/* Big overall doughnut */}
+          <DonutRing rate={rate} size={104} stroke={11} color={overallColor}>
+            <div className="text-center leading-none">
+              <div className={cn("text-2xl font-bold tabular-nums", tone.text)}>{rate}%</div>
+              <div className="mt-1 text-[9px] font-medium uppercase tracking-wider text-muted-foreground">Overall</div>
+            </div>
+          </DonutRing>
 
-      <span className="ml-auto flex items-center gap-2 text-[10px] text-muted-foreground">
-        {loading && <Loader2 className="h-3 w-3 animate-spin" />}
-        {fetchedAt && <>synced {format(new Date(fetchedAt), "dd MMM, hh:mm a")}</>}
-      </span>
-    </div>
+          <div className="min-w-0 flex-1 space-y-2">
+            <div className="text-[12px] text-muted-foreground tabular-nums">
+              <span className="font-semibold text-foreground">{totals.success}</span>/{totals.total} parcel delivered successfully
+            </div>
+            <div className="flex flex-wrap gap-2">
+              {providers.map((p, i) => {
+                const r = p.total > 0 ? Math.round((p.success / p.total) * 100) : 0;
+                const color = providerColor(p.name, i);
+                return (
+                  <div
+                    key={p.name}
+                    title={`${p.success} success · ${p.cancelled} cancel`}
+                    className="flex items-center gap-2 rounded-xl border bg-background/70 px-2.5 py-2 transition-colors hover:bg-muted/50"
+                  >
+                    <DonutRing rate={r} size={44} stroke={6} color={color}>
+                      <span className="text-[9px] font-bold tabular-nums" style={{ color }}>{r}%</span>
+                    </DonutRing>
+                    <div className="leading-tight">
+                      <div className="flex items-center gap-1 text-[11px] font-semibold">
+                        <span className="h-1.5 w-1.5 rounded-full" style={{ background: color }} />
+                        {LABELS[p.name] ?? p.label ?? p.name}
+                      </div>
+                      <div className="text-[10px] text-muted-foreground tabular-nums">
+                        {p.success}/{p.total} delivered
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        </div>
+      )}
+    </section>
   );
 }
 
