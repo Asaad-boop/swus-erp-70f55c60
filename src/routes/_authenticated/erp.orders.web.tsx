@@ -1261,10 +1261,11 @@ function _WebOrdersPageBody() {
     mutationFn: async (status: WebStatusKey) => {
       const ids = Array.from(selectedIds);
       const now = new Date().toISOString();
+      const { data: auth } = await supabase.auth.getUser();
       if (status === "complete" || status === "cancelled") {
         // Promote against the DB's live status so nothing stays stuck at `new`.
         const promo = status === "complete"
-          ? { status: "confirmed" as never, confirmation_status: "pending" as never, confirmed_at: now }
+          ? { status: "confirmed" as never, confirmation_status: "pending" as never, confirmed_at: now, confirmed_by: auth.user?.id ?? null }
           : { status: "cancelled" as never, cancelled_at: now };
         const { error: promoError } = await supabase
           .from("orders")
