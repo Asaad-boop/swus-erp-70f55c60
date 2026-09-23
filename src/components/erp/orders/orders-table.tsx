@@ -143,15 +143,34 @@ export function OrdersTable({ rows, loading, selectedIds, onToggleSelect, onTogg
               <span className="text-muted-foreground/40">•</span>
               <BrandBadge brandId={o.brand_id} variant="text" className="text-[11px]" />
             </div>
-            {(confirmerName || manualCreatorName) && (
-              <div className="mt-1 flex items-center gap-1 text-[10.5px] font-medium text-muted-foreground">
-                <UserCheck className="h-3 w-3 shrink-0 text-primary" />
-                <span className="truncate">
-                  {confirmerName ? "Confirmed" : "Created"} by {confirmerName ?? manualCreatorName}
-                </span>
-              </div>
-            )}
           </div>
+        );
+      },
+    },
+    {
+      header: "Confirmed by",
+      id: "confirmed_by",
+      cell: ({ row }) => {
+        const o = row.original;
+        const confirmerName = o.confirmed_by ? staffNames[o.confirmed_by] : null;
+        const manualCreatorName = !confirmerName && (!o.source || o.source === "manual") && o.user_id
+          ? staffNames[o.user_id]
+          : null;
+        const name = confirmerName ?? manualCreatorName;
+        return name ? (
+          <div className="flex min-w-[120px] items-center gap-2 whitespace-nowrap">
+            <span className="grid h-7 w-7 shrink-0 place-items-center rounded-full bg-primary/10 text-[10px] font-bold uppercase text-primary">
+              {avatarInitials(name)}
+            </span>
+            <div>
+              <div className="text-xs font-semibold text-foreground">{name}</div>
+              <div className="text-[10px] text-muted-foreground">{confirmerName ? "Confirmed" : "Created"}</div>
+            </div>
+          </div>
+        ) : (
+          <span className="inline-flex items-center gap-1 text-[10.5px] text-muted-foreground/60">
+            <UserCheck className="h-3 w-3" /> Not recorded
+          </span>
         );
       },
     },
