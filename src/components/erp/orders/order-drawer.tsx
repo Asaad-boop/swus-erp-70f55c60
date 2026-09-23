@@ -1110,27 +1110,12 @@ export function OrderDrawer({ orderId, onClose, mode = "fulfillment" }: Props) {
                   </section>
                   </>)}
 
-                  {tab === "activity" && (
-                  /* Timeline */
-                  <section className="rounded-xl border bg-card p-4">
-                    <h3 className="text-xs font-bold uppercase tracking-wider text-muted-foreground mb-3 flex items-center gap-1.5"><Clock className="h-3.5 w-3.5" />Status Timeline</h3>
-                    {history.length > 0 ? (
-                      <div className="space-y-3 relative before:absolute before:left-[5px] before:top-2 before:bottom-2 before:w-px before:bg-border">
-                        {history.map((h) => (
-                          <div key={h.id} className="text-xs flex items-start gap-3 relative">
-                            <div className="w-3 h-3 rounded-full bg-primary ring-4 ring-background mt-0.5 shrink-0 z-10" />
-                            <div className="flex-1 pb-0.5">
-                              <div className="text-sm"><span className="capitalize text-muted-foreground">{(h.from_status ?? "—").replace(/_/g, " ")}</span> <span className="text-muted-foreground/50">→</span> <span className="font-semibold capitalize">{(h.to_status ?? "").replace(/_/g, " ")}</span></div>
-                              <div className="text-[11px] text-muted-foreground mt-0.5">{format(new Date(h.created_at), "dd MMM, hh:mm a")}</div>
-                              {h.note && <div className="text-xs text-muted-foreground italic mt-0.5">"{h.note}"</div>}
-                            </div>
-                          </div>
-                        ))}
-                      </div>
-                    ) : (
-                      <p className="text-xs text-muted-foreground italic">No status changes recorded yet</p>
-                    )}
-                  </section>
+                  {tab === "activity" && orderId && (
+                    <OrderActivityFeed
+                      orderId={orderId}
+                      createdAt={order.created_at}
+                      source={(order as { source?: string | null }).source ?? null}
+                    />
                   )}
                 </div>
 
