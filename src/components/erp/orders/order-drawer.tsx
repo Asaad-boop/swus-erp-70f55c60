@@ -22,6 +22,8 @@ import { confirmOrderAdvanceReceivedFn } from "@/lib/erp/finance/advance.functio
 import { PreorderConvertDialog } from "@/components/erp/orders/preorder-convert-dialog";
 import { OrderItemsEditor } from "@/components/erp/orders/order-items-editor";
 import { OrderCourierScoreStrip, OrderLocationIntel } from "@/components/erp/orders/order-delivery-intel";
+import { OrderActivityFeed } from "@/components/erp/orders/order-activity-feed";
+import { CustomerHistoryCard } from "@/components/erp/orders/customer-history-card";
 import { OrderBillingEditor } from "@/components/erp/orders/order-billing-editor";
 import { fireOrderSms } from "@/lib/erp/sms/notify";
 import { cn } from "@/lib/utils";
