@@ -1,5 +1,5 @@
 import { flexRender, getCoreRowModel, useReactTable, type ColumnDef } from "@tanstack/react-table";
-import { PackageCheck, Undo2, MoreHorizontal, FileText, Printer, ImageDown, Pencil, Send, X as XIcon, ListPlus, StickyNote, Phone, MapPin, Copy, ImageIcon, MessageSquare, ArrowRight, RefreshCcw, Check, CheckCircle2, Hash, ExternalLink, CalendarClock, UserCheck } from "lucide-react";
+import { PackageCheck, Undo2, MoreHorizontal, FileText, Printer, ImageDown, Pencil, Send, X as XIcon, ListPlus, StickyNote, Phone, MapPin, Copy, ImageIcon, MessageSquare, ArrowRight, RefreshCcw, Check, CheckCircle2, Hash, ExternalLink, CalendarClock } from "lucide-react";
 import { format } from "date-fns";
 import { Link } from "@tanstack/react-router";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
@@ -108,10 +108,6 @@ export function OrdersTable({ rows, loading, selectedIds, onToggleSelect, onTogg
         const o = row.original;
         const inv = invoiceDisplay(o);
         const printedAt = o.printed_at;
-        const confirmerName = o.confirmed_by ? staffNames[o.confirmed_by] : null;
-        const manualCreatorName = !confirmerName && (!o.source || o.source === "manual") && o.user_id
-          ? staffNames[o.user_id]
-          : null;
         return (
           <div className="min-w-[168px] whitespace-nowrap">
             <div className="flex items-center gap-1.5">
@@ -157,19 +153,12 @@ export function OrdersTable({ rows, loading, selectedIds, onToggleSelect, onTogg
           ? staffNames[o.user_id]
           : null;
         const name = confirmerName ?? manualCreatorName;
-        return name ? (
-          <div className="flex min-w-[120px] items-center gap-2 whitespace-nowrap">
-            <span className="grid h-7 w-7 shrink-0 place-items-center rounded-full bg-primary/10 text-[10px] font-bold uppercase text-primary">
-              {avatarInitials(name)}
-            </span>
-            <div>
-              <div className="text-xs font-semibold text-foreground">{name}</div>
-              <div className="text-[10px] text-muted-foreground">{confirmerName ? "Confirmed" : "Created"}</div>
-            </div>
-          </div>
-        ) : (
-          <span className="inline-flex items-center gap-1 text-[10.5px] text-muted-foreground/60">
-            <UserCheck className="h-3 w-3" /> Not recorded
+        return (
+          <span className={cn(
+            "block min-w-[88px] whitespace-nowrap text-xs",
+            name ? "font-semibold text-foreground" : "text-[10.5px] text-muted-foreground/60",
+          )}>
+            {name ?? "Not recorded"}
           </span>
         );
       },
