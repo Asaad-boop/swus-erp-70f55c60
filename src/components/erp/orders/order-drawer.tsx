@@ -968,13 +968,15 @@ export function OrderDrawer({ orderId, onClose, mode = "fulfillment" }: Props) {
                     <div className="mb-3 flex items-center justify-between gap-2">
                       <h3 className="text-xs font-bold uppercase tracking-wider text-muted-foreground flex items-center gap-1.5"><Package className="h-3.5 w-3.5" />Items ({items.length})</h3>
                       {!itemsEditing && (
-                        <button
-                          type="button"
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          className="h-7 px-2 gap-1"
                           onClick={() => guardedAction(() => setItemsEditing(true))}
-                          className="inline-flex items-center gap-1 text-[11px] font-semibold text-primary hover:underline"
+                          disabled={editingBlocked}
                         >
-                          <Pencil className="h-3 w-3" /> Edit / Add product
-                        </button>
+                          <Pencil className="h-3.5 w-3.5" />Edit / Add product
+                        </Button>
                       )}
                     </div>
                     {itemsEditing ? (
@@ -1115,7 +1117,8 @@ export function OrderDrawer({ orderId, onClose, mode = "fulfillment" }: Props) {
                       <div className="flex justify-between font-bold text-base pt-2 mt-1 border-t"><span>{advanceAmount > 0 ? "Due Total" : "Total"}</span><span className="tabular-nums text-primary">৳ {payableTotal.toLocaleString()}</span></div>
                     </div>
                   </section>
-                  </>)}
+                  </div>
+                  )}
 
                   {tab === "activity" && orderId && (
                     <OrderActivityFeed
