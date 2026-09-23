@@ -522,7 +522,7 @@ export function OrderDrawer({ orderId, onClose, mode = "fulfillment" }: Props) {
 
   return (
     <Dialog open={!!orderId} onOpenChange={(o) => !o && onClose()}>
-      <DialogContent className="max-w-5xl w-[96vw] max-h-[92vh] overflow-hidden p-0 gap-0 border-border/60 rounded-2xl">
+      <DialogContent className="max-w-5xl w-[96vw] max-h-[92vh] overflow-hidden p-0 gap-0 border-border/60 rounded-2xl duration-300 data-[state=open]:zoom-in-95">
         {isLoading || !order ? (
           <div className="flex items-center justify-center h-60"><Loader2 className="h-6 w-6 animate-spin text-muted-foreground" /></div>
         ) : (
@@ -802,9 +802,10 @@ export function OrderDrawer({ orderId, onClose, mode = "fulfillment" }: Props) {
 
                 {/* LEFT — Customer + Items (2 cols) */}
                 <div className="lg:col-span-2 space-y-4">
-                  {tab === "details" && (<>
+                  {tab === "details" && (
+                  <div className="space-y-4 animate-in fade-in-0 slide-in-from-bottom-1 duration-200">
                   {/* Customer */}
-                  <section className="rounded-xl border bg-card p-4">
+                  <section className="rounded-2xl border bg-card p-4 shadow-sm transition-shadow duration-300 hover:shadow-md">
 
                     <div className="mb-3 flex items-center justify-between gap-2">
                       <h3 className="text-xs font-bold uppercase tracking-wider text-muted-foreground flex items-center gap-1.5"><User className="h-3.5 w-3.5" />Customer</h3>
@@ -963,7 +964,7 @@ export function OrderDrawer({ orderId, onClose, mode = "fulfillment" }: Props) {
 
 
                   {/* Items */}
-                  <section className="rounded-xl border bg-card p-4">
+                  <section className="rounded-2xl border bg-card p-4 shadow-sm transition-shadow duration-300 hover:shadow-md">
                     <div className="mb-3 flex items-center justify-between gap-2">
                       <h3 className="text-xs font-bold uppercase tracking-wider text-muted-foreground flex items-center gap-1.5"><Package className="h-3.5 w-3.5" />Items ({items.length})</h3>
                       {!itemsEditing && (
