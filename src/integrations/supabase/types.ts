@@ -13152,6 +13152,10 @@ export type Database = {
         }
         Returns: Json
       }
+      erp_order_list_daily_pulse: {
+        Args: { p_brand_ids?: string[] }
+        Returns: Json
+      }
       erp_order_status_counts: {
         Args: {
           _brand_ids: string[]

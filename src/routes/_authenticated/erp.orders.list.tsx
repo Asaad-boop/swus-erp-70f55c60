@@ -7,12 +7,13 @@ import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { useBrand } from "@/contexts/brand-context";
 import {
-  useOrdersInfinite, useOrderStatusCounts, fetchAllMatchingOrderIds,
+  useOrdersInfinite, useOrderStatusCounts, useOrderListDailyPulse, useStaffList, fetchAllMatchingOrderIds,
   type OrdersFilter, type OrdersSortKey, type OrdersSortDir,
 } from "@/hooks/erp/use-orders-query";
 import { useCourierShipments, COURIER_BUCKET_META, type CourierBucket, type CourierShipmentRow } from "@/hooks/erp/use-courier-shipments";
 import { applyBrandScope } from "@/lib/erp/apply-brand-scope";
 import { OrdersStatusTabs } from "@/components/erp/orders/orders-status-tabs";
+import { OrderListDailyPulse } from "@/components/erp/orders/order-list-daily-pulse";
 import { OrdersToolbar } from "@/components/erp/orders/orders-toolbar";
 import { OrdersBulkActions } from "@/components/erp/orders/orders-bulk-actions";
 import { OrdersTable } from "@/components/erp/orders/orders-table";
@@ -105,7 +106,14 @@ const num = (v: unknown) => {
 };
 
 export const Route = createFileRoute("/_authenticated/erp/orders/list")({
-  head: () => ({ meta: [{ title: "Orders — ERP" }] }),
+  head: () => ({ meta: [
+    { title: "Order List — SWUS ERP" },
+    { name: "description", content: "Manage daily orders, products, customers, and fulfillment status in SWUS ERP." },
+    { property: "og:title", content: "Order List — SWUS ERP" },
+    { property: "og:description", content: "Manage daily orders, products, customers, and fulfillment status in SWUS ERP." },
+    { property: "og:type", content: "website" },
+    { name: "twitter:card", content: "summary" },
+  ] }),
   validateSearch: (s: Record<string, unknown>): OrdersSearch => ({
     q: str(s['q']),
     tab: str(s['tab']),
@@ -250,6 +258,12 @@ function OrdersPage() {
   );
 
   const { data: countsData } = useOrderStatusCounts(effective);
+  const { data: dailyPulse, isLoading: dailyPulseLoading } = useOrderListDailyPulse(effective.brandId, effective.brandIds);
+  const { data: staff = [] } = useStaffList();
+  const staffNames = useMemo(
+    () => Object.fromEntries(staff.map((person) => [person.id, person.display_name?.trim() || "Staff"])),
+    [staff],
+  );
   const { data: incompleteCount } = useAbandonedCartCount(effective.brandId, effective.brandIds);
   const rows = data?.rows ?? [];
   const total = data?.total ?? 0;
@@ -686,6 +700,7 @@ function OrdersPage() {
       />
 
       <div className="space-y-3">
+        <OrderListDailyPulse data={dailyPulse} loading={dailyPulseLoading} />
         <OrdersStatusTabs
           active={activeTab}
           counts={countsData?.counts ?? {}}
@@ -849,6 +864,7 @@ function OrdersPage() {
           onPreorder={(id) => { setPreorderIds([id]); setPreorderOpen(true); }}
           onDispatchPrint={(id) => { setSinglePrintOrderId(id); }}
           onReturnReceive={(id) => { setReturnReceiveIds([id]); setReturnReceiveOpen(true); }}
+          staffNames={staffNames}
         />
         {!isLoading && visibleRows.length === 0 && (
           <EmptyState

@@ -1,5 +1,5 @@
 import { flexRender, getCoreRowModel, useReactTable, type ColumnDef } from "@tanstack/react-table";
-import { PackageCheck, Undo2, MoreHorizontal, FileText, Printer, ImageDown, Pencil, Send, X as XIcon, ListPlus, StickyNote, Phone, MapPin, Copy, ImageIcon, MessageSquare, ArrowRight, RefreshCcw, Check, CheckCircle2, Hash, ExternalLink, CalendarClock } from "lucide-react";
+import { PackageCheck, Undo2, MoreHorizontal, FileText, Printer, ImageDown, Pencil, Send, X as XIcon, ListPlus, StickyNote, Phone, MapPin, Copy, ImageIcon, MessageSquare, ArrowRight, RefreshCcw, Check, CheckCircle2, Hash, ExternalLink, CalendarClock, UserCheck } from "lucide-react";
 import { format } from "date-fns";
 import { Link } from "@tanstack/react-router";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
@@ -63,10 +63,11 @@ type Props = {
   sortKey?: string;
   sortDir?: "asc" | "desc";
   onSortChange?: (key: "created_at" | "total" | "invoice_no" | "updated_at") => void;
+  staffNames?: Record<string, string>;
 };
 
 
-export function OrdersTable({ rows, loading, selectedIds, onToggleSelect, onToggleAll, onRowClick, onStatusChange, pendingStatusIds, shipmentsByOrderId, flashOrderIds, onSyncRow, onPreorder, onDispatchPrint, onReturnReceive, density = "comfortable", hiddenColumns = [], sortKey, sortDir, onSortChange }: Props) {
+export function OrdersTable({ rows, loading, selectedIds, onToggleSelect, onToggleAll, onRowClick, onStatusChange, pendingStatusIds, shipmentsByOrderId, flashOrderIds, onSyncRow, onPreorder, onDispatchPrint, onReturnReceive, density = "comfortable", hiddenColumns = [], sortKey, sortDir, onSortChange, staffNames = {} }: Props) {
   const copyText = (text: string, label: string) => {
     navigator.clipboard?.writeText(text).then(() => toast.success(`${label} copied`));
   };
@@ -107,6 +108,10 @@ export function OrdersTable({ rows, loading, selectedIds, onToggleSelect, onTogg
         const o = row.original;
         const inv = invoiceDisplay(o);
         const printedAt = o.printed_at;
+        const confirmerName = o.confirmed_by ? staffNames[o.confirmed_by] : null;
+        const manualCreatorName = !confirmerName && (!o.source || o.source === "manual") && o.user_id
+          ? staffNames[o.user_id]
+          : null;
         return (
           <div className="min-w-[168px] whitespace-nowrap">
             <div className="flex items-center gap-1.5">
@@ -138,6 +143,14 @@ export function OrdersTable({ rows, loading, selectedIds, onToggleSelect, onTogg
               <span className="text-muted-foreground/40">•</span>
               <BrandBadge brandId={o.brand_id} variant="text" className="text-[11px]" />
             </div>
+            {(confirmerName || manualCreatorName) && (
+              <div className="mt-1 flex items-center gap-1 text-[10.5px] font-medium text-muted-foreground">
+                <UserCheck className="h-3 w-3 shrink-0 text-primary" />
+                <span className="truncate">
+                  {confirmerName ? "Confirmed" : "Created"} by {confirmerName ?? manualCreatorName}
+                </span>
+              </div>
+            )}
           </div>
         );
       },

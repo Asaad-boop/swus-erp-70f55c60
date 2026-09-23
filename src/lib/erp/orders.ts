@@ -182,6 +182,7 @@ export type OrderRow = {
   guest_phone: string | null;
   is_guest_order: boolean;
   user_id: string | null;
+  confirmed_by?: string | null;
   brand_id: string | null;
   source: string | null;
   courier_name: string | null;
