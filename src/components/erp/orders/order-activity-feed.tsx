@@ -86,7 +86,9 @@ export function OrderActivityFeed({
       }>;
 
       const ids = Array.from(
-        new Set([...hist.map((h) => h.changed_by), ...logs.map((l) => l.performed_by)].filter(Boolean)),
+        new Set(
+          [...hist.map((h) => h.changed_by), ...logs.map((l) => l.performed_by), createdById].filter(Boolean),
+        ),
       ) as string[];
       const names = new Map<string, string>();
       if (ids.length) {
