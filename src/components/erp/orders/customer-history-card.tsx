@@ -1,6 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
 import { format } from "date-fns";
-import { History, Repeat2, ShieldAlert, Loader2 } from "lucide-react";
+import { History, Repeat2, ShieldAlert, Loader2, Package } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { cn } from "@/lib/utils";
 import { statusBadge } from "@/lib/erp/orders";
@@ -12,6 +12,19 @@ type PastOrder = {
   web_status: string | null;
   total: number | null;
   created_at: string;
+  payment_status: string | null;
+  courier_name: string | null;
+  tracking_number: string | null;
+  items: Array<{
+    id: string;
+    name: string;
+    quantity: number;
+    variant_label: string | null;
+    unit_price: number | null;
+    price: number;
+    line_total: number | null;
+    is_combo_child: boolean;
+  }>;
 };
 
 export function useCustomerPastOrders(phone: string | null, currentId: string | null) {
@@ -23,7 +36,7 @@ export function useCustomerPastOrders(phone: string | null, currentId: string | 
     queryFn: async () => {
       const { data, error } = await supabase
         .from("orders")
-        .select("id,invoice_no,status,web_status,total,created_at")
+        .select("id,invoice_no,status,web_status,total,created_at,payment_status,courier_name,tracking_number,items:order_items(id,name,quantity,variant_label,unit_price,price,line_total,is_combo_child)")
         .or(`shipping_phone.ilike.%${digits}%,guest_phone.ilike.%${digits}%`)
         .order("created_at", { ascending: false })
         .limit(50);
@@ -101,26 +114,49 @@ export function CustomerHistoryCard({
       <div className="divide-y divide-border/60 overflow-hidden rounded-lg border">
         {rows.slice(0, 12).map((r) => {
           const b = statusBadge(String(r.status ?? ""));
+          const items = (r.items ?? []).filter((item) => !item.is_combo_child);
+          const pieces = items.reduce((sum, item) => sum + Number(item.quantity ?? 0), 0);
           return (
             <button
               key={r.id}
               type="button"
               onClick={() => onOpenOrder?.(r.id)}
-              className="flex w-full items-center gap-3 bg-card px-3 py-2 text-left text-xs transition-colors hover:bg-muted/40"
+              className="w-full bg-card px-3 py-2.5 text-left text-xs transition-colors duration-200 hover:bg-muted/40"
             >
-              <span className="font-mono text-[11px] font-semibold">
-                #{r.invoice_no ?? String(r.id).slice(0, 6).toUpperCase()}
-              </span>
-              <span className="text-[11px] text-muted-foreground tabular-nums">
-                {format(new Date(r.created_at), "dd MMM yyyy")}
-              </span>
-              <span className={cn("rounded-full px-2 py-0.5 text-[10px] font-semibold", b.className)}>{b.label}</span>
-              {r.web_status && (
-                <span className="hidden rounded-full border px-2 py-0.5 text-[10px] capitalize text-muted-foreground sm:inline">
-                  {String(r.web_status).replace(/_/g, " ")}
+              <div className="flex min-w-0 items-center gap-2">
+                <span className="shrink-0 font-mono text-[11px] font-semibold">
+                  #{r.invoice_no ?? String(r.id).slice(0, 6).toUpperCase()}
                 </span>
+                <span className="shrink-0 text-[10px] text-muted-foreground tabular-nums">
+                  {format(new Date(r.created_at), "dd MMM yyyy")}
+                </span>
+                <span className={cn("shrink-0 rounded-full px-1.5 py-0.5 text-[9px] font-semibold", b.className)}>{b.label}</span>
+                <span className="ml-auto shrink-0 text-[12px] font-bold tabular-nums">৳{Number(r.total ?? 0).toLocaleString()}</span>
+              </div>
+
+              {items.length > 0 && (
+                <div className="mt-2 space-y-1 border-l-2 border-border/70 pl-2.5">
+                  {items.slice(0, 3).map((item) => (
+                    <div key={item.id} className="flex min-w-0 items-center gap-1.5 text-[11px]">
+                      <Package className="h-3 w-3 shrink-0 text-muted-foreground" />
+                      <span className="min-w-0 truncate font-medium">{item.name}</span>
+                      {item.variant_label && <span className="max-w-24 truncate text-[10px] text-muted-foreground">· {item.variant_label}</span>}
+                      <span className="ml-auto shrink-0 rounded bg-muted px-1.5 py-0.5 font-semibold tabular-nums">×{item.quantity}</span>
+                      <span className="w-16 shrink-0 text-right text-muted-foreground tabular-nums">
+                        ৳{Number(item.line_total ?? Number(item.unit_price ?? item.price) * item.quantity).toLocaleString()}
+                      </span>
+                    </div>
+                  ))}
+                  {items.length > 3 && <div className="text-[10px] text-muted-foreground">+{items.length - 3} more product</div>}
+                </div>
               )}
-              <span className="ml-auto font-semibold tabular-nums">৳{Number(r.total ?? 0).toLocaleString()}</span>
+
+              <div className="mt-2 flex flex-wrap items-center gap-x-2 gap-y-1 text-[10px] text-muted-foreground">
+                <span>{items.length} product · {pieces} pcs</span>
+                {r.payment_status && <span className="capitalize">Payment: {r.payment_status.replace(/_/g, " ")}</span>}
+                {r.courier_name && <span className="capitalize">Courier: {r.courier_name}</span>}
+                {r.tracking_number && <span className="font-mono">#{r.tracking_number}</span>}
+              </div>
             </button>
           );
         })}
