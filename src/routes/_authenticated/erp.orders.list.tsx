@@ -532,6 +532,11 @@ function OrdersPage() {
         const n = new Set(prev); n.delete(vars.id); return n;
       });
       qc.invalidateQueries({ queryKey: ["orders"] });
+      if (vars.status === "shipped") {
+        // Safety net in case the live channel drops an event after courier booking
+        qc.invalidateQueries({ queryKey: ["courier-shipments"] });
+        qc.invalidateQueries({ queryKey: ["order-intel-shipment", vars.id] });
+      }
     },
   });
 
