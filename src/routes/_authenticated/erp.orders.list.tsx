@@ -984,6 +984,7 @@ function OrdersPage() {
         onStatusChange={async (id, status) => {
           await statusMutation.mutateAsync({ id, status });
         }}
+        onPrint={(id) => setSinglePrintOrderId(id)}
       />
 
       <CourierStatusSyncDialog

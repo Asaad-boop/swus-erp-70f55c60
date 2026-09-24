@@ -11,6 +11,12 @@ type Props = {
   open: boolean;
   onClose: () => void;
   onDetect: (code: string) => void;
+  /** Keep scanning after a hit (cooldown + same-code dedupe). */
+  continuous?: boolean;
+  /** Render as an embedded panel instead of a full-screen dialog. */
+  inline?: boolean;
+  /** Temporarily ignore detections (e.g. while an order is processing). */
+  paused?: boolean;
 };
 
 type DetectedBarcode = { rawValue: string };
@@ -42,7 +48,15 @@ const ZXING_FORMATS = [
   BarcodeFormat.PDF_417,
 ];
 
-export function CameraScanner({ open, onClose, onDetect }: Props) {
+export function CameraScanner({ open, onClose, onDetect, continuous = false, inline = false, paused = false }: Props) {
+  const continuousRef = useRef(continuous);
+  continuousRef.current = continuous;
+  const pausedRef = useRef(paused);
+  pausedRef.current = paused;
+  const lastHitRef = useRef<{ v: string; at: number }>({ v: "", at: 0 });
+  const [flash, setFlash] = useState(0);
+  const [zoomMax, setZoomMax] = useState(0);
+  const [zoom, setZoom] = useState(1);
   const videoRef = useRef<HTMLVideoElement | null>(null);
   const streamRef = useRef<MediaStream | null>(null);
   const frameRef = useRef<number | null>(null);
@@ -78,6 +92,17 @@ export function CameraScanner({ open, onClose, onDetect }: Props) {
   const hit = useCallback((raw: string) => {
     const value = raw.trim();
     if (doneRef.current || !value) return;
+    if (continuousRef.current) {
+      if (pausedRef.current) return;
+      const now = Date.now();
+      if (now - lastHitRef.current.at < 1200) return;
+      if (value === lastHitRef.current.v && now - lastHitRef.current.at < 3500) return;
+      lastHitRef.current = { v: value, at: now };
+      navigator.vibrate?.(45);
+      setFlash((f) => f + 1);
+      onDetectRef.current(value);
+      return;
+    }
     doneRef.current = true;
     controlsRef.current?.stop();
     if (frameRef.current !== null) cancelAnimationFrame(frameRef.current);
@@ -99,7 +124,7 @@ export function CameraScanner({ open, onClose, onDetect }: Props) {
           const value = results[0]?.rawValue;
           if (value) {
             hit(value);
-            return;
+            if (!continuousRef.current) return;
           }
         } catch {
           // A single blurred frame can fail; keep the live loop running.
@@ -173,8 +198,10 @@ export function CameraScanner({ open, onClose, onDetect }: Props) {
           const capabilities = (track.getCapabilities?.() ?? {}) as MediaTrackCapabilities & {
             torch?: boolean;
             focusMode?: string[];
+            zoom?: { min: number; max: number };
           };
           setCanTorch(Boolean(capabilities.torch));
+          setZoomMax(capabilities.zoom?.max && capabilities.zoom.max > 1 ? Math.min(capabilities.zoom.max, 4) : 0);
           const advanced: Record<string, unknown>[] = [];
           if (capabilities.focusMode?.includes("continuous")) advanced.push({ focusMode: "continuous" });
           if (advanced.length) {
@@ -219,6 +246,18 @@ export function CameraScanner({ open, onClose, onDetect }: Props) {
     }
   }
 
+  async function cycleZoom() {
+    const track = streamRef.current?.getVideoTracks()[0];
+    if (!track || !zoomMax) return;
+    const next = zoom >= zoomMax ? 1 : Math.min(zoomMax, zoom + 1);
+    try {
+      await track.applyConstraints({ advanced: [{ zoom: next }] } as unknown as MediaTrackConstraints);
+      setZoom(next);
+    } catch {
+      setZoomMax(0);
+    }
+  }
+
   async function scanImage(file: File | undefined) {
     if (!file || doneRef.current) return;
     try {
@@ -243,16 +282,13 @@ export function CameraScanner({ open, onClose, onDetect }: Props) {
     return stop;
   }, [open, stop]);
 
-  return (
-    <Dialog open={open} onOpenChange={(next) => !next && onClose()}>
-      <DialogContent
-        aria-describedby={undefined}
-        className="h-dvh w-screen max-w-none border-0 bg-foreground p-0 text-background sm:h-[min(760px,92dvh)] sm:w-[min(460px,94vw)] sm:rounded-2xl [&>button]:hidden"
-      >
-        <DialogTitle className="sr-only">Fast camera scanner</DialogTitle>
-        <div className="relative isolate h-full overflow-hidden bg-foreground">
+  const body = (
+        <div className="relative isolate h-full overflow-hidden bg-foreground text-background">
           {!error && (
             <video ref={attachVideo} className="absolute inset-0 h-full w-full object-cover" playsInline muted autoPlay />
+          )}
+          {flash > 0 && (
+            <div key={flash} className="pointer-events-none absolute inset-0 z-30 bg-emerald-400/30 motion-safe:animate-out motion-safe:fade-out motion-safe:duration-500 fill-mode-forwards" />
           )}
           <div className="pointer-events-none absolute inset-0 bg-[linear-gradient(to_bottom,oklch(0.08_0.02_260/0.72),transparent_24%,transparent_73%,oklch(0.08_0.02_260/0.88))]" />
 
@@ -285,7 +321,7 @@ export function CameraScanner({ open, onClose, onDetect }: Props) {
                 <span className="absolute right-0 top-0 h-10 w-10 rounded-tr-xl border-r-[3px] border-t-[3px] border-emerald-400" />
                 <span className="absolute bottom-0 left-0 h-10 w-10 rounded-bl-xl border-b-[3px] border-l-[3px] border-emerald-400" />
                 <span className="absolute bottom-0 right-0 h-10 w-10 rounded-br-xl border-b-[3px] border-r-[3px] border-emerald-400" />
-                {ready && <div className="absolute inset-x-3 top-1/2 h-px bg-emerald-300 shadow-[0_0_8px_2px_oklch(0.8_0.2_155/0.75)] motion-safe:animate-pulse" />}
+                {ready && <div className={cn("absolute inset-x-3 top-1/2 h-px bg-emerald-300 shadow-[0_0_8px_2px_oklch(0.8_0.2_155/0.75)] motion-safe:animate-pulse", paused && "bg-amber-300")} />}
                 <div className="absolute inset-0 grid place-items-center">
                   {starting ? <Loader2 className="h-7 w-7 animate-spin" /> : <ScanLine className="h-8 w-8 text-background/40" />}
                 </div>
@@ -310,11 +346,32 @@ export function CameraScanner({ open, onClose, onDetect }: Props) {
               ) : (
                 <div className="grid h-16 w-16 place-items-center rounded-full border-4 border-background/15 bg-background text-foreground"><Zap className="h-6 w-6" /></div>
               )}
-              <div className="h-12 w-12" />
+              {zoomMax ? (
+                <Button type="button" size="icon" variant="secondary" className="h-12 w-12 rounded-full bg-background/15 text-xs font-bold text-background backdrop-blur-md hover:bg-background/25" onClick={() => void cycleZoom()} aria-label="Zoom">
+                  {zoom}x
+                </Button>
+              ) : (
+                <div className="h-12 w-12" />
+              )}
             </div>
           </div>
           <input ref={fileRef} type="file" accept="image/*" capture="environment" className="hidden" onChange={(event) => void scanImage(event.target.files?.[0])} />
         </div>
+  );
+
+  if (inline) {
+    if (!open) return null;
+    return <div className="h-[min(52dvh,380px)] overflow-hidden rounded-2xl">{body}</div>;
+  }
+
+  return (
+    <Dialog open={open} onOpenChange={(next) => !next && onClose()}>
+      <DialogContent
+        aria-describedby={undefined}
+        className="h-dvh w-screen max-w-none border-0 bg-foreground p-0 text-background sm:h-[min(760px,92dvh)] sm:w-[min(460px,94vw)] sm:rounded-2xl [&>button]:hidden"
+      >
+        <DialogTitle className="sr-only">Fast camera scanner</DialogTitle>
+        {body}
       </DialogContent>
     </Dialog>
   );
