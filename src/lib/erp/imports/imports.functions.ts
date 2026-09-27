@@ -1771,20 +1771,11 @@ export const releasePoQuantity = createServerFn({ method: "POST" })
 
         // Per-pcs landed cost ta product-er cost e boshe jak — inventory value / profit
         // report shob jaygay ei cost dekhabe.
-        const { data: prodRow } = await context.supabase
-          .from("products")
-          .select("id, weighted_avg_cost, cost_price")
-          .eq("id", pi.product_id as string)
-          .maybeSingle();
-        const productWac = Number((prodRow as any)?.weighted_avg_cost ?? 0);
-        const newCost = +(productWac > 0 ? productWac : landed).toFixed(2);
-        await context.supabase
-          .from("products")
-          .update({
-            cost_price: newCost,
-            ...(productWac > 0 ? {} : { weighted_avg_cost: landed }),
-          } as any)
-          .eq("id", pi.product_id as string);
+        const { error: costErr } = await context.supabase.rpc("imp_sync_product_cost" as any, {
+          _product_id: pi.product_id as string,
+          _landed: landed,
+        });
+        if (costErr) throw costErr;
 
         movements.push({ po_item_id: l.po_item_id, qty: l.quantity, unit_cost: landed, movement_id: movId });
       }
