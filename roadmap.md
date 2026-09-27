@@ -5,8 +5,8 @@
 - [x] 7. Bulk status batched RPC (+ wire order list)
 - [x] 2. Order total server-side recompute
 - [x] 3. PO release cost price race/stale
-- [ ] 4. Courier bucket filter server-side
-- [ ] 5. CRM customer list server pagination
+- [x] 4. Courier bucket filter server-side
+- [x] 5. CRM customer list server pagination
 - [ ] 6. Cash flow/inventory summary row cap
 - [ ] 8. ROAS single formula
 - [ ] 9. HR leaves Asia/Dhaka dates
