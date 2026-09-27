@@ -605,8 +605,8 @@ export const getCashflowStatement = createServerFn({ method: "POST" })
     const classMap = new Map(accounts.map((a) => [a.id, classifyAccount(a)]));
 
     type Line = { account_id: string; debit: number | null; credit: number | null };
-    const periodLines = (periodRes.data ?? []) as Line[];
-    const openingLines = (openingRes.data ?? []) as Line[];
+    const periodLines = periodRows as unknown as Line[];
+    const openingLines = openingRows as unknown as Line[];
 
     // Helpers
     const normalChange = (klass: string, debit: number, credit: number) => {
