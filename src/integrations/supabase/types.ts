@@ -13657,6 +13657,10 @@ export type Database = {
         Returns: Json
       }
       imp_save_cartons: { Args: { _payload: Json }; Returns: Json }
+      imp_sync_product_cost: {
+        Args: { _landed: number; _product_id: string }
+        Returns: number
+      }
       imp_update_carton_stage: {
         Args: { _carton: string; _new_stage: string; _notes?: string }
         Returns: undefined
