@@ -7,7 +7,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { useBrand } from "@/contexts/brand-context";
 import {
-  useOrdersInfinite, useOrderStatusCounts, useOrderListDailyPulse, useStaffList, fetchAllMatchingOrderIds,
+  useOrdersInfinite, useOrderStatusCounts, useOrderListDailyPulse, useStaffList, fetchAllMatchingOrderIds, applyOrdersFilter,
   type OrdersFilter, type OrdersSortKey, type OrdersSortDir,
 } from "@/hooks/erp/use-orders-query";
 import { useCourierShipments, COURIER_BUCKET_META, type CourierBucket, type CourierShipmentRow } from "@/hooks/erp/use-courier-shipments";
