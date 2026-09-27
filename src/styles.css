@@ -185,6 +185,19 @@
   --status-incomplete: oklch(0.65 0.03 260);
   --status-incomplete-glow: oklch(0.65 0.03 260 / 0.32);
   --row-selected: oklch(0.955 0.03 265);
+
+  /* Owner Command Center — Cloud & Ink */
+  --owner-canvas: oklch(0.982 0.005 255);
+  --owner-ink: oklch(0.21 0.035 258);
+  --owner-surface: oklch(1 0 0);
+  --owner-line: oklch(0.91 0.012 255);
+  --owner-blue: oklch(0.55 0.19 255);
+  --owner-blue-soft: oklch(0.96 0.025 255);
+  --owner-green: oklch(0.49 0.12 168);
+  --owner-green-soft: oklch(0.96 0.025 168);
+  --owner-red: oklch(0.56 0.2 25);
+  --owner-amber: oklch(0.7 0.15 75);
+  --owner-shadow: 0 1px 2px oklch(0.21 0.035 258 / 0.04), 0 8px 24px -20px oklch(0.21 0.035 258 / 0.25);
 }
 
 .dark {
@@ -296,6 +309,174 @@
   --status-all-glow: oklch(0.72 0.04 250 / 0.4);
   --status-incomplete: oklch(0.78 0.04 250);
   --status-incomplete-glow: oklch(0.78 0.04 250 / 0.35);
+
+  --owner-canvas: oklch(0.16 0.022 258);
+  --owner-ink: oklch(0.96 0.006 255);
+  --owner-surface: oklch(0.2 0.024 258);
+  --owner-line: oklch(1 0 0 / 0.1);
+  --owner-blue: oklch(0.7 0.15 255);
+  --owner-blue-soft: oklch(0.3 0.06 255);
+  --owner-green: oklch(0.72 0.12 168);
+  --owner-green-soft: oklch(0.29 0.05 168);
+  --owner-red: oklch(0.7 0.17 25);
+  --owner-amber: oklch(0.79 0.14 75);
+  --owner-shadow: 0 1px 2px oklch(0 0 0 / 0.25), 0 12px 28px -20px oklch(0 0 0 / 0.7);
+}
+
+/* Owner dashboard redesign: scoped so admin/staff screens remain unchanged. */
+.owner-command-center {
+  background: var(--owner-canvas);
+  color: var(--owner-ink);
+  font-family: "Manrope", "Noto Sans Bengali", ui-sans-serif, system-ui, sans-serif;
+}
+
+.owner-command-center h1,
+.owner-command-center h2,
+.owner-command-center h3,
+.owner-command-center h4,
+.owner-command-center .font-display {
+  font-family: "Sora", "Noto Sans Bengali", ui-sans-serif, system-ui, sans-serif;
+  letter-spacing: 0;
+}
+
+.owner-command-center .dashboard-shell-content {
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+  padding-top: 1.25rem;
+  padding-bottom: 2rem;
+}
+
+.owner-command-center .owner-briefing {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 0.5rem 0 0.25rem;
+}
+
+.owner-command-center .owner-briefing h2 {
+  margin-top: 0.45rem;
+  color: var(--owner-ink);
+  font-size: clamp(1.35rem, 2vw, 1.8rem);
+  font-weight: 700;
+  line-height: 1.2;
+}
+
+.owner-command-center .owner-briefing p {
+  margin-top: 0.3rem;
+  color: var(--muted-foreground);
+  font-size: 0.78rem;
+}
+
+.owner-command-center .owner-eyebrow,
+.owner-command-center .owner-live {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  color: var(--owner-blue);
+  font-size: 0.68rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+
+.owner-command-center .owner-live {
+  flex: none;
+  color: var(--owner-green);
+  text-transform: none;
+  letter-spacing: 0;
+}
+
+.owner-command-center .owner-live span {
+  width: 0.45rem;
+  height: 0.45rem;
+  border-radius: 999px;
+  background: var(--owner-green);
+  animation: owner-pulse 2s ease-in-out infinite;
+}
+
+.owner-command-center .owner-panel,
+.owner-command-center .owner-kpi-card {
+  border-color: var(--owner-line);
+  background: var(--owner-surface);
+  box-shadow: var(--owner-shadow);
+}
+
+.owner-command-center .owner-panel { border-radius: 0.5rem; }
+
+.owner-command-center .owner-kpi-card {
+  position: relative;
+  min-height: 7.5rem;
+  overflow: hidden;
+  padding: 1rem;
+  border-radius: 0.5rem;
+  transition: transform 180ms ease, border-color 180ms ease, box-shadow 180ms ease;
+}
+
+.owner-command-center .owner-kpi-card::after {
+  position: absolute;
+  right: 0;
+  bottom: 0;
+  left: 0;
+  height: 2px;
+  background: var(--owner-blue);
+  content: "";
+  opacity: 0.68;
+}
+
+.owner-command-center .owner-kpi-card:nth-child(2)::after,
+.owner-command-center .owner-kpi-card:nth-child(3)::after { background: var(--owner-green); }
+.owner-command-center .owner-kpi-card:nth-child(4)::after,
+.owner-command-center .owner-kpi-card:nth-child(7)::after { background: var(--owner-amber); }
+.owner-command-center .owner-kpi-card:nth-child(8)::after { background: var(--owner-red); }
+
+.owner-command-center .owner-kpi-card:hover {
+  transform: translateY(-2px);
+  border-color: color-mix(in oklab, var(--owner-blue) 30%, var(--owner-line));
+  box-shadow: 0 14px 30px -24px color-mix(in oklab, var(--owner-blue) 45%, transparent);
+}
+
+.owner-command-center .owner-profit-panel {
+  height: 100%;
+  border-color: color-mix(in oklab, var(--owner-green) 28%, var(--owner-line));
+}
+
+.owner-command-center .owner-section-heading {
+  display: flex;
+  align-items: center;
+  gap: 0.65rem;
+  padding-top: 0.25rem;
+}
+
+.owner-command-center .owner-section-heading h3 {
+  color: var(--owner-ink);
+  font-size: 0.85rem;
+  font-weight: 700;
+}
+
+.owner-command-center .owner-section-heading p { color: var(--muted-foreground); font-size: 0.68rem; }
+
+.owner-command-center .owner-section-icon {
+  display: grid;
+  width: 2rem;
+  height: 2rem;
+  flex: none;
+  place-items: center;
+  border-radius: 0.4rem;
+}
+
+.owner-command-center .owner-section-icon-blue { background: var(--owner-blue-soft); color: var(--owner-blue); }
+.owner-command-center .owner-section-icon-green { background: var(--owner-green-soft); color: var(--owner-green); }
+
+@keyframes owner-pulse {
+  0%, 100% { opacity: 0.45; transform: scale(0.85); }
+  50% { opacity: 1; transform: scale(1); }
+}
+
+@media (max-width: 640px) {
+  .owner-command-center .owner-live { display: none; }
+  .owner-command-center .owner-kpi-card { min-height: 7rem; padding: 0.8rem; }
 }
 
 @layer base {

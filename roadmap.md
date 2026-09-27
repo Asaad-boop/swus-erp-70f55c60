@@ -20,5 +20,6 @@
 - [ ] Live authenticated UI verification pending (external Supabase — no preview session available)
 
 ## Dashboard split
+- [x] Owner overview redesign — Executive Command Center focused-feed hierarchy
 - [ ] Phase 3b: Owner Leak Panel + Risk Alerts consolidated section
 - [ ] Phase 4: Staff dashboard — announcements/holidays + deeper role-adaptive queues

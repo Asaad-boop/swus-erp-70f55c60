@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { useNavigate } from "@tanstack/react-router";
+import { Activity, CircleDollarSign, Radar } from "lucide-react";
 import { useBrand } from "@/contexts/brand-context";
 import {
   DashboardShell, useDashboardShellState, SectionLabel, OwnerTabs, KpiStrip,
@@ -34,6 +35,9 @@ export function OwnerDashboard({ actions }: { actions?: React.ReactNode }) {
     <DashboardShell
       badge="Owner"
       badgeTone="owner"
+      title="Executive Operating View"
+      subtitle="Live business performance, profitability and operating risk"
+      className="owner-command-center"
       lastSync={lastSync}
       mktRange={mktRange}
       onRange={setMktRange}
@@ -44,28 +48,47 @@ export function OwnerDashboard({ actions }: { actions?: React.ReactNode }) {
 
       {tab === "overview" && (
         <>
-          <SectionLabel title="Executive KPI" hint={`${mktRange.label} · vs previous period`} />
+          <div className="owner-briefing">
+            <div>
+              <span className="owner-eyebrow"><Radar className="size-3.5" /> Business briefing</span>
+              <h2>Today’s business, at a glance</h2>
+              <p>{mktRange.label} performance compared with the previous period.</p>
+            </div>
+            <div className="owner-live"><span /> Live operating view</div>
+          </div>
+
+          <SectionLabel title="Financial pulse" hint={`${mktRange.label} · vs previous period`} />
           <ExecutiveKpi brandIds={brandIds} enabled={enabled} range={range} compareLabel="vs prev" />
 
-          <SectionLabel title="Needs your attention" />
+          <SectionLabel title="Performance & profit" hint="Click Net Profit for the full cost trail" />
+          <div className="grid grid-cols-1 gap-4 xl:grid-cols-5">
+            <div className="xl:col-span-3">
+              <PerformanceTrend brandIds={brandIds} enabled={enabled} range={range} />
+            </div>
+            <div className="xl:col-span-2">
+              <NetProfitCard brandIds={brandIds} enabled={enabled} range={range} />
+            </div>
+          </div>
+
+          <SectionLabel title="Needs your attention" hint="Priority signals across the business" />
           <NeedsYourAttention brandIds={brandIds} enabled={enabled} range={range} />
 
-          <SectionLabel title="Business performance" hint={mktRange.label} />
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-3">
+          <div className="owner-section-heading">
+            <div className="owner-section-icon owner-section-icon-blue"><Activity className="size-4" /></div>
+            <div><h3>Operations pulse</h3><p>Momentum, collections and the month-end outlook</p></div>
+          </div>
+          <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
             <div className="lg:col-span-2">
-              <PerformanceTrend brandIds={brandIds} enabled={enabled} range={range} />
+              <TargetForecast brandIds={brandIds} enabled={enabled} />
             </div>
             <MonthPaceCard brandIds={brandIds} enabled={enabled} />
           </div>
 
-          <SectionLabel title="Net profit — কোথায় টাকা গেল" hint="Click করে পুরো breakdown দেখুন" />
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
-            <NetProfitCard brandIds={brandIds} enabled={enabled} range={range} />
-            <CodRemittancePipelineCard brandIds={brandIds} enabled={enabled} range={range} />
+          <div className="owner-section-heading">
+            <div className="owner-section-icon owner-section-icon-green"><CircleDollarSign className="size-4" /></div>
+            <div><h3>Cash collection</h3><p>Courier remittance movement for the selected period</p></div>
           </div>
-
-          <SectionLabel title="Target & forecast" hint="Current month" />
-          <TargetForecast brandIds={brandIds} enabled={enabled} />
+          <CodRemittancePipelineCard brandIds={brandIds} enabled={enabled} range={range} />
         </>
       )}
 

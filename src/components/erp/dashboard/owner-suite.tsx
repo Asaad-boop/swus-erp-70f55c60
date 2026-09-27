@@ -48,7 +48,7 @@ export function SectionCard({
   title, icon: Icon, action, children, className,
 }: { title: string; icon?: any; action?: React.ReactNode; children: React.ReactNode; className?: string }) {
   return (
-    <Card className={cn("border-slate-200", className)}>
+    <Card className={cn("owner-panel border-slate-200", className)}>
       <CardHeader className="flex flex-row items-center justify-between gap-2 pb-2">
         <CardTitle className="flex items-center gap-2 text-[13px] font-semibold text-slate-800">
           {Icon ? <Icon className="size-4 text-slate-400" /> : null}
@@ -178,9 +178,9 @@ export function ExecutiveKpi(props: P & { compareLabel?: string }) {
     { label: "ROAS", value: (c?.roas ?? 0).toFixed(2) + "x", d: delta(c?.roas ?? 0, p?.roas ?? 0), key: "revenue", icon: Target, tone: "text-fuchsia-600 bg-fuchsia-50 border-fuchsia-200", spark: "#d946ef", sparkFill: "#fdf4ff" },
   ];
   return (
-    <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
+    <div className="owner-kpi-grid grid grid-cols-2 gap-3 md:grid-cols-4">
       {tiles.map((t) => (
-        <div key={t.label} className={cn("rounded-lg border bg-white p-3 transition-colors", t.tone.split(" ")[2])}>
+        <div key={t.label} className={cn("owner-kpi-card rounded-lg border bg-white p-3 transition-colors", t.tone.split(" ")[2])}>
           <div className="mb-1.5 flex items-center justify-between gap-2">
             <span className="text-[10.5px] font-medium uppercase tracking-wider text-slate-500">{t.label}</span>
             <span className={cn("inline-flex size-6 items-center justify-center rounded-md", t.tone)}>

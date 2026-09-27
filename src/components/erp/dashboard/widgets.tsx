@@ -233,7 +233,7 @@ export function NetProfitCard({
 
   return (
     <>
-      <Card className="overflow-hidden">
+      <Card className="owner-panel owner-profit-panel overflow-hidden">
         <CardHeader className="flex flex-row items-center justify-between pb-2">
           <CardTitle className="text-base font-semibold flex items-center gap-2">
             <PiggyBank className="size-4 text-emerald-600" /> Net Profit
@@ -447,7 +447,7 @@ export function CashPositionCard({
   const icons: Record<string, any> = { cash: Coins, bank: Landmark, mfs: Smartphone, other: Wallet };
 
   return (
-    <Card>
+      <Card className="owner-panel">
       <CardHeader className="flex flex-row items-center justify-between pb-2">
         <CardTitle className="text-base font-semibold flex items-center gap-2">
           <Wallet className="size-4 text-emerald-600" /> Cash Position

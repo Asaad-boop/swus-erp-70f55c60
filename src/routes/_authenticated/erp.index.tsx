@@ -9,7 +9,14 @@ import { AdminDashboard } from "@/components/erp/dashboard/admin-dashboard";
 import { StaffDashboard } from "@/components/erp/dashboard/staff-dashboard";
 
 export const Route = createFileRoute("/_authenticated/erp/")({
-  head: () => ({ meta: [{ title: "Dashboard — SynqWithUs ERP" }] }),
+  head: () => ({ meta: [
+    { title: "Owner Dashboard — SynqWithUs ERP" },
+    { name: "description", content: "Live owner view of revenue, profit, orders, marketing, cash collection and operating risks." },
+    { property: "og:title", content: "Owner Dashboard — SynqWithUs ERP" },
+    { property: "og:description", content: "Live business performance, profitability and operating risk in one executive view." },
+    { property: "og:type", content: "website" },
+    { name: "twitter:card", content: "summary" },
+  ] }),
   component: DashboardPage,
 });
 
