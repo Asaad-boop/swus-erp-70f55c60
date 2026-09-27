@@ -214,6 +214,9 @@ function OrdersPage() {
     fetchNextPage,
     hasNextPage,
     isFetchingNextPage,
+    isError: ordersError,
+    error: ordersErrorObj,
+    refetch: refetchOrders,
   } = useOrdersInfinite(queryFilter, PAGE_CHUNK);
   const data = useMemo(
     () =>
@@ -880,7 +883,19 @@ function OrdersPage() {
           onReturnReceive={(id) => { setReturnReceiveIds([id]); setReturnReceiveOpen(true); }}
           staffNames={staffNames}
         />
-        {!isLoading && visibleRows.length === 0 && (
+        {!isLoading && ordersError && visibleRows.length === 0 && (
+          <EmptyState
+            icon={<Inbox className="h-7 w-7" />}
+            title="Orders load করা যায়নি"
+            description={(ordersErrorObj as Error)?.message || "Network বা server সমস্যা। আবার চেষ্টা করো।"}
+            action={
+              <Button variant="outline" size="sm" onClick={() => refetchOrders()}>
+                Retry
+              </Button>
+            }
+          />
+        )}
+        {!isLoading && !ordersError && visibleRows.length === 0 && (
           <EmptyState
             icon={<Inbox className="h-7 w-7" />}
             title="No orders found"
