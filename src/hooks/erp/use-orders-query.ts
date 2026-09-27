@@ -5,45 +5,12 @@ import type { OrderRow, OrderStatus } from "@/lib/erp/orders";
 import { statusSinceTs } from "@/lib/erp/orders";
 import { fetchCourierHistoryFn } from "@/lib/erp/courier-history.functions";
 import { applyBrandScope } from "@/lib/erp/apply-brand-scope";
-import { normalizeCourierStatus, type CourierBucket } from "@/hooks/erp/use-courier-shipments";
+import { type CourierBucket } from "@/hooks/erp/use-courier-shipments";
 
 const WEB_ORDER_SOURCE_FILTER = "source.not.in.(website,pixel,utm)";
 
 export type OrdersSortKey = "created_at" | "total" | "updated_at" | "invoice_no";
 export type OrdersSortDir = "asc" | "desc";
-
-/** Coarse ilike prefilters per courier bucket — results are re-checked exactly
- *  with normalizeCourierStatus, so these only need to be supersets. */
-const BUCKET_PREFILTER: Partial<Record<CourierBucket, string[]>> = {
-  delivered: ["%deliver%"],
-  out_for_delivery: ["%deliver%", "%way%"],
-  returned: ["%return%"],
-  cancelled: ["%cancel%"],
-  on_hold: ["%hold%", "%lost%", "%damag%", "%fail%", "%unsuccess%", "%reject%"],
-  in_transit: ["%transit%", "%forward%", "%reach%", "%hub%", "%received%"],
-  picked_up: ["%pick%", "%collect%"],
-};
-
-/** Resolve the set of order ids whose latest shipment falls in `bucket`. */
-async function orderIdsForCourierBucket(bucket: CourierBucket): Promise<string[]> {
-  let q = supabase
-    .from("courier_shipments")
-    .select("order_id,status,updated_at")
-    .order("updated_at", { ascending: false })
-    .limit(20000);
-  const patterns = BUCKET_PREFILTER[bucket];
-  if (patterns) q = q.or(patterns.map((p) => `status.ilike.${p}`).join(","));
-  const { data, error } = await q;
-  if (error) throw error;
-  const seen = new Set<string>();
-  const out: string[] = [];
-  for (const r of (data ?? []) as { order_id: string; status: string | null }[]) {
-    if (!r.order_id || seen.has(r.order_id)) continue;
-    seen.add(r.order_id);
-    if (normalizeCourierStatus(r.status) === bucket) out.push(r.order_id);
-  }
-  return out;
-}
 
 export type OrdersFilter = {
   brandId: string | null;
@@ -89,11 +56,7 @@ export async function fetchOrdersPage(
   const brandIds = brandIdsOf(filter);
   {
     {
-      let bucketIds: string[] | null = null;
-      if (filter.courierBucket) {
-        bucketIds = await orderIdsForCourierBucket(filter.courierBucket);
-        if (bucketIds.length === 0) return { rows: [] as OrderRow[], total: 0 };
-      }
+      const bucket = filter.courierBucket ?? null;
 
       let q = applyBrandScope(
         supabase
@@ -119,7 +82,9 @@ export async function fetchOrdersPage(
         q = q.neq("status", "pre_order");
         q = q.or(`status.neq.confirmed,source.is.null,${WEB_ORDER_SOURCE_FILTER},web_status.eq.complete`);
       }
-      if (bucketIds) q = q.in("id", bucketIds);
+      // Server-maintained latest courier bucket (trigger on courier_shipments)
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      if (bucket) q = (q as any).eq("courier_bucket", bucket);
       if (filter.printedFilter === "printed") q = q.not("printed_at", "is", null);
       else if (filter.printedFilter === "unprinted") q = q.is("printed_at", null);
       if (filter.source) q = q.eq("source", filter.source as never);
@@ -226,11 +191,7 @@ export async function fetchAllMatchingOrderIds(filter: OrdersFilter, cap = 5000)
     ? filter.brandIds
     : filter.brandId ? [filter.brandId] : [];
   if (brandIds.length === 0) return [];
-  let bucketIds: string[] | null = null;
-  if (filter.courierBucket) {
-    bucketIds = await orderIdsForCourierBucket(filter.courierBucket);
-    if (bucketIds.length === 0) return [];
-  }
+  const bucket = filter.courierBucket ?? null;
   const out: string[] = [];
   const pageSize = 1000;
   for (let page = 0; out.length < cap; page++) {
@@ -245,7 +206,9 @@ export async function fetchAllMatchingOrderIds(filter: OrdersFilter, cap = 5000)
       q = q.neq("status", "new").neq("status", "pre_order");
       q = q.or(`status.neq.confirmed,source.is.null,${WEB_ORDER_SOURCE_FILTER},web_status.eq.complete`);
     }
-    if (bucketIds) q = q.in("id", bucketIds);
+    // Server-maintained latest courier bucket (trigger on courier_shipments)
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      if (bucket) q = (q as any).eq("courier_bucket", bucket);
     if (filter.printedFilter === "printed") q = q.not("printed_at", "is", null);
     else if (filter.printedFilter === "unprinted") q = q.is("printed_at", null);
     if (filter.source) q = q.eq("source", filter.source as never);

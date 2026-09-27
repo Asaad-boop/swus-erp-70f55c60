@@ -10326,6 +10326,7 @@ export type Database = {
           confirmed_by: string | null
           coupon_code: string | null
           courier_assigned_at: string | null
+          courier_bucket: string | null
           courier_fee: number
           courier_name: string | null
           created_at: string
@@ -10450,6 +10451,7 @@ export type Database = {
           confirmed_by?: string | null
           coupon_code?: string | null
           courier_assigned_at?: string | null
+          courier_bucket?: string | null
           courier_fee?: number
           courier_name?: string | null
           created_at?: string
@@ -10574,6 +10576,7 @@ export type Database = {
           confirmed_by?: string | null
           coupon_code?: string | null
           courier_assigned_at?: string | null
+          courier_bucket?: string | null
           courier_fee?: number
           courier_name?: string | null
           created_at?: string
@@ -13090,6 +13093,7 @@ export type Database = {
           title: string
         }[]
       }
+      courier_bucket_of: { Args: { _raw: string }; Returns: string }
       create_bill: {
         Args: {
           _amount: number
@@ -13782,6 +13786,7 @@ export type Database = {
           confirmed_by: string | null
           coupon_code: string | null
           courier_assigned_at: string | null
+          courier_bucket: string | null
           courier_fee: number
           courier_name: string | null
           created_at: string
@@ -13915,6 +13920,7 @@ export type Database = {
           confirmed_by: string | null
           coupon_code: string | null
           courier_assigned_at: string | null
+          courier_bucket: string | null
           courier_fee: number
           courier_name: string | null
           created_at: string

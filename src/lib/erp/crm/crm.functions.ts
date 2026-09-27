@@ -41,34 +41,34 @@ async function loadAll(
   brandIds: string[] | undefined,
 ): Promise<any[]> {
   // Read from the materialized view (fast snapshot). Fall back to live view
-  // if the MV doesn't exist yet (older deployments).
+  // if the MV doesn't exist yet. Pages are fetched in parallel after one count
+  // query, and only the columns the list needs are selected.
   const PAGE = 1000;
-  const all: any[] = [];
-  let from = 0;
-  let source: "crm_customers_mv" | "crm_customers_v" = "crm_customers_mv";
-  for (;;) {
-    let q = supabaseClient
-      .from(source)
-      .select("*")
-      .range(from, from + PAGE - 1);
+  const COLS =
+    "customer_key,name,email,user_id,is_registered,orders_count,valid_orders_count,lifetime_value,avg_order_value,first_order_at,last_order_at,brand_ids,meta_status";
+  const build = (source: string, head = false) => {
+    let q = supabaseClient.from(source).select(head ? "customer_key" : COLS, head ? { count: "exact", head: true } : undefined);
     if (brandIds && brandIds.length) q = q.overlaps("brand_ids", brandIds);
-    const { data, error } = await q;
-    if (error) {
-      // MV missing or not yet refreshed → fall back to the live view once.
-      if (source === "crm_customers_mv" && from === 0) {
-        source = "crm_customers_v";
-        continue;
-      }
-      throw error;
-    }
-    if (source === "crm_customers_mv" && from === 0 && (!data || data.length === 0)) {
-      source = "crm_customers_v";
-      continue;
-    }
-    if (!data || !data.length) break;
-    all.push(...data);
-    if (data.length < PAGE) break;
-    from += PAGE;
+    return q;
+  };
+  let source = "crm_customers_mv";
+  let { count, error } = await build(source, true);
+  if (error || !count) {
+    source = "crm_customers_v";
+    ({ count, error } = await build(source, true));
+    if (error) throw error;
+  }
+  const total = count ?? 0;
+  const pages = Math.ceil(total / PAGE);
+  const results = await Promise.all(
+    Array.from({ length: pages }, (_, i) =>
+      build(source).order("customer_key", { ascending: true }).range(i * PAGE, i * PAGE + PAGE - 1),
+    ),
+  );
+  const all: any[] = [];
+  for (const r of results as { data: any[] | null; error: any }[]) {
+    if (r.error) throw r.error;
+    all.push(...(r.data ?? []));
   }
   return all;
 }
