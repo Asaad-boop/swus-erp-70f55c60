@@ -4,7 +4,7 @@ import { useQuery } from "@tanstack/react-query";
 import {
   Wallet, Banknote, TrendingUp, TrendingDown, AlertTriangle, Truck,
   Landmark, Smartphone, Coins, PiggyBank, Clock, Repeat, Target, DollarSign,
-  ChevronDown, ChevronUp, ShoppingCart, Zap,
+  ChevronDown, ChevronUp, ShoppingCart, Zap, ArrowRight, Info,
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { applyBrandScope } from "@/lib/erp/apply-brand-scope";
@@ -12,6 +12,7 @@ import { useUsdBdtRate } from "@/hooks/erp/use-fx-rate";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Badge } from "@/components/ui/badge";
+import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription } from "@/components/ui/sheet";
 import { cn } from "@/lib/utils";
 
 const BDT = (n: number) => "৳" + Math.round(n).toLocaleString("en-IN");
