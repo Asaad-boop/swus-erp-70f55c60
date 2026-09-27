@@ -1,3 +1,4 @@
+import { calcRoas } from "@/lib/erp/marketing/roas";
 import { createFileRoute } from "@tanstack/react-router";
 import { useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
@@ -976,7 +977,7 @@ function ProductsTab({ args, enabled, rangeLabel }: { args: RpcArgs; enabled: bo
       if (first) seen.add(r.product_id);
       const ad_spend = first ? adSpendOf(r.product_id) : 0;
       const net_after_ads = Number(r.contribution_profit) - ad_spend;
-      const roas = ad_spend > 0 ? Number(r.net_revenue) / ad_spend : 0;
+      const roas = calcRoas(r.net_revenue, ad_spend);
       return { ...r, ad_spend, net_after_ads, roas };
     });
     // eslint-disable-next-line react-hooks/exhaustive-deps

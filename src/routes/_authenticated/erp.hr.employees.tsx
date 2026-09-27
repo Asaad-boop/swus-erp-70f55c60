@@ -286,7 +286,7 @@ function EmployeesPage() {
     const blob = new Blob([[head.join(","), ...lines].join("\n")], { type: "text/csv;charset=utf-8" });
     const a = document.createElement("a");
     a.href = URL.createObjectURL(blob);
-    a.download = `employees-${new Date().toISOString().slice(0, 10)}.csv`;
+    a.download = `employees-${new Intl.DateTimeFormat("en-CA", { timeZone: "Asia/Dhaka" }).format(new Date())}.csv`;
     a.click();
     URL.revokeObjectURL(a.href);
   };

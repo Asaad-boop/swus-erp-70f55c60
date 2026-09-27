@@ -8,8 +8,8 @@
 - [x] 4. Courier bucket filter server-side
 - [x] 5. CRM customer list server pagination
 - [x] 6. Cash flow/inventory summary row cap
-- [ ] 8. ROAS single formula
-- [ ] 9. HR leaves Asia/Dhaka dates
+- [x] 8. ROAS single formula
+- [x] 9. HR leaves Asia/Dhaka dates
 - [ ] 10. Order filter logic shared (export pre_order)
 - [x] 11. Orders list error state
 - [ ] 12-19. Stock aging, supplier scorecard, leave balance, payroll audit, cohort/LTV, abandoned cart auto, bulk assign, global SLA alert

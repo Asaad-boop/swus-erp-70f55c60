@@ -1,3 +1,4 @@
+import { calcRoas } from "@/lib/erp/marketing/roas";
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
@@ -132,7 +133,7 @@ export const getMarketingOverview = createServerFn({ method: "POST" })
         spend_bdt: spend_today,
         revenue_bdt: revenue_today,
         orders: orders_today,
-        roas: spend_today > 0 ? revenue_today / spend_today : 0,
+        roas: calcRoas(revenue_today, spend_today),
         cpo: orders_today > 0 ? spend_today / orders_today : 0,
       },
       sparkline,
