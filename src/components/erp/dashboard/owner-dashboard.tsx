@@ -58,6 +58,12 @@ export function OwnerDashboard({ actions }: { actions?: React.ReactNode }) {
             <MonthPaceCard brandIds={brandIds} enabled={enabled} />
           </div>
 
+          <SectionLabel title="Net profit — কোথায় টাকা গেল" hint="Click করে পুরো breakdown দেখুন" />
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
+            <NetProfitCard brandIds={brandIds} enabled={enabled} range={range} />
+            <CodRemittancePipelineCard brandIds={brandIds} enabled={enabled} range={range} />
+          </div>
+
           <SectionLabel title="Target & forecast" hint="Current month" />
           <TargetForecast brandIds={brandIds} enabled={enabled} />
         </>
