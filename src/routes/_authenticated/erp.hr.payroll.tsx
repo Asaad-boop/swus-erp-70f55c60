@@ -28,6 +28,7 @@ import {
   updatePayslip,
 } from "@/lib/erp/hr/payroll.functions";
 import { Banknote, RefreshCw, Wand2, Wallet, Trash2, Download, FileText, Printer, Eye, X } from "lucide-react";
+import { PayrollHistory } from "@/components/erp/hr/payroll-history";
 
 export const Route = createFileRoute("/_authenticated/erp/hr/payroll")({
   component: PayrollPage,
@@ -399,6 +400,15 @@ function PayrollPage() {
           </div>
         </CardContent>
       </Card>
+
+      {run?.id && (
+        <PayrollHistory
+          runId={run.id}
+          slipEmployee={new Map(slips.map((s: any) => [s.id as string, s.employee_id as string]))}
+          empName={empName}
+        />
+      )}
+
 
       <PayslipPreviewDialog
         open={!!preview}
