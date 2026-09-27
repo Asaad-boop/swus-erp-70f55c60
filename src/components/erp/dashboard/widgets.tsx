@@ -142,14 +142,94 @@ export function NetProfitCard({
     },
   });
 
+  // Drilldown detail — fetched lazily when the sheet opens
+  const { data: detail, isLoading: detailLoading } = useQuery({
+    queryKey: ["dash-net-profit-detail", brandIds.join(","), range.from.toISOString(), range.to.toISOString(), fx ?? 0],
+    enabled: enabled && drill,
+    staleTime: 60_000,
+    queryFn: async () => {
+      const fromISO = range.from.toISOString();
+      const toISO = range.to.toISOString();
+      const fromDate = toLocalDate(range.from);
+      const toDate = toLocalDate(range.to);
+
+      const [items, ads] = await Promise.all([
+        applyBrandScope(
+          supabase.from("order_items").select(
+            "product_id, quantity, unit_cost_snapshot, orders!inner(brand_id, status, created_at)",
+          ),
+          brandIds,
+          "orders.brand_id" as any,
+        ).not("orders.status", "in", "(new,cancelled,returned)")
+          .gte("orders.created_at", fromISO).lte("orders.created_at", toISO),
+        applyBrandScope(
+          supabase.from("mkt_insights_daily").select("campaign_id, spend, spend_bdt_fifo"),
+          brandIds,
+        ).gte("date", fromDate).lte("date", toDate),
+      ]);
+
+      // Top products by COGS
+      const itemRows = (items.data ?? []) as any[];
+      const missingPids = Array.from(new Set(
+        itemRows.filter((r) => !(Number(r.unit_cost_snapshot ?? 0) > 0) && r.product_id).map((r) => r.product_id as string)
+      ));
+      const fallback = new Map<string, number>();
+      if (missingPids.length) {
+        const { data: prods } = await supabase.from("products").select("id, weighted_avg_cost, cost_price").in("id", missingPids.slice(0, 500));
+        for (const p of (prods ?? []) as any[]) {
+          const c = Number(p.weighted_avg_cost ?? 0) || Number(p.cost_price ?? 0);
+          if (c > 0) fallback.set(p.id, c);
+        }
+      }
+      const byProduct = new Map<string, { cost: number; qty: number }>();
+      for (const r of itemRows) {
+        if (!r.product_id) continue;
+        let u = Number(r.unit_cost_snapshot ?? 0);
+        if (!(u > 0)) u = fallback.get(r.product_id) ?? 0;
+        const cur = byProduct.get(r.product_id) ?? { cost: 0, qty: 0 };
+        cur.cost += u * Number(r.quantity ?? 0);
+        cur.qty += Number(r.quantity ?? 0);
+        byProduct.set(r.product_id, cur);
+      }
+      const topIds = Array.from(byProduct.entries()).sort((a, b) => b[1].cost - a[1].cost).slice(0, 5);
+      const { data: names } = topIds.length
+        ? await supabase.from("products").select("id, name").in("id", topIds.map(([id]) => id))
+        : { data: [] as any[] };
+      const nameMap = new Map(((names ?? []) as any[]).map((p) => [p.id, p.name]));
+      const topProducts = topIds.map(([id, v]) => ({ name: nameMap.get(id) ?? "Unknown", ...v }));
+
+      // Top campaigns by spend
+      const byCamp = new Map<string, number>();
+      for (const r of (ads.data ?? []) as any[]) {
+        const v = Number(r.spend_bdt_fifo ?? 0) || (fx ? Number(r.spend ?? 0) * fx : 0);
+        if (v <= 0) continue;
+        const k = r.campaign_id ?? "untracked";
+        byCamp.set(k, (byCamp.get(k) ?? 0) + v);
+      }
+      const topCampIds = Array.from(byCamp.entries()).sort((a, b) => b[1] - a[1]).slice(0, 5);
+      const realIds = topCampIds.map(([id]) => id).filter((id) => id !== "untracked");
+      const { data: camps } = realIds.length
+        ? await supabase.from("mkt_campaigns").select("id, name").in("id", realIds)
+        : { data: [] as any[] };
+      const campMap = new Map(((camps ?? []) as any[]).map((c) => [c.id, c.name]));
+      const topCampaigns = topCampIds.map(([id, spend]) => ({
+        name: id === "untracked" ? "Untracked / other" : campMap.get(id) ?? "Campaign",
+        spend,
+      }));
+
+      return { topProducts, topCampaigns };
+    },
+  });
+
   const rows = [
-    { k: "Revenue", v: data?.revenue ?? 0, missing: data?.revenueMissing, sign: 1 },
-    { k: "Product Cost", v: data?.cogs ?? 0, missing: !data?.cogsSeen, sign: -1 },
-    { k: "Courier Cost", v: data?.courier ?? 0, missing: !data?.courierSeen, sign: -1 },
-    { k: "Packaging", v: data?.pack ?? 0, missing: !data?.packSeen, sign: -1 },
-    { k: "Ad Spend", v: data?.adSpend ?? 0, missing: !data?.adSpendSeen, note: data?.adFxMissing ? "FX rate missing" : undefined, sign: -1 },
-    { k: "Return / Exchange Loss", v: data?.returnLoss ?? 0, missing: !data?.returnSeen, sign: -1 },
+    { k: "Revenue", v: data?.revenue ?? 0, missing: data?.revenueMissing, sign: 1, hint: "সব order-এর total (new/cancelled/returned বাদ)" },
+    { k: "Product Cost", v: data?.cogs ?? 0, missing: !data?.cogsSeen, sign: -1, hint: "unit_cost_snapshot × qty; খালি হলে WAC/cost_price" },
+    { k: "Courier Cost", v: data?.courier ?? 0, missing: !data?.courierSeen, sign: -1, hint: "courier_cost_allocated, না থাকলে actual_shipping_cost" },
+    { k: "Packaging", v: data?.pack ?? 0, missing: !data?.packSeen, sign: -1, hint: "packaging_cost_allocated" },
+    { k: "Ad Spend", v: data?.adSpend ?? 0, missing: !data?.adSpendSeen, note: data?.adFxMissing ? "FX rate missing" : undefined, sign: -1, hint: "mkt_insights_daily spend_bdt_fifo (FIFO ডলার rate)" },
+    { k: "Return / Exchange Loss", v: data?.returnLoss ?? 0, missing: !data?.returnSeen, sign: -1, hint: "return/exchange case-এর product_cost_loss" },
   ];
+  const days = Math.max(1, range.days);
 
   return (
     <Card className="overflow-hidden">
