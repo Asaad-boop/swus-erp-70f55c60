@@ -1,8 +1,8 @@
 # Roadmap
 
 ## ERP deep-dive fixes (step by step)
-- [ ] 1. Order status: row lock + illegal backward jump guard
-- [ ] 7. Bulk status batched RPC (+ wire order list)
+- [x] 1. Order status: row lock + illegal backward jump guard
+- [x] 7. Bulk status batched RPC (+ wire order list)
 - [ ] 2. Order total server-side recompute
 - [ ] 3. PO release cost price race/stale
 - [ ] 4. Courier bucket filter server-side
