@@ -3,6 +3,7 @@ import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { applyBrandScope } from "@/lib/erp/apply-brand-scope";
 import { isCapitalOutflow, refLabel, dhakaDay } from "@/lib/erp/finance-expense-classify";
+import { fetchAllRows } from "@/lib/erp/fetch-all-rows";
 
 const Input = z.object({
   brandIds: z.array(z.string().uuid()).min(1),
@@ -467,17 +468,20 @@ export const getDrilldownTransactions = createServerFn({ method: "POST" })
     // Sum across the whole filtered set (not just this page)
     let totalSum = 0;
     if (count && count > 0) {
-      let sumQ = applyBrandScope(
-        supabase.from("erp_transactions").select("amount"),
-        brandIds,
-      )
-        .gte("transaction_date", from)
-        .lte("transaction_date", to);
-      if (type === "revenue" || type === "income") sumQ = sumQ.eq("txn_type", "income");
-      else if (type === "expense") sumQ = sumQ.eq("txn_type", "expense");
-      if (accountIds && accountIds.length > 0) sumQ = sumQ.in("account_id", accountIds);
-      const { data: allAmts } = await sumQ.limit(10000);
-      totalSum = (allAmts ?? []).reduce((s, r) => s + num((r as { amount: number }).amount), 0);
+      const buildSum = (f: number, t: number) => {
+        let sumQ = applyBrandScope(
+          supabase.from("erp_transactions").select("id, amount"),
+          brandIds,
+        )
+          .gte("transaction_date", from)
+          .lte("transaction_date", to);
+        if (type === "revenue" || type === "income") sumQ = sumQ.eq("txn_type", "income");
+        else if (type === "expense") sumQ = sumQ.eq("txn_type", "expense");
+        if (accountIds && accountIds.length > 0) sumQ = sumQ.in("account_id", accountIds);
+        return sumQ.order("id").range(f, t);
+      };
+      const allAmts = await fetchAllRows(buildSum as never);
+      totalSum = (allAmts as Array<{ amount: number }>).reduce((s: number, r) => s + num(r.amount), 0);
     }
 
     const mapped: DrilldownRow[] = (rows ?? []).map((r) => ({
@@ -574,23 +578,23 @@ export const getCashflowStatement = createServerFn({ method: "POST" })
     const { supabase } = context;
     const { brandId, from, to } = data;
 
-    const [coaRes, periodRes, openingRes, walletRes] = await Promise.all([
+    const [coaRes, periodRows, openingRows, walletRes] = await Promise.all([
       supabase.from("erp_chart_accounts")
         .select("id,code,name,account_type,opening_balance")
         .eq("brand_id", brandId).eq("is_archived", false),
-      supabase.from("erp_journal_lines")
-        .select("account_id,debit,credit,erp_journal_entries!inner(entry_date,brand_id,status)")
+      fetchAllRows((f, t) => supabase.from("erp_journal_lines")
+        .select("id,account_id,debit,credit,erp_journal_entries!inner(entry_date,brand_id,status)")
         .eq("brand_id", brandId)
         .gte("erp_journal_entries.entry_date", from)
         .lte("erp_journal_entries.entry_date", to)
         .eq("erp_journal_entries.status", "posted")
-        .limit(50000),
-      supabase.from("erp_journal_lines")
-        .select("account_id,debit,credit,erp_journal_entries!inner(entry_date,brand_id,status)")
+        .order("id").range(f, t)),
+      fetchAllRows((f, t) => supabase.from("erp_journal_lines")
+        .select("id,account_id,debit,credit,erp_journal_entries!inner(entry_date,brand_id,status)")
         .eq("brand_id", brandId)
         .lt("erp_journal_entries.entry_date", from)
         .eq("erp_journal_entries.status", "posted")
-        .limit(50000),
+        .order("id").range(f, t)),
       supabase.from("erp_accounts")
         .select("name,account_type,current_balance")
         .eq("brand_id", brandId).eq("is_active", true),
@@ -601,8 +605,8 @@ export const getCashflowStatement = createServerFn({ method: "POST" })
     const classMap = new Map(accounts.map((a) => [a.id, classifyAccount(a)]));
 
     type Line = { account_id: string; debit: number | null; credit: number | null };
-    const periodLines = (periodRes.data ?? []) as Line[];
-    const openingLines = (openingRes.data ?? []) as Line[];
+    const periodLines = periodRows as unknown as Line[];
+    const openingLines = openingRows as unknown as Line[];
 
     // Helpers
     const normalChange = (klass: string, debit: number, credit: number) => {
