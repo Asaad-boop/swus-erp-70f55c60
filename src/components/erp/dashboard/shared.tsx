@@ -2165,10 +2165,13 @@ export function useMyName() {
 }
 
 export function DashboardShell({
-  badge, badgeTone, lastSync, mktRange, onRange, onRefresh, actions, children,
+  badge, badgeTone, title, subtitle, className, lastSync, mktRange, onRange, onRefresh, actions, children,
 }: {
   badge: string;
   badgeTone: "owner" | "admin";
+  title?: string;
+  subtitle?: string;
+  className?: string;
   lastSync: Date;
   mktRange: MktRangeValue;
   onRange: (v: MktRangeValue) => void;
@@ -2179,14 +2182,15 @@ export function DashboardShell({
   const { activeBrand, isAllBrands, brands } = useBrand();
   const name = useMyName();
   return (
-    <div className="min-h-screen bg-background text-foreground">
+    <div className={cn("min-h-screen bg-background text-foreground", className)}>
       <div className="border-b border-border/60 bg-background/85 sticky top-0 z-20 backdrop-blur supports-[backdrop-filter]:bg-background/70">
         <div className="px-4 md:px-6 py-3 max-w-[1600px] mx-auto">
           <div className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-3 sm:flex sm:flex-wrap sm:justify-between">
-            <div className="min-w-0 flex items-baseline gap-3 flex-wrap">
-              <h1 className="text-[15px] font-semibold tracking-tight truncate">
-                {greeting()}, {name}
-              </h1>
+            <div className="min-w-0 flex items-center gap-3 flex-wrap">
+              <div className="min-w-0">
+                <h1 className="text-[15px] font-semibold truncate">{title ?? `${greeting()}, ${name}`}</h1>
+                {subtitle ? <p className="hidden text-[11px] text-muted-foreground md:block">{subtitle}</p> : null}
+              </div>
               <span
                 className={cn(
                   "shrink-0 rounded-full px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wider ring-1 ring-inset",
@@ -2198,7 +2202,7 @@ export function DashboardShell({
                 {badge}
               </span>
               <span className="text-[12px] text-muted-foreground truncate">
-                {isAllBrands ? `All Brands · ${brands.length}` : activeBrand?.name ?? ""}
+                {title ? `${greeting()}, ${name} · ` : ""}{isAllBrands ? `All Brands · ${brands.length}` : activeBrand?.name ?? ""}
                 <span className="mx-1.5 text-border">·</span>
                 {new Date().toLocaleDateString("en-GB", { weekday: "short", month: "short", day: "numeric" })}
               </span>
@@ -2218,7 +2222,7 @@ export function DashboardShell({
           </div>
         </div>
       </div>
-      <div className="px-4 md:px-6 py-4 max-w-[1600px] mx-auto space-y-4">{children}</div>
+      <div className="dashboard-shell-content px-4 py-4 md:px-6 max-w-[1600px] mx-auto space-y-4">{children}</div>
     </div>
   );
 }
