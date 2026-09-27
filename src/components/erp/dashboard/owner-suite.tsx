@@ -168,20 +168,25 @@ export function ExecutiveKpi(props: P & { compareLabel?: string }) {
   const { data, isLoading } = useExecutive(props);
   const c = data?.cur, p = data?.prev;
   const tiles = [
-    { label: "Revenue", value: BDT(c?.revenue ?? 0), d: delta(c?.revenue ?? 0, p?.revenue ?? 0), key: "revenue" },
-    { label: "Gross Profit", value: BDT(c?.gross ?? 0), d: delta(c?.gross ?? 0, p?.gross ?? 0), key: "gross" },
-    { label: "Net Profit", value: BDT(c?.net ?? 0), d: delta(c?.net ?? 0, p?.net ?? 0), key: "net", danger: (c?.net ?? 0) < 0 },
-    { label: "Profit Margin", value: pct(c?.margin ?? 0), d: (c?.margin ?? 0) - (p?.margin ?? 0), key: "net", raw: true },
-    { label: "Orders", value: String(c?.orders ?? 0), d: delta(c?.orders ?? 0, p?.orders ?? 0), key: "orders" },
-    { label: "AOV", value: BDT(c?.aov ?? 0), d: delta(c?.aov ?? 0, p?.aov ?? 0), key: "revenue" },
-    { label: "Marketing Spend", value: BDT(c?.adSpend ?? 0), d: delta(c?.adSpend ?? 0, p?.adSpend ?? 0), key: "spend", invert: true },
-    { label: "ROAS", value: (c?.roas ?? 0).toFixed(2) + "x", d: delta(c?.roas ?? 0, p?.roas ?? 0), key: "revenue" },
+    { label: "Revenue", value: BDT(c?.revenue ?? 0), d: delta(c?.revenue ?? 0, p?.revenue ?? 0), key: "revenue", icon: Banknote, tone: "text-sky-600 bg-sky-50 border-sky-200", spark: "#0ea5e9", sparkFill: "#f0f9ff" },
+    { label: "Gross Profit", value: BDT(c?.gross ?? 0), d: delta(c?.gross ?? 0, p?.gross ?? 0), key: "gross", icon: TrendingUp, tone: "text-teal-600 bg-teal-50 border-teal-200", spark: "#14b8a6", sparkFill: "#f0fdfa" },
+    { label: "Net Profit", value: BDT(c?.net ?? 0), d: delta(c?.net ?? 0, p?.net ?? 0), key: "net", danger: (c?.net ?? 0) < 0, icon: PiggyBank, tone: "text-emerald-600 bg-emerald-50 border-emerald-200", spark: "#10b981", sparkFill: "#ecfdf5" },
+    { label: "Profit Margin", value: pct(c?.margin ?? 0), d: (c?.margin ?? 0) - (p?.margin ?? 0), key: "net", raw: true, icon: Gauge, tone: "text-violet-600 bg-violet-50 border-violet-200", spark: "#8b5cf6", sparkFill: "#f5f3ff" },
+    { label: "Orders", value: String(c?.orders ?? 0), d: delta(c?.orders ?? 0, p?.orders ?? 0), key: "orders", icon: ShoppingCart, tone: "text-indigo-600 bg-indigo-50 border-indigo-200", spark: "#6366f1", sparkFill: "#eef2ff" },
+    { label: "AOV", value: BDT(c?.aov ?? 0), d: delta(c?.aov ?? 0, p?.aov ?? 0), key: "revenue", icon: Receipt, tone: "text-cyan-600 bg-cyan-50 border-cyan-200", spark: "#06b6d4", sparkFill: "#ecfeff" },
+    { label: "Marketing Spend", value: BDT(c?.adSpend ?? 0), d: delta(c?.adSpend ?? 0, p?.adSpend ?? 0), key: "spend", invert: true, icon: Megaphone, tone: "text-amber-600 bg-amber-50 border-amber-200", spark: "#f59e0b", sparkFill: "#fffbeb" },
+    { label: "ROAS", value: (c?.roas ?? 0).toFixed(2) + "x", d: delta(c?.roas ?? 0, p?.roas ?? 0), key: "revenue", icon: Target, tone: "text-fuchsia-600 bg-fuchsia-50 border-fuchsia-200", spark: "#d946ef", sparkFill: "#fdf4ff" },
   ];
   return (
     <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
       {tiles.map((t) => (
-        <div key={t.label} className="rounded-lg border border-slate-200 bg-white p-3">
-          <div className="mb-1.5 text-[10.5px] font-medium uppercase tracking-wider text-slate-500">{t.label}</div>
+        <div key={t.label} className={cn("rounded-lg border bg-white p-3 transition-colors", t.tone.split(" ")[2])}>
+          <div className="mb-1.5 flex items-center justify-between gap-2">
+            <span className="text-[10.5px] font-medium uppercase tracking-wider text-slate-500">{t.label}</span>
+            <span className={cn("inline-flex size-6 items-center justify-center rounded-md", t.tone)}>
+              <t.icon className="size-3.5" />
+            </span>
+          </div>
           {isLoading ? <Skeleton className="h-7 w-24" /> : (
             <div className={cn("text-[22px] font-semibold leading-none tracking-tight tabular-nums",
               t.danger ? "text-rose-600" : "text-slate-900")}>{t.value}</div>
@@ -199,7 +204,7 @@ export function ExecutiveKpi(props: P & { compareLabel?: string }) {
               {(c?.series?.length ?? 0) > 1 && (
                 <ResponsiveContainer width="100%" height="100%">
                   <AreaChart data={c!.series}>
-                    <Area type="monotone" dataKey={t.key} stroke="#6366f1" fill="#eef2ff" strokeWidth={1.5} dot={false} />
+                    <Area type="monotone" dataKey={t.key} stroke={t.spark} fill={t.sparkFill} strokeWidth={1.5} dot={false} />
                   </AreaChart>
                 </ResponsiveContainer>
               )}
