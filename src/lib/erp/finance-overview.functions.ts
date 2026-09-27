@@ -481,7 +481,7 @@ export const getDrilldownTransactions = createServerFn({ method: "POST" })
         return sumQ.order("id").range(f, t);
       };
       const allAmts = await fetchAllRows(buildSum as never);
-      totalSum = (allAmts ?? []).reduce((s, r) => s + num((r as { amount: number }).amount), 0);
+      totalSum = (allAmts as Array<{ amount: number }>).reduce((s: number, r) => s + num(r.amount), 0);
     }
 
     const mapped: DrilldownRow[] = (rows ?? []).map((r) => ({
