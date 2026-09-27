@@ -5,7 +5,7 @@ import type { OrderRow, OrderStatus } from "@/lib/erp/orders";
 import { statusSinceTs } from "@/lib/erp/orders";
 import { fetchCourierHistoryFn } from "@/lib/erp/courier-history.functions";
 import { applyBrandScope } from "@/lib/erp/apply-brand-scope";
-import { normalizeCourierStatus, type CourierBucket } from "@/hooks/erp/use-courier-shipments";
+import { type CourierBucket } from "@/hooks/erp/use-courier-shipments";
 
 const WEB_ORDER_SOURCE_FILTER = "source.not.in.(website,pixel,utm)";
 
