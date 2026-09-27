@@ -5,6 +5,7 @@ import { Plus, Wallet } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { useBrand } from "@/contexts/brand-context";
+import { SupplierScorecard } from "@/components/erp/suppliers/supplier-scorecard";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -105,6 +106,8 @@ function SuppliersPage() {
           </TableBody>
         </Table>
       </div>
+
+      <SupplierScorecard brandIds={brandIds} />
 
       <AddSupplierDialog open={addOpen} onClose={() => setAddOpen(false)} brandId={activeBrand?.id ?? null} onCreated={() => qc.invalidateQueries({ queryKey: ["suppliers"] })} />
       <PaymentDialog supplier={payFor} onClose={() => setPayFor(null)} brandId={activeBrand?.id ?? null} onPaid={() => qc.invalidateQueries({ queryKey: ["suppliers"] })} />
