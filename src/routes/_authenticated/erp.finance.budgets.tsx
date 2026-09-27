@@ -57,14 +57,14 @@ function BudgetsPage() {
     queryFn: async () => {
       const start = monthDate;
       const end = monthEnd(new Date(monthDate));
-      const { data, error } = await supabase.from("erp_journal_lines")
-        .select("account_id, debit, credit, erp_journal_entries!inner(brand_id, entry_date, status)")
+      const { fetchAllRows } = await import("@/lib/erp/fetch-all-rows");
+      const data = await fetchAllRows((f, t) => supabase.from("erp_journal_lines")
+        .select("id, account_id, debit, credit, erp_journal_entries!inner(brand_id, entry_date, status)")
         .eq("brand_id", brandId!)
         .gte("erp_journal_entries.entry_date", start)
         .lte("erp_journal_entries.entry_date", end)
         .eq("erp_journal_entries.status", "posted")
-        .limit(10000);
-      if (error) throw error;
+        .order("id").range(f, t));
       const map = new Map<string, number>();
       (data ?? []).forEach((l) => {
         const v = (map.get(l.account_id) ?? 0) + Number(l.debit) - Number(l.credit);
