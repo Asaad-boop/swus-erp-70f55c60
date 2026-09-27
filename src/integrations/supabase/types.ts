@@ -12965,6 +12965,15 @@ export type Database = {
         Args: { p_brand_id: string }
         Returns: number
       }
+      bulk_transition_order_status: {
+        Args: {
+          _new_status: Database["public"]["Enums"]["order_status"]
+          _note?: string
+          _order_ids: string[]
+          _reason?: string
+        }
+        Returns: Json
+      }
       calculate_rfm_all_brands: { Args: never; Returns: undefined }
       can_access_brand: {
         Args: { _brand: string; _uid: string }

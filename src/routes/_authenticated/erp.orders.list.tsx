@@ -543,19 +543,28 @@ function OrdersPage() {
   const bulkStatus = useMutation({
     mutationFn: async (status: OrderStatus) => {
       const ids = Array.from(selectedIds);
-      const results = await Promise.allSettled(
-        ids.map(async (id) => {
-          const { error } = await supabase.rpc("transition_order_status", { _order_id: id, _new_status: status });
-          if (error) throw error;
-          return id;
-        }),
-      );
-      const failed = results.filter((r) => r.status === "rejected").length;
-      const succeeded = results.length - failed;
-      return { failed, succeeded };
+      let succeeded = 0;
+      let failed = 0;
+      let firstError = "";
+      // Batched server-side: one call per 500 orders instead of one per order
+      for (let i = 0; i < ids.length; i += 500) {
+        const chunk = ids.slice(i, i + 500);
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const { data, error } = await (supabase.rpc as any)("bulk_transition_order_status", {
+          _order_ids: chunk,
+          _new_status: status,
+        });
+        if (error) { failed += chunk.length; firstError ||= error.message; continue; }
+        const res = data as { ok: number; failed: { id: string; error: string }[] };
+        succeeded += res.ok;
+        failed += res.failed.length;
+        if (res.failed[0]) firstError ||= res.failed[0].error;
+      }
+      if (firstError) console.warn("Bulk status failures:", firstError);
+      return { failed, succeeded, firstError };
     },
-    onSuccess: ({ failed, succeeded }) => {
-      if (failed > 0) toast.error(`${failed} orders failed, ${succeeded} succeeded`);
+    onSuccess: ({ failed, succeeded, firstError }) => {
+      if (failed > 0) toast.error(`${failed} orders failed, ${succeeded} succeeded`, { description: firstError });
       else toast.success(`${succeeded} orders updated`);
       setSelectedIds(new Set());
       qc.invalidateQueries({ queryKey: ["orders"] });
