@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useNavigate } from "@tanstack/react-router";
-import { Activity, BarChart3, CircleDollarSign, Radar } from "lucide-react";
+import { Activity, CircleDollarSign, Radar } from "lucide-react";
 import { useBrand } from "@/contexts/brand-context";
 import {
   DashboardShell, useDashboardShellState, SectionLabel, OwnerTabs, KpiStrip,
