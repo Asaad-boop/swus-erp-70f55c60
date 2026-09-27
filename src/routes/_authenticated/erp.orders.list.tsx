@@ -593,25 +593,7 @@ function OrdersPage() {
           ),
           brandsArr,
         ).order("created_at", { ascending: false });
-        if (effective.statuses.length > 0) {
-          q = q.in("status", effective.statuses);
-          if (effective.statuses.includes("confirmed")) {
-            q = q.or(`status.neq.confirmed,source.is.null,${WEB_ORDER_SOURCE_FILTER},web_status.eq.complete`);
-          }
-        } else {
-          q = q.neq("status", "new");
-          q = q.or(`status.neq.confirmed,source.is.null,${WEB_ORDER_SOURCE_FILTER},web_status.eq.complete`);
-        }
-        if (effective.source) q = q.eq("source", effective.source as never);
-        if (effective.courier) q = q.eq("courier_name", effective.courier);
-        if (effective.dateFrom) q = q.gte("created_at", effective.dateFrom);
-        if (effective.dateTo) q = q.lte("created_at", effective.dateTo);
-        if (effective.search.trim()) {
-          const s = effective.search.trim();
-          q = q.or(
-            `shipping_name.ilike.%${s}%,shipping_phone.ilike.%${s}%,guest_name.ilike.%${s}%,guest_phone.ilike.%${s}%,tracking_number.ilike.%${s}%`,
-          );
-        }
+        q = applyOrdersFilter(q, { ...effective, ids: null } as OrdersFilter);
         const from = page * pageSize;
         const to = from + pageSize - 1;
         const { data, error } = await q.range(from, to);
