@@ -43,6 +43,7 @@ export function NetProfitCard({
   brandIds, enabled, range,
 }: { brandIds: string[]; enabled: boolean; range: Range }) {
   const [open, setOpen] = useState(true);
+  const [drill, setDrill] = useState(false);
   const { data: fx } = useUsdBdtRate(brandIds);
   const { data, isLoading } = useQuery({
     queryKey: ["dash-net-profit", brandIds.join(","), range.from.toISOString(), range.to.toISOString(), fx ?? 0],
