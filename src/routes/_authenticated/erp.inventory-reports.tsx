@@ -25,6 +25,7 @@ import {
   getReorderSuggestions,
   updateReorderSuggestion,
 } from "@/lib/erp/inventory/reports.functions";
+import { StockAgingTab } from "@/components/erp/inventory/stock-aging-tab";
 
 export const Route = createFileRoute("/_authenticated/erp/inventory-reports")({
   head: () => ({ meta: [{ title: "Inventory Reports — ERP" }] }),
@@ -78,17 +79,19 @@ function InventoryReportsPage() {
         </Card>
       ) : (
         <Tabs defaultValue="valuation" className="space-y-5">
-          <TabsList className="h-11 p-1 bg-muted/60 backdrop-blur rounded-xl grid grid-cols-4 w-full max-w-2xl">
+          <TabsList className="h-11 p-1 bg-muted/60 backdrop-blur rounded-xl grid grid-cols-5 w-full max-w-3xl">
             <TabsTrigger value="valuation" className="rounded-lg data-[state=active]:shadow-sm"><Wallet className="h-3.5 w-3.5 mr-1.5" />Valuation</TabsTrigger>
             <TabsTrigger value="movement" className="rounded-lg data-[state=active]:shadow-sm"><History className="h-3.5 w-3.5 mr-1.5" />Movement</TabsTrigger>
             <TabsTrigger value="low-stock" className="rounded-lg data-[state=active]:shadow-sm"><AlertTriangle className="h-3.5 w-3.5 mr-1.5" />Low Stock</TabsTrigger>
             <TabsTrigger value="reorder" className="rounded-lg data-[state=active]:shadow-sm"><RefreshCw className="h-3.5 w-3.5 mr-1.5" />Reorder</TabsTrigger>
+            <TabsTrigger value="aging" className="rounded-lg data-[state=active]:shadow-sm"><Boxes className="h-3.5 w-3.5 mr-1.5" />Aging</TabsTrigger>
           </TabsList>
 
           <TabsContent value="valuation"><ValuationTab brandId={brandId} /></TabsContent>
           <TabsContent value="movement"><MovementTab brandId={brandId} /></TabsContent>
           <TabsContent value="low-stock"><LowStockTab brandId={brandId} /></TabsContent>
           <TabsContent value="reorder"><ReorderTab brandId={brandId} /></TabsContent>
+          <TabsContent value="aging"><StockAgingTab brandId={brandId} /></TabsContent>
         </Tabs>
       )}
     </div>
