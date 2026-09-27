@@ -232,49 +232,178 @@ export function NetProfitCard({
   const days = Math.max(1, range.days);
 
   return (
-    <Card className="overflow-hidden">
-      <CardHeader className="flex flex-row items-center justify-between pb-2">
-        <CardTitle className="text-base font-semibold flex items-center gap-2">
-          <PiggyBank className="size-4 text-emerald-600" /> Net Profit
-        </CardTitle>
-        <button onClick={() => setOpen(o => !o)} className="text-muted-foreground hover:text-foreground">
-          {open ? <ChevronUp className="size-4" /> : <ChevronDown className="size-4" />}
-        </button>
-      </CardHeader>
-      <CardContent>
-        {isLoading ? <Skeleton className="h-10 w-40" /> : (
-          <div className="flex items-baseline gap-3">
-            <span className={cn(
-              "text-3xl font-bold tabular-nums leading-none",
-              (data?.net ?? 0) >= 0 ? "text-emerald-600" : "text-rose-600",
-            )} style={{ fontFamily: "Sora, ui-sans-serif" }}>
-              {BDT(data?.net ?? 0)}
-            </span>
-            <span className={cn("text-sm font-semibold tabular-nums", (data?.margin ?? 0) >= 0 ? "text-emerald-600" : "text-rose-600")}>
-              {(data?.margin ?? 0).toFixed(1)}%
-            </span>
+    <>
+      <Card className="overflow-hidden">
+        <CardHeader className="flex flex-row items-center justify-between pb-2">
+          <CardTitle className="text-base font-semibold flex items-center gap-2">
+            <PiggyBank className="size-4 text-emerald-600" /> Net Profit
+          </CardTitle>
+          <div className="flex items-center gap-1">
+            <button
+              onClick={() => setDrill(true)}
+              className="inline-flex items-center gap-1 rounded-md px-2 py-1 text-[11px] font-medium text-emerald-700 hover:bg-emerald-50 transition-colors"
+            >
+              Breakdown <ArrowRight className="size-3" />
+            </button>
+            <button onClick={() => setOpen(o => !o)} className="text-muted-foreground hover:text-foreground">
+              {open ? <ChevronUp className="size-4" /> : <ChevronDown className="size-4" />}
+            </button>
           </div>
-        )}
-        {open && (
-          <div className="mt-4 space-y-1.5 text-xs">
-            {rows.map((r) => (
-              <div key={r.k} className="flex justify-between items-baseline border-b border-dashed border-border/40 pb-1 last:border-0">
-                <span className="text-muted-foreground">{r.sign < 0 && !r.missing ? "− " : ""}{r.k}
-                  {r.note && <span className="ml-1.5 text-[10px] text-amber-600">({r.note})</span>}
-                </span>
-                {r.missing ? (
-                  <span className="text-[11px] italic text-muted-foreground">no data</span>
-                ) : (
-                  <span className={cn("tabular-nums font-medium", r.sign < 0 && r.v !== 0 && "text-rose-600/80")}>
-                    {r.sign < 0 ? "−" : ""}{BDT(r.v)}
+        </CardHeader>
+        <CardContent>
+          {isLoading ? <Skeleton className="h-10 w-40" /> : (
+            <button onClick={() => setDrill(true)} className="flex items-baseline gap-3 text-left">
+              <span className={cn(
+                "text-3xl font-bold tabular-nums leading-none",
+                (data?.net ?? 0) >= 0 ? "text-emerald-600" : "text-rose-600",
+              )} style={{ fontFamily: "Sora, ui-sans-serif" }}>
+                {BDT(data?.net ?? 0)}
+              </span>
+              <span className={cn("text-sm font-semibold tabular-nums", (data?.margin ?? 0) >= 0 ? "text-emerald-600" : "text-rose-600")}>
+                {(data?.margin ?? 0).toFixed(1)}%
+              </span>
+            </button>
+          )}
+          {open && (
+            <div className="mt-4 space-y-1.5 text-xs">
+              {rows.map((r) => (
+                <button key={r.k} onClick={() => setDrill(true)} className="w-full flex justify-between items-baseline border-b border-dashed border-border/40 pb-1 last:border-0 hover:bg-muted/40 rounded-sm px-1 -mx-1 transition-colors">
+                  <span className="text-muted-foreground">{r.sign < 0 && !r.missing ? "− " : ""}{r.k}
+                    {r.note && <span className="ml-1.5 text-[10px] text-amber-600">({r.note})</span>}
                   </span>
-                )}
+                  {r.missing ? (
+                    <span className="text-[11px] italic text-muted-foreground">no data</span>
+                  ) : (
+                    <span className={cn("tabular-nums font-medium", r.sign < 0 && r.v !== 0 && "text-rose-600/80")}>
+                      {r.sign < 0 ? "−" : ""}{BDT(r.v)}
+                    </span>
+                  )}
+                </button>
+              ))}
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
+      <Sheet open={drill} onOpenChange={setDrill}>
+        <SheetContent className="w-full sm:max-w-lg overflow-y-auto">
+          <SheetHeader>
+            <SheetTitle className="flex items-center gap-2">
+              <PiggyBank className="size-4 text-emerald-600" /> Net Profit — Breakdown
+            </SheetTitle>
+            <SheetDescription>
+              {toLocalDate(range.from)} → {toLocalDate(range.to)} · {days} দিন · প্রতিটা টাকা কোথায় গেল
+            </SheetDescription>
+          </SheetHeader>
+
+          <div className="mt-5 space-y-6 px-4 pb-8">
+            {/* Profit ladder */}
+            <div>
+              <p className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground mb-2">Profit ladder</p>
+              <div className="space-y-2">
+                {rows.map((r) => {
+                  const share = data && data.revenue > 0 && !r.missing ? Math.min(100, (Math.abs(r.v) / data.revenue) * 100) : 0;
+                  return (
+                    <div key={r.k}>
+                      <div className="flex justify-between items-baseline text-xs">
+                        <span className="text-muted-foreground flex items-center gap-1.5">
+                          {r.k}
+                          <span className="group relative">
+                            <Info className="size-3 text-muted-foreground/50" />
+                            <span className="pointer-events-none absolute left-4 top-0 z-10 hidden w-52 rounded-md border bg-popover p-2 text-[10.5px] text-popover-foreground shadow-md group-hover:block">
+                              {r.hint}
+                            </span>
+                          </span>
+                        </span>
+                        {r.missing ? (
+                          <span className="text-[11px] italic text-muted-foreground">no data</span>
+                        ) : (
+                          <span className={cn("tabular-nums font-semibold", r.sign < 0 && r.v !== 0 ? "text-rose-600" : "text-foreground")}>
+                            {r.sign < 0 ? "−" : ""}{BDT(r.v)}
+                            <span className="ml-1.5 text-[10px] font-normal text-muted-foreground">{share.toFixed(0)}%</span>
+                          </span>
+                        )}
+                      </div>
+                      {!r.missing && (
+                        <div className="mt-1 h-1.5 rounded-full bg-muted overflow-hidden">
+                          <div
+                            className={cn("h-full rounded-full", r.sign > 0 ? "bg-emerald-500" : "bg-rose-400")}
+                            style={{ width: `${share}%` }}
+                          />
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
+                <div className="flex justify-between items-baseline border-t pt-2 text-sm">
+                  <span className="font-semibold">Net Profit</span>
+                  <span className={cn("tabular-nums font-bold", (data?.net ?? 0) >= 0 ? "text-emerald-600" : "text-rose-600")}>
+                    {BDT(data?.net ?? 0)} <span className="text-[11px] font-normal text-muted-foreground">({(data?.margin ?? 0).toFixed(1)}%)</span>
+                  </span>
+                </div>
               </div>
-            ))}
+            </div>
+
+            {/* Per-day averages */}
+            <div>
+              <p className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground mb-2">প্রতিদিন গড়</p>
+              <div className="grid grid-cols-2 gap-2">
+                {[
+                  { k: "Revenue / দিন", v: (data?.revenue ?? 0) / days },
+                  { k: "Product cost / দিন", v: (data?.cogs ?? 0) / days },
+                  { k: "Courier / দিন", v: (data?.courier ?? 0) / days },
+                  { k: "Ad spend / দিন", v: (data?.adSpend ?? 0) / days },
+                ].map((x) => (
+                  <div key={x.k} className="rounded-lg border p-2.5">
+                    <p className="text-[10.5px] text-muted-foreground">{x.k}</p>
+                    <p className="text-sm font-semibold tabular-nums mt-0.5">{BDT(x.v)}</p>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* Top products by cost */}
+            <div>
+              <p className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground mb-2">Top 5 product — সবচেয়ে বেশি cost</p>
+              {detailLoading ? <Skeleton className="h-24 w-full" /> : (detail?.topProducts.length ?? 0) === 0 ? (
+                <EmptyLine text="এই range-এ কোনো product cost data নেই" />
+              ) : (
+                <div className="space-y-1.5">
+                  {detail!.topProducts.map((p, i) => (
+                    <div key={i} className="flex justify-between items-baseline text-xs border-b border-dashed border-border/40 pb-1 last:border-0">
+                      <span className="truncate max-w-[60%] text-muted-foreground">{p.name} <span className="text-[10px]">× {p.qty}</span></span>
+                      <span className="tabular-nums font-medium">{BDT(p.cost)}</span>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            {/* Top campaigns by spend */}
+            <div>
+              <p className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground mb-2">Top 5 campaign — সবচেয়ে বেশি ad spend</p>
+              {detailLoading ? <Skeleton className="h-24 w-full" /> : (detail?.topCampaigns.length ?? 0) === 0 ? (
+                <EmptyLine text="এই range-এ কোনো ad spend নেই" />
+              ) : (
+                <div className="space-y-1.5">
+                  {detail!.topCampaigns.map((c, i) => (
+                    <div key={i} className="flex justify-between items-baseline text-xs border-b border-dashed border-border/40 pb-1 last:border-0">
+                      <span className="truncate max-w-[60%] text-muted-foreground">{c.name}</span>
+                      <span className="tabular-nums font-medium">{BDT(c.spend)}</span>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            <p className="text-[10.5px] text-muted-foreground/70 leading-relaxed border-t pt-3">
+              Formula: Revenue − Product Cost − Courier − Packaging − Ad Spend − Return/Exchange Loss।
+              new/cancelled/returned order বাদ। Ad spend-এ FIFO ডলার rate ব্যবহার হয়।
+            </p>
           </div>
-        )}
-      </CardContent>
-    </Card>
+        </SheetContent>
+      </Sheet>
+    </>
   );
 }
 
