@@ -12,7 +12,8 @@
 - [x] 9. HR leaves Asia/Dhaka dates
 - [x] 10. Order filter logic shared (export pre_order)
 - [x] 11. Orders list error state
-- [ ] 12-19. Stock aging, supplier scorecard, leave balance, payroll audit, cohort/LTV, abandoned cart auto, bulk assign, global SLA alert
+- [x] 12-15. Stock aging, supplier scorecard, leave balance, payroll audit
+- [ ] 16-19. cohort/LTV, abandoned cart auto, bulk assign, global SLA alert
 - [ ] 20-23. Admin-check helper, route error boundaries, monolith split, shared realtime hook
 
 ## Campaign Profit Truth — open

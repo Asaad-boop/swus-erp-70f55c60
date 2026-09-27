@@ -12,7 +12,8 @@ import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { HrEmpty, HrPageHeader, TableSkeleton, hrRow, statusTone } from "@/components/erp/hr/hr-shell";
-import { PalmtreeIcon, Plus, Check, X, Trash2 } from "lucide-react";
+import { PalmtreeIcon, Plus, Check, X, Trash2, AlertTriangle } from "lucide-react";
+import { dhakaToday } from "@/lib/erp/hr/date";
 
 export const Route = createFileRoute("/_authenticated/erp/hr/leaves")({
   component: LeavesPage,
@@ -66,6 +67,30 @@ function LeavesPage() {
 
   const empName = (id: string) => data?.employees.find((e) => e.id === id)?.full_name ?? "—";
   const typeName = (id: string | null) => data?.types.find((t) => t.id === id)?.name ?? "—";
+
+  /** Leave days used this (Dhaka) year for an employee + type; approved and pending counted separately. */
+  const year = dhakaToday().slice(0, 4);
+  const usage = (empId: string, typeId: string, excludeId?: string) => {
+    let approved = 0;
+    let pending = 0;
+    for (const l of data?.leaves ?? []) {
+      if (l.id === excludeId || l.employee_id !== empId || l.leave_type_id !== typeId) continue;
+      if (String(l.start_date).slice(0, 4) !== year) continue;
+      if (l.status === "approved") approved += Number(l.days) || 0;
+      else if (l.status === "pending") pending += Number(l.days) || 0;
+    }
+    return { approved, pending };
+  };
+  const allowance = (typeId: string) => Number(data?.types.find((t) => t.id === typeId)?.days_per_year ?? 0);
+  const formDays = daysBetween(form.start_date, form.end_date);
+  const formBal =
+    form.employee_id && form.leave_type_id && allowance(form.leave_type_id) > 0
+      ? (() => {
+          const u = usage(form.employee_id, form.leave_type_id);
+          const total = allowance(form.leave_type_id);
+          return { total, ...u, left: total - u.approved, over: u.approved + u.pending + formDays > total };
+        })()
+      : null;
 
   const create = useMutation({
     mutationFn: async () => {
@@ -158,11 +183,20 @@ function LeavesPage() {
   });
 
   const addType = useMutation({
-    mutationFn: async (name: string) => {
-      const { error } = await supabase.from("hr_leave_types").insert({ name });
+    mutationFn: async ({ name, days }: { name: string; days: number }) => {
+      const { error } = await supabase.from("hr_leave_types").insert({ name, days_per_year: days });
       if (error) throw new Error(error.message);
     },
     onSuccess: () => void qc.invalidateQueries({ queryKey: ["hr-leaves"] }),
+    onError: (e: Error) => toast.error(e.message),
+  });
+
+  const setTypeDays = useMutation({
+    mutationFn: async ({ id, days }: { id: string; days: number }) => {
+      const { error } = await supabase.from("hr_leave_types").update({ days_per_year: days }).eq("id", id);
+      if (error) throw new Error(error.message);
+    },
+    onSuccess: () => { toast.success("Yearly days update hoyeche"); void qc.invalidateQueries({ queryKey: ["hr-leaves"] }); },
     onError: (e: Error) => toast.error(e.message),
   });
 
@@ -181,7 +215,9 @@ function LeavesPage() {
               variant="outline"
               onClick={() => {
                 const name = window.prompt("Leave type name? (e.g. Casual, Sick)");
-                if (name?.trim()) addType.mutate(name.trim());
+                if (!name?.trim()) return;
+                const days = Number(window.prompt("Bochore koto din? (0 = limit nei)", "10") ?? 0) || 0;
+                addType.mutate({ name: name.trim(), days });
               }}
             >
               + Leave type
@@ -192,6 +228,25 @@ function LeavesPage() {
           </>
         }
       />
+
+      {(data?.types ?? []).length > 0 && (
+        <div className="flex flex-wrap items-center gap-1.5 text-xs">
+          <span className="text-muted-foreground">Yearly allowance ({year}):</span>
+          {(data?.types ?? []).map((t) => (
+            <button
+              key={t.id}
+              title="Click kore bochore koto din set korun"
+              onClick={() => {
+                const v = window.prompt(`${t.name} — bochore koto din? (0 = limit nei)`, String(Number(t.days_per_year ?? 0)));
+                if (v !== null) setTypeDays.mutate({ id: t.id, days: Number(v) || 0 });
+              }}
+              className="rounded-md border border-border/70 px-2 py-1 transition-colors hover:bg-muted"
+            >
+              {t.name}: <span className="font-semibold tabular-nums">{Number(t.days_per_year ?? 0) || "∞"}</span>
+            </button>
+          ))}
+        </div>
+      )}
 
       <div className="flex flex-wrap gap-1.5">
         {["pending", "approved", "rejected", "cancelled", "all"].map((t) => (
@@ -237,7 +292,14 @@ function LeavesPage() {
                       <td className="p-2.5 font-medium">{empName(l.employee_id)}</td>
                       <td className="p-2.5">{typeName(l.leave_type_id)}</td>
                       <td className="p-2.5 text-[12px]">{l.start_date} → {l.end_date}</td>
-                      <td className="p-2.5 text-right tabular-nums">{Number(l.days)}</td>
+                      <td className="p-2.5 text-right tabular-nums">
+                        {Number(l.days)}
+                        {l.leave_type_id && allowance(l.leave_type_id) > 0 && (
+                          <div className="text-[10px] text-muted-foreground">
+                            {Math.max(0, allowance(l.leave_type_id) - usage(l.employee_id, l.leave_type_id).approved)} left
+                          </div>
+                        )}
+                      </td>
                       <td className="p-2.5 max-w-[240px] truncate text-muted-foreground">{l.reason ?? "—"}</td>
                       <td className="p-2.5"><Badge variant="outline" className={statusTone[l.status] ?? ""}>{l.status}</Badge></td>
                       <td className="p-2.5">
@@ -304,7 +366,22 @@ function LeavesPage() {
                 <Input type="date" value={form.end_date} onChange={(e) => setForm({ ...form, end_date: e.target.value })} />
               </div>
             </div>
-            <p className="text-xs text-muted-foreground">Total: {daysBetween(form.start_date, form.end_date)} day(s)</p>
+            <p className="text-xs text-muted-foreground">Total: {formDays} day(s)</p>
+            {formBal && (
+              <div className={`rounded-md border px-3 py-2 text-xs ${formBal.over ? "border-destructive/40 bg-destructive/10 text-destructive" : "border-border/70 bg-muted/40"}`}>
+                <div className="flex flex-wrap gap-x-3 tabular-nums">
+                  <span>Bochore: <b>{formBal.total}</b></span>
+                  <span>Niyeche: <b>{formBal.approved}</b></span>
+                  {formBal.pending > 0 && <span>Pending: <b>{formBal.pending}</b></span>}
+                  <span>Baki: <b>{Math.max(0, formBal.left)}</b></span>
+                </div>
+                {formBal.over && (
+                  <div className="mt-1 flex items-center gap-1 font-medium">
+                    <AlertTriangle className="h-3.5 w-3.5" /> Ei request dile limit er beshi hoye jabe
+                  </div>
+                )}
+              </div>
+            )}
             <div className="space-y-1.5">
               <Label className="text-xs text-muted-foreground">Reason</Label>
               <Textarea rows={2} value={form.reason} onChange={(e) => setForm({ ...form, reason: e.target.value })} />

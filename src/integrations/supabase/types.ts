@@ -4827,6 +4827,39 @@ export type Database = {
           },
         ]
       }
+      hr_payroll_audit: {
+        Row: {
+          action: string
+          changed_at: string
+          changed_by: string | null
+          changes: Json
+          id: string
+          row_id: string
+          run_id: string | null
+          table_name: string
+        }
+        Insert: {
+          action: string
+          changed_at?: string
+          changed_by?: string | null
+          changes?: Json
+          id?: string
+          row_id: string
+          run_id?: string | null
+          table_name: string
+        }
+        Update: {
+          action?: string
+          changed_at?: string
+          changed_by?: string | null
+          changes?: Json
+          id?: string
+          row_id?: string
+          run_id?: string | null
+          table_name?: string
+        }
+        Relationships: []
+      }
       hr_payroll_runs: {
         Row: {
           account_id: string | null
