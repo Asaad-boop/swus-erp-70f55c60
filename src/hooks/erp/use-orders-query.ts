@@ -26,21 +26,28 @@ const BUCKET_PREFILTER: Partial<Record<CourierBucket, string[]>> = {
 
 /** Resolve the set of order ids whose latest shipment falls in `bucket`. */
 async function orderIdsForCourierBucket(bucket: CourierBucket): Promise<string[]> {
-  let q = supabase
-    .from("courier_shipments")
-    .select("order_id,status,updated_at")
-    .order("updated_at", { ascending: false })
-    .limit(20000);
   const patterns = BUCKET_PREFILTER[bucket];
-  if (patterns) q = q.or(patterns.map((p) => `status.ilike.${p}`).join(","));
-  const { data, error } = await q;
-  if (error) throw error;
   const seen = new Set<string>();
   const out: string[] = [];
-  for (const r of (data ?? []) as { order_id: string; status: string | null }[]) {
-    if (!r.order_id || seen.has(r.order_id)) continue;
-    seen.add(r.order_id);
-    if (normalizeCourierStatus(r.status) === bucket) out.push(r.order_id);
+  // Page through ALL matching shipments (server caps each response at 1000 rows)
+  const PAGE = 1000;
+  for (let from = 0; from < 200_000; from += PAGE) {
+    let q = supabase
+      .from("courier_shipments")
+      .select("order_id,status,updated_at")
+      .order("updated_at", { ascending: false })
+      .order("id", { ascending: true })
+      .range(from, from + PAGE - 1);
+    if (patterns) q = q.or(patterns.map((p) => `status.ilike.${p}`).join(","));
+    const { data, error } = await q;
+    if (error) throw error;
+    const rows = (data ?? []) as { order_id: string; status: string | null }[];
+    for (const r of rows) {
+      if (!r.order_id || seen.has(r.order_id)) continue;
+      seen.add(r.order_id);
+      if (normalizeCourierStatus(r.status) === bucket) out.push(r.order_id);
+    }
+    if (rows.length < PAGE) break;
   }
   return out;
 }
