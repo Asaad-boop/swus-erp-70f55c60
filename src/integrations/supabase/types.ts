@@ -13735,6 +13735,21 @@ export type Database = {
         }[]
       }
       inv_reserve_status: { Args: { _brand_id?: string }; Returns: Json }
+      inv_stock_aging: {
+        Args: { p_brand_ids: string[] }
+        Returns: {
+          brand_id: string
+          bucket: string
+          days_idle: number
+          last_sold_at: string
+          product_id: string
+          sku: string
+          stock: number
+          stock_value: number
+          title: string
+          unit_cost: number
+        }[]
+      }
       inv_take_snapshot: {
         Args: { _label: string; _note?: string }
         Returns: string
@@ -15438,6 +15453,20 @@ export type Database = {
       snapshot_order_item_profit_fields: {
         Args: { _order_id: string }
         Returns: undefined
+      }
+      supplier_scorecard: {
+        Args: { p_brand_ids: string[] }
+        Returns: {
+          avg_lead_days: number
+          due_bdt: number
+          late_count: number
+          name: string
+          open_count: number
+          po_count: number
+          score: string
+          supplier_id: string
+          total_bdt: number
+        }[]
       }
       track_order_public: {
         Args: { _order_prefix: string; _phone: string }
