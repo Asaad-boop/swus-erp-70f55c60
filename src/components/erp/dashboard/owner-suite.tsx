@@ -17,6 +17,7 @@ import {
 } from "recharts";
 import { supabase } from "@/integrations/supabase/client";
 import { applyBrandScope } from "@/lib/erp/apply-brand-scope";
+import { fetchAllRows } from "@/lib/erp/fetch-all";
 import { useUsdBdtRate } from "@/hooks/erp/use-fx-rate";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -77,23 +78,26 @@ function Chip({ v, invert }: { v: number; invert?: boolean }) {
 ============================================================ */
 async function fetchPnl(brandIds: string[], from: Date, to: Date, fx: number | undefined) {
   const fromISO = from.toISOString(), toISO = to.toISOString();
-  const [ord, items, ads] = await Promise.all([
-    applyBrandScope(supabase.from("orders").select("total, created_at, status, actual_shipping_cost"), brandIds)
-      .not("status", "in", EXCLUDED).gte("created_at", fromISO).lte("created_at", toISO),
-    applyBrandScope(
-      supabase.from("order_items").select(
-        "product_id, quantity, unit_cost_snapshot, courier_cost_allocated, packaging_cost_allocated, orders!inner(brand_id,status,created_at)",
-      ), brandIds, "orders.brand_id" as any,
-    ).not("orders.status", "in", EXCLUDED).gte("orders.created_at", fromISO).lte("orders.created_at", toISO),
+  const [rows, itemRows, ads] = await Promise.all([
+    fetchAllRows((f, t) =>
+      applyBrandScope(supabase.from("orders").select("total, created_at, status, actual_shipping_cost"), brandIds)
+        .not("status", "in", EXCLUDED).gte("created_at", fromISO).lte("created_at", toISO)
+        .order("created_at", { ascending: true }).range(f, t),
+    ),
+    fetchAllRows((f, t) =>
+      applyBrandScope(
+        supabase.from("order_items").select(
+          "product_id, quantity, unit_cost_snapshot, courier_cost_allocated, packaging_cost_allocated, orders!inner(brand_id,status,created_at)",
+        ), brandIds, "orders.brand_id" as any,
+      ).not("orders.status", "in", EXCLUDED).gte("orders.created_at", fromISO).lte("orders.created_at", toISO)
+        .range(f, t),
+    ),
     applyBrandScope(supabase.from("mkt_insights_daily").select("date, spend, spend_bdt_fifo"), brandIds)
       .gte("date", localDate(from)).lte("date", localDate(to)),
   ]);
-
-  const rows = (ord.data ?? []) as any[];
   const revenue = rows.reduce((s, r) => s + Number(r.total ?? 0), 0);
   const orders = rows.length;
 
-  const itemRows = (items.data ?? []) as any[];
   const missing = Array.from(new Set(itemRows.filter(r => !(Number(r.unit_cost_snapshot ?? 0) > 0) && r.product_id).map(r => r.product_id)));
   const fallback = new Map<string, number>();
   if (missing.length) {
@@ -531,16 +535,17 @@ export function MarketingPerformance({ brandIds, enabled, range }: P) {
     staleTime: 60_000,
     queryFn: async () => {
       const fromISO = range.from.toISOString(), toISO = range.to.toISOString();
-      const [ads, orders] = await Promise.all([
+      const [ads, rows] = await Promise.all([
         applyBrandScope(supabase.from("mkt_insights_daily").select("spend, spend_bdt_fifo, meta_purchase_value, meta_purchases"), brandIds)
           .gte("date", localDate(range.from)).lte("date", localDate(range.to)),
-        applyBrandScope(supabase.from("orders").select("total, source, utm_source"), brandIds)
-          .not("status", "in", EXCLUDED).gte("created_at", fromISO).lte("created_at", toISO),
+        fetchAllRows((f, t) =>
+          applyBrandScope(supabase.from("orders").select("total, source, utm_source"), brandIds)
+            .not("status", "in", EXCLUDED).gte("created_at", fromISO).lte("created_at", toISO)
+            .order("created_at", { ascending: true }).range(f, t),
+        ),
       ]);
       let spend = 0;
       for (const r of (ads.data ?? []) as any[]) spend += Number(r.spend_bdt_fifo ?? 0) || (fx ? Number(r.spend ?? 0) * fx : 0);
-
-      const rows = (orders.data ?? []) as any[];
       const revenue = rows.reduce((s, r) => s + Number(r.total ?? 0), 0);
       const isPaid = (r: any) => {
         const u = String(r.utm_source ?? "").toLowerCase();
