@@ -86,12 +86,11 @@ export function NetProfitCard({
           .gte("created_at", fromISO).lte("created_at", toISO),
       ]);
 
-      const revenue = (rev.data ?? []).reduce((s: number, r: any) => s + Number(r.total ?? 0), 0);
-      const shipFallback = (rev.data ?? []).reduce((s: number, r: any) => s + Number(r.actual_shipping_cost ?? 0), 0);
-      const revenueMissing = (rev.data ?? []).length === 0;
+      const revenue = revRows.reduce((s: number, r: any) => s + Number(r.total ?? 0), 0);
+      const shipFallback = revRows.reduce((s: number, r: any) => s + Number(r.actual_shipping_cost ?? 0), 0);
+      const revenueMissing = revRows.length === 0;
 
       // Fallback: unit_cost_snapshot 0/null hole product-er WAC ba cost_price theke neya
-      const itemsArr = (items.data ?? []) as any[];
       const missingCostPids = Array.from(new Set(
         itemsArr.filter((r) => !(Number(r.unit_cost_snapshot ?? 0) > 0) && r.product_id).map((r) => r.product_id as string)
       ));
