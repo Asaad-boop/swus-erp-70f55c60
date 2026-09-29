@@ -9,6 +9,7 @@ export type ComboAccount = {
   id: string;
   name: string;
   account_type?: string | null;
+  account_subtype?: string | null;
   current_balance?: number | string | null;
   brand_id?: string | null;
 };
@@ -44,6 +45,7 @@ const TYPE_TONE: Record<string, string> = {
   card: "bg-violet-500/10 text-violet-600 dark:text-violet-400",
 };
 const toneFor = (t?: string | null) => TYPE_TONE[(t ?? "other").toLowerCase()] ?? "bg-muted text-muted-foreground";
+const displayType = (account: ComboAccount) => account.account_subtype ?? account.account_type ?? "other";
 
 export function AccountCombobox({
   accounts,
@@ -73,15 +75,16 @@ export function AccountCombobox({
       if (!needle) return true;
       return (
         a.name.toLowerCase().includes(needle) ||
-        (a.account_type ?? "").toLowerCase().includes(needle) ||
+        displayType(a).toLowerCase().includes(needle) ||
         (brandNames?.[a.brand_id ?? ""] ?? "").toLowerCase().includes(needle)
       );
     });
     const map = new Map<string, ComboAccount[]>();
     filtered.forEach((a) => {
-      const k = (a.account_type ?? "other").toLowerCase();
+      const k = displayType(a).toLowerCase();
       if (!map.has(k)) map.set(k, []);
-      map.get(k)!.push(a);
+      const list = map.get(k);
+      if (list) list.push(a);
     });
     return Array.from(map.entries()).sort((a, b) => a[0].localeCompare(b[0]));
   }, [accounts, q, brandNames]);
@@ -106,12 +109,12 @@ export function AccountCombobox({
         >
           {selected ? (
             <span className="flex items-center gap-2.5 min-w-0">
-              <SelectedIcon type={selected.account_type} />
+              <SelectedIcon type={displayType(selected)} />
               <span className="flex flex-col items-start min-w-0 leading-tight">
                 <span className="text-sm font-semibold truncate max-w-[220px]">{selected.name}</span>
                 <span className="text-[11px] text-muted-foreground truncate max-w-[220px]">
-                  {(selected.account_type ?? "other").toLowerCase()}
-                  {brandNames?.[selected.brand_id ?? ""] ? ` · ${brandNames[selected.brand_id!]}` : selected.brand_id ? "" : " · shared"}
+                  {displayType(selected).toLowerCase()}
+                  {brandNames?.[selected.brand_id ?? ""] ? ` · ${brandNames[selected.brand_id ?? ""]}` : selected.brand_id ? "" : " · shared"}
                 </span>
               </span>
               <span
@@ -153,7 +156,8 @@ export function AccountCombobox({
                 {type} <span className="opacity-60">({list.length})</span>
               </div>
               {list.map((a) => {
-                const Icon = typeIcon(a.account_type);
+                const accountType = displayType(a);
+                const Icon = typeIcon(accountType);
                 const bal = Number(a.current_balance ?? 0);
                 const short = requiredAmount > 0 && bal < requiredAmount;
                 const isDup = (dupNames.get(a.name.toLowerCase()) ?? 0) > 1;
@@ -172,7 +176,7 @@ export function AccountCombobox({
                       value === a.id && "bg-primary/10",
                     )}
                   >
-                    <span className={cn("h-8 w-8 rounded-lg flex items-center justify-center shrink-0", toneFor(a.account_type))}>
+                    <span className={cn("h-8 w-8 rounded-lg flex items-center justify-center shrink-0", toneFor(accountType))}>
                       <Icon className="h-4 w-4" />
                     </span>
                     <span className="flex-1 min-w-0">
@@ -185,7 +189,7 @@ export function AccountCombobox({
                         )}
                       </span>
                       <span className="block text-[11px] text-muted-foreground truncate">
-                        {(a.account_type ?? "other").toLowerCase()}
+                        {accountType.toLowerCase()}
                         {brand ? ` · ${brand}` : !a.brand_id ? " · shared" : ""}
                       </span>
                     </span>
