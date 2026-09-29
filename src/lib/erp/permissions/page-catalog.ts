@@ -30,7 +30,6 @@ export const SECTION_ROOTS = new Set<string>([
   "/erp",
   "/erp/finance",
   "/erp/marketing",
-  "/erp/growth",
   "/erp/hr",
   "/erp/analytics",
   "/erp/orders",

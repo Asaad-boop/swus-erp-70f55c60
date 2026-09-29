@@ -39,7 +39,32 @@ import {
   type VariantMeta,
 } from "@/components/erp/imports/po-line-builder";
 import { PoReviewPanel } from "@/components/erp/imports/po-review";
-import { GrowthPageHeader } from "@/components/erp/growth/growth-shell";
+function GrowthPageHeader({
+  icon: Icon,
+  title,
+  subtitle,
+  actions,
+}: {
+  icon: React.ComponentType<{ className?: string }>;
+  title: string;
+  subtitle?: React.ReactNode;
+  actions?: React.ReactNode;
+}) {
+  return (
+    <div className="flex flex-wrap items-center justify-between gap-3">
+      <div className="flex items-center gap-3">
+        <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-primary/10 text-primary">
+          <Icon className="h-5 w-5" />
+        </div>
+        <div>
+          <h1 className="text-lg font-semibold tracking-tight">{title}</h1>
+          {subtitle && <p className="text-xs text-muted-foreground">{subtitle}</p>}
+        </div>
+      </div>
+      {actions && <div className="flex flex-wrap items-center gap-2">{actions}</div>}
+    </div>
+  );
+}
 import { IdeaGallery, StarRating } from "@/components/erp/hub/idea-visuals";
 import {
   deriveStage,
