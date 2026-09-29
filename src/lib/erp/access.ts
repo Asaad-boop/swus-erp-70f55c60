@@ -111,12 +111,6 @@ const PATH_RULES: { test: (p: string) => boolean; module: Module }[] = [
   },
   { test: (p) => p.startsWith("/erp/finance"), module: "finance" },
   { test: (p) => p.startsWith("/erp/marketing"), module: "marketing" },
-  { test: (p) => p.startsWith("/erp/growth"), module: "marketing" },
-  {
-    test: (p) =>
-      p.startsWith("/erp/content") || p.startsWith("/erp/hub") || p.startsWith("/erp/extension"),
-    module: "marketing",
-  },
   { test: (p) => p.startsWith("/erp/crm"), module: "crm" },
   { test: (p) => p.startsWith("/erp/hr"), module: "hr" },
   { test: (p) => p.startsWith("/erp/analytics"), module: "analytics" },
