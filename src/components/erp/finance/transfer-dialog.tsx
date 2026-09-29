@@ -9,6 +9,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { AccountCombobox } from "@/components/erp/finance/account-combobox";
 import { fmtBdt, type Account } from "@/lib/erp/finance";
 import type { Brand } from "@/contexts/brand-context";
 
@@ -118,26 +119,28 @@ export function TransferDialog({ open, onClose, brandId, accounts, defaultFromId
           )}
           <div>
             <Label>From account</Label>
-            <Select value={fromId} onValueChange={setFromId} disabled={!canPick}>
-              <SelectTrigger><SelectValue placeholder="Select source" /></SelectTrigger>
-              <SelectContent>
-                {scopedAccounts.map((a) => (
-                  <SelectItem key={a.id} value={a.id}>{a.name} · {fmtBdt(a.current_balance)}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+            <AccountCombobox
+              accounts={scopedAccounts}
+              value={fromId}
+              onChange={(id) => {
+                setFromId(id);
+                if (id === toId) setToId("");
+              }}
+              requiredAmount={amt}
+              placeholder="Select source account"
+              disabled={!canPick}
+            />
           </div>
           <div className="flex justify-center text-muted-foreground"><ArrowRight className="h-4 w-4" /></div>
           <div>
             <Label>To account</Label>
-            <Select value={toId} onValueChange={setToId} disabled={!canPick}>
-              <SelectTrigger><SelectValue placeholder="Select destination" /></SelectTrigger>
-              <SelectContent>
-                {scopedAccounts.filter((a) => a.id !== fromId).map((a) => (
-                  <SelectItem key={a.id} value={a.id}>{a.name} · {fmtBdt(a.current_balance)}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+            <AccountCombobox
+              accounts={scopedAccounts.filter((a) => a.id !== fromId)}
+              value={toId}
+              onChange={setToId}
+              placeholder="Select destination account"
+              disabled={!canPick}
+            />
           </div>
           <div className="grid grid-cols-2 gap-3">
             <div>
