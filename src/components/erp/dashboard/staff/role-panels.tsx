@@ -113,42 +113,6 @@ function PackerPanel({ brandIds, userId }: { brandIds: string[]; userId: string 
   );
 }
 
-/** Content team queue. */
-function ContentPanel({ brandIds }: { brandIds: string[] }) {
-  const q = useQuery({
-    queryKey: ["staff-content", brandIds.join(",")],
-    staleTime: 60_000,
-    queryFn: async () => {
-      const count = async (statuses: string[]) => {
-        const base = applyBrandScope(
-          supabase.from("content_items").select("id", { count: "exact", head: true }) as any,
-          brandIds,
-        );
-        const { count: c } = await base.in("status", statuses);
-        return c ?? 0;
-      };
-      const [idea, production, review] = await Promise.all([
-        count(["idea", "planned", "brief"]),
-        count(["shooting", "editing", "in_progress"]),
-        count(["review", "ready"]),
-      ]);
-      return { idea, production, review };
-    },
-  });
-  return (
-    <Panel
-      title="Content queue"
-      icon={ClipboardList}
-      loading={q.isLoading}
-      items={[
-        { label: "Planned / brief", value: q.data?.idea ?? 0, to: "/erp/content" },
-        { label: "In production", value: q.data?.production ?? 0, to: "/erp/content" },
-        { label: "Review / ready", value: q.data?.review ?? 0, to: "/erp/content" },
-      ]}
-    />
-  );
-}
-
 /** Cargo agent queue. */
 function CargoPanel() {
   const q = useQuery({
