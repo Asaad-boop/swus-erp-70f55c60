@@ -30,7 +30,6 @@ export const SECTION_ROOTS = new Set<string>([
   "/erp",
   "/erp/finance",
   "/erp/marketing",
-  "/erp/growth",
   "/erp/hr",
   "/erp/analytics",
   "/erp/orders",
@@ -107,20 +106,6 @@ const HIDDEN_PAGES: Omit<PageEntry, "exact">[] = [
     section: "Supply Chain",
     path: "/erp/imports/settings",
     label: "Import Settings",
-    hidden: true,
-  },
-  {
-    group: "Growth",
-    section: "Growth Studio",
-    path: "/erp/hub",
-    label: "Growth Hub (legacy)",
-    hidden: true,
-  },
-  {
-    group: "Growth",
-    section: "Growth Studio",
-    path: "/erp/content",
-    label: "Content Studio (legacy)",
     hidden: true,
   },
   {

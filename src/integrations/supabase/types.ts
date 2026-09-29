@@ -12379,6 +12379,833 @@ export type Database = {
           },
         ]
       }
+      work_activity_events: {
+        Row: {
+          actor_id: string | null
+          brand_id: string | null
+          created_at: string
+          event_type: string
+          id: string
+          meta: Json
+          object_id: string | null
+          object_type: string
+          project_id: string | null
+          summary: string
+        }
+        Insert: {
+          actor_id?: string | null
+          brand_id?: string | null
+          created_at?: string
+          event_type: string
+          id?: string
+          meta?: Json
+          object_id?: string | null
+          object_type: string
+          project_id?: string | null
+          summary: string
+        }
+        Update: {
+          actor_id?: string | null
+          brand_id?: string | null
+          created_at?: string
+          event_type?: string
+          id?: string
+          meta?: Json
+          object_id?: string | null
+          object_type?: string
+          project_id?: string | null
+          summary?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "work_activity_events_brand_id_fkey"
+            columns: ["brand_id"]
+            isOneToOne: false
+            referencedRelation: "brands"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "work_activity_events_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "work_projects"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      work_brainstorm_boards: {
+        Row: {
+          brand_id: string | null
+          created_at: string
+          created_by: string | null
+          description: string | null
+          id: string
+          project_id: string | null
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          brand_id?: string | null
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          id?: string
+          project_id?: string | null
+          title: string
+          updated_at?: string
+        }
+        Update: {
+          brand_id?: string | null
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          id?: string
+          project_id?: string | null
+          title?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "work_brainstorm_boards_brand_id_fkey"
+            columns: ["brand_id"]
+            isOneToOne: false
+            referencedRelation: "brands"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "work_brainstorm_boards_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "work_projects"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      work_brainstorm_cards: {
+        Row: {
+          board_id: string
+          converted_to_id: string | null
+          converted_to_type: string | null
+          created_at: string
+          created_by: string | null
+          id: string
+          link: string | null
+          note: string | null
+          position: number
+          section: string
+          tags: string[]
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          board_id: string
+          converted_to_id?: string | null
+          converted_to_type?: string | null
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          link?: string | null
+          note?: string | null
+          position?: number
+          section?: string
+          tags?: string[]
+          title: string
+          updated_at?: string
+        }
+        Update: {
+          board_id?: string
+          converted_to_id?: string | null
+          converted_to_type?: string | null
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          link?: string | null
+          note?: string | null
+          position?: number
+          section?: string
+          tags?: string[]
+          title?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "work_brainstorm_cards_board_id_fkey"
+            columns: ["board_id"]
+            isOneToOne: false
+            referencedRelation: "work_brainstorm_boards"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      work_content_items: {
+        Row: {
+          angle: string | null
+          brand_id: string | null
+          caption: string | null
+          content_type: string | null
+          created_at: string
+          created_by: string | null
+          creator_id: string | null
+          cta: string | null
+          editor_id: string | null
+          hook: string | null
+          id: string
+          notes: string | null
+          platform: string | null
+          position: number
+          priority: string
+          product_id: string | null
+          project_id: string | null
+          publish_date: string | null
+          reference_urls: string[]
+          reviewer_id: string | null
+          script: string | null
+          shot_list: string | null
+          stage: string
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          angle?: string | null
+          brand_id?: string | null
+          caption?: string | null
+          content_type?: string | null
+          created_at?: string
+          created_by?: string | null
+          creator_id?: string | null
+          cta?: string | null
+          editor_id?: string | null
+          hook?: string | null
+          id?: string
+          notes?: string | null
+          platform?: string | null
+          position?: number
+          priority?: string
+          product_id?: string | null
+          project_id?: string | null
+          publish_date?: string | null
+          reference_urls?: string[]
+          reviewer_id?: string | null
+          script?: string | null
+          shot_list?: string | null
+          stage?: string
+          title: string
+          updated_at?: string
+        }
+        Update: {
+          angle?: string | null
+          brand_id?: string | null
+          caption?: string | null
+          content_type?: string | null
+          created_at?: string
+          created_by?: string | null
+          creator_id?: string | null
+          cta?: string | null
+          editor_id?: string | null
+          hook?: string | null
+          id?: string
+          notes?: string | null
+          platform?: string | null
+          position?: number
+          priority?: string
+          product_id?: string | null
+          project_id?: string | null
+          publish_date?: string | null
+          reference_urls?: string[]
+          reviewer_id?: string | null
+          script?: string | null
+          shot_list?: string | null
+          stage?: string
+          title?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "work_content_items_brand_id_fkey"
+            columns: ["brand_id"]
+            isOneToOne: false
+            referencedRelation: "brands"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "work_content_items_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "inv_missing_cost"
+            referencedColumns: ["product_id"]
+          },
+          {
+            foreignKeyName: "work_content_items_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "products"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "work_content_items_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "v_combo_summary"
+            referencedColumns: ["combo_product_id"]
+          },
+          {
+            foreignKeyName: "work_content_items_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "v_inv_drift"
+            referencedColumns: ["product_id"]
+          },
+          {
+            foreignKeyName: "work_content_items_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "work_projects"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      work_daily_updates: {
+        Row: {
+          blocked: string | null
+          completed: string | null
+          created_at: string
+          id: string
+          next_focus: string | null
+          update_date: string
+          updated_at: string
+          user_id: string
+          working_on: string | null
+        }
+        Insert: {
+          blocked?: string | null
+          completed?: string | null
+          created_at?: string
+          id?: string
+          next_focus?: string | null
+          update_date?: string
+          updated_at?: string
+          user_id: string
+          working_on?: string | null
+        }
+        Update: {
+          blocked?: string | null
+          completed?: string | null
+          created_at?: string
+          id?: string
+          next_focus?: string | null
+          update_date?: string
+          updated_at?: string
+          user_id?: string
+          working_on?: string | null
+        }
+        Relationships: []
+      }
+      work_ideas: {
+        Row: {
+          brand_id: string | null
+          converted_to_id: string | null
+          converted_to_type: string | null
+          created_at: string
+          created_by: string | null
+          id: string
+          idea_type: string
+          link: string | null
+          note: string | null
+          project_id: string | null
+          status: string
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          brand_id?: string | null
+          converted_to_id?: string | null
+          converted_to_type?: string | null
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          idea_type?: string
+          link?: string | null
+          note?: string | null
+          project_id?: string | null
+          status?: string
+          title: string
+          updated_at?: string
+        }
+        Update: {
+          brand_id?: string | null
+          converted_to_id?: string | null
+          converted_to_type?: string | null
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          idea_type?: string
+          link?: string | null
+          note?: string | null
+          project_id?: string | null
+          status?: string
+          title?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "work_ideas_brand_id_fkey"
+            columns: ["brand_id"]
+            isOneToOne: false
+            referencedRelation: "brands"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "work_ideas_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "work_projects"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      work_notifications: {
+        Row: {
+          actor_id: string | null
+          body: string | null
+          created_at: string
+          event_type: string
+          id: string
+          is_read: boolean
+          object_id: string | null
+          object_type: string | null
+          title: string
+          user_id: string
+        }
+        Insert: {
+          actor_id?: string | null
+          body?: string | null
+          created_at?: string
+          event_type: string
+          id?: string
+          is_read?: boolean
+          object_id?: string | null
+          object_type?: string | null
+          title: string
+          user_id: string
+        }
+        Update: {
+          actor_id?: string | null
+          body?: string | null
+          created_at?: string
+          event_type?: string
+          id?: string
+          is_read?: boolean
+          object_id?: string | null
+          object_type?: string | null
+          title?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      work_project_members: {
+        Row: {
+          created_at: string
+          id: string
+          project_id: string
+          role: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          project_id: string
+          role?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          project_id?: string
+          role?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "work_project_members_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "work_projects"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      work_project_milestones: {
+        Row: {
+          created_at: string
+          id: string
+          is_done: boolean
+          position: number
+          project_id: string
+          target_date: string | null
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          is_done?: boolean
+          position?: number
+          project_id: string
+          target_date?: string | null
+          title: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          is_done?: boolean
+          position?: number
+          project_id?: string
+          target_date?: string | null
+          title?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "work_project_milestones_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "work_projects"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      work_projects: {
+        Row: {
+          brand_id: string | null
+          created_at: string
+          created_by: string | null
+          deadline: string | null
+          description: string | null
+          goal: string | null
+          id: string
+          name: string
+          owner_id: string | null
+          priority: string
+          progress: number
+          start_date: string | null
+          status: string
+          tags: string[]
+          updated_at: string
+        }
+        Insert: {
+          brand_id?: string | null
+          created_at?: string
+          created_by?: string | null
+          deadline?: string | null
+          description?: string | null
+          goal?: string | null
+          id?: string
+          name: string
+          owner_id?: string | null
+          priority?: string
+          progress?: number
+          start_date?: string | null
+          status?: string
+          tags?: string[]
+          updated_at?: string
+        }
+        Update: {
+          brand_id?: string | null
+          created_at?: string
+          created_by?: string | null
+          deadline?: string | null
+          description?: string | null
+          goal?: string | null
+          id?: string
+          name?: string
+          owner_id?: string | null
+          priority?: string
+          progress?: number
+          start_date?: string | null
+          status?: string
+          tags?: string[]
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "work_projects_brand_id_fkey"
+            columns: ["brand_id"]
+            isOneToOne: false
+            referencedRelation: "brands"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      work_task_checklist_items: {
+        Row: {
+          created_at: string
+          id: string
+          is_done: boolean
+          label: string
+          position: number
+          task_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          is_done?: boolean
+          label: string
+          position?: number
+          task_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          is_done?: boolean
+          label?: string
+          position?: number
+          task_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "work_task_checklist_items_task_id_fkey"
+            columns: ["task_id"]
+            isOneToOne: false
+            referencedRelation: "work_tasks"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      work_task_comments: {
+        Row: {
+          body: string
+          created_at: string
+          id: string
+          task_id: string
+          user_id: string
+        }
+        Insert: {
+          body: string
+          created_at?: string
+          id?: string
+          task_id: string
+          user_id: string
+        }
+        Update: {
+          body?: string
+          created_at?: string
+          id?: string
+          task_id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "work_task_comments_task_id_fkey"
+            columns: ["task_id"]
+            isOneToOne: false
+            referencedRelation: "work_tasks"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      work_task_dependencies: {
+        Row: {
+          created_at: string
+          depends_on_task_id: string
+          id: string
+          task_id: string
+        }
+        Insert: {
+          created_at?: string
+          depends_on_task_id: string
+          id?: string
+          task_id: string
+        }
+        Update: {
+          created_at?: string
+          depends_on_task_id?: string
+          id?: string
+          task_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "work_task_dependencies_depends_on_task_id_fkey"
+            columns: ["depends_on_task_id"]
+            isOneToOne: false
+            referencedRelation: "work_tasks"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "work_task_dependencies_task_id_fkey"
+            columns: ["task_id"]
+            isOneToOne: false
+            referencedRelation: "work_tasks"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      work_tasks: {
+        Row: {
+          assigned_to: string | null
+          blocked_reason: string | null
+          brand_id: string | null
+          completed_at: string | null
+          created_at: string
+          created_by: string | null
+          description: string | null
+          due_date: string | null
+          estimated_hours: number | null
+          id: string
+          priority: string
+          project_id: string | null
+          start_date: string | null
+          status: string
+          tags: string[]
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          assigned_to?: string | null
+          blocked_reason?: string | null
+          brand_id?: string | null
+          completed_at?: string | null
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          due_date?: string | null
+          estimated_hours?: number | null
+          id?: string
+          priority?: string
+          project_id?: string | null
+          start_date?: string | null
+          status?: string
+          tags?: string[]
+          title: string
+          updated_at?: string
+        }
+        Update: {
+          assigned_to?: string | null
+          blocked_reason?: string | null
+          brand_id?: string | null
+          completed_at?: string | null
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          due_date?: string | null
+          estimated_hours?: number | null
+          id?: string
+          priority?: string
+          project_id?: string | null
+          start_date?: string | null
+          status?: string
+          tags?: string[]
+          title?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "work_tasks_brand_id_fkey"
+            columns: ["brand_id"]
+            isOneToOne: false
+            referencedRelation: "brands"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "work_tasks_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "work_projects"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      work_user_focus_items: {
+        Row: {
+          created_at: string
+          focus_date: string
+          id: string
+          label: string | null
+          position: number
+          task_id: string | null
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          focus_date?: string
+          id?: string
+          label?: string | null
+          position?: number
+          task_id?: string | null
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          focus_date?: string
+          id?: string
+          label?: string | null
+          position?: number
+          task_id?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "work_user_focus_items_task_id_fkey"
+            columns: ["task_id"]
+            isOneToOne: false
+            referencedRelation: "work_tasks"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      work_weekly_plans: {
+        Row: {
+          brand_id: string | null
+          created_at: string
+          goals: string | null
+          id: string
+          learnings: string | null
+          next_week: string | null
+          priorities: string[]
+          problems: string | null
+          updated_at: string
+          user_id: string
+          week_start: string
+          wins: string | null
+        }
+        Insert: {
+          brand_id?: string | null
+          created_at?: string
+          goals?: string | null
+          id?: string
+          learnings?: string | null
+          next_week?: string | null
+          priorities?: string[]
+          problems?: string | null
+          updated_at?: string
+          user_id: string
+          week_start: string
+          wins?: string | null
+        }
+        Update: {
+          brand_id?: string | null
+          created_at?: string
+          goals?: string | null
+          id?: string
+          learnings?: string | null
+          next_week?: string | null
+          priorities?: string[]
+          problems?: string | null
+          updated_at?: string
+          user_id?: string
+          week_start?: string
+          wins?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "work_weekly_plans_brand_id_fkey"
+            columns: ["brand_id"]
+            isOneToOne: false
+            referencedRelation: "brands"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Views: {
       crm_customers_mv: {
