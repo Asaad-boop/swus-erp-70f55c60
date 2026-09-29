@@ -8,6 +8,7 @@ import {
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { applyBrandScope } from "@/lib/erp/apply-brand-scope";
+import { fetchAllRows } from "@/lib/erp/fetch-all";
 import { useUsdBdtRate } from "@/hooks/erp/use-fx-rate";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -55,20 +56,26 @@ export function NetProfitCard({
       const fromDate = toLocalDate(range.from);
       const toDate = toLocalDate(range.to);
 
-      const [rev, items, ads, returns, exch] = await Promise.all([
-        applyBrandScope(
-          supabase.from("orders").select("total, actual_shipping_cost"),
-          brandIds,
-        ).not("status", "in", "(new,cancelled,returned)")
-          .gte("created_at", fromISO).lte("created_at", toISO),
-        applyBrandScope(
-          supabase.from("order_items").select(
-            "product_id, quantity, unit_cost_snapshot, courier_cost_allocated, packaging_cost_allocated, orders!inner(brand_id, status, created_at)",
-          ),
-          brandIds,
-          "orders.brand_id" as any,
-        ).not("orders.status", "in", "(new,cancelled,returned)")
-          .gte("orders.created_at", fromISO).lte("orders.created_at", toISO),
+      const [revRows, itemsArr, ads, returns, exch] = await Promise.all([
+        fetchAllRows((f, t) =>
+          applyBrandScope(
+            supabase.from("orders").select("total, actual_shipping_cost"),
+            brandIds,
+          ).not("status", "in", "(new,cancelled,returned)")
+            .gte("created_at", fromISO).lte("created_at", toISO)
+            .order("created_at", { ascending: true }).range(f, t),
+        ),
+        fetchAllRows((f, t) =>
+          applyBrandScope(
+            supabase.from("order_items").select(
+              "product_id, quantity, unit_cost_snapshot, courier_cost_allocated, packaging_cost_allocated, orders!inner(brand_id, status, created_at)",
+            ),
+            brandIds,
+            "orders.brand_id" as any,
+          ).not("orders.status", "in", "(new,cancelled,returned)")
+            .gte("orders.created_at", fromISO).lte("orders.created_at", toISO)
+            .range(f, t),
+        ),
         applyBrandScope(
           supabase.from("mkt_insights_daily").select("spend, spend_bdt_fifo"),
           brandIds,
