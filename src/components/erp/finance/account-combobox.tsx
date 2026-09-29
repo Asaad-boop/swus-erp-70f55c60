@@ -132,7 +132,11 @@ export function AccountCombobox({
           <ChevronsUpDown className="h-4 w-4 shrink-0 opacity-50" />
         </Button>
       </PopoverTrigger>
-      <PopoverContent className="p-0 w-[var(--radix-popover-trigger-width)] min-w-[320px]" align="start">
+      <PopoverContent
+        portalled={false}
+        className="p-0 w-[var(--radix-popover-trigger-width)] min-w-[320px]"
+        align="start"
+      >
         <div className="p-2 border-b border-border">
           <div className="relative">
             <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
@@ -146,7 +150,7 @@ export function AccountCombobox({
           </div>
         </div>
 
-        <div className="max-h-[320px] overflow-y-auto py-1">
+        <div className="max-h-[320px] overscroll-contain overflow-y-auto py-1">
           {total === 0 && (
             <div className="px-3 py-6 text-center text-xs text-muted-foreground">No matching account</div>
           )}
