@@ -130,22 +130,6 @@ export const NAV_GROUPS: Group[] = [
     label: "Growth",
     sections: [
       {
-        key: "growth",
-        label: "Growth Studio",
-        icon: Compass,
-        items: [
-          { to: "/erp/growth", label: "Command Center", icon: Compass, exact: true },
-          { to: "/erp/growth/goals", label: "Goals & Plan", icon: Target },
-          { to: "/erp/growth/products", label: "Product Lab", icon: Lightbulb },
-          { to: "/erp/growth/content", label: "Content Engine", icon: Clapperboard },
-          { to: "/erp/growth/media", label: "Media Center", icon: Megaphone },
-          { to: "/erp/growth/lab", label: "Growth Lab", icon: ListChecks },
-          { to: "/erp/growth/market", label: "Market Intelligence", icon: Swords },
-          { to: "/erp/growth/analytics", label: "Analytics", icon: BarChart3 },
-          { to: "/erp/extension", label: "Synq Extension", icon: Chrome },
-        ],
-      },
-      {
         key: "marketing",
         label: "Marketing",
         icon: Megaphone,
