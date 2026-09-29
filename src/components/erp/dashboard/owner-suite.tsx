@@ -77,19 +77,23 @@ function Chip({ v, invert }: { v: number; invert?: boolean }) {
 ============================================================ */
 async function fetchPnl(brandIds: string[], from: Date, to: Date, fx: number | undefined) {
   const fromISO = from.toISOString(), toISO = to.toISOString();
-  const [ord, items, ads] = await Promise.all([
-    applyBrandScope(supabase.from("orders").select("total, created_at, status, actual_shipping_cost"), brandIds)
-      .not("status", "in", EXCLUDED).gte("created_at", fromISO).lte("created_at", toISO),
-    applyBrandScope(
-      supabase.from("order_items").select(
-        "product_id, quantity, unit_cost_snapshot, courier_cost_allocated, packaging_cost_allocated, orders!inner(brand_id,status,created_at)",
-      ), brandIds, "orders.brand_id" as any,
-    ).not("orders.status", "in", EXCLUDED).gte("orders.created_at", fromISO).lte("orders.created_at", toISO),
+  const [rows, itemRows, ads] = await Promise.all([
+    fetchAllRows((f, t) =>
+      applyBrandScope(supabase.from("orders").select("total, created_at, status, actual_shipping_cost"), brandIds)
+        .not("status", "in", EXCLUDED).gte("created_at", fromISO).lte("created_at", toISO)
+        .order("created_at", { ascending: true }).range(f, t),
+    ),
+    fetchAllRows((f, t) =>
+      applyBrandScope(
+        supabase.from("order_items").select(
+          "product_id, quantity, unit_cost_snapshot, courier_cost_allocated, packaging_cost_allocated, orders!inner(brand_id,status,created_at)",
+        ), brandIds, "orders.brand_id" as any,
+      ).not("orders.status", "in", EXCLUDED).gte("orders.created_at", fromISO).lte("orders.created_at", toISO)
+        .range(f, t),
+    ),
     applyBrandScope(supabase.from("mkt_insights_daily").select("date, spend, spend_bdt_fifo"), brandIds)
       .gte("date", localDate(from)).lte("date", localDate(to)),
   ]);
-
-  const rows = (ord.data ?? []) as any[];
   const revenue = rows.reduce((s, r) => s + Number(r.total ?? 0), 0);
   const orders = rows.length;
 
