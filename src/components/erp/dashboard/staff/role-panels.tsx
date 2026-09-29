@@ -289,7 +289,6 @@ export function RolePanels({
   const panels: React.ReactNode[] = [];
 
   if (has("packer", "warehouse_staff")) panels.push(<PackerPanel key="pack" brandIds={brandIds} userId={userId} />);
-  if (has("marketing_manager", "moderator")) panels.push(<ContentPanel key="content" brandIds={brandIds} />);
   if (has("cargo_agent")) panels.push(<CargoPanel key="cargo" />);
   if (has("warehouse_staff", "operations")) panels.push(<SupplyPanel key="supply" brandIds={brandIds} />);
   if (has("accountant")) panels.push(<FinancePanel key="fin" />);
