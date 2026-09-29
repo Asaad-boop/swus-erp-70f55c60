@@ -109,20 +109,6 @@ const HIDDEN_PAGES: Omit<PageEntry, "exact">[] = [
     hidden: true,
   },
   {
-    group: "Growth",
-    section: "Growth Studio",
-    path: "/erp/hub",
-    label: "Growth Hub (legacy)",
-    hidden: true,
-  },
-  {
-    group: "Growth",
-    section: "Growth Studio",
-    path: "/erp/content",
-    label: "Content Studio (legacy)",
-    hidden: true,
-  },
-  {
     group: "System",
     section: "System",
     path: "/erp/pathao-debug",
