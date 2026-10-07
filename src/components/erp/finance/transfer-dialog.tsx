@@ -1,3 +1,4 @@
+import { dhakaToday } from "@/lib/erp/finance";
 import { useEffect, useMemo, useState } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
@@ -28,7 +29,7 @@ export function TransferDialog({ open, onClose, brandId, accounts, defaultFromId
   const [fromId, setFromId] = useState<string>(defaultFromId ?? "");
   const [toId, setToId] = useState<string>("");
   const [amount, setAmount] = useState<string>("");
-  const [date, setDate] = useState<string>(() => new Date().toISOString().slice(0, 10));
+  const [date, setDate] = useState<string>(() => dhakaToday());
   const [note, setNote] = useState<string>("");
   const [pickedBrandId, setPickedBrandId] = useState<string>("");
 

@@ -1,3 +1,4 @@
+import { dhakaToday } from "@/lib/erp/finance";
 import { useMemo, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Plus, Trash2, Ban, FileText, Search } from "lucide-react";
@@ -178,7 +179,7 @@ type LineDraft = { account_id: string; debit: string; credit: string; descriptio
 function JournalEntryDialog({ open, onClose, brandId, coa, onSaved }: {
   open: boolean; onClose: () => void; brandId: string; coa: COA[]; onSaved: () => void;
 }) {
-  const today = new Date().toISOString().slice(0, 10);
+  const today = dhakaToday();
   const [date, setDate] = useState(today);
   const [desc, setDesc] = useState("");
   const [lines, setLines] = useState<LineDraft[]>([

@@ -1,3 +1,4 @@
+import { dhakaToday } from "@/lib/erp/finance";
 import { useMemo, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Plus, Search, Wallet, AlertCircle, Download, FileSpreadsheet, Printer } from "lucide-react";
@@ -107,7 +108,7 @@ export function PayablesPage() {
 
   const totalOutstanding = (apQ.data ?? []).reduce((s, r) => s + Number(r.outstanding), 0);
 
-  const today = new Date().toISOString().slice(0, 10);
+  const today = dhakaToday();
   const supplierContactMap = new Map((suppliersQ.data ?? []).map((s) => [s.id, ""]));
   const exportRowsForAging = () =>
     (apQ.data ?? []).map((r) => ({
@@ -254,7 +255,7 @@ export function PayablesPage() {
 function NewBillDialog({ brandId, suppliers, coa, onClose, onSaved }: {
   brandId: string; suppliers: Supplier[]; coa: COA[]; onClose: () => void; onSaved: () => void;
 }) {
-  const today = new Date().toISOString().slice(0, 10);
+  const today = dhakaToday();
   const [supplierId, setSupplierId] = useState("");
   const [billNo, setBillNo] = useState("");
   const [billDate, setBillDate] = useState(today);
@@ -343,7 +344,7 @@ function PayBillDialog({ row, coa, onClose, onSaved }: {
 }) {
   const [amount, setAmount] = useState(String(row.outstanding.toFixed(2)));
   const [cashAcct, setCashAcct] = useState("");
-  const [date, setDate] = useState(new Date().toISOString().slice(0, 10));
+  const [date, setDate] = useState(dhakaToday());
   const [ref, setRef] = useState("");
   const [notes, setNotes] = useState("");
   const cashAccounts = coa.filter((a) => a.account_type === "asset");

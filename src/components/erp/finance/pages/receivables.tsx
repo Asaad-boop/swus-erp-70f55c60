@@ -1,3 +1,4 @@
+import { dhakaToday } from "@/lib/erp/finance";
 import { useMemo, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Search, Wallet, AlertCircle, Download, FileSpreadsheet, Printer } from "lucide-react";
@@ -100,7 +101,7 @@ export function ReceivablesPage() {
 
   const totalOutstanding = (arQ.data ?? []).reduce((s, r) => s + Number(r.outstanding), 0);
 
-  const today = new Date().toISOString().slice(0, 10);
+  const today = dhakaToday();
   const exportRowsForAging = () =>
     (arQ.data ?? []).map((r) => ({
       name: r.customer_name,
@@ -237,7 +238,7 @@ function ReceivePaymentDialog({ row, coa, onClose, onSaved }: {
   const [amount, setAmount] = useState(String(row.outstanding.toFixed(2)));
   const [cashAcct, setCashAcct] = useState("");
   const [arAcct, setArAcct] = useState("");
-  const [date, setDate] = useState(new Date().toISOString().slice(0, 10));
+  const [date, setDate] = useState(dhakaToday());
   const [ref, setRef] = useState("");
   const [notes, setNotes] = useState("");
 

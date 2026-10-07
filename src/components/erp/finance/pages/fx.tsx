@@ -1,3 +1,4 @@
+import { dhakaToday } from "@/lib/erp/finance";
 import { useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
@@ -16,7 +17,7 @@ type FX = { id: string; from_ccy: string; to_ccy: string; rate: number; rate_dat
 export function FxPage() {
   const { brandId, effectiveBrand, picker } = useBrandPicker();
   const qc = useQueryClient();
-  const [form, setForm] = useState({ from_ccy: "USD", to_ccy: "BDT", rate: "", rate_date: new Date().toISOString().slice(0, 10) });
+  const [form, setForm] = useState({ from_ccy: "USD", to_ccy: "BDT", rate: "", rate_date: dhakaToday() });
 
   const ratesQ = useQuery({
     queryKey: ["fx_rates", brandId],
@@ -123,7 +124,7 @@ function CnyQuickUpdate({ brandId }: { brandId?: string }) {
       if (!r || r <= 0) throw new Error("Enter rate");
       const { error } = await supabase.from("erp_fx_rates" as never).upsert({
         brand_id: brandId, from_ccy: "CNY", to_ccy: "BDT",
-        rate: r, rate_date: new Date().toISOString().slice(0, 10),
+        rate: r, rate_date: dhakaToday(),
       } as never, { onConflict: "brand_id,from_ccy,to_ccy,rate_date" });
       if (error) throw error;
     },

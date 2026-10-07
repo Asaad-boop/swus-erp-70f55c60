@@ -1,3 +1,4 @@
+import { dhakaToday } from "@/lib/erp/finance";
 import { Link } from "@tanstack/react-router";
 import { useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
@@ -23,7 +24,7 @@ type Row = {
   brand_id?: string; brand_name?: string;
 };
 
-function today() { return new Date().toISOString().slice(0, 10); }
+function today() { return dhakaToday(); }
 function daysAgo(d: number) { const x = new Date(); x.setDate(x.getDate() - d); return x.toISOString().slice(0, 10); }
 
 function csvEscape(v: unknown) { const s = v == null ? "" : String(v); return /[",\n]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s; }

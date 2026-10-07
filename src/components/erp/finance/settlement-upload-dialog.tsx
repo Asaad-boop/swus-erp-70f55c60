@@ -1,3 +1,4 @@
+import { dhakaToday } from "@/lib/erp/finance";
 import { useMemo, useState } from "react";
 import Papa from "papaparse";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
@@ -87,7 +88,7 @@ export function SettlementUploadDialog({ open, onClose, brandId, brandIds }: Pro
   const qc = useQueryClient();
   const [pickedBrand, setPickedBrand] = useState<string>(brandId ?? "");
   const [courier, setCourier] = useState("pathao");
-  const [remitDate, setRemitDate] = useState(() => new Date().toISOString().slice(0, 10));
+  const [remitDate, setRemitDate] = useState(() => dhakaToday());
   const [refNo, setRefNo] = useState("");
   const [file, setFile] = useState<File | null>(null);
   const [lines, setLines] = useState<ParsedLine[]>([]);

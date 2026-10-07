@@ -1,3 +1,4 @@
+import { dhakaToday } from "@/lib/erp/finance";
 import { useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Link } from "@tanstack/react-router";
@@ -80,7 +81,7 @@ export function WalletsPage() {
   });
 
   // Today's transactions for in/out badges
-  const today = new Date().toISOString().slice(0, 10);
+  const today = dhakaToday();
   const todayTxQ = useQuery({
     queryKey: ["wallets_today", brandIds, today],
     enabled: brandIds.length > 0,

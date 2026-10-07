@@ -1,3 +1,4 @@
+import { dhakaToday } from "@/lib/erp/finance";
 import { useEffect, useMemo, useState } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
@@ -43,7 +44,7 @@ function accountIcon(t: string) {
   return WalletIcon;
 }
 
-function todayIso() { return new Date().toISOString().slice(0, 10); }
+function todayIso() { return dhakaToday(); }
 function yesterdayIso() { const d = new Date(); d.setDate(d.getDate() - 1); return d.toISOString().slice(0, 10); }
 
 export function TransactionForm({ open, onClose, brandId, accounts, categories, defaultType = "income", defaultAccountId = null, brands = [] }: Props) {
