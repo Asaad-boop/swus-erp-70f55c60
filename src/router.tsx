@@ -97,7 +97,7 @@ export const getRouter = () => {
             Something went wrong
           </h2>
           <p className="text-sm text-gray-500 mb-4">
-            {error?.message || 'An unexpected error occurred'}
+            {(error as Error | undefined)?.message || 'An unexpected error occurred'}
           </p>
           <button
             onClick={() => window.location.reload()}
