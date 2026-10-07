@@ -1,3 +1,4 @@
+import { dhakaToday } from "@/lib/erp/finance";
 import { useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Link } from "@tanstack/react-router";
@@ -42,7 +43,7 @@ function bucketKeyFor(w: Wallet): string | null {
 
 export function BdWalletsWidget() {
   const { brandIds } = useBrand();
-  const today = new Date().toISOString().slice(0, 10);
+  const today = dhakaToday();
 
   const walletsQ = useQuery({
     queryKey: ["bd_wallets_widget", brandIds.join(",")],

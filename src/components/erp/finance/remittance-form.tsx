@@ -1,3 +1,4 @@
+import { dhakaToday } from "@/lib/erp/finance";
 import { useEffect, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
@@ -40,7 +41,7 @@ export function RemittanceForm({ open, onClose, brandId, brandIds, editing }: Pr
   const qc = useQueryClient();
   const [pickedBrand, setPickedBrand] = useState<string>(brandId ?? "");
   const [courier, setCourier] = useState("pathao");
-  const [remitDate, setRemitDate] = useState(() => new Date().toISOString().slice(0, 10));
+  const [remitDate, setRemitDate] = useState(() => dhakaToday());
   const [amount, setAmount] = useState("");
   const [expected, setExpected] = useState("");
   const [refNo, setRefNo] = useState("");
@@ -59,7 +60,7 @@ export function RemittanceForm({ open, onClose, brandId, brandIds, editing }: Pr
     } else {
       setPickedBrand(brandId ?? (brandIds.length === 1 ? brandIds[0] : ""));
       setCourier("pathao");
-      setRemitDate(new Date().toISOString().slice(0, 10));
+      setRemitDate(dhakaToday());
       setAmount("");
       setExpected("");
       setRefNo("");

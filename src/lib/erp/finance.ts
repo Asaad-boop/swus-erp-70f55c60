@@ -96,7 +96,8 @@ export const ACCOUNT_GROUP_META: Record<AccountTypeMeta["group"], { label: strin
 
 export function fmtBdt(n: number | string | null | undefined) {
   const v = Number(n ?? 0);
-  return "৳" + v.toLocaleString(undefined, { maximumFractionDigits: 2 });
+  const hasFraction = Math.round(Math.abs(v) * 100) % 100 !== 0;
+  return "৳" + v.toLocaleString("en-IN", { minimumFractionDigits: hasFraction ? 2 : 0, maximumFractionDigits: 2 });
 }
 
 export function exportTransactionsCsv(
@@ -123,4 +124,8 @@ export function exportTransactionsCsv(
     ].map(esc).join(","));
   }
   return lines.join("\n");
+}
+/** Today's date (YYYY-MM-DD) in Asia/Dhaka — never use UTC toISOString for business dates. */
+export function dhakaToday(): string {
+  return new Intl.DateTimeFormat("en-CA", { timeZone: "Asia/Dhaka" }).format(new Date());
 }

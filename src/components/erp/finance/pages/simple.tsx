@@ -1,3 +1,4 @@
+import { dhakaToday } from "@/lib/erp/finance";
 import { useEffect, useMemo, useState } from "react";
 import { Download, Plus, Wallet, TrendingUp, TrendingDown, ArrowRightLeft, Trash2, Search, Sparkles, Check } from "lucide-react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
@@ -148,7 +149,7 @@ function TransactionsTab({ brandIds, brands, isAllBrands }: { brandIds: string[]
 
   const handleExport = () => {
     const csv = exportTransactionsCsv(rows, catMap, accMap);
-    downloadCsv(`transactions-${new Date().toISOString().slice(0, 10)}.csv`, csv);
+    downloadCsv(`transactions-${dhakaToday()}.csv`, csv);
   };
 
   const del = useMutation({
@@ -477,7 +478,7 @@ function CategoriesTab({ brandId, brands, isAllBrands }: { brandId: string | nul
 }
 
 function ReportsTab({ brandIds }: { brandIds: string[] }) {
-  const today = new Date().toISOString().slice(0, 10);
+  const today = dhakaToday();
   const monthStart = new Date(new Date().getFullYear(), new Date().getMonth(), 1).toISOString().slice(0, 10);
   const [from, setFrom] = useState(monthStart);
   const [to, setTo] = useState(today);

@@ -1,3 +1,4 @@
+import { dhakaToday } from "@/lib/erp/finance";
 import { useMemo, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Plus, Play, Pause, Trash2, RefreshCw } from "lucide-react";
@@ -79,7 +80,7 @@ export function RecurringPage() {
     onError: (e: Error) => toast.error(e.message),
   });
 
-  const today = new Date().toISOString().slice(0, 10);
+  const today = dhakaToday();
 
   return (
     <div className="p-4 md:p-6 space-y-4">
@@ -151,7 +152,7 @@ export function RecurringPage() {
 }
 
 function NewRuleDialog({ brandId, coa, onClose, onSaved }: { brandId: string; coa: COA[]; onClose: () => void; onSaved: () => void; }) {
-  const today = new Date().toISOString().slice(0, 10);
+  const today = dhakaToday();
   const [name, setName] = useState("");
   const [desc, setDesc] = useState("");
   const [frequency, setFrequency] = useState("monthly");

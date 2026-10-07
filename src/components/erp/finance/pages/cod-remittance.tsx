@@ -1,3 +1,4 @@
+import { dhakaToday } from "@/lib/erp/finance";
 import { useEffect, useMemo, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
@@ -135,7 +136,7 @@ export function CodRemittancePage() {
       ReceivedTo: r.received_to ? (walletMap.get(r.received_to)?.name ?? "") : "",
       Notes: r.notes ?? "",
     }));
-    exportToXlsx(data, "COD Remittances", `cod-remittances-${new Date().toISOString().slice(0, 10)}`);
+    exportToXlsx(data, "COD Remittances", `cod-remittances-${dhakaToday()}`);
   }
 
   return (
@@ -323,7 +324,7 @@ function PipelineTile({ label, value, color, icon: Icon, count }: { label: strin
 function ReceiveRemittanceDialog({ row, wallets, onClose }: { row: RemittanceRow | null; wallets: Wallet[]; onClose: () => void }) {
   const qc = useQueryClient();
   const [walletId, setWalletId] = useState<string>("");
-  const [date, setDate] = useState<string>(() => new Date().toISOString().slice(0, 10));
+  const [date, setDate] = useState<string>(() => dhakaToday());
 
   const brandWallets = wallets.filter((w) => !row || w.brand_id === row.brand_id);
   useEffect(() => {

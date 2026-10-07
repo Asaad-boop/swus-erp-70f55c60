@@ -1,3 +1,4 @@
+import { dhakaToday } from "@/lib/erp/finance";
 import { useEffect, useState } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
@@ -29,11 +30,11 @@ type Props = {
 export function DepositWithdrawDialog({ open, onClose, mode, account, brandId }: Props) {
   const qc = useQueryClient();
   const [amount, setAmount] = useState("");
-  const [date, setDate] = useState(() => new Date().toISOString().slice(0, 10));
+  const [date, setDate] = useState(() => dhakaToday());
   const [note, setNote] = useState("");
 
   useEffect(() => {
-    if (open) { setAmount(""); setNote(""); setDate(new Date().toISOString().slice(0, 10)); }
+    if (open) { setAmount(""); setNote(""); setDate(dhakaToday()); }
   }, [open]);
 
   const amt = Number(amount) || 0;

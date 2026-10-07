@@ -1,3 +1,4 @@
+import { dhakaToday } from "@/lib/erp/finance";
 import { useEffect, useMemo, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
@@ -33,7 +34,7 @@ export function CodCollectionDialog({ open, onClose, brandId, brandIds, orderId,
   const [amount, setAmount] = useState<string>(defaultAmount ? String(defaultAmount) : "");
   const [orderQuery, setOrderQuery] = useState<string>(orderId ?? "");
   const [selectedOrderId, setSelectedOrderId] = useState<string | null>(orderId ?? null);
-  const [date, setDate] = useState<string>(() => new Date().toISOString().slice(0, 10));
+  const [date, setDate] = useState<string>(() => dhakaToday());
   const [note, setNote] = useState<string>("");
 
   useEffect(() => {
