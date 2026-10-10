@@ -14288,6 +14288,7 @@ export type Database = {
         Row: {
           avg_order_value: number | null
           brand_ids: string[] | null
+          cancelled_orders_count: number | null
           customer_key: string | null
           email: string | null
           first_order_at: string | null
@@ -14307,6 +14308,7 @@ export type Database = {
         Row: {
           avg_order_value: number | null
           brand_ids: string[] | null
+          cancelled_orders_count: number | null
           customer_key: string | null
           email: string | null
           first_order_at: string | null
