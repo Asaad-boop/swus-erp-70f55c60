@@ -15,7 +15,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { cn } from "@/lib/utils";
 import { useAccounts } from "@/hooks/erp/use-finance-query";
 import { listWarehouses, payCartonDue, postCartonToInventory, releaseCarton } from "@/lib/erp/imports/imports.functions";
-import { CARTON_STATUS_LABEL, fmtBdt, newIdemKey, type ImpCartonStatus } from "@/lib/erp/imports/types";
+import { CARTON_STATUS_LABEL, fmtBdt, netDue, newIdemKey, type ImpCartonStatus } from "@/lib/erp/imports/types";
 import { Mini, Row } from "./atoms";
 
 const PRE_ARRIVAL: string[] = ["ordered", "at_china_warehouse", "in_transit"];
@@ -90,8 +90,11 @@ export function CartonRow({ carton, poId, poNumber, poItems, brandId, poDue, poP
   const supplierDueAfterAdvance = Math.max(0, supplierCost - advanceShare);
   const cartonBillable = +(supplierDueAfterAdvance + shippingCost).toFixed(2);
   const cartonPaid = Number(carton.paid_bdt ?? 0);
-  const cartonDue = Math.max(0, +(cartonBillable - cartonPaid).toFixed(2));
-  const hasDue = cartonDue > 0.009 && (status === "released" || status === "in_stock");
+  // netDue(): pro-rata advance share-e ৳1 er kom rounding residue thakle
+  // seta due hishebe dekhabo na — otherwise fully-paid carton-e phantom
+  // "Due ৳0.04" chip + Pay form dekha Jay.
+  const cartonDue = netDue(Math.max(0, +(cartonBillable - cartonPaid).toFixed(2)));
+  const hasDue = cartonDue > 0 && (status === "released" || status === "in_stock");
 
   const needsAction = status === "arrived_bd" || status === "released" || hasDue;
   const selectable = ["ordered", "at_china_warehouse", "in_transit", "arrived_bd"].includes(status);
