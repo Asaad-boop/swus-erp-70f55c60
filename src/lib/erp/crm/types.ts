@@ -15,6 +15,7 @@ export type CrmCustomerRow = {
   is_registered: boolean;
   orders_count: number;
   valid_orders_count: number;
+  cancelled_orders_count: number;
   lifetime_value: number;
   avg_order_value: number;
   first_order_at: string | null;
@@ -44,6 +45,7 @@ export type CrmFilters = {
   search?: string;
   brandIds?: string[];
   type?: "all" | "registered" | "guest";
+  orderType?: "valid" | "cancelled" | "all";
   segment?: CrmSegment | "all";
   tag?: string;
   minSpend?: number;

@@ -24,6 +24,7 @@ const filtersSchema = z
     search: z.string().optional(),
     brandIds: z.array(z.string()).optional(),
     type: z.enum(["all", "registered", "guest"]).optional(),
+    orderType: z.enum(["valid", "cancelled", "all"]).optional(),
     segment: z.string().optional(),
     tag: z.string().optional(),
     minSpend: z.number().optional(),
@@ -45,7 +46,7 @@ async function loadAll(
   // query, and only the columns the list needs are selected.
   const PAGE = 1000;
   const COLS =
-    "customer_key,name,email,user_id,is_registered,orders_count,valid_orders_count,lifetime_value,avg_order_value,first_order_at,last_order_at,brand_ids,meta_status";
+    "customer_key,name,email,user_id,is_registered,orders_count,valid_orders_count,cancelled_orders_count,lifetime_value,avg_order_value,first_order_at,last_order_at,brand_ids,meta_status";
   const build = (source: string, head = false) => {
     let q = supabaseClient.from(source).select(head ? "customer_key" : COLS, head ? { count: "exact", head: true } : undefined);
     if (brandIds && brandIds.length) q = q.overlaps("brand_ids", brandIds);
@@ -92,6 +93,14 @@ function applyFilters(
   f: z.infer<typeof filtersSchema>,
 ): CrmCustomerRow[] {
   let out = rows;
+  const orderType = f.orderType ?? "valid";
+  if (orderType === "valid") {
+    // Customers with at least one confirmed/delivered (non-cancelled) order,
+    // plus imported customers who have no orders yet.
+    out = out.filter((r) => r.valid_orders_count > 0 || r.orders_count === 0);
+  } else if (orderType === "cancelled") {
+    out = out.filter((r) => r.cancelled_orders_count > 0);
+  }
   if (f.search) {
     const s = f.search.toLowerCase().trim();
     out = out.filter(
@@ -161,6 +170,7 @@ function enrich(rows: any[], tagMap: Map<string, string[]>): CrmCustomerRow[] {
       is_registered: !!r.is_registered,
       orders_count: Number(r.orders_count ?? 0),
       valid_orders_count: Number(r.valid_orders_count ?? 0),
+      cancelled_orders_count: Number(r.cancelled_orders_count ?? 0),
       lifetime_value: Number(r.lifetime_value ?? 0),
       avg_order_value: Number(r.avg_order_value ?? 0),
       first_order_at: r.first_order_at,
