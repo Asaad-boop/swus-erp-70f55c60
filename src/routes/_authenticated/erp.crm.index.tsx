@@ -102,6 +102,7 @@ function CrmListPage() {
 
   const [search, setSearch] = useState("");
   const [type, setType] = useState<"all" | "registered" | "guest">("all");
+  const [orderType, setOrderType] = useState<"valid" | "cancelled" | "all">("valid");
   const [segment, setSegment] = useState<CrmSegment | "all">("all");
   const [tag, setTag] = useState<string>("all");
   const [sort, setSort] = useState<CrmSort>("ltv_desc");
@@ -145,6 +146,7 @@ function CrmListPage() {
     search: search.trim() || undefined,
     brandIds: effectiveBrandIds,
     type,
+    orderType,
     segment,
     tag: tag === "all" ? undefined : tag,
     minSpend: minSpend.trim() ? Number(minSpend) : undefined,
@@ -172,12 +174,13 @@ function CrmListPage() {
 
   // ----- Saved filters apply/snapshot -----
   const filterSnapshot = {
-    search, type, segment, tag, sort,
+    search, type, orderType, segment, tag, sort,
     advBrandIds, minSpend, maxSpend, lastOrderFrom, lastOrderTo, hasEmail,
   };
   const applySavedFilter = (f: Record<string, any>) => {
     if (typeof f.search === "string") setSearch(f.search);
     if (f.type) setType(f.type);
+    if (f.orderType) setOrderType(f.orderType);
     if (f.segment) setSegment(f.segment);
     if (f.tag) setTag(f.tag);
     if (f.sort) setSort(f.sort);
@@ -374,6 +377,14 @@ function CrmListPage() {
               onChange={(e) => { setSearch(e.target.value); setPage(1); }}
             />
           </div>
+          <Select value={orderType} onValueChange={(v: any) => { setOrderType(v); setPage(1); }}>
+            <SelectTrigger className="w-[160px]"><SelectValue /></SelectTrigger>
+            <SelectContent>
+              <SelectItem value="valid">Valid customers</SelectItem>
+              <SelectItem value="cancelled">Cancelled orders</SelectItem>
+              <SelectItem value="all">All customers</SelectItem>
+            </SelectContent>
+          </Select>
           <Select value={type} onValueChange={(v: any) => { setType(v); setPage(1); }}>
             <SelectTrigger className="w-[140px]"><SelectValue /></SelectTrigger>
             <SelectContent>
