@@ -53,3 +53,12 @@ Existing ERP extend করা হবে, নতুন আলাদা stock syst
 
 ## Order of delivery
 Phase 1+2 প্রথম ধাপে, তারপর 3, তারপর 4–6। প্রতি ধাপ শেষে তুমি check করবে।
+
+## Approved refinements (mandatory)
+- Per-release accounting: released/received qty, attributable purchase amount, advance applied, purchase/shipping/courier due & paid, QC qty, provisional + final landed cost; no double release or duplicate finance posting
+- Manufacturing qty: Original / Revised / Dispatched / Received / Final Invoiced আলাদা; revision invoice auto-finalize করে না; history রাখা
+- QC: Accepted / Quarantined-Damaged / Rejected / Missing / Pending; photos, supplier claims, replacement, credit note, refund, settlement history; missing ≠ received; damaged ≠ sellable
+- Landed cost: estimated → provisional → final; qty/value/weight/CBM/manual allocation with rounding reconciliation; loss/claims আলাদা; late cost-এ auditable valuation/COGS adjustment, history overwrite না
+- One PO ↔ many shipments, one shipment ↔ many POs, supplier vs cargo agent balance আলাদা
+- Advance = prepayment, cost না; invoices/payments/cargo charges/receipts আলাদা কিন্তু linked; atomic idempotent RPC
+- Phase 4-এর আগে detailed technical mapping দেখাতে হবে; Phase 1+2 শেষে review
