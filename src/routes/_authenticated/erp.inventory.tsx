@@ -54,6 +54,7 @@ import { BulkReorderDialog } from "@/components/erp/inventory/bulk-reorder-dialo
 import { ProductEditDialog } from "@/components/erp/inventory/product-edit-dialog";
 import { ProductAddDialog } from "@/components/erp/inventory/product-add-dialog";
 import { CatalogView } from "@/components/erp/inventory/catalog-view";
+import { BomWorkspace } from "@/components/erp/inventory/bom-workspace";
 import { ReserveStatusCard } from "@/components/erp/inventory/reserve-status-card";
 
 export const Route = createFileRoute("/_authenticated/erp/inventory")({
@@ -378,10 +379,11 @@ function InventoryPage() {
       <ReserveStatusCard brandId={isAllBrands ? null : (activeBrand?.id ?? null)} />
 
       {/* TABS */}
-      <Tabs defaultValue={tabParam === "catalog" ? "catalog" : "products"} className="space-y-6">
+      <Tabs defaultValue={tabParam === "catalog" || tabParam === "bom" ? tabParam : "products"} className="space-y-6">
         <TabsList className="bg-transparent border-b border-border/70 rounded-none p-0 h-auto gap-6 w-full justify-start">
           <PillTab value="catalog" icon={<Tag className="h-3.5 w-3.5" />}>Catalog</PillTab>
           <PillTab value="products" icon={<Package className="h-3.5 w-3.5" />}>Stock List</PillTab>
+          <PillTab value="bom" icon={<Layers className="h-3.5 w-3.5" />}>Components & BOM</PillTab>
           <PillTab value="opening" icon={<Layers className="h-3.5 w-3.5" />}>Opening Stock</PillTab>
           <PillTab value="cost" icon={<DollarSign className="h-3.5 w-3.5" />}>Cost Price</PillTab>
           <PillTab value="low" icon={<AlertTriangle className="h-3.5 w-3.5" />} badge={lowQuery.data?.length}>
@@ -392,6 +394,10 @@ function InventoryPage() {
 
         <TabsContent value="catalog" className="space-y-5 mt-0">
           <CatalogView embedded />
+        </TabsContent>
+
+        <TabsContent value="bom" className="space-y-5 mt-0">
+          <BomWorkspace />
         </TabsContent>
 
         {/* PRODUCTS TAB */}
