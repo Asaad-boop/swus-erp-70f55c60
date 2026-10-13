@@ -23,4 +23,4 @@
 - [x] Owner overview redesign — Executive Command Center focused-feed hierarchy
 - [ ] Phase 3b: Owner Leak Panel + Risk Alerts consolidated section
 - [ ] Phase 4: Staff dashboard — announcements/holidays + deeper role-adaptive queues
-- [ ] BOM + Procurement upgrade (plan pending approval)
+- [ ] BOM + Procurement upgrade — approved; Phase 1 in progress, Phase 2-6 pending
