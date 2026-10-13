@@ -1,0 +1,47 @@
+# BOM, Assembly & Costing System — Implementation Plan
+
+Existing ERP extend করা হবে, নতুন আলাদা stock system না। Components = `products` table-এর row (নতুন `product_kind`), তাই একই `stock_movements` ledger, WAC, local PO, import PO, stocktake সব আগের মতো কাজ করবে।
+
+## Phase 1 — Product types + Components
+- `products.product_kind`: `simple` (default, সব পুরনো product) / `bundle` / `assembled` / `component`
+- Component fields: purchase unit, unit conversion, lead time days, default supplier, stock location — nullable, পুরনো data অক্ষত
+- Inventory page-এ নতুন **Components** tab: SKU, name, variant, supplier, on-hand/reserved/available/incoming, unit cost, value, reorder point, status
+- Component-রা storefront/catalog API-তে যাবে না
+
+## Phase 2 — BOM Manager
+- নতুন `bom_headers` (product + variant, version, status Draft/Active/Archived, effective date, wastage %) ও `bom_lines` (component, qty, UoM, est. unit cost snapshot)
+- প্রতি variant-এ একটাই Active BOM; নতুন version activate করলে আগেরটা Archived (history থাকে)
+- Features: add/remove line, clone from another variant, version compare, est. material cost, missing components, max buildable qty, est. margin
+- বিদ্যমান combo (`product_combo_items`) = Bundle হিসেবে থাকবে, অর্ডারে আগের মতো explode হবে
+
+## Phase 3 — Assembly Batches
+- `assembly_batches` (batch no, product/variant, qty, BOM version, warehouse, planned date, assignee, notes, status Draft → In progress → Completed / Cancelled)
+- Pre-check: required vs available, shortage, est. cost, buildable qty
+- Complete করলে একটি atomic DB function: components `stock_movements` (source `assembly`) দিয়ে কাটবে, finished goods যোগ হবে actual cost-এ (WAC update), batch-এ total cost / unit cost / variance save
+- Order fulfillment-এ assembled product শুধু finished stock কাটবে — component আবার কাটবে না
+
+## Phase 4 — Procurement link
+- Local PO ও Import PO-তে component item add করা যাবে (already products table, তাই বড় change নেই); landed cost আগের pro-rata logic-ই
+- Supplier scorecard-এ component purchase history, latest price, rejection rate
+
+## Phase 5 — Pricing & Profit
+- Product-এ standard cost (active BOM) vs actual historical cost (WAC) পাশাপাশি
+- **Pricing Simulator**: price, cost, ad cost, fulfillment, return provision, target profit → profit/order, margin, break-even price, max CAC, target price
+- Profit reports canonical RPC-ই ব্যবহার করবে (memory rule)
+
+## Phase 6 — Availability & Replenishment
+- Finished on-hand, reserved, available, buildable, component shortage, incoming
+- Reorder suggestion: avg daily consumption × lead time + safety stock − (available + open PO)
+
+## Order / Return rules (বিদ্যমান logic মেনে)
+- Reserve packing-stage-এ (বর্তমান rule), cancel-এ release, shipped/delivered-এ on-hand কমে
+- Returned kit: inspection step — "Sellable" / "Damaged" / "Incomplete"; শুধু Sellable stock-এ ফেরে
+
+## Technical notes
+- সব নতুন table: brand_id, RLS via `can_access_brand` + staff roles, explicit GRANTs, updated_at trigger
+- কোনো demo data DB-তে না; sample costs (Gift Box) শুধু UI placeholder
+- Movement source `assembly` যোগ; `MOVEMENT_SOURCES` update
+- Server logic: Postgres RPC + `createServerFn`, কোনো Edge Function না
+
+## Order of delivery
+Phase 1+2 প্রথম ধাপে, তারপর 3, তারপর 4–6। প্রতি ধাপ শেষে তুমি check করবে।
