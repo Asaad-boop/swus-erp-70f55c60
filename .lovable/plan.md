@@ -20,9 +20,17 @@ Existing ERP extend করা হবে, নতুন আলাদা stock syst
 - Complete করলে একটি atomic DB function: components `stock_movements` (source `assembly`) দিয়ে কাটবে, finished goods যোগ হবে actual cost-এ (WAC update), batch-এ total cost / unit cost / variance save
 - Order fulfillment-এ assembled product শুধু finished stock কাটবে — component আবার কাটবে না
 
-## Phase 4 — Procurement link
-- Local PO ও Import PO-তে component item add করা যাবে (already products table, তাই বড় change নেই); landed cost আগের pro-rata logic-ই
-- Supplier scorecard-এ component purchase history, latest price, rejection rate
+## Phase 4 — Procurement Upgrade (২য় brief)
+বিদ্যমান Local PO, Import PO, cargo ledger, carton release, supplier, finance-ই extend হবে — নতুন আলাদা system না।
+- **Local Manufacturing PO**: line-এ আলাদা qty — Ordered (original, কখনো overwrite না), Revised/Confirmed, Dispatched, Received, QC Accepted, Damaged, Missing, Rejected, Pending। Revised qty × same unit price = auto revised invoice; revision audit history; একই PO-তে multiple delivery
+- **Advance & installments**: PO payment summary — estimated bill, advance %, paid, actual invoice, due; advance actual invoice-এর বিরুদ্ধে apply; supplier ledger-এ যায়
+- **China import**: বিদ্যমান Import PO + cargo agent; এক agent multiple supplier; partial release-এ double release block, release-wise freight (আগের logic) রাখা
+- **QC step** (local receipt + carton release দুটোতেই): Accept → stock, Damaged/Rejected/Missing → stock-এ না, supplier claim/return note
+- **True landed cost**: product price + freight + duty + local courier + other; allocation method (qty / value / weight / CBM); শুধু QC accepted unit-এ cost বসে → WAC update; PO close হলে final cost recalc
+- **Statuses**: PO, Manufacturing, Cargo, QC, Payment, Landed cost — আলাদা badge
+- **Supplier & cargo agent ledger**: purchase, advance, payment, return/claim, outstanding
+- Component-ও এই PO-তে কেনা যাবে (একই products table)
+- Supplier scorecard: latest price, lead time, rejection rate, outstanding
 
 ## Phase 5 — Pricing & Profit
 - Product-এ standard cost (active BOM) vs actual historical cost (WAC) পাশাপাশি
