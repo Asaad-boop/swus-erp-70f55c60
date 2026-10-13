@@ -49,6 +49,7 @@ export const Route = createFileRoute("/api/public/inventory")({
           .order("updated_at", { ascending: false })
           .range(offset, offset + limit - 1);
 
+        q = q.neq("product_kind", "component");
         if (brandId) q = q.eq("brand_id", brandId);
         if (updatedSince) q = q.gte("updated_at", updatedSince);
 
