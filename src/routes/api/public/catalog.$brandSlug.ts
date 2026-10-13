@@ -59,6 +59,7 @@ export const Route = createFileRoute("/api/public/catalog/$brandSlug")({
           .eq("brand_id", brand.id)
           .eq("is_active", true)
           .eq("products.is_active", true)
+          .neq("products.product_kind", "component")
           .order("display_order", { ascending: true });
 
         if (slug) q = q.eq("slug", slug);

@@ -826,6 +826,190 @@ export type Database = {
           },
         ]
       }
+      bom_headers: {
+        Row: {
+          brand_id: string | null
+          created_at: string
+          created_by: string | null
+          effective_date: string | null
+          id: string
+          notes: string | null
+          product_id: string
+          status: string
+          updated_at: string
+          variant_id: string | null
+          version: number
+          wastage_pct: number
+        }
+        Insert: {
+          brand_id?: string | null
+          created_at?: string
+          created_by?: string | null
+          effective_date?: string | null
+          id?: string
+          notes?: string | null
+          product_id: string
+          status?: string
+          updated_at?: string
+          variant_id?: string | null
+          version?: number
+          wastage_pct?: number
+        }
+        Update: {
+          brand_id?: string | null
+          created_at?: string
+          created_by?: string | null
+          effective_date?: string | null
+          id?: string
+          notes?: string | null
+          product_id?: string
+          status?: string
+          updated_at?: string
+          variant_id?: string | null
+          version?: number
+          wastage_pct?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "bom_headers_brand_id_fkey"
+            columns: ["brand_id"]
+            isOneToOne: false
+            referencedRelation: "brands"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "bom_headers_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "inv_missing_cost"
+            referencedColumns: ["product_id"]
+          },
+          {
+            foreignKeyName: "bom_headers_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "products"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "bom_headers_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "v_combo_summary"
+            referencedColumns: ["combo_product_id"]
+          },
+          {
+            foreignKeyName: "bom_headers_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "v_inv_drift"
+            referencedColumns: ["product_id"]
+          },
+          {
+            foreignKeyName: "bom_headers_variant_id_fkey"
+            columns: ["variant_id"]
+            isOneToOne: false
+            referencedRelation: "inv_missing_cost"
+            referencedColumns: ["variant_id"]
+          },
+          {
+            foreignKeyName: "bom_headers_variant_id_fkey"
+            columns: ["variant_id"]
+            isOneToOne: false
+            referencedRelation: "product_variants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      bom_lines: {
+        Row: {
+          bom_id: string
+          component_product_id: string
+          component_variant_id: string | null
+          created_at: string
+          display_order: number
+          est_unit_cost: number | null
+          id: string
+          quantity: number
+          uom: string
+          updated_at: string
+        }
+        Insert: {
+          bom_id: string
+          component_product_id: string
+          component_variant_id?: string | null
+          created_at?: string
+          display_order?: number
+          est_unit_cost?: number | null
+          id?: string
+          quantity: number
+          uom?: string
+          updated_at?: string
+        }
+        Update: {
+          bom_id?: string
+          component_product_id?: string
+          component_variant_id?: string | null
+          created_at?: string
+          display_order?: number
+          est_unit_cost?: number | null
+          id?: string
+          quantity?: number
+          uom?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "bom_lines_bom_id_fkey"
+            columns: ["bom_id"]
+            isOneToOne: false
+            referencedRelation: "bom_headers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "bom_lines_component_product_id_fkey"
+            columns: ["component_product_id"]
+            isOneToOne: false
+            referencedRelation: "inv_missing_cost"
+            referencedColumns: ["product_id"]
+          },
+          {
+            foreignKeyName: "bom_lines_component_product_id_fkey"
+            columns: ["component_product_id"]
+            isOneToOne: false
+            referencedRelation: "products"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "bom_lines_component_product_id_fkey"
+            columns: ["component_product_id"]
+            isOneToOne: false
+            referencedRelation: "v_combo_summary"
+            referencedColumns: ["combo_product_id"]
+          },
+          {
+            foreignKeyName: "bom_lines_component_product_id_fkey"
+            columns: ["component_product_id"]
+            isOneToOne: false
+            referencedRelation: "v_inv_drift"
+            referencedColumns: ["product_id"]
+          },
+          {
+            foreignKeyName: "bom_lines_component_variant_id_fkey"
+            columns: ["component_variant_id"]
+            isOneToOne: false
+            referencedRelation: "inv_missing_cost"
+            referencedColumns: ["variant_id"]
+          },
+          {
+            foreignKeyName: "bom_lines_component_variant_id_fkey"
+            columns: ["component_variant_id"]
+            isOneToOne: false
+            referencedRelation: "product_variants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       brands: {
         Row: {
           created_at: string
@@ -11500,6 +11684,7 @@ export type Database = {
           category_id: string | null
           cost_price: number
           created_at: string
+          default_supplier_id: string | null
           description: string | null
           display_order: number
           gallery: Json
@@ -11510,11 +11695,14 @@ export type Database = {
           is_featured: boolean
           is_new_arrival: boolean
           is_preorder: boolean
+          lead_time_days: number | null
           low_stock_threshold: number
           old_price: number | null
           preorder_expected_date: string | null
           preorder_note: string | null
           price: number
+          product_kind: string
+          purchase_unit: string | null
           rating: number
           reorder_point: number | null
           reorder_qty: number
@@ -11526,8 +11714,10 @@ export type Database = {
           slug: string
           specs: Json
           stock: number
+          stock_location: string | null
           title: string
           total_cost_value: number | null
+          unit_conversion: number
           updated_at: string
           video_url: string | null
           weighted_avg_cost: number
@@ -11541,6 +11731,7 @@ export type Database = {
           category_id?: string | null
           cost_price?: number
           created_at?: string
+          default_supplier_id?: string | null
           description?: string | null
           display_order?: number
           gallery?: Json
@@ -11551,11 +11742,14 @@ export type Database = {
           is_featured?: boolean
           is_new_arrival?: boolean
           is_preorder?: boolean
+          lead_time_days?: number | null
           low_stock_threshold?: number
           old_price?: number | null
           preorder_expected_date?: string | null
           preorder_note?: string | null
           price: number
+          product_kind?: string
+          purchase_unit?: string | null
           rating?: number
           reorder_point?: number | null
           reorder_qty?: number
@@ -11567,8 +11761,10 @@ export type Database = {
           slug: string
           specs?: Json
           stock?: number
+          stock_location?: string | null
           title: string
           total_cost_value?: number | null
+          unit_conversion?: number
           updated_at?: string
           video_url?: string | null
           weighted_avg_cost?: number
@@ -11582,6 +11778,7 @@ export type Database = {
           category_id?: string | null
           cost_price?: number
           created_at?: string
+          default_supplier_id?: string | null
           description?: string | null
           display_order?: number
           gallery?: Json
@@ -11592,11 +11789,14 @@ export type Database = {
           is_featured?: boolean
           is_new_arrival?: boolean
           is_preorder?: boolean
+          lead_time_days?: number | null
           low_stock_threshold?: number
           old_price?: number | null
           preorder_expected_date?: string | null
           preorder_note?: string | null
           price?: number
+          product_kind?: string
+          purchase_unit?: string | null
           rating?: number
           reorder_point?: number | null
           reorder_qty?: number
@@ -11608,8 +11808,10 @@ export type Database = {
           slug?: string
           specs?: Json
           stock?: number
+          stock_location?: string | null
           title?: string
           total_cost_value?: number | null
+          unit_conversion?: number
           updated_at?: string
           video_url?: string | null
           weighted_avg_cost?: number
@@ -11627,6 +11829,13 @@ export type Database = {
             columns: ["category_id"]
             isOneToOne: false
             referencedRelation: "categories"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "products_default_supplier_id_fkey"
+            columns: ["default_supplier_id"]
+            isOneToOne: false
+            referencedRelation: "erp_suppliers"
             referencedColumns: ["id"]
           },
         ]
@@ -14944,6 +15153,7 @@ export type Database = {
         Args: { p_brand_id: string }
         Returns: number
       }
+      bom_activate: { Args: { _bom_id: string }; Returns: undefined }
       bulk_transition_order_status: {
         Args: {
           _new_status: Database["public"]["Enums"]["order_status"]

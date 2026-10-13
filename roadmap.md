@@ -23,4 +23,7 @@
 - [x] Owner overview redesign — Executive Command Center focused-feed hierarchy
 - [ ] Phase 3b: Owner Leak Panel + Risk Alerts consolidated section
 - [ ] Phase 4: Staff dashboard — announcements/holidays + deeper role-adaptive queues
-- [ ] BOM + Procurement upgrade (plan pending approval)
+- [x] BOM Phase 1+2 (components, BOM manager) — awaiting review
+- [ ] BOM Phase 3 assembly (after review)
+- [ ] Phase 4 procurement — technical mapping first
+- [ ] Phase 5-6 pricing / replenishment
