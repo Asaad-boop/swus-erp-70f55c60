@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { Link } from "@tanstack/react-router";
@@ -51,6 +51,7 @@ import { CopyIconBtn, PhoneActions } from "@/components/erp/orders/contact-actio
 import { CourierRateBadge } from "@/components/erp/orders/orders-table";
 import { BrandBadge } from "@/components/erp/brand-badge";
 import { cn } from "@/lib/utils";
+import { supabase } from "@/integrations/supabase/client";
 import { useAbandonedCartsQuery, type IncompleteFilters } from "@/hooks/erp/use-abandoned-carts-query";
 import {
   convertAbandonedCartFn,
@@ -139,6 +140,27 @@ export function IncompleteOrdersTable({
     ...filters,
   });
   const rows = data?.rows ?? [];
+
+  // Realtime: new carts + cart updates land instantly without a manual refresh.
+  useEffect(() => {
+    let t: ReturnType<typeof setTimeout> | null = null;
+    const refresh = () => {
+      if (t) clearTimeout(t);
+      t = setTimeout(() => {
+        qc.invalidateQueries({ queryKey: ["abandoned-carts"] });
+        qc.invalidateQueries({ queryKey: ["abandoned-carts-count"] });
+      }, 150);
+    };
+    const channel = supabase
+      .channel("abandoned-carts-realtime")
+      .on("postgres_changes", { event: "*", schema: "public", table: "abandoned_carts" }, refresh)
+      .subscribe();
+    return () => {
+      if (t) clearTimeout(t);
+      supabase.removeChannel(channel);
+    };
+  }, [qc]);
+
   const total = data?.total ?? 0;
   const totalPages = Math.max(1, Math.ceil(total / pageSize));
 
@@ -273,7 +295,7 @@ export function IncompleteOrdersTable({
     const headers = ["date","name","phone","address","city","subtotal","items","last_step","followup_status","followup_count"];
     const csv = [headers.join(",")].concat(
       target.map((r) => [
-        format(new Date(r.updated_at), "yyyy-MM-dd HH:mm"),
+        format(new Date(r.created_at), "yyyy-MM-dd HH:mm"),
         JSON.stringify(r.customer_name ?? ""),
         r.customer_phone ?? "",
         JSON.stringify([r.shipping_address, r.shipping_thana, r.shipping_city].filter(Boolean).join(", ")),
@@ -471,7 +493,7 @@ export function IncompleteOrdersTable({
                       </div>
                       <div>{format(new Date(r.created_at), "h:mm a")}</div>
                       <div className="text-[10px] text-muted-foreground mt-0.5">
-                        {relTime(r.updated_at)}
+                        active {relTime(r.updated_at)}
                       </div>
                     </div>
                   </TableCell>

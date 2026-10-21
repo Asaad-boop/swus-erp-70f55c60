@@ -124,15 +124,18 @@ export const listAbandonedCartsFn = createServerFn({ method: "POST" })
       q = q.in("followup_status", data.followupStatuses);
     }
 
-    // Sort
+    // Sort by created_at (cart date) — the column the table displays.
+    // updated_at moves on every cart edit / follow-up, which made the list
+    // order contradict the dates shown on screen.
     switch (data.sort) {
-      case "oldest": q = q.order("updated_at", { ascending: true }); break;
+      case "oldest": q = q.order("created_at", { ascending: true }); break;
       case "highest": q = q.order("subtotal", { ascending: false }); break;
       case "lowest": q = q.order("subtotal", { ascending: true }); break;
-      case "priority": q = q.order("subtotal", { ascending: false }).order("updated_at", { ascending: false }); break;
+      case "priority": q = q.order("subtotal", { ascending: false }).order("created_at", { ascending: false }); break;
       case "newest":
-      default: q = q.order("updated_at", { ascending: false });
+      default: q = q.order("created_at", { ascending: false });
     }
+    q = q.order("id", { ascending: data.sort === "oldest" });
 
     q = q.range(from, to);
     const { data: rows, error, count } = await q;

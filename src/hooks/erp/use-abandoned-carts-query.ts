@@ -42,6 +42,11 @@ export function useAbandonedCartsQuery(args: {
       args.sort ?? "newest",
     ],
     enabled: args.enabled,
+    // Safety net alongside the realtime subscription: quiet background refresh
+    // so a missed event never leaves the tab stale.
+    refetchInterval: 15_000,
+    refetchIntervalInBackground: false,
+    refetchOnWindowFocus: true,
     queryFn: async () => {
       return listAbandonedCarts({
         data: {
@@ -69,7 +74,9 @@ export function useAbandonedCartCount(brandId: string | null, brandIds?: string[
   return useQuery({
     queryKey: ["abandoned-carts-count", brandId, (brandIds ?? []).join(",")],
     enabled: true,
-    staleTime: 30_000,
+    staleTime: 10_000,
+    refetchInterval: 30_000,
+    refetchOnWindowFocus: true,
     queryFn: async () => {
       const res = await countAbandonedCarts({ data: { brandId, brandIds } });
       return res.count;
