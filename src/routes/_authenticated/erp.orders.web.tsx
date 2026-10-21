@@ -806,6 +806,10 @@ function _WebOrdersPageBody() {
     enabled: brandIds.length > 0 && activeTab !== "incomplete"
       && (sourceFilter === "all" || sourceFilter === "direct" || !!sourceOrderIds),
     placeholderData: keepPreviousData,
+    // Safety net if a realtime event is missed: quiet background refresh.
+    refetchInterval: 20_000,
+    refetchIntervalInBackground: false,
+    refetchOnWindowFocus: true,
     initialPageParam: 1,
     queryFn: async ({ pageParam }) => {
       const pageIdx = pageParam - 1;
@@ -943,7 +947,10 @@ function _WebOrdersPageBody() {
   const { data: counts } = useQuery({
     queryKey: ["web-orders-counts", brandsKey],
     enabled: brandIds.length > 0,
-    staleTime: 30_000,
+    staleTime: 5_000,
+    refetchInterval: 20_000,
+    refetchIntervalInBackground: false,
+    refetchOnWindowFocus: true,
     queryFn: async () => {
       const queries = STATUS_KEYS.map(async (st) => {
         let q = applyBrandScope(
@@ -969,18 +976,25 @@ function _WebOrdersPageBody() {
   useEffect(() => {
     if (brandIds.length === 0) return;
     let refreshTimer: ReturnType<typeof setTimeout> | null = null;
-    const refreshSoon = () => {
+    let followUpTimer: ReturnType<typeof setTimeout> | null = null;
+    const refreshNow = () => {
+      queryClient.invalidateQueries({ queryKey: ["web-orders-page"] });
+      queryClient.invalidateQueries({ queryKey: ["web-orders-counts"] });
+    };
+    const refreshSoon = (withFollowUp = false) => {
       if (refreshTimer) clearTimeout(refreshTimer);
-      refreshTimer = setTimeout(() => {
-        queryClient.invalidateQueries({ queryKey: ["web-orders-page"] });
-        queryClient.invalidateQueries({ queryKey: ["web-orders-counts"] });
-      }, 300);
+      refreshTimer = setTimeout(refreshNow, 120);
+      // Items / pre-order flags land a moment after the order row — refetch once more.
+      if (withFollowUp) {
+        if (followUpTimer) clearTimeout(followUpTimer);
+        followUpTimer = setTimeout(refreshNow, 2500);
+      }
     };
     const channel = supabase
       .channel(`web-orders-realtime-${brandsKey}`)
       .on(
         "postgres_changes",
-        { event: "INSERT", schema: "public", table: "orders", filter: "status=eq.new" },
+        { event: "INSERT", schema: "public", table: "orders" },
         (payload) => {
           const row = payload.new as { id: string; brand_id: string | null };
           if (!row.brand_id || !brandIds.includes(row.brand_id)) return;
@@ -990,23 +1004,22 @@ function _WebOrdersPageBody() {
             setFlashIds((prev) => { const n = new Set(prev); n.delete(row.id); return n; });
           }, 3000);
           flashTimersRef.current.add(timer);
-          refreshSoon();
+          refreshSoon(true);
         },
       )
       .on(
         "postgres_changes",
         { event: "UPDATE", schema: "public", table: "orders" },
         (payload) => {
-          const row = payload.new as { brand_id: string | null; web_status: string | null };
-          const old = payload.old as { web_status?: string | null; status?: string | null };
+          const row = payload.new as { brand_id: string | null };
           if (!row.brand_id || !brandIds.includes(row.brand_id)) return;
-          if (old?.web_status === row.web_status) return;
           refreshSoon();
         },
       )
       .subscribe();
     return () => {
       if (refreshTimer) clearTimeout(refreshTimer);
+      if (followUpTimer) clearTimeout(followUpTimer);
       supabase.removeChannel(channel);
     };
     // brandIds intentionally omitted — brandsKey is the stable identity
@@ -1261,7 +1274,9 @@ function _WebOrdersPageBody() {
     mutationFn: async (status: WebStatusKey) => {
       const ids = Array.from(selectedIds);
       const now = new Date().toISOString();
-      const { data: auth } = await supabase.auth.getUser();
+      // Local session read — avoids an extra network round-trip before the update.
+      const { data: sess } = await supabase.auth.getSession();
+      const auth = { user: sess.session?.user ?? null };
       if (status === "complete" || status === "cancelled") {
         // Promote against the DB's live status so nothing stays stuck at `new`.
         const promo = status === "complete"
