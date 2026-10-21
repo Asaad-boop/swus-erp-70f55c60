@@ -983,6 +983,7 @@ function _WebOrdersPageBody() {
     };
     const refreshSoon = (withFollowUp = false) => {
       if (refreshTimer) clearTimeout(refreshTimer);
+      if (followUpTimer) clearTimeout(followUpTimer);
       refreshTimer = setTimeout(refreshNow, 120);
       // Items / pre-order flags land a moment after the order row — refetch once more.
       if (withFollowUp) {
@@ -1019,6 +1020,7 @@ function _WebOrdersPageBody() {
       .subscribe();
     return () => {
       if (refreshTimer) clearTimeout(refreshTimer);
+      if (followUpTimer) clearTimeout(followUpTimer);
       supabase.removeChannel(channel);
     };
     // brandIds intentionally omitted — brandsKey is the stable identity
