@@ -983,7 +983,6 @@ function _WebOrdersPageBody() {
     };
     const refreshSoon = (withFollowUp = false) => {
       if (refreshTimer) clearTimeout(refreshTimer);
-      if (followUpTimer) clearTimeout(followUpTimer);
       refreshTimer = setTimeout(refreshNow, 120);
       // Items / pre-order flags land a moment after the order row — refetch once more.
       if (withFollowUp) {
