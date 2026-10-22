@@ -63,7 +63,7 @@ export function NetProfitCard({
             brandIds,
           ).not("status", "in", "(new,cancelled,returned)")
             .gte("created_at", fromISO).lte("created_at", toISO)
-            .order("created_at", { ascending: true }).range(f, t),
+            .order("created_at", { ascending: true }).order("id", { ascending: true }).range(f, t),
         ),
         fetchAllRows((f, t) =>
           applyBrandScope(
@@ -74,16 +74,16 @@ export function NetProfitCard({
             "orders.brand_id" as any,
           ).not("orders.status", "in", "(new,cancelled,returned)")
             .gte("orders.created_at", fromISO).lte("orders.created_at", toISO)
-            .range(f, t),
+            .order("id", { ascending: true }).range(f, t),
         ),
-        applyBrandScope(
+        fetchAllRows((f, t) => applyBrandScope(
           supabase.from("mkt_insights_daily").select("spend, spend_bdt_fifo"),
           brandIds,
-        ).gte("date", fromDate).lte("date", toDate),
-        applyBrandScope(supabase.from("erp_return_cases").select("product_cost_loss"), brandIds)
-          .gte("created_at", fromISO).lte("created_at", toISO),
-        applyBrandScope(supabase.from("erp_exchange_cases").select("product_cost_loss"), brandIds)
-          .gte("created_at", fromISO).lte("created_at", toISO),
+        ).gte("date", fromDate).lte("date", toDate).order("id", { ascending: true }).range(f, t)),
+        fetchAllRows((f, t) => applyBrandScope(supabase.from("erp_return_cases").select("product_cost_loss"), brandIds)
+          .gte("created_at", fromISO).lte("created_at", toISO).order("id", { ascending: true }).range(f, t)),
+        fetchAllRows((f, t) => applyBrandScope(supabase.from("erp_exchange_cases").select("product_cost_loss"), brandIds)
+          .gte("created_at", fromISO).lte("created_at", toISO).order("id", { ascending: true }).range(f, t)),
       ]);
 
       const revenue = revRows.reduce((s: number, r: any) => s + Number(r.total ?? 0), 0);
@@ -122,16 +122,16 @@ export function NetProfitCard({
       if (courier <= 0 && shipFallback > 0) { courier = shipFallback; courierSeen = true; }
 
       let adSpend = 0; let adSpendSeen = false;
-      for (const r of (ads.data ?? []) as any[]) {
+      for (const r of ads) {
         const bdt = Number(r.spend_bdt_fifo ?? 0);
         if (bdt > 0) { adSpend += bdt; adSpendSeen = true; continue; }
         const usd = Number(r.spend ?? 0);
         if (usd > 0 && fx) { adSpend += usd * fx; adSpendSeen = true; }
       }
 
-      const returnLoss = (returns.data ?? []).reduce((s: number, r: any) => s + Number(r.product_cost_loss ?? 0), 0)
-                       + (exch.data ?? []).reduce((s: number, r: any) => s + Number(r.product_cost_loss ?? 0), 0);
-      const returnSeen = (returns.data ?? []).length > 0 || (exch.data ?? []).length > 0;
+      const returnLoss = returns.reduce((s: number, r: any) => s + Number(r.product_cost_loss ?? 0), 0)
+                       + exch.reduce((s: number, r: any) => s + Number(r.product_cost_loss ?? 0), 0);
+      const returnSeen = returns.length > 0 || exch.length > 0;
 
       const net = revenue - cogs - courier - pack - adSpend - returnLoss;
       const margin = revenue > 0 ? (net / revenue) * 100 : 0;
@@ -141,7 +141,7 @@ export function NetProfitCard({
         cogs, cogsSeen,
         courier, courierSeen,
         pack, packSeen,
-        adSpend, adSpendSeen, adFxMissing: !fx && (ads.data ?? []).some((r: any) => Number(r.spend ?? 0) > 0 && !Number(r.spend_bdt_fifo ?? 0)),
+        adSpend, adSpendSeen, adFxMissing: !fx && ads.some((r: any) => Number(r.spend ?? 0) > 0 && !Number(r.spend_bdt_fifo ?? 0)),
         returnLoss, returnSeen,
         net, margin,
       };
@@ -160,22 +160,22 @@ export function NetProfitCard({
       const toDate = toLocalDate(range.to);
 
       const [items, ads] = await Promise.all([
-        applyBrandScope(
+        fetchAllRows((f, t) => applyBrandScope(
           supabase.from("order_items").select(
             "product_id, quantity, unit_cost_snapshot, orders!inner(brand_id, status, created_at)",
           ),
           brandIds,
           "orders.brand_id" as any,
         ).not("orders.status", "in", "(new,cancelled,returned)")
-          .gte("orders.created_at", fromISO).lte("orders.created_at", toISO),
-        applyBrandScope(
+          .gte("orders.created_at", fromISO).lte("orders.created_at", toISO).order("id", { ascending: true }).range(f, t)),
+        fetchAllRows((f, t) => applyBrandScope(
           supabase.from("mkt_insights_daily").select("campaign_id, spend, spend_bdt_fifo"),
           brandIds,
-        ).gte("date", fromDate).lte("date", toDate),
+        ).gte("date", fromDate).lte("date", toDate).order("id", { ascending: true }).range(f, t)),
       ]);
 
       // Top products by COGS
-      const itemRows = (items.data ?? []) as any[];
+      const itemRows = items;
       const missingPids = Array.from(new Set(
         itemRows.filter((r) => !(Number(r.unit_cost_snapshot ?? 0) > 0) && r.product_id).map((r) => r.product_id as string)
       ));
@@ -206,7 +206,7 @@ export function NetProfitCard({
 
       // Top campaigns by spend
       const byCamp = new Map<string, number>();
-      for (const r of (ads.data ?? []) as any[]) {
+      for (const r of ads) {
         const v = Number(r.spend_bdt_fifo ?? 0) || (fx ? Number(r.spend ?? 0) * fx : 0);
         if (v <= 0) continue;
         const k = r.campaign_id ?? "untracked";
