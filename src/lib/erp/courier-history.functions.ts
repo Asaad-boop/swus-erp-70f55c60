@@ -1,6 +1,7 @@
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
+import { assertIntegrationAdmin } from "./integration-admin";
 
 export const fetchCourierHistoryFn = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
@@ -29,18 +30,14 @@ export const bdCourierQuotaFn = createServerFn({ method: "POST" })
     return await getBdCourierQuota(context.supabase);
   });
 
-/** Admin-only: save (or clear) the BDCourier API key. Never returns the raw key. */
+/** Admin/owner only: save (or clear) the key. Never returns the raw key. */
 export const bdCourierSaveKeyFn = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((d) =>
     z.object({ apiKey: z.string().max(400).nullable() }).parse(d),
   )
   .handler(async ({ data, context }) => {
-    const { data: isAdmin } = await context.supabase.rpc("has_role", {
-      _user_id: context.userId,
-      _role: "admin",
-    });
-    if (!isAdmin) throw new Error("Admin only");
+    await assertIntegrationAdmin(context.supabase, context.userId);
 
     const { saveBdCourierKey, getBdCourierQuota } = await import("./bdcourier.server");
     await saveBdCourierKey(context.supabase, data.apiKey);

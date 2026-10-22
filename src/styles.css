@@ -1227,12 +1227,12 @@ button:disabled,
 /* Page/route entrance — subtle, never janky */
 @keyframes butter-in {
   from { opacity: 0; transform: translate3d(0, 6px, 0); }
-  to   { opacity: 1; transform: translate3d(0, 0, 0); }
+  to   { opacity: 1; transform: none; }
 }
-.butter-in { animation: butter-in 260ms var(--ease-butter) both; }
+.butter-in { animation: butter-in 260ms var(--ease-butter) backwards; }
 
 main > *, [data-page-enter] {
-  animation: butter-in 240ms var(--ease-butter) both;
+  animation: butter-in 240ms var(--ease-butter) backwards;
 }
 
 /* Radix overlays/popovers/dialogs/dropdowns: consistent easing */

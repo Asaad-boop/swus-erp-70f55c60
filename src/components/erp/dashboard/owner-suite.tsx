@@ -82,7 +82,7 @@ async function fetchPnl(brandIds: string[], from: Date, to: Date, fx: number | u
     fetchAllRows((f, t) =>
       applyBrandScope(supabase.from("orders").select("total, created_at, status, actual_shipping_cost"), brandIds)
         .not("status", "in", EXCLUDED).gte("created_at", fromISO).lte("created_at", toISO)
-        .order("created_at", { ascending: true }).range(f, t),
+        .order("created_at", { ascending: true }).order("id", { ascending: true }).range(f, t),
     ),
     fetchAllRows((f, t) =>
       applyBrandScope(
@@ -90,10 +90,10 @@ async function fetchPnl(brandIds: string[], from: Date, to: Date, fx: number | u
           "product_id, quantity, unit_cost_snapshot, courier_cost_allocated, packaging_cost_allocated, orders!inner(brand_id,status,created_at)",
         ), brandIds, "orders.brand_id" as any,
       ).not("orders.status", "in", EXCLUDED).gte("orders.created_at", fromISO).lte("orders.created_at", toISO)
-        .range(f, t),
+        .order("id", { ascending: true }).range(f, t),
     ),
-    applyBrandScope(supabase.from("mkt_insights_daily").select("date, spend, spend_bdt_fifo"), brandIds)
-      .gte("date", localDate(from)).lte("date", localDate(to)),
+    fetchAllRows((f, t) => applyBrandScope(supabase.from("mkt_insights_daily").select("date, spend, spend_bdt_fifo"), brandIds)
+      .gte("date", localDate(from)).lte("date", localDate(to)).order("id", { ascending: true }).range(f, t)),
   ]);
   const revenue = rows.reduce((s, r) => s + Number(r.total ?? 0), 0);
   const orders = rows.length;
@@ -119,7 +119,7 @@ async function fetchPnl(brandIds: string[], from: Date, to: Date, fx: number | u
 
   let adSpend = 0;
   const adByDay = new Map<string, number>();
-  for (const r of (ads.data ?? []) as any[]) {
+  for (const r of ads) {
     const v = Number(r.spend_bdt_fifo ?? 0) || (fx ? Number(r.spend ?? 0) * fx : 0);
     adSpend += v;
     adByDay.set(String(r.date), (adByDay.get(String(r.date)) ?? 0) + v);
@@ -536,16 +536,16 @@ export function MarketingPerformance({ brandIds, enabled, range }: P) {
     queryFn: async () => {
       const fromISO = range.from.toISOString(), toISO = range.to.toISOString();
       const [ads, rows] = await Promise.all([
-        applyBrandScope(supabase.from("mkt_insights_daily").select("spend, spend_bdt_fifo, meta_purchase_value, meta_purchases"), brandIds)
-          .gte("date", localDate(range.from)).lte("date", localDate(range.to)),
+        fetchAllRows((f, t) => applyBrandScope(supabase.from("mkt_insights_daily").select("spend, spend_bdt_fifo, meta_purchase_value, meta_purchases"), brandIds)
+          .gte("date", localDate(range.from)).lte("date", localDate(range.to)).order("id", { ascending: true }).range(f, t)),
         fetchAllRows((f, t) =>
           applyBrandScope(supabase.from("orders").select("total, source, utm_source"), brandIds)
             .not("status", "in", EXCLUDED).gte("created_at", fromISO).lte("created_at", toISO)
-            .order("created_at", { ascending: true }).range(f, t),
+            .order("created_at", { ascending: true }).order("id", { ascending: true }).range(f, t),
         ),
       ]);
       let spend = 0;
-      for (const r of (ads.data ?? []) as any[]) spend += Number(r.spend_bdt_fifo ?? 0) || (fx ? Number(r.spend ?? 0) * fx : 0);
+      for (const r of ads) spend += Number(r.spend_bdt_fifo ?? 0) || (fx ? Number(r.spend ?? 0) * fx : 0);
       const revenue = rows.reduce((s, r) => s + Number(r.total ?? 0), 0);
       const isPaid = (r: any) => {
         const u = String(r.utm_source ?? "").toLowerCase();

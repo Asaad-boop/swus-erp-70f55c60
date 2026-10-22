@@ -1,5 +1,5 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
-import { useMutation, useQuery } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { useEffect, useMemo, useState } from "react";
 import { ArrowLeft, Plus, Trash2, Save, Loader2, ClipboardList, Boxes, FileText } from "lucide-react";
@@ -20,7 +20,14 @@ import { Palette } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 export const Route = createFileRoute("/_authenticated/erp/purchase-orders/new")({
-  head: () => ({ meta: [{ title: "New Purchase Order — ERP" }] }),
+  head: () => ({ meta: [
+    { title: "New Purchase Order — SyncWithUs ERP" },
+    { name: "description", content: "Create a supplier purchase order with product quantities and purchasing costs in SyncWithUs ERP." },
+    { property: "og:title", content: "New Purchase Order — SyncWithUs ERP" },
+    { property: "og:description", content: "Create a supplier purchase order with product quantities and purchasing costs." },
+    { property: "og:type", content: "website" },
+    { name: "twitter:card", content: "summary" },
+  ] }),
   component: NewLocalPoPage,
 });
 
@@ -41,6 +48,7 @@ const emptyPick = (): PickedProduct => ({ id: null, title: "", sku: null, image:
 function NewLocalPoPage() {
   const { activeBrand, brands, isAllBrands } = useBrand();
   const navigate = useNavigate();
+  const qc = useQueryClient();
   const [pickedBrandId, setPickedBrandId] = useState("");
   const effectiveBrand = useMemo(
     () => activeBrand ?? brands.find((b) => b.id === pickedBrandId) ?? null,
@@ -140,6 +148,7 @@ function NewLocalPoPage() {
       return await createFn({ data: payload });
     },
     onSuccess: async (res: any) => {
+      void qc.invalidateQueries({ queryKey: ["local-pos"] });
       toast.success(`PO ${res.po_number} created`);
       // Mark linked reorder suggestions as processed (fail-soft)
       if (prefillSuggestionIds.length) {
