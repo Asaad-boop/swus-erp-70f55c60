@@ -467,6 +467,12 @@ function PosInvoice(p: ThemeProps) {
       <div className="flex justify-between font-bold border-t border-black mt-1 pt-1"><span>TOTAL</span><span>{formatMoney(t.total, p.cfg.items)}</span></div>
       {p.cfg.totals.showAdvance && t.advance > 0 && <div className="flex justify-between"><span>Paid</span><span>{formatMoney(t.advance, p.cfg.items)}</span></div>}
       {p.cfg.totals.showDue && <div className="flex justify-between font-bold"><span>Due</span><span>{formatMoney(t.due, p.cfg.items)}</span></div>}
+      {(p.order.shipping_note || p.order.customer_note) && (
+        <div className="mt-2 space-y-1 whitespace-pre-wrap break-words border-t border-border pt-1">
+          {p.order.shipping_note && <div><strong>Shipping Note:</strong> {p.order.shipping_note}</div>}
+          {p.order.customer_note && <div><strong>Customer Note:</strong> {p.order.customer_note}</div>}
+        </div>
+      )}
       <div className="text-center mt-2">{p.cfg.footer.thankYou}</div>
       {p.qrDataUrl && <div className="flex justify-center mt-2"><img src={p.qrDataUrl} alt="QR" style={{ width: 60, height: 60 }} /></div>}
     </div>

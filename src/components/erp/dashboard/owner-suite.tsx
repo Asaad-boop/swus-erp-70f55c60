@@ -536,16 +536,16 @@ export function MarketingPerformance({ brandIds, enabled, range }: P) {
     queryFn: async () => {
       const fromISO = range.from.toISOString(), toISO = range.to.toISOString();
       const [ads, rows] = await Promise.all([
-        applyBrandScope(supabase.from("mkt_insights_daily").select("spend, spend_bdt_fifo, meta_purchase_value, meta_purchases"), brandIds)
-          .gte("date", localDate(range.from)).lte("date", localDate(range.to)),
+        fetchAllRows((f, t) => applyBrandScope(supabase.from("mkt_insights_daily").select("spend, spend_bdt_fifo, meta_purchase_value, meta_purchases"), brandIds)
+          .gte("date", localDate(range.from)).lte("date", localDate(range.to)).order("id", { ascending: true }).range(f, t)),
         fetchAllRows((f, t) =>
           applyBrandScope(supabase.from("orders").select("total, source, utm_source"), brandIds)
             .not("status", "in", EXCLUDED).gte("created_at", fromISO).lte("created_at", toISO)
-            .order("created_at", { ascending: true }).range(f, t),
+            .order("created_at", { ascending: true }).order("id", { ascending: true }).range(f, t),
         ),
       ]);
       let spend = 0;
-      for (const r of (ads.data ?? []) as any[]) spend += Number(r.spend_bdt_fifo ?? 0) || (fx ? Number(r.spend ?? 0) * fx : 0);
+      for (const r of ads) spend += Number(r.spend_bdt_fifo ?? 0) || (fx ? Number(r.spend ?? 0) * fx : 0);
       const revenue = rows.reduce((s, r) => s + Number(r.total ?? 0), 0);
       const isPaid = (r: any) => {
         const u = String(r.utm_source ?? "").toLowerCase();
