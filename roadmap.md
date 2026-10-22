@@ -1,8 +1,10 @@
 # Roadmap
 
 ## Project monitoring safety review
-- [ ] Review all 15 findings against current code and live definitions; preserve intentional removals.
-- [ ] Apply only verified, low-risk fixes with targeted regression checks; defer changes with unclear accounting or integration impact.
+- [x] Review all 15 findings against current code and live definitions; preserve intentional Growth Studio removal (false positive).
+- [x] Apply 9 low-risk fixes: courier column mapping, fixed bars, stable/full aggregate pagination, activity refresh, owner key permission, brand-safe cache, sidebar focus, receipt notes. Ten regression tests pass; preview/CSS/receipt checks pass.
+- Deferred by safety instruction: billing total gross-vs-COD convention (decision required), CRM refresh (performance + row isolation review required), scanner undo (atomic conflict protection required), webhook duplicates (atomic claims + crash recovery required), packing counter/link mismatch (combined queue semantics required). Findings remain unresolved; no risky changes applied.
+- Authenticated end-to-end checks unavailable: externally managed Supabase provides no test session. Verify real courier booking, owner settings save and live order activity in the signed-in app.
 
 ## ERP deep-dive fixes (step by step)
 - [x] 1. Order status: row lock + illegal backward jump guard
