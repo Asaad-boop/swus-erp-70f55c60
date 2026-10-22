@@ -69,9 +69,10 @@ async function readSetting(supabase: any, key: string): Promise<any> {
 
 async function writeSetting(supabase: any, key: string, value: unknown) {
   const client = await db(supabase);
-  await client
+  const { error } = await client
     .from("app_settings")
     .upsert({ key, value: JSON.stringify(value), updated_at: new Date().toISOString() }, { onConflict: "key" });
+  if (error) throw error;
 }
 
 /** DB-saved key wins over the env secret so admins can rotate it from Settings. */

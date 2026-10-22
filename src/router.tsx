@@ -59,12 +59,11 @@ export const getRouter = () => {
         staleTime: 60_000,
         gcTime: 30 * 60_000,
         refetchOnWindowFocus: false,
-        refetchOnMount: false,
+        refetchOnMount: true,
         refetchOnReconnect: true,
         retry: 1,
         networkMode: "offlineFirst",
-        // Keep old rows on screen while the next page loads → no layout flash.
-        placeholderData: (prev: unknown) => prev,
+        // Do not reuse another query's rows across brand/filter changes.
       },
       mutations: { retry: 0, networkMode: "offlineFirst" },
     },

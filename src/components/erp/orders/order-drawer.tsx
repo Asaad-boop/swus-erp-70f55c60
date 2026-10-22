@@ -299,6 +299,7 @@ export function OrderDrawer({ orderId, onClose, mode = "fulfillment" }: Props) {
     onSuccess: (_d, vars) => {
       toast.success("Status updated");
       if (vars === "confirmed" && orderId) fireOrderSms(orderId, "order_confirm");
+      qc.invalidateQueries({ queryKey: ["order-activity-feed", orderId] });
       qc.invalidateQueries({ queryKey: ["orders"] });
       qc.invalidateQueries({ queryKey: ["order-detail", orderId] });
     },
@@ -368,6 +369,7 @@ export function OrderDrawer({ orderId, onClose, mode = "fulfillment" }: Props) {
     onSuccess: (_d, vars) => {
       toast.success("Status updated");
       if (vars.web_status === "complete" && orderId) fireOrderSms(orderId, "order_confirm");
+      qc.invalidateQueries({ queryKey: ["order-activity-feed", orderId] });
       qc.invalidateQueries({ queryKey: ["web-orders"] });
       qc.invalidateQueries({ queryKey: ["web-orders-page"] });
       qc.invalidateQueries({ queryKey: ["web-orders-inf"] });

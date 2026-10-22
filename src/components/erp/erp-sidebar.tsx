@@ -395,6 +395,8 @@ export function ErpSidebar({
                           onToggle={() => toggleGroup(s.key)}
                         />
                         <div
+                          inert={!open}
+                          aria-hidden={!open}
                           className={cn(
                             "grid transition-all duration-300 ease-[cubic-bezier(0.32,0.72,0,1)]",
                             open
@@ -466,7 +468,7 @@ function RailSection({
         />
         <Icon className="h-4 w-4" />
       </button>
-      <div className="pointer-events-none absolute left-full top-0 z-50 pl-2 opacity-0 transition-opacity duration-150 group-hover/fly:pointer-events-auto group-hover/fly:opacity-100">
+      <div className="invisible pointer-events-none absolute left-full top-0 z-50 pl-2 opacity-0 transition-opacity duration-150 group-hover/fly:visible group-hover/fly:pointer-events-auto group-hover/fly:opacity-100 group-focus-within/fly:visible group-focus-within/fly:pointer-events-auto group-focus-within/fly:opacity-100">
         <div className="min-w-[196px] rounded-lg border border-border bg-popover p-1.5 shadow-lg">
           <div className="px-2 py-1 text-[10px] font-semibold uppercase tracking-[0.12em] text-muted-foreground/70">
             {label}
