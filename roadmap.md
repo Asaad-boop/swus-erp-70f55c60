@@ -1,5 +1,9 @@
 # Roadmap
 
+## Project monitoring safety review
+- [ ] Review all 15 findings against current code and live definitions; preserve intentional removals.
+- [ ] Apply only verified, low-risk fixes with targeted regression checks; defer changes with unclear accounting or integration impact.
+
 ## ERP deep-dive fixes (step by step)
 - [x] 1. Order status: row lock + illegal backward jump guard
 - [x] 7. Bulk status batched RPC (+ wire order list)
