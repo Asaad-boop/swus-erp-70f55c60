@@ -67,7 +67,7 @@ function CargoAgentsDashboard() {
                 <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-7 gap-4 text-right">
                   <Stat label="POs" value={String(row.po_count)} />
                   <Stat label="Pcs" value={Number(row.pcs_total ?? 0).toLocaleString()} />
-                  <Stat label="Weight" value={`${Number(row.weight_total ?? 0).toLocaleString()} kg`} />
+                  <Stat label="Weight" value={`${row.weight_estimated ? "~" : ""}${Number(row.weight_total ?? 0).toLocaleString()} kg`} />
                   <Stat label="Buying" value={fmtBdt(row.buying_total)} />
                   <Stat label="Shipping" value={fmtBdt(row.shipping_total)} />
                   <Stat label="Total bill" value={fmtBdt(row.bill_total ?? row.grand_total)} />
@@ -114,7 +114,7 @@ function CargoAgentsDashboard() {
                               <td className="py-1.5 pr-3 text-right tabular-nums">
                                 {p.carton_count > 0 ? `${p.carton_received}/${p.carton_count}` : "—"}
                               </td>
-                              <td className="py-1.5 pr-3 text-right tabular-nums">{Number(p.weight_kg ?? 0) > 0 ? `${Number(p.weight_kg).toLocaleString()} kg` : "—"}</td>
+                              <td className="py-1.5 pr-3 text-right tabular-nums">{Number(p.weight_kg ?? 0) > 0 ? `${p.weight_estimated ? "~" : ""}${Number(p.weight_kg).toLocaleString()} kg` : "—"}</td>
                               <td className="py-1.5 pr-3 text-right tabular-nums">{fmtBdt(p.buying_bdt)}</td>
                               <td className="py-1.5 pr-3 text-right tabular-nums">{fmtBdt(p.shipping_bdt)}</td>
                               <td className="py-1.5 pr-3 text-right tabular-nums font-medium">{fmtBdt(p.bill_bdt)}</td>
