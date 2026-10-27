@@ -64,11 +64,14 @@ function CargoAgentsDashboard() {
                     {a.contact_person || "—"}{a.phone ? ` · ${a.phone}` : ""}
                   </div>
                 </div>
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-right">
-                  <Stat label="Shipments" value={String(row.po_count)} />
-                  <Stat label="Shipping value" value={fmtBdt(row.shipping_total)} />
-                  <Stat label="Paid" value={fmtBdt(row.paid_total)} />
-                  <Stat label="Due" value={fmtBdt(row.due_total)} className={row.due_total > 0 ? "text-orange-600" : ""} />
+                <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-7 gap-4 text-right">
+                  <Stat label="POs" value={String(row.po_count)} />
+                  <Stat label="Pcs" value={Number(row.pcs_total ?? 0).toLocaleString()} />
+                  <Stat label="Weight" value={`${Number(row.weight_total ?? 0).toLocaleString()} kg`} />
+                  <Stat label="Buying" value={fmtBdt(row.buying_total)} />
+                  <Stat label="Shipping" value={fmtBdt(row.shipping_total)} />
+                  <Stat label="Total bill" value={fmtBdt(row.bill_total ?? row.grand_total)} />
+                  <Stat label="Paid / Due" value={`${fmtBdt(row.paid_total)} / ${fmtBdt(row.due_total)}`} className={row.due_total > 0 ? "text-orange-600" : ""} />
                 </div>
               </div>
               {isOpen && (
