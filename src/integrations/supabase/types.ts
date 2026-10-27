@@ -7687,6 +7687,7 @@ export type Database = {
           currency: string
           customs_duty_bdt: number
           due_bdt: number
+          expected_arrival_date: string | null
           freight_cost_bdt: number
           fx_rate: number
           fx_rate_cny_bdt: number | null
@@ -7727,6 +7728,7 @@ export type Database = {
           currency?: string
           customs_duty_bdt?: number
           due_bdt?: number
+          expected_arrival_date?: string | null
           freight_cost_bdt?: number
           fx_rate?: number
           fx_rate_cny_bdt?: number | null
@@ -7767,6 +7769,7 @@ export type Database = {
           currency?: string
           customs_duty_bdt?: number
           due_bdt?: number
+          expected_arrival_date?: string | null
           freight_cost_bdt?: number
           fx_rate?: number
           fx_rate_cny_bdt?: number | null
