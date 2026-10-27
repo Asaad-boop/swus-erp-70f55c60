@@ -123,6 +123,7 @@ export const listPurchaseOrders = createServerFn({ method: "POST" })
         currency, fx_rate,
         product_subtotal_bdt, shipping_total_bdt, local_courier_total_bdt,
         grand_total_bdt, paid_bdt, due_bdt, status, notes, created_at,
+        shipped_at, expected_arrival_date,
         supplier:supplier_id ( id, name ),
         agent:cargo_agent_id ( id, name ),
         brand:brand_id ( id, name, slug ),
@@ -2095,6 +2096,7 @@ export const updateImportPo = createServerFn({ method: "POST" })
       po_number: z.string().min(1).optional(),
       cargo_agent_id: z.string().uuid().nullable().optional(),
       shipped_at: z.string().nullable().optional(),
+      expected_arrival_date: z.string().nullable().optional(),
       freight_cost_bdt: z.number().nonnegative().optional(),
       customs_duty_bdt: z.number().nonnegative().optional(),
       other_charges_bdt: z.number().nonnegative().optional(),
@@ -2105,12 +2107,19 @@ export const updateImportPo = createServerFn({ method: "POST" })
   )
   .handler(async ({ data, context }) => {
     await assertAnyRole(context.supabase, context.userId, ["admin", "operations", "accountant"]);
-    const { poId, ...payload } = data;
+    const { poId, expected_arrival_date, ...payload } = data;
     const { data: out, error } = await context.supabase.rpc("imp_update_po", {
       _po_id: poId,
       _payload: payload,
     });
     if (error) throw error;
+    if (expected_arrival_date !== undefined) {
+      const { error: etaErr } = await context.supabase
+        .from("imp_purchase_orders")
+        .update({ expected_arrival_date: expected_arrival_date || null } as any)
+        .eq("id", poId);
+      if (etaErr) throw etaErr;
+    }
     await logPoEvent(context.supabase, context.userId, poId, "po_updated", {
       group: "plan",
       title: "PO edit kora hoyeche",
