@@ -1445,7 +1445,8 @@ export const getCargoAgentDashboard = createServerFn({ method: "POST" })
         .from("imp_purchase_orders")
         .select("id, po_number, order_date, status, cargo_agent_id, product_subtotal_bdt, shipping_total_bdt, shipping_cost_bdt, shipping_weight_kg, shipping_rate_per_kg, total_weight_kg, local_delivery_total_bdt, paid_bdt, grand_total_bdt, due_bdt")
         .in("brand_id", ids)
-        .not("cargo_agent_id", "is", null),
+        .not("cargo_agent_id", "is", null)
+        .neq("status", "cancelled"),
     ]);
     if (agentsRes.error) throw agentsRes.error;
     if (posRes.error) throw posRes.error;
