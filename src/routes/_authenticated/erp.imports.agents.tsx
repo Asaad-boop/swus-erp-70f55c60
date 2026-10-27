@@ -64,11 +64,14 @@ function CargoAgentsDashboard() {
                     {a.contact_person || "—"}{a.phone ? ` · ${a.phone}` : ""}
                   </div>
                 </div>
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-right">
-                  <Stat label="Shipments" value={String(row.po_count)} />
-                  <Stat label="Shipping value" value={fmtBdt(row.shipping_total)} />
-                  <Stat label="Paid" value={fmtBdt(row.paid_total)} />
-                  <Stat label="Due" value={fmtBdt(row.due_total)} className={row.due_total > 0 ? "text-orange-600" : ""} />
+                <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-7 gap-4 text-right">
+                  <Stat label="POs" value={String(row.po_count)} />
+                  <Stat label="Pcs" value={Number(row.pcs_total ?? 0).toLocaleString()} />
+                  <Stat label="Weight" value={`${Number(row.weight_total ?? 0).toLocaleString()} kg`} />
+                  <Stat label="Buying" value={fmtBdt(row.buying_total)} />
+                  <Stat label="Shipping" value={fmtBdt(row.shipping_total)} />
+                  <Stat label="Total bill" value={fmtBdt(row.bill_total ?? row.grand_total)} />
+                  <Stat label="Paid / Due" value={`${fmtBdt(row.paid_total)} / ${fmtBdt(row.due_total)}`} className={row.due_total > 0 ? "text-orange-600" : ""} />
                 </div>
               </div>
               {isOpen && (
@@ -83,7 +86,12 @@ function CargoAgentsDashboard() {
                             <th className="py-1.5 pr-3">PO #</th>
                             <th className="py-1.5 pr-3">Date</th>
                             <th className="py-1.5 pr-3">Status</th>
-                            <th className="py-1.5 pr-3 text-right">Grand total</th>
+                            <th className="py-1.5 pr-3 text-right">Pcs</th>
+                            <th className="py-1.5 pr-3 text-right">Cartons</th>
+                            <th className="py-1.5 pr-3 text-right">Weight</th>
+                            <th className="py-1.5 pr-3 text-right">Buying</th>
+                            <th className="py-1.5 pr-3 text-right">Shipping</th>
+                            <th className="py-1.5 pr-3 text-right">Total bill</th>
                             <th className="py-1.5 pr-3 text-right">Paid</th>
                             <th className="py-1.5 text-right">Due</th>
                           </tr>
@@ -102,7 +110,14 @@ function CargoAgentsDashboard() {
                               </td>
                               <td className="py-1.5 pr-3">{p.order_date}</td>
                               <td className="py-1.5 pr-3"><Badge variant="outline">{p.status}</Badge></td>
-                              <td className="py-1.5 pr-3 text-right tabular-nums">{fmtBdt(p.grand_total_bdt)}</td>
+                              <td className="py-1.5 pr-3 text-right tabular-nums">{Number(p.pcs ?? 0).toLocaleString()}</td>
+                              <td className="py-1.5 pr-3 text-right tabular-nums">
+                                {p.carton_count > 0 ? `${p.carton_received}/${p.carton_count}` : "—"}
+                              </td>
+                              <td className="py-1.5 pr-3 text-right tabular-nums">{Number(p.weight_kg ?? 0) > 0 ? `${Number(p.weight_kg).toLocaleString()} kg` : "—"}</td>
+                              <td className="py-1.5 pr-3 text-right tabular-nums">{fmtBdt(p.buying_bdt)}</td>
+                              <td className="py-1.5 pr-3 text-right tabular-nums">{fmtBdt(p.shipping_bdt)}</td>
+                              <td className="py-1.5 pr-3 text-right tabular-nums font-medium">{fmtBdt(p.bill_bdt)}</td>
                               <td className="py-1.5 pr-3 text-right tabular-nums">{fmtBdt(p.paid_bdt)}</td>
                               <td className={`py-1.5 text-right tabular-nums ${Number(p.due_bdt) > 0 ? "text-orange-600" : ""}`}>{fmtBdt(p.due_bdt)}</td>
                             </tr>
