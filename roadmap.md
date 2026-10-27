@@ -33,3 +33,10 @@
 - [ ] BOM Phase 3 assembly (after review)
 - [ ] Phase 4 procurement — technical mapping first
 - [ ] Phase 5-6 pricing / replenishment
+
+## Imports polish (step by step)
+- [x] 1. ETA field + late alert on PO list
+- [ ] 2. Landed cost per pcs report
+- [ ] 3. Supplier/agent ledger statement PDF
+- [ ] 4. PO create flow polish
+- [ ] 5. PO detail / carton release polish

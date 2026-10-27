@@ -1,0 +1,1 @@
+ALTER TABLE public.imp_purchase_orders ADD COLUMN IF NOT EXISTS expected_arrival_date date;

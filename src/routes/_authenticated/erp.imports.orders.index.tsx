@@ -16,7 +16,7 @@ import { toast } from "sonner";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { cn } from "@/lib/utils";
 import { listPurchaseOrders, deleteImportPo } from "@/lib/erp/imports/imports.functions";
-import { PO_STATUS_LABEL, fmtBdt, netDue, type ImpPoStatus } from "@/lib/erp/imports/types";
+import { PO_STATUS_LABEL, fmtBdt, netDue, poEtaDays, type ImpPoStatus } from "@/lib/erp/imports/types";
 import { ProductThumbStack, poItemName } from "./erp.imports.index";
 
 export const Route = createFileRoute("/_authenticated/erp/imports/orders/")({
@@ -37,6 +37,7 @@ function PoListPage() {
   const [status, setStatus] = useState<string>("all");
   const [q, setQ] = useState("");
   const [payState, setPayState] = useState<"all" | "paid" | "partial" | "unpaid">("all");
+  const [lateOnly, setLateOnly] = useState(false);
   const [sortBy, setSortBy] = useState<SortKey>("date");
   const [sortDir, setSortDir] = useState<"asc" | "desc">("desc");
   const [selected, setSelected] = useState<Set<string>>(new Set());
@@ -110,6 +111,11 @@ function PoListPage() {
     return m;
   }, [rows]);
 
+  const today = useMemo(() => new Intl.DateTimeFormat("en-CA", { timeZone: "Asia/Dhaka" }).format(new Date()), []);
+  const lateCount = useMemo(
+    () => rows.filter((p) => (poEtaDays(p.expected_arrival_date, p.status, today) ?? 0) > 0).length,
+    [rows, today],
+  );
   const filtered = useMemo(() => {
     const needle = q.trim().toLowerCase();
     let out = rows.filter((p) => {
@@ -127,6 +133,7 @@ function PoListPage() {
       // Due column jei number dekhay, filter o thik oi number-ei kaj korbe
       const paid = Number(p.paid_bdt || 0);
       const due = netDue(p.due_bdt);
+      if (lateOnly && !((poEtaDays(p.expected_arrival_date, p.status, today) ?? 0) > 0)) return false;
       if (payState === "paid" && due > 0) return false;
       if (payState === "partial" && !(paid > 0 && due > 0)) return false;
       if (payState === "unpaid" && paid > 0) return false;
@@ -143,7 +150,7 @@ function PoListPage() {
       }
     });
     return out;
-  }, [rows, q, payState, sortBy, sortDir]);
+  }, [rows, q, payState, sortBy, sortDir, lateOnly, today]);
 
   const toggleSort = (k: SortKey) => {
     if (sortBy === k) setSortDir((d) => (d === "asc" ? "desc" : "asc"));
@@ -282,6 +289,9 @@ function PoListPage() {
         {rows.length > 0 && (
           <div className="flex flex-wrap gap-1.5 border-t border-border/60 pt-2.5">
             <Chip active={status === "all"} onClick={() => setStatus("all")} label="All" count={rows.length} />
+            {lateCount > 0 && (
+              <Chip active={lateOnly} onClick={() => setLateOnly((v) => !v)} label="⚠ Late (ETA par)" count={lateCount} />
+            )}
             {(Object.keys(PO_STATUS_LABEL) as ImpPoStatus[])
               .filter((k) => status === k || (statusCounts.get(k) ?? 0) > 0)
               .map((k) => (
@@ -405,6 +415,15 @@ function PoListPage() {
                         <Badge variant="secondary" className={cn("whitespace-nowrap", PO_STATUS_LABEL[p.status as ImpPoStatus]?.tone)}>
                           {PO_STATUS_LABEL[p.status as ImpPoStatus]?.label ?? p.status}
                         </Badge>
+                        {(() => {
+                          const d = poEtaDays(p.expected_arrival_date, p.status, today);
+                          if (d === null) return null;
+                          return (
+                            <div className={cn("mt-1 text-[11px] whitespace-nowrap tabular-nums", d > 0 ? "font-semibold text-destructive" : "text-muted-foreground")}>
+                              {d > 0 ? `${d} din late` : d === 0 ? "ETA aj" : `ETA ${-d} din baki`}
+                            </div>
+                          );
+                        })()}
                       </TableCell>
                       <TableCell className="text-right tabular-nums font-semibold whitespace-nowrap">{fmtBdt(total)}</TableCell>
                       <TableCell className="min-w-[200px]">

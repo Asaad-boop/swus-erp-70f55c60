@@ -80,3 +80,10 @@ export function netDue(n: number | string | null | undefined): number {
 export function newIdemKey(prefix: string = "imp"): string {
   return `${prefix}_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 10)}`;
 }
+/** ETA status: days late (>0) / days left (<=0) for POs not yet arrived in BD. null = no ETA or already arrived. */
+export const PO_ARRIVED_STATUSES = ["arrived_bd", "partially_received", "completed", "cancelled"];
+export function poEtaDays(eta: string | null | undefined, status: string, today: string): number | null {
+  if (!eta || PO_ARRIVED_STATUSES.includes(status)) return null;
+  const ms = Date.parse(today + "T00:00:00Z") - Date.parse(eta.slice(0, 10) + "T00:00:00Z");
+  return Number.isFinite(ms) ? Math.round(ms / 86400000) : null;
+}

@@ -79,6 +79,7 @@ export function EditPoDialog({
   const [poNumber, setPoNumber] = useState("");
   const [agentId, setAgentId] = useState<string>("");
   const [shippedAt, setShippedAt] = useState("");
+  const [eta, setEta] = useState("");
   const [freight, setFreight] = useState("");
   const [customs, setCustoms] = useState("");
   const [otherCharges, setOtherCharges] = useState("");
@@ -96,6 +97,7 @@ export function EditPoDialog({
     setPoNumber(po.po_number ?? "");
     setAgentId(po.cargo_agent_id ?? "");
     setShippedAt(po.shipped_at ?? "");
+    setEta(po.expected_arrival_date ?? "");
     setFreight(String(po.freight_cost_bdt ?? 0));
     setCustoms(String(po.customs_duty_bdt ?? 0));
     setOtherCharges(String(po.other_charges_bdt ?? 0));
@@ -232,6 +234,7 @@ export function EditPoDialog({
           po_number: poNumber.trim() || undefined,
           cargo_agent_id: agentId ? agentId : null,
           shipped_at: shippedAt || null,
+          expected_arrival_date: eta || null,
           freight_cost_bdt: Number(freight) || 0,
           customs_duty_bdt: Number(customs) || 0,
           other_charges_bdt: Number(otherCharges) || 0,
@@ -318,6 +321,10 @@ export function EditPoDialog({
           <div className="space-y-1.5">
             <Label>Shipped date</Label>
             <Input type="date" value={shippedAt} onChange={(e) => setShippedAt(e.target.value)} />
+          </div>
+          <div className="space-y-1.5">
+            <Label>Expected arrival (ETA)</Label>
+            <Input type="date" value={eta} onChange={(e) => setEta(e.target.value)} />
           </div>
           <div className="space-y-1.5">
             <Label>Total weight (kg)</Label>
