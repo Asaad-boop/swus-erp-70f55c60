@@ -31,7 +31,7 @@ function isRecoverableStaleError(err: unknown): boolean {
 
 function tryReloadForStaleChunk(err: unknown): boolean {
   if (typeof window === "undefined") return false;
-  if (!isChunkLoadError(err)) return false;
+  if (!isRecoverableStaleError(err)) return false;
   try {
     const KEY = "__chunk_reload_at";
     const last = Number(sessionStorage.getItem(KEY) ?? 0);
