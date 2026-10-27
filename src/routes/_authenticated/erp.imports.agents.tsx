@@ -86,7 +86,12 @@ function CargoAgentsDashboard() {
                             <th className="py-1.5 pr-3">PO #</th>
                             <th className="py-1.5 pr-3">Date</th>
                             <th className="py-1.5 pr-3">Status</th>
-                            <th className="py-1.5 pr-3 text-right">Grand total</th>
+                            <th className="py-1.5 pr-3 text-right">Pcs</th>
+                            <th className="py-1.5 pr-3 text-right">Cartons</th>
+                            <th className="py-1.5 pr-3 text-right">Weight</th>
+                            <th className="py-1.5 pr-3 text-right">Buying</th>
+                            <th className="py-1.5 pr-3 text-right">Shipping</th>
+                            <th className="py-1.5 pr-3 text-right">Total bill</th>
                             <th className="py-1.5 pr-3 text-right">Paid</th>
                             <th className="py-1.5 text-right">Due</th>
                           </tr>
@@ -105,7 +110,14 @@ function CargoAgentsDashboard() {
                               </td>
                               <td className="py-1.5 pr-3">{p.order_date}</td>
                               <td className="py-1.5 pr-3"><Badge variant="outline">{p.status}</Badge></td>
-                              <td className="py-1.5 pr-3 text-right tabular-nums">{fmtBdt(p.grand_total_bdt)}</td>
+                              <td className="py-1.5 pr-3 text-right tabular-nums">{Number(p.pcs ?? 0).toLocaleString()}</td>
+                              <td className="py-1.5 pr-3 text-right tabular-nums">
+                                {p.carton_count > 0 ? `${p.carton_received}/${p.carton_count}` : "—"}
+                              </td>
+                              <td className="py-1.5 pr-3 text-right tabular-nums">{Number(p.weight_kg ?? 0) > 0 ? `${Number(p.weight_kg).toLocaleString()} kg` : "—"}</td>
+                              <td className="py-1.5 pr-3 text-right tabular-nums">{fmtBdt(p.buying_bdt)}</td>
+                              <td className="py-1.5 pr-3 text-right tabular-nums">{fmtBdt(p.shipping_bdt)}</td>
+                              <td className="py-1.5 pr-3 text-right tabular-nums font-medium">{fmtBdt(p.bill_bdt)}</td>
                               <td className="py-1.5 pr-3 text-right tabular-nums">{fmtBdt(p.paid_bdt)}</td>
                               <td className={`py-1.5 text-right tabular-nums ${Number(p.due_bdt) > 0 ? "text-orange-600" : ""}`}>{fmtBdt(p.due_bdt)}</td>
                             </tr>
