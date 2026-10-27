@@ -150,7 +150,7 @@ function PoListPage() {
       }
     });
     return out;
-  }, [rows, q, payState, sortBy, sortDir]);
+  }, [rows, q, payState, sortBy, sortDir, lateOnly, today]);
 
   const toggleSort = (k: SortKey) => {
     if (sortBy === k) setSortDir((d) => (d === "asc" ? "desc" : "asc"));
