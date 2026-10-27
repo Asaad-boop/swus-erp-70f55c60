@@ -1484,7 +1484,10 @@ export const getCargoAgentDashboard = createServerFn({ method: "POST" })
         : Number(p.freight_cost_bdt ?? p.shipping_cost_bdt ?? 0);
       const buying = Number(p.product_subtotal_bdt ?? 0);
       const c = cartonsByPo[p.id] ?? { count: 0, weight: 0, received: 0 };
-      const weight = Number(p.shipping_weight_kg ?? 0) || Number(p.total_weight_kg ?? 0) || +c.weight.toFixed(2);
+      const recorded = Number(p.shipping_weight_kg ?? 0) || Number(p.total_weight_kg ?? 0) || +c.weight.toFixed(2);
+      // Older POs never recorded weight; freight was billed at a flat ৳750/kg, so derive an estimate.
+      const weight = recorded > 0 ? recorded : (shipping > 0 ? +(shipping / 750).toFixed(1) : 0);
+      const weightEstimated = recorded <= 0 && shipping > 0;
       const pcs = pcsByPo[p.id] ?? 0;
       // Accurate bill = buying + shipping (local delivery is ours, not the agent's).
       const bill = +(buying + shipping).toFixed(2);
@@ -1498,6 +1501,7 @@ export const getCargoAgentDashboard = createServerFn({ method: "POST" })
         due_bdt: due < 0 ? 0 : due,
         pcs,
         weight_kg: +weight.toFixed(2),
+        weight_estimated: weightEstimated,
         carton_count: c.count,
         carton_received: c.received,
       };
@@ -1522,6 +1526,7 @@ export const getCargoAgentDashboard = createServerFn({ method: "POST" })
         po_count: list.length,
         pcs_total: pcs,
         weight_total: +weight.toFixed(2),
+        weight_estimated: list.some((p) => p.weight_estimated),
         buying_total: +buying.toFixed(2),
         shipping_total: +shipping.toFixed(2),
         bill_total: +bill.toFixed(2),
