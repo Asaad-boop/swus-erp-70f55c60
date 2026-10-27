@@ -151,7 +151,7 @@ export const getPurchaseOrderDetail = createServerFn({ method: "POST" })
     const [poRes, itemsRes, cartonsRes, paymentsRes, historyRes, releasesRes] = await Promise.all([
       context.supabase.from("imp_purchase_orders").select(`
         id, po_number, brand_id, supplier_id, order_date,
-        currency, fx_rate, receive_mode,
+        currency, fx_rate, receive_mode, expected_arrival_date,
         product_subtotal_bdt, shipping_total_bdt, local_courier_total_bdt,
         grand_total_bdt, paid_bdt, due_bdt, status, notes, created_at,
         fx_rate_cny_bdt, fx_rate_locked_at, fx_rate_source,
