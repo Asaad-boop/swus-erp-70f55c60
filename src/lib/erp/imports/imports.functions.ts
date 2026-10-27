@@ -1443,7 +1443,7 @@ export const getCargoAgentDashboard = createServerFn({ method: "POST" })
         .order("name"),
       context.supabase
         .from("imp_purchase_orders")
-        .select("id, po_number, order_date, status, cargo_agent_id, product_subtotal_bdt, shipping_total_bdt, shipping_cost_bdt, shipping_weight_kg, shipping_rate_per_kg, total_weight_kg, local_delivery_total_bdt, paid_bdt, grand_total_bdt, due_bdt")
+        .select("id, po_number, order_date, status, cargo_agent_id, product_subtotal_bdt, shipping_total_bdt, shipping_cost_bdt, freight_cost_bdt, shipping_weight_kg, shipping_rate_per_kg, total_weight_kg, local_delivery_total_bdt, paid_bdt, grand_total_bdt, due_bdt")
         .in("brand_id", ids)
         .not("cargo_agent_id", "is", null)
         .neq("status", "cancelled"),
@@ -1478,7 +1478,10 @@ export const getCargoAgentDashboard = createServerFn({ method: "POST" })
     }
 
     const enrich = (p: any) => {
-      const shipping = Number(p.shipping_total_bdt ?? p.shipping_cost_bdt ?? 0);
+      // Shipping can live in shipping_total_bdt (newer POs) or freight_cost_bdt (older POs); never both.
+      const shipping = Number(p.shipping_total_bdt ?? 0) > 0
+        ? Number(p.shipping_total_bdt)
+        : Number(p.freight_cost_bdt ?? p.shipping_cost_bdt ?? 0);
       const buying = Number(p.product_subtotal_bdt ?? 0);
       const c = cartonsByPo[p.id] ?? { count: 0, weight: 0, received: 0 };
       const weight = Number(p.shipping_weight_kg ?? 0) || Number(p.total_weight_kg ?? 0) || +c.weight.toFixed(2);
