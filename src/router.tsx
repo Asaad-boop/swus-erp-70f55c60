@@ -16,6 +16,19 @@ function isChunkLoadError(err: unknown): boolean {
   );
 }
 
+// Stale server-function ID: the client bundle predates a dev restart/deploy,
+// so the server no longer recognizes the function hash and 500s with
+// "Cannot read properties of undefined (reading 'method')". Same cure as a
+// stale chunk — one guarded reload pulls a fresh client.
+function isStaleServerFnError(err: unknown): boolean {
+  const msg = (err as any)?.message ?? String(err ?? "");
+  return /reading 'method'/.test(msg) && /undefined/.test(msg);
+}
+
+function isRecoverableStaleError(err: unknown): boolean {
+  return isChunkLoadError(err) || isStaleServerFnError(err);
+}
+
 function tryReloadForStaleChunk(err: unknown): boolean {
   if (typeof window === "undefined") return false;
   if (!isChunkLoadError(err)) return false;
