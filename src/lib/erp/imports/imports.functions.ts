@@ -1443,7 +1443,7 @@ export const getCargoAgentDashboard = createServerFn({ method: "POST" })
         .order("name"),
       context.supabase
         .from("imp_purchase_orders")
-        .select("id, po_number, order_date, status, cargo_agent_id, shipping_total_bdt, shipping_cost_bdt, paid_bdt, grand_total_bdt, due_bdt")
+        .select("id, po_number, order_date, status, cargo_agent_id, product_subtotal_bdt, shipping_total_bdt, shipping_cost_bdt, shipping_weight_kg, shipping_rate_per_kg, total_weight_kg, local_delivery_total_bdt, paid_bdt, grand_total_bdt, due_bdt")
         .in("brand_id", ids)
         .not("cargo_agent_id", "is", null),
     ]);
@@ -1451,24 +1451,79 @@ export const getCargoAgentDashboard = createServerFn({ method: "POST" })
     if (posRes.error) throw posRes.error;
     const agents = (agentsRes.data ?? []) as any[];
     const pos = (posRes.data ?? []) as any[];
+    const poIds = pos.map((p) => p.id as string);
+
+    // Per-PO pcs (from items) and carton weight/count for accurate display.
+    const [itemsRes, cartonsRes] = await Promise.all([
+      poIds.length
+        ? context.supabase.from("imp_po_items").select("po_id, quantity").in("po_id", poIds)
+        : Promise.resolve({ data: [], error: null }),
+      poIds.length
+        ? context.supabase.from("imp_cartons").select("po_id, weight_kg, status").in("po_id", poIds)
+        : Promise.resolve({ data: [], error: null }),
+    ]);
+    if (itemsRes.error) throw itemsRes.error;
+    if (cartonsRes.error) throw cartonsRes.error;
+    const pcsByPo: Record<string, number> = {};
+    for (const it of (itemsRes.data ?? []) as any[]) {
+      pcsByPo[it.po_id] = (pcsByPo[it.po_id] ?? 0) + Number(it.quantity ?? 0);
+    }
+    const cartonsByPo: Record<string, { count: number; weight: number; received: number }> = {};
+    for (const c of (cartonsRes.data ?? []) as any[]) {
+      const e = (cartonsByPo[c.po_id] ||= { count: 0, weight: 0, received: 0 });
+      e.count += 1;
+      e.weight += Number(c.weight_kg ?? 0);
+      if (c.status === "in_stock" || c.status === "released" || c.status === "arrived_bd") e.received += 1;
+    }
+
+    const enrich = (p: any) => {
+      const shipping = Number(p.shipping_total_bdt ?? p.shipping_cost_bdt ?? 0);
+      const buying = Number(p.product_subtotal_bdt ?? 0);
+      const c = cartonsByPo[p.id] ?? { count: 0, weight: 0, received: 0 };
+      const weight = Number(p.shipping_weight_kg ?? 0) || Number(p.total_weight_kg ?? 0) || +c.weight.toFixed(2);
+      const pcs = pcsByPo[p.id] ?? 0;
+      // Accurate bill = buying + shipping (local delivery is ours, not the agent's).
+      const bill = +(buying + shipping).toFixed(2);
+      const paid = Number(p.paid_bdt ?? 0);
+      const due = +(bill - paid).toFixed(2);
+      return {
+        ...p,
+        buying_bdt: +buying.toFixed(2),
+        shipping_bdt: +shipping.toFixed(2),
+        bill_bdt: bill,
+        due_bdt: due < 0 ? 0 : due,
+        pcs,
+        weight_kg: +weight.toFixed(2),
+        carton_count: c.count,
+        carton_received: c.received,
+      };
+    };
+
     const byAgent: Record<string, any[]> = {};
     for (const p of pos) {
       const k = p.cargo_agent_id as string;
       (byAgent[k] ||= []).push(p);
     }
     return agents.map((a: any) => {
-      const list = byAgent[a.id] ?? [];
-      const shipping = list.reduce((s, p) => s + Number(p.shipping_total_bdt ?? p.shipping_cost_bdt ?? 0), 0);
+      const list = (byAgent[a.id] ?? []).map(enrich);
+      const shipping = list.reduce((s, p) => s + p.shipping_bdt, 0);
+      const buying = list.reduce((s, p) => s + p.buying_bdt, 0);
+      const bill = list.reduce((s, p) => s + p.bill_bdt, 0);
       const paid = list.reduce((s, p) => s + Number(p.paid_bdt ?? 0), 0);
-      const grand = list.reduce((s, p) => s + Number(p.grand_total_bdt ?? 0), 0);
-      const due = list.reduce((s, p) => s + Number(p.due_bdt ?? 0), 0);
+      const due = +(bill - paid).toFixed(2);
+      const weight = list.reduce((s, p) => s + p.weight_kg, 0);
+      const pcs = list.reduce((s, p) => s + p.pcs, 0);
       return {
         agent: a,
         po_count: list.length,
+        pcs_total: pcs,
+        weight_total: +weight.toFixed(2),
+        buying_total: +buying.toFixed(2),
         shipping_total: +shipping.toFixed(2),
+        bill_total: +bill.toFixed(2),
         paid_total: +paid.toFixed(2),
-        grand_total: +grand.toFixed(2),
-        due_total: +due.toFixed(2),
+        grand_total: +bill.toFixed(2),
+        due_total: due < 0 ? 0 : due,
         pos: list,
       };
     });
