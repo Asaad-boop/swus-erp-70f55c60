@@ -11554,6 +11554,48 @@ export type Database = {
           },
         ]
       }
+      product_requests: {
+        Row: {
+          contact: string
+          created_at: string
+          id: string
+          image_path: string | null
+          name: string
+          notes: string
+          product_name: string
+          reference_link: string | null
+          status: string
+          target_price: number | null
+          updated_at: string
+        }
+        Insert: {
+          contact: string
+          created_at?: string
+          id?: string
+          image_path?: string | null
+          name: string
+          notes?: string
+          product_name: string
+          reference_link?: string | null
+          status?: string
+          target_price?: number | null
+          updated_at?: string
+        }
+        Update: {
+          contact?: string
+          created_at?: string
+          id?: string
+          image_path?: string | null
+          name?: string
+          notes?: string
+          product_name?: string
+          reference_link?: string | null
+          status?: string
+          target_price?: number | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
       product_variant_values: {
         Row: {
           option_value_id: string
