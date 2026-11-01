@@ -4549,6 +4549,42 @@ export type Database = {
           },
         ]
       }
+      hr_attendance_events: {
+        Row: {
+          action: string
+          actor: string | null
+          created_at: string
+          employee_id: string | null
+          entity: string
+          entity_id: string | null
+          id: string
+          new_data: Json | null
+          old_data: Json | null
+        }
+        Insert: {
+          action: string
+          actor?: string | null
+          created_at?: string
+          employee_id?: string | null
+          entity: string
+          entity_id?: string | null
+          id?: string
+          new_data?: Json | null
+          old_data?: Json | null
+        }
+        Update: {
+          action?: string
+          actor?: string | null
+          created_at?: string
+          employee_id?: string | null
+          entity?: string
+          entity_id?: string | null
+          id?: string
+          new_data?: Json | null
+          old_data?: Json | null
+        }
+        Relationships: []
+      }
       hr_breaks: {
         Row: {
           break_end: string | null
@@ -4925,6 +4961,30 @@ export type Database = {
         }
         Relationships: []
       }
+      hr_job_runs: {
+        Row: {
+          closed_count: number
+          error: string | null
+          id: string
+          job: string
+          ran_at: string
+        }
+        Insert: {
+          closed_count?: number
+          error?: string | null
+          id?: string
+          job: string
+          ran_at?: string
+        }
+        Update: {
+          closed_count?: number
+          error?: string | null
+          id?: string
+          job?: string
+          ran_at?: string
+        }
+        Relationships: []
+      }
       hr_kpi_entries: {
         Row: {
           actual_value: number
@@ -5012,6 +5072,8 @@ export type Database = {
           decision_note: string | null
           employee_id: string
           end_date: string
+          half_day: boolean
+          half_day_part: string | null
           id: string
           leave_type_id: string | null
           reason: string | null
@@ -5028,6 +5090,8 @@ export type Database = {
           decision_note?: string | null
           employee_id: string
           end_date: string
+          half_day?: boolean
+          half_day_part?: string | null
           id?: string
           leave_type_id?: string | null
           reason?: string | null
@@ -5044,6 +5108,8 @@ export type Database = {
           decision_note?: string | null
           employee_id?: string
           end_date?: string
+          half_day?: boolean
+          half_day_part?: string | null
           id?: string
           leave_type_id?: string | null
           reason?: string | null
@@ -15864,6 +15930,7 @@ export type Database = {
       }
       heartbeat_order_lock: { Args: { _order_id: string }; Returns: undefined }
       hr_auto_close_stale_sessions: { Args: never; Returns: number }
+      hr_can_decide_leave: { Args: { _uid: string }; Returns: boolean }
       hr_cancel_my_leave: { Args: { _leave_id: string }; Returns: undefined }
       hr_count_working_days: {
         Args: { _from: string; _to: string; _weekly_off?: number[] }
