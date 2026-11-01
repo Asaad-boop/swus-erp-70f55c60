@@ -1,64 +1,41 @@
-# BOM, Assembly & Costing System — Implementation Plan
+# HRM Upgrade — Simple, Reliable, Employee-friendly
 
-Existing ERP extend করা হবে, নতুন আলাদা stock system না। Components = `products` table-এর row (নতুন `product_kind`), তাই একই `stock_movements` ledger, WAC, local PO, import PO, stocktake সব আগের মতো কাজ করবে।
+Goal: employee-ra shohoje attendance, break, weekly holiday, overtime, leave, payroll ar performance use korte parbe. Kono jinish complex hobe na.
 
-## Phase 1 — Product types + Components
-- `products.product_kind`: `simple` (default, সব পুরনো product) / `bundle` / `assembled` / `component`
-- Component fields: purchase unit, unit conversion, lead time days, default supplier, stock location — nullable, পুরনো data অক্ষত
-- Inventory page-এ নতুন **Components** tab: SKU, name, variant, supplier, on-hand/reserved/available/incoming, unit cost, value, reorder point, status
-- Component-রা storefront/catalog API-তে যাবে না
+## Phase 1 — Attendance thik kora (shobcheye age)
+- Check In / Break / Check Out: ek tap, boro button, phone-e easy.
+- Ekbar-e ekta open session; double check-in block.
+- Bhule check-out na korle raat-e auto close + "missed checkout" flag (10ta purono open session clean).
+- Dhaka time-e date/late/overtime hisab.
+- Brand mixing bondho: shudhu nijer brand-er employee/attendance dekhabe.
 
-## Phase 2 — BOM Manager
-- নতুন `bom_headers` (product + variant, version, status Draft/Active/Archived, effective date, wastage %) ও `bom_lines` (component, qty, UoM, est. unit cost snapshot)
-- প্রতি variant-এ একটাই Active BOM; নতুন version activate করলে আগেরটা Archived (history থাকে)
-- Features: add/remove line, clone from another variant, version compare, est. material cost, missing components, max buildable qty, est. margin
-- বিদ্যমান combo (`product_combo_items`) = Bundle হিসেবে থাকবে, অর্ডারে আগের মতো explode হবে
+## Phase 2 — Weekly holiday + Shift
+- Protiti employee-r weekly off day (jemon Friday) set kora jabe.
+- Off day-te kaj korle automatic overtime.
+- Shift time (start/end, grace minutes) diye late hisab.
+- Public holiday list.
 
-## Phase 3 — Assembly Batches
-- `assembly_batches` (batch no, product/variant, qty, BOM version, warehouse, planned date, assignee, notes, status Draft → In progress → Completed / Cancelled)
-- Pre-check: required vs available, shortage, est. cost, buildable qty
-- Complete করলে একটি atomic DB function: components `stock_movements` (source `assembly`) দিয়ে কাটবে, finished goods যোগ হবে actual cost-এ (WAC update), batch-এ total cost / unit cost / variance save
-- Order fulfillment-এ assembled product শুধু finished stock কাটবে — component আবার কাটবে না
+## Phase 3 — Leave (employee nije apply korbe)
+- Employee nijer dashboard theke leave apply, balance dekhbe.
+- Manager approve/reject; approve hole attendance-e "Leave" auto boshbe (ekshathe, ekta fail korle duto-i fail).
 
-## Phase 4 — Procurement Upgrade (২য় brief)
-বিদ্যমান Local PO, Import PO, cargo ledger, carton release, supplier, finance-ই extend হবে — নতুন আলাদা system না।
-- **Local Manufacturing PO**: line-এ আলাদা qty — Ordered (original, কখনো overwrite না), Revised/Confirmed, Dispatched, Received, QC Accepted, Damaged, Missing, Rejected, Pending। Revised qty × same unit price = auto revised invoice; revision audit history; একই PO-তে multiple delivery
-- **Advance & installments**: PO payment summary — estimated bill, advance %, paid, actual invoice, due; advance actual invoice-এর বিরুদ্ধে apply; supplier ledger-এ যায়
-- **China import**: বিদ্যমান Import PO + cargo agent; এক agent multiple supplier; partial release-এ double release block, release-wise freight (আগের logic) রাখা
-- **QC step** (local receipt + carton release দুটোতেই): Accept → stock, Damaged/Rejected/Missing → stock-এ না, supplier claim/return note
-- **True landed cost**: product price + freight + duty + local courier + other; allocation method (qty / value / weight / CBM); শুধু QC accepted unit-এ cost বসে → WAC update; PO close হলে final cost recalc
-- **Statuses**: PO, Manufacturing, Cargo, QC, Payment, Landed cost — আলাদা badge
-- **Supplier & cargo agent ledger**: purchase, advance, payment, return/claim, outstanding
-- Component-ও এই PO-তে কেনা যাবে (একই products table)
-- Supplier scorecard: latest price, lead time, rejection rate, outstanding
+## Phase 4 — Overtime
+- Shift-er beshi kaj = overtime request; manager approve korle payroll-e jabe.
+- Overtime rate employee/settings theke.
 
-## Phase 5 — Pricing & Profit
-- Product-এ standard cost (active BOM) vs actual historical cost (WAC) পাশাপাশি
-- **Pricing Simulator**: price, cost, ad cost, fulfillment, return provision, target profit → profit/order, margin, break-even price, max CAC, target price
-- Profit reports canonical RPC-ই ব্যবহার করবে (memory rule)
+## Phase 5 — Payroll
+- Mash shesh-e ek click-e payroll run: base salary + approved overtime − unpaid leave/absent − late deduction (setting on/off).
+- Payslip employee nijer dashboard-e dekhbe/PDF download.
+- Payroll lock korar por change audit-e thakbe.
 
-## Phase 6 — Availability & Replenishment
-- Finished on-hand, reserved, available, buildable, component shortage, incoming
-- Reorder suggestion: avg daily consumption × lead time + safety stock − (available + open PO)
+## Phase 6 — Performance
+- Monthly simple score: attendance %, punctuality, overtime, manager rating (1–5) + short note.
+- Employee nijer score dekhbe; owner team summary dekhbe.
 
-## Order / Return rules (বিদ্যমান logic মেনে)
-- Reserve packing-stage-এ (বর্তমান rule), cancel-এ release, shipped/delivered-এ on-hand কমে
-- Returned kit: inspection step — "Sellable" / "Damaged" / "Incomplete"; শুধু Sellable stock-এ ফেরে
+## Kivabe korbo
+- Phase dhore dhore; protiti phase shesh-e janabo, "next" bolle porer ta.
+- Existing data/flow bhangbo na; important rule-er test likhbo.
 
 ## Technical notes
-- সব নতুন table: brand_id, RLS via `can_access_brand` + staff roles, explicit GRANTs, updated_at trigger
-- কোনো demo data DB-তে না; sample costs (Gift Box) শুধু UI placeholder
-- Movement source `assembly` যোগ; `MOVEMENT_SOURCES` update
-- Server logic: Postgres RPC + `createServerFn`, কোনো Edge Function না
-
-## Order of delivery
-Phase 1+2 প্রথম ধাপে, তারপর 3, তারপর 4–6। প্রতি ধাপ শেষে তুমি check করবে।
-
-## Approved refinements (mandatory)
-- Per-release accounting: released/received qty, attributable purchase amount, advance applied, purchase/shipping/courier due & paid, QC qty, provisional + final landed cost; no double release or duplicate finance posting
-- Manufacturing qty: Original / Revised / Dispatched / Received / Final Invoiced আলাদা; revision invoice auto-finalize করে না; history রাখা
-- QC: Accepted / Quarantined-Damaged / Rejected / Missing / Pending; photos, supplier claims, replacement, credit note, refund, settlement history; missing ≠ received; damaged ≠ sellable
-- Landed cost: estimated → provisional → final; qty/value/weight/CBM/manual allocation with rounding reconciliation; loss/claims আলাদা; late cost-এ auditable valuation/COGS adjustment, history overwrite না
-- One PO ↔ many shipments, one shipment ↔ many POs, supplier vs cargo agent balance আলাদা
-- Advance = prepayment, cost না; invoices/payments/cargo charges/receipts আলাদা কিন্তু linked; atomic idempotent RPC
-- Phase 4-এর আগে detailed technical mapping দেখাতে হবে; Phase 1+2 শেষে review
+- Attendance/leave/payroll write-gulo server-side RPC-te atomic; brand-scoped RLS.
+- Auto-close via scheduled job; Dhaka timezone helpers reuse.
