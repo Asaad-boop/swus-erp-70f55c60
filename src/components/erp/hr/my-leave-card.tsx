@@ -49,7 +49,8 @@ export function MyLeaveCard() {
       .filter((l) => l.leave_type_id === typeId && String(l.start_date).startsWith(year) && ["approved", "pending"].includes(String(l.status)))
       .reduce((s, l) => s + Number(l.days || 0), 0);
 
-  const days = leaveWorkDays(form.start, form.end, ((data?.emp.week_offs as number[] | null) ?? []).map(Number));
+  const fullDays = leaveWorkDays(form.start, form.end, ((data?.emp.week_offs as number[] | null) ?? []).map(Number));
+  const days = form.half ? (fullDays > 0 ? 0.5 : 0) : fullDays;
   const typ = data?.types.find((t) => t.id === form.type);
   const left = typ ? Number(typ.days_per_year || 0) - used(typ.id) : 0;
 
@@ -58,10 +59,13 @@ export function MyLeaveCard() {
       if (!data) throw new Error("Employee profile link nei");
       if (!form.type) throw new Error("Leave type select korun");
       if (days <= 0) throw new Error("Date thik korun");
-      if (typ && days > left) throw new Error(`Balance e ${left} din baki`);
+      if (typ && Number(typ.days_per_year || 0) > 0 && days > left) throw new Error(`Balance e ${left} din baki`);
+      // Server recalculates days (holidays, weekly offs) and re-checks balance + overlap.
       const { error } = await supabase.from("hr_leaves").insert({
-        employee_id: data.emp.id, leave_type_id: form.type, start_date: form.start, end_date: form.end,
+        employee_id: data.emp.id, leave_type_id: form.type, start_date: form.start,
+        end_date: form.half ? form.start : form.end,
         days, reason: form.reason || null, status: "pending",
+        half_day: form.half, half_day_part: form.half ? form.part : null,
       } as never);
       if (error) throw new Error(error.message);
     },
