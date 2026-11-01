@@ -70,7 +70,7 @@ export function isSuperRole(roles: string[]): boolean {
  * Pages every authenticated staff member may open regardless of role or
  * custom page grants (self-service screens).
  */
-export const SELF_SERVICE_PAGES = ["/erp/hr/my-attendance"];
+export const SELF_SERVICE_PAGES = ["/erp/hr/my-day", "/erp/hr/my-leave"];
 
 export function getAllowedModules(roles: string[]): Set<Module> {
   const s = new Set<Module>();

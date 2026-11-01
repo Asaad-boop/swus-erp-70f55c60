@@ -164,8 +164,8 @@ function HrOverview() {
   const kpis = [
     { label: "Active employees", value: String(active.length), sub: `${emps.length} total records`, icon: Users, to: "/erp/hr/employees" },
     { label: "Present today", value: `${present}`, sub: `${absent} absent • ${expected.length} expected`, icon: CalendarCheck, to: "/erp/hr/attendance" },
-    { label: "Late today", value: String(lateRows.length), sub: lateRows.length ? `${Math.round(lateRows.reduce((s, a) => s + Number(a.late_minutes ?? 0), 0))} min total` : "shobai on time", icon: Clock, to: "/erp/hr/live" },
-    { label: "On leave today", value: String(onLeaveToday.length), sub: `${data?.pendingLeaves.length ?? 0} pending approval`, icon: PalmtreeIcon, to: "/erp/hr/leaves" },
+    { label: "Late today", value: String(lateRows.length), sub: lateRows.length ? `${Math.round(lateRows.reduce((s, a) => s + Number(a.late_minutes ?? 0), 0))} min total` : "shobai on time", icon: Clock, to: "/erp/hr/team" },
+    { label: "On leave today", value: String(onLeaveToday.length), sub: `${data?.pendingLeaves.length ?? 0} pending approval`, icon: PalmtreeIcon, to: "/erp/hr/leave-approvals" },
     { label: "Overtime today", value: `${Math.floor(otMinutes / 60)}h ${otMinutes % 60}m`, sub: "approved attendance theke", icon: TimerReset, to: "/erp/hr/attendance" },
     { label: "Monthly salary cost", value: money(salaryCost), sub: data?.run ? `Payroll ${data.run.status}` : "Payroll not generated", icon: Banknote, to: "/erp/hr/payroll" },
   ];
@@ -179,7 +179,7 @@ function HrOverview() {
         actions={
           <>
             <Link
-              to="/erp/hr/live"
+              to="/erp/hr/team"
               className="inline-flex items-center gap-1.5 rounded-lg border border-border bg-background px-3 py-1.5 text-xs font-medium transition-colors hover:border-primary/40 hover:text-primary"
             >
               <Radio className="h-3.5 w-3.5" /> Live board

@@ -52,7 +52,7 @@ export function TeamTodayCard() {
         <CardTitle className="text-[13px] font-semibold flex items-center gap-1.5">
           <Users className="size-3.5 text-indigo-600" /> Team today
         </CardTitle>
-        <Link to="/erp/hr/live" className="text-[11px] text-indigo-600 hover:underline">
+        <Link to="/erp/hr/team" className="text-[11px] text-indigo-600 hover:underline">
           Live board
         </Link>
       </CardHeader>

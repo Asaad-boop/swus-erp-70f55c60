@@ -26,7 +26,7 @@ export function leaveWorkDays(start: string, end: string, weekOffs: number[]): n
 export function MyLeaveCard() {
   const qc = useQueryClient();
   const year = dhakaToday().slice(0, 4);
-  const [form, setForm] = useState({ type: "", start: dhakaToday(), end: dhakaToday(), reason: "" });
+  const [form, setForm] = useState({ type: "", start: dhakaToday(), end: dhakaToday(), reason: "", half: false, part: "first" });
 
   const { data } = useQuery({
     queryKey: ["hr-my-leaves"],
@@ -49,7 +49,8 @@ export function MyLeaveCard() {
       .filter((l) => l.leave_type_id === typeId && String(l.start_date).startsWith(year) && ["approved", "pending"].includes(String(l.status)))
       .reduce((s, l) => s + Number(l.days || 0), 0);
 
-  const days = leaveWorkDays(form.start, form.end, ((data?.emp.week_offs as number[] | null) ?? []).map(Number));
+  const fullDays = leaveWorkDays(form.start, form.end, ((data?.emp.week_offs as number[] | null) ?? []).map(Number));
+  const days = form.half ? (fullDays > 0 ? 0.5 : 0) : fullDays;
   const typ = data?.types.find((t) => t.id === form.type);
   const left = typ ? Number(typ.days_per_year || 0) - used(typ.id) : 0;
 
@@ -58,10 +59,13 @@ export function MyLeaveCard() {
       if (!data) throw new Error("Employee profile link nei");
       if (!form.type) throw new Error("Leave type select korun");
       if (days <= 0) throw new Error("Date thik korun");
-      if (typ && days > left) throw new Error(`Balance e ${left} din baki`);
+      if (typ && Number(typ.days_per_year || 0) > 0 && days > left) throw new Error(`Balance e ${left} din baki`);
+      // Server recalculates days (holidays, weekly offs) and re-checks balance + overlap.
       const { error } = await supabase.from("hr_leaves").insert({
-        employee_id: data.emp.id, leave_type_id: form.type, start_date: form.start, end_date: form.end,
+        employee_id: data.emp.id, leave_type_id: form.type, start_date: form.start,
+        end_date: form.half ? form.start : form.end,
         days, reason: form.reason || null, status: "pending",
+        half_day: form.half, half_day_part: form.half ? form.part : null,
       } as never);
       if (error) throw new Error(error.message);
     },
@@ -111,11 +115,24 @@ export function MyLeaveCard() {
             {data.types.map((t) => <option key={t.id} value={t.id}>{t.name}</option>)}
           </select>
           <Input type="date" value={form.start} onChange={(e) => setForm({ ...form, start: e.target.value, end: e.target.value > form.end ? e.target.value : form.end })} />
-          <Input type="date" value={form.end} min={form.start} onChange={(e) => setForm({ ...form, end: e.target.value })} />
+          <Input type="date" value={form.half ? form.start : form.end} min={form.start} disabled={form.half} onChange={(e) => setForm({ ...form, end: e.target.value })} />
           <Input placeholder="Karon (optional)" value={form.reason} onChange={(e) => setForm({ ...form, reason: e.target.value })} />
           <Button size="lg" className="h-9" disabled={apply.isPending} onClick={() => apply.mutate()}>
             Apply {days > 0 ? `· ${days} din` : ""}
           </Button>
+        </div>
+        <div className="flex flex-wrap items-center gap-3 text-sm">
+          <label className="flex items-center gap-2">
+            <input type="checkbox" checked={form.half} onChange={(e) => setForm({ ...form, half: e.target.checked, end: form.start })} />
+            Half day
+          </label>
+          {form.half && (
+            <select className="h-8 rounded-md border border-input bg-background px-2 text-sm"
+              value={form.part} onChange={(e) => setForm({ ...form, part: e.target.value })}>
+              <option value="first">Prothom half (shokal)</option>
+              <option value="second">Second half (bikel)</option>
+            </select>
+          )}
         </div>
 
         {data.leaves.length > 0 && (
