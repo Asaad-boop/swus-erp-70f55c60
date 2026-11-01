@@ -43,7 +43,7 @@
 
 ## HRM upgrade
 - [x] Phase 1: missed-checkout auto close, one open session, stale cleanup
-- [ ] Phase 2: weekly holiday + shift review
+- [x] Phase 2: public holiday = off day (no late, holiday OT)
 - [ ] Phase 3: employee leave apply
 - [ ] Phase 4: overtime approval
 - [ ] Phase 5: payroll run + payslip
