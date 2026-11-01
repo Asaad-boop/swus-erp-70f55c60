@@ -11,7 +11,7 @@ import { dhakaToday } from "@/lib/erp/hr/date";
 import { getLiveBoard, type LiveEmployee } from "@/lib/erp/hr/attendance.functions";
 import { getAppSetting } from "@/lib/erp/settings/app-settings.functions";
 import { DEFAULT_HR_POLICY, type HrPolicy } from "@/lib/erp/hr/policy";
-import { breakWindowLabel, dayMetrics, shiftLabel, unpaidBreakMinutes } from "@/lib/erp/hr/schedule";
+import { breakWindowLabel, dayMetrics, isWeekOff, shiftLabel, unpaidBreakMinutes } from "@/lib/erp/hr/schedule";
 import { Radio, RefreshCw, Users, CheckCircle2, Coffee, LogOut, UserX, Table2, GanttChartSquare, Activity, Search } from "lucide-react";
 
 export const Route = createFileRoute("/_authenticated/erp/hr/live")({
@@ -141,6 +141,7 @@ function LiveDashboardPage() {
       netMs: r.workMs + r.breakMs - unpaidBreakMinutes(r.schedule, r.breakMs / 60000) * 60000,
       firstIn: r.firstIn,
       fallbackGraceMin: policy?.late_grace_min ?? DEFAULT_HR_POLICY.late_grace_min,
+      holiday: data?.holiday ?? null,
     });
   const kpi = useMemo(() => {
     const c = { total: allRows.length, present: 0, on_break: 0, left: 0, not_in: 0 };
@@ -294,7 +295,7 @@ function LiveDashboardPage() {
                         <td className="p-2.5 whitespace-nowrap text-[12px]">
                           {shiftLabel(r.schedule)}
                           {m.isOff && (
-                            <Badge variant="outline" className="ml-1.5 border-violet-500/20 bg-violet-500/10 text-[10px] text-violet-600">Off day</Badge>
+                            <Badge variant="outline" className="ml-1.5 border-violet-500/20 bg-violet-500/10 text-[10px] text-violet-600">{data?.holiday && !isWeekOff(r.schedule, workDate) ? "Holiday" : "Off day"}</Badge>
                           )}
                           {breakWindowLabel(r.schedule) && (
                             <p className="text-[10px] text-muted-foreground">Break {breakWindowLabel(r.schedule)}</p>

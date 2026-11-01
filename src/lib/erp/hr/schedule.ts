@@ -153,6 +153,16 @@ export function dhakaMinutes(iso: string) {
   return (h || 0) * 60 + (m || 0);
 }
 
+/** Holiday title on a date; recurring holidays match by month-day every year. */
+export function holidayOn(
+  holidays: { holiday_date: string; title: string; is_recurring: boolean }[],
+  dateStr: string,
+): string | null {
+  const md = dateStr.slice(5, 10);
+  const h = holidays.find((x) => x.holiday_date === dateStr || (x.is_recurring && x.holiday_date.slice(5, 10) === md));
+  return h ? h.title : null;
+}
+
 export type DayMetrics = {
   isOff: boolean;
   isLate: boolean;
@@ -173,9 +183,11 @@ export function dayMetrics(args: {
   netMs: number;
   firstIn: string | null;
   fallbackGraceMin?: number;
+  /** Public holiday title for this date; a holiday counts like a weekly off. */
+  holiday?: string | null;
 }): DayMetrics {
   const s = args.schedule;
-  const off = isWeekOff(s, args.workDate);
+  const off = isWeekOff(s, args.workDate) || !!args.holiday;
   const grace = s.late_grace_min ?? args.fallbackGraceMin ?? 0;
   const netMin = Math.max(0, Math.round(args.netMs / 60000));
 

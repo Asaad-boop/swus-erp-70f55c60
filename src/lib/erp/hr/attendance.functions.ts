@@ -1,6 +1,11 @@
 import { createServerFn } from "@tanstack/react-start";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
-import { toSchedule, type EmployeeSchedule } from "@/lib/erp/hr/schedule";
+import { toSchedule, holidayOn, type EmployeeSchedule } from "@/lib/erp/hr/schedule";
+
+async function loadHoliday(supabase: any, workDate: string) {
+  const { data } = await supabase.from("hr_holidays").select("holiday_date, title, is_recurring");
+  return holidayOn((data ?? []) as any[], workDate);
+}
 
 const SCHEDULE_COLS =
   "shift_start, shift_end, week_offs, late_grace_min, overtime_enabled, overtime_rate, overtime_holiday_multiplier, overtime_min_minutes, break_allowance_min, unpaid_break, break_start, break_end";
@@ -75,10 +80,11 @@ export const getMyAttendanceToday = createServerFn({ method: "GET" })
   .handler(async ({ context }) => {
     const employee = await resolveEmployee(context.supabase, context.userId);
     const workDate = dhakaDate();
-    if (!employee) return { employee: null, workDate, entries: [] as EntryRow[], serverNow: new Date().toISOString() };
+    if (!employee) return { employee: null, workDate, holiday: null as string | null, entries: [] as EntryRow[], serverNow: new Date().toISOString() };
     return {
       employee,
       workDate,
+      holiday: await loadHoliday(context.supabase, workDate),
       entries: await loadDay(context.supabase, employee.id, workDate),
       serverNow: new Date().toISOString(),
     };
@@ -265,5 +271,5 @@ export const getLiveBoard = createServerFn({ method: "GET" })
       };
     });
 
-    return { workDate, serverNow: nowIso, rows };
+    return { workDate, serverNow: nowIso, rows, holiday: await loadHoliday(supabase, workDate) };
   });
