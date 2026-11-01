@@ -35,16 +35,6 @@ const daysBetween = (a: string, b: string) => {
   return d > 0 ? d : 0;
 };
 
-/** Every YYYY-MM-DD between two dates, inclusive (max 366 to stay safe). */
-const dateRange = (a: string, b: string) => {
-  const out: string[] = [];
-  const start = new Date(`${a}T00:00:00Z`);
-  const end = new Date(`${b}T00:00:00Z`);
-  for (let d = start; d <= end && out.length < 366; d = new Date(d.getTime() + 86400000)) {
-    out.push(d.toISOString().slice(0, 10));
-  }
-  return out;
-};
 
 function LeavesPage() {
   const qc = useQueryClient();
@@ -118,52 +108,9 @@ function LeavesPage() {
 
   const decide = useMutation({
     mutationFn: async ({ id, status }: { id: string; status: string }) => {
-      const leave = (data?.leaves ?? []).find((l) => l.id === id);
-      const { error } = await supabase
-        .from("hr_leaves")
-        .update({ status, decided_at: new Date().toISOString() })
-        .eq("id", id);
+      // Atomic: leave status + attendance marks change together or not at all.
+      const { error } = await supabase.rpc("hr_decide_leave" as never, { _leave_id: id, _status: status } as never);
       if (error) throw new Error(error.message);
-      if (!leave) return;
-
-      const dates = dateRange(String(leave.start_date), String(leave.end_date));
-      if (!dates.length) return;
-
-      if (status === "approved") {
-        // Attendance register must show these days as leave, otherwise payroll counts them absent.
-        const { data: emp } = await supabase
-          .from("hr_employees")
-          .select("week_offs")
-          .eq("id", leave.employee_id)
-          .maybeSingle();
-        const offs = new Set<number>((emp?.week_offs ?? []).map(Number));
-        const workDays = dates.filter((d) => !offs.has(new Date(`${d}T00:00:00Z`).getUTCDay()));
-        if (!workDays.length) return;
-        const { data: existing } = await supabase
-          .from("hr_attendance")
-          .select("id, work_date")
-          .eq("employee_id", leave.employee_id)
-          .in("work_date", workDays);
-        const have = new Set((existing ?? []).map((r) => String(r.work_date)));
-        const insertRows = workDays
-          .filter((d) => !have.has(d))
-          .map((d) => ({ employee_id: leave.employee_id, work_date: d, status: "leave" }));
-        if (insertRows.length) await supabase.from("hr_attendance").insert(insertRows as never);
-        if (existing?.length) {
-          await supabase
-            .from("hr_attendance")
-            .update({ status: "leave" } as never)
-            .in("id", existing.map((r) => r.id));
-        }
-      } else {
-        // Withdrawn approval → clear the auto-marked leave days.
-        await supabase
-          .from("hr_attendance")
-          .delete()
-          .eq("employee_id", leave.employee_id)
-          .eq("status", "leave")
-          .in("work_date", dates);
-      }
     },
     onSuccess: (_r, v) => {
       toast.success(v.status === "approved" ? "Approve kora hoyeche — attendance e leave mark hoyeche" : "Update kora hoyeche");
