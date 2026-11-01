@@ -115,11 +115,24 @@ export function MyLeaveCard() {
             {data.types.map((t) => <option key={t.id} value={t.id}>{t.name}</option>)}
           </select>
           <Input type="date" value={form.start} onChange={(e) => setForm({ ...form, start: e.target.value, end: e.target.value > form.end ? e.target.value : form.end })} />
-          <Input type="date" value={form.end} min={form.start} onChange={(e) => setForm({ ...form, end: e.target.value })} />
+          <Input type="date" value={form.half ? form.start : form.end} min={form.start} disabled={form.half} onChange={(e) => setForm({ ...form, end: e.target.value })} />
           <Input placeholder="Karon (optional)" value={form.reason} onChange={(e) => setForm({ ...form, reason: e.target.value })} />
           <Button size="lg" className="h-9" disabled={apply.isPending} onClick={() => apply.mutate()}>
             Apply {days > 0 ? `· ${days} din` : ""}
           </Button>
+        </div>
+        <div className="flex flex-wrap items-center gap-3 text-sm">
+          <label className="flex items-center gap-2">
+            <input type="checkbox" checked={form.half} onChange={(e) => setForm({ ...form, half: e.target.checked, end: form.start })} />
+            Half day
+          </label>
+          {form.half && (
+            <select className="h-8 rounded-md border border-input bg-background px-2 text-sm"
+              value={form.part} onChange={(e) => setForm({ ...form, part: e.target.value })}>
+              <option value="first">Prothom half (shokal)</option>
+              <option value="second">Second half (bikel)</option>
+            </select>
+          )}
         </div>
 
         {data.leaves.length > 0 && (
