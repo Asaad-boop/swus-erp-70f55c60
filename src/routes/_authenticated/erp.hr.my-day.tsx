@@ -33,7 +33,7 @@ import {
   weekOffLabel,
 } from "@/lib/erp/hr/schedule";
 
-export const Route = createFileRoute("/_authenticated/erp/hr/my-attendance")({
+export const Route = createFileRoute("/_authenticated/erp/hr/my-day")({
   component: MyAttendancePage,
   head: () => ({
     meta: [

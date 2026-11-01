@@ -15,7 +15,7 @@ import { HrEmpty, HrPageHeader, TableSkeleton, hrRow, statusTone } from "@/compo
 import { PalmtreeIcon, Plus, Check, X, Trash2, AlertTriangle } from "lucide-react";
 import { dhakaToday } from "@/lib/erp/hr/date";
 
-export const Route = createFileRoute("/_authenticated/erp/hr/leaves")({
+export const Route = createFileRoute("/_authenticated/erp/hr/leave-approvals")({
   component: LeavesPage,
   head: () => ({
     meta: [
