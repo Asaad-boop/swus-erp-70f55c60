@@ -6,6 +6,7 @@ import { toast } from "sonner";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { MyLeaveCard } from "@/components/erp/hr/my-leave-card";
 import { HrPageHeader, clockTime, hoursMins } from "@/components/erp/hr/hr-shell";
 import {
   getMyAttendanceToday,
@@ -325,6 +326,7 @@ function MyAttendancePage() {
           </CardContent>
         </Card>
       )}
+      <MyLeaveCard />
     </div>
   );
 }
