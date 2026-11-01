@@ -15864,9 +15864,14 @@ export type Database = {
       }
       heartbeat_order_lock: { Args: { _order_id: string }; Returns: undefined }
       hr_auto_close_stale_sessions: { Args: never; Returns: number }
+      hr_cancel_my_leave: { Args: { _leave_id: string }; Returns: undefined }
       hr_count_working_days: {
         Args: { _from: string; _to: string; _weekly_off?: number[] }
         Returns: number
+      }
+      hr_decide_leave: {
+        Args: { _leave_id: string; _note?: string; _status: string }
+        Returns: undefined
       }
       hr_effective_break_allowance: {
         Args: { _emp: Database["public"]["Tables"]["hr_employees"]["Row"] }
