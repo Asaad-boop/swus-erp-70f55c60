@@ -40,3 +40,11 @@
 - [ ] 3. Supplier/agent ledger statement PDF
 - [ ] 4. PO create flow polish
 - [ ] 5. PO detail / carton release polish
+
+## HRM upgrade
+- [x] Phase 1: missed-checkout auto close, one open session, stale cleanup
+- [ ] Phase 2: weekly holiday + shift review
+- [ ] Phase 3: employee leave apply
+- [ ] Phase 4: overtime approval
+- [ ] Phase 5: payroll run + payslip
+- [ ] Phase 6: performance

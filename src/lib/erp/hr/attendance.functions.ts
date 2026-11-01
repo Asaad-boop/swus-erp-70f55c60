@@ -92,6 +92,18 @@ export const punchIn = createServerFn({ method: "POST" })
     const employee = await resolveEmployee(supabase, context.userId);
     if (!employee) throw new Error("Tomar ERP account kono employee profile er sathe link kora nei. HR ke bolo.");
     const workDate = dhakaDate();
+    // Close any session left open from a previous day (missed checkout) before starting today's.
+    const { data: stale } = await supabase
+      .from("hr_time_entries")
+      .select("id")
+      .eq("employee_id", employee.id)
+      .is("check_out", null)
+      .lt("work_date", workDate)
+      .limit(1);
+    if (stale?.length) {
+      const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+      await (supabaseAdmin as any).rpc("hr_auto_close_stale_sessions");
+    }
     const open = (await loadDay(supabase, employee.id, workDate)).find((e) => !e.check_out);
     if (open) return { entryId: open.id, alreadyOpen: true };
     const { data, error } = await supabase
@@ -99,7 +111,14 @@ export const punchIn = createServerFn({ method: "POST" })
       .insert({ employee_id: employee.id, work_date: workDate, check_in: new Date().toISOString() })
       .select("id")
       .single();
-    if (error) throw new Error(error.message);
+    if (error) {
+      // Double tap race: the unique open-session index rejected a second insert.
+      if (error.code === "23505") {
+        const again = (await loadDay(supabase, employee.id, workDate)).find((e) => !e.check_out);
+        if (again) return { entryId: again.id, alreadyOpen: true };
+      }
+      throw new Error(error.message);
+    }
     return { entryId: data.id as string, alreadyOpen: false };
   });
 
