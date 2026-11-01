@@ -6,7 +6,6 @@ import { toast } from "sonner";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { MyLeaveCard } from "@/components/erp/hr/my-leave-card";
 import { HrPageHeader, clockTime, hoursMins } from "@/components/erp/hr/hr-shell";
 import {
   getMyAttendanceToday,
@@ -37,9 +36,9 @@ export const Route = createFileRoute("/_authenticated/erp/hr/my-day")({
   component: MyAttendancePage,
   head: () => ({
     meta: [
-      { title: "My Attendance — Synq ERP HRM" },
+      { title: "My Day — Synq ERP HRM" },
       { name: "description", content: "Check in, take breaks and check out — your own live attendance card with work hours and break log." },
-      { property: "og:title", content: "My Attendance — Synq ERP HRM" },
+      { property: "og:title", content: "My Day — Synq ERP HRM" },
       { property: "og:description", content: "Self-service punch card with live work hours and break tracking." },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary" },
@@ -326,7 +325,6 @@ function MyAttendancePage() {
           </CardContent>
         </Card>
       )}
-      <MyLeaveCard />
     </div>
   );
 }

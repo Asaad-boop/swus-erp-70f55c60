@@ -304,7 +304,7 @@ export function EmployeeDashboard() {
                   {open ? "Check out" : "Check in"}
                 </Button>
                 <Button asChild size="sm" variant="ghost" className="gap-1.5">
-                  <Link to={"/erp/hr/my-attendance" as any}>
+                  <Link to={"/erp/hr/my-day" as any}>
                     <CalendarDays className="size-4" /> Attendance
                   </Link>
                 </Button>

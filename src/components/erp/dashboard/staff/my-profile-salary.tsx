@@ -67,7 +67,7 @@ export function MyProfileSalary({ employeeId }: { employeeId?: string }) {
           <div className="flex items-center gap-1.5 text-[10px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">
             <Wallet className="size-3.5" /> My salary
           </div>
-          <Link to="/erp/hr/my-attendance" className="text-[11px] text-indigo-600 hover:underline">
+          <Link to="/erp/hr/my-day" className="text-[11px] text-indigo-600 hover:underline">
             Attendance
           </Link>
         </div>

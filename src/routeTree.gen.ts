@@ -63,12 +63,12 @@ import { Route as AuthenticatedErpHrIndexRouteImport } from './routes/_authentic
 import { Route as AuthenticatedErpHrAccessRouteImport } from './routes/_authenticated/erp.hr.access'
 import { Route as AuthenticatedErpHrAttendanceRouteImport } from './routes/_authenticated/erp.hr.attendance'
 import { Route as AuthenticatedErpHrEmployeesRouteImport } from './routes/_authenticated/erp.hr.employees'
-import { Route as AuthenticatedErpHrLeavesRouteImport } from './routes/_authenticated/erp.hr.leaves'
-import { Route as AuthenticatedErpHrLiveRouteImport } from './routes/_authenticated/erp.hr.live'
-import { Route as AuthenticatedErpHrMyAttendanceRouteImport } from './routes/_authenticated/erp.hr.my-attendance'
+import { Route as AuthenticatedErpHrLeaveApprovalsRouteImport } from './routes/_authenticated/erp.hr.leave-approvals'
+import { Route as AuthenticatedErpHrMyDayRouteImport } from './routes/_authenticated/erp.hr.my-day'
 import { Route as AuthenticatedErpHrPayrollRouteImport } from './routes/_authenticated/erp.hr.payroll'
 import { Route as AuthenticatedErpHrPerformanceRouteImport } from './routes/_authenticated/erp.hr.performance'
 import { Route as AuthenticatedErpHrSettingsRouteImport } from './routes/_authenticated/erp.hr.settings'
+import { Route as AuthenticatedErpHrTeamRouteImport } from './routes/_authenticated/erp.hr.team'
 import { Route as AuthenticatedErpImportsIndexRouteImport } from './routes/_authenticated/erp.imports.index'
 import { Route as AuthenticatedErpImportsAgentsRouteImport } from './routes/_authenticated/erp.imports.agents'
 import { Route as AuthenticatedErpImportsIncomingRouteImport } from './routes/_authenticated/erp.imports.incoming'
@@ -427,23 +427,17 @@ const AuthenticatedErpHrEmployeesRoute =
     path: '/employees',
     getParentRoute: () => AuthenticatedErpHrRoute,
   } as any)
-const AuthenticatedErpHrLeavesRoute =
-  AuthenticatedErpHrLeavesRouteImport.update({
-    id: '/leaves',
-    path: '/leaves',
+const AuthenticatedErpHrLeaveApprovalsRoute =
+  AuthenticatedErpHrLeaveApprovalsRouteImport.update({
+    id: '/leave-approvals',
+    path: '/leave-approvals',
     getParentRoute: () => AuthenticatedErpHrRoute,
   } as any)
-const AuthenticatedErpHrLiveRoute = AuthenticatedErpHrLiveRouteImport.update({
-  id: '/live',
-  path: '/live',
+const AuthenticatedErpHrMyDayRoute = AuthenticatedErpHrMyDayRouteImport.update({
+  id: '/my-day',
+  path: '/my-day',
   getParentRoute: () => AuthenticatedErpHrRoute,
 } as any)
-const AuthenticatedErpHrMyAttendanceRoute =
-  AuthenticatedErpHrMyAttendanceRouteImport.update({
-    id: '/my-attendance',
-    path: '/my-attendance',
-    getParentRoute: () => AuthenticatedErpHrRoute,
-  } as any)
 const AuthenticatedErpHrPayrollRoute =
   AuthenticatedErpHrPayrollRouteImport.update({
     id: '/payroll',
@@ -462,6 +456,11 @@ const AuthenticatedErpHrSettingsRoute =
     path: '/settings',
     getParentRoute: () => AuthenticatedErpHrRoute,
   } as any)
+const AuthenticatedErpHrTeamRoute = AuthenticatedErpHrTeamRouteImport.update({
+  id: '/team',
+  path: '/team',
+  getParentRoute: () => AuthenticatedErpHrRoute,
+} as any)
 const AuthenticatedErpImportsIndexRoute =
   AuthenticatedErpImportsIndexRouteImport.update({
     id: '/',
@@ -834,12 +833,12 @@ export interface FileRoutesByFullPath {
   '/erp/hr/access': typeof AuthenticatedErpHrAccessRoute
   '/erp/hr/attendance': typeof AuthenticatedErpHrAttendanceRoute
   '/erp/hr/employees': typeof AuthenticatedErpHrEmployeesRoute
-  '/erp/hr/leaves': typeof AuthenticatedErpHrLeavesRoute
-  '/erp/hr/live': typeof AuthenticatedErpHrLiveRoute
-  '/erp/hr/my-attendance': typeof AuthenticatedErpHrMyAttendanceRoute
+  '/erp/hr/leave-approvals': typeof AuthenticatedErpHrLeaveApprovalsRoute
+  '/erp/hr/my-day': typeof AuthenticatedErpHrMyDayRoute
   '/erp/hr/payroll': typeof AuthenticatedErpHrPayrollRoute
   '/erp/hr/performance': typeof AuthenticatedErpHrPerformanceRoute
   '/erp/hr/settings': typeof AuthenticatedErpHrSettingsRoute
+  '/erp/hr/team': typeof AuthenticatedErpHrTeamRoute
   '/erp/imports/agents': typeof AuthenticatedErpImportsAgentsRoute
   '/erp/imports/incoming': typeof AuthenticatedErpImportsIncomingRoute
   '/erp/imports/reports': typeof AuthenticatedErpImportsReportsRoute
@@ -940,12 +939,12 @@ export interface FileRoutesByTo {
   '/erp/hr/access': typeof AuthenticatedErpHrAccessRoute
   '/erp/hr/attendance': typeof AuthenticatedErpHrAttendanceRoute
   '/erp/hr/employees': typeof AuthenticatedErpHrEmployeesRoute
-  '/erp/hr/leaves': typeof AuthenticatedErpHrLeavesRoute
-  '/erp/hr/live': typeof AuthenticatedErpHrLiveRoute
-  '/erp/hr/my-attendance': typeof AuthenticatedErpHrMyAttendanceRoute
+  '/erp/hr/leave-approvals': typeof AuthenticatedErpHrLeaveApprovalsRoute
+  '/erp/hr/my-day': typeof AuthenticatedErpHrMyDayRoute
   '/erp/hr/payroll': typeof AuthenticatedErpHrPayrollRoute
   '/erp/hr/performance': typeof AuthenticatedErpHrPerformanceRoute
   '/erp/hr/settings': typeof AuthenticatedErpHrSettingsRoute
+  '/erp/hr/team': typeof AuthenticatedErpHrTeamRoute
   '/erp/imports/agents': typeof AuthenticatedErpImportsAgentsRoute
   '/erp/imports/incoming': typeof AuthenticatedErpImportsIncomingRoute
   '/erp/imports/reports': typeof AuthenticatedErpImportsReportsRoute
@@ -1057,12 +1056,12 @@ export interface FileRoutesById {
   '/_authenticated/erp/hr/access': typeof AuthenticatedErpHrAccessRoute
   '/_authenticated/erp/hr/attendance': typeof AuthenticatedErpHrAttendanceRoute
   '/_authenticated/erp/hr/employees': typeof AuthenticatedErpHrEmployeesRoute
-  '/_authenticated/erp/hr/leaves': typeof AuthenticatedErpHrLeavesRoute
-  '/_authenticated/erp/hr/live': typeof AuthenticatedErpHrLiveRoute
-  '/_authenticated/erp/hr/my-attendance': typeof AuthenticatedErpHrMyAttendanceRoute
+  '/_authenticated/erp/hr/leave-approvals': typeof AuthenticatedErpHrLeaveApprovalsRoute
+  '/_authenticated/erp/hr/my-day': typeof AuthenticatedErpHrMyDayRoute
   '/_authenticated/erp/hr/payroll': typeof AuthenticatedErpHrPayrollRoute
   '/_authenticated/erp/hr/performance': typeof AuthenticatedErpHrPerformanceRoute
   '/_authenticated/erp/hr/settings': typeof AuthenticatedErpHrSettingsRoute
+  '/_authenticated/erp/hr/team': typeof AuthenticatedErpHrTeamRoute
   '/_authenticated/erp/imports/agents': typeof AuthenticatedErpImportsAgentsRoute
   '/_authenticated/erp/imports/incoming': typeof AuthenticatedErpImportsIncomingRoute
   '/_authenticated/erp/imports/reports': typeof AuthenticatedErpImportsReportsRoute
@@ -1174,12 +1173,12 @@ export interface FileRouteTypes {
     | '/erp/hr/access'
     | '/erp/hr/attendance'
     | '/erp/hr/employees'
-    | '/erp/hr/leaves'
-    | '/erp/hr/live'
-    | '/erp/hr/my-attendance'
+    | '/erp/hr/leave-approvals'
+    | '/erp/hr/my-day'
     | '/erp/hr/payroll'
     | '/erp/hr/performance'
     | '/erp/hr/settings'
+    | '/erp/hr/team'
     | '/erp/imports/agents'
     | '/erp/imports/incoming'
     | '/erp/imports/reports'
@@ -1280,12 +1279,12 @@ export interface FileRouteTypes {
     | '/erp/hr/access'
     | '/erp/hr/attendance'
     | '/erp/hr/employees'
-    | '/erp/hr/leaves'
-    | '/erp/hr/live'
-    | '/erp/hr/my-attendance'
+    | '/erp/hr/leave-approvals'
+    | '/erp/hr/my-day'
     | '/erp/hr/payroll'
     | '/erp/hr/performance'
     | '/erp/hr/settings'
+    | '/erp/hr/team'
     | '/erp/imports/agents'
     | '/erp/imports/incoming'
     | '/erp/imports/reports'
@@ -1396,12 +1395,12 @@ export interface FileRouteTypes {
     | '/_authenticated/erp/hr/access'
     | '/_authenticated/erp/hr/attendance'
     | '/_authenticated/erp/hr/employees'
-    | '/_authenticated/erp/hr/leaves'
-    | '/_authenticated/erp/hr/live'
-    | '/_authenticated/erp/hr/my-attendance'
+    | '/_authenticated/erp/hr/leave-approvals'
+    | '/_authenticated/erp/hr/my-day'
     | '/_authenticated/erp/hr/payroll'
     | '/_authenticated/erp/hr/performance'
     | '/_authenticated/erp/hr/settings'
+    | '/_authenticated/erp/hr/team'
     | '/_authenticated/erp/imports/agents'
     | '/_authenticated/erp/imports/incoming'
     | '/_authenticated/erp/imports/reports'
@@ -1869,25 +1868,18 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedErpHrEmployeesRouteImport
       parentRoute: typeof AuthenticatedErpHrRoute
     }
-    '/_authenticated/erp/hr/leaves': {
-      id: '/_authenticated/erp/hr/leaves'
-      path: '/leaves'
-      fullPath: '/erp/hr/leaves'
-      preLoaderRoute: typeof AuthenticatedErpHrLeavesRouteImport
+    '/_authenticated/erp/hr/leave-approvals': {
+      id: '/_authenticated/erp/hr/leave-approvals'
+      path: '/leave-approvals'
+      fullPath: '/erp/hr/leave-approvals'
+      preLoaderRoute: typeof AuthenticatedErpHrLeaveApprovalsRouteImport
       parentRoute: typeof AuthenticatedErpHrRoute
     }
-    '/_authenticated/erp/hr/live': {
-      id: '/_authenticated/erp/hr/live'
-      path: '/live'
-      fullPath: '/erp/hr/live'
-      preLoaderRoute: typeof AuthenticatedErpHrLiveRouteImport
-      parentRoute: typeof AuthenticatedErpHrRoute
-    }
-    '/_authenticated/erp/hr/my-attendance': {
-      id: '/_authenticated/erp/hr/my-attendance'
-      path: '/my-attendance'
-      fullPath: '/erp/hr/my-attendance'
-      preLoaderRoute: typeof AuthenticatedErpHrMyAttendanceRouteImport
+    '/_authenticated/erp/hr/my-day': {
+      id: '/_authenticated/erp/hr/my-day'
+      path: '/my-day'
+      fullPath: '/erp/hr/my-day'
+      preLoaderRoute: typeof AuthenticatedErpHrMyDayRouteImport
       parentRoute: typeof AuthenticatedErpHrRoute
     }
     '/_authenticated/erp/hr/payroll': {
@@ -1909,6 +1901,13 @@ declare module '@tanstack/react-router' {
       path: '/settings'
       fullPath: '/erp/hr/settings'
       preLoaderRoute: typeof AuthenticatedErpHrSettingsRouteImport
+      parentRoute: typeof AuthenticatedErpHrRoute
+    }
+    '/_authenticated/erp/hr/team': {
+      id: '/_authenticated/erp/hr/team'
+      path: '/team'
+      fullPath: '/erp/hr/team'
+      preLoaderRoute: typeof AuthenticatedErpHrTeamRouteImport
       parentRoute: typeof AuthenticatedErpHrRoute
     }
     '/_authenticated/erp/imports/': {
@@ -2349,12 +2348,12 @@ interface AuthenticatedErpHrRouteChildren {
   AuthenticatedErpHrAccessRoute: typeof AuthenticatedErpHrAccessRoute
   AuthenticatedErpHrAttendanceRoute: typeof AuthenticatedErpHrAttendanceRoute
   AuthenticatedErpHrEmployeesRoute: typeof AuthenticatedErpHrEmployeesRoute
-  AuthenticatedErpHrLeavesRoute: typeof AuthenticatedErpHrLeavesRoute
-  AuthenticatedErpHrLiveRoute: typeof AuthenticatedErpHrLiveRoute
-  AuthenticatedErpHrMyAttendanceRoute: typeof AuthenticatedErpHrMyAttendanceRoute
+  AuthenticatedErpHrLeaveApprovalsRoute: typeof AuthenticatedErpHrLeaveApprovalsRoute
+  AuthenticatedErpHrMyDayRoute: typeof AuthenticatedErpHrMyDayRoute
   AuthenticatedErpHrPayrollRoute: typeof AuthenticatedErpHrPayrollRoute
   AuthenticatedErpHrPerformanceRoute: typeof AuthenticatedErpHrPerformanceRoute
   AuthenticatedErpHrSettingsRoute: typeof AuthenticatedErpHrSettingsRoute
+  AuthenticatedErpHrTeamRoute: typeof AuthenticatedErpHrTeamRoute
   AuthenticatedErpHrIndexRoute: typeof AuthenticatedErpHrIndexRoute
 }
 
@@ -2362,12 +2361,12 @@ const AuthenticatedErpHrRouteChildren: AuthenticatedErpHrRouteChildren = {
   AuthenticatedErpHrAccessRoute: AuthenticatedErpHrAccessRoute,
   AuthenticatedErpHrAttendanceRoute: AuthenticatedErpHrAttendanceRoute,
   AuthenticatedErpHrEmployeesRoute: AuthenticatedErpHrEmployeesRoute,
-  AuthenticatedErpHrLeavesRoute: AuthenticatedErpHrLeavesRoute,
-  AuthenticatedErpHrLiveRoute: AuthenticatedErpHrLiveRoute,
-  AuthenticatedErpHrMyAttendanceRoute: AuthenticatedErpHrMyAttendanceRoute,
+  AuthenticatedErpHrLeaveApprovalsRoute: AuthenticatedErpHrLeaveApprovalsRoute,
+  AuthenticatedErpHrMyDayRoute: AuthenticatedErpHrMyDayRoute,
   AuthenticatedErpHrPayrollRoute: AuthenticatedErpHrPayrollRoute,
   AuthenticatedErpHrPerformanceRoute: AuthenticatedErpHrPerformanceRoute,
   AuthenticatedErpHrSettingsRoute: AuthenticatedErpHrSettingsRoute,
+  AuthenticatedErpHrTeamRoute: AuthenticatedErpHrTeamRoute,
   AuthenticatedErpHrIndexRoute: AuthenticatedErpHrIndexRoute,
 }
 
