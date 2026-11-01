@@ -35,16 +35,6 @@ const daysBetween = (a: string, b: string) => {
   return d > 0 ? d : 0;
 };
 
-/** Every YYYY-MM-DD between two dates, inclusive (max 366 to stay safe). */
-const dateRange = (a: string, b: string) => {
-  const out: string[] = [];
-  const start = new Date(`${a}T00:00:00Z`);
-  const end = new Date(`${b}T00:00:00Z`);
-  for (let d = start; d <= end && out.length < 366; d = new Date(d.getTime() + 86400000)) {
-    out.push(d.toISOString().slice(0, 10));
-  }
-  return out;
-};
 
 function LeavesPage() {
   const qc = useQueryClient();
