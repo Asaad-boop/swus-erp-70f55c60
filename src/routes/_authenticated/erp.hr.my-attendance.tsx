@@ -158,6 +158,7 @@ function MyAttendancePage() {
           workDate: data.workDate,
           netMs: payableMs,
           firstIn: stats.firstIn,
+          holiday: data.holiday ?? null,
         })
       : null;
 

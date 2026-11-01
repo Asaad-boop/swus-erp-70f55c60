@@ -141,6 +141,7 @@ function LiveDashboardPage() {
       netMs: r.workMs + r.breakMs - unpaidBreakMinutes(r.schedule, r.breakMs / 60000) * 60000,
       firstIn: r.firstIn,
       fallbackGraceMin: policy?.late_grace_min ?? DEFAULT_HR_POLICY.late_grace_min,
+      holiday: data?.holiday ?? null,
     });
   const kpi = useMemo(() => {
     const c = { total: allRows.length, present: 0, on_break: 0, left: 0, not_in: 0 };

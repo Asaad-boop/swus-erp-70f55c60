@@ -271,5 +271,5 @@ export const getLiveBoard = createServerFn({ method: "GET" })
       };
     });
 
-    return { workDate, serverNow: nowIso, rows };
+    return { workDate, serverNow: nowIso, rows, holiday: await loadHoliday(supabase, workDate) };
   });
