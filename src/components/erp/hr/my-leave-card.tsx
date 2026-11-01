@@ -26,7 +26,7 @@ export function leaveWorkDays(start: string, end: string, weekOffs: number[]): n
 export function MyLeaveCard() {
   const qc = useQueryClient();
   const year = dhakaToday().slice(0, 4);
-  const [form, setForm] = useState({ type: "", start: dhakaToday(), end: dhakaToday(), reason: "" });
+  const [form, setForm] = useState({ type: "", start: dhakaToday(), end: dhakaToday(), reason: "", half: false, part: "first" });
 
   const { data } = useQuery({
     queryKey: ["hr-my-leaves"],
