@@ -11,7 +11,7 @@ import { dhakaToday } from "@/lib/erp/hr/date";
 import { getLiveBoard, type LiveEmployee } from "@/lib/erp/hr/attendance.functions";
 import { getAppSetting } from "@/lib/erp/settings/app-settings.functions";
 import { DEFAULT_HR_POLICY, type HrPolicy } from "@/lib/erp/hr/policy";
-import { breakWindowLabel, dayMetrics, shiftLabel, unpaidBreakMinutes } from "@/lib/erp/hr/schedule";
+import { breakWindowLabel, dayMetrics, isWeekOff, shiftLabel, unpaidBreakMinutes } from "@/lib/erp/hr/schedule";
 import { Radio, RefreshCw, Users, CheckCircle2, Coffee, LogOut, UserX, Table2, GanttChartSquare, Activity, Search } from "lucide-react";
 
 export const Route = createFileRoute("/_authenticated/erp/hr/live")({
