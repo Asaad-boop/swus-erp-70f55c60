@@ -1,0 +1,1 @@
+REVOKE EXECUTE ON FUNCTION public.hr_auto_close_stale_sessions() FROM authenticated;
