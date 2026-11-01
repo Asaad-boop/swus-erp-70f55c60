@@ -5300,6 +5300,7 @@ export type Database = {
       }
       hr_time_entries: {
         Row: {
+          auto_closed: boolean
           check_in: string
           check_out: string | null
           created_at: string
@@ -5311,6 +5312,7 @@ export type Database = {
           work_date: string
         }
         Insert: {
+          auto_closed?: boolean
           check_in?: string
           check_out?: string | null
           created_at?: string
@@ -5322,6 +5324,7 @@ export type Database = {
           work_date?: string
         }
         Update: {
+          auto_closed?: boolean
           check_in?: string
           check_out?: string | null
           created_at?: string
@@ -15860,6 +15863,7 @@ export type Database = {
         Returns: boolean
       }
       heartbeat_order_lock: { Args: { _order_id: string }; Returns: undefined }
+      hr_auto_close_stale_sessions: { Args: never; Returns: number }
       hr_count_working_days: {
         Args: { _from: string; _to: string; _weekly_off?: number[] }
         Returns: number
