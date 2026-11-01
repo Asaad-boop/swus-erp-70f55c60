@@ -207,7 +207,7 @@ function MyAttendancePage() {
                   <span>· Off: {weekOffLabel(sched)}</span>
                   {metrics?.isOff && (
                     <Badge variant="outline" className="border-violet-500/20 bg-violet-500/10 text-[10px] text-violet-600">
-                      Off day{sched.overtime_enabled ? ` · ${metrics.multiplier}x OT` : ""}
+                      {data?.holiday ? `Holiday: ${data.holiday}` : "Off day"}{sched.overtime_enabled ? ` · ${metrics.multiplier}x OT` : ""}
                     </Badge>
                   )}
                   {metrics?.isLate && (

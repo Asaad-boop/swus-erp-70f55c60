@@ -295,7 +295,7 @@ function LiveDashboardPage() {
                         <td className="p-2.5 whitespace-nowrap text-[12px]">
                           {shiftLabel(r.schedule)}
                           {m.isOff && (
-                            <Badge variant="outline" className="ml-1.5 border-violet-500/20 bg-violet-500/10 text-[10px] text-violet-600">Off day</Badge>
+                            <Badge variant="outline" className="ml-1.5 border-violet-500/20 bg-violet-500/10 text-[10px] text-violet-600">{data?.holiday && !isWeekOff(r.schedule, workDate) ? "Holiday" : "Off day"}</Badge>
                           )}
                           {breakWindowLabel(r.schedule) && (
                             <p className="text-[10px] text-muted-foreground">Break {breakWindowLabel(r.schedule)}</p>
