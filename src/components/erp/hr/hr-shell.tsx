@@ -18,13 +18,11 @@ export type HrNavItem = { to: string; label: string; short: string; icon: Lucide
 
 export const HR_NAV: HrNavItem[] = [
   { to: "/erp/hr", label: "HR Overview", short: "Overview", icon: LayoutDashboard, exact: true },
-  { to: "/erp/hr/team", label: "Live Dashboard", short: "Live", icon: Radio },
-  { to: "/erp/hr/my-day", label: "My Attendance", short: "Mine", icon: Fingerprint },
+  { to: "/erp/hr/team", label: "Team Today", short: "Team", icon: Radio },
+  { to: "/erp/hr/my-day", label: "My Day", short: "My Day", icon: Fingerprint },
+  { to: "/erp/hr/my-leave", label: "My Leave", short: "My Leave", icon: PalmtreeIcon },
   { to: "/erp/hr/employees", label: "Employees", short: "Staff", icon: Users },
-  { to: "/erp/hr/attendance", label: "Attendance", short: "Attend", icon: CalendarCheck },
-  { to: "/erp/hr/leave-approvals", label: "Leave & Holidays", short: "Leave", icon: PalmtreeIcon },
-  { to: "/erp/hr/payroll", label: "Payroll", short: "Payroll", icon: Banknote },
-  { to: "/erp/hr/performance", label: "Performance & KPI", short: "KPI", icon: Trophy },
+  { to: "/erp/hr/leave-approvals", label: "Leave Approvals", short: "Leave", icon: PalmtreeIcon },
   { to: "/erp/hr/access", label: "Users & Access", short: "Access", icon: ShieldCheck },
   { to: "/erp/hr/settings", label: "HR Settings", short: "Settings", icon: Settings2 },
 ];
