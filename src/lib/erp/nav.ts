@@ -113,6 +113,7 @@ export const NAV_GROUPS: Group[] = [
           { to: "/erp/finance/receivables", label: "AR / AP", icon: ArrowDownCircle },
           { to: "/erp/finance/dollar-purchase", label: "Dollar Purchase", icon: Coins },
           { to: "/erp/finance/reports", label: "Reports", icon: FileBarChart },
+          { to: "/erp/finance/integrity", label: "Integrity", icon: ShieldCheck },
           { to: "/erp/finance/settings", label: "Settings", icon: Settings },
         ],
       },
