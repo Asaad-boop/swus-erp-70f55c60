@@ -643,15 +643,83 @@ function SourceRowBlock({
   const subtext = campaign || (channel ? siteLabel || undefined : undefined);
   const meta: ChannelMeta = channel ?? { icon: "🔗", label: siteLabel || "Direct", tone: TONES.neutral };
 
+  const copyCampaign = () => {
+    if (!campaign) return;
+    navigator.clipboard
+      .writeText(campaign)
+      .then(() => toast.success("Campaign ID copied"))
+      .catch(() => toast.error("Copy failed"));
+  };
+
+  const chip = (
+    <span className={cn("inline-flex items-center gap-1 px-2 h-5 rounded-full text-[10px] font-semibold ring-1 ring-inset max-w-full", meta.tone)}>
+      <span>{meta.icon}</span>
+      <span className="truncate">{meta.label}</span>
+    </span>
+  );
+
+  // Campaign ID (e.g. Meta campaign id from utm_campaign): click to open
+  // details, one-tap copy of the full ID.
+  if (campaign) {
+    return (
+      <Popover>
+        <span className="inline-flex flex-col items-start gap-0.5 max-w-[150px]">
+          {chip}
+          <PopoverTrigger asChild>
+            <button
+              type="button"
+              className="text-[9.5px] text-muted-foreground hover:text-foreground truncate pl-0.5 max-w-full underline decoration-dotted underline-offset-2 cursor-pointer"
+              title="Click for campaign details"
+            >
+              {campaign}
+            </button>
+          </PopoverTrigger>
+        </span>
+        <PopoverContent align="start" className="w-72 p-3 space-y-2">
+          <div className="text-xs font-semibold">Campaign details</div>
+          <div className="flex items-center justify-between gap-2 rounded-md bg-muted/60 px-2 py-1.5">
+            <span className="font-mono text-[11px] break-all">{campaign}</span>
+            <Button type="button" size="sm" variant="outline" className="h-6 px-2 text-[10px] shrink-0" onClick={copyCampaign}>
+              Copy
+            </Button>
+          </div>
+          <dl className="space-y-1 text-[11px]">
+            <div className="flex justify-between gap-2">
+              <dt className="text-muted-foreground">Channel</dt>
+              <dd className="font-medium">{meta.label}</dd>
+            </div>
+            {attribution?.utm_source && (
+              <div className="flex justify-between gap-2">
+                <dt className="text-muted-foreground">Source</dt>
+                <dd className="font-medium truncate">{attribution.utm_source}</dd>
+              </div>
+            )}
+            {attribution?.utm_medium && (
+              <div className="flex justify-between gap-2">
+                <dt className="text-muted-foreground">Medium</dt>
+                <dd className="font-medium truncate">{attribution.utm_medium}</dd>
+              </div>
+            )}
+            <div className="flex justify-between gap-2">
+              <dt className="text-muted-foreground">Site</dt>
+              <dd className="font-medium">{siteLabel || "—"}</dd>
+            </div>
+            <div className="flex justify-between gap-2">
+              <dt className="text-muted-foreground">FB click ID</dt>
+              <dd className="font-medium">{attribution?.fbclid ? "Yes" : "No"}</dd>
+            </div>
+          </dl>
+        </PopoverContent>
+      </Popover>
+    );
+  }
+
   return (
     <TooltipProvider delayDuration={100}>
       <Tooltip>
         <TooltipTrigger asChild>
           <span className="inline-flex flex-col items-start gap-0.5 max-w-[150px]">
-            <span className={cn("inline-flex items-center gap-1 px-2 h-5 rounded-full text-[10px] font-semibold ring-1 ring-inset max-w-full", meta.tone)}>
-              <span>{meta.icon}</span>
-              <span className="truncate">{meta.label}</span>
-            </span>
+            {chip}
             {subtext && <span className="text-[9.5px] text-muted-foreground truncate pl-0.5 max-w-full" title={subtext}>{subtext}</span>}
           </span>
         </TooltipTrigger>
