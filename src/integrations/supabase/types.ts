@@ -15548,6 +15548,10 @@ export type Database = {
         Args: { _order_id: string }
         Returns: number
       }
+      fin_integrity_report: {
+        Args: { _brand?: string; _from?: string; _to?: string }
+        Returns: Json
+      }
       finalize_order_on_confirm: {
         Args: { _order_id: string }
         Returns: undefined
