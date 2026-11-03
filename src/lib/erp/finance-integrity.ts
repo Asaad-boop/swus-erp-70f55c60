@@ -11,6 +11,24 @@ export type DeliveredClass = {
   fix: string;
 };
 
+/**
+ * Mirror of the Phase 2 SQL formula in fn_post_order_delivery_to_finance (orders
+ * delivered on/after 2026-11-04). Kept in sync for tests: net COD receivable =
+ * collected − advance − courier fee − refund. Legacy partial rows (semantics null)
+ * store the uncollected part; new rows (semantics 'collected') store the amount collected.
+ */
+export function deliveryNetV2(o: {
+  status: string; total: number; advance?: number | null; shipping?: number | null;
+  refund?: number | null; partial_amount?: number | null; partial_amount_semantics?: string | null;
+}): number {
+  const total = Number(o.total) || 0;
+  const collected = o.status === "partial_delivered"
+    ? (o.partial_amount_semantics === "collected" ? Number(o.partial_amount) || 0 : Math.max(total - (Number(o.partial_amount) || 0), 0))
+    : total;
+  const net = collected - (Number(o.advance) || 0) - (Number(o.shipping) || 0) - (Number(o.refund) || 0);
+  return net > 0 ? net : 0;
+}
+
 /** Read-only classification of a delivered/partial order's finance posting. */
 export function classifyDelivered(d: DeliveredRow): DeliveredClass {
   const total = Number(d.total) || 0;

@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { classifyDelivered, type DeliveredRow } from "./finance-integrity";
+import { classifyDelivered, deliveryNetV2, type DeliveredRow } from "./finance-integrity";
 
 const base: DeliveredRow = { id: "x", invoice_no: "HS-1", brand: "HobbyShop", status: "delivered", total: 1000, advance: 0, partial_amount: null, delivered_at: null, posted: null, advance_posted: null, refs: null, recon_rows: 0 };
 
