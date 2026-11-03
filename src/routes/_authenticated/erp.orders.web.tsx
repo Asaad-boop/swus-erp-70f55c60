@@ -670,6 +670,7 @@ function SourceRowBlock({
               type="button"
               className="text-[9.5px] text-muted-foreground hover:text-foreground truncate pl-0.5 max-w-full underline decoration-dotted underline-offset-2 cursor-pointer"
               title="Click for campaign details"
+              onClick={(e) => e.stopPropagation()}
             >
               {campaign}
             </button>
