@@ -137,6 +137,25 @@ function IntegrityPage() {
               ))}</TableBody></Table>
           </Section>
 
+          <Section title="Phase 4 correction preview (read-only — nothing is posted)" count={r.orphans.length + exceptions.filter((d) => d.c.kind === "advance_double").length} info>
+            <p className="text-sm text-muted-foreground mb-2">Exact entries a future correction would need. Every one requires owner authorization; this preview never writes.</p>
+            <Table><TableHeader><TableRow><TableHead>Reference</TableHead><TableHead>Brand</TableHead><TableHead className="text-right">Amount</TableHead><TableHead>Expected accounting impact</TableHead><TableHead>Duplicate risk</TableHead></TableRow></TableHeader>
+              <TableBody>
+                {r.orphans.map((o) => (
+                  <TableRow key={o.id}><TableCell className="font-mono text-xs" title={o.id}>txn {short(o.id)} → {o.reference_type} {short(o.reference_id)}</TableCell><TableCell>{o.brand}</TableCell>
+                    <TableCell className="text-right">{fmtBdt(o.amount)}</TableCell>
+                    <TableCell className="text-xs">Void the orphan expense row: Income/Expense, P&amp;L other expense and import cost drop by {fmtBdt(o.amount)}; stored wallet balance and Balance Sheet unchanged.</TableCell>
+                    <TableCell className="text-xs">Low — no matching payment or journal exists anymore.</TableCell></TableRow>
+                ))}
+                {exceptions.filter((d) => d.c.kind === "advance_double").map((d) => (
+                  <TableRow key={d.id}><TableCell className="font-mono text-xs">{d.invoice_no}</TableCell><TableCell>{d.brand}</TableCell>
+                    <TableCell className="text-right">{fmtBdt((d.posted ?? 0) + (d.advance_posted ?? 0) - d.total)}</TableCell>
+                    <TableCell className="text-xs">Correcting entry for the excess income of {fmtBdt((d.posted ?? 0) + (d.advance_posted ?? 0) - d.total)} (delivery {fmtBdt(d.posted ?? 0)} + advance {fmtBdt(d.advance_posted ?? 0)} &gt; total {fmtBdt(d.total)}).</TableCell>
+                    <TableCell className="text-xs">Check the courier payout first — if the courier actually remitted the excess, record it as other income instead.</TableCell></TableRow>
+                ))}
+              </TableBody></Table>
+          </Section>
+
           <Card><CardHeader className="pb-2"><CardTitle className="text-base">Acceptance checklist (Phase 1)</CardTitle></CardHeader>
             <CardContent className="text-sm space-y-1">
               {["Page is read-only: no buttons change data", "Every exception shows ID, brand, amount, root cause and suggestion", "Wallet drift explained or flagged for manual review", "Delivered orders checked against settlement, advance, courier and reconciliation records before being called unposted", "Brand filter scopes orders and transactions; shared wallets always shown", "Period filter applies to transaction date and delivered date", "Only owner/admin/accountant can open it"].map((x) => <div key={x} className="flex gap-2"><CheckCircle2 className="h-4 w-4 text-success shrink-0" />{x}</div>)}

@@ -10715,6 +10715,7 @@ export type Database = {
           packaged_by: string | null
           paid_at: string | null
           partial_amount: number | null
+          partial_amount_semantics: string | null
           pathao_area_id: number | null
           pathao_area_name: string | null
           pathao_city_id: number | null
@@ -10840,6 +10841,7 @@ export type Database = {
           packaged_by?: string | null
           paid_at?: string | null
           partial_amount?: number | null
+          partial_amount_semantics?: string | null
           pathao_area_id?: number | null
           pathao_area_name?: string | null
           pathao_city_id?: number | null
@@ -10965,6 +10967,7 @@ export type Database = {
           packaged_by?: string | null
           paid_at?: string | null
           partial_amount?: number | null
+          partial_amount_semantics?: string | null
           pathao_area_id?: number | null
           pathao_area_name?: string | null
           pathao_city_id?: number | null
@@ -16211,6 +16214,7 @@ export type Database = {
           packaged_by: string | null
           paid_at: string | null
           partial_amount: number | null
+          partial_amount_semantics: string | null
           pathao_area_id: number | null
           pathao_area_name: string | null
           pathao_city_id: number | null
@@ -16345,6 +16349,7 @@ export type Database = {
           packaged_by: string | null
           paid_at: string | null
           partial_amount: number | null
+          partial_amount_semantics: string | null
           pathao_area_id: number | null
           pathao_area_name: string | null
           pathao_city_id: number | null
