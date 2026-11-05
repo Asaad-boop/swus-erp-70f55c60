@@ -14,6 +14,24 @@ export type Database = {
   }
   public: {
     Tables: {
+      _backup_hr_reset_2026_11_05: {
+        Row: {
+          backed_at: string | null
+          row_data: Json | null
+          src: string | null
+        }
+        Insert: {
+          backed_at?: string | null
+          row_data?: Json | null
+          src?: string | null
+        }
+        Update: {
+          backed_at?: string | null
+          row_data?: Json | null
+          src?: string | null
+        }
+        Relationships: []
+      }
       _backup_instapay_dup_2026_08_02: {
         Row: {
           account_id: string | null
