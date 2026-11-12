@@ -1,21 +1,11 @@
 import { Link, useLocation } from "@tanstack/react-router";
 import { useEffect, useRef, type ReactNode } from "react";
-import {
-  LayoutDashboard,
-  Target,
-  GitBranch,
-  ScanSearch,
-  PackagePlus,
-  CalendarDays,
-  BellRing,
-  Plug,
-  FileBarChart,
-  Settings,
-  type LucideIcon,
-} from "lucide-react";
+import { Sun, Target, Lightbulb, CalendarDays, Settings, type LucideIcon } from "lucide-react";
 
 import { Skeleton } from "@/components/ui/skeleton";
 import { useBrand } from "@/contexts/brand-context";
+
+export type MarketingNavChild = { to: string; label: string };
 
 export type MarketingNavItem = {
   to: string;
@@ -23,61 +13,66 @@ export type MarketingNavItem = {
   short: string;
   icon: LucideIcon;
   exact?: boolean;
+  /** Sub-pages grouped under this tab (shown as a second row when active) */
+  children?: MarketingNavChild[];
 };
 
+/**
+ * Five tabs instead of ten. Every old URL still works — related pages are
+ * grouped under one tab and shown as a second row, so bookmarks and page
+ * permissions keep working.
+ */
 export const MARKETING_NAV: MarketingNavItem[] = [
-  {
-    to: "/erp/marketing",
-    label: "Overview",
-    short: "Overview",
-    icon: LayoutDashboard,
-    exact: true,
-  },
-  {
-    to: "/erp/marketing/truth",
-    label: "Campaign Workspace",
-    short: "Campaigns",
-    icon: Target,
-  },
+  { to: "/erp/marketing", label: "Today", short: "Today", icon: Sun, exact: true },
+  { to: "/erp/marketing/truth", label: "Campaigns", short: "Campaigns", icon: Target },
   {
     to: "/erp/marketing/attribution",
-    label: "Attribution & Funnel",
-    short: "Attribution",
-    icon: GitBranch,
+    label: "Insights",
+    short: "Insights",
+    icon: Lightbulb,
+    children: [
+      { to: "/erp/marketing/attribution", label: "Funnel & UTM" },
+      { to: "/erp/marketing/audit", label: "Order match audit" },
+      { to: "/erp/marketing/products", label: "Product & LTV" },
+      { to: "/erp/marketing/reports", label: "Reports & export" },
+    ],
   },
-  {
-    to: "/erp/marketing/audit",
-    label: "Attribution Audit",
-    short: "Audit",
-    icon: ScanSearch,
-  },
-
-  { to: "/erp/marketing/products", label: "Product & LTV", short: "Products", icon: PackagePlus },
   {
     to: "/erp/marketing/calendar",
-    label: "Calendar & Experiments",
-    short: "Calendar",
+    label: "Plan & Alerts",
+    short: "Plan",
     icon: CalendarDays,
+    children: [
+      { to: "/erp/marketing/calendar", label: "Calendar & experiments" },
+      { to: "/erp/marketing/alerts", label: "Alerts" },
+    ],
   },
-  { to: "/erp/marketing/alerts", label: "Alerts & Intelligence", short: "Alerts", icon: BellRing },
-  { to: "/erp/marketing/channels", label: "Ad Channels", short: "Channels", icon: Plug },
   {
-    to: "/erp/marketing/reports",
-    label: "Reports & Exports",
-    short: "Reports",
-    icon: FileBarChart,
+    to: "/erp/marketing/settings",
+    label: "Setup",
+    short: "Setup",
+    icon: Settings,
+    children: [
+      { to: "/erp/marketing/settings", label: "Ad accounts & rules" },
+      { to: "/erp/marketing/channels", label: "Other channels" },
+    ],
   },
-  { to: "/erp/marketing/settings", label: "Settings", short: "Settings", icon: Settings },
 ];
 
-/** Sticky horizontal sub-navigation shared by every marketing page. */
+const under = (pathname: string, to: string) => pathname === to || pathname.startsWith(`${to}/`);
+
+function isItemActive(pathname: string, it: MarketingNavItem) {
+  if (it.exact) return pathname === it.to || pathname === `${it.to}/`;
+  if (it.children) return it.children.some((c) => under(pathname, c.to));
+  return under(pathname, it.to);
+}
+
+/** Sticky sub-navigation shared by every marketing page. */
 export function MarketingSubnav() {
   const { pathname } = useLocation();
   const scroller = useRef<HTMLDivElement>(null);
   const activeRef = useRef<HTMLAnchorElement>(null);
-
-  const isActive = (it: MarketingNavItem) =>
-    it.exact ? pathname === it.to || pathname === `${it.to}/` : pathname.startsWith(it.to);
+  const activeGroup = MARKETING_NAV.find((it) => isItemActive(pathname, it));
 
   useEffect(() => {
     const el = activeRef.current;
@@ -94,7 +89,7 @@ export function MarketingSubnav() {
         className="mx-auto flex max-w-[1500px] gap-1 overflow-x-auto px-3 py-2 md:px-6 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
       >
         {MARKETING_NAV.map((it) => {
-          const on = isActive(it);
+          const on = it === activeGroup;
           const Icon = it.icon;
           return (
             <Link
@@ -114,6 +109,26 @@ export function MarketingSubnav() {
           );
         })}
       </div>
+      {activeGroup?.children && (
+        <div className="mx-auto flex max-w-[1500px] gap-4 overflow-x-auto px-4 md:px-7 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+          {activeGroup.children.map((c) => {
+            const on = under(pathname, c.to);
+            return (
+              <Link
+                key={c.to}
+                to={c.to}
+                className={`shrink-0 border-b-2 pb-1.5 text-xs transition-colors ${
+                  on
+                    ? "border-primary font-medium text-foreground"
+                    : "border-transparent text-muted-foreground hover:text-foreground"
+                }`}
+              >
+                {c.label}
+              </Link>
+            );
+          })}
+        </div>
+      )}
     </div>
   );
 }

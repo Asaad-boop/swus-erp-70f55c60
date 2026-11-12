@@ -56,7 +56,8 @@ import {
 } from "@/components/erp/marketing/campaign-truth-detail";
 import { CampaignMonthlyDashboard } from "@/components/erp/marketing/campaign-monthly-dashboard";
 import { DailyPerformancePanel } from "@/components/erp/marketing/daily-performance-panel";
-import { TodayPulse } from "@/components/erp/marketing/today-pulse";
+import { LadderInline, RoasLadder } from "@/components/erp/marketing/roas-ladder";
+import { buildLadder, portfolioBreakeven, sumTotals, totalsFromRow } from "@/lib/erp/marketing/roas-ladder";
 
 
 export const Route = createFileRoute("/_authenticated/erp/marketing/truth")({
@@ -671,8 +672,14 @@ function CampaignTruthPage() {
         <span className="ml-auto tabular-nums">{num(rows.length)} campaigns in view</span>
       </div>
 
-      {/* 1.5 — Today pulse (always Dhaka today, independent of range) */}
-      <TodayPulse brandIds={brandIds} />
+      {/* 1.5 — ROAS ladder for the filtered campaigns (Meta → Booked → Confirmed → Delivered) */}
+      <RoasLadder
+        loading={q.isLoading}
+        ladder={q.data ? buildLadder(sumTotals(rows)) : undefined}
+        prev={compare && prevQ.data ? buildLadder(sumTotals(prevQ.data)) : undefined}
+        breakeven={portfolioBreakeven(rows)}
+        compareLabel={compare ? `${prev.from} → ${prev.to}` : undefined}
+      />
 
       {/* 2 — Compact truth strip */}
 
@@ -1125,11 +1132,14 @@ function CampaignTruthPage() {
       ) : (
         <div className="overflow-hidden rounded-xl border bg-card">
           <div className="overflow-x-auto">
-            <table className="w-full min-w-[900px] text-sm">
+            <table className="w-full min-w-[1060px] text-sm">
               <thead className="border-b bg-muted/30 text-[10px] uppercase tracking-[0.12em] text-muted-foreground">
                 <tr>
                   <th className="px-4 py-3 text-left font-medium">Campaign</th>
                   <th className="px-4 py-3 text-right font-medium">Spend</th>
+                  <th className="px-4 py-3 text-right font-medium" title="Meta › Booked › Confirmed › Delivered ROAS">
+                    ROAS ladder
+                  </th>
                   <th className="px-4 py-3 text-left font-medium">Lifecycle</th>
                   <th className="px-4 py-3 text-right font-medium">Actual collected</th>
                   <th className="px-4 py-3 text-right font-medium">Realized profit</th>
@@ -1205,6 +1215,10 @@ function CampaignTruthPage() {
                             CPA {r.orders > 0 ? bdt(r.cpa) : "—"}
                           </div>
                         </td>
+                        <td className="px-4 py-3.5 text-right">
+                          <LadderInline ladder={buildLadder(totalsFromRow(r))} breakeven={r.breakeven_roas} />
+                          <div className="mt-0.5 text-[10px] text-muted-foreground">M › B › C › D</div>
+                        </td>
                         <td className="px-4 py-3.5">
                           <MiniFunnel row={r} />
                         </td>
@@ -1267,7 +1281,7 @@ function CampaignTruthPage() {
                       </tr>
                       {open && (
                         <tr className="border-l-2 border-l-primary/40 bg-muted/20">
-                          <td colSpan={6} className="px-4 py-4">
+                          <td colSpan={7} className="px-4 py-4">
                             <CampaignTruthDetail
                               row={r}
                               trend={trendByCampaign.get(r.id) ?? []}

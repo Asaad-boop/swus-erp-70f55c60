@@ -47,7 +47,7 @@ const PAGES: { name: string; path: string; section: string; icon: typeof LayoutD
   { name: "Finance Taxes", path: "/erp/finance/taxes", section: "Money", icon: Wallet },
   { name: "Finance Reports", path: "/erp/finance/reports", section: "Money", icon: Wallet },
   { name: "Finance Product P&L", path: "/erp/finance/product-profitability", section: "Money", icon: Wallet },
-  { name: "Marketing Overview", path: "/erp/marketing", section: "Growth", icon: BarChart3 },
+  { name: "Marketing Today", path: "/erp/marketing", section: "Growth", icon: BarChart3 },
   { name: "CRM Customers", path: "/erp/crm", section: "Growth", icon: Heart },
   { name: "Analytics", path: "/erp/analytics", section: "Growth", icon: BarChart3 },
   { name: "Live Analytics", path: "/erp/analytics/live", section: "Growth", icon: BarChart3 },
