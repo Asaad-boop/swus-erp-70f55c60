@@ -5,6 +5,7 @@ import { useServerFn } from "@tanstack/react-start";
 import { toast } from "sonner";
 import { ArrowDown, ArrowUp, Save, Settings2, ShieldAlert, Plug, Plus, Pencil, PlugZap } from "lucide-react";
 import { AdAccountDialog, type AdAccountRow } from "@/components/erp/marketing/ad-account-dialog";
+import { MetaLoginConnect } from "@/components/erp/marketing/meta-login-connect";
 import { testAdAccountConnection } from "@/lib/erp/marketing/meta.functions";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -446,6 +447,8 @@ function MarketingSettingsPage() {
           </CardContent>
         </Card>
       </div>
+
+      <MetaLoginConnect canEdit={canEdit} />
 
       <Card>
         <CardHeader className="flex flex-row items-center justify-between pb-3">

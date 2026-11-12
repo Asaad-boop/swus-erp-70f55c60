@@ -1,6 +1,6 @@
 // Server-only Meta Graph API client. Lazy import only from server-function handlers.
 
-const GRAPH_VERSION = "v21.0";
+export const GRAPH_VERSION = "v21.0";
 const GRAPH_BASE = `https://graph.facebook.com/${GRAPH_VERSION}`;
 const FETCH_TIMEOUT_MS = 20_000;
 

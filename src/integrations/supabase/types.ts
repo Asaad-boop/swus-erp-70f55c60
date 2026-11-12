@@ -10225,6 +10225,30 @@ export type Database = {
           },
         ]
       }
+      mkt_meta_oauth_sessions: {
+        Row: {
+          access_token: string
+          created_at: string
+          expires_at: string | null
+          fb_user_name: string | null
+          user_id: string
+        }
+        Insert: {
+          access_token: string
+          created_at?: string
+          expires_at?: string | null
+          fb_user_name?: string | null
+          user_id: string
+        }
+        Update: {
+          access_token?: string
+          created_at?: string
+          expires_at?: string | null
+          fb_user_name?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
       mkt_order_attributions: {
         Row: {
           ad_id: string | null

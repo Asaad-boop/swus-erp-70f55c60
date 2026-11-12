@@ -205,7 +205,7 @@ export const updateAdAccount = createServerFn({ method: "POST" })
     return { ok: true };
   });
 
-async function syncAdAccountBrandLinks(
+export async function syncAdAccountBrandLinks(
   supabase: any,
   adAccountId: string,
   brandIds: string[],

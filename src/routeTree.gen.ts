@@ -117,6 +117,7 @@ import { Route as ApiPublicCronSyncCourierRouteImport } from './routes/api/publi
 import { Route as ApiPublicCronSyncMarketingRouteImport } from './routes/api/public/cron.sync-marketing'
 import { Route as ApiPublicCronSyncPathaoInvoicesRouteImport } from './routes/api/public/cron.sync-pathao-invoices'
 import { Route as ApiPublicInstapayBackfillRouteImport } from './routes/api/public/instapay.backfill'
+import { Route as ApiPublicMetaOauthCallbackRouteImport } from './routes/api/public/meta/oauth-callback'
 import { Route as ApiPublicMktTrackRouteImport } from './routes/api/public/mkt.track'
 import { Route as ApiPublicMktTrackerDotjsRouteImport } from './routes/api/public/mkt.tracker[.]js'
 import { Route as ApiPublicOrdersCreateRouteImport } from './routes/api/public/orders.create'
@@ -751,6 +752,12 @@ const ApiPublicInstapayBackfillRoute =
     path: '/api/public/instapay/backfill',
     getParentRoute: () => rootRouteImport,
   } as any)
+const ApiPublicMetaOauthCallbackRoute =
+  ApiPublicMetaOauthCallbackRouteImport.update({
+    id: '/api/public/meta/oauth-callback',
+    path: '/api/public/meta/oauth-callback',
+    getParentRoute: () => rootRouteImport,
+  } as any)
 const ApiPublicMktTrackRoute = ApiPublicMktTrackRouteImport.update({
   id: '/api/public/mkt/track',
   path: '/api/public/mkt/track',
@@ -894,6 +901,7 @@ export interface FileRoutesByFullPath {
   '/api/public/cron/sync-marketing': typeof ApiPublicCronSyncMarketingRoute
   '/api/public/cron/sync-pathao-invoices': typeof ApiPublicCronSyncPathaoInvoicesRoute
   '/api/public/instapay/backfill': typeof ApiPublicInstapayBackfillRoute
+  '/api/public/meta/oauth-callback': typeof ApiPublicMetaOauthCallbackRoute
   '/api/public/mkt/track': typeof ApiPublicMktTrackRoute
   '/api/public/mkt/tracker.js': typeof ApiPublicMktTrackerDotjsRoute
   '/api/public/orders/create': typeof ApiPublicOrdersCreateRoute
@@ -1002,6 +1010,7 @@ export interface FileRoutesByTo {
   '/api/public/cron/sync-marketing': typeof ApiPublicCronSyncMarketingRoute
   '/api/public/cron/sync-pathao-invoices': typeof ApiPublicCronSyncPathaoInvoicesRoute
   '/api/public/instapay/backfill': typeof ApiPublicInstapayBackfillRoute
+  '/api/public/meta/oauth-callback': typeof ApiPublicMetaOauthCallbackRoute
   '/api/public/mkt/track': typeof ApiPublicMktTrackRoute
   '/api/public/mkt/tracker.js': typeof ApiPublicMktTrackerDotjsRoute
   '/api/public/orders/create': typeof ApiPublicOrdersCreateRoute
@@ -1121,6 +1130,7 @@ export interface FileRoutesById {
   '/api/public/cron/sync-marketing': typeof ApiPublicCronSyncMarketingRoute
   '/api/public/cron/sync-pathao-invoices': typeof ApiPublicCronSyncPathaoInvoicesRoute
   '/api/public/instapay/backfill': typeof ApiPublicInstapayBackfillRoute
+  '/api/public/meta/oauth-callback': typeof ApiPublicMetaOauthCallbackRoute
   '/api/public/mkt/track': typeof ApiPublicMktTrackRoute
   '/api/public/mkt/tracker.js': typeof ApiPublicMktTrackerDotjsRoute
   '/api/public/orders/create': typeof ApiPublicOrdersCreateRoute
@@ -1240,6 +1250,7 @@ export interface FileRouteTypes {
     | '/api/public/cron/sync-marketing'
     | '/api/public/cron/sync-pathao-invoices'
     | '/api/public/instapay/backfill'
+    | '/api/public/meta/oauth-callback'
     | '/api/public/mkt/track'
     | '/api/public/mkt/tracker.js'
     | '/api/public/orders/create'
@@ -1348,6 +1359,7 @@ export interface FileRouteTypes {
     | '/api/public/cron/sync-marketing'
     | '/api/public/cron/sync-pathao-invoices'
     | '/api/public/instapay/backfill'
+    | '/api/public/meta/oauth-callback'
     | '/api/public/mkt/track'
     | '/api/public/mkt/tracker.js'
     | '/api/public/orders/create'
@@ -1466,6 +1478,7 @@ export interface FileRouteTypes {
     | '/api/public/cron/sync-marketing'
     | '/api/public/cron/sync-pathao-invoices'
     | '/api/public/instapay/backfill'
+    | '/api/public/meta/oauth-callback'
     | '/api/public/mkt/track'
     | '/api/public/mkt/tracker.js'
     | '/api/public/orders/create'
@@ -1507,6 +1520,7 @@ export interface RootRouteChildren {
   ApiPublicCronSyncMarketingRoute: typeof ApiPublicCronSyncMarketingRoute
   ApiPublicCronSyncPathaoInvoicesRoute: typeof ApiPublicCronSyncPathaoInvoicesRoute
   ApiPublicInstapayBackfillRoute: typeof ApiPublicInstapayBackfillRoute
+  ApiPublicMetaOauthCallbackRoute: typeof ApiPublicMetaOauthCallbackRoute
   ApiPublicMktTrackRoute: typeof ApiPublicMktTrackRoute
   ApiPublicMktTrackerDotjsRoute: typeof ApiPublicMktTrackerDotjsRoute
   ApiPublicOrdersCreateRoute: typeof ApiPublicOrdersCreateRoute
@@ -2272,6 +2286,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiPublicInstapayBackfillRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/public/meta/oauth-callback': {
+      id: '/api/public/meta/oauth-callback'
+      path: '/api/public/meta/oauth-callback'
+      fullPath: '/api/public/meta/oauth-callback'
+      preLoaderRoute: typeof ApiPublicMetaOauthCallbackRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/public/mkt/track': {
       id: '/api/public/mkt/track'
       path: '/api/public/mkt/track'
@@ -2682,6 +2703,7 @@ const rootRouteChildren: RootRouteChildren = {
   ApiPublicCronSyncMarketingRoute: ApiPublicCronSyncMarketingRoute,
   ApiPublicCronSyncPathaoInvoicesRoute: ApiPublicCronSyncPathaoInvoicesRoute,
   ApiPublicInstapayBackfillRoute: ApiPublicInstapayBackfillRoute,
+  ApiPublicMetaOauthCallbackRoute: ApiPublicMetaOauthCallbackRoute,
   ApiPublicMktTrackRoute: ApiPublicMktTrackRoute,
   ApiPublicMktTrackerDotjsRoute: ApiPublicMktTrackerDotjsRoute,
   ApiPublicOrdersCreateRoute: ApiPublicOrdersCreateRoute,
