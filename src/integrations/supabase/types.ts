@@ -2856,6 +2856,13 @@ export type Database = {
             referencedRelation: "erp_accounts"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "erp_cod_remittances_received_to_fkey"
+            columns: ["received_to"]
+            isOneToOne: false
+            referencedRelation: "os_v_pay_accounts"
+            referencedColumns: ["id"]
+          },
         ]
       }
       erp_courier_settings: {
@@ -2917,6 +2924,13 @@ export type Database = {
             columns: ["wallet_id"]
             isOneToOne: false
             referencedRelation: "erp_accounts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "erp_courier_settings_wallet_id_fkey"
+            columns: ["wallet_id"]
+            isOneToOne: false
+            referencedRelation: "os_v_pay_accounts"
             referencedColumns: ["id"]
           },
         ]
@@ -4204,6 +4218,13 @@ export type Database = {
             referencedRelation: "erp_accounts"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "erp_settings_default_cod_wallet_id_fkey"
+            columns: ["default_cod_wallet_id"]
+            isOneToOne: false
+            referencedRelation: "os_v_pay_accounts"
+            referencedColumns: ["id"]
+          },
         ]
       }
       erp_suppliers: {
@@ -4455,6 +4476,13 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "erp_transactions_account_id_fkey"
+            columns: ["account_id"]
+            isOneToOne: false
+            referencedRelation: "os_v_pay_accounts"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "erp_transactions_brand_id_fkey"
             columns: ["brand_id"]
             isOneToOne: false
@@ -4480,6 +4508,13 @@ export type Database = {
             columns: ["to_account_id"]
             isOneToOne: false
             referencedRelation: "erp_accounts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "erp_transactions_to_account_id_fkey"
+            columns: ["to_account_id"]
+            isOneToOne: false
+            referencedRelation: "os_v_pay_accounts"
             referencedColumns: ["id"]
           },
         ]
@@ -5237,6 +5272,13 @@ export type Database = {
             columns: ["account_id"]
             isOneToOne: false
             referencedRelation: "erp_accounts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "hr_payroll_runs_account_id_fkey"
+            columns: ["account_id"]
+            isOneToOne: false
+            referencedRelation: "os_v_pay_accounts"
             referencedColumns: ["id"]
           },
           {
@@ -7009,6 +7051,13 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "imp_cargo_bills_payment_account_id_fkey"
+            columns: ["payment_account_id"]
+            isOneToOne: false
+            referencedRelation: "os_v_pay_accounts"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "imp_cargo_bills_po_id_fkey"
             columns: ["po_id"]
             isOneToOne: false
@@ -7096,6 +7145,13 @@ export type Database = {
             columns: ["payment_account_id"]
             isOneToOne: false
             referencedRelation: "erp_accounts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "imp_cargo_ledger_payment_account_id_fkey"
+            columns: ["payment_account_id"]
+            isOneToOne: false
+            referencedRelation: "os_v_pay_accounts"
             referencedColumns: ["id"]
           },
         ]
@@ -7409,6 +7465,13 @@ export type Database = {
             columns: ["wallet_id"]
             isOneToOne: false
             referencedRelation: "erp_accounts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "imp_payments_wallet_id_fkey"
+            columns: ["wallet_id"]
+            isOneToOne: false
+            referencedRelation: "os_v_pay_accounts"
             referencedColumns: ["id"]
           },
         ]
@@ -8775,6 +8838,13 @@ export type Database = {
             referencedRelation: "erp_accounts"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "meta_dollar_purchases_paid_from_account_id_fkey"
+            columns: ["paid_from_account_id"]
+            isOneToOne: false
+            referencedRelation: "os_v_pay_accounts"
+            referencedColumns: ["id"]
+          },
         ]
       }
       meta_fifo_lots: {
@@ -9072,6 +9142,13 @@ export type Database = {
             columns: ["finance_wallet_id"]
             isOneToOne: false
             referencedRelation: "erp_accounts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "mkt_ad_accounts_finance_wallet_id_fkey"
+            columns: ["finance_wallet_id"]
+            isOneToOne: false
+            referencedRelation: "os_v_pay_accounts"
             referencedColumns: ["id"]
           },
         ]
@@ -10077,6 +10154,13 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "mkt_manual_expenses_account_id_fkey"
+            columns: ["account_id"]
+            isOneToOne: false
+            referencedRelation: "os_v_pay_accounts"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "mkt_manual_expenses_brand_id_fkey"
             columns: ["brand_id"]
             isOneToOne: false
@@ -11073,6 +11157,880 @@ export type Database = {
           },
         ]
       }
+      os_activity: {
+        Row: {
+          action: string
+          actor_id: string | null
+          created_at: string
+          detail: Json
+          entity_id: string
+          entity_type: string
+          id: number
+          workspace_id: string | null
+        }
+        Insert: {
+          action: string
+          actor_id?: string | null
+          created_at?: string
+          detail?: Json
+          entity_id: string
+          entity_type: string
+          id?: never
+          workspace_id?: string | null
+        }
+        Update: {
+          action?: string
+          actor_id?: string | null
+          created_at?: string
+          detail?: Json
+          entity_id?: string
+          entity_type?: string
+          id?: never
+          workspace_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "os_activity_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "os_workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      os_attachments: {
+        Row: {
+          created_at: string
+          entity_id: string
+          entity_type: string
+          file_name: string | null
+          id: string
+          mime_type: string | null
+          size_bytes: number | null
+          uploaded_by: string
+          url: string
+          workspace_id: string | null
+        }
+        Insert: {
+          created_at?: string
+          entity_id: string
+          entity_type: string
+          file_name?: string | null
+          id?: string
+          mime_type?: string | null
+          size_bytes?: number | null
+          uploaded_by?: string
+          url: string
+          workspace_id?: string | null
+        }
+        Update: {
+          created_at?: string
+          entity_id?: string
+          entity_type?: string
+          file_name?: string | null
+          id?: string
+          mime_type?: string | null
+          size_bytes?: number | null
+          uploaded_by?: string
+          url?: string
+          workspace_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "os_attachments_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "os_workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      os_comments: {
+        Row: {
+          author_id: string
+          body: string
+          created_at: string
+          entity_id: string
+          entity_type: string
+          id: string
+          mentions: string[]
+          updated_at: string
+          workspace_id: string | null
+        }
+        Insert: {
+          author_id?: string
+          body: string
+          created_at?: string
+          entity_id: string
+          entity_type: string
+          id?: string
+          mentions?: string[]
+          updated_at?: string
+          workspace_id?: string | null
+        }
+        Update: {
+          author_id?: string
+          body?: string
+          created_at?: string
+          entity_id?: string
+          entity_type?: string
+          id?: string
+          mentions?: string[]
+          updated_at?: string
+          workspace_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "os_comments_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "os_workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      os_content_items: {
+        Row: {
+          angle: string | null
+          brief_url: string | null
+          content_type: string
+          created_at: string
+          creator_id: string | null
+          deal_id: string | null
+          due_date: string | null
+          final_url: string | null
+          hook: string | null
+          id: string
+          is_winner: boolean
+          legacy_content_item_id: string | null
+          meta_ad_id: string | null
+          owner_id: string
+          platform: string | null
+          position: number
+          product_id: string | null
+          raw_url: string | null
+          script: string | null
+          shared_with: string[]
+          shoot_id: string | null
+          stage: string
+          title: string
+          updated_at: string
+          visibility: string
+          workspace_id: string
+        }
+        Insert: {
+          angle?: string | null
+          brief_url?: string | null
+          content_type?: string
+          created_at?: string
+          creator_id?: string | null
+          deal_id?: string | null
+          due_date?: string | null
+          final_url?: string | null
+          hook?: string | null
+          id?: string
+          is_winner?: boolean
+          legacy_content_item_id?: string | null
+          meta_ad_id?: string | null
+          owner_id?: string
+          platform?: string | null
+          position?: number
+          product_id?: string | null
+          raw_url?: string | null
+          script?: string | null
+          shared_with?: string[]
+          shoot_id?: string | null
+          stage?: string
+          title: string
+          updated_at?: string
+          visibility?: string
+          workspace_id: string
+        }
+        Update: {
+          angle?: string | null
+          brief_url?: string | null
+          content_type?: string
+          created_at?: string
+          creator_id?: string | null
+          deal_id?: string | null
+          due_date?: string | null
+          final_url?: string | null
+          hook?: string | null
+          id?: string
+          is_winner?: boolean
+          legacy_content_item_id?: string | null
+          meta_ad_id?: string | null
+          owner_id?: string
+          platform?: string | null
+          position?: number
+          product_id?: string | null
+          raw_url?: string | null
+          script?: string | null
+          shared_with?: string[]
+          shoot_id?: string | null
+          stage?: string
+          title?: string
+          updated_at?: string
+          visibility?: string
+          workspace_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "os_content_items_creator_id_fkey"
+            columns: ["creator_id"]
+            isOneToOne: false
+            referencedRelation: "os_creators"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "os_content_items_creator_id_fkey"
+            columns: ["creator_id"]
+            isOneToOne: false
+            referencedRelation: "os_v_creator_ledger"
+            referencedColumns: ["creator_id"]
+          },
+          {
+            foreignKeyName: "os_content_items_deal_id_fkey"
+            columns: ["deal_id"]
+            isOneToOne: false
+            referencedRelation: "os_creator_deals"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "os_content_items_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "inv_missing_cost"
+            referencedColumns: ["product_id"]
+          },
+          {
+            foreignKeyName: "os_content_items_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "products"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "os_content_items_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "v_combo_summary"
+            referencedColumns: ["combo_product_id"]
+          },
+          {
+            foreignKeyName: "os_content_items_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "v_inv_drift"
+            referencedColumns: ["product_id"]
+          },
+          {
+            foreignKeyName: "os_content_items_shoot_id_fkey"
+            columns: ["shoot_id"]
+            isOneToOne: false
+            referencedRelation: "os_shoots"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "os_content_items_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "os_workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      os_creator_deals: {
+        Row: {
+          accepted_at: string | null
+          agreed_fee: number
+          created_at: string
+          creator_id: string
+          deadline: string | null
+          deliverables: number
+          id: string
+          notes: string | null
+          owner_id: string
+          product_id: string | null
+          proposal_sent_at: string | null
+          shared_with: string[]
+          status: string
+          title: string
+          updated_at: string
+          usage_rights: string | null
+          visibility: string
+          workspace_id: string
+        }
+        Insert: {
+          accepted_at?: string | null
+          agreed_fee?: number
+          created_at?: string
+          creator_id: string
+          deadline?: string | null
+          deliverables?: number
+          id?: string
+          notes?: string | null
+          owner_id?: string
+          product_id?: string | null
+          proposal_sent_at?: string | null
+          shared_with?: string[]
+          status?: string
+          title: string
+          updated_at?: string
+          usage_rights?: string | null
+          visibility?: string
+          workspace_id: string
+        }
+        Update: {
+          accepted_at?: string | null
+          agreed_fee?: number
+          created_at?: string
+          creator_id?: string
+          deadline?: string | null
+          deliverables?: number
+          id?: string
+          notes?: string | null
+          owner_id?: string
+          product_id?: string | null
+          proposal_sent_at?: string | null
+          shared_with?: string[]
+          status?: string
+          title?: string
+          updated_at?: string
+          usage_rights?: string | null
+          visibility?: string
+          workspace_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "os_creator_deals_creator_id_fkey"
+            columns: ["creator_id"]
+            isOneToOne: false
+            referencedRelation: "os_creators"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "os_creator_deals_creator_id_fkey"
+            columns: ["creator_id"]
+            isOneToOne: false
+            referencedRelation: "os_v_creator_ledger"
+            referencedColumns: ["creator_id"]
+          },
+          {
+            foreignKeyName: "os_creator_deals_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "inv_missing_cost"
+            referencedColumns: ["product_id"]
+          },
+          {
+            foreignKeyName: "os_creator_deals_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "products"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "os_creator_deals_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "v_combo_summary"
+            referencedColumns: ["combo_product_id"]
+          },
+          {
+            foreignKeyName: "os_creator_deals_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "v_inv_drift"
+            referencedColumns: ["product_id"]
+          },
+          {
+            foreignKeyName: "os_creator_deals_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "os_workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      os_creator_payments: {
+        Row: {
+          amount: number
+          approved_at: string | null
+          approved_by: string | null
+          created_at: string
+          created_by: string
+          creator_id: string
+          deal_id: string | null
+          due_date: string | null
+          erp_transaction_id: string | null
+          id: string
+          kind: string
+          note: string | null
+          paid_from_account_id: string | null
+          paid_on: string | null
+          proof_url: string | null
+          status: string
+          trx_ref: string | null
+          updated_at: string
+          workspace_id: string
+        }
+        Insert: {
+          amount: number
+          approved_at?: string | null
+          approved_by?: string | null
+          created_at?: string
+          created_by?: string
+          creator_id: string
+          deal_id?: string | null
+          due_date?: string | null
+          erp_transaction_id?: string | null
+          id?: string
+          kind?: string
+          note?: string | null
+          paid_from_account_id?: string | null
+          paid_on?: string | null
+          proof_url?: string | null
+          status?: string
+          trx_ref?: string | null
+          updated_at?: string
+          workspace_id: string
+        }
+        Update: {
+          amount?: number
+          approved_at?: string | null
+          approved_by?: string | null
+          created_at?: string
+          created_by?: string
+          creator_id?: string
+          deal_id?: string | null
+          due_date?: string | null
+          erp_transaction_id?: string | null
+          id?: string
+          kind?: string
+          note?: string | null
+          paid_from_account_id?: string | null
+          paid_on?: string | null
+          proof_url?: string | null
+          status?: string
+          trx_ref?: string | null
+          updated_at?: string
+          workspace_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "os_creator_payments_creator_id_fkey"
+            columns: ["creator_id"]
+            isOneToOne: false
+            referencedRelation: "os_creators"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "os_creator_payments_creator_id_fkey"
+            columns: ["creator_id"]
+            isOneToOne: false
+            referencedRelation: "os_v_creator_ledger"
+            referencedColumns: ["creator_id"]
+          },
+          {
+            foreignKeyName: "os_creator_payments_deal_id_fkey"
+            columns: ["deal_id"]
+            isOneToOne: false
+            referencedRelation: "os_creator_deals"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "os_creator_payments_paid_from_account_id_fkey"
+            columns: ["paid_from_account_id"]
+            isOneToOne: false
+            referencedRelation: "erp_accounts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "os_creator_payments_paid_from_account_id_fkey"
+            columns: ["paid_from_account_id"]
+            isOneToOne: false
+            referencedRelation: "os_v_pay_accounts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "os_creator_payments_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "os_workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      os_creator_shipments: {
+        Row: {
+          courier: string | null
+          created_at: string
+          created_by: string
+          creator_id: string
+          deal_id: string | null
+          delivered_at: string | null
+          id: string
+          note: string | null
+          product_id: string
+          qty: number
+          sample_cost: number | null
+          sent_at: string | null
+          status: string
+          stock_movement_id: string | null
+          tracking_no: string | null
+          updated_at: string
+          variant_id: string | null
+          workspace_id: string
+        }
+        Insert: {
+          courier?: string | null
+          created_at?: string
+          created_by?: string
+          creator_id: string
+          deal_id?: string | null
+          delivered_at?: string | null
+          id?: string
+          note?: string | null
+          product_id: string
+          qty?: number
+          sample_cost?: number | null
+          sent_at?: string | null
+          status?: string
+          stock_movement_id?: string | null
+          tracking_no?: string | null
+          updated_at?: string
+          variant_id?: string | null
+          workspace_id: string
+        }
+        Update: {
+          courier?: string | null
+          created_at?: string
+          created_by?: string
+          creator_id?: string
+          deal_id?: string | null
+          delivered_at?: string | null
+          id?: string
+          note?: string | null
+          product_id?: string
+          qty?: number
+          sample_cost?: number | null
+          sent_at?: string | null
+          status?: string
+          stock_movement_id?: string | null
+          tracking_no?: string | null
+          updated_at?: string
+          variant_id?: string | null
+          workspace_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "os_creator_shipments_creator_id_fkey"
+            columns: ["creator_id"]
+            isOneToOne: false
+            referencedRelation: "os_creators"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "os_creator_shipments_creator_id_fkey"
+            columns: ["creator_id"]
+            isOneToOne: false
+            referencedRelation: "os_v_creator_ledger"
+            referencedColumns: ["creator_id"]
+          },
+          {
+            foreignKeyName: "os_creator_shipments_deal_id_fkey"
+            columns: ["deal_id"]
+            isOneToOne: false
+            referencedRelation: "os_creator_deals"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "os_creator_shipments_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "inv_missing_cost"
+            referencedColumns: ["product_id"]
+          },
+          {
+            foreignKeyName: "os_creator_shipments_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "products"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "os_creator_shipments_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "v_combo_summary"
+            referencedColumns: ["combo_product_id"]
+          },
+          {
+            foreignKeyName: "os_creator_shipments_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "v_inv_drift"
+            referencedColumns: ["product_id"]
+          },
+          {
+            foreignKeyName: "os_creator_shipments_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "os_workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      os_creators: {
+        Row: {
+          address: string | null
+          created_at: string
+          email: string | null
+          followers: number | null
+          handle: string | null
+          id: string
+          legacy_hub_creator_id: string | null
+          max_rate: number | null
+          min_rate: number | null
+          name: string
+          niche: string | null
+          notes: string | null
+          owner_id: string
+          payout_method: string | null
+          payout_ref: string | null
+          phone: string | null
+          platform: string
+          profile_url: string | null
+          rate_per_video: number | null
+          rating: number | null
+          shared_with: string[]
+          status: string
+          tags: string[]
+          updated_at: string
+          visibility: string
+          workspace_id: string | null
+        }
+        Insert: {
+          address?: string | null
+          created_at?: string
+          email?: string | null
+          followers?: number | null
+          handle?: string | null
+          id?: string
+          legacy_hub_creator_id?: string | null
+          max_rate?: number | null
+          min_rate?: number | null
+          name: string
+          niche?: string | null
+          notes?: string | null
+          owner_id?: string
+          payout_method?: string | null
+          payout_ref?: string | null
+          phone?: string | null
+          platform?: string
+          profile_url?: string | null
+          rate_per_video?: number | null
+          rating?: number | null
+          shared_with?: string[]
+          status?: string
+          tags?: string[]
+          updated_at?: string
+          visibility?: string
+          workspace_id?: string | null
+        }
+        Update: {
+          address?: string | null
+          created_at?: string
+          email?: string | null
+          followers?: number | null
+          handle?: string | null
+          id?: string
+          legacy_hub_creator_id?: string | null
+          max_rate?: number | null
+          min_rate?: number | null
+          name?: string
+          niche?: string | null
+          notes?: string | null
+          owner_id?: string
+          payout_method?: string | null
+          payout_ref?: string | null
+          phone?: string | null
+          platform?: string
+          profile_url?: string | null
+          rate_per_video?: number | null
+          rating?: number | null
+          shared_with?: string[]
+          status?: string
+          tags?: string[]
+          updated_at?: string
+          visibility?: string
+          workspace_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "os_creators_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "os_workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      os_events: {
+        Row: {
+          all_day: boolean
+          attendees: string[]
+          created_at: string
+          ends_at: string | null
+          entity_id: string | null
+          entity_type: string | null
+          id: string
+          kind: string
+          location: string | null
+          owner_id: string
+          shared_with: string[]
+          starts_at: string
+          title: string
+          updated_at: string
+          visibility: string
+          workspace_id: string | null
+        }
+        Insert: {
+          all_day?: boolean
+          attendees?: string[]
+          created_at?: string
+          ends_at?: string | null
+          entity_id?: string | null
+          entity_type?: string | null
+          id?: string
+          kind?: string
+          location?: string | null
+          owner_id?: string
+          shared_with?: string[]
+          starts_at: string
+          title: string
+          updated_at?: string
+          visibility?: string
+          workspace_id?: string | null
+        }
+        Update: {
+          all_day?: boolean
+          attendees?: string[]
+          created_at?: string
+          ends_at?: string | null
+          entity_id?: string | null
+          entity_type?: string | null
+          id?: string
+          kind?: string
+          location?: string | null
+          owner_id?: string
+          shared_with?: string[]
+          starts_at?: string
+          title?: string
+          updated_at?: string
+          visibility?: string
+          workspace_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "os_events_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "os_workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      os_ideas: {
+        Row: {
+          body: string
+          created_at: string
+          id: string
+          owner_id: string
+          routed_entity_id: string | null
+          routed_entity_type: string | null
+          shared_with: string[]
+          status: string
+          updated_at: string
+          visibility: string
+          votes: number
+          workspace_id: string | null
+        }
+        Insert: {
+          body: string
+          created_at?: string
+          id?: string
+          owner_id?: string
+          routed_entity_id?: string | null
+          routed_entity_type?: string | null
+          shared_with?: string[]
+          status?: string
+          updated_at?: string
+          visibility?: string
+          votes?: number
+          workspace_id?: string | null
+        }
+        Update: {
+          body?: string
+          created_at?: string
+          id?: string
+          owner_id?: string
+          routed_entity_id?: string | null
+          routed_entity_type?: string | null
+          shared_with?: string[]
+          status?: string
+          updated_at?: string
+          visibility?: string
+          votes?: number
+          workspace_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "os_ideas_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "os_workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      os_notifications: {
+        Row: {
+          body: string | null
+          created_at: string
+          entity_id: string | null
+          entity_type: string | null
+          id: string
+          kind: string
+          read_at: string | null
+          title: string
+          user_id: string
+        }
+        Insert: {
+          body?: string | null
+          created_at?: string
+          entity_id?: string | null
+          entity_type?: string | null
+          id?: string
+          kind: string
+          read_at?: string | null
+          title: string
+          user_id: string
+        }
+        Update: {
+          body?: string | null
+          created_at?: string
+          entity_id?: string | null
+          entity_type?: string | null
+          id?: string
+          kind?: string
+          read_at?: string | null
+          title?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       os_profiles: {
         Row: {
           created_at: string
@@ -11108,6 +12066,401 @@ export type Database = {
           {
             foreignKeyName: "os_profiles_default_workspace_id_fkey"
             columns: ["default_workspace_id"]
+            isOneToOne: false
+            referencedRelation: "os_workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      os_projects: {
+        Row: {
+          created_at: string
+          end_date: string | null
+          goal: string | null
+          id: string
+          name: string
+          owner_id: string
+          phases: Json
+          product_id: string | null
+          shared_with: string[]
+          start_date: string | null
+          status: string
+          target_qty: number | null
+          updated_at: string
+          visibility: string
+          workspace_id: string | null
+        }
+        Insert: {
+          created_at?: string
+          end_date?: string | null
+          goal?: string | null
+          id?: string
+          name: string
+          owner_id?: string
+          phases?: Json
+          product_id?: string | null
+          shared_with?: string[]
+          start_date?: string | null
+          status?: string
+          target_qty?: number | null
+          updated_at?: string
+          visibility?: string
+          workspace_id?: string | null
+        }
+        Update: {
+          created_at?: string
+          end_date?: string | null
+          goal?: string | null
+          id?: string
+          name?: string
+          owner_id?: string
+          phases?: Json
+          product_id?: string | null
+          shared_with?: string[]
+          start_date?: string | null
+          status?: string
+          target_qty?: number | null
+          updated_at?: string
+          visibility?: string
+          workspace_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "os_projects_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "inv_missing_cost"
+            referencedColumns: ["product_id"]
+          },
+          {
+            foreignKeyName: "os_projects_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "products"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "os_projects_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "v_combo_summary"
+            referencedColumns: ["combo_product_id"]
+          },
+          {
+            foreignKeyName: "os_projects_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "v_inv_drift"
+            referencedColumns: ["product_id"]
+          },
+          {
+            foreignKeyName: "os_projects_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "os_workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      os_routine_runs: {
+        Row: {
+          checklist: Json
+          created_at: string
+          done_at: string | null
+          done_by: string | null
+          id: string
+          note: string | null
+          routine_id: string
+          run_date: string
+        }
+        Insert: {
+          checklist?: Json
+          created_at?: string
+          done_at?: string | null
+          done_by?: string | null
+          id?: string
+          note?: string | null
+          routine_id: string
+          run_date: string
+        }
+        Update: {
+          checklist?: Json
+          created_at?: string
+          done_at?: string | null
+          done_by?: string | null
+          id?: string
+          note?: string | null
+          routine_id?: string
+          run_date?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "os_routine_runs_routine_id_fkey"
+            columns: ["routine_id"]
+            isOneToOne: false
+            referencedRelation: "os_routines"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      os_routines: {
+        Row: {
+          active: boolean
+          assignee_id: string | null
+          cadence: string
+          checklist: Json
+          created_at: string
+          day_of_month: number | null
+          details: string | null
+          id: string
+          legacy_hub_routine_id: string | null
+          owner_id: string
+          shared_with: string[]
+          time_of_day: string | null
+          title: string
+          updated_at: string
+          visibility: string
+          weekdays: number[]
+          workspace_id: string | null
+        }
+        Insert: {
+          active?: boolean
+          assignee_id?: string | null
+          cadence?: string
+          checklist?: Json
+          created_at?: string
+          day_of_month?: number | null
+          details?: string | null
+          id?: string
+          legacy_hub_routine_id?: string | null
+          owner_id?: string
+          shared_with?: string[]
+          time_of_day?: string | null
+          title: string
+          updated_at?: string
+          visibility?: string
+          weekdays?: number[]
+          workspace_id?: string | null
+        }
+        Update: {
+          active?: boolean
+          assignee_id?: string | null
+          cadence?: string
+          checklist?: Json
+          created_at?: string
+          day_of_month?: number | null
+          details?: string | null
+          id?: string
+          legacy_hub_routine_id?: string | null
+          owner_id?: string
+          shared_with?: string[]
+          time_of_day?: string | null
+          title?: string
+          updated_at?: string
+          visibility?: string
+          weekdays?: number[]
+          workspace_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "os_routines_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "os_workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      os_shoots: {
+        Row: {
+          brief_url: string | null
+          created_at: string
+          creator_ids: string[]
+          crew: string[]
+          id: string
+          location: string | null
+          owner_id: string
+          product_id: string | null
+          shared_with: string[]
+          shoot_at: string
+          shot_list: Json
+          status: string
+          title: string
+          updated_at: string
+          visibility: string
+          workspace_id: string | null
+        }
+        Insert: {
+          brief_url?: string | null
+          created_at?: string
+          creator_ids?: string[]
+          crew?: string[]
+          id?: string
+          location?: string | null
+          owner_id?: string
+          product_id?: string | null
+          shared_with?: string[]
+          shoot_at: string
+          shot_list?: Json
+          status?: string
+          title: string
+          updated_at?: string
+          visibility?: string
+          workspace_id?: string | null
+        }
+        Update: {
+          brief_url?: string | null
+          created_at?: string
+          creator_ids?: string[]
+          crew?: string[]
+          id?: string
+          location?: string | null
+          owner_id?: string
+          product_id?: string | null
+          shared_with?: string[]
+          shoot_at?: string
+          shot_list?: Json
+          status?: string
+          title?: string
+          updated_at?: string
+          visibility?: string
+          workspace_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "os_shoots_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "inv_missing_cost"
+            referencedColumns: ["product_id"]
+          },
+          {
+            foreignKeyName: "os_shoots_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "products"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "os_shoots_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "v_combo_summary"
+            referencedColumns: ["combo_product_id"]
+          },
+          {
+            foreignKeyName: "os_shoots_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "v_inv_drift"
+            referencedColumns: ["product_id"]
+          },
+          {
+            foreignKeyName: "os_shoots_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "os_workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      os_tasks: {
+        Row: {
+          assignee_id: string | null
+          checklist: Json
+          completed_at: string | null
+          created_at: string
+          details: string | null
+          due_date: string | null
+          entity_id: string | null
+          entity_type: string | null
+          id: string
+          legacy_hub_task_id: string | null
+          owner_id: string
+          parent_id: string | null
+          position: number
+          priority: string
+          project_id: string | null
+          recurrence: string
+          shared_with: string[]
+          start_date: string | null
+          status: string
+          tags: string[]
+          title: string
+          updated_at: string
+          visibility: string
+          workspace_id: string | null
+        }
+        Insert: {
+          assignee_id?: string | null
+          checklist?: Json
+          completed_at?: string | null
+          created_at?: string
+          details?: string | null
+          due_date?: string | null
+          entity_id?: string | null
+          entity_type?: string | null
+          id?: string
+          legacy_hub_task_id?: string | null
+          owner_id?: string
+          parent_id?: string | null
+          position?: number
+          priority?: string
+          project_id?: string | null
+          recurrence?: string
+          shared_with?: string[]
+          start_date?: string | null
+          status?: string
+          tags?: string[]
+          title: string
+          updated_at?: string
+          visibility?: string
+          workspace_id?: string | null
+        }
+        Update: {
+          assignee_id?: string | null
+          checklist?: Json
+          completed_at?: string | null
+          created_at?: string
+          details?: string | null
+          due_date?: string | null
+          entity_id?: string | null
+          entity_type?: string | null
+          id?: string
+          legacy_hub_task_id?: string | null
+          owner_id?: string
+          parent_id?: string | null
+          position?: number
+          priority?: string
+          project_id?: string | null
+          recurrence?: string
+          shared_with?: string[]
+          start_date?: string | null
+          status?: string
+          tags?: string[]
+          title?: string
+          updated_at?: string
+          visibility?: string
+          workspace_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "os_tasks_parent_id_fkey"
+            columns: ["parent_id"]
+            isOneToOne: false
+            referencedRelation: "os_tasks"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "os_tasks_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "os_projects"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "os_tasks_workspace_id_fkey"
+            columns: ["workspace_id"]
             isOneToOne: false
             referencedRelation: "os_workspaces"
             referencedColumns: ["id"]
@@ -14736,6 +16089,49 @@ export type Database = {
           },
         ]
       }
+      os_v_creator_ledger: {
+        Row: {
+          content_count: number | null
+          creator_id: string | null
+          name: string | null
+          owed_total: number | null
+          paid_total: number | null
+          winner_count: number | null
+        }
+        Relationships: []
+      }
+      os_v_pay_accounts: {
+        Row: {
+          account_type: string | null
+          brand_id: string | null
+          id: string | null
+          name: string | null
+          wallet_type: string | null
+        }
+        Insert: {
+          account_type?: string | null
+          brand_id?: string | null
+          id?: string | null
+          name?: string | null
+          wallet_type?: string | null
+        }
+        Update: {
+          account_type?: string | null
+          brand_id?: string | null
+          id?: string | null
+          name?: string | null
+          wallet_type?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "erp_accounts_brand_id_fkey"
+            columns: ["brand_id"]
+            isOneToOne: false
+            referencedRelation: "brands"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       reviews_public: {
         Row: {
           admin_note: string | null
@@ -16153,6 +17549,10 @@ export type Database = {
       is_marketing_staff: { Args: { _uid: string }; Returns: boolean }
       is_recent_guest_order: { Args: { _order_id: string }; Returns: boolean }
       is_staff: { Args: { _user_id: string }; Returns: boolean }
+      issue_marketing_sample: {
+        Args: { p_shipment_id: string }
+        Returns: string
+      }
       list_staff_profiles: {
         Args: never
         Returns: {
@@ -16964,6 +18364,16 @@ export type Database = {
           _ws: string
         }
         Returns: boolean
+      }
+      post_creator_payment: {
+        Args: {
+          p_account_id: string
+          p_paid_on?: string
+          p_payment_id: string
+          p_proof_url?: string
+          p_trx_ref?: string
+        }
+        Returns: string
       }
       post_meta_ad_spend_all_brands: {
         Args: { _from?: string; _to?: string }
