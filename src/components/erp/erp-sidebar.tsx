@@ -42,6 +42,7 @@ export function ErpSidebar({
 
   const isActive = useCallback(
     (item: NavItem) => {
+      if (item.activeFor?.some((p) => matchPath(pathname, p))) return true;
       if (!matchPath(pathname, item.to, item.exact)) return false;
       if (item.search) {
         return Object.entries(item.search).every(
@@ -56,8 +57,14 @@ export function ErpSidebar({
   /* ── permissions ───────────────────────────────────────────── */
   const visibleGroups = useMemo<Group[]>(() => {
     const bypass = isAdmin && pageMode !== "custom";
+    const can = (to: string) => bypass || resolveAccess(roles, allowedPages, to, pageMode);
+    // Grouped items link to their first permitted route; hidden when none is.
     const keep = (items: NavItem[]) =>
-      items.filter((i) => (bypass ? true : resolveAccess(roles, allowedPages, i.to, pageMode)));
+      items.flatMap((i) => {
+        if (can(i.to)) return [i];
+        const alt = i.activeFor?.find(can);
+        return alt ? [{ ...i, to: alt }] : [];
+      });
     const out: Group[] = [];
     for (const g of groups) {
       if (g.kind === "flat") {

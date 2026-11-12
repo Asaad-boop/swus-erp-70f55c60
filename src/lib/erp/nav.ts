@@ -20,7 +20,16 @@ import {
   Settings2,
 } from "lucide-react";
 
-export type NavItem = { to: string; label: string; icon: typeof LayoutDashboard; exact?: boolean; search?: Record<string, string> };
+export type NavItem = {
+  to: string;
+  label: string;
+  icon: typeof LayoutDashboard;
+  exact?: boolean;
+  search?: Record<string, string>;
+  /** Extra routes grouped under this item: highlight it there, and fall back to
+   *  the first permitted one when the user cannot open `to` itself. */
+  activeFor?: string[];
+};
 export type FlatGroup = { kind: "flat"; label: string; items: NavItem[] };
 export type AccordionGroup = { kind: "accordion"; label: string; sections: { key: string; label: string; icon: typeof LayoutDashboard; items: NavItem[] }[]; defaultClosed?: boolean };
 export type Group = FlatGroup | AccordionGroup;
@@ -128,15 +137,26 @@ export const NAV_GROUPS: Group[] = [
         label: "Marketing",
         icon: Megaphone,
         items: [
-          { to: "/erp/marketing", label: "Overview", icon: LayoutDashboard, exact: true },
-          { to: "/erp/marketing/truth", label: "Campaign Workspace", icon: Target },
-          { to: "/erp/marketing/attribution", label: "Attribution & Funnel", icon: GitBranch },
-          { to: "/erp/marketing/products", label: "Product & LTV", icon: PackagePlus },
-          { to: "/erp/marketing/calendar", label: "Calendar & Experiments", icon: CalendarClock },
-          { to: "/erp/marketing/alerts", label: "Alerts & Intelligence", icon: BellRing },
-          { to: "/erp/marketing/channels", label: "Ad Channels", icon: Plug },
-          { to: "/erp/marketing/reports", label: "Reports & Exports", icon: FileBarChart },
-          { to: "/erp/marketing/settings", label: "Marketing Settings", icon: Settings },
+          { to: "/erp/marketing", label: "Today", icon: LayoutDashboard, exact: true },
+          { to: "/erp/marketing/truth", label: "Campaigns", icon: Target },
+          {
+            to: "/erp/marketing/attribution",
+            label: "Insights",
+            icon: GitBranch,
+            activeFor: ["/erp/marketing/audit", "/erp/marketing/products", "/erp/marketing/reports"],
+          },
+          {
+            to: "/erp/marketing/calendar",
+            label: "Plan & Alerts",
+            icon: CalendarClock,
+            activeFor: ["/erp/marketing/alerts"],
+          },
+          {
+            to: "/erp/marketing/settings",
+            label: "Setup",
+            icon: Settings,
+            activeFor: ["/erp/marketing/channels"],
+          },
         ],
       },
       {

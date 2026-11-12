@@ -108,6 +108,12 @@ const HIDDEN_PAGES: Omit<PageEntry, "exact">[] = [
     label: "Import Settings",
     hidden: true,
   },
+  // Marketing pages grouped under the 5 sidebar tabs — still grantable one by one
+  { group: "Growth", section: "Marketing", path: "/erp/marketing/audit", label: "Order Match Audit", hidden: true },
+  { group: "Growth", section: "Marketing", path: "/erp/marketing/products", label: "Product & LTV", hidden: true },
+  { group: "Growth", section: "Marketing", path: "/erp/marketing/reports", label: "Reports & Exports", hidden: true },
+  { group: "Growth", section: "Marketing", path: "/erp/marketing/alerts", label: "Marketing Alerts", hidden: true },
+  { group: "Growth", section: "Marketing", path: "/erp/marketing/channels", label: "Ad Channels", hidden: true },
   {
     group: "System",
     section: "System",
