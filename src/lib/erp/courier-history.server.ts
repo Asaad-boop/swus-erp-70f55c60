@@ -143,10 +143,16 @@ async function fetchFresh(
   cachedRest: ProviderResult[] | null,
 ): Promise<HistoryData> {
   const { fetchBdCourierHistory } = await import("./bdcourier.server");
-  const [pathao, others] = await Promise.all([
+  const [pathaoResult, othersResult] = await Promise.allSettled([
     cachedPathao ?? fetchPathao(supabase, brandId, normalized),
     cachedRest ?? fetchBdCourierHistory(supabase, normalized),
   ]);
+  const pathao: ProviderResult = pathaoResult.status === "fulfilled"
+    ? pathaoResult.value
+    : { name: "pathao", label: "Pathao", total: 0, success: 0, cancelled: 0, ok: false, error: "Pathao history temporarily unavailable" };
+  const others: ProviderResult[] = othersResult.status === "fulfilled"
+    ? othersResult.value
+    : [{ name: "bdcourier", label: "Other couriers", total: 0, success: 0, cancelled: 0, ok: false, error: "Other courier history temporarily unavailable" }];
   const providers: ProviderResult[] = [pathao, ...others];
   const okRows = providers.filter((p) => p.ok);
   const fresh: HistoryData = {
@@ -215,7 +221,7 @@ export async function getCourierHistory(
       : false;
     const cachedPathao = fresh ? cachedProvider(cachedData, "pathao") : null;
     const cachedRest = fresh ? cachedOthers(cachedData) : null;
-    if (cachedPathao && cachedRest) byNormalized.set(n, cachedData!);
+    if (cachedPathao && cachedRest && cachedData) byNormalized.set(n, cachedData);
     else toFetch.push({ phone: n, cachedPathao, cachedRest });
   }
 

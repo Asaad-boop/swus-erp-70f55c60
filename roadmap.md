@@ -4,6 +4,10 @@
 - [x] Sync the two named accounts for October 28–November 15 and record verified spend at BDT 131/USD without a second cash debit; corrected reversed account-brand mapping.
 - [ ] Additional USD 78.88 requires the account ID, brand and spend date/range before recording; do not guess or add it to an already-synced total.
 
+## Courier history runtime recovery
+- [x] Current generated call reaches authentication instead of the old missing-handler 500; isolate provider settings failures so working courier history remains available.
+- [ ] Signed-in courier UI check unavailable with externally managed Supabase session.
+
 ## Staff data visibility
 - [x] Repair explicit custom-page read permissions for orders, products within orders, notes, status history, incomplete carts and inventory stock history; preserve roles and all existing records.
 - [x] Execute affected-employee database acceptance checks; migration security checks introduce no warnings.
