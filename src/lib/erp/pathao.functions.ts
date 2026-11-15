@@ -2,21 +2,9 @@ import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 
-async function assertCourierRole(supabase: any, userId: string) {
-  const allowedRoles = [
-    "owner",
-    "admin",
-    "operations",
-    "customer_service",
-    "warehouse_staff",
-    "packer",
-  ] as const;
-  const results = await Promise.all(
-    allowedRoles.map((role) =>
-      supabase.rpc("has_role", { _user_id: userId, _role: role }),
-    ),
-  );
-  if (!results.some(({ data }) => data === true)) throw new Error("Not authorized");
+async function assertCourierRole(supabase: any, _userId: string) {
+  const { assertCourierAccess } = await import("./courier-access.server");
+  await assertCourierAccess(supabase);
 }
 
 async function clientForBrand(supabase: any, brandId?: string | null) {
