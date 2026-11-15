@@ -60,7 +60,11 @@ function useCourierScore(phone: string | null, brandId?: string | null) {
         .eq("phone", digits)
         .maybeSingle();
       const hist = data?.data as { providers?: Provider[]; fetched_at?: string } | null;
-      return hist?.providers?.length ? { providers: hist.providers, fetched_at: hist.fetched_at ?? null } : null;
+      // A cache row saved while BDCourier failed (quota/limit) is incomplete —
+      // return null so the live lookup retries the other couriers.
+      const incomplete = !!hist?.providers?.some((p) => p.name !== "pathao" && p.ok === false);
+      if (!hist?.providers?.length || incomplete) return null;
+      return { providers: hist.providers, fetched_at: hist.fetched_at ?? null };
     },
   });
 

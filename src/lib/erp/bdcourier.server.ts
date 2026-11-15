@@ -170,7 +170,9 @@ export async function fetchBdCourierHistory(supabase: any, phone: string): Promi
       signal: controller.signal,
     });
     const text = await res.text();
-    await bumpUsage(supabase, 1);
+    // Only successful lookups consume our local daily counter — a 429/401
+    // must not lock the user out after they raise their BDCourier limit.
+    if (res.ok) await bumpUsage(supabase, 1);
 
     if (!res.ok) {
       let msg = `${res.status}`;
