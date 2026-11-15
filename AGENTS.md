@@ -5,3 +5,4 @@
 - Integration setting authorization uses authenticated server-side role checks for admin or owner; lookup errors fail closed so ordinary staff cannot change integration secrets.
 - Query defaults never reuse previous-key data globally; brand-specific rows must not appear while a different brand's query loads.
 - Offset-paginated aggregate queries use a unique row ID as their final order key so equal timestamps do not shuffle pages.
+- Explicit custom-page data reads use private.staff_has_explicit_page with the authenticated user's brand scope; page grants do not confer roles or write access, preventing empty staff pages without privilege escalation.

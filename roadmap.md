@@ -1,5 +1,10 @@
 # Roadmap
 
+## Staff data visibility
+- [x] Repair explicit custom-page read permissions for orders, products within orders, notes, status history, incomplete carts and inventory stock history; preserve roles and all existing records.
+- [x] Execute affected-employee database acceptance checks; migration security checks introduce no warnings.
+- [ ] Signed-in staff UI verification blocked: external Supabase cannot mint this employee's session.
+
 ## Project monitoring safety review
 - [x] Review all 15 findings against current code and live definitions; preserve intentional Growth Studio removal (false positive).
 - [x] Apply 9 low-risk fixes: courier column mapping, fixed bars, stable/full aggregate pagination, activity refresh, owner key permission, brand-safe cache, sidebar focus, receipt notes. Ten regression tests pass; preview/CSS/receipt checks pass.
