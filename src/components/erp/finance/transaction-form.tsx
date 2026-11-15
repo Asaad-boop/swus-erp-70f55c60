@@ -57,30 +57,49 @@ export function TransactionForm({ open, onClose, brandId, accounts, categories, 
   const [date, setDate] = useState(todayIso());
   const [description, setDescription] = useState("");
   const [pickedBrandId, setPickedBrandId] = useState<string>("");
+  const [addAnother, setAddAnother] = useState(false);
 
   const showBrandPicker = !brandId && brands.length > 1;
-  const effectiveBrandId = brandId ?? pickedBrandId ?? null;
+  const isShared = pickedBrandId === "shared";
+  const effectiveBrandId = brandId ?? (isShared ? null : pickedBrandId || null);
+  // Shared (all-brand) is only meaningful for expense/income
+  const brandReady = !!effectiveBrandId || (isShared && (type === "expense" || type === "income"));
 
   useEffect(() => {
     if (open) {
-      setPickedBrandId(brandId ?? (brands.length === 1 ? brands[0].id : ""));
+      const last = localStorage.getItem("txn_last_brand");
+      setPickedBrandId(brandId ?? (brands.length === 1 ? brands[0].id : last || ""));
     }
   }, [open, brandId, brands]);
 
   // When in All-Brands mode, after picking a brand, narrow accounts/categories.
+  // Shared mode shows every account/category.
   const scopedAccounts = useMemo(
-    () => (effectiveBrandId ? accounts.filter((a) => a.brand_id === effectiveBrandId || a.brand_id === null) : []),
-    [accounts, effectiveBrandId],
+    () => (isShared ? accounts : effectiveBrandId ? accounts.filter((a) => a.brand_id === effectiveBrandId || a.brand_id === null) : []),
+    [accounts, effectiveBrandId, isShared],
   );
   const scopedCategories = useMemo(
-    () => (effectiveBrandId ? categories.filter((c) => c.brand_id === effectiveBrandId) : []),
-    [categories, effectiveBrandId],
+    () => (isShared ? categories : effectiveBrandId ? categories.filter((c) => c.brand_id === effectiveBrandId) : []),
+    [categories, effectiveBrandId, isShared],
   );
 
   // Reset account/category when brand changes so we don't keep an out-of-scope id.
   useEffect(() => {
     setAccountId(""); setToAccountId(""); setCategoryId("");
-  }, [effectiveBrandId]);
+  }, [effectiveBrandId, isShared]);
+
+  // Speed: prefill last-used account/category when they exist in the current scope.
+  useEffect(() => {
+    if (!open) return;
+    if (!accountId) {
+      const last = localStorage.getItem(`txn_last_account_${type}`);
+      if (last && scopedAccounts.some((a) => a.id === last)) setAccountId(last);
+    }
+    if (!categoryId && (type === "expense" || type === "income")) {
+      const last = localStorage.getItem(`txn_last_category_${type}`);
+      if (last && scopedCategories.some((c) => c.id === last)) setCategoryId(last);
+    }
+  }, [open, type, scopedAccounts, scopedCategories]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // When dialog opens, reset type to caller's default
   useEffect(() => {
@@ -101,7 +120,7 @@ export function TransactionForm({ open, onClose, brandId, accounts, categories, 
 
   const mut = useMutation({
     mutationFn: async () => {
-      if (!effectiveBrandId) throw new Error("Select a brand");
+      if (!brandReady) throw new Error("Select a brand");
       const amt = Number(amount);
       if (!amt || amt <= 0) throw new Error("Amount must be > 0");
       if (type !== "transfer" && !accountId) throw new Error("Account is required");
@@ -117,7 +136,7 @@ export function TransactionForm({ open, onClose, brandId, accounts, categories, 
         throw new Error(`Insufficient balance in ${src.name}. Available ${fmtBdt(src.current_balance)}`);
       }
       const payload = {
-        brand_id: effectiveBrandId,
+        brand_id: effectiveBrandId ?? null,
         txn_type: type,
         amount: amt,
         account_id: accountId || null,
@@ -131,11 +150,20 @@ export function TransactionForm({ open, onClose, brandId, accounts, categories, 
     },
     onSuccess: () => {
       toast.success("Transaction saved");
+      // Remember last-used picks for faster next entry
+      if (pickedBrandId) localStorage.setItem("txn_last_brand", pickedBrandId);
+      if (accountId) localStorage.setItem(`txn_last_account_${type}`, accountId);
+      if (categoryId) localStorage.setItem(`txn_last_category_${type}`, categoryId);
       qc.invalidateQueries({ queryKey: ["erp_transactions"] });
       qc.invalidateQueries({ queryKey: ["erp_accounts"] });
       qc.invalidateQueries({ queryKey: ["erp_pnl"] });
-      reset();
-      onClose();
+      if (addAnother) {
+        setAmount(""); setDescription("");
+        setAddAnother(false);
+      } else {
+        reset();
+        onClose();
+      }
     },
     onError: (e: Error) => toast.error(e.message),
   });
@@ -204,9 +232,15 @@ export function TransactionForm({ open, onClose, brandId, accounts, categories, 
               <Select value={pickedBrandId} onValueChange={setPickedBrandId}>
                 <SelectTrigger><SelectValue placeholder="Choose brand" /></SelectTrigger>
                 <SelectContent>
+                  {(type === "expense" || type === "income") && (
+                    <SelectItem value="shared">All Brands (Shared)</SelectItem>
+                  )}
                   {brands.map((b) => <SelectItem key={b.id} value={b.id}>{b.name}</SelectItem>)}
                 </SelectContent>
               </Select>
+              {isShared && (
+                <p className="text-[11px] text-muted-foreground">Shared {type} — sob brand-er hisabe ekbar-i dhorbe.</p>
+              )}
             </div>
           )}
 
@@ -224,6 +258,7 @@ export function TransactionForm({ open, onClose, brandId, accounts, categories, 
                 autoFocus
                 value={amount}
                 onChange={(e) => setAmount(e.target.value)}
+                onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); handleSave(); } }}
                 onWheel={(e) => (e.target as HTMLInputElement).blur()}
                 placeholder="0"
                 className={cn(
@@ -269,14 +304,14 @@ export function TransactionForm({ open, onClose, brandId, accounts, categories, 
           {/* Account picker(s) */}
           {type === "transfer" ? (
             <div className="grid grid-cols-[1fr_auto_1fr] items-end gap-2">
-              <AccountCombo label="From wallet" value={accountId} onChange={setAccountId} accounts={scopedAccounts} disabled={!effectiveBrandId} />
+              <AccountCombo label="From wallet" value={accountId} onChange={setAccountId} accounts={scopedAccounts} disabled={!brandReady} />
               <div className="pb-2 text-muted-foreground"><ArrowRightLeft className="h-4 w-4" /></div>
-              <AccountCombo label="To wallet" value={toAccountId} onChange={setToAccountId} accounts={scopedAccounts.filter((a) => a.id !== accountId)} disabled={!effectiveBrandId} />
+              <AccountCombo label="To wallet" value={toAccountId} onChange={setToAccountId} accounts={scopedAccounts.filter((a) => a.id !== accountId)} disabled={!brandReady} />
             </div>
           ) : (
-            <AccountCombo label={type === "expense" ? "Pay from" : type === "income" ? "Receive in" : "Account"} value={accountId} onChange={setAccountId} accounts={scopedAccounts} disabled={!effectiveBrandId} />
+            <AccountCombo label={type === "expense" ? "Pay from" : type === "income" ? "Receive in" : "Account"} value={accountId} onChange={setAccountId} accounts={scopedAccounts} disabled={!brandReady} />
           )}
-          {effectiveBrandId && scopedAccounts.length === 0 && (
+          {brandReady && scopedAccounts.length === 0 && (
             <p className="text-xs text-muted-foreground -mt-2">No account/wallet in this brand yet. Add one from Finance → Accounts first.</p>
           )}
 
@@ -296,6 +331,7 @@ export function TransactionForm({ open, onClose, brandId, accounts, categories, 
               onChange={setCategoryId}
               categories={filteredCats}
               brandId={effectiveBrandId}
+              disabled={!brandReady}
               kind={type as "income" | "expense"}
               meta={meta}
               qc={qc}
@@ -328,6 +364,13 @@ export function TransactionForm({ open, onClose, brandId, accounts, categories, 
 
         <DialogFooter className="border-t bg-muted/30 px-5 py-3">
           <Button variant="ghost" onClick={onClose}>Cancel</Button>
+          <Button
+            variant="outline"
+            onClick={() => { setAddAnother(true); handleSave(); }}
+            disabled={mut.isPending || !amount || !!insufficient || ((type === "income" || type === "expense") && !categoryId)}
+          >
+            Save &amp; add another
+          </Button>
           <Button
             onClick={handleSave}
             disabled={mut.isPending || !amount || !!insufficient || ((type === "income" || type === "expense") && !categoryId)}
@@ -382,11 +425,12 @@ function AccountCombo({ label, value, onChange, accounts, disabled }: { label: s
   );
 }
 
-function CategoryPicker({ value, onChange, categories, brandId, kind, meta, qc }: {
+function CategoryPicker({ value, onChange, categories, brandId, disabled, kind, meta, qc }: {
   value: string;
   onChange: (v: string) => void;
   categories: Category[];
   brandId: string | null;
+  disabled?: boolean;
   kind: "income" | "expense";
   meta: { bg: string; fg: string };
   qc: ReturnType<typeof useQueryClient>;
@@ -438,7 +482,7 @@ function CategoryPicker({ value, onChange, categories, brandId, kind, meta, qc }
       </Label>
       <Popover open={open} onOpenChange={setOpen}>
         <PopoverTrigger asChild>
-          <Button variant="outline" role="combobox" disabled={!brandId}
+          <Button variant="outline" role="combobox" disabled={disabled}
             className="w-full justify-between h-10 font-normal">
             <span className="flex items-center gap-2 truncate">
               <Tag className={cn("h-3.5 w-3.5", selected ? meta.fg : "text-muted-foreground")} />

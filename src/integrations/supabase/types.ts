@@ -4417,7 +4417,7 @@ export type Database = {
           account_id: string | null
           amount: number
           attachment_url: string | null
-          brand_id: string
+          brand_id: string | null
           category_id: string | null
           created_at: string
           created_by: string | null
@@ -4435,7 +4435,7 @@ export type Database = {
           account_id?: string | null
           amount: number
           attachment_url?: string | null
-          brand_id: string
+          brand_id?: string | null
           category_id?: string | null
           created_at?: string
           created_by?: string | null
@@ -4453,7 +4453,7 @@ export type Database = {
           account_id?: string | null
           amount?: number
           attachment_url?: string | null
-          brand_id?: string
+          brand_id?: string | null
           category_id?: string | null
           created_at?: string
           created_by?: string | null

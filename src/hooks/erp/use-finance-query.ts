@@ -122,6 +122,30 @@ export function useProfitLoss(brandIds: string[], from: string, to: string) {
           acc.expense_by_category[k] = (acc.expense_by_category[k] ?? 0) + Number(v || 0);
         }
       }
+      // Shared (all-brand) transactions have brand_id NULL — count them once in All-Brands view.
+      const { data: sharedRows, error: sharedErr } = await supabase
+        .from("erp_transactions")
+        .select("txn_type, amount, category_id, erp_expense_categories(name, excluded_from_pnl, is_cogs_category)")
+        .is("brand_id", null)
+        .in("txn_type", ["expense", "income"])
+        .gte("transaction_date", from)
+        .lte("transaction_date", to);
+      if (sharedErr) throw sharedErr;
+      for (const row of sharedRows ?? []) {
+        const cat = row.erp_expense_categories as { name: string; excluded_from_pnl: boolean | null; is_cogs_category: boolean | null } | null;
+        if (cat?.excluded_from_pnl) continue;
+        const amt = Number(row.amount || 0);
+        if (row.txn_type === "expense") {
+          if (cat?.is_cogs_category) continue;
+          acc.expense_total += amt;
+          acc.profit -= amt;
+          const name = cat?.name ?? "Uncategorized";
+          acc.expense_by_category[name] = (acc.expense_by_category[name] ?? 0) + amt;
+        } else {
+          acc.other_income += amt;
+          acc.profit += amt;
+        }
+      }
       return acc;
     },
   });
