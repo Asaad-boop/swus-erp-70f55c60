@@ -132,7 +132,12 @@ export function OrdersTable({ rows, loading, selectedIds, onToggleSelect, onTogg
             </div>
             <div className="mt-1 text-[11.5px] text-muted-foreground tabular-nums">
               {format(new Date(o.created_at), "dd MMM yyyy, h:mm a")}
-              <span className="text-muted-foreground/60"> · {relTime(o.created_at)}</span>
+              <span
+                className="text-muted-foreground/60"
+                title={`${statusBadge(o.status).label} status-e eseche ${format(new Date(statusSinceTs(o)), "dd MMM yyyy, h:mm a")}`}
+              >
+                {" "}· {statusBadge(o.status).label} {relTime(statusSinceTs(o))}
+              </span>
             </div>
             <div className="mt-0.5 flex items-center gap-1 text-[11px] text-muted-foreground/80">
               <span className="capitalize">{o.source ?? "manual"}</span>
