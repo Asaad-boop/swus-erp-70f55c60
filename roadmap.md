@@ -1,5 +1,9 @@
 # Roadmap
 
+## Requested Meta spend reconciliation
+- [x] Sync the two named accounts for October 28–November 15 and record verified spend at BDT 131/USD without a second cash debit; corrected reversed account-brand mapping.
+- [ ] Additional USD 78.88 requires the account ID, brand and spend date/range before recording; do not guess or add it to an already-synced total.
+
 ## Staff data visibility
 - [x] Repair explicit custom-page read permissions for orders, products within orders, notes, status history, incomplete carts and inventory stock history; preserve roles and all existing records.
 - [x] Execute affected-employee database acceptance checks; migration security checks introduce no warnings.
