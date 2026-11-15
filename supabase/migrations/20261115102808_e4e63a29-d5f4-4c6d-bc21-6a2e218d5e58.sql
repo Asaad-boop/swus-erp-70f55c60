@@ -1,0 +1,3 @@
+CREATE POLICY "order page staff update orders" ON public.orders FOR UPDATE TO authenticated
+USING (private.staff_has_explicit_page((SELECT auth.uid()), ARRAY['/erp/orders','/erp/orders/list','/erp/orders/web','/erp/orders/pre-orders','/erp/orders/new'], brand_id))
+WITH CHECK (private.staff_has_explicit_page((SELECT auth.uid()), ARRAY['/erp/orders','/erp/orders/list','/erp/orders/web','/erp/orders/pre-orders','/erp/orders/new'], brand_id));

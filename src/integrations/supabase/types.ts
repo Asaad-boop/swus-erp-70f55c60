@@ -19324,6 +19324,7 @@ export type Database = {
         Args: { _order_id: string }
         Returns: undefined
       }
+      staff_can_work_order: { Args: { _order_id: string }; Returns: boolean }
       supplier_scorecard: {
         Args: { p_brand_ids: string[] }
         Returns: {

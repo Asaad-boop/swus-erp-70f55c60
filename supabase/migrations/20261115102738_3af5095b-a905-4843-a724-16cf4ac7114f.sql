@@ -1,0 +1,1 @@
+REVOKE EXECUTE ON FUNCTION public.staff_can_work_order(uuid) FROM authenticated;
