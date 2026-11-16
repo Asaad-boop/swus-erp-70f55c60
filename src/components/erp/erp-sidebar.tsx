@@ -228,7 +228,7 @@ export function ErpSidebar({
       <aside
         data-collapsed={mini}
         className={cn(
-          "flex-col h-screen sticky top-0 shrink-0 border-r border-sidebar-border bg-sidebar",
+          "erp-ink flex-col h-screen sticky top-0 shrink-0 bg-sidebar text-foreground",
           mobile ? "flex w-full border-r-0" : "hidden md:flex",
           "transition-[width] duration-300 ease-[cubic-bezier(0.32,0.72,0,1)]",
           mobile ? "" : mini ? "w-[60px]" : "w-[248px]",
@@ -237,13 +237,13 @@ export function ErpSidebar({
         {/* Brand */}
         <div
           className={cn(
-            "flex h-14 shrink-0 items-center border-b border-sidebar-border px-3",
+            "flex h-16 shrink-0 items-center px-3.5",
             mini ? "justify-center" : "justify-between gap-2",
           )}
         >
           <div className="flex min-w-0 items-center gap-2.5">
-            <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-md bg-primary">
-              <Sparkles className="h-3.5 w-3.5 text-primary-foreground" />
+            <div className="erp-logo flex h-8 w-8 shrink-0 items-center justify-center rounded-[10px]">
+              <Sparkles className="h-4 w-4 text-white" />
             </div>
             {!mini && (
               <div className="min-w-0">
@@ -290,7 +290,7 @@ export function ErpSidebar({
         {/* Search */}
         <div
           className={cn(
-            "shrink-0 border-b border-sidebar-border",
+            "shrink-0",
             mini ? "flex justify-center px-2 py-2" : "space-y-1.5 px-3 py-2.5",
           )}
         >
@@ -431,7 +431,7 @@ export function ErpSidebar({
         </nav>
 
         {/* User */}
-        <div className={cn("shrink-0 border-t border-sidebar-border", mini ? "p-2" : "p-2")}>
+        <div className={cn("shrink-0 border-t border-sidebar-border", mini ? "p-2" : "p-2.5")}>
           <SidebarUser collapsed={mini} onNavigate={onNavigate} />
         </div>
       </aside>

@@ -47,15 +47,31 @@ import {
   type ProductRow,
 } from "@/lib/erp/inventory";
 import { downloadCsv } from "@/lib/erp/orders";
-import { StockAdjustDialog } from "@/components/erp/inventory/stock-adjust-dialog";
-import { PhysicalCountDialog } from "@/components/erp/inventory/physical-count-dialog";
-import { BulkStockDialog } from "@/components/erp/inventory/bulk-stock-dialog";
-import { BulkReorderDialog } from "@/components/erp/inventory/bulk-reorder-dialog";
 import { ProductEditDialog } from "@/components/erp/inventory/product-edit-dialog";
 import { ProductAddDialog } from "@/components/erp/inventory/product-add-dialog";
+import { lazyDialog } from "@/lib/lazy-dialog";
+
 import { CatalogView } from "@/components/erp/inventory/catalog-view";
 import { BomWorkspace } from "@/components/erp/inventory/bom-workspace";
 import { ReserveStatusCard } from "@/components/erp/inventory/reserve-status-card";
+
+// Stock dialogs are code-split: their JS downloads on first open, not on page load.
+const StockAdjustDialog = lazyDialog(
+  () => import("@/components/erp/inventory/stock-adjust-dialog").then((m) => m.StockAdjustDialog),
+  (p) => p.product != null,
+);
+const PhysicalCountDialog = lazyDialog(
+  () => import("@/components/erp/inventory/physical-count-dialog").then((m) => m.PhysicalCountDialog),
+  (p) => p.product != null,
+);
+const BulkStockDialog = lazyDialog(
+  () => import("@/components/erp/inventory/bulk-stock-dialog").then((m) => m.BulkStockDialog),
+  (p) => p.open,
+);
+const BulkReorderDialog = lazyDialog(
+  () => import("@/components/erp/inventory/bulk-reorder-dialog").then((m) => m.BulkReorderDialog),
+  (p) => p.open,
+);
 
 export const Route = createFileRoute("/_authenticated/erp/inventory")({
   validateSearch: (search: Record<string, unknown>): { tab?: string } =>

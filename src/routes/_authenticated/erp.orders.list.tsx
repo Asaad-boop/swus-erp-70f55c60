@@ -21,19 +21,47 @@ import { OrdersSelectionBar } from "@/components/erp/orders/orders-selection-bar
 import { ErpPageHeader, HeaderChip } from "@/components/erp/ui/page-header";
 import { EmptyState } from "@/components/erp/ui/data-panel";
 import { useOrdersPrefs, useSavedViews } from "@/hooks/erp/use-orders-prefs";
-import { OrderDrawer } from "@/components/erp/orders/order-drawer";
 import { IncompleteOrdersTable } from "@/components/erp/orders/incomplete-orders-table";
 import { useAbandonedCartCount } from "@/hooks/erp/use-abandoned-carts-query";
-import { PathaoBulkUploadDialog } from "@/components/erp/orders/pathao-bulk-upload-dialog";
-import { PreorderConvertDialog } from "@/components/erp/orders/preorder-convert-dialog";
-import { ReturnReceiveDialog } from "@/components/erp/orders/return-receive-dialog";
-import { BulkPrintDialog, type PrintMode } from "@/components/erp/orders/bulk-print-dialog";
-import { CourierStatusSyncDialog } from "@/components/erp/orders/courier-status-sync-dialog";
-import { PhoneHistorySyncDialog } from "@/components/erp/orders/phone-history-sync-dialog";
-import { ScanToDispatchDialog } from "@/components/erp/orders/scan-to-dispatch-dialog";
+import type { PrintMode } from "@/components/erp/orders/bulk-print-dialog";
 
 import { downloadCsv, exportOrdersCsv, statusAge, statusSinceTs, tabForStatuses, RETURN_PENDING_STATUSES, STATUS_TABS, type OrderRow, type OrderStatus } from "@/lib/erp/orders";
 import { AlertTriangle, RefreshCcw } from "lucide-react";
+import { lazyDialog } from "@/lib/lazy-dialog";
+
+// Heavy dialogs/drawers are code-split: their JS downloads on first open, not on page load.
+const OrderDrawer = lazyDialog(
+  () => import("@/components/erp/orders/order-drawer").then((m) => m.OrderDrawer),
+  (p) => p.orderId != null,
+);
+const PathaoBulkUploadDialog = lazyDialog(
+  () => import("@/components/erp/orders/pathao-bulk-upload-dialog").then((m) => m.PathaoBulkUploadDialog),
+  (p) => p.open,
+);
+const PreorderConvertDialog = lazyDialog(
+  () => import("@/components/erp/orders/preorder-convert-dialog").then((m) => m.PreorderConvertDialog),
+  (p) => p.open,
+);
+const ReturnReceiveDialog = lazyDialog(
+  () => import("@/components/erp/orders/return-receive-dialog").then((m) => m.ReturnReceiveDialog),
+  (p) => p.open,
+);
+const BulkPrintDialog = lazyDialog(
+  () => import("@/components/erp/orders/bulk-print-dialog").then((m) => m.BulkPrintDialog),
+  (p) => p.open,
+);
+const CourierStatusSyncDialog = lazyDialog(
+  () => import("@/components/erp/orders/courier-status-sync-dialog").then((m) => m.CourierStatusSyncDialog),
+  (p) => p.open,
+);
+const PhoneHistorySyncDialog = lazyDialog(
+  () => import("@/components/erp/orders/phone-history-sync-dialog").then((m) => m.PhoneHistorySyncDialog),
+  (p) => p.open,
+);
+const ScanToDispatchDialog = lazyDialog(
+  () => import("@/components/erp/orders/scan-to-dispatch-dialog").then((m) => m.ScanToDispatchDialog),
+  (p) => p.open,
+);
 
 const WEB_ORDER_SOURCE_FILTER = "source.not.in.(website,pixel,utm)";
 
