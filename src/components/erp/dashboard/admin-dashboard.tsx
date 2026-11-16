@@ -1,4 +1,5 @@
 import { useMemo } from "react";
+import { PunchCard } from "@/components/erp/hr/punch-card";
 import { useNavigate, Link } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 import { AlertTriangle, Users, Wallet2, CheckCircle2 } from "lucide-react";
@@ -41,7 +42,7 @@ export function AdminDashboard({ actions }: { actions?: React.ReactNode }) {
       onRefresh={refreshAll}
       actions={actions}
     >
-      <SectionLabel title="Team today" hint="Attendance live" />
+      <PunchCard compact hideIfUnlinked />
 
       <SectionLabel title="Today's operations" hint="Order · courier · return" />
       <div className="grid grid-cols-1 gap-3">

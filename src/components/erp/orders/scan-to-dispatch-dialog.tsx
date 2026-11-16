@@ -90,7 +90,8 @@ function modeFor(status: OrderStatus): ScanMode | null {
 export type ScanToDispatchDialogProps = {
   open: boolean;
   onClose: () => void;
-  onStatusChange: (id: string, status: OrderStatus) => Promise<void>;
+  /** `reason` is stored on order_status_history so HR can attribute scans. */
+  onStatusChange: (id: string, status: OrderStatus, reason?: string) => Promise<void>;
   onPrint?: (id: string) => void;
 };
 
@@ -187,12 +188,12 @@ export function ScanToDispatchDialog({ open, onClose, onStatusChange, onPrint }:
 
   const shipOrder = async (o: OrderRow): Promise<string> => {
     if (provider === "manual") {
-      await onStatusChange(o.id, "shipped");
+      await onStatusChange(o.id, "shipped", "scan");
       return "Shipped (manual)";
     }
     const existing = await existingShipment(o.id);
     if (existing?.consignment_id) {
-      await onStatusChange(o.id, "shipped");
+      await onStatusChange(o.id, "shipped", "scan");
       dispatchFeedback("duplicate");
       return `Already booked · ${existing.consignment_id}`;
     }
@@ -212,7 +213,7 @@ export function ScanToDispatchDialog({ open, onClose, onStatusChange, onPrint }:
       tracking_number: consignment || o.tracking_number,
       courier_assigned_at: new Date().toISOString(),
     } as never).eq("id", o.id);
-    await onStatusChange(o.id, "shipped");
+    await onStatusChange(o.id, "shipped", "scan");
     return `Booked ${provider}${consignment ? ` · ${consignment}` : ""}`;
   };
 
@@ -242,7 +243,7 @@ export function ScanToDispatchDialog({ open, onClose, onStatusChange, onPrint }:
       msg = await shipOrder(order);
       dispatchFeedback("ship");
     } else {
-      await onStatusChange(order.id, to);
+      await onStatusChange(order.id, to, "scan");
       dispatchFeedback(useMode === "ready" ? "ready" : "pack");
       msg = `${statusBadge(from).label} → ${statusBadge(to).label}`;
     }

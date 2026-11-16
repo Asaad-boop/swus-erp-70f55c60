@@ -504,8 +504,12 @@ function OrdersPage() {
   );
 
   const statusMutation = useMutation({
-    mutationFn: async ({ id, status }: { id: string; status: OrderStatus }) => {
-      const { error } = await supabase.rpc("transition_order_status", { _order_id: id, _new_status: status });
+    mutationFn: async ({ id, status, reason }: { id: string; status: OrderStatus; reason?: string }) => {
+      const { error } = await supabase.rpc("transition_order_status", {
+        _order_id: id,
+        _new_status: status,
+        ...(reason ? { _reason: reason } : {}),
+      });
       if (error) throw error;
     },
     onMutate: async ({ id, status }) => {
@@ -992,8 +996,8 @@ function OrdersPage() {
       <ScanToDispatchDialog
         open={scanOpen}
         onClose={() => setScanOpen(false)}
-        onStatusChange={async (id, status) => {
-          await statusMutation.mutateAsync({ id, status });
+        onStatusChange={async (id, status, reason) => {
+          await statusMutation.mutateAsync({ id, status, reason });
         }}
         onPrint={(id) => setSinglePrintOrderId(id)}
       />

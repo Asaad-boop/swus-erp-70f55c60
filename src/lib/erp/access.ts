@@ -23,6 +23,7 @@ export type Module =
   | "analytics"
   | "staff_accounts"
   | "customer_accounts"
+  | "hr"
   | "settings"
   | "diagnostics";
 
@@ -39,6 +40,7 @@ export const ROLE_MODULES: Record<string, Module[]> = {
     "analytics",
     "staff_accounts",
     "customer_accounts",
+    "hr",
     "settings",
     "diagnostics",
   ],
@@ -53,9 +55,8 @@ export const ROLE_MODULES: Record<string, Module[]> = {
   customer: [],
 };
 
-// HRM was removed (Nov 2026); HR roles keep dashboard-only access until the new module ships.
-ROLE_MODULES["hr_admin"] = ["dashboard"];
-ROLE_MODULES["hr_manager"] = ["dashboard"];
+ROLE_MODULES["hr_admin"] = ["dashboard", "hr"];
+ROLE_MODULES["hr_manager"] = ["dashboard", "hr"];
 ROLE_MODULES["employee"] = ["dashboard"];
 // Owner mirrors admin: everything.
 ROLE_MODULES["owner"] = [...ROLE_MODULES["admin"]!];
@@ -69,7 +70,7 @@ export function isSuperRole(roles: string[]): boolean {
  * Pages every authenticated staff member may open regardless of role or
  * custom page grants (self-service screens).
  */
-export const SELF_SERVICE_PAGES: string[] = [];
+export const SELF_SERVICE_PAGES: string[] = ["/erp/hr/me"];
 
 export function getAllowedModules(roles: string[]): Set<Module> {
   const s = new Set<Module>();
@@ -111,6 +112,7 @@ const PATH_RULES: { test: (p: string) => boolean; module: Module }[] = [
   { test: (p) => p.startsWith("/erp/finance"), module: "finance" },
   { test: (p) => p.startsWith("/erp/marketing"), module: "marketing" },
   { test: (p) => p.startsWith("/erp/crm"), module: "crm" },
+  { test: (p) => p.startsWith("/erp/hr"), module: "hr" },
   { test: (p) => p.startsWith("/erp/analytics"), module: "analytics" },
   { test: (p) => p.startsWith("/erp/reports"), module: "analytics" },
   { test: (p) => p.startsWith("/erp/users"), module: "customer_accounts" },

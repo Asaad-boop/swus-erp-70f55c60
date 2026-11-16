@@ -11,6 +11,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { cn } from "@/lib/utils";
 import { useCurrentRole } from "@/hooks/use-current-role";
 import { RolePanels } from "@/components/erp/dashboard/staff/role-panels";
+import { PunchCard } from "@/components/erp/hr/punch-card";
 import { useMyAllowedPages } from "@/hooks/use-my-allowed-pages";
 import { resolveAccess } from "@/lib/erp/access";
 import { NAV_PAGES } from "@/lib/erp/nav";
@@ -139,6 +140,9 @@ export function EmployeeDashboard() {
       </div>
 
       <div className="px-4 md:px-6 py-4 max-w-[1200px] mx-auto space-y-4">
+        {/* ATTENDANCE — check in / break / check out */}
+        <PunchCard />
+
 
         {/* TODAY'S BOOKINGS */}
         <section className="space-y-2">

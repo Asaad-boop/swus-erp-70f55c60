@@ -32,6 +32,7 @@ export const SECTION_ROOTS = new Set<string>([
   "/erp/marketing",
   "/erp/analytics",
   "/erp/orders",
+  "/erp/hr",
 ]);
 
 /** Reachable routes without their own sidebar entry. */

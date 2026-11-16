@@ -6,7 +6,7 @@
  * can never exist in the menu but be missing from the access editor.
  */
 import {
-  LayoutDashboard, Globe, PlusCircle, Boxes, Wallet, Truck, Settings, Users, Package,
+  LayoutDashboard, Globe, PlusCircle, Boxes, Wallet, Truck, Settings, Users, UserCog, Radio, Fingerprint, Palmtree, Package,
   TrendingDown, TrendingUp, PackagePlus, Megaphone, Container, Heart, GitBranch, Plug,
   ChevronsLeft, ChevronRight, Sparkles, ClipboardList, ClipboardCheck, PackageSearch,
   Activity, BarChart3, RotateCcw, FileSpreadsheet, Zap, Briefcase, Stethoscope, ChevronDown,
@@ -173,6 +173,27 @@ export const NAV_GROUPS: Group[] = [
         items: [
           { to: "/erp/analytics", label: "Analytics", icon: BarChart3, exact: true },
           { to: "/erp/analytics/live", label: "Live Analytics", icon: Activity },
+        ],
+      },
+    ],
+  },
+  {
+    kind: "accordion",
+    label: "People",
+    defaultClosed: true,
+    sections: [
+      {
+        key: "hr",
+        label: "HRM",
+        icon: UserCog,
+        items: [
+          { to: "/erp/hr", label: "Team Today", icon: Radio, exact: true },
+          { to: "/erp/hr/attendance", label: "Attendance", icon: CalendarCheck },
+          { to: "/erp/hr/employees", label: "Employees", icon: Users },
+          { to: "/erp/hr/leaves", label: "Leave & Holidays", icon: Palmtree },
+          { to: "/erp/hr/payroll", label: "Payroll", icon: Banknote },
+          { to: "/erp/hr/performance", label: "Performance", icon: Trophy },
+          { to: "/erp/hr/me", label: "My Attendance", icon: Fingerprint },
         ],
       },
     ],
