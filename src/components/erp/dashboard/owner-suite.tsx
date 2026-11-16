@@ -117,11 +117,12 @@ async function fetchPnl(brandIds: string[], from: Date, to: Date, fx: number | u
   }
   if (courier <= 0) courier = rows.reduce((s, r) => s + Number(r.actual_shipping_cost ?? 0), 0);
 
-  let adSpend = 0;
+  let adSpend = 0, adSpendUsd = 0;
   const adByDay = new Map<string, number>();
   for (const r of ads) {
     const v = Number(r.spend_bdt_fifo ?? 0) || (fx ? Number(r.spend ?? 0) * fx : 0);
     adSpend += v;
+    adSpendUsd += Number(r.spend ?? 0);
     adByDay.set(String(r.date), (adByDay.get(String(r.date)) ?? 0) + v);
   }
 
@@ -144,7 +145,7 @@ async function fetchPnl(brandIds: string[], from: Date, to: Date, fx: number | u
   }));
 
   return {
-    revenue, orders, cogs, courier, pack, adSpend, gross, net,
+    revenue, orders, cogs, courier, pack, adSpend, adSpendUsd, gross, net,
     margin: revenue > 0 ? (net / revenue) * 100 : 0,
     aov: orders > 0 ? revenue / orders : 0,
     roas: adSpend > 0 ? revenue / adSpend : 0,
@@ -178,7 +179,7 @@ export function ExecutiveKpi(props: P & { compareLabel?: string }) {
     { label: "Profit Margin", value: pct(c?.margin ?? 0), d: (c?.margin ?? 0) - (p?.margin ?? 0), key: "net", raw: true, icon: Gauge, tone: "text-violet-600 bg-violet-50 border-violet-200", spark: "#8b5cf6", sparkFill: "#f5f3ff" },
     { label: "Orders", value: String(c?.orders ?? 0), d: delta(c?.orders ?? 0, p?.orders ?? 0), key: "orders", icon: ShoppingCart, tone: "text-indigo-600 bg-indigo-50 border-indigo-200", spark: "#6366f1", sparkFill: "#eef2ff" },
     { label: "AOV", value: BDT(c?.aov ?? 0), d: delta(c?.aov ?? 0, p?.aov ?? 0), key: "revenue", icon: Receipt, tone: "text-cyan-600 bg-cyan-50 border-cyan-200", spark: "#06b6d4", sparkFill: "#ecfeff" },
-    { label: "Marketing Spend", value: BDT(c?.adSpend ?? 0), d: delta(c?.adSpend ?? 0, p?.adSpend ?? 0), key: "spend", invert: true, icon: Megaphone, tone: "text-amber-600 bg-amber-50 border-amber-200", spark: "#f59e0b", sparkFill: "#fffbeb" },
+    { label: "Marketing Spend", value: BDT(c?.adSpend ?? 0), sub: "$" + (c?.adSpendUsd ?? 0).toLocaleString("en-US", { maximumFractionDigits: 2 }), d: delta(c?.adSpend ?? 0, p?.adSpend ?? 0), key: "spend", invert: true, icon: Megaphone, tone: "text-amber-600 bg-amber-50 border-amber-200", spark: "#f59e0b", sparkFill: "#fffbeb" },
     { label: "ROAS", value: (c?.roas ?? 0).toFixed(2) + "x", d: delta(c?.roas ?? 0, p?.roas ?? 0), key: "revenue", icon: Target, tone: "text-fuchsia-600 bg-fuchsia-50 border-fuchsia-200", spark: "#d946ef", sparkFill: "#fdf4ff" },
   ];
   return (
@@ -195,6 +196,9 @@ export function ExecutiveKpi(props: P & { compareLabel?: string }) {
             <div className={cn("text-[22px] font-semibold leading-none tracking-tight tabular-nums",
               t.danger ? "text-rose-600" : "text-slate-900")}>{t.value}</div>
           )}
+          {!isLoading && (t as any).sub ? (
+            <div className="mt-0.5 text-[11px] font-medium tabular-nums text-slate-400">{(t as any).sub}</div>
+          ) : null}
           <div className="mt-2 flex items-center justify-between gap-2">
             <div className="flex items-center gap-1.5">
               {isLoading ? null : t.raw
