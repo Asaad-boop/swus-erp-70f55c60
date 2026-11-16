@@ -1271,3 +1271,45 @@ img { transition: opacity 220ms var(--ease-butter); }
   }
   main > *, [data-page-enter], .butter-in { animation: none !important; }
 }
+
+/* ═══════════════════════════════════════════════════════════════
+   v2.1 update — shell polish (route progress + top bar)
+   ═══════════════════════════════════════════════════════════════ */
+
+.erp-route-progress {
+  position: fixed;
+  inset: 0 0 auto 0;
+  height: 2px;
+  z-index: 100;
+  pointer-events: none;
+  overflow: hidden;
+}
+.erp-route-progress__bar {
+  height: 100%;
+  width: 100%;
+  transform-origin: left center;
+  background: linear-gradient(90deg, var(--primary), color-mix(in oklab, var(--primary) 55%, oklch(0.75 0.15 200)));
+  box-shadow: 0 0 8px color-mix(in oklab, var(--primary) 50%, transparent);
+  transform: scaleX(0);
+}
+.erp-route-progress[data-phase="running"] .erp-route-progress__bar {
+  animation: erp-progress-run 8s cubic-bezier(0.1, 0.7, 0.2, 1) forwards;
+}
+.erp-route-progress[data-phase="done"] .erp-route-progress__bar {
+  transform: scaleX(1);
+  opacity: 0;
+  transition: transform 160ms var(--ease-swift), opacity 260ms ease 80ms;
+}
+@keyframes erp-progress-run {
+  0%   { transform: scaleX(0); }
+  10%  { transform: scaleX(0.35); }
+  40%  { transform: scaleX(0.7); }
+  100% { transform: scaleX(0.94); }
+}
+
+/* Top bar sits on the canvas with a hairline, not a heavy band. */
+.erp-topbar { box-shadow: 0 1px 0 color-mix(in oklab, var(--border) 40%, transparent); }
+
+@media (prefers-reduced-motion: reduce) {
+  .erp-route-progress[data-phase="running"] .erp-route-progress__bar { animation: none; transform: scaleX(0.6); }
+}
