@@ -4,7 +4,7 @@ import { useQuery } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import {
   Clock, ArrowRight, ListChecks,
-  Activity, ShoppingCart, CheckCircle2, Truck, PackageCheck, Flame,
+  Activity, ShoppingCart, CheckCircle2, Truck, PackageCheck, Flame, ScanLine,
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -12,6 +12,7 @@ import { cn } from "@/lib/utils";
 import { useCurrentRole } from "@/hooks/use-current-role";
 import { RolePanels } from "@/components/erp/dashboard/staff/role-panels";
 import { PunchCard } from "@/components/erp/hr/punch-card";
+import { packStats } from "@/lib/erp/packing/api";
 import { useMyAllowedPages } from "@/hooks/use-my-allowed-pages";
 import { resolveAccess } from "@/lib/erp/access";
 import { NAV_PAGES } from "@/lib/erp/nav";
@@ -143,6 +144,9 @@ export function EmployeeDashboard() {
         {/* ATTENDANCE — check in / break / check out */}
         <PunchCard />
 
+        {/* PACKING STATION shortcut for packers / warehouse */}
+        {can("/erp/packing") && <PackingShortcut brandIds={brandIds} />}
+
 
         {/* TODAY'S BOOKINGS */}
         <section className="space-y-2">
@@ -267,7 +271,7 @@ export function EmployeeDashboard() {
         {/* QUICK LINKS */}
         <section className="rounded-2xl border border-border/60 bg-card p-5">
           <div className="text-[10px] uppercase tracking-[0.18em] text-muted-foreground font-semibold mb-3">
-            My pages
+            আমার access — যে পেজগুলো খুলতে পারবেন
           </div>
           <div className="flex flex-wrap gap-2">
             {quickLinks.map((p) => (
@@ -286,5 +290,33 @@ export function EmployeeDashboard() {
         </section>
       </div>
     </div>
+  );
+}
+
+function PackingShortcut({ brandIds }: { brandIds: string[] }) {
+  const scope = brandIds.length ? brandIds : null;
+  const { data } = useQuery({
+    queryKey: ["packing", "stats", scope],
+    queryFn: () => packStats(scope),
+    refetchInterval: 60_000,
+  });
+  return (
+    <Link
+      to={"/erp/packing" as never}
+      className="flex items-center justify-between gap-4 rounded-2xl border border-indigo-500/30 bg-gradient-to-br from-indigo-500/10 to-card p-5 transition-shadow hover:shadow-md"
+    >
+      <div className="flex items-center gap-3">
+        <span className="grid size-12 place-items-center rounded-xl bg-indigo-600 text-white">
+          <ScanLine className="size-6" />
+        </span>
+        <div>
+          <div className="text-base font-semibold">Packing Station</div>
+          <div className="text-xs text-muted-foreground">
+            {data ? `${data.to_pack} to pack · ${data.packing} packing · আজ আপনি ${data.my_packed_today} packed` : "Scan করে order pack করুন"}
+          </div>
+        </div>
+      </div>
+      <ArrowRight className="size-5 text-indigo-600" />
+    </Link>
   );
 }

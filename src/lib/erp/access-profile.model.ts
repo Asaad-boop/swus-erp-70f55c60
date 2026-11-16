@@ -33,7 +33,7 @@ export const ROLE_REGISTRY: Record<AppRole, { label: string; description: string
     label: "Warehouse staff",
     description: "Inventory, stocktake and fulfillment",
   },
-  packer: { label: "Packer", description: "Packing, dispatch and labels" },
+  packer: { label: "Packer", description: "Packing Station only — scan orders to packing → packed → ready to ship" },
   customer_service: { label: "Customer service", description: "Orders, customers and follow-up" },
   marketing_manager: { label: "Marketing manager", description: "Growth, campaigns and analytics" },
   cargo_agent: { label: "Cargo agent", description: "Imports and cargo workflow" },

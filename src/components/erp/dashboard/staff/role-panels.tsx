@@ -2,6 +2,7 @@ import { useQuery } from "@tanstack/react-query";
 import { Link } from "@tanstack/react-router";
 import { ArrowRight, Boxes, ClipboardList, Megaphone, PackageCheck, Ship, Wallet2, Headphones } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
+import { packStats } from "@/lib/erp/packing/api";
 import { applyBrandScope } from "@/lib/erp/apply-brand-scope";
 import { Skeleton } from "@/components/ui/skeleton";
 
@@ -73,30 +74,13 @@ const orderCount = async (brandIds: string[], build: (q: any) => any) => {
   return count ?? 0;
 };
 
-/** Packing / warehouse work queue. */
-function PackerPanel({ brandIds, userId }: { brandIds: string[]; userId: string | null }) {
+/** Packing / warehouse work queue — via pack_my_stats so packers (no orders access) see real numbers. */
+function PackerPanel({ brandIds }: { brandIds: string[]; userId: string | null }) {
   const q = useQuery({
-    queryKey: ["staff-packer", brandIds.join(","), userId],
+    queryKey: ["packing", "stats", brandIds.length ? brandIds : null],
     staleTime: 30_000,
     refetchInterval: 60_000,
-    queryFn: async () => {
-      const start = new Date();
-      start.setHours(0, 0, 0, 0);
-      const [toPack, packed, readyShip, mine] = await Promise.all([
-        orderCount(brandIds, (b: any) => b.in("status", ["confirmed", "ready_to_pack"])),
-        orderCount(brandIds, (b: any) => b.in("status", ["packaging"])),
-        orderCount(brandIds, (b: any) => b.in("status", ["packed", "ready_to_ship"])),
-        userId
-          ? supabase
-              .from("order_status_history")
-              .select("id", { count: "exact", head: true })
-              .eq("changed_by", userId)
-              .in("to_status", ["packed", "packaging"])
-              .gte("created_at", start.toISOString())
-          : Promise.resolve({ count: 0 } as any),
-      ]);
-      return { toPack, packed, readyShip, mine: (mine as any).count ?? 0 };
-    },
+    queryFn: () => packStats(brandIds.length ? brandIds : null),
   });
   return (
     <Panel
@@ -104,10 +88,10 @@ function PackerPanel({ brandIds, userId }: { brandIds: string[]; userId: string 
       icon={PackageCheck}
       loading={q.isLoading}
       items={[
-        { label: "Ready to pack", value: q.data?.toPack ?? 0, to: "/erp/orders/list", search: { tab: "packing" } },
-        { label: "Packing in progress", value: q.data?.packed ?? 0, to: "/erp/orders/list", search: { tab: "packing" } },
-        { label: "Packed · waiting courier", value: q.data?.readyShip ?? 0, to: "/erp/courier" },
-        { label: "আমি আজ pack করেছি", value: q.data?.mine ?? 0 },
+        { label: "Ready to pack", value: q.data?.to_pack ?? 0, to: "/erp/packing" },
+        { label: "Packing in progress", value: q.data?.packing ?? 0, to: "/erp/packing" },
+        { label: "Packed · waiting", value: (q.data?.packed ?? 0) + (q.data?.ready ?? 0), to: "/erp/packing" },
+        { label: "আমি আজ pack করেছি", value: q.data?.my_packed_today ?? 0 },
       ]}
     />
   );

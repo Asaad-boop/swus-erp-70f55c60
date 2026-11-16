@@ -16,6 +16,7 @@ export type Module =
   | "orders"
   | "inventory"
   | "fulfillment"
+  | "packing"
   | "supply"
   | "finance"
   | "marketing"
@@ -33,6 +34,7 @@ export const ROLE_MODULES: Record<string, Module[]> = {
     "orders",
     "inventory",
     "fulfillment",
+    "packing",
     "supply",
     "finance",
     "marketing",
@@ -44,10 +46,11 @@ export const ROLE_MODULES: Record<string, Module[]> = {
     "settings",
     "diagnostics",
   ],
-  operations: ["dashboard", "orders", "inventory", "fulfillment", "supply", "crm", "analytics"],
+  operations: ["dashboard", "orders", "inventory", "fulfillment", "packing", "supply", "crm", "analytics"],
   accountant: ["dashboard", "finance", "analytics"],
-  warehouse_staff: ["dashboard", "inventory", "fulfillment", "supply"],
-  packer: ["dashboard", "fulfillment"],
+  warehouse_staff: ["dashboard", "inventory", "fulfillment", "packing", "supply"],
+  // Packers: packing station only (scan to move confirmed → packed → ready). No orders/courier/finance.
+  packer: ["dashboard", "packing"],
   customer_service: ["dashboard", "orders", "crm", "customer_accounts"],
   marketing_manager: ["dashboard", "marketing", "analytics"],
   cargo_agent: ["dashboard", "supply"],
@@ -109,6 +112,7 @@ const PATH_RULES: { test: (p: string) => boolean; module: Module }[] = [
       p.startsWith("/erp/sourcing"),
     module: "supply",
   },
+  { test: (p) => p.startsWith("/erp/packing"), module: "packing" },
   { test: (p) => p.startsWith("/erp/finance"), module: "finance" },
   { test: (p) => p.startsWith("/erp/marketing"), module: "marketing" },
   { test: (p) => p.startsWith("/erp/crm"), module: "crm" },
