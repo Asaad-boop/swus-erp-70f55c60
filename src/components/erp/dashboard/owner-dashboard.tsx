@@ -11,7 +11,6 @@ import {
   AdWalletBalanceCard, ReturnRateByProductCard,
 } from "@/components/erp/dashboard/widgets";
 import { ProductDangerZone } from "@/components/erp/dashboard-command-center";
-import { TeamCostCard } from "@/components/erp/dashboard/team-cost-card";
 import { MonthPaceCard } from "@/components/erp/dashboard/month-pace-card";
 import {
   ExecutiveKpi, NeedsYourAttention, PerformanceTrend, TargetForecast,
@@ -147,10 +146,7 @@ export function OwnerDashboard({ actions }: { actions?: React.ReactNode }) {
         <>
           <SectionLabel title="Team & operations" />
           <TeamOpsSummary brandIds={brandIds} enabled={enabled} />
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
-            <TeamCostCard brandIds={brandIds} enabled={enabled} />
-            <TopCustomers brandIds={brandIds} enabled={enabled} range={range} />
-          </div>
+          <TopCustomers brandIds={brandIds} enabled={enabled} range={range} />
           <SectionLabel title="Business health score" />
           <BusinessHealthScore brandIds={brandIds} enabled={enabled} range={range} />
           <SectionLabel title="Recent activity" />

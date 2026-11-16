@@ -1,13 +1,13 @@
 import { useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { getAppSetting } from "@/lib/erp/settings/app-settings.functions";
-import { mergeCompany } from "@/lib/erp/hr/company";
+import { mergeCompany } from "@/lib/erp/company";
 import { useBrand } from "@/contexts/brand-context";
 import { setDocBranding } from "@/lib/erp/utils/doc-branding";
 
 /**
  * Keeps the shared PDF/print branding (logo, company, contact, footer)
- * in sync with HR company settings + the active brand. Mount once inside
+ * in sync with company settings + the active brand. Mount once inside
  * the ERP layout.
  */
 export function DocBrandingSync() {

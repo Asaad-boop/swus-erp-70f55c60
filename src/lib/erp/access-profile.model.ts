@@ -37,9 +37,9 @@ export const ROLE_REGISTRY: Record<AppRole, { label: string; description: string
   customer_service: { label: "Customer service", description: "Orders, customers and follow-up" },
   marketing_manager: { label: "Marketing manager", description: "Growth, campaigns and analytics" },
   cargo_agent: { label: "Cargo agent", description: "Imports and cargo workflow" },
-  hr_admin: { label: "HR administrator", description: "Full HRM operations" },
-  hr_manager: { label: "HR manager", description: "Employees, attendance and performance" },
-  employee: { label: "Employee", description: "Personal attendance self-service" },
+  hr_admin: { label: "HR administrator", description: "Reserved for the new HRM module (dashboard only for now)" },
+  hr_manager: { label: "HR manager", description: "Reserved for the new HRM module (dashboard only for now)" },
+  employee: { label: "Employee", description: "Basic staff login — dashboard plus any granted pages" },
   moderator: { label: "Moderator", description: "Limited dashboard access" },
   customer: { label: "Customer", description: "Storefront only; not a staff role" },
 };
@@ -68,10 +68,6 @@ export type AccessWorkspaceUser = {
   allowedPages: string[];
   brandMode: BrandMode;
   brandIds: string[];
-  employeeId: string | null;
-  employeeName: string | null;
-  employeeCode: string | null;
-  employeeStatus: string | null;
   updatedAt: string | null;
 };
 
@@ -84,7 +80,6 @@ export const replaceAccessProfileSchema = z.object({
   brandIds: z.array(z.string().uuid()).max(50),
   pageMode: z.enum(["role_default", "custom"]),
   allowedPages: z.array(z.string()).max(250),
-  employeeId: z.string().uuid().nullable(),
 });
 
 export const createAccessUserSchema = z.object({
@@ -96,7 +91,6 @@ export const createAccessUserSchema = z.object({
   brandIds: z.array(z.string().uuid()).max(50),
   pageMode: z.enum(["role_default", "custom"]),
   allowedPages: z.array(z.string()).max(250),
-  employeeId: z.string().uuid().nullable(),
 });
 
 export const userIdSchema = z.object({ userId: z.string().uuid() });

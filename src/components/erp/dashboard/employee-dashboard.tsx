@@ -1,28 +1,22 @@
-import { useEffect, useMemo, useState } from "react";
+import { useMemo } from "react";
 import { Link } from "@tanstack/react-router";
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useQuery } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
-import { toast } from "sonner";
 import {
-  LogIn, LogOut, Clock, CalendarDays, ArrowRight, ListChecks, Coffee, Play,
-  Activity, ShoppingCart, CheckCircle2, Truck, PackageCheck, Timer, Flame,
+  Clock, ArrowRight, ListChecks,
+  Activity, ShoppingCart, CheckCircle2, Truck, PackageCheck, Flame,
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
-import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { cn } from "@/lib/utils";
 import { useCurrentRole } from "@/hooks/use-current-role";
-import { MyProfileSalary } from "@/components/erp/dashboard/staff/my-profile-salary";
 import { RolePanels } from "@/components/erp/dashboard/staff/role-panels";
 import { useMyAllowedPages } from "@/hooks/use-my-allowed-pages";
 import { resolveAccess } from "@/lib/erp/access";
 import { NAV_PAGES } from "@/lib/erp/nav";
 import { useBrand } from "@/contexts/brand-context";
 import { applyBrandScope } from "@/lib/erp/apply-brand-scope";
-import {
-  getMyAttendanceToday, punchIn, punchOut, startBreak, endBreak,
-} from "@/lib/erp/hr/attendance.functions";
-import { getMyDaySummary } from "@/lib/erp/hr/my-day.functions";
+import { getMyDaySummary } from "@/lib/erp/staff/my-day.functions";
 
 function greeting() {
   const h = new Date().getHours();
@@ -30,9 +24,6 @@ function greeting() {
   if (h < 17) return "Good afternoon";
   return "Good evening";
 }
-
-const hhmm = (mins: number) =>
-  `${Math.floor(mins / 60)}h ${String(Math.floor(mins % 60)).padStart(2, "0")}m`;
 
 const clock = (iso?: string | null) =>
   iso
@@ -73,25 +64,16 @@ export function EmployeeDashboard() {
   const { roles, userId } = useCurrentRole();
   const { allowedPages, pageMode } = useMyAllowedPages();
   const { brandIds } = useBrand();
-  const qc = useQueryClient();
-  const [tick, setTick] = useState(0);
-
-  useEffect(() => {
-    const t = setInterval(() => setTick((n) => n + 1), 15_000);
-    return () => clearInterval(t);
-  }, []);
-
-  const fetchToday = useServerFn(getMyAttendanceToday);
-  const inFn = useServerFn(punchIn);
-  const outFn = useServerFn(punchOut);
-  const breakInFn = useServerFn(startBreak);
-  const breakOutFn = useServerFn(endBreak);
   const dayFn = useServerFn(getMyDaySummary);
 
-  const { data: att, isLoading: attLoading } = useQuery({
-    queryKey: ["hr-my-attendance"],
-    queryFn: () => fetchToday(),
-    refetchInterval: 60_000,
+  const { data: me } = useQuery({
+    queryKey: ["my-display-name", userId],
+    enabled: Boolean(userId),
+    staleTime: 10 * 60_000,
+    queryFn: async () => {
+      const { data } = await supabase.from("profiles").select("display_name").eq("id", userId!).maybeSingle();
+      return (data?.display_name as string | null) ?? null;
+    },
   });
 
   const { data: day, isLoading: dayLoading } = useQuery({
@@ -100,55 +82,6 @@ export function EmployeeDashboard() {
     refetchInterval: 60_000,
     staleTime: 30_000,
   });
-
-  const invalidate = () => {
-    void qc.invalidateQueries({ queryKey: ["hr-my-attendance"] });
-    void qc.invalidateQueries({ queryKey: ["my-day-summary"] });
-  };
-
-  const punch = useMutation<unknown, Error, "in" | "out">({
-    mutationFn: async (kind) => (kind === "in" ? await inFn() : await outFn()),
-    onSuccess: (_d, kind) => {
-      toast.success(kind === "in" ? "Check in hoyeche" : "Check out hoyeche");
-      invalidate();
-    },
-    onError: (e: Error) => toast.error(e.message),
-  });
-
-  const brk = useMutation<unknown, Error, "start" | "end">({
-    mutationFn: async (kind) => (kind === "start" ? await breakInFn({ data: {} }) : await breakOutFn()),
-    onSuccess: (_d, kind) => {
-      toast.success(kind === "start" ? "Break shuru" : "Break sesh");
-      invalidate();
-    },
-    onError: (e: Error) => toast.error(e.message),
-  });
-
-  const entries = att?.entries ?? [];
-  const open = entries.find((e: any) => !e.check_out);
-  const onBreak = open?.breaks?.find((b: any) => !b.break_end) ?? null;
-
-  const { workMins, breakMins } = useMemo(() => {
-    void tick;
-    const now = Date.now();
-    let workMs = 0;
-    let breakMs = 0;
-    for (const e of entries as any[]) {
-      workMs += (e.check_out ? Date.parse(e.check_out) : now) - Date.parse(e.check_in);
-      for (const b of e.breaks ?? []) {
-        breakMs += (b.break_end ? Date.parse(b.break_end) : now) - Date.parse(b.break_start);
-      }
-    }
-    return {
-      workMins: Math.max(0, (workMs - breakMs) / 60000),
-      breakMins: Math.max(0, breakMs / 60000),
-    };
-  }, [entries, tick]);
-
-  const shift = (att?.employee as any)?.schedule as
-    | { shiftStart?: string | null; shiftEnd?: string | null }
-    | undefined;
-  const firstIn = entries[0]?.check_in ?? null;
 
   // ---- role-scoped work queues (counts only, no money) ----
   const can = (p: string) => resolveAccess(roles, allowedPages, p, pageMode);
@@ -186,44 +119,6 @@ export function EmployeeDashboard() {
     [roles, allowedPages, pageMode],
   );
 
-  const employeeLinked = Boolean(att?.employee);
-  const employeeId = att?.employee?.id as string | undefined;
-
-  // Personal month summary (no money): present days, late, OT, pending leaves.
-  const { data: mine } = useQuery({
-    queryKey: ["emp-month-summary", employeeId],
-    enabled: Boolean(employeeId),
-    staleTime: 5 * 60_000,
-    queryFn: async () => {
-      const now = new Date();
-      const start = new Date(now.getFullYear(), now.getMonth(), 1).toISOString().slice(0, 10);
-      const [{ data: rows }, { data: leaves }] = await Promise.all([
-        supabase
-          .from("hr_attendance")
-          .select("work_minutes, late_minutes, overtime_minutes, status, work_date")
-          .eq("employee_id", employeeId!)
-          .gte("work_date", start),
-        supabase
-          .from("hr_leaves")
-          .select("id, status, start_date, end_date, days")
-          .eq("employee_id", employeeId!)
-          .order("start_date", { ascending: false })
-          .limit(20),
-      ]);
-      const list = rows ?? [];
-      return {
-        present: list.filter((r) => String(r.status) === "present").length,
-        lateDays: list.filter((r) => Number(r.late_minutes ?? 0) > 0).length,
-        otMins: list.reduce((s, r) => s + Number(r.overtime_minutes ?? 0), 0),
-        workedMins: list.reduce((s, r) => s + Number(r.work_minutes ?? 0), 0),
-        pendingLeaves: (leaves ?? []).filter((l) => String(l.status) === "pending").length,
-        approvedDays: (leaves ?? [])
-          .filter((l) => String(l.status) === "approved")
-          .reduce((s, l) => s + Number(l.days ?? 0), 0),
-      };
-    },
-  });
-
   const trend = day?.trend ?? [];
   const trendMax = Math.max(1, ...trend.map((t) => t.count));
   const byStatus = Object.entries(day?.byStatus ?? {}).sort((a, b) => b[1] - a[1]).slice(0, 6);
@@ -234,84 +129,16 @@ export function EmployeeDashboard() {
         <div className="px-4 md:px-6 py-3 max-w-[1200px] mx-auto flex items-center justify-between gap-3">
           <div className="min-w-0">
             <h1 className="text-[15px] font-semibold tracking-tight truncate">
-              {greeting()}, {att?.employee?.full_name ?? "there"}
+              {greeting()}, {me ?? "there"}
             </h1>
             <p className="text-[12px] text-muted-foreground">
               {new Date().toLocaleDateString("en-GB", { weekday: "long", month: "short", day: "numeric" })}
-              {shift?.shiftStart && (
-                <> · Shift {shift.shiftStart}{shift.shiftEnd ? `–${shift.shiftEnd}` : ""}</>
-              )}
             </p>
           </div>
-          <span
-            className={cn(
-              "shrink-0 rounded-full px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wider",
-              onBreak ? "bg-amber-100 text-amber-700"
-                : open ? "bg-emerald-100 text-emerald-700"
-                : "bg-muted text-muted-foreground",
-            )}
-          >
-            {onBreak ? "On break" : open ? "Working" : "Off duty"}
-          </span>
         </div>
       </div>
 
       <div className="px-4 md:px-6 py-4 max-w-[1200px] mx-auto space-y-4">
-        {/* MY DAY — check in / out / break */}
-        <section className="rounded-2xl border border-border/60 bg-card p-5">
-          <div className="text-[10px] uppercase tracking-[0.18em] text-muted-foreground font-semibold">
-            My day
-          </div>
-          {attLoading ? (
-            <Skeleton className="mt-3 h-20 w-full" />
-          ) : !employeeLinked ? (
-            <p className="mt-3 text-sm text-muted-foreground">
-              Tomar account kono employee profile er sathe link kora nei. HR ke bolo.
-            </p>
-          ) : (
-            <div className="mt-3 flex flex-wrap items-center gap-5">
-              <div>
-                <div className="text-[11px] uppercase tracking-wide text-muted-foreground flex items-center gap-1">
-                  <Clock className="size-3.5" /> Worked today
-                </div>
-                <div className="font-bold text-3xl tabular-nums leading-tight">{hhmm(workMins)}</div>
-                <div className="text-[11px] text-muted-foreground">
-                  In {clock(firstIn)} · Break {hhmm(breakMins)}
-                </div>
-              </div>
-
-              <div className="ml-auto flex flex-wrap items-center gap-2">
-                {open && (
-                  <Button
-                    size="sm"
-                    variant={onBreak ? "default" : "outline"}
-                    disabled={brk.isPending}
-                    onClick={() => brk.mutate(onBreak ? "end" : "start")}
-                    className="gap-1.5"
-                  >
-                    {onBreak ? <Play className="size-4" /> : <Coffee className="size-4" />}
-                    {onBreak ? "Resume work" : "Break"}
-                  </Button>
-                )}
-                <Button
-                  size="sm"
-                  disabled={punch.isPending}
-                  variant={open ? "outline" : "default"}
-                  onClick={() => punch.mutate(open ? "out" : "in")}
-                  className="gap-1.5"
-                >
-                  {open ? <LogOut className="size-4" /> : <LogIn className="size-4" />}
-                  {open ? "Check out" : "Check in"}
-                </Button>
-                <Button asChild size="sm" variant="ghost" className="gap-1.5">
-                  <Link to={"/erp/hr/my-day" as any}>
-                    <CalendarDays className="size-4" /> Attendance
-                  </Link>
-                </Button>
-              </div>
-            </div>
-          )}
-        </section>
 
         {/* TODAY'S BOOKINGS */}
         <section className="space-y-2">
@@ -335,16 +162,9 @@ export function EmployeeDashboard() {
           <div className="text-[10px] uppercase tracking-[0.18em] text-muted-foreground font-semibold">
             My performance
           </div>
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+          <div className="grid grid-cols-2 gap-3">
             <Stat label="My actions today" value={String(day?.myActionsToday ?? 0)} icon={Activity} tone="good" />
             <Stat label="Last 7 days" value={String(day?.myActionsWeek ?? 0)} icon={Flame} />
-            <Stat label="Worked (month)" value={hhmm(mine?.workedMins ?? 0)} icon={Timer} />
-            <Stat
-              label="Present days"
-              value={String(mine?.present ?? 0)}
-              hint={`${mine?.lateDays ?? 0} late · OT ${hhmm(mine?.otMins ?? 0)}`}
-              icon={CalendarDays}
-            />
           </div>
 
           {trend.length > 0 && (
@@ -436,9 +256,6 @@ export function EmployeeDashboard() {
             </ul>
           </section>
         )}
-
-        {/* MY PROFILE + SALARY (own row only) */}
-        <MyProfileSalary employeeId={employeeId} />
 
         {/* ROLE-SPECIFIC WORK PANELS */}
         <RolePanels roles={roles} brandIds={brandIds} userId={userId} />

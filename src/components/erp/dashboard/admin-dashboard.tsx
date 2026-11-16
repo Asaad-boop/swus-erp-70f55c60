@@ -14,7 +14,6 @@ import {
 } from "@/components/erp/dashboard/shared";
 import { StuckOrdersCard, CourierPerformanceCard } from "@/components/erp/dashboard/widgets";
 import { WebsiteOrdersOverview } from "@/components/erp/dashboard/website-orders-overview";
-import { TeamTodayCard } from "@/components/erp/dashboard/admin/team-today-card";
 import {
   OrderFlowTodayCard,
   CourierReturnTodayCard,
@@ -43,7 +42,6 @@ export function AdminDashboard({ actions }: { actions?: React.ReactNode }) {
       actions={actions}
     >
       <SectionLabel title="Team today" hint="Attendance live" />
-      <TeamTodayCard />
 
       <SectionLabel title="Today's operations" hint="Order · courier · return" />
       <div className="grid grid-cols-1 gap-3">
@@ -89,30 +87,25 @@ export function AdminDashboard({ actions }: { actions?: React.ReactNode }) {
   );
 }
 
-/** Who moved orders forward today + who is present. No payroll data. */
+/** Who moved orders forward today. No payroll data. */
 function TeamActivityCard({ brandIds, enabled }: { brandIds: string[]; enabled: boolean }) {
   const today = useMemo(() => {
     const d = new Date();
     d.setHours(0, 0, 0, 0);
     return d.toISOString();
   }, []);
-  const ymd = new Date().toLocaleDateString("en-CA");
 
   const q = useQuery({
     queryKey: ["dash-team-activity", brandIds.join(","), today],
     enabled,
     staleTime: 60_000,
     queryFn: async () => {
-      const [hist, present, profiles] = await Promise.all([
+      const [hist, profiles] = await Promise.all([
         supabase
           .from("order_status_history")
           .select("to_status, changed_by")
           .gte("created_at", today)
           .limit(2000),
-        supabase
-          .from("hr_attendance")
-          .select("id, status")
-          .eq("work_date", ymd),
         supabase.from("profiles").select("id, display_name").limit(500),
       ]);
       const nameOf = new Map<string, string>();
@@ -133,10 +126,7 @@ function TeamActivityCard({ brandIds, enabled }: { brandIds: string[]; enabled: 
         .sort((a, b) => b.confirmed + b.packed - (a.confirmed + a.packed))
         .slice(0, 8);
 
-      const presentCount = (present.data ?? []).filter(
-        (a: any) => a.status && a.status !== "absent",
-      ).length;
-      return { rows, presentCount };
+      return { rows };
     },
   });
 
@@ -146,9 +136,6 @@ function TeamActivityCard({ brandIds, enabled }: { brandIds: string[]; enabled: 
         <CardTitle className="text-[13px] font-semibold flex items-center gap-1.5">
           <Users className="size-3.5 text-indigo-600" /> Team activity
         </CardTitle>
-        <span className="text-[11px] text-muted-foreground">
-          {q.data ? `${q.data.presentCount} present` : ""}
-        </span>
       </CardHeader>
       <CardContent className="space-y-1.5">
         {q.isLoading ? (

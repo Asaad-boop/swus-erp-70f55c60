@@ -109,7 +109,6 @@ export const deleteAccessUser = createServerFn({ method: "POST" })
         .eq("role", "admin");
       if ((count ?? 0) <= 1) throw new Error("Cannot delete the last admin");
     }
-    await supabaseAdmin.from("hr_employees").update({ user_id: null }).eq("user_id", data.userId);
     await supabaseAdmin.from("staff_permissions").delete().eq("user_id", data.userId);
     await supabaseAdmin.from("user_brand_access").delete().eq("user_id", data.userId);
     await supabaseAdmin.from("user_roles").delete().eq("user_id", data.userId);

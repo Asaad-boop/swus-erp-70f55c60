@@ -23,7 +23,6 @@ export type Module =
   | "analytics"
   | "staff_accounts"
   | "customer_accounts"
-  | "hr"
   | "settings"
   | "diagnostics";
 
@@ -40,7 +39,6 @@ export const ROLE_MODULES: Record<string, Module[]> = {
     "analytics",
     "staff_accounts",
     "customer_accounts",
-    "hr",
     "settings",
     "diagnostics",
   ],
@@ -55,8 +53,9 @@ export const ROLE_MODULES: Record<string, Module[]> = {
   customer: [],
 };
 
-ROLE_MODULES["hr_admin"] = ["dashboard", "hr"];
-ROLE_MODULES["hr_manager"] = ["dashboard", "hr"];
+// HRM was removed (Nov 2026); HR roles keep dashboard-only access until the new module ships.
+ROLE_MODULES["hr_admin"] = ["dashboard"];
+ROLE_MODULES["hr_manager"] = ["dashboard"];
 ROLE_MODULES["employee"] = ["dashboard"];
 // Owner mirrors admin: everything.
 ROLE_MODULES["owner"] = [...ROLE_MODULES["admin"]!];
@@ -70,7 +69,7 @@ export function isSuperRole(roles: string[]): boolean {
  * Pages every authenticated staff member may open regardless of role or
  * custom page grants (self-service screens).
  */
-export const SELF_SERVICE_PAGES = ["/erp/hr/my-day", "/erp/hr/my-leave"];
+export const SELF_SERVICE_PAGES: string[] = [];
 
 export function getAllowedModules(roles: string[]): Set<Module> {
   const s = new Set<Module>();
@@ -112,7 +111,6 @@ const PATH_RULES: { test: (p: string) => boolean; module: Module }[] = [
   { test: (p) => p.startsWith("/erp/finance"), module: "finance" },
   { test: (p) => p.startsWith("/erp/marketing"), module: "marketing" },
   { test: (p) => p.startsWith("/erp/crm"), module: "crm" },
-  { test: (p) => p.startsWith("/erp/hr"), module: "hr" },
   { test: (p) => p.startsWith("/erp/analytics"), module: "analytics" },
   { test: (p) => p.startsWith("/erp/reports"), module: "analytics" },
   { test: (p) => p.startsWith("/erp/users"), module: "customer_accounts" },
@@ -175,7 +173,7 @@ export function resolveAccess(
   // Custom grants fully replace the role matrix — even for admins.
   if (pageMode === "custom") {
     // Lockout guard: an admin always keeps the access editor reachable.
-    if (isSuperRole(roles) && pathname.startsWith("/erp/hr/access")) return true;
+    if (isSuperRole(roles) && pathname.startsWith("/erp/access")) return true;
     return pathAllowedBy(allowedPages ?? [], pathname);
   }
   if (isSuperRole(roles)) return true;

@@ -6,7 +6,7 @@
  * can never exist in the menu but be missing from the access editor.
  */
 import {
-  LayoutDashboard, Globe, PlusCircle, Boxes, Wallet, Truck, Settings, Users, UserCog, Radio, Fingerprint, Package,
+  LayoutDashboard, Globe, PlusCircle, Boxes, Wallet, Truck, Settings, Users, Package,
   TrendingDown, TrendingUp, PackagePlus, Megaphone, Container, Heart, GitBranch, Plug,
   ChevronsLeft, ChevronRight, Sparkles, ClipboardList, ClipboardCheck, PackageSearch,
   Activity, BarChart3, RotateCcw, FileSpreadsheet, Zap, Briefcase, Stethoscope, ChevronDown,
@@ -15,9 +15,7 @@ import {
   CalendarClock,
   BellRing,
   CalendarCheck,
-  Palmtree,
   Trophy,
-  Settings2,
 } from "lucide-react";
 
 export type NavItem = {
@@ -181,28 +179,6 @@ export const NAV_GROUPS: Group[] = [
   },
   {
     kind: "accordion",
-    label: "People",
-    defaultClosed: true,
-    sections: [
-      {
-        key: "hr",
-        label: "HRM",
-        icon: UserCog,
-        items: [
-          { to: "/erp/hr", label: "HR Overview", icon: LayoutDashboard, exact: true },
-          { to: "/erp/hr/team", label: "Team Today", icon: Radio },
-          { to: "/erp/hr/my-day", label: "My Day", icon: Fingerprint },
-          { to: "/erp/hr/my-leave", label: "My Leave", icon: Palmtree },
-          { to: "/erp/hr/employees", label: "Employees", icon: Users },
-          { to: "/erp/hr/leave-approvals", label: "Leave Approvals", icon: Palmtree },
-          { to: "/erp/hr/access", label: "Users & Access", icon: ShieldCheck },
-          { to: "/erp/hr/settings", label: "HR Settings", icon: Settings2 },
-        ],
-      },
-    ],
-  },
-  {
-    kind: "accordion",
     label: "System",
     defaultClosed: true,
     sections: [
@@ -212,6 +188,7 @@ export const NAV_GROUPS: Group[] = [
         icon: Settings,
         items: [
           { to: "/erp/settings", label: "Settings", icon: Settings },
+          { to: "/erp/access", label: "Users & Access", icon: ShieldCheck },
           { to: "/erp/diagnostics", label: "Diagnostics", icon: Stethoscope },
           { to: "/erp/deploy-sync", label: "Deploy Sync", icon: Stethoscope },
         ],

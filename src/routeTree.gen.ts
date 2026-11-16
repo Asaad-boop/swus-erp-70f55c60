@@ -19,12 +19,12 @@ import { Route as Char91DotwellKnownChar93OauthProtectedResourceRouteImport } fr
 import { Route as AuthenticatedErpRouteImport } from './routes/_authenticated/erp'
 import { Route as Char91DotmcpChar93InvokeToolToolRouteImport } from './routes/[.mcp]/invoke-tool/$tool'
 import { Route as AuthenticatedErpIndexRouteImport } from './routes/_authenticated/erp.index'
+import { Route as AuthenticatedErpAccessRouteImport } from './routes/_authenticated/erp.access'
 import { Route as AuthenticatedErpCourierRouteImport } from './routes/_authenticated/erp.courier'
 import { Route as AuthenticatedErpCrmRouteImport } from './routes/_authenticated/erp.crm'
 import { Route as AuthenticatedErpDeploySyncRouteImport } from './routes/_authenticated/erp.deploy-sync'
 import { Route as AuthenticatedErpDiagnosticsRouteImport } from './routes/_authenticated/erp.diagnostics'
 import { Route as AuthenticatedErpFinanceRouteImport } from './routes/_authenticated/erp.finance'
-import { Route as AuthenticatedErpHrRouteImport } from './routes/_authenticated/erp.hr'
 import { Route as AuthenticatedErpImportsRouteImport } from './routes/_authenticated/erp.imports'
 import { Route as AuthenticatedErpInventoryRouteImport } from './routes/_authenticated/erp.inventory'
 import { Route as AuthenticatedErpInventoryReportsRouteImport } from './routes/_authenticated/erp.inventory-reports'
@@ -60,17 +60,6 @@ import { Route as AuthenticatedErpFinanceReportsRouteImport } from './routes/_au
 import { Route as AuthenticatedErpFinanceSettingsRouteImport } from './routes/_authenticated/erp.finance.settings'
 import { Route as AuthenticatedErpFinanceTaxesRouteImport } from './routes/_authenticated/erp.finance.taxes'
 import { Route as AuthenticatedErpFinanceWalletsRouteImport } from './routes/_authenticated/erp.finance.wallets'
-import { Route as AuthenticatedErpHrIndexRouteImport } from './routes/_authenticated/erp.hr.index'
-import { Route as AuthenticatedErpHrAccessRouteImport } from './routes/_authenticated/erp.hr.access'
-import { Route as AuthenticatedErpHrAttendanceRouteImport } from './routes/_authenticated/erp.hr.attendance'
-import { Route as AuthenticatedErpHrEmployeesRouteImport } from './routes/_authenticated/erp.hr.employees'
-import { Route as AuthenticatedErpHrLeaveApprovalsRouteImport } from './routes/_authenticated/erp.hr.leave-approvals'
-import { Route as AuthenticatedErpHrMyDayRouteImport } from './routes/_authenticated/erp.hr.my-day'
-import { Route as AuthenticatedErpHrMyLeaveRouteImport } from './routes/_authenticated/erp.hr.my-leave'
-import { Route as AuthenticatedErpHrPayrollRouteImport } from './routes/_authenticated/erp.hr.payroll'
-import { Route as AuthenticatedErpHrPerformanceRouteImport } from './routes/_authenticated/erp.hr.performance'
-import { Route as AuthenticatedErpHrSettingsRouteImport } from './routes/_authenticated/erp.hr.settings'
-import { Route as AuthenticatedErpHrTeamRouteImport } from './routes/_authenticated/erp.hr.team'
 import { Route as AuthenticatedErpImportsIndexRouteImport } from './routes/_authenticated/erp.imports.index'
 import { Route as AuthenticatedErpImportsAgentsRouteImport } from './routes/_authenticated/erp.imports.agents'
 import { Route as AuthenticatedErpImportsIncomingRouteImport } from './routes/_authenticated/erp.imports.incoming'
@@ -179,6 +168,11 @@ const AuthenticatedErpIndexRoute = AuthenticatedErpIndexRouteImport.update({
   path: '/',
   getParentRoute: () => AuthenticatedErpRoute,
 } as any)
+const AuthenticatedErpAccessRoute = AuthenticatedErpAccessRouteImport.update({
+  id: '/access',
+  path: '/access',
+  getParentRoute: () => AuthenticatedErpRoute,
+} as any)
 const AuthenticatedErpCourierRoute = AuthenticatedErpCourierRouteImport.update({
   id: '/courier',
   path: '/courier',
@@ -204,11 +198,6 @@ const AuthenticatedErpDiagnosticsRoute =
 const AuthenticatedErpFinanceRoute = AuthenticatedErpFinanceRouteImport.update({
   id: '/finance',
   path: '/finance',
-  getParentRoute: () => AuthenticatedErpRoute,
-} as any)
-const AuthenticatedErpHrRoute = AuthenticatedErpHrRouteImport.update({
-  id: '/hr',
-  path: '/hr',
   getParentRoute: () => AuthenticatedErpRoute,
 } as any)
 const AuthenticatedErpImportsRoute = AuthenticatedErpImportsRouteImport.update({
@@ -413,69 +402,6 @@ const AuthenticatedErpFinanceWalletsRoute =
     path: '/wallets',
     getParentRoute: () => AuthenticatedErpFinanceRoute,
   } as any)
-const AuthenticatedErpHrIndexRoute = AuthenticatedErpHrIndexRouteImport.update({
-  id: '/',
-  path: '/',
-  getParentRoute: () => AuthenticatedErpHrRoute,
-} as any)
-const AuthenticatedErpHrAccessRoute =
-  AuthenticatedErpHrAccessRouteImport.update({
-    id: '/access',
-    path: '/access',
-    getParentRoute: () => AuthenticatedErpHrRoute,
-  } as any)
-const AuthenticatedErpHrAttendanceRoute =
-  AuthenticatedErpHrAttendanceRouteImport.update({
-    id: '/attendance',
-    path: '/attendance',
-    getParentRoute: () => AuthenticatedErpHrRoute,
-  } as any)
-const AuthenticatedErpHrEmployeesRoute =
-  AuthenticatedErpHrEmployeesRouteImport.update({
-    id: '/employees',
-    path: '/employees',
-    getParentRoute: () => AuthenticatedErpHrRoute,
-  } as any)
-const AuthenticatedErpHrLeaveApprovalsRoute =
-  AuthenticatedErpHrLeaveApprovalsRouteImport.update({
-    id: '/leave-approvals',
-    path: '/leave-approvals',
-    getParentRoute: () => AuthenticatedErpHrRoute,
-  } as any)
-const AuthenticatedErpHrMyDayRoute = AuthenticatedErpHrMyDayRouteImport.update({
-  id: '/my-day',
-  path: '/my-day',
-  getParentRoute: () => AuthenticatedErpHrRoute,
-} as any)
-const AuthenticatedErpHrMyLeaveRoute =
-  AuthenticatedErpHrMyLeaveRouteImport.update({
-    id: '/my-leave',
-    path: '/my-leave',
-    getParentRoute: () => AuthenticatedErpHrRoute,
-  } as any)
-const AuthenticatedErpHrPayrollRoute =
-  AuthenticatedErpHrPayrollRouteImport.update({
-    id: '/payroll',
-    path: '/payroll',
-    getParentRoute: () => AuthenticatedErpHrRoute,
-  } as any)
-const AuthenticatedErpHrPerformanceRoute =
-  AuthenticatedErpHrPerformanceRouteImport.update({
-    id: '/performance',
-    path: '/performance',
-    getParentRoute: () => AuthenticatedErpHrRoute,
-  } as any)
-const AuthenticatedErpHrSettingsRoute =
-  AuthenticatedErpHrSettingsRouteImport.update({
-    id: '/settings',
-    path: '/settings',
-    getParentRoute: () => AuthenticatedErpHrRoute,
-  } as any)
-const AuthenticatedErpHrTeamRoute = AuthenticatedErpHrTeamRouteImport.update({
-  id: '/team',
-  path: '/team',
-  getParentRoute: () => AuthenticatedErpHrRoute,
-} as any)
 const AuthenticatedErpImportsIndexRoute =
   AuthenticatedErpImportsIndexRouteImport.update({
     id: '/',
@@ -813,12 +739,12 @@ export interface FileRoutesByFullPath {
   '/.well-known/oauth-protected-resource': typeof Char91DotwellKnownChar93OauthProtectedResourceRoute
   '/erp': typeof AuthenticatedErpRouteWithChildren
   '/.mcp/invoke-tool/$tool': typeof Char91DotmcpChar93InvokeToolToolRoute
+  '/erp/access': typeof AuthenticatedErpAccessRoute
   '/erp/courier': typeof AuthenticatedErpCourierRoute
   '/erp/crm': typeof AuthenticatedErpCrmRouteWithChildren
   '/erp/deploy-sync': typeof AuthenticatedErpDeploySyncRoute
   '/erp/diagnostics': typeof AuthenticatedErpDiagnosticsRoute
   '/erp/finance': typeof AuthenticatedErpFinanceRouteWithChildren
-  '/erp/hr': typeof AuthenticatedErpHrRouteWithChildren
   '/erp/imports': typeof AuthenticatedErpImportsRouteWithChildren
   '/erp/inventory': typeof AuthenticatedErpInventoryRouteWithChildren
   '/erp/inventory-reports': typeof AuthenticatedErpInventoryReportsRoute
@@ -852,16 +778,6 @@ export interface FileRoutesByFullPath {
   '/erp/finance/settings': typeof AuthenticatedErpFinanceSettingsRoute
   '/erp/finance/taxes': typeof AuthenticatedErpFinanceTaxesRoute
   '/erp/finance/wallets': typeof AuthenticatedErpFinanceWalletsRoute
-  '/erp/hr/access': typeof AuthenticatedErpHrAccessRoute
-  '/erp/hr/attendance': typeof AuthenticatedErpHrAttendanceRoute
-  '/erp/hr/employees': typeof AuthenticatedErpHrEmployeesRoute
-  '/erp/hr/leave-approvals': typeof AuthenticatedErpHrLeaveApprovalsRoute
-  '/erp/hr/my-day': typeof AuthenticatedErpHrMyDayRoute
-  '/erp/hr/my-leave': typeof AuthenticatedErpHrMyLeaveRoute
-  '/erp/hr/payroll': typeof AuthenticatedErpHrPayrollRoute
-  '/erp/hr/performance': typeof AuthenticatedErpHrPerformanceRoute
-  '/erp/hr/settings': typeof AuthenticatedErpHrSettingsRoute
-  '/erp/hr/team': typeof AuthenticatedErpHrTeamRoute
   '/erp/imports/agents': typeof AuthenticatedErpImportsAgentsRoute
   '/erp/imports/incoming': typeof AuthenticatedErpImportsIncomingRoute
   '/erp/imports/reports': typeof AuthenticatedErpImportsReportsRoute
@@ -910,7 +826,6 @@ export interface FileRoutesByFullPath {
   '/erp/analytics/': typeof AuthenticatedErpAnalyticsIndexRoute
   '/erp/crm/': typeof AuthenticatedErpCrmIndexRoute
   '/erp/finance/': typeof AuthenticatedErpFinanceIndexRoute
-  '/erp/hr/': typeof AuthenticatedErpHrIndexRoute
   '/erp/imports/': typeof AuthenticatedErpImportsIndexRoute
   '/erp/marketing/': typeof AuthenticatedErpMarketingIndexRoute
   '/erp/orders/': typeof AuthenticatedErpOrdersIndexRoute
@@ -930,6 +845,7 @@ export interface FileRoutesByTo {
   '/.mcp/list-tools': typeof Char91DotmcpChar93ListToolsRoute
   '/.well-known/oauth-protected-resource': typeof Char91DotwellKnownChar93OauthProtectedResourceRoute
   '/.mcp/invoke-tool/$tool': typeof Char91DotmcpChar93InvokeToolToolRoute
+  '/erp/access': typeof AuthenticatedErpAccessRoute
   '/erp/courier': typeof AuthenticatedErpCourierRoute
   '/erp/deploy-sync': typeof AuthenticatedErpDeploySyncRoute
   '/erp/diagnostics': typeof AuthenticatedErpDiagnosticsRoute
@@ -961,16 +877,6 @@ export interface FileRoutesByTo {
   '/erp/finance/settings': typeof AuthenticatedErpFinanceSettingsRoute
   '/erp/finance/taxes': typeof AuthenticatedErpFinanceTaxesRoute
   '/erp/finance/wallets': typeof AuthenticatedErpFinanceWalletsRoute
-  '/erp/hr/access': typeof AuthenticatedErpHrAccessRoute
-  '/erp/hr/attendance': typeof AuthenticatedErpHrAttendanceRoute
-  '/erp/hr/employees': typeof AuthenticatedErpHrEmployeesRoute
-  '/erp/hr/leave-approvals': typeof AuthenticatedErpHrLeaveApprovalsRoute
-  '/erp/hr/my-day': typeof AuthenticatedErpHrMyDayRoute
-  '/erp/hr/my-leave': typeof AuthenticatedErpHrMyLeaveRoute
-  '/erp/hr/payroll': typeof AuthenticatedErpHrPayrollRoute
-  '/erp/hr/performance': typeof AuthenticatedErpHrPerformanceRoute
-  '/erp/hr/settings': typeof AuthenticatedErpHrSettingsRoute
-  '/erp/hr/team': typeof AuthenticatedErpHrTeamRoute
   '/erp/imports/agents': typeof AuthenticatedErpImportsAgentsRoute
   '/erp/imports/incoming': typeof AuthenticatedErpImportsIncomingRoute
   '/erp/imports/reports': typeof AuthenticatedErpImportsReportsRoute
@@ -1019,7 +925,6 @@ export interface FileRoutesByTo {
   '/erp/analytics': typeof AuthenticatedErpAnalyticsIndexRoute
   '/erp/crm': typeof AuthenticatedErpCrmIndexRoute
   '/erp/finance': typeof AuthenticatedErpFinanceIndexRoute
-  '/erp/hr': typeof AuthenticatedErpHrIndexRoute
   '/erp/imports': typeof AuthenticatedErpImportsIndexRoute
   '/erp/marketing': typeof AuthenticatedErpMarketingIndexRoute
   '/erp/orders': typeof AuthenticatedErpOrdersIndexRoute
@@ -1042,12 +947,12 @@ export interface FileRoutesById {
   '/.well-known/oauth-protected-resource': typeof Char91DotwellKnownChar93OauthProtectedResourceRoute
   '/_authenticated/erp': typeof AuthenticatedErpRouteWithChildren
   '/.mcp/invoke-tool/$tool': typeof Char91DotmcpChar93InvokeToolToolRoute
+  '/_authenticated/erp/access': typeof AuthenticatedErpAccessRoute
   '/_authenticated/erp/courier': typeof AuthenticatedErpCourierRoute
   '/_authenticated/erp/crm': typeof AuthenticatedErpCrmRouteWithChildren
   '/_authenticated/erp/deploy-sync': typeof AuthenticatedErpDeploySyncRoute
   '/_authenticated/erp/diagnostics': typeof AuthenticatedErpDiagnosticsRoute
   '/_authenticated/erp/finance': typeof AuthenticatedErpFinanceRouteWithChildren
-  '/_authenticated/erp/hr': typeof AuthenticatedErpHrRouteWithChildren
   '/_authenticated/erp/imports': typeof AuthenticatedErpImportsRouteWithChildren
   '/_authenticated/erp/inventory': typeof AuthenticatedErpInventoryRouteWithChildren
   '/_authenticated/erp/inventory-reports': typeof AuthenticatedErpInventoryReportsRoute
@@ -1081,16 +986,6 @@ export interface FileRoutesById {
   '/_authenticated/erp/finance/settings': typeof AuthenticatedErpFinanceSettingsRoute
   '/_authenticated/erp/finance/taxes': typeof AuthenticatedErpFinanceTaxesRoute
   '/_authenticated/erp/finance/wallets': typeof AuthenticatedErpFinanceWalletsRoute
-  '/_authenticated/erp/hr/access': typeof AuthenticatedErpHrAccessRoute
-  '/_authenticated/erp/hr/attendance': typeof AuthenticatedErpHrAttendanceRoute
-  '/_authenticated/erp/hr/employees': typeof AuthenticatedErpHrEmployeesRoute
-  '/_authenticated/erp/hr/leave-approvals': typeof AuthenticatedErpHrLeaveApprovalsRoute
-  '/_authenticated/erp/hr/my-day': typeof AuthenticatedErpHrMyDayRoute
-  '/_authenticated/erp/hr/my-leave': typeof AuthenticatedErpHrMyLeaveRoute
-  '/_authenticated/erp/hr/payroll': typeof AuthenticatedErpHrPayrollRoute
-  '/_authenticated/erp/hr/performance': typeof AuthenticatedErpHrPerformanceRoute
-  '/_authenticated/erp/hr/settings': typeof AuthenticatedErpHrSettingsRoute
-  '/_authenticated/erp/hr/team': typeof AuthenticatedErpHrTeamRoute
   '/_authenticated/erp/imports/agents': typeof AuthenticatedErpImportsAgentsRoute
   '/_authenticated/erp/imports/incoming': typeof AuthenticatedErpImportsIncomingRoute
   '/_authenticated/erp/imports/reports': typeof AuthenticatedErpImportsReportsRoute
@@ -1139,7 +1034,6 @@ export interface FileRoutesById {
   '/_authenticated/erp/analytics/': typeof AuthenticatedErpAnalyticsIndexRoute
   '/_authenticated/erp/crm/': typeof AuthenticatedErpCrmIndexRoute
   '/_authenticated/erp/finance/': typeof AuthenticatedErpFinanceIndexRoute
-  '/_authenticated/erp/hr/': typeof AuthenticatedErpHrIndexRoute
   '/_authenticated/erp/imports/': typeof AuthenticatedErpImportsIndexRoute
   '/_authenticated/erp/marketing/': typeof AuthenticatedErpMarketingIndexRoute
   '/_authenticated/erp/orders/': typeof AuthenticatedErpOrdersIndexRoute
@@ -1162,12 +1056,12 @@ export interface FileRouteTypes {
     | '/.well-known/oauth-protected-resource'
     | '/erp'
     | '/.mcp/invoke-tool/$tool'
+    | '/erp/access'
     | '/erp/courier'
     | '/erp/crm'
     | '/erp/deploy-sync'
     | '/erp/diagnostics'
     | '/erp/finance'
-    | '/erp/hr'
     | '/erp/imports'
     | '/erp/inventory'
     | '/erp/inventory-reports'
@@ -1201,16 +1095,6 @@ export interface FileRouteTypes {
     | '/erp/finance/settings'
     | '/erp/finance/taxes'
     | '/erp/finance/wallets'
-    | '/erp/hr/access'
-    | '/erp/hr/attendance'
-    | '/erp/hr/employees'
-    | '/erp/hr/leave-approvals'
-    | '/erp/hr/my-day'
-    | '/erp/hr/my-leave'
-    | '/erp/hr/payroll'
-    | '/erp/hr/performance'
-    | '/erp/hr/settings'
-    | '/erp/hr/team'
     | '/erp/imports/agents'
     | '/erp/imports/incoming'
     | '/erp/imports/reports'
@@ -1259,7 +1143,6 @@ export interface FileRouteTypes {
     | '/erp/analytics/'
     | '/erp/crm/'
     | '/erp/finance/'
-    | '/erp/hr/'
     | '/erp/imports/'
     | '/erp/marketing/'
     | '/erp/orders/'
@@ -1279,6 +1162,7 @@ export interface FileRouteTypes {
     | '/.mcp/list-tools'
     | '/.well-known/oauth-protected-resource'
     | '/.mcp/invoke-tool/$tool'
+    | '/erp/access'
     | '/erp/courier'
     | '/erp/deploy-sync'
     | '/erp/diagnostics'
@@ -1310,16 +1194,6 @@ export interface FileRouteTypes {
     | '/erp/finance/settings'
     | '/erp/finance/taxes'
     | '/erp/finance/wallets'
-    | '/erp/hr/access'
-    | '/erp/hr/attendance'
-    | '/erp/hr/employees'
-    | '/erp/hr/leave-approvals'
-    | '/erp/hr/my-day'
-    | '/erp/hr/my-leave'
-    | '/erp/hr/payroll'
-    | '/erp/hr/performance'
-    | '/erp/hr/settings'
-    | '/erp/hr/team'
     | '/erp/imports/agents'
     | '/erp/imports/incoming'
     | '/erp/imports/reports'
@@ -1368,7 +1242,6 @@ export interface FileRouteTypes {
     | '/erp/analytics'
     | '/erp/crm'
     | '/erp/finance'
-    | '/erp/hr'
     | '/erp/imports'
     | '/erp/marketing'
     | '/erp/orders'
@@ -1390,12 +1263,12 @@ export interface FileRouteTypes {
     | '/.well-known/oauth-protected-resource'
     | '/_authenticated/erp'
     | '/.mcp/invoke-tool/$tool'
+    | '/_authenticated/erp/access'
     | '/_authenticated/erp/courier'
     | '/_authenticated/erp/crm'
     | '/_authenticated/erp/deploy-sync'
     | '/_authenticated/erp/diagnostics'
     | '/_authenticated/erp/finance'
-    | '/_authenticated/erp/hr'
     | '/_authenticated/erp/imports'
     | '/_authenticated/erp/inventory'
     | '/_authenticated/erp/inventory-reports'
@@ -1429,16 +1302,6 @@ export interface FileRouteTypes {
     | '/_authenticated/erp/finance/settings'
     | '/_authenticated/erp/finance/taxes'
     | '/_authenticated/erp/finance/wallets'
-    | '/_authenticated/erp/hr/access'
-    | '/_authenticated/erp/hr/attendance'
-    | '/_authenticated/erp/hr/employees'
-    | '/_authenticated/erp/hr/leave-approvals'
-    | '/_authenticated/erp/hr/my-day'
-    | '/_authenticated/erp/hr/my-leave'
-    | '/_authenticated/erp/hr/payroll'
-    | '/_authenticated/erp/hr/performance'
-    | '/_authenticated/erp/hr/settings'
-    | '/_authenticated/erp/hr/team'
     | '/_authenticated/erp/imports/agents'
     | '/_authenticated/erp/imports/incoming'
     | '/_authenticated/erp/imports/reports'
@@ -1487,7 +1350,6 @@ export interface FileRouteTypes {
     | '/_authenticated/erp/analytics/'
     | '/_authenticated/erp/crm/'
     | '/_authenticated/erp/finance/'
-    | '/_authenticated/erp/hr/'
     | '/_authenticated/erp/imports/'
     | '/_authenticated/erp/marketing/'
     | '/_authenticated/erp/orders/'
@@ -1600,6 +1462,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedErpIndexRouteImport
       parentRoute: typeof AuthenticatedErpRoute
     }
+    '/_authenticated/erp/access': {
+      id: '/_authenticated/erp/access'
+      path: '/access'
+      fullPath: '/erp/access'
+      preLoaderRoute: typeof AuthenticatedErpAccessRouteImport
+      parentRoute: typeof AuthenticatedErpRoute
+    }
     '/_authenticated/erp/courier': {
       id: '/_authenticated/erp/courier'
       path: '/courier'
@@ -1633,13 +1502,6 @@ declare module '@tanstack/react-router' {
       path: '/finance'
       fullPath: '/erp/finance'
       preLoaderRoute: typeof AuthenticatedErpFinanceRouteImport
-      parentRoute: typeof AuthenticatedErpRoute
-    }
-    '/_authenticated/erp/hr': {
-      id: '/_authenticated/erp/hr'
-      path: '/hr'
-      fullPath: '/erp/hr'
-      preLoaderRoute: typeof AuthenticatedErpHrRouteImport
       parentRoute: typeof AuthenticatedErpRoute
     }
     '/_authenticated/erp/imports': {
@@ -1886,83 +1748,6 @@ declare module '@tanstack/react-router' {
       fullPath: '/erp/finance/wallets'
       preLoaderRoute: typeof AuthenticatedErpFinanceWalletsRouteImport
       parentRoute: typeof AuthenticatedErpFinanceRoute
-    }
-    '/_authenticated/erp/hr/': {
-      id: '/_authenticated/erp/hr/'
-      path: '/'
-      fullPath: '/erp/hr/'
-      preLoaderRoute: typeof AuthenticatedErpHrIndexRouteImport
-      parentRoute: typeof AuthenticatedErpHrRoute
-    }
-    '/_authenticated/erp/hr/access': {
-      id: '/_authenticated/erp/hr/access'
-      path: '/access'
-      fullPath: '/erp/hr/access'
-      preLoaderRoute: typeof AuthenticatedErpHrAccessRouteImport
-      parentRoute: typeof AuthenticatedErpHrRoute
-    }
-    '/_authenticated/erp/hr/attendance': {
-      id: '/_authenticated/erp/hr/attendance'
-      path: '/attendance'
-      fullPath: '/erp/hr/attendance'
-      preLoaderRoute: typeof AuthenticatedErpHrAttendanceRouteImport
-      parentRoute: typeof AuthenticatedErpHrRoute
-    }
-    '/_authenticated/erp/hr/employees': {
-      id: '/_authenticated/erp/hr/employees'
-      path: '/employees'
-      fullPath: '/erp/hr/employees'
-      preLoaderRoute: typeof AuthenticatedErpHrEmployeesRouteImport
-      parentRoute: typeof AuthenticatedErpHrRoute
-    }
-    '/_authenticated/erp/hr/leave-approvals': {
-      id: '/_authenticated/erp/hr/leave-approvals'
-      path: '/leave-approvals'
-      fullPath: '/erp/hr/leave-approvals'
-      preLoaderRoute: typeof AuthenticatedErpHrLeaveApprovalsRouteImport
-      parentRoute: typeof AuthenticatedErpHrRoute
-    }
-    '/_authenticated/erp/hr/my-day': {
-      id: '/_authenticated/erp/hr/my-day'
-      path: '/my-day'
-      fullPath: '/erp/hr/my-day'
-      preLoaderRoute: typeof AuthenticatedErpHrMyDayRouteImport
-      parentRoute: typeof AuthenticatedErpHrRoute
-    }
-    '/_authenticated/erp/hr/my-leave': {
-      id: '/_authenticated/erp/hr/my-leave'
-      path: '/my-leave'
-      fullPath: '/erp/hr/my-leave'
-      preLoaderRoute: typeof AuthenticatedErpHrMyLeaveRouteImport
-      parentRoute: typeof AuthenticatedErpHrRoute
-    }
-    '/_authenticated/erp/hr/payroll': {
-      id: '/_authenticated/erp/hr/payroll'
-      path: '/payroll'
-      fullPath: '/erp/hr/payroll'
-      preLoaderRoute: typeof AuthenticatedErpHrPayrollRouteImport
-      parentRoute: typeof AuthenticatedErpHrRoute
-    }
-    '/_authenticated/erp/hr/performance': {
-      id: '/_authenticated/erp/hr/performance'
-      path: '/performance'
-      fullPath: '/erp/hr/performance'
-      preLoaderRoute: typeof AuthenticatedErpHrPerformanceRouteImport
-      parentRoute: typeof AuthenticatedErpHrRoute
-    }
-    '/_authenticated/erp/hr/settings': {
-      id: '/_authenticated/erp/hr/settings'
-      path: '/settings'
-      fullPath: '/erp/hr/settings'
-      preLoaderRoute: typeof AuthenticatedErpHrSettingsRouteImport
-      parentRoute: typeof AuthenticatedErpHrRoute
-    }
-    '/_authenticated/erp/hr/team': {
-      id: '/_authenticated/erp/hr/team'
-      path: '/team'
-      fullPath: '/erp/hr/team'
-      preLoaderRoute: typeof AuthenticatedErpHrTeamRouteImport
-      parentRoute: typeof AuthenticatedErpHrRoute
     }
     '/_authenticated/erp/imports/': {
       id: '/_authenticated/erp/imports/'
@@ -2408,37 +2193,6 @@ const AuthenticatedErpFinanceRouteWithChildren =
     AuthenticatedErpFinanceRouteChildren,
   )
 
-interface AuthenticatedErpHrRouteChildren {
-  AuthenticatedErpHrAccessRoute: typeof AuthenticatedErpHrAccessRoute
-  AuthenticatedErpHrAttendanceRoute: typeof AuthenticatedErpHrAttendanceRoute
-  AuthenticatedErpHrEmployeesRoute: typeof AuthenticatedErpHrEmployeesRoute
-  AuthenticatedErpHrLeaveApprovalsRoute: typeof AuthenticatedErpHrLeaveApprovalsRoute
-  AuthenticatedErpHrMyDayRoute: typeof AuthenticatedErpHrMyDayRoute
-  AuthenticatedErpHrMyLeaveRoute: typeof AuthenticatedErpHrMyLeaveRoute
-  AuthenticatedErpHrPayrollRoute: typeof AuthenticatedErpHrPayrollRoute
-  AuthenticatedErpHrPerformanceRoute: typeof AuthenticatedErpHrPerformanceRoute
-  AuthenticatedErpHrSettingsRoute: typeof AuthenticatedErpHrSettingsRoute
-  AuthenticatedErpHrTeamRoute: typeof AuthenticatedErpHrTeamRoute
-  AuthenticatedErpHrIndexRoute: typeof AuthenticatedErpHrIndexRoute
-}
-
-const AuthenticatedErpHrRouteChildren: AuthenticatedErpHrRouteChildren = {
-  AuthenticatedErpHrAccessRoute: AuthenticatedErpHrAccessRoute,
-  AuthenticatedErpHrAttendanceRoute: AuthenticatedErpHrAttendanceRoute,
-  AuthenticatedErpHrEmployeesRoute: AuthenticatedErpHrEmployeesRoute,
-  AuthenticatedErpHrLeaveApprovalsRoute: AuthenticatedErpHrLeaveApprovalsRoute,
-  AuthenticatedErpHrMyDayRoute: AuthenticatedErpHrMyDayRoute,
-  AuthenticatedErpHrMyLeaveRoute: AuthenticatedErpHrMyLeaveRoute,
-  AuthenticatedErpHrPayrollRoute: AuthenticatedErpHrPayrollRoute,
-  AuthenticatedErpHrPerformanceRoute: AuthenticatedErpHrPerformanceRoute,
-  AuthenticatedErpHrSettingsRoute: AuthenticatedErpHrSettingsRoute,
-  AuthenticatedErpHrTeamRoute: AuthenticatedErpHrTeamRoute,
-  AuthenticatedErpHrIndexRoute: AuthenticatedErpHrIndexRoute,
-}
-
-const AuthenticatedErpHrRouteWithChildren =
-  AuthenticatedErpHrRoute._addFileChildren(AuthenticatedErpHrRouteChildren)
-
 interface AuthenticatedErpImportsRouteChildren {
   AuthenticatedErpImportsAgentsRoute: typeof AuthenticatedErpImportsAgentsRoute
   AuthenticatedErpImportsIncomingRoute: typeof AuthenticatedErpImportsIncomingRoute
@@ -2598,12 +2352,12 @@ const AuthenticatedErpReturnsRouteWithChildren =
   )
 
 interface AuthenticatedErpRouteChildren {
+  AuthenticatedErpAccessRoute: typeof AuthenticatedErpAccessRoute
   AuthenticatedErpCourierRoute: typeof AuthenticatedErpCourierRoute
   AuthenticatedErpCrmRoute: typeof AuthenticatedErpCrmRouteWithChildren
   AuthenticatedErpDeploySyncRoute: typeof AuthenticatedErpDeploySyncRoute
   AuthenticatedErpDiagnosticsRoute: typeof AuthenticatedErpDiagnosticsRoute
   AuthenticatedErpFinanceRoute: typeof AuthenticatedErpFinanceRouteWithChildren
-  AuthenticatedErpHrRoute: typeof AuthenticatedErpHrRouteWithChildren
   AuthenticatedErpImportsRoute: typeof AuthenticatedErpImportsRouteWithChildren
   AuthenticatedErpInventoryRoute: typeof AuthenticatedErpInventoryRouteWithChildren
   AuthenticatedErpInventoryReportsRoute: typeof AuthenticatedErpInventoryReportsRoute
@@ -2631,12 +2385,12 @@ interface AuthenticatedErpRouteChildren {
 }
 
 const AuthenticatedErpRouteChildren: AuthenticatedErpRouteChildren = {
+  AuthenticatedErpAccessRoute: AuthenticatedErpAccessRoute,
   AuthenticatedErpCourierRoute: AuthenticatedErpCourierRoute,
   AuthenticatedErpCrmRoute: AuthenticatedErpCrmRouteWithChildren,
   AuthenticatedErpDeploySyncRoute: AuthenticatedErpDeploySyncRoute,
   AuthenticatedErpDiagnosticsRoute: AuthenticatedErpDiagnosticsRoute,
   AuthenticatedErpFinanceRoute: AuthenticatedErpFinanceRouteWithChildren,
-  AuthenticatedErpHrRoute: AuthenticatedErpHrRouteWithChildren,
   AuthenticatedErpImportsRoute: AuthenticatedErpImportsRouteWithChildren,
   AuthenticatedErpInventoryRoute: AuthenticatedErpInventoryRouteWithChildren,
   AuthenticatedErpInventoryReportsRoute: AuthenticatedErpInventoryReportsRoute,

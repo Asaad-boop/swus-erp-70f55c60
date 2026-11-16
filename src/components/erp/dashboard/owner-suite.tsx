@@ -1143,20 +1143,13 @@ export function TeamOpsSummary({ brandIds, enabled }: { brandIds: string[]; enab
     staleTime: 120_000,
     queryFn: async () => {
       const today = localDate(new Date());
-      const [att, emp, tasks, packed] = await Promise.all([
-        supabase.from("hr_attendance").select("status, late_minutes, overtime_minutes").eq("work_date", today),
-        supabase.from("hr_employees").select("id", { count: "exact", head: true }).eq("status", "active"),
+      const [tasks, packed] = await Promise.all([
         applyBrandScope(supabase.from("hub_tasks").select("id", { count: "exact", head: true }), brandIds).neq("status", "done"),
         applyBrandScope(supabase.from("orders").select("id", { count: "exact", head: true }), brandIds)
           .in("status", ["packed", "ready_to_ship", "shipped", "in_transit", "delivered"])
           .gte("updated_at", today + "T00:00:00.000Z"),
       ]);
-      const rows = (att.data ?? []) as any[];
       return {
-        present: rows.filter(r => ["present", "late", "half_day"].includes(String(r.status))).length,
-        late: rows.filter(r => Number(r.late_minutes ?? 0) > 0).length,
-        ot: Math.round(rows.reduce((s, r) => s + Number(r.overtime_minutes ?? 0), 0) / 60),
-        headcount: emp.count ?? 0,
         pendingTasks: tasks.count ?? 0,
         processedToday: packed.count ?? 0,
       };
@@ -1164,18 +1157,13 @@ export function TeamOpsSummary({ brandIds, enabled }: { brandIds: string[]; enab
   });
 
   const cells = [
-    { l: "Headcount", v: data?.headcount ?? 0 },
-    { l: "Present today", v: data?.present ?? 0 },
-    { l: "Late", v: data?.late ?? 0 },
-    { l: "Overtime (h)", v: data?.ot ?? 0 },
     { l: "Pending tasks", v: data?.pendingTasks ?? 0 },
     { l: "Orders processed", v: data?.processedToday ?? 0 },
   ];
   return (
-    <SectionCard title="Team & operations" icon={Users}
-      action={<Link to="/erp/hr/attendance" className="text-[11px] text-indigo-600 hover:underline">HR →</Link>}>
+    <SectionCard title="Team & operations" icon={Users}>
       {isLoading ? <Skeleton className="h-20" /> : (
-        <div className="grid grid-cols-3 gap-2 md:grid-cols-6">
+        <div className="grid grid-cols-2 gap-2">
           {cells.map(c => (
             <div key={c.l} className="rounded-md border border-slate-200 p-2">
               <div className="text-[10px] uppercase tracking-wider text-slate-500">{c.l}</div>

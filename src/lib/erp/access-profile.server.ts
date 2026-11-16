@@ -9,7 +9,6 @@ type AccessInput = {
   brandIds: string[];
   pageMode: "role_default" | "custom";
   allowedPages: string[];
-  employeeId: string | null;
 };
 
 export async function assertAccessAdmin(supabase: SupabaseClient, userId: string) {
@@ -46,7 +45,6 @@ export async function replaceAccessProfile(supabase: SupabaseClient, input: Acce
     _brand_ids: data.brandIds,
     _page_mode: data.pageMode,
     _allowed_pages: data.allowedPages,
-    _employee_id: data.employeeId,
   });
   if (error) throw error;
   return result;
@@ -80,7 +78,7 @@ export async function listAccessWorkspace(supabase: SupabaseClient, actorId: str
   }
   const ids = allAuthUsers.map((user) => user.id as string);
   const safeIds = ids.length ? ids : ["00000000-0000-0000-0000-000000000000"];
-  const [rolesRes, profilesRes, permsRes, brandsRes, employeesRes] = await Promise.all([
+  const [rolesRes, profilesRes, permsRes, brandsRes] = await Promise.all([
     supabaseAdmin.from("user_roles").select("user_id,role").in("user_id", safeIds),
     supabaseAdmin.from("profiles").select("id,display_name").in("id", safeIds),
     supabaseAdmin
@@ -88,12 +86,8 @@ export async function listAccessWorkspace(supabase: SupabaseClient, actorId: str
       .select("user_id,permissions,updated_at")
       .in("user_id", safeIds),
     supabaseAdmin.from("user_brand_access").select("user_id,brand_id").in("user_id", safeIds),
-    supabaseAdmin
-      .from("hr_employees")
-      .select("id,user_id,full_name,employee_code,status")
-      .order("full_name"),
   ]);
-  for (const result of [rolesRes, profilesRes, permsRes, brandsRes, employeesRes])
+  for (const result of [rolesRes, profilesRes, permsRes, brandsRes])
     if (result.error) throw result.error;
 
   const roles = new Map<string, AppRole[]>();
@@ -104,18 +98,12 @@ export async function listAccessWorkspace(supabase: SupabaseClient, actorId: str
   const brands = new Map<string, string[]>();
   for (const row of brandsRes.data ?? [])
     brands.set(row.user_id, [...(brands.get(row.user_id) ?? []), row.brand_id]);
-  const employees = new Map(
-    (employeesRes.data ?? [])
-      .filter((row) => row.user_id)
-      .map((row) => [row.user_id as string, row]),
-  );
 
   const users: AccessWorkspaceUser[] = allAuthUsers
     .map((authUser) => {
       const userRoles = roles.get(authUser.id) ?? [];
       const permissionRow = permissions.get(authUser.id);
       const document = (permissionRow?.permissions ?? {}) as Record<string, unknown>;
-      const employee = employees.get(authUser.id);
       const brandIds = brands.get(authUser.id) ?? [];
       const allowedPages = Array.isArray(document.allowedPages)
         ? document.allowedPages.map(String).filter((path) => ALL_PAGE_PATHS.includes(path))
@@ -137,10 +125,6 @@ export async function listAccessWorkspace(supabase: SupabaseClient, actorId: str
         allowedPages,
         brandMode,
         brandIds,
-        employeeId: employee?.id ?? null,
-        employeeName: employee?.full_name ?? null,
-        employeeCode: employee?.employee_code ?? null,
-        employeeStatus: employee?.status ?? null,
         updatedAt: permissionRow?.updated_at ?? null,
       };
     })
@@ -152,5 +136,5 @@ export async function listAccessWorkspace(supabase: SupabaseClient, actorId: str
         permissions.has(user.id) && user.roles.some((role) => role !== "customer"),
     );
 
-  return { users, employees: employeesRes.data ?? [] };
+  return { users };
 }

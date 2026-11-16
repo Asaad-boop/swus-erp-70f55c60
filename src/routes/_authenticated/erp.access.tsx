@@ -1,5 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState, type ReactNode } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { toast } from "sonner";
@@ -49,7 +49,6 @@ import {
 } from "@/components/ui/select";
 import { Separator } from "@/components/ui/separator";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { HrPageHeader } from "@/components/erp/hr/hr-shell";
 import { useBrand } from "@/contexts/brand-context";
 import { MY_ACCESS_QUERY_KEY } from "@/hooks/use-my-access-profile";
 import { useCurrentRole } from "@/hooks/use-current-role";
@@ -79,15 +78,15 @@ import {
 } from "@/lib/erp/permissions/page-catalog";
 import { cn } from "@/lib/utils";
 
-export const Route = createFileRoute("/_authenticated/erp/hr/access")({
+export const Route = createFileRoute("/_authenticated/erp/access")({
   head: () => ({
     meta: [
-      { title: "Users & Access — HRM" },
+      { title: "Users & Access" },
       {
         name: "description",
         content: "Manage ERP staff identities, roles, brands and page access from one workspace.",
       },
-      { property: "og:title", content: "Users & Access — HRM" },
+      { property: "og:title", content: "Users & Access" },
       { property: "og:description", content: "One secure workspace for staff access management." },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary" },
@@ -102,15 +101,6 @@ type Draft = {
   brandIds: string[];
   pageMode: PageMode;
   allowedPages: string[];
-  employeeId: string | null;
-};
-
-type Employee = {
-  id: string;
-  user_id: string | null;
-  full_name: string;
-  employee_code: string | null;
-  status: string;
 };
 
 const STAFF_ROLES = APP_ROLES.filter((role) => role !== "customer");
@@ -123,7 +113,6 @@ const emptyInvite = {
   brandIds: [] as string[],
   pageMode: "role_default" as PageMode,
   allowedPages: [] as string[],
-  employeeId: null as string | null,
 };
 
 function fromUser(user: AccessWorkspaceUser): Draft {
@@ -133,7 +122,6 @@ function fromUser(user: AccessWorkspaceUser): Draft {
     brandIds: user.brandIds,
     pageMode: user.pageMode,
     allowedPages: user.allowedPages,
-    employeeId: user.employeeId,
   };
 }
 
@@ -174,7 +162,6 @@ function AccessPage() {
     refetchOnWindowFocus: true,
   });
   const usersList = useMemo(() => workspace.data?.users ?? [], [workspace.data?.users]);
-  const employees = (workspace.data?.employees ?? []) as Employee[];
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [draft, setDraft] = useState<Draft | null>(null);
   const [search, setSearch] = useState("");
@@ -259,7 +246,7 @@ function AccessPage() {
       if (statusFilter === "custom" && user.pageMode !== "custom") return false;
       return (
         !term ||
-        `${user.displayName ?? ""} ${user.email ?? ""} ${user.employeeName ?? ""}`
+        `${user.displayName ?? ""} ${user.email ?? ""}`
           .toLowerCase()
           .includes(term)
       );
@@ -295,10 +282,10 @@ function AccessPage() {
 
   return (
     <div className="mx-auto max-w-[1600px] space-y-4 p-4 md:p-6">
-      <HrPageHeader
+      <PageHeader
         icon={ShieldCheck}
         title="Users & Access"
-        subtitle="Staff identity, role, brand, page permission and employee link — one control center."
+        subtitle="Staff identity, role, brand and page permission — one control center."
         actions={
           <Button size="sm" onClick={() => setInviteOpen(true)}>
             <UserPlus className="h-4 w-4" /> New staff login
@@ -393,8 +380,7 @@ function AccessPage() {
                     <TabsTrigger value="access">Roles</TabsTrigger>
                     <TabsTrigger value="brands">Brands</TabsTrigger>
                     <TabsTrigger value="pages">Pages</TabsTrigger>
-                    <TabsTrigger value="employee">Employee</TabsTrigger>
-                    <TabsTrigger value="security">Security</TabsTrigger>
+                                        <TabsTrigger value="security">Security</TabsTrigger>
                   </TabsList>
                 </div>
                 <div className="p-4 md:p-5">
@@ -422,14 +408,6 @@ function AccessPage() {
                       onChange={(pageMode, allowedPages) =>
                         setDraft({ ...draft, pageMode, allowedPages })
                       }
-                    />
-                  </TabsContent>
-                  <TabsContent value="employee" className="mt-0">
-                    <EmployeePanel
-                      employees={employees}
-                      selectedUserId={selected.id}
-                      value={draft.employeeId}
-                      onChange={(employeeId) => setDraft({ ...draft, employeeId })}
                     />
                   </TabsContent>
                   <TabsContent value="security" className="mt-0">
@@ -498,7 +476,6 @@ function AccessPage() {
         value={invite}
         onChange={setInvite}
         brands={brands}
-        employees={employees}
         pending={createMutation.isPending}
         onSubmit={() => createMutation.mutate()}
       />
@@ -614,7 +591,6 @@ function ProfileHeader({
       <div className="flex gap-2 text-xs">
         <Badge variant="secondary">{effectivePages} pages</Badge>
         <Badge variant="secondary">{brandCount} brands</Badge>
-        {user.employeeName && <Badge variant="outline">{user.employeeName}</Badge>}
       </div>
     </div>
   );
@@ -872,47 +848,6 @@ function PagesPanel({
   );
 }
 
-function EmployeePanel({
-  employees,
-  selectedUserId,
-  value,
-  onChange,
-}: {
-  employees: Employee[];
-  selectedUserId: string;
-  value: string | null;
-  onChange: (value: string | null) => void;
-}) {
-  const available = employees.filter(
-    (employee) => !employee.user_id || employee.user_id === selectedUserId || employee.id === value,
-  );
-  return (
-    <section className="space-y-4">
-      <PanelHeading
-        title="Employee identity"
-        copy="Link this login to exactly one HR employee for self-service attendance and payroll."
-      />
-      <div className="max-w-xl space-y-2">
-        <Label>Linked employee</Label>
-        <Select value={value ?? "none"} onValueChange={(id) => onChange(id === "none" ? null : id)}>
-          <SelectTrigger>
-            <SelectValue />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="none">No employee linked</SelectItem>
-            {available.map((employee) => (
-              <SelectItem key={employee.id} value={employee.id}>
-                {employee.full_name}
-                {employee.employee_code ? ` · ${employee.employee_code}` : ""} · {employee.status}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-      </div>
-    </section>
-  );
-}
-
 function SecurityPanel({
   user,
   onPassword,
@@ -1017,7 +952,6 @@ function CreateUserDialog({
   value,
   onChange,
   brands,
-  employees,
   pending,
   onSubmit,
 }: {
@@ -1026,7 +960,6 @@ function CreateUserDialog({
   value: typeof emptyInvite;
   onChange: (value: typeof emptyInvite) => void;
   brands: Array<{ id: string; name: string }>;
-  employees: Employee[];
   pending: boolean;
   onSubmit: () => void;
 }) {
@@ -1062,29 +995,6 @@ function CreateUserDialog({
                 onChange={(event) => onChange({ ...value, password: event.target.value })}
                 placeholder="Minimum 8 characters"
               />
-            </div>
-            <div>
-              <Label>Employee link</Label>
-              <Select
-                value={value.employeeId ?? "none"}
-                onValueChange={(id) =>
-                  onChange({ ...value, employeeId: id === "none" ? null : id })
-                }
-              >
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="none">Link later</SelectItem>
-                  {employees
-                    .filter((employee) => !employee.user_id)
-                    .map((employee) => (
-                      <SelectItem key={employee.id} value={employee.id}>
-                        {employee.full_name}
-                      </SelectItem>
-                    ))}
-                </SelectContent>
-              </Select>
             </div>
           </div>
           <Separator />
@@ -1189,5 +1099,32 @@ function CreateUserDialog({
         </DialogFooter>
       </DialogContent>
     </Dialog>
+  );
+}
+
+function PageHeader({
+  icon: Icon,
+  title,
+  subtitle,
+  actions,
+}: {
+  icon: typeof ShieldCheck;
+  title: string;
+  subtitle?: ReactNode;
+  actions?: ReactNode;
+}) {
+  return (
+    <div className="flex flex-wrap items-end justify-between gap-3">
+      <div className="flex min-w-0 items-center gap-2.5">
+        <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-primary/10 text-primary">
+          <Icon className="h-4.5 w-4.5" />
+        </span>
+        <div className="min-w-0">
+          <h1 className="font-display text-xl font-bold tracking-tight">{title}</h1>
+          {subtitle && <p className="text-xs text-muted-foreground">{subtitle}</p>}
+        </div>
+      </div>
+      {actions && <div className="flex flex-wrap items-center gap-2">{actions}</div>}
+    </div>
   );
 }
