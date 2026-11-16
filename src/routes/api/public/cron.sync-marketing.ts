@@ -15,10 +15,14 @@ export const Route = createFileRoute("/api/public/cron/sync-marketing")({
         const apikey = request.headers.get('apikey');
         const expectedSecret = process.env.CRON_SECRET;
         const expectedApiKey =
-          process.env.SUPABASE_PUBLISHABLE_KEY ?? process.env.VITE_SUPABASE_PUBLISHABLE_KEY;
+          process.env.SUPABASE_PUBLISHABLE_KEY ??
+          process.env.VITE_SUPABASE_PUBLISHABLE_KEY ??
+          import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY;
+        const apikeyHeader =
+          apikey ?? request.headers.get("authorization")?.replace(/^Bearer\s+/i, "") ?? null;
         const ok =
           (expectedSecret && cronSecret === expectedSecret) ||
-          (expectedApiKey && apikey === expectedApiKey);
+          (expectedApiKey && apikeyHeader === expectedApiKey);
         if (!ok) {
           return new Response('Unauthorized', { status: 401 });
         }
