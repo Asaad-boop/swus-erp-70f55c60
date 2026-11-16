@@ -129,7 +129,7 @@ export function OrdersStatusTabs({ active, counts, total, onChange, incompleteCo
         className="overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
         role="tablist"
       >
-        <div className="flex min-w-max items-stretch gap-1 rounded-lg border border-border bg-card p-1">
+        <div className="flex min-w-max items-stretch gap-1 rounded-[14px] border border-border/70 bg-muted/70 p-1">
           {STATUS_TABS.map((t) => {
             const c =
               t.key === "all"
@@ -149,15 +149,22 @@ export function OrdersStatusTabs({ active, counts, total, onChange, incompleteCo
                 role="tab"
                 aria-selected={isActive}
                 onClick={() => onChange(t.statuses, t.key)}
-                className={cn(
-                  "group relative h-11 min-w-[92px] justify-start gap-2 rounded-md border border-transparent px-2.5 text-left transition-all duration-300",
+                style={
                   isActive
-                    ? "bg-muted text-foreground shadow-sm"
-                    : "text-muted-foreground hover:bg-muted/60 hover:text-foreground",
+                    ? {
+                        boxShadow: `0 0 0 1px color-mix(in oklab, ${accent} 38%, transparent), 0 6px 16px -8px color-mix(in oklab, ${accent} 55%, transparent)`,
+                      }
+                    : undefined
+                }
+                className={cn(
+                  "group relative h-12 min-w-[100px] justify-start gap-2.5 rounded-[10px] border border-transparent px-2.5 text-left transition-all duration-300",
+                  isActive
+                    ? "bg-card text-foreground"
+                    : "text-muted-foreground hover:bg-card/70 hover:text-foreground",
                 )}
               >
                 <span
-                  className="grid h-7 w-7 shrink-0 place-items-center rounded-md transition-transform duration-300 group-hover:scale-105"
+                  className="grid h-8 w-8 shrink-0 place-items-center rounded-[9px] transition-transform duration-300 group-hover:scale-105"
                   style={{
                     backgroundColor: `color-mix(in oklab, ${accent} 14%, transparent)`,
                     color: accent,
@@ -179,7 +186,6 @@ export function OrdersStatusTabs({ active, counts, total, onChange, incompleteCo
                     {c.toLocaleString()}
                   </span>
                 </span>
-                {isActive ? <span className="absolute inset-x-2 bottom-0 h-0.5 rounded-full" style={{ backgroundColor: accent }} /> : null}
               </Button>
             );
           })}

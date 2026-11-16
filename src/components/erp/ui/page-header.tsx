@@ -1,5 +1,6 @@
 import type { ReactNode } from "react";
 import { cn } from "@/lib/utils";
+import { useNavCrumb } from "@/components/erp/shell/header-breadcrumb";
 
 type Props = {
   /** Small uppercase context line above the title. */
@@ -35,6 +36,8 @@ export function ErpPageHeader({
   sticky = false,
   className,
 }: Props) {
+  const crumb = useNavCrumb();
+  const Icon = crumb?.item.icon;
   return (
     <header
       className={cn(
@@ -43,7 +46,12 @@ export function ErpPageHeader({
         className,
       )}
     >
-      <div className="flex min-w-0 items-center gap-3">
+      <div className="flex min-w-0 items-center gap-3.5">
+        {Icon && (
+          <div className="erp-title-icon hidden sm:grid h-11 w-11 shrink-0 place-items-center rounded-[12px]">
+            <Icon className="h-5 w-5" />
+          </div>
+        )}
         <div className="min-w-0">
           {breadcrumb != null ? (
             <div className="text-caption-v2 text-muted-foreground">{breadcrumb}</div>

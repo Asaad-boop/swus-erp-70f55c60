@@ -41,13 +41,13 @@ function ErpLayout() {
     <BrandProvider>
       <ErpQuickActionsProvider>
       <GlobalSearchProvider>
-      <div className="flex h-screen bg-background overflow-hidden">
+      <div className="erp-app flex h-screen overflow-hidden">
         <RouteProgress />
         <ErpSidebar />
         <GlobalNewOrderNotifier />
         <DocBrandingSync />
 
-        <div className="flex-1 flex flex-col min-w-0 h-screen">
+        <div className="erp-panel flex-1 flex flex-col min-w-0 h-screen bg-background">
           <header className="erp-topbar h-14 shrink-0 border-b border-border/70 bg-background/85 backdrop-blur-md flex items-center justify-between px-4 md:px-8 gap-3">
             <div className="flex items-center gap-2 md:hidden">
               <Sheet open={mobileNav} onOpenChange={setMobileNav}>

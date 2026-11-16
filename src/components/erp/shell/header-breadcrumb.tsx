@@ -35,7 +35,7 @@ function tailLabel(pathname: string): string {
   return seg.replace(/[-_]+/g, " ").replace(/\b\w/g, (c) => c.toUpperCase());
 }
 
-function findCrumb(pathname: string): Crumb | null {
+export function findCrumb(pathname: string): Crumb | null {
   const clean = pathname.replace(/\/+$/, "") || "/";
   for (const { path, crumb } of INDEX) {
     if (clean === path) return crumb;
@@ -44,6 +44,12 @@ function findCrumb(pathname: string): Crumb | null {
     if (path !== "/erp" && clean.startsWith(path + "/")) return crumb;
   }
   return null;
+}
+
+/** Nav entry for the current route (same tree as the sidebar). */
+export function useNavCrumb(): Crumb | null {
+  const pathname = useRouterState({ select: (s) => s.location.pathname });
+  return useMemo(() => findCrumb(pathname), [pathname]);
 }
 
 /** "Where am I" trail in the top bar, derived from the same nav tree as the sidebar. */

@@ -42,6 +42,7 @@ export const NavLinkRow = memo(function NavLinkRow({
         search={item.search as never}
         onClick={onNavigate}
         aria-current={active ? "page" : undefined}
+        data-nav-active={active ? "true" : undefined}
         className={cn(
           "group/link relative flex items-center gap-2.5 rounded-xl outline-none",
           "transition-all duration-200 ease-out",
