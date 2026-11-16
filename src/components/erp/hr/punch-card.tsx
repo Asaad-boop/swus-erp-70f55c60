@@ -122,6 +122,7 @@ export function PunchCard({
   const { employee: emp, today, state } = data;
   const sched = emp.sched_minutes * 60;
   const pct = sched > 0 ? Math.min(100, (worked / sched) * 100) : 0;
+  const noBreak = emp.break_minutes === 0;
   const breakLeft = emp.break_minutes * 60 - onBreakSecs;
   const firstIn = data.sessions[0]?.check_in ?? null;
   const busy = m.isPending;
@@ -184,9 +185,11 @@ export function PunchCard({
           </div>
           <p className="mt-2 text-xs text-muted-foreground">
             Shift {time12(emp.shift_start)} – {time12(emp.shift_end)}
-            {emp.break_start && emp.break_end
-              ? ` · Break ${time12(emp.break_start)} – ${time12(emp.break_end)}`
-              : ` · Break ${emp.break_minutes}m`}
+            {noBreak
+              ? " · No break (টানা ডিউটি)"
+              : emp.break_start && emp.break_end
+                ? ` · Break ${time12(emp.break_start)} – ${time12(emp.break_end)}`
+                : ` · Break ${emp.break_minutes}m`}
           </p>
         </div>
         {showHistoryLink && (
@@ -217,7 +220,7 @@ export function PunchCard({
             {firstIn ? <>In {clock(firstIn)}</> : "Not checked in yet"}
             {state === "on_break" && <> · Worked {hm(worked / 60)}</>}
             {onBreakSecs > 0 && state !== "on_break" && <> · Break {hm(onBreakSecs / 60)}</>}
-            {breakLeft < 0 && (
+            {!noBreak && breakLeft < 0 && (
               <span className="text-rose-600"> · {hm(-breakLeft / 60)} over break</span>
             )}
           </div>
@@ -237,16 +240,22 @@ export function PunchCard({
           )}
           {state === "working" && (
             <>
-              <Button
-                size="lg"
-                variant="outline"
-                disabled={busy}
-                onClick={() => m.mutate("break_start")}
-                className="h-14 flex-1 gap-2 rounded-xl border-sky-500/40 px-6 text-base font-semibold sm:flex-none"
-              >
-                {busy ? <Loader2 className="size-5 animate-spin" /> : <Coffee className="size-5" />}{" "}
-                Break
-              </Button>
+              {!noBreak && (
+                <Button
+                  size="lg"
+                  variant="outline"
+                  disabled={busy}
+                  onClick={() => m.mutate("break_start")}
+                  className="h-14 flex-1 gap-2 rounded-xl border-sky-500/40 px-6 text-base font-semibold sm:flex-none"
+                >
+                  {busy ? (
+                    <Loader2 className="size-5 animate-spin" />
+                  ) : (
+                    <Coffee className="size-5" />
+                  )}{" "}
+                  Break
+                </Button>
+              )}
               <Button
                 size="lg"
                 variant="outline"

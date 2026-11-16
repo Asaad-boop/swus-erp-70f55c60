@@ -184,10 +184,13 @@ function EmployeesPage() {
                           {time12(e.shift_start)} – {time12(e.shift_end)}
                         </div>
                         <div className="text-xs text-muted-foreground">
-                          Break{" "}
-                          {e.break_start && e.break_end
-                            ? `${time12(e.break_start)}–${time12(e.break_end)}`
-                            : `${e.break_minutes}m`}
+                          {e.break_minutes === 0
+                            ? "No break · টানা ডিউটি"
+                            : `Break ${
+                                e.break_start && e.break_end
+                                  ? `${time12(e.break_start)}–${time12(e.break_end)}`
+                                  : `${e.break_minutes}m`
+                              }`}
                         </div>
                       </td>
                       <td className="px-3 py-2.5">
@@ -274,6 +277,7 @@ type Form = {
   break_start: string;
   break_end: string;
   break_minutes: number;
+  no_break: boolean;
   work_days: number[];
   late_grace_min: number;
   ot_min_minutes: number;
@@ -316,6 +320,7 @@ function toForm(e: Employee | null, p: EmployeePay | null): Form {
     break_start: e ? hhmm(e.break_start) : "14:00",
     break_end: e ? hhmm(e.break_end) : "15:00",
     break_minutes: e?.break_minutes ?? 60,
+    no_break: e ? e.break_minutes === 0 : false,
     work_days: e?.work_days ?? [6, 0, 1, 2, 3, 4],
     late_grace_min: e?.late_grace_min ?? 10,
     ot_min_minutes: e?.ot_min_minutes ?? 30,
@@ -363,11 +368,13 @@ function EmployeeSheet({
   // Break window drives the break allowance unless the window is cleared.
   const windowMin = f.break_start && f.break_end ? mins(f.break_start, f.break_end) : 0;
   useEffect(() => {
-    if (windowMin > 0 && windowMin < 600) setF((s) => ({ ...s, break_minutes: windowMin }));
+    if (windowMin > 0 && windowMin < 600)
+      setF((s) => (s.no_break ? s : { ...s, break_minutes: windowMin }));
   }, [windowMin]);
 
   const shiftMin = mins(f.shift_start, f.shift_end);
-  const netMin = Math.max(0, shiftMin - f.break_minutes);
+  const breakMin = f.no_break ? 0 : f.break_minutes;
+  const netMin = Math.max(0, shiftMin - breakMin);
   const salary = Number(f.monthly_salary) || 0;
   const workdaysPerMonth = Math.round((f.work_days.length * 30) / 7);
   const perDay = workdaysPerMonth ? salary / workdaysPerMonth : 0;
@@ -398,9 +405,9 @@ function EmployeeSheet({
         user_id: f.user_id,
         shift_start: f.shift_start,
         shift_end: f.shift_end,
-        break_start: f.break_start,
-        break_end: f.break_end,
-        break_minutes: f.break_minutes,
+        break_start: f.no_break ? "" : f.break_start,
+        break_end: f.no_break ? "" : f.break_end,
+        break_minutes: f.no_break ? 0 : f.break_minutes,
         work_days: f.work_days,
         late_grace_min: f.late_grace_min,
         ot_min_minutes: f.ot_min_minutes,
@@ -569,28 +576,56 @@ function EmployeeSheet({
                   onChange={(e) => set("shift_end", e.target.value)}
                 />
               </Field>
-              <Field label="Break from">
-                <Input
-                  type="time"
-                  value={f.break_start}
-                  onChange={(e) => set("break_start", e.target.value)}
-                />
-              </Field>
-              <Field label="Break to">
-                <Input
-                  type="time"
-                  value={f.break_end}
-                  onChange={(e) => set("break_end", e.target.value)}
-                />
-              </Field>
-              <Field label="Break allowance (min)">
-                <Input
-                  type="number"
-                  min={0}
-                  value={f.break_minutes}
-                  onChange={(e) => set("break_minutes", Number(e.target.value))}
-                />
-              </Field>
+              <div className="sm:col-span-2">
+                <label className="flex items-center justify-between gap-3 rounded-lg border p-3">
+                  <span>
+                    <span className="block text-sm font-medium">No break — টানা ডিউটি</span>
+                    <span className="block text-xs text-muted-foreground">
+                      পুরো shift-টাই কাজের সময়। Check-in কার্ডে Break বাটন দেখাবে না।
+                    </span>
+                  </span>
+                  <Switch
+                    checked={f.no_break}
+                    onCheckedChange={(v) =>
+                      setF((s) => ({
+                        ...s,
+                        no_break: v,
+                        break_minutes: v
+                          ? 0
+                          : s.break_start && s.break_end
+                            ? mins(s.break_start, s.break_end)
+                            : 60,
+                      }))
+                    }
+                  />
+                </label>
+              </div>
+              {!f.no_break && (
+                <>
+                  <Field label="Break from">
+                    <Input
+                      type="time"
+                      value={f.break_start}
+                      onChange={(e) => set("break_start", e.target.value)}
+                    />
+                  </Field>
+                  <Field label="Break to">
+                    <Input
+                      type="time"
+                      value={f.break_end}
+                      onChange={(e) => set("break_end", e.target.value)}
+                    />
+                  </Field>
+                  <Field label="Break allowance (min)">
+                    <Input
+                      type="number"
+                      min={0}
+                      value={f.break_minutes}
+                      onChange={(e) => set("break_minutes", Number(e.target.value))}
+                    />
+                  </Field>
+                </>
+              )}
               <Field label="Late after (grace, min)">
                 <Input
                   type="number"
@@ -629,7 +664,8 @@ function EmployeeSheet({
               </div>
             </div>
             <p className="rounded-lg bg-muted/50 px-3 py-2 text-xs text-muted-foreground">
-              Daily duty {hm(shiftMin)} − break {hm(f.break_minutes)} ={" "}
+              Daily duty {hm(shiftMin)}
+              {f.no_break ? " · no break" : ` − break ${hm(breakMin)}`} ={" "}
               <b className="text-foreground">{hm(netMin)} work</b> · {f.work_days.length} days/week
             </p>
           </Section>
