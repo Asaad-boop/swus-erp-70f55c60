@@ -14,6 +14,30 @@ export type Database = {
   }
   public: {
     Tables: {
+      _backup_curtain_merge_20261117: {
+        Row: {
+          created_at: string
+          id: number
+          original_record: Json
+          source_table: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          id?: never
+          original_record: Json
+          source_table: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          id?: never
+          original_record?: Json
+          source_table?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       _backup_hrm_removed_2026_11_16: {
         Row: {
           backed_at: string

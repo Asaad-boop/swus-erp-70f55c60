@@ -1,0 +1,1 @@
+CREATE POLICY curtain_merge_backup_service_only ON public._backup_curtain_merge_20261117 FOR ALL TO service_role USING (true) WITH CHECK (true);

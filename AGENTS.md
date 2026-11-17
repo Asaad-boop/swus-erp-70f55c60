@@ -6,3 +6,4 @@
 - Query defaults never reuse previous-key data globally; brand-specific rows must not appear while a different brand's query loads.
 - Offset-paginated aggregate queries use a unique row ID as their final order key so equal timestamps do not shuffle pages.
 - Explicit custom-page data reads use private.staff_has_explicit_page with the authenticated user's brand scope; page grants do not confer roles or write access, preventing empty staff pages without privilege escalation.
+- Historical product merges preserve row IDs, monetary snapshots and movement quantities in a private pre-merge backup; only product/color references are reassigned, with atomic conservation checks to prevent duplicate stock or finance postings.

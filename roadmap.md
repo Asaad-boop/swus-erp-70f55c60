@@ -1,5 +1,10 @@
 # Roadmap
 
+## Flower Curtain Buckle consolidation
+- [x] Verify all three Pearl products, color SKUs, sales, procurement and stock references; preserve separate Elastic product.
+- [x] Merge Beige/Coffee into the existing parent without losing history; remove duplicate catalog entries with private backup.
+- [x] Atomic checks preserve sales snapshots, stock movements, combined physical stock and financial entries; legacy uncolored orders remain unguessed.
+
 ## Requested Meta spend reconciliation
 - [x] Sync the two named accounts for October 28–November 15 and record verified spend at BDT 131/USD without a second cash debit; corrected reversed account-brand mapping.
 - [ ] Additional USD 78.88 requires the account ID, brand and spend date/range before recording; do not guess or add it to an already-synced total.
