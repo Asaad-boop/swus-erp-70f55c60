@@ -14,21 +14,21 @@ export type Database = {
   }
   public: {
     Tables: {
-      _backup_hr_reset_2026_11_05: {
+      _backup_hrm_removed_2026_11_16: {
         Row: {
-          backed_at: string | null
-          row_data: Json | null
-          src: string | null
+          backed_at: string
+          row_data: Json
+          src: string
         }
         Insert: {
-          backed_at?: string | null
-          row_data?: Json | null
-          src?: string | null
+          backed_at?: string
+          row_data: Json
+          src: string
         }
         Update: {
-          backed_at?: string | null
-          row_data?: Json | null
-          src?: string | null
+          backed_at?: string
+          row_data?: Json
+          src?: string
         }
         Relationships: []
       }
@@ -233,6 +233,33 @@ export type Database = {
           snapshot_at?: string | null
           transaction_date?: string | null
           txn_type?: string | null
+        }
+        Relationships: []
+      }
+      _meta_brand_retag_backup: {
+        Row: {
+          created_at: string
+          evidence: Json | null
+          kind: string
+          new_brand: string
+          old_brand: string | null
+          row_id: string
+        }
+        Insert: {
+          created_at?: string
+          evidence?: Json | null
+          kind: string
+          new_brand: string
+          old_brand?: string | null
+          row_id: string
+        }
+        Update: {
+          created_at?: string
+          evidence?: Json | null
+          kind?: string
+          new_brand?: string
+          old_brand?: string | null
+          row_id?: string
         }
         Relationships: []
       }
@@ -4543,101 +4570,6 @@ export type Database = {
         }
         Relationships: []
       }
-      hr_attendance: {
-        Row: {
-          break_minutes: number
-          check_in: string | null
-          check_out: string | null
-          created_at: string
-          employee_id: string
-          id: string
-          late_minutes: number
-          marked_by: string | null
-          note: string | null
-          overtime_minutes: number
-          status: string
-          updated_at: string
-          work_date: string
-          work_minutes: number | null
-        }
-        Insert: {
-          break_minutes?: number
-          check_in?: string | null
-          check_out?: string | null
-          created_at?: string
-          employee_id: string
-          id?: string
-          late_minutes?: number
-          marked_by?: string | null
-          note?: string | null
-          overtime_minutes?: number
-          status?: string
-          updated_at?: string
-          work_date: string
-          work_minutes?: number | null
-        }
-        Update: {
-          break_minutes?: number
-          check_in?: string | null
-          check_out?: string | null
-          created_at?: string
-          employee_id?: string
-          id?: string
-          late_minutes?: number
-          marked_by?: string | null
-          note?: string | null
-          overtime_minutes?: number
-          status?: string
-          updated_at?: string
-          work_date?: string
-          work_minutes?: number | null
-        }
-        Relationships: [
-          {
-            foreignKeyName: "hr_attendance_employee_id_fkey"
-            columns: ["employee_id"]
-            isOneToOne: false
-            referencedRelation: "hr_employees"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      hr_attendance_events: {
-        Row: {
-          action: string
-          actor: string | null
-          created_at: string
-          employee_id: string | null
-          entity: string
-          entity_id: string | null
-          id: string
-          new_data: Json | null
-          old_data: Json | null
-        }
-        Insert: {
-          action: string
-          actor?: string | null
-          created_at?: string
-          employee_id?: string | null
-          entity: string
-          entity_id?: string | null
-          id?: string
-          new_data?: Json | null
-          old_data?: Json | null
-        }
-        Update: {
-          action?: string
-          actor?: string | null
-          created_at?: string
-          employee_id?: string | null
-          entity?: string
-          entity_id?: string | null
-          id?: string
-          new_data?: Json | null
-          old_data?: Json | null
-        }
-        Relationships: []
-      }
       hr_breaks: {
         Row: {
           break_end: string | null
@@ -4645,21 +4577,15 @@ export type Database = {
           created_at: string
           employee_id: string
           id: string
-          kind: string
-          reason: string | null
-          time_entry_id: string
-          updated_at: string
+          session_id: string
         }
         Insert: {
           break_end?: string | null
-          break_start?: string
+          break_start: string
           created_at?: string
           employee_id: string
           id?: string
-          kind?: string
-          reason?: string | null
-          time_entry_id: string
-          updated_at?: string
+          session_id: string
         }
         Update: {
           break_end?: string | null
@@ -4667,10 +4593,7 @@ export type Database = {
           created_at?: string
           employee_id?: string
           id?: string
-          kind?: string
-          reason?: string | null
-          time_entry_id?: string
-          updated_at?: string
+          session_id?: string
         }
         Relationships: [
           {
@@ -4681,162 +4604,53 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
-            foreignKeyName: "hr_breaks_time_entry_id_fkey"
-            columns: ["time_entry_id"]
+            foreignKeyName: "hr_breaks_session_id_fkey"
+            columns: ["session_id"]
             isOneToOne: false
-            referencedRelation: "hr_time_entries"
+            referencedRelation: "hr_sessions"
             referencedColumns: ["id"]
           },
         ]
       }
-      hr_departments: {
+      hr_employee_pay: {
         Row: {
-          created_at: string
-          description: string | null
-          id: string
-          name: string
-          updated_at: string
-        }
-        Insert: {
-          created_at?: string
-          description?: string | null
-          id?: string
-          name: string
-          updated_at?: string
-        }
-        Update: {
-          created_at?: string
-          description?: string | null
-          id?: string
-          name?: string
-          updated_at?: string
-        }
-        Relationships: []
-      }
-      hr_designations: {
-        Row: {
-          base_salary: number
-          created_at: string
-          department_id: string | null
-          id: string
-          title: string
-          updated_at: string
-        }
-        Insert: {
-          base_salary?: number
-          created_at?: string
-          department_id?: string | null
-          id?: string
-          title: string
-          updated_at?: string
-        }
-        Update: {
-          base_salary?: number
-          created_at?: string
-          department_id?: string | null
-          id?: string
-          title?: string
-          updated_at?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "hr_designations_department_id_fkey"
-            columns: ["department_id"]
-            isOneToOne: false
-            referencedRelation: "hr_departments"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      hr_documents: {
-        Row: {
-          created_at: string
-          doc_type: string | null
+          absent_deduction: boolean
           employee_id: string
-          expires_on: string | null
-          file_url: string | null
-          id: string
-          issued_on: string | null
-          notes: string | null
-          title: string
+          monthly_salary: number
+          ot_enabled: boolean
+          ot_multiplier: number
+          ot_rate_per_hour: number | null
+          payment_account: string | null
+          payment_method: string
           updated_at: string
         }
         Insert: {
-          created_at?: string
-          doc_type?: string | null
+          absent_deduction?: boolean
           employee_id: string
-          expires_on?: string | null
-          file_url?: string | null
-          id?: string
-          issued_on?: string | null
-          notes?: string | null
-          title: string
+          monthly_salary?: number
+          ot_enabled?: boolean
+          ot_multiplier?: number
+          ot_rate_per_hour?: number | null
+          payment_account?: string | null
+          payment_method?: string
           updated_at?: string
         }
         Update: {
-          created_at?: string
-          doc_type?: string | null
+          absent_deduction?: boolean
           employee_id?: string
-          expires_on?: string | null
-          file_url?: string | null
-          id?: string
-          issued_on?: string | null
-          notes?: string | null
-          title?: string
+          monthly_salary?: number
+          ot_enabled?: boolean
+          ot_multiplier?: number
+          ot_rate_per_hour?: number | null
+          payment_account?: string | null
+          payment_method?: string
           updated_at?: string
         }
         Relationships: [
           {
-            foreignKeyName: "hr_documents_employee_id_fkey"
+            foreignKeyName: "hr_employee_pay_employee_id_fkey"
             columns: ["employee_id"]
-            isOneToOne: false
-            referencedRelation: "hr_employees"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      hr_employee_events: {
-        Row: {
-          amount: number | null
-          created_at: string
-          created_by: string | null
-          details: string | null
-          effective_date: string | null
-          employee_id: string
-          event_type: string
-          id: string
-          title: string
-          updated_at: string
-        }
-        Insert: {
-          amount?: number | null
-          created_at?: string
-          created_by?: string | null
-          details?: string | null
-          effective_date?: string | null
-          employee_id: string
-          event_type?: string
-          id?: string
-          title: string
-          updated_at?: string
-        }
-        Update: {
-          amount?: number | null
-          created_at?: string
-          created_by?: string | null
-          details?: string | null
-          effective_date?: string | null
-          employee_id?: string
-          event_type?: string
-          id?: string
-          title?: string
-          updated_at?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "hr_employee_events_employee_id_fkey"
-            columns: ["employee_id"]
-            isOneToOne: false
+            isOneToOne: true
             referencedRelation: "hr_employees"
             referencedColumns: ["id"]
           },
@@ -4844,124 +4658,88 @@ export type Database = {
       }
       hr_employees: {
         Row: {
-          address: string | null
-          blood_group: string | null
           brand_id: string | null
-          break_allowance_min: number
           break_end: string | null
+          break_minutes: number
           break_start: string | null
           created_at: string
-          date_of_birth: string | null
-          department_id: string | null
-          designation_id: string | null
+          created_by: string | null
+          department: string | null
+          designation: string | null
           email: string | null
-          emergency_contact_name: string | null
-          emergency_contact_phone: string | null
-          employee_code: string | null
+          employee_code: string
           employment_type: string
+          end_date: string | null
           full_name: string
           id: string
-          join_date: string | null
-          late_grace_min: number | null
-          monthly_salary: number
-          nid: string | null
+          join_date: string
+          late_grace_min: number
           notes: string | null
-          overtime_enabled: boolean
-          overtime_holiday_multiplier: number
-          overtime_min_minutes: number
-          overtime_rate: number
-          payment_method: string | null
-          payment_number: string | null
+          ot_min_minutes: number
           phone: string | null
           photo_url: string | null
-          resign_date: string | null
           shift_end: string
           shift_start: string
           status: string
-          unpaid_break: boolean
           updated_at: string
           user_id: string | null
-          week_offs: number[]
+          work_days: number[]
         }
         Insert: {
-          address?: string | null
-          blood_group?: string | null
           brand_id?: string | null
-          break_allowance_min?: number
           break_end?: string | null
+          break_minutes?: number
           break_start?: string | null
           created_at?: string
-          date_of_birth?: string | null
-          department_id?: string | null
-          designation_id?: string | null
+          created_by?: string | null
+          department?: string | null
+          designation?: string | null
           email?: string | null
-          emergency_contact_name?: string | null
-          emergency_contact_phone?: string | null
-          employee_code?: string | null
+          employee_code?: string
           employment_type?: string
+          end_date?: string | null
           full_name: string
           id?: string
-          join_date?: string | null
-          late_grace_min?: number | null
-          monthly_salary?: number
-          nid?: string | null
+          join_date?: string
+          late_grace_min?: number
           notes?: string | null
-          overtime_enabled?: boolean
-          overtime_holiday_multiplier?: number
-          overtime_min_minutes?: number
-          overtime_rate?: number
-          payment_method?: string | null
-          payment_number?: string | null
+          ot_min_minutes?: number
           phone?: string | null
           photo_url?: string | null
-          resign_date?: string | null
           shift_end?: string
           shift_start?: string
           status?: string
-          unpaid_break?: boolean
           updated_at?: string
           user_id?: string | null
-          week_offs?: number[]
+          work_days?: number[]
         }
         Update: {
-          address?: string | null
-          blood_group?: string | null
           brand_id?: string | null
-          break_allowance_min?: number
           break_end?: string | null
+          break_minutes?: number
           break_start?: string | null
           created_at?: string
-          date_of_birth?: string | null
-          department_id?: string | null
-          designation_id?: string | null
+          created_by?: string | null
+          department?: string | null
+          designation?: string | null
           email?: string | null
-          emergency_contact_name?: string | null
-          emergency_contact_phone?: string | null
-          employee_code?: string | null
+          employee_code?: string
           employment_type?: string
+          end_date?: string | null
           full_name?: string
           id?: string
-          join_date?: string | null
-          late_grace_min?: number | null
-          monthly_salary?: number
-          nid?: string | null
+          join_date?: string
+          late_grace_min?: number
           notes?: string | null
-          overtime_enabled?: boolean
-          overtime_holiday_multiplier?: number
-          overtime_min_minutes?: number
-          overtime_rate?: number
-          payment_method?: string | null
-          payment_number?: string | null
+          ot_min_minutes?: number
           phone?: string | null
           photo_url?: string | null
-          resign_date?: string | null
           shift_end?: string
           shift_start?: string
           status?: string
-          unpaid_break?: boolean
           updated_at?: string
           user_id?: string | null
-          week_offs?: number[]
+          work_days?: number[]
         }
         Relationships: [
           {
@@ -4971,20 +4749,6 @@ export type Database = {
             referencedRelation: "brands"
             referencedColumns: ["id"]
           },
-          {
-            foreignKeyName: "hr_employees_department_id_fkey"
-            columns: ["department_id"]
-            isOneToOne: false
-            referencedRelation: "hr_departments"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "hr_employees_designation_id_fkey"
-            columns: ["designation_id"]
-            isOneToOne: false
-            referencedRelation: "hr_designations"
-            referencedColumns: ["id"]
-          },
         ]
       }
       hr_holidays: {
@@ -4992,183 +4756,64 @@ export type Database = {
           created_at: string
           holiday_date: string
           id: string
-          is_recurring: boolean
           title: string
-          updated_at: string
         }
         Insert: {
           created_at?: string
           holiday_date: string
           id?: string
-          is_recurring?: boolean
           title: string
-          updated_at?: string
         }
         Update: {
           created_at?: string
           holiday_date?: string
           id?: string
-          is_recurring?: boolean
           title?: string
-          updated_at?: string
-        }
-        Relationships: []
-      }
-      hr_job_runs: {
-        Row: {
-          closed_count: number
-          error: string | null
-          id: string
-          job: string
-          ran_at: string
-        }
-        Insert: {
-          closed_count?: number
-          error?: string | null
-          id?: string
-          job: string
-          ran_at?: string
-        }
-        Update: {
-          closed_count?: number
-          error?: string | null
-          id?: string
-          job?: string
-          ran_at?: string
-        }
-        Relationships: []
-      }
-      hr_kpi_entries: {
-        Row: {
-          actual_value: number
-          created_at: string
-          employee_id: string
-          id: string
-          metric: string
-          note: string | null
-          period_month: string
-          target_value: number
-          unit: string | null
-          updated_at: string
-          weight: number
-        }
-        Insert: {
-          actual_value?: number
-          created_at?: string
-          employee_id: string
-          id?: string
-          metric: string
-          note?: string | null
-          period_month: string
-          target_value?: number
-          unit?: string | null
-          updated_at?: string
-          weight?: number
-        }
-        Update: {
-          actual_value?: number
-          created_at?: string
-          employee_id?: string
-          id?: string
-          metric?: string
-          note?: string | null
-          period_month?: string
-          target_value?: number
-          unit?: string | null
-          updated_at?: string
-          weight?: number
-        }
-        Relationships: [
-          {
-            foreignKeyName: "hr_kpi_entries_employee_id_fkey"
-            columns: ["employee_id"]
-            isOneToOne: false
-            referencedRelation: "hr_employees"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      hr_leave_types: {
-        Row: {
-          created_at: string
-          days_per_year: number
-          id: string
-          is_paid: boolean
-          name: string
-          updated_at: string
-        }
-        Insert: {
-          created_at?: string
-          days_per_year?: number
-          id?: string
-          is_paid?: boolean
-          name: string
-          updated_at?: string
-        }
-        Update: {
-          created_at?: string
-          days_per_year?: number
-          id?: string
-          is_paid?: boolean
-          name?: string
-          updated_at?: string
         }
         Relationships: []
       }
       hr_leaves: {
         Row: {
           created_at: string
-          created_by: string | null
-          days: number
           decided_at: string | null
           decided_by: string | null
           decision_note: string | null
           employee_id: string
           end_date: string
-          half_day: boolean
-          half_day_part: string | null
           id: string
-          leave_type_id: string | null
+          paid: boolean
           reason: string | null
+          requested_by: string | null
           start_date: string
           status: string
-          updated_at: string
         }
         Insert: {
           created_at?: string
-          created_by?: string | null
-          days?: number
           decided_at?: string | null
           decided_by?: string | null
           decision_note?: string | null
           employee_id: string
           end_date: string
-          half_day?: boolean
-          half_day_part?: string | null
           id?: string
-          leave_type_id?: string | null
+          paid?: boolean
           reason?: string | null
+          requested_by?: string | null
           start_date: string
           status?: string
-          updated_at?: string
         }
         Update: {
           created_at?: string
-          created_by?: string | null
-          days?: number
           decided_at?: string | null
           decided_by?: string | null
           decision_note?: string | null
           employee_id?: string
           end_date?: string
-          half_day?: boolean
-          half_day_part?: string | null
           id?: string
-          leave_type_id?: string | null
+          paid?: boolean
           reason?: string | null
+          requested_by?: string | null
           start_date?: string
           status?: string
-          updated_at?: string
         }
         Relationships: [
           {
@@ -5178,109 +4823,70 @@ export type Database = {
             referencedRelation: "hr_employees"
             referencedColumns: ["id"]
           },
-          {
-            foreignKeyName: "hr_leaves_leave_type_id_fkey"
-            columns: ["leave_type_id"]
-            isOneToOne: false
-            referencedRelation: "hr_leave_types"
-            referencedColumns: ["id"]
-          },
         ]
-      }
-      hr_payroll_audit: {
-        Row: {
-          action: string
-          changed_at: string
-          changed_by: string | null
-          changes: Json
-          id: string
-          row_id: string
-          run_id: string | null
-          table_name: string
-        }
-        Insert: {
-          action: string
-          changed_at?: string
-          changed_by?: string | null
-          changes?: Json
-          id?: string
-          row_id: string
-          run_id?: string | null
-          table_name: string
-        }
-        Update: {
-          action?: string
-          changed_at?: string
-          changed_by?: string | null
-          changes?: Json
-          id?: string
-          row_id?: string
-          run_id?: string | null
-          table_name?: string
-        }
-        Relationships: []
       }
       hr_payroll_runs: {
         Row: {
-          account_id: string | null
           brand_id: string | null
           created_at: string
           created_by: string | null
+          employee_count: number
+          finalized_at: string | null
+          finalized_by: string | null
           id: string
-          notes: string | null
+          note: string | null
           paid_at: string | null
+          paid_by: string | null
+          paid_on: string | null
+          payout_account_id: string | null
+          period_from: string
           period_month: string
+          period_to: string
           status: string
-          total_deduction: number
-          total_gross: number
+          title: string | null
           total_net: number
-          updated_at: string
         }
         Insert: {
-          account_id?: string | null
           brand_id?: string | null
           created_at?: string
           created_by?: string | null
+          employee_count?: number
+          finalized_at?: string | null
+          finalized_by?: string | null
           id?: string
-          notes?: string | null
+          note?: string | null
           paid_at?: string | null
+          paid_by?: string | null
+          paid_on?: string | null
+          payout_account_id?: string | null
+          period_from: string
           period_month: string
+          period_to: string
           status?: string
-          total_deduction?: number
-          total_gross?: number
+          title?: string | null
           total_net?: number
-          updated_at?: string
         }
         Update: {
-          account_id?: string | null
           brand_id?: string | null
           created_at?: string
           created_by?: string | null
+          employee_count?: number
+          finalized_at?: string | null
+          finalized_by?: string | null
           id?: string
-          notes?: string | null
+          note?: string | null
           paid_at?: string | null
+          paid_by?: string | null
+          paid_on?: string | null
+          payout_account_id?: string | null
+          period_from?: string
           period_month?: string
+          period_to?: string
           status?: string
-          total_deduction?: number
-          total_gross?: number
+          title?: string | null
           total_net?: number
-          updated_at?: string
         }
         Relationships: [
-          {
-            foreignKeyName: "hr_payroll_runs_account_id_fkey"
-            columns: ["account_id"]
-            isOneToOne: false
-            referencedRelation: "erp_accounts"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "hr_payroll_runs_account_id_fkey"
-            columns: ["account_id"]
-            isOneToOne: false
-            referencedRelation: "os_v_pay_accounts"
-            referencedColumns: ["id"]
-          },
           {
             foreignKeyName: "hr_payroll_runs_brand_id_fkey"
             columns: ["brand_id"]
@@ -5288,68 +4894,130 @@ export type Database = {
             referencedRelation: "brands"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "hr_payroll_runs_payout_account_id_fkey"
+            columns: ["payout_account_id"]
+            isOneToOne: false
+            referencedRelation: "erp_accounts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "hr_payroll_runs_payout_account_id_fkey"
+            columns: ["payout_account_id"]
+            isOneToOne: false
+            referencedRelation: "os_v_pay_accounts"
+            referencedColumns: ["id"]
+          },
         ]
       }
       hr_payslips: {
         Row: {
+          absent_amount: number
           absent_days: number
-          advance_deduction: number
+          advance: number
           allowance: number
-          base_salary: number
           bonus: number
+          brand_id: string | null
           created_at: string
           deduction: number
+          designation: string | null
+          earned_basic: number
+          employee_code: string
           employee_id: string
+          employee_name: string
+          holiday_days: number
           id: string
+          late_days: number
+          month_workdays: number
+          monthly_salary: number
           net_pay: number
           note: string | null
-          overtime_amount: number
-          paid_at: string | null
+          ot_amount: number
+          ot_minutes: number
+          ot_rate: number
+          paid_leave_days: number
+          payment_account: string | null
+          payment_method: string | null
+          per_day_rate: number
+          period_workdays: number
           present_days: number
+          previously_paid: number
           run_id: string
-          status: string
-          txn_id: string | null
+          unpaid_leave_days: number
           updated_at: string
+          worked_minutes: number
         }
         Insert: {
-          absent_days?: number
-          advance_deduction?: number
+          absent_amount: number
+          absent_days: number
+          advance?: number
           allowance?: number
-          base_salary?: number
           bonus?: number
+          brand_id?: string | null
           created_at?: string
           deduction?: number
+          designation?: string | null
+          earned_basic: number
+          employee_code: string
           employee_id: string
+          employee_name: string
+          holiday_days: number
           id?: string
-          net_pay?: number
+          late_days: number
+          month_workdays: number
+          monthly_salary: number
+          net_pay: number
           note?: string | null
-          overtime_amount?: number
-          paid_at?: string | null
-          present_days?: number
+          ot_amount: number
+          ot_minutes: number
+          ot_rate: number
+          paid_leave_days: number
+          payment_account?: string | null
+          payment_method?: string | null
+          per_day_rate: number
+          period_workdays: number
+          present_days: number
+          previously_paid?: number
           run_id: string
-          status?: string
-          txn_id?: string | null
+          unpaid_leave_days: number
           updated_at?: string
+          worked_minutes: number
         }
         Update: {
+          absent_amount?: number
           absent_days?: number
-          advance_deduction?: number
+          advance?: number
           allowance?: number
-          base_salary?: number
           bonus?: number
+          brand_id?: string | null
           created_at?: string
           deduction?: number
+          designation?: string | null
+          earned_basic?: number
+          employee_code?: string
           employee_id?: string
+          employee_name?: string
+          holiday_days?: number
           id?: string
+          late_days?: number
+          month_workdays?: number
+          monthly_salary?: number
           net_pay?: number
           note?: string | null
-          overtime_amount?: number
-          paid_at?: string | null
+          ot_amount?: number
+          ot_minutes?: number
+          ot_rate?: number
+          paid_leave_days?: number
+          payment_account?: string | null
+          payment_method?: string | null
+          per_day_rate?: number
+          period_workdays?: number
           present_days?: number
+          previously_paid?: number
           run_id?: string
-          status?: string
-          txn_id?: string | null
+          unpaid_leave_days?: number
           updated_at?: string
+          worked_minutes?: number
         }
         Relationships: [
           {
@@ -5368,102 +5036,49 @@ export type Database = {
           },
         ]
       }
-      hr_reviews: {
-        Row: {
-          created_at: string
-          employee_id: string
-          goals: string | null
-          id: string
-          improvements: string | null
-          incentive_amount: number
-          period_end: string
-          period_start: string
-          rating: number | null
-          reviewer_id: string | null
-          status: string
-          strengths: string | null
-          updated_at: string
-        }
-        Insert: {
-          created_at?: string
-          employee_id: string
-          goals?: string | null
-          id?: string
-          improvements?: string | null
-          incentive_amount?: number
-          period_end: string
-          period_start: string
-          rating?: number | null
-          reviewer_id?: string | null
-          status?: string
-          strengths?: string | null
-          updated_at?: string
-        }
-        Update: {
-          created_at?: string
-          employee_id?: string
-          goals?: string | null
-          id?: string
-          improvements?: string | null
-          incentive_amount?: number
-          period_end?: string
-          period_start?: string
-          rating?: number | null
-          reviewer_id?: string | null
-          status?: string
-          strengths?: string | null
-          updated_at?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "hr_reviews_employee_id_fkey"
-            columns: ["employee_id"]
-            isOneToOne: false
-            referencedRelation: "hr_employees"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      hr_time_entries: {
+      hr_sessions: {
         Row: {
           auto_closed: boolean
           check_in: string
           check_out: string | null
           created_at: string
+          edited_at: string | null
+          edited_by: string | null
           employee_id: string
           id: string
           note: string | null
           source: string
-          updated_at: string
           work_date: string
         }
         Insert: {
           auto_closed?: boolean
-          check_in?: string
+          check_in: string
           check_out?: string | null
           created_at?: string
+          edited_at?: string | null
+          edited_by?: string | null
           employee_id: string
           id?: string
           note?: string | null
           source?: string
-          updated_at?: string
-          work_date?: string
+          work_date: string
         }
         Update: {
           auto_closed?: boolean
           check_in?: string
           check_out?: string | null
           created_at?: string
+          edited_at?: string | null
+          edited_by?: string | null
           employee_id?: string
           id?: string
           note?: string | null
           source?: string
-          updated_at?: string
           work_date?: string
         }
         Relationships: [
           {
-            foreignKeyName: "hr_time_entries_employee_id_fkey"
+            foreignKeyName: "hr_sessions_employee_id_fkey"
             columns: ["employee_id"]
             isOneToOne: false
             referencedRelation: "hr_employees"
@@ -11222,6 +10837,71 @@ export type Database = {
           },
         ]
       }
+      os_approvals: {
+        Row: {
+          amount: number | null
+          approver_id: string | null
+          created_at: string
+          decided_at: string | null
+          decided_by: string | null
+          decision_note: string | null
+          details: string | null
+          entity_id: string | null
+          entity_type: string | null
+          id: string
+          kind: string
+          requested_by: string
+          status: string
+          title: string
+          updated_at: string
+          workspace_id: string
+        }
+        Insert: {
+          amount?: number | null
+          approver_id?: string | null
+          created_at?: string
+          decided_at?: string | null
+          decided_by?: string | null
+          decision_note?: string | null
+          details?: string | null
+          entity_id?: string | null
+          entity_type?: string | null
+          id?: string
+          kind?: string
+          requested_by?: string
+          status?: string
+          title: string
+          updated_at?: string
+          workspace_id: string
+        }
+        Update: {
+          amount?: number | null
+          approver_id?: string | null
+          created_at?: string
+          decided_at?: string | null
+          decided_by?: string | null
+          decision_note?: string | null
+          details?: string | null
+          entity_id?: string | null
+          entity_type?: string | null
+          id?: string
+          kind?: string
+          requested_by?: string
+          status?: string
+          title?: string
+          updated_at?: string
+          workspace_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "os_approvals_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "os_workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       os_attachments: {
         Row: {
           created_at: string
@@ -11262,6 +10942,203 @@ export type Database = {
         Relationships: [
           {
             foreignKeyName: "os_attachments_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "os_workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      os_brand_profiles: {
+        Row: {
+          audience: string | null
+          category: string | null
+          colors: string[]
+          competitors: string | null
+          created_at: string
+          customer_segments: string | null
+          description: string | null
+          growth_objectives: string | null
+          guidelines_md: string | null
+          logo_path: string | null
+          mission: string | null
+          positioning: string | null
+          risks: string | null
+          socials: Json
+          strategic_priorities: string | null
+          tagline: string | null
+          tone_of_voice: string | null
+          typography: string | null
+          updated_at: string
+          updated_by: string | null
+          value_proposition: string | null
+          vision: string | null
+          website: string | null
+          workspace_id: string
+        }
+        Insert: {
+          audience?: string | null
+          category?: string | null
+          colors?: string[]
+          competitors?: string | null
+          created_at?: string
+          customer_segments?: string | null
+          description?: string | null
+          growth_objectives?: string | null
+          guidelines_md?: string | null
+          logo_path?: string | null
+          mission?: string | null
+          positioning?: string | null
+          risks?: string | null
+          socials?: Json
+          strategic_priorities?: string | null
+          tagline?: string | null
+          tone_of_voice?: string | null
+          typography?: string | null
+          updated_at?: string
+          updated_by?: string | null
+          value_proposition?: string | null
+          vision?: string | null
+          website?: string | null
+          workspace_id: string
+        }
+        Update: {
+          audience?: string | null
+          category?: string | null
+          colors?: string[]
+          competitors?: string | null
+          created_at?: string
+          customer_segments?: string | null
+          description?: string | null
+          growth_objectives?: string | null
+          guidelines_md?: string | null
+          logo_path?: string | null
+          mission?: string | null
+          positioning?: string | null
+          risks?: string | null
+          socials?: Json
+          strategic_priorities?: string | null
+          tagline?: string | null
+          tone_of_voice?: string | null
+          typography?: string | null
+          updated_at?: string
+          updated_by?: string | null
+          value_proposition?: string | null
+          vision?: string | null
+          website?: string | null
+          workspace_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "os_brand_profiles_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: true
+            referencedRelation: "os_workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      os_budgets: {
+        Row: {
+          amount: number
+          category_id: string
+          created_at: string
+          id: string
+          month: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          amount: number
+          category_id: string
+          created_at?: string
+          id?: string
+          month: string
+          updated_at?: string
+          user_id?: string
+        }
+        Update: {
+          amount?: number
+          category_id?: string
+          created_at?: string
+          id?: string
+          month?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "os_budgets_category_id_user_id_fkey"
+            columns: ["category_id", "user_id"]
+            isOneToOne: false
+            referencedRelation: "os_money_categories"
+            referencedColumns: ["id", "user_id"]
+          },
+        ]
+      }
+      os_capital_entries: {
+        Row: {
+          amount: number
+          created_at: string
+          entry_date: string
+          erp_recorded: boolean
+          erp_reference: string | null
+          id: string
+          kind: string
+          method: string | null
+          note: string | null
+          updated_at: string
+          user_id: string
+          wallet_id: string | null
+          workspace_id: string
+        }
+        Insert: {
+          amount: number
+          created_at?: string
+          entry_date?: string
+          erp_recorded?: boolean
+          erp_reference?: string | null
+          id?: string
+          kind: string
+          method?: string | null
+          note?: string | null
+          updated_at?: string
+          user_id?: string
+          wallet_id?: string | null
+          workspace_id: string
+        }
+        Update: {
+          amount?: number
+          created_at?: string
+          entry_date?: string
+          erp_recorded?: boolean
+          erp_reference?: string | null
+          id?: string
+          kind?: string
+          method?: string | null
+          note?: string | null
+          updated_at?: string
+          user_id?: string
+          wallet_id?: string | null
+          workspace_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "os_capital_entries_wallet_id_user_id_fkey"
+            columns: ["wallet_id", "user_id"]
+            isOneToOne: false
+            referencedRelation: "os_v_wallet_balances"
+            referencedColumns: ["wallet_id", "user_id"]
+          },
+          {
+            foreignKeyName: "os_capital_entries_wallet_id_user_id_fkey"
+            columns: ["wallet_id", "user_id"]
+            isOneToOne: false
+            referencedRelation: "os_wallets"
+            referencedColumns: ["id", "user_id"]
+          },
+          {
+            foreignKeyName: "os_capital_entries_workspace_id_fkey"
             columns: ["workspace_id"]
             isOneToOne: false
             referencedRelation: "os_workspaces"
@@ -11464,6 +11341,105 @@ export type Database = {
           },
         ]
       }
+      os_creative_ad_links: {
+        Row: {
+          ad_id: string
+          content_item_id: string
+          created_at: string
+          created_by: string
+          id: string
+        }
+        Insert: {
+          ad_id: string
+          content_item_id: string
+          created_at?: string
+          created_by?: string
+          id?: string
+        }
+        Update: {
+          ad_id?: string
+          content_item_id?: string
+          created_at?: string
+          created_by?: string
+          id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "os_creative_ad_links_ad_id_fkey"
+            columns: ["ad_id"]
+            isOneToOne: false
+            referencedRelation: "mkt_ads"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "os_creative_ad_links_content_item_id_fkey"
+            columns: ["content_item_id"]
+            isOneToOne: false
+            referencedRelation: "os_content_items"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      os_creative_assets: {
+        Row: {
+          content_item_id: string
+          created_at: string
+          file_name: string | null
+          id: string
+          kind: string
+          mime_type: string | null
+          note: string | null
+          size_bytes: number | null
+          storage_path: string
+          uploaded_by: string
+          version: number
+          workspace_id: string
+        }
+        Insert: {
+          content_item_id: string
+          created_at?: string
+          file_name?: string | null
+          id?: string
+          kind?: string
+          mime_type?: string | null
+          note?: string | null
+          size_bytes?: number | null
+          storage_path: string
+          uploaded_by?: string
+          version?: number
+          workspace_id: string
+        }
+        Update: {
+          content_item_id?: string
+          created_at?: string
+          file_name?: string | null
+          id?: string
+          kind?: string
+          mime_type?: string | null
+          note?: string | null
+          size_bytes?: number | null
+          storage_path?: string
+          uploaded_by?: string
+          version?: number
+          workspace_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "os_creative_assets_content_item_id_fkey"
+            columns: ["content_item_id"]
+            isOneToOne: false
+            referencedRelation: "os_content_items"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "os_creative_assets_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "os_workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       os_creator_deals: {
         Row: {
           accepted_at: string | null
@@ -11582,6 +11558,7 @@ export type Database = {
           amount: number
           approved_at: string | null
           approved_by: string | null
+          content_item_id: string | null
           created_at: string
           created_by: string
           creator_id: string
@@ -11603,6 +11580,7 @@ export type Database = {
           amount: number
           approved_at?: string | null
           approved_by?: string | null
+          content_item_id?: string | null
           created_at?: string
           created_by?: string
           creator_id: string
@@ -11624,6 +11602,7 @@ export type Database = {
           amount?: number
           approved_at?: string | null
           approved_by?: string | null
+          content_item_id?: string | null
           created_at?: string
           created_by?: string
           creator_id?: string
@@ -11642,6 +11621,13 @@ export type Database = {
           workspace_id?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "os_creator_payments_content_item_id_fkey"
+            columns: ["content_item_id"]
+            isOneToOne: false
+            referencedRelation: "os_content_items"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "os_creator_payments_creator_id_fkey"
             columns: ["creator_id"]
@@ -11689,17 +11675,26 @@ export type Database = {
       os_creator_shipments: {
         Row: {
           courier: string | null
+          courier_cost: number
+          courier_paid_by: string
+          courier_preference: string | null
           created_at: string
           created_by: string
           creator_id: string
           deal_id: string | null
           delivered_at: string | null
+          erp_order_id: string | null
           id: string
           note: string | null
           product_id: string
           qty: number
           sample_cost: number | null
           sent_at: string | null
+          ship_address: string | null
+          ship_district: string | null
+          ship_name: string | null
+          ship_phone: string | null
+          ship_thana: string | null
           status: string
           stock_movement_id: string | null
           tracking_no: string | null
@@ -11709,17 +11704,26 @@ export type Database = {
         }
         Insert: {
           courier?: string | null
+          courier_cost?: number
+          courier_paid_by?: string
+          courier_preference?: string | null
           created_at?: string
           created_by?: string
           creator_id: string
           deal_id?: string | null
           delivered_at?: string | null
+          erp_order_id?: string | null
           id?: string
           note?: string | null
           product_id: string
           qty?: number
           sample_cost?: number | null
           sent_at?: string | null
+          ship_address?: string | null
+          ship_district?: string | null
+          ship_name?: string | null
+          ship_phone?: string | null
+          ship_thana?: string | null
           status?: string
           stock_movement_id?: string | null
           tracking_no?: string | null
@@ -11729,17 +11733,26 @@ export type Database = {
         }
         Update: {
           courier?: string | null
+          courier_cost?: number
+          courier_paid_by?: string
+          courier_preference?: string | null
           created_at?: string
           created_by?: string
           creator_id?: string
           deal_id?: string | null
           delivered_at?: string | null
+          erp_order_id?: string | null
           id?: string
           note?: string | null
           product_id?: string
           qty?: number
           sample_cost?: number | null
           sent_at?: string | null
+          ship_address?: string | null
+          ship_district?: string | null
+          ship_name?: string | null
+          ship_phone?: string | null
+          ship_thana?: string | null
           status?: string
           stock_movement_id?: string | null
           tracking_no?: string | null
@@ -11767,6 +11780,13 @@ export type Database = {
             columns: ["deal_id"]
             isOneToOne: false
             referencedRelation: "os_creator_deals"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "os_creator_shipments_erp_order_id_fkey"
+            columns: ["erp_order_id"]
+            isOneToOne: false
+            referencedRelation: "orders"
             referencedColumns: ["id"]
           },
           {
@@ -11809,12 +11829,21 @@ export type Database = {
       os_creators: {
         Row: {
           address: string | null
+          avatar_url: string | null
+          category: string | null
+          content_styles: string[]
           created_at: string
+          drive_folder_url: string | null
           email: string | null
+          facebook_url: string | null
           followers: number | null
+          gender: string | null
           handle: string | null
           id: string
+          instagram_url: string | null
+          languages: string[]
           legacy_hub_creator_id: string | null
+          location: string | null
           max_rate: number | null
           min_rate: number | null
           name: string
@@ -11825,24 +11854,38 @@ export type Database = {
           payout_ref: string | null
           phone: string | null
           platform: string
+          portfolio_links: string[]
           profile_url: string | null
+          rate_per_image: number | null
           rate_per_video: number | null
           rating: number | null
           shared_with: string[]
           status: string
           tags: string[]
+          tiktok_url: string | null
           updated_at: string
           visibility: string
+          whatsapp: string | null
           workspace_id: string | null
+          youtube_url: string | null
         }
         Insert: {
           address?: string | null
+          avatar_url?: string | null
+          category?: string | null
+          content_styles?: string[]
           created_at?: string
+          drive_folder_url?: string | null
           email?: string | null
+          facebook_url?: string | null
           followers?: number | null
+          gender?: string | null
           handle?: string | null
           id?: string
+          instagram_url?: string | null
+          languages?: string[]
           legacy_hub_creator_id?: string | null
+          location?: string | null
           max_rate?: number | null
           min_rate?: number | null
           name: string
@@ -11853,24 +11896,38 @@ export type Database = {
           payout_ref?: string | null
           phone?: string | null
           platform?: string
+          portfolio_links?: string[]
           profile_url?: string | null
+          rate_per_image?: number | null
           rate_per_video?: number | null
           rating?: number | null
           shared_with?: string[]
           status?: string
           tags?: string[]
+          tiktok_url?: string | null
           updated_at?: string
           visibility?: string
+          whatsapp?: string | null
           workspace_id?: string | null
+          youtube_url?: string | null
         }
         Update: {
           address?: string | null
+          avatar_url?: string | null
+          category?: string | null
+          content_styles?: string[]
           created_at?: string
+          drive_folder_url?: string | null
           email?: string | null
+          facebook_url?: string | null
           followers?: number | null
+          gender?: string | null
           handle?: string | null
           id?: string
+          instagram_url?: string | null
+          languages?: string[]
           legacy_hub_creator_id?: string | null
+          location?: string | null
           max_rate?: number | null
           min_rate?: number | null
           name?: string
@@ -11881,19 +11938,86 @@ export type Database = {
           payout_ref?: string | null
           phone?: string | null
           platform?: string
+          portfolio_links?: string[]
           profile_url?: string | null
+          rate_per_image?: number | null
           rate_per_video?: number | null
           rating?: number | null
           shared_with?: string[]
           status?: string
           tags?: string[]
+          tiktok_url?: string | null
           updated_at?: string
           visibility?: string
+          whatsapp?: string | null
           workspace_id?: string | null
+          youtube_url?: string | null
         }
         Relationships: [
           {
             foreignKeyName: "os_creators_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "os_workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      os_decisions: {
+        Row: {
+          alternatives: string | null
+          context: string | null
+          created_at: string
+          decided_on: string
+          decision: string
+          expected_outcome: string | null
+          id: string
+          outcome: string | null
+          owner_id: string
+          review_on: string | null
+          shared_with: string[]
+          title: string
+          updated_at: string
+          visibility: string
+          workspace_id: string
+        }
+        Insert: {
+          alternatives?: string | null
+          context?: string | null
+          created_at?: string
+          decided_on?: string
+          decision: string
+          expected_outcome?: string | null
+          id?: string
+          outcome?: string | null
+          owner_id?: string
+          review_on?: string | null
+          shared_with?: string[]
+          title: string
+          updated_at?: string
+          visibility?: string
+          workspace_id: string
+        }
+        Update: {
+          alternatives?: string | null
+          context?: string | null
+          created_at?: string
+          decided_on?: string
+          decision?: string
+          expected_outcome?: string | null
+          id?: string
+          outcome?: string | null
+          owner_id?: string
+          review_on?: string | null
+          shared_with?: string[]
+          title?: string
+          updated_at?: string
+          visibility?: string
+          workspace_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "os_decisions_workspace_id_fkey"
             columns: ["workspace_id"]
             isOneToOne: false
             referencedRelation: "os_workspaces"
@@ -11966,6 +12090,172 @@ export type Database = {
           },
         ]
       }
+      os_focus_sessions: {
+        Row: {
+          created_at: string
+          distraction_note: string | null
+          ended_at: string | null
+          id: string
+          kind: string
+          label: string | null
+          minutes: number | null
+          started_at: string
+          user_id: string
+          workspace_id: string | null
+        }
+        Insert: {
+          created_at?: string
+          distraction_note?: string | null
+          ended_at?: string | null
+          id?: string
+          kind?: string
+          label?: string | null
+          minutes?: number | null
+          started_at?: string
+          user_id?: string
+          workspace_id?: string | null
+        }
+        Update: {
+          created_at?: string
+          distraction_note?: string | null
+          ended_at?: string | null
+          id?: string
+          kind?: string
+          label?: string | null
+          minutes?: number | null
+          started_at?: string
+          user_id?: string
+          workspace_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "os_focus_sessions_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "os_workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      os_habit_logs: {
+        Row: {
+          count: number
+          created_at: string
+          habit_id: string
+          id: string
+          log_date: string
+          note: string | null
+          user_id: string
+        }
+        Insert: {
+          count?: number
+          created_at?: string
+          habit_id: string
+          id?: string
+          log_date?: string
+          note?: string | null
+          user_id?: string
+        }
+        Update: {
+          count?: number
+          created_at?: string
+          habit_id?: string
+          id?: string
+          log_date?: string
+          note?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "os_habit_logs_habit_id_user_id_fkey"
+            columns: ["habit_id", "user_id"]
+            isOneToOne: false
+            referencedRelation: "os_habits"
+            referencedColumns: ["id", "user_id"]
+          },
+        ]
+      }
+      os_habits: {
+        Row: {
+          category: string
+          created_at: string
+          frequency: string
+          id: string
+          is_active: boolean
+          name: string
+          sort_order: number
+          target_per_period: number
+          updated_at: string
+          user_id: string
+          weekdays: number[]
+        }
+        Insert: {
+          category?: string
+          created_at?: string
+          frequency?: string
+          id?: string
+          is_active?: boolean
+          name: string
+          sort_order?: number
+          target_per_period?: number
+          updated_at?: string
+          user_id?: string
+          weekdays?: number[]
+        }
+        Update: {
+          category?: string
+          created_at?: string
+          frequency?: string
+          id?: string
+          is_active?: boolean
+          name?: string
+          sort_order?: number
+          target_per_period?: number
+          updated_at?: string
+          user_id?: string
+          weekdays?: number[]
+        }
+        Relationships: []
+      }
+      os_health_logs: {
+        Row: {
+          created_at: string
+          id: string
+          log_date: string
+          note: string | null
+          sleep_hours: number | null
+          updated_at: string
+          user_id: string
+          walk_minutes: number | null
+          water_glasses: number | null
+          weight_kg: number | null
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          log_date?: string
+          note?: string | null
+          sleep_hours?: number | null
+          updated_at?: string
+          user_id?: string
+          walk_minutes?: number | null
+          water_glasses?: number | null
+          weight_kg?: number | null
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          log_date?: string
+          note?: string | null
+          sleep_hours?: number | null
+          updated_at?: string
+          user_id?: string
+          walk_minutes?: number | null
+          water_glasses?: number | null
+          weight_kg?: number | null
+        }
+        Relationships: []
+      }
       os_ideas: {
         Row: {
           body: string
@@ -12018,6 +12308,543 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      os_investment_txns: {
+        Row: {
+          amount: number
+          created_at: string
+          id: string
+          investment_id: string
+          kind: string
+          note: string | null
+          txn_date: string
+          user_id: string
+          wallet_id: string | null
+        }
+        Insert: {
+          amount: number
+          created_at?: string
+          id?: string
+          investment_id: string
+          kind: string
+          note?: string | null
+          txn_date?: string
+          user_id?: string
+          wallet_id?: string | null
+        }
+        Update: {
+          amount?: number
+          created_at?: string
+          id?: string
+          investment_id?: string
+          kind?: string
+          note?: string | null
+          txn_date?: string
+          user_id?: string
+          wallet_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "os_investment_txns_investment_id_user_id_fkey"
+            columns: ["investment_id", "user_id"]
+            isOneToOne: false
+            referencedRelation: "os_investments"
+            referencedColumns: ["id", "user_id"]
+          },
+          {
+            foreignKeyName: "os_investment_txns_investment_id_user_id_fkey"
+            columns: ["investment_id", "user_id"]
+            isOneToOne: false
+            referencedRelation: "os_v_investment_summary"
+            referencedColumns: ["id", "user_id"]
+          },
+          {
+            foreignKeyName: "os_investment_txns_wallet_id_user_id_fkey"
+            columns: ["wallet_id", "user_id"]
+            isOneToOne: false
+            referencedRelation: "os_v_wallet_balances"
+            referencedColumns: ["wallet_id", "user_id"]
+          },
+          {
+            foreignKeyName: "os_investment_txns_wallet_id_user_id_fkey"
+            columns: ["wallet_id", "user_id"]
+            isOneToOne: false
+            referencedRelation: "os_wallets"
+            referencedColumns: ["id", "user_id"]
+          },
+        ]
+      }
+      os_investments: {
+        Row: {
+          category: string
+          created_at: string
+          current_value: number | null
+          id: string
+          name: string
+          notes: string | null
+          status: string
+          updated_at: string
+          user_id: string
+          valued_on: string | null
+        }
+        Insert: {
+          category?: string
+          created_at?: string
+          current_value?: number | null
+          id?: string
+          name: string
+          notes?: string | null
+          status?: string
+          updated_at?: string
+          user_id?: string
+          valued_on?: string | null
+        }
+        Update: {
+          category?: string
+          created_at?: string
+          current_value?: number | null
+          id?: string
+          name?: string
+          notes?: string | null
+          status?: string
+          updated_at?: string
+          user_id?: string
+          valued_on?: string | null
+        }
+        Relationships: []
+      }
+      os_kb_pages: {
+        Row: {
+          body: string
+          category: string
+          created_at: string
+          id: string
+          owner_id: string
+          pinned: boolean
+          review_on: string | null
+          shared_with: string[]
+          status: string
+          steps: Json
+          tags: string[]
+          title: string
+          updated_at: string
+          version: number
+          visibility: string
+          workspace_id: string
+        }
+        Insert: {
+          body?: string
+          category?: string
+          created_at?: string
+          id?: string
+          owner_id?: string
+          pinned?: boolean
+          review_on?: string | null
+          shared_with?: string[]
+          status?: string
+          steps?: Json
+          tags?: string[]
+          title: string
+          updated_at?: string
+          version?: number
+          visibility?: string
+          workspace_id: string
+        }
+        Update: {
+          body?: string
+          category?: string
+          created_at?: string
+          id?: string
+          owner_id?: string
+          pinned?: boolean
+          review_on?: string | null
+          shared_with?: string[]
+          status?: string
+          steps?: Json
+          tags?: string[]
+          title?: string
+          updated_at?: string
+          version?: number
+          visibility?: string
+          workspace_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "os_kb_pages_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "os_workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      os_loan_payments: {
+        Row: {
+          created_at: string
+          fee_amount: number
+          id: string
+          interest_amount: number
+          loan_id: string
+          note: string | null
+          paid_on: string
+          principal_amount: number
+          user_id: string
+          wallet_id: string | null
+        }
+        Insert: {
+          created_at?: string
+          fee_amount?: number
+          id?: string
+          interest_amount?: number
+          loan_id: string
+          note?: string | null
+          paid_on?: string
+          principal_amount?: number
+          user_id?: string
+          wallet_id?: string | null
+        }
+        Update: {
+          created_at?: string
+          fee_amount?: number
+          id?: string
+          interest_amount?: number
+          loan_id?: string
+          note?: string | null
+          paid_on?: string
+          principal_amount?: number
+          user_id?: string
+          wallet_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "os_loan_payments_loan_id_user_id_fkey"
+            columns: ["loan_id", "user_id"]
+            isOneToOne: false
+            referencedRelation: "os_loans"
+            referencedColumns: ["id", "user_id"]
+          },
+          {
+            foreignKeyName: "os_loan_payments_loan_id_user_id_fkey"
+            columns: ["loan_id", "user_id"]
+            isOneToOne: false
+            referencedRelation: "os_v_loan_status"
+            referencedColumns: ["id", "user_id"]
+          },
+          {
+            foreignKeyName: "os_loan_payments_wallet_id_user_id_fkey"
+            columns: ["wallet_id", "user_id"]
+            isOneToOne: false
+            referencedRelation: "os_v_wallet_balances"
+            referencedColumns: ["wallet_id", "user_id"]
+          },
+          {
+            foreignKeyName: "os_loan_payments_wallet_id_user_id_fkey"
+            columns: ["wallet_id", "user_id"]
+            isOneToOne: false
+            referencedRelation: "os_wallets"
+            referencedColumns: ["id", "user_id"]
+          },
+        ]
+      }
+      os_loans: {
+        Row: {
+          counterparty: string | null
+          created_at: string
+          currency: string
+          direction: string
+          due_date: string | null
+          id: string
+          installment_amount: number | null
+          installment_frequency: string
+          interest_rate_pct: number | null
+          interest_type: string
+          loan_type: string
+          name: string
+          next_due_date: string | null
+          notes: string | null
+          pressure: string
+          principal: number
+          start_date: string
+          status: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          counterparty?: string | null
+          created_at?: string
+          currency?: string
+          direction?: string
+          due_date?: string | null
+          id?: string
+          installment_amount?: number | null
+          installment_frequency?: string
+          interest_rate_pct?: number | null
+          interest_type?: string
+          loan_type?: string
+          name: string
+          next_due_date?: string | null
+          notes?: string | null
+          pressure?: string
+          principal: number
+          start_date?: string
+          status?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Update: {
+          counterparty?: string | null
+          created_at?: string
+          currency?: string
+          direction?: string
+          due_date?: string | null
+          id?: string
+          installment_amount?: number | null
+          installment_frequency?: string
+          interest_rate_pct?: number | null
+          interest_type?: string
+          loan_type?: string
+          name?: string
+          next_due_date?: string | null
+          notes?: string | null
+          pressure?: string
+          principal?: number
+          start_date?: string
+          status?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      os_member_invites: {
+        Row: {
+          accepted_at: string | null
+          accepted_by: string | null
+          code_hash: string
+          created_at: string
+          display_name: string | null
+          email: string
+          expires_at: string
+          id: string
+          invited_by: string
+          revoked_at: string | null
+          role: string
+          workspace_ids: string[]
+        }
+        Insert: {
+          accepted_at?: string | null
+          accepted_by?: string | null
+          code_hash: string
+          created_at?: string
+          display_name?: string | null
+          email: string
+          expires_at?: string
+          id?: string
+          invited_by: string
+          revoked_at?: string | null
+          role: string
+          workspace_ids?: string[]
+        }
+        Update: {
+          accepted_at?: string | null
+          accepted_by?: string | null
+          code_hash?: string
+          created_at?: string
+          display_name?: string | null
+          email?: string
+          expires_at?: string
+          id?: string
+          invited_by?: string
+          revoked_at?: string | null
+          role?: string
+          workspace_ids?: string[]
+        }
+        Relationships: []
+      }
+      os_money_categories: {
+        Row: {
+          color: string | null
+          created_at: string
+          icon: string | null
+          id: string
+          is_active: boolean
+          kind: string
+          name: string
+          user_id: string
+        }
+        Insert: {
+          color?: string | null
+          created_at?: string
+          icon?: string | null
+          id?: string
+          is_active?: boolean
+          kind: string
+          name: string
+          user_id?: string
+        }
+        Update: {
+          color?: string | null
+          created_at?: string
+          icon?: string | null
+          id?: string
+          is_active?: boolean
+          kind?: string
+          name?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      os_money_txns: {
+        Row: {
+          amount: number
+          capital_entry_id: string | null
+          category_id: string | null
+          created_at: string
+          direction: string | null
+          id: string
+          investment_txn_id: string | null
+          kind: string
+          loan_payment_id: string | null
+          note: string | null
+          tags: string[]
+          to_wallet_id: string | null
+          txn_date: string
+          updated_at: string
+          user_id: string
+          wallet_id: string
+        }
+        Insert: {
+          amount: number
+          capital_entry_id?: string | null
+          category_id?: string | null
+          created_at?: string
+          direction?: string | null
+          id?: string
+          investment_txn_id?: string | null
+          kind: string
+          loan_payment_id?: string | null
+          note?: string | null
+          tags?: string[]
+          to_wallet_id?: string | null
+          txn_date?: string
+          updated_at?: string
+          user_id?: string
+          wallet_id: string
+        }
+        Update: {
+          amount?: number
+          capital_entry_id?: string | null
+          category_id?: string | null
+          created_at?: string
+          direction?: string | null
+          id?: string
+          investment_txn_id?: string | null
+          kind?: string
+          loan_payment_id?: string | null
+          note?: string | null
+          tags?: string[]
+          to_wallet_id?: string | null
+          txn_date?: string
+          updated_at?: string
+          user_id?: string
+          wallet_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "os_money_txns_capital_entry_id_fkey"
+            columns: ["capital_entry_id"]
+            isOneToOne: false
+            referencedRelation: "os_capital_entries"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "os_money_txns_category_id_user_id_fkey"
+            columns: ["category_id", "user_id"]
+            isOneToOne: false
+            referencedRelation: "os_money_categories"
+            referencedColumns: ["id", "user_id"]
+          },
+          {
+            foreignKeyName: "os_money_txns_investment_txn_id_user_id_fkey"
+            columns: ["investment_txn_id", "user_id"]
+            isOneToOne: false
+            referencedRelation: "os_investment_txns"
+            referencedColumns: ["id", "user_id"]
+          },
+          {
+            foreignKeyName: "os_money_txns_loan_payment_id_user_id_fkey"
+            columns: ["loan_payment_id", "user_id"]
+            isOneToOne: false
+            referencedRelation: "os_loan_payments"
+            referencedColumns: ["id", "user_id"]
+          },
+          {
+            foreignKeyName: "os_money_txns_to_wallet_id_user_id_fkey"
+            columns: ["to_wallet_id", "user_id"]
+            isOneToOne: false
+            referencedRelation: "os_v_wallet_balances"
+            referencedColumns: ["wallet_id", "user_id"]
+          },
+          {
+            foreignKeyName: "os_money_txns_to_wallet_id_user_id_fkey"
+            columns: ["to_wallet_id", "user_id"]
+            isOneToOne: false
+            referencedRelation: "os_wallets"
+            referencedColumns: ["id", "user_id"]
+          },
+          {
+            foreignKeyName: "os_money_txns_wallet_id_user_id_fkey"
+            columns: ["wallet_id", "user_id"]
+            isOneToOne: false
+            referencedRelation: "os_v_wallet_balances"
+            referencedColumns: ["wallet_id", "user_id"]
+          },
+          {
+            foreignKeyName: "os_money_txns_wallet_id_user_id_fkey"
+            columns: ["wallet_id", "user_id"]
+            isOneToOne: false
+            referencedRelation: "os_wallets"
+            referencedColumns: ["id", "user_id"]
+          },
+        ]
+      }
+      os_notes: {
+        Row: {
+          body: string
+          created_at: string
+          entry_date: string | null
+          id: string
+          kind: string
+          pinned: boolean
+          tags: string[]
+          title: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          body?: string
+          created_at?: string
+          entry_date?: string | null
+          id?: string
+          kind?: string
+          pinned?: boolean
+          tags?: string[]
+          title?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Update: {
+          body?: string
+          created_at?: string
+          entry_date?: string | null
+          id?: string
+          kind?: string
+          pinned?: boolean
+          tags?: string[]
+          title?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
       }
       os_notifications: {
         Row: {
@@ -12388,6 +13215,45 @@ export type Database = {
           },
         ]
       }
+      os_study_items: {
+        Row: {
+          course: string
+          created_at: string
+          due_at: string | null
+          id: string
+          kind: string
+          notes: string | null
+          status: string
+          title: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          course: string
+          created_at?: string
+          due_at?: string | null
+          id?: string
+          kind?: string
+          notes?: string | null
+          status?: string
+          title: string
+          updated_at?: string
+          user_id?: string
+        }
+        Update: {
+          course?: string
+          created_at?: string
+          due_at?: string | null
+          id?: string
+          kind?: string
+          notes?: string | null
+          status?: string
+          title?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       os_tasks: {
         Row: {
           assignee_id: string | null
@@ -12512,6 +13378,84 @@ export type Database = {
           role?: string
           updated_at?: string
           user_id?: string
+        }
+        Relationships: []
+      }
+      os_wallets: {
+        Row: {
+          created_at: string
+          currency: string
+          id: string
+          is_active: boolean
+          kind: string
+          name: string
+          notes: string | null
+          opening_balance: number
+          sort_order: number
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          currency?: string
+          id?: string
+          is_active?: boolean
+          kind?: string
+          name: string
+          notes?: string | null
+          opening_balance?: number
+          sort_order?: number
+          updated_at?: string
+          user_id?: string
+        }
+        Update: {
+          created_at?: string
+          currency?: string
+          id?: string
+          is_active?: boolean
+          kind?: string
+          name?: string
+          notes?: string | null
+          opening_balance?: number
+          sort_order?: number
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      os_weekly_reviews: {
+        Row: {
+          created_at: string
+          id: string
+          missed: string | null
+          notes: string | null
+          priorities: Json
+          updated_at: string
+          user_id: string
+          week_start: string
+          went_well: string | null
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          missed?: string | null
+          notes?: string | null
+          priorities?: Json
+          updated_at?: string
+          user_id?: string
+          week_start: string
+          went_well?: string | null
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          missed?: string | null
+          notes?: string | null
+          priorities?: Json
+          updated_at?: string
+          user_id?: string
+          week_start?: string
+          went_well?: string | null
         }
         Relationships: []
       }
@@ -16113,6 +17057,58 @@ export type Database = {
           },
         ]
       }
+      os_v_budget_actuals: {
+        Row: {
+          budget: number | null
+          budget_id: string | null
+          category_id: string | null
+          category_name: string | null
+          month: string | null
+          spent: number | null
+          user_id: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "os_budgets_category_id_user_id_fkey"
+            columns: ["category_id", "user_id"]
+            isOneToOne: false
+            referencedRelation: "os_money_categories"
+            referencedColumns: ["id", "user_id"]
+          },
+        ]
+      }
+      os_v_capital_summary: {
+        Row: {
+          brand_id: string | null
+          capital_in: number | null
+          drawings: number | null
+          last_entry: string | null
+          loan_outstanding: number | null
+          loans_given: number | null
+          loans_repaid: number | null
+          net_capital: number | null
+          not_in_erp: number | null
+          user_id: string | null
+          workspace_id: string | null
+          workspace_name: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "os_capital_entries_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "os_workspaces"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "os_workspaces_brand_id_fkey"
+            columns: ["brand_id"]
+            isOneToOne: false
+            referencedRelation: "brands"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       os_v_creator_ledger: {
         Row: {
           content_count: number | null
@@ -16121,6 +17117,56 @@ export type Database = {
           owed_total: number | null
           paid_total: number | null
           winner_count: number | null
+        }
+        Relationships: []
+      }
+      os_v_investment_summary: {
+        Row: {
+          category: string | null
+          contributed: number | null
+          created_at: string | null
+          current_value: number | null
+          distributions: number | null
+          id: string | null
+          name: string | null
+          net_invested: number | null
+          notes: string | null
+          status: string | null
+          updated_at: string | null
+          user_id: string | null
+          valued_on: string | null
+          withdrawn: number | null
+        }
+        Relationships: []
+      }
+      os_v_loan_status: {
+        Row: {
+          counterparty: string | null
+          created_at: string | null
+          currency: string | null
+          direction: string | null
+          due_date: string | null
+          fees_paid: number | null
+          id: string | null
+          installment_amount: number | null
+          installment_frequency: string | null
+          interest_paid: number | null
+          interest_rate_pct: number | null
+          interest_type: string | null
+          is_overdue: boolean | null
+          last_paid_on: string | null
+          loan_type: string | null
+          name: string | null
+          next_due_date: string | null
+          notes: string | null
+          outstanding: number | null
+          pressure: string | null
+          principal: number | null
+          principal_paid: number | null
+          start_date: string | null
+          status: string | null
+          updated_at: string | null
+          user_id: string | null
         }
         Relationships: []
       }
@@ -16155,6 +17201,20 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      os_v_wallet_balances: {
+        Row: {
+          balance: number | null
+          currency: string | null
+          is_active: boolean | null
+          kind: string | null
+          name: string | null
+          opening_balance: number | null
+          sort_order: number | null
+          user_id: string | null
+          wallet_id: string | null
+        }
+        Relationships: []
       }
       reviews_public: {
         Row: {
@@ -17361,7 +18421,6 @@ export type Database = {
         Args: { _brand_id: string; _user_id?: string }
         Returns: boolean
       }
-      has_hr_access: { Args: { _user_id: string }; Returns: boolean }
       has_permission: {
         Args: { _permission: string; _user_id: string }
         Returns: boolean
@@ -17374,25 +18433,197 @@ export type Database = {
         Returns: boolean
       }
       heartbeat_order_lock: { Args: { _order_id: string }; Returns: undefined }
-      hr_auto_close_stale_sessions: { Args: never; Returns: number }
-      hr_can_decide_leave: { Args: { _uid: string }; Returns: boolean }
-      hr_cancel_my_leave: { Args: { _leave_id: string }; Returns: undefined }
-      hr_count_working_days: {
-        Args: { _from: string; _to: string; _weekly_off?: number[] }
-        Returns: number
+      hr__compute_payslip: {
+        Args: { _employee_id: string; _run_id: string }
+        Returns: undefined
       }
+      hr__fill_run: { Args: { _run_id: string }; Returns: undefined }
+      hr__refresh_run: { Args: { _run_id: string }; Returns: undefined }
+      hr_activity_feed: {
+        Args: { _from: string; _limit?: number; _to: string; _user_id?: string }
+        Returns: {
+          at: string
+          brand_id: string
+          from_status: string
+          invoice_no: string
+          name: string
+          order_id: string
+          to_status: string
+          user_id: string
+          via: string
+        }[]
+      }
+      hr_admin_delete_session: { Args: { _id: string }; Returns: undefined }
+      hr_admin_save_session: {
+        Args: {
+          _breaks?: Json
+          _check_in: string
+          _check_out: string
+          _employee_id: string
+          _id: string
+          _note?: string
+        }
+        Returns: string
+      }
+      hr_attendance_days: {
+        Args: { _employee_id?: string; _from: string; _to: string }
+        Returns: {
+          auto_closed: boolean
+          brand_id: string
+          break_min: number
+          day_type: string
+          designation: string
+          early_min: number
+          employee_code: string
+          employee_id: string
+          employee_name: string
+          first_in: string
+          holiday_title: string
+          is_open: boolean
+          last_out: string
+          late_min: number
+          on_break: boolean
+          ot_min: number
+          sched_min: number
+          session_count: number
+          status: string
+          work_date: string
+          worked_min: number
+        }[]
+      }
+      hr_audit: {
+        Args: {
+          _action: string
+          _after: Json
+          _before: Json
+          _entity: string
+          _id: string
+        }
+        Returns: undefined
+      }
+      hr_auto_close_sessions: { Args: never; Returns: number }
+      hr_can_pay: { Args: { _uid?: string }; Returns: boolean }
+      hr_cancel_my_leave: { Args: { _id: string }; Returns: undefined }
       hr_decide_leave: {
-        Args: { _leave_id: string; _note?: string; _status: string }
+        Args: {
+          _approve: boolean
+          _id: string
+          _note?: string
+          _paid?: boolean
+        }
         Returns: undefined
       }
-      hr_effective_break_allowance: {
-        Args: { _emp: Database["public"]["Tables"]["hr_employees"]["Row"] }
+      hr_delete_leave: { Args: { _id: string }; Returns: undefined }
+      hr_is_manager: { Args: { _uid?: string }; Returns: boolean }
+      hr_list_staff_logins: {
+        Args: never
+        Returns: {
+          display_name: string
+          email: string
+          employee_id: string
+          roles: string[]
+          user_id: string
+        }[]
+      }
+      hr_my_status: { Args: never; Returns: Json }
+      hr_payroll_delete: { Args: { _run_id: string }; Returns: undefined }
+      hr_payroll_generate: {
+        Args: {
+          _as_of?: string
+          _brand_id?: string
+          _month: string
+          _title?: string
+        }
+        Returns: string
+      }
+      hr_payroll_pay: {
+        Args: {
+          _account_id: string
+          _paid_on: string
+          _post_to_finance?: boolean
+          _run_id: string
+        }
+        Returns: Json
+      }
+      hr_payroll_recalculate: {
+        Args: { _as_of?: string; _run_id: string }
+        Returns: undefined
+      }
+      hr_payroll_set_status: {
+        Args: { _run_id: string; _status: string }
+        Returns: undefined
+      }
+      hr_payslip_update: {
+        Args: {
+          _advance: number
+          _allowance: number
+          _bonus: number
+          _deduction: number
+          _id: string
+          _note: string
+        }
+        Returns: undefined
+      }
+      hr_punch: { Args: { _action: string }; Returns: Json }
+      hr_request_leave: {
+        Args: { _end: string; _paid: boolean; _reason: string; _start: string }
+        Returns: string
+      }
+      hr_run_released: { Args: { _run_id: string }; Returns: boolean }
+      hr_save_employee: {
+        Args: { _data: Json; _id: string; _pay?: Json }
+        Returns: string
+      }
+      hr_save_leave: {
+        Args: {
+          _employee_id: string
+          _end: string
+          _id: string
+          _paid: boolean
+          _reason: string
+          _start: string
+        }
+        Returns: string
+      }
+      hr_sched_minutes: {
+        Args: { _break: number; _end: string; _start: string }
         Returns: number
       }
-      hr_recalc_attendance: {
-        Args: { p_date: string; p_employee: string }
-        Returns: undefined
+      hr_shift_end_ts: {
+        Args: { _d: string; _end: string; _start: string }
+        Returns: string
       }
+      hr_shift_start_ts: {
+        Args: { _d: string; _start: string }
+        Returns: string
+      }
+      hr_staff_performance: {
+        Args: { _from: string; _to: string }
+        Returns: {
+          absent_days: number
+          actions_per_hour: number
+          cancelled: number
+          confirmed: number
+          designation: string
+          employee_id: string
+          first_action: string
+          last_action: string
+          late_days: number
+          name: string
+          ot_min: number
+          packed: number
+          packing: number
+          present_days: number
+          ready_to_ship: number
+          returned: number
+          scans: number
+          shipped: number
+          total_actions: number
+          user_id: string
+          worked_min: number
+        }[]
+      }
+      hr_today: { Args: never; Returns: string }
       hub_goal_actuals: {
         Args: { _brand_ids: string[] }
         Returns: {
@@ -18372,12 +19603,304 @@ export type Database = {
         Args: { p_status: Database["public"]["Enums"]["order_status"] }
         Returns: number
       }
+      os__apply_member: {
+        Args: {
+          p_display_name: string
+          p_email: string
+          p_granted_by: string
+          p_role: string
+          p_target: string
+          p_ws: string[]
+        }
+        Returns: undefined
+      }
+      os_ads_pulse: { Args: { p_brand_ids?: string[] }; Returns: Json }
       os_can_access_workspace: {
         Args: { _uid: string; _ws: string }
         Returns: boolean
       }
+      os_claim_invite: { Args: { p_code: string }; Returns: Json }
+      os_creative_performance: {
+        Args: { p_from: string; p_to: string; p_workspace_id?: string }
+        Returns: {
+          ads: number
+          clicks: number
+          content_item_id: string
+          cpa: number
+          cpc: number
+          cpm: number
+          ctr: number
+          ctr_last3: number
+          ctr_prev: number
+          days_live: number
+          fatigue: boolean
+          first_spend: string
+          hook_rate: number
+          impressions: number
+          last_spend: string
+          purchase_value: number
+          purchases: number
+          roas: number
+          spend: number
+          status: string
+          video_views: number
+        }[]
+      }
+      os_creator_pay_accounts: {
+        Args: { p_workspace_id: string }
+        Returns: {
+          account_id: string
+          account_type: string
+          brand_scoped: boolean
+          name: string
+        }[]
+      }
+      os_creator_send_product: {
+        Args: { p_shipment_id: string }
+        Returns: Json
+      }
+      os_creator_shipment_tracking: {
+        Args: { p_creator_id?: string; p_workspace_id?: string }
+        Returns: {
+          consignment_id: string
+          courier: string
+          courier_fee: number
+          courier_status: string
+          creator_id: string
+          delivered_at: string
+          erp_order_id: string
+          invoice_no: string
+          item_cost: number
+          live_status: string
+          order_status: string
+          ordered_at: string
+          product_id: string
+          product_title: string
+          qty: number
+          rider_name: string
+          rider_phone: string
+          shipment_id: string
+          shipped_at: string
+          tracking_url: string
+        }[]
+      }
+      os_creator_summary: {
+        Args: { p_days?: number; p_workspace_id?: string }
+        Returns: {
+          ad_spend: number
+          agreed_fees: number
+          approved_unpaid: number
+          avg_ctr: number
+          avg_hook_rate: number
+          contents_total: number
+          cost_per_content: number
+          courier_cost: number
+          creator_id: string
+          deals: number
+          delivered: number
+          due: number
+          in_production: number
+          last_content_at: string
+          live: number
+          not_winners: number
+          outstanding: number
+          paid: number
+          planned: number
+          products_sent: number
+          purchase_value: number
+          purchases: number
+          roas: number
+          sample_cost: number
+          shipments: number
+          total_cost: number
+          units_sent: number
+          winners: number
+        }[]
+      }
+      os_dhaka_today: { Args: never; Returns: string }
+      os_invite_member: {
+        Args: {
+          p_display_name: string
+          p_email: string
+          p_role: string
+          p_workspace_ids: string[]
+        }
+        Returns: Json
+      }
       os_is_admin: { Args: { _uid: string }; Returns: boolean }
+      os_is_meta_order: {
+        Args: { o: Database["public"]["Tables"]["orders"]["Row"] }
+        Returns: boolean
+      }
       os_is_owner: { Args: { _uid: string }; Returns: boolean }
+      os_is_personal_ws: { Args: { _ws: string }; Returns: boolean }
+      os_list_invites: {
+        Args: never
+        Returns: {
+          accepted_at: string
+          created_at: string
+          display_name: string
+          email: string
+          expires_at: string
+          invite_id: string
+          invited_by_name: string
+          role: string
+          status: string
+          workspace_ids: string[]
+        }[]
+      }
+      os_list_members: {
+        Args: never
+        Returns: {
+          display_name: string
+          email: string
+          role: string
+          user_id: string
+          workspace_ids: string[]
+        }[]
+      }
+      os_meta_accounts: {
+        Args: never
+        Returns: {
+          active_campaigns: number
+          bdt_estimated: boolean
+          brand_id: string
+          brand_name: string
+          clicks_7d: number
+          currency: string
+          external_id: string
+          id: string
+          impressions_7d: number
+          last_error: string
+          last_insights_sync_at: string
+          last_structure_sync_at: string
+          last_sync_at: string
+          last_sync_kind: string
+          last_sync_rows: number
+          last_sync_status: string
+          name: string
+          platform: string
+          purchase_value_7d: number
+          purchases_7d: number
+          spend_7d: number
+          spend_7d_bdt: number
+          spend_today: number
+          status: string
+          sync_stale: boolean
+          timezone: string
+          token_connected: boolean
+        }[]
+      }
+      os_meta_ad_search: {
+        Args: { p_brand_ids?: string[]; p_limit?: number; p_q?: string }
+        Returns: {
+          ad_id: string
+          ad_name: string
+          adset_name: string
+          brand_id: string
+          campaign_name: string
+          external_id: string
+          last_spend_date: string
+          spend_30d: number
+          status: string
+          thumbnail: string
+        }[]
+      }
+      os_meta_allowed_accounts: { Args: never; Returns: string[] }
+      os_meta_allowed_brands: { Args: never; Returns: string[] }
+      os_meta_daily: {
+        Args: { p_account_ids?: string[]; p_from: string; p_to: string }
+        Returns: {
+          account_id: string
+          clicks: number
+          day: string
+          impressions: number
+          purchase_value: number
+          purchases: number
+          spend: number
+          spend_bdt: number
+        }[]
+      }
+      os_meta_sync_log: {
+        Args: { p_account_id?: string; p_limit?: number }
+        Returns: {
+          account_id: string
+          account_name: string
+          error: string
+          finished_at: string
+          id: string
+          kind: string
+          rows_processed: number
+          started_at: string
+          status: string
+        }[]
+      }
+      os_meta_tree: {
+        Args: { p_account_ids?: string[]; p_from: string; p_to: string }
+        Returns: {
+          account_id: string
+          account_name: string
+          add_to_cart: number
+          campaign_id: string
+          clicks: number
+          cpc: number
+          cpm: number
+          ctr: number
+          daily_budget: number
+          effective_status: string
+          id: string
+          impressions: number
+          initiate_checkout: number
+          level: string
+          lifetime_budget: number
+          meta_roas: number
+          name: string
+          objective: string
+          parent_id: string
+          purchase_value: number
+          purchases: number
+          spend: number
+          spend_bdt: number
+          status: string
+          thumbnail: string
+        }[]
+      }
+      os_money_seed_defaults: { Args: never; Returns: undefined }
+      os_orders_cohort: {
+        Args: { p_brand_ids?: string[]; p_days?: number }
+        Returns: {
+          cancelled: number
+          confirmed: number
+          delivered: number
+          delivered_value: number
+          delivery_rate: number
+          in_progress: number
+          meta_orders: number
+          order_date: string
+          pending: number
+          placed: number
+          returned: number
+          shipped: number
+        }[]
+      }
+      os_product_ad_daily: {
+        Args: { p_from: string; p_product_id: string; p_to: string }
+        Returns: {
+          day_date: string
+          meta_units: number
+          order_value: number
+          orders: number
+          spend: number
+          units: number
+        }[]
+      }
+      os_product_ad_scorecard: {
+        Args: { p_brand_ids?: string[]; p_from: string; p_to: string }
+        Returns: Json
+      }
+      os_regenerate_invite: { Args: { p_invite_id: string }; Returns: Json }
+      os_remove_member: { Args: { p_user_id: string }; Returns: undefined }
+      os_revoke_invite: { Args: { p_invite_id: string }; Returns: undefined }
       os_role: { Args: { _uid: string }; Returns: string }
       os_row_visible: {
         Args: {
@@ -18389,6 +19912,29 @@ export type Database = {
         }
         Returns: boolean
       }
+      os_storage_ws_ok: { Args: { p_name: string }; Returns: boolean }
+      os_upsert_member: {
+        Args: {
+          p_display_name: string
+          p_email: string
+          p_role: string
+          p_workspace_ids: string[]
+        }
+        Returns: string
+      }
+      pack__row: {
+        Args: { o: Database["public"]["Tables"]["orders"]["Row"] }
+        Returns: Json
+      }
+      pack_can_use: {
+        Args: { _brand?: string; _uid?: string }
+        Returns: boolean
+      }
+      pack_lookup: { Args: { _code: string }; Returns: Json }
+      pack_my_stats: { Args: { _brand_ids?: string[] }; Returns: Json }
+      pack_queue: { Args: { _brand_ids?: string[] }; Returns: Json }
+      pack_scan: { Args: { _mode?: string; _order_id: string }; Returns: Json }
+      pack_undo: { Args: { _order_id: string }; Returns: Json }
       post_creator_payment: {
         Args: {
           p_account_id: string
