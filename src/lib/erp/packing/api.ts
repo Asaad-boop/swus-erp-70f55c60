@@ -58,16 +58,16 @@ export const packStats = (brandIds: string[] | null) =>
   });
 
 export const PACK_STAGE: Record<string, { label: string; cls: string }> = {
-  confirmed: { label: "To pack", cls: "bg-amber-500/10 text-amber-700" },
-  ready_to_pack: { label: "To pack", cls: "bg-amber-500/10 text-amber-700" },
-  packaging: { label: "Packing", cls: "bg-sky-500/10 text-sky-700" },
-  packed: { label: "Packed", cls: "bg-indigo-500/10 text-indigo-700" },
-  ready_to_ship: { label: "Ready to ship", cls: "bg-emerald-500/10 text-emerald-700" },
+  confirmed: { label: "Pending", cls: "bg-blue-500/10 text-blue-700" },
+  ready_to_pack: { label: "Ready to pack", cls: "bg-fuchsia-500/10 text-fuchsia-700" },
+  packaging: { label: "Packing", cls: "bg-fuchsia-500/10 text-fuchsia-700" },
+  packed: { label: "Packed", cls: "bg-purple-500/10 text-purple-700" },
+  ready_to_ship: { label: "RTS", cls: "bg-cyan-500/10 text-cyan-700" },
 };
 
 export const NEXT_LABEL: Record<string, string> = {
-  confirmed: "Start packing",
-  ready_to_pack: "Start packing",
-  packaging: "Mark packed",
-  packed: "Ready to ship",
+  confirmed: "Packing-এ নেবে",
+  ready_to_pack: "Packed হবে",
+  packaging: "Packed হবে",
+  packed: "RTS হবে",
 };

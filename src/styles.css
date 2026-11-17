@@ -498,6 +498,22 @@
   }
 }
 
+/* Phones: stop iOS auto-zoom on focus (it zooms any field under 16px and the
+   page jumps), and stop the page from rubber-banding the whole app shell. */
+@media (max-width: 767px) {
+  input:not([type="checkbox"]):not([type="radio"]):not([type="range"]),
+  select,
+  textarea {
+    font-size: 16px !important;
+  }
+  html,
+  body {
+    overscroll-behavior: none;
+    -webkit-tap-highlight-color: transparent;
+  }
+}
+
+
 @keyframes panel-rise {
   from { opacity: 0; transform: translateY(10px); }
   to { opacity: 1; transform: none; }

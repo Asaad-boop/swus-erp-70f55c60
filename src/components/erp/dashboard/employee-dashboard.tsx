@@ -126,7 +126,7 @@ export function EmployeeDashboard() {
   const byStatus = Object.entries(day?.byStatus ?? {}).sort((a, b) => b[1] - a[1]).slice(0, 6);
 
   return (
-    <div className="min-h-screen bg-muted/20">
+    <div className="min-h-full bg-muted/20">
       <div className="border-b border-border/60 bg-background/90 sticky top-0 z-20 backdrop-blur">
         <div className="px-4 md:px-6 py-3 max-w-[1200px] mx-auto flex items-center justify-between gap-3">
           <div className="min-w-0">

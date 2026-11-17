@@ -39,12 +39,12 @@ function ErpLayout() {
     <BrandProvider>
       <ErpQuickActionsProvider>
       <GlobalSearchProvider>
-      <div className="flex h-screen bg-background overflow-hidden">
+      <div className="flex h-dvh bg-background overflow-hidden">
         <ErpSidebar />
         <GlobalNewOrderNotifier />
         <DocBrandingSync />
 
-        <div className="flex-1 flex flex-col min-w-0 h-screen">
+        <div className="flex-1 flex flex-col min-w-0 h-dvh">
           <header className="h-14 shrink-0 border-b border-border/70 bg-background/80 backdrop-blur-md flex items-center justify-between px-4 md:px-8 gap-3">
             <div className="flex items-center gap-2 md:hidden">
               <Sheet open={mobileNav} onOpenChange={setMobileNav}>
@@ -70,7 +70,7 @@ function ErpLayout() {
               </Button>
             </div>
           </header>
-          <main className="flex-1 overflow-auto bg-background">
+          <main className="flex-1 overflow-auto overscroll-contain bg-background">
             <Outlet />
           </main>
         </div>
