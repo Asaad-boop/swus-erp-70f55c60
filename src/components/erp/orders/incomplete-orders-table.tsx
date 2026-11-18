@@ -53,8 +53,8 @@ import { BrandBadge } from "@/components/erp/brand-badge";
 import { cn } from "@/lib/utils";
 import { supabase } from "@/integrations/supabase/client";
 import { useAbandonedCartsQuery, type IncompleteFilters } from "@/hooks/erp/use-abandoned-carts-query";
+import { IncompleteCartReviewDialog } from "@/components/erp/orders/incomplete-cart-review-dialog";
 import {
-  convertAbandonedCartFn,
   deleteAbandonedCartFn,
   bulkDeleteAbandonedCartsFn,
   bulkLogCartMessagesFn,
@@ -84,7 +84,7 @@ const FOLLOWUP_OPTIONS = [
 function priorityScore(r: AbandonedCartRow): number {
   // Higher = more urgent. Bigger cart + fresher = higher score.
   const val = Number(r.subtotal ?? 0);
-  const ageH = (Date.now() - new Date(r.updated_at).getTime()) / 3_600_000;
+  const ageH = (Date.now() - new Date(lastActive(r)).getTime()) / 3_600_000;
   const freshness = Math.max(0, 48 - ageH) / 48; // 1 fresh, 0 stale (>48h)
   const contactedPenalty = (r.followup_count ?? 0) > 0 ? 0.5 : 1;
   return val * (0.5 + 0.5 * freshness) * contactedPenalty;
@@ -120,7 +120,6 @@ export function IncompleteOrdersTable({
   onOpenOrder,
 }: Props) {
   const qc = useQueryClient();
-  const convertAbandonedCart = useServerFn(convertAbandonedCartFn);
   const deleteAbandonedCart = useServerFn(deleteAbandonedCartFn);
   const bulkDeleteCarts = useServerFn(bulkDeleteAbandonedCartsFn);
   const bulkLogMessages = useServerFn(bulkLogCartMessagesFn);
@@ -129,6 +128,11 @@ export function IncompleteOrdersTable({
   const [filters, setFilters] = useState<IncompleteFilters>({ sort: "newest" });
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [confirmBulkDelete, setConfirmBulkDelete] = useState(false);
+  const [, setClock] = useState(0);
+  useEffect(() => {
+    const t = setInterval(() => setClock((c) => c + 1), 30_000);
+    return () => clearInterval(t);
+  }, []);
 
   const { data, isLoading, isFetching, error } = useAbandonedCartsQuery({
     brandId,
@@ -197,26 +201,6 @@ export function IncompleteOrdersTable({
     (filters.lastSteps?.length ? 1 : 0) +
     (filters.followupStatuses?.length ? 1 : 0) +
     (filters.sort && filters.sort !== "newest" ? 1 : 0);
-
-  const convertMut = useMutation({
-    mutationFn: async (cart: AbandonedCartRow) => {
-      setPendingId(cart.id);
-      const targetBrandId = cart.brand_id ?? brandId;
-      if (!targetBrandId) throw new Error("Brand select koro");
-      return convertAbandonedCart({
-        data: { id: cart.id, brandId: targetBrandId },
-      });
-    },
-    onSuccess: (res) => {
-      toast.success(`Order draft created${res.invoiceNo ? " · " + res.invoiceNo : ""} — edit & confirm`);
-      qc.invalidateQueries({ queryKey: ["abandoned-carts"] });
-      qc.invalidateQueries({ queryKey: ["abandoned-carts-count"] });
-      qc.invalidateQueries({ queryKey: ["orders"] });
-      onOpenOrder(res.orderId);
-    },
-    onError: (e: Error) => toast.error(e.message),
-    onSettled: () => setPendingId(null),
-  });
 
   const delMut = useMutation({
     mutationFn: async (id: string) => {
@@ -487,14 +471,12 @@ export function IncompleteOrdersTable({
                       aria-hidden
                       className="absolute left-0 top-1/2 -translate-y-1/2 h-8 w-[3px] rounded-r-full bg-amber-500"
                     />
-                    <div className="text-xs leading-tight whitespace-nowrap pl-1" title={`Last activity: ${format(new Date(r.updated_at), "dd/MM/yyyy h:mm a")}`}>
+                    <div className="text-xs leading-tight whitespace-nowrap pl-1" title={`Customer last active: ${format(new Date(lastActive(r)), "dd/MM/yyyy h:mm a")}`}>
                       <div className="font-medium">
                         {format(new Date(r.created_at), "dd/MM/yyyy,")}
                       </div>
                       <div>{format(new Date(r.created_at), "h:mm a")}</div>
-                      <div className="text-[10px] text-muted-foreground mt-0.5">
-                        active {relTime(r.updated_at)}
-                      </div>
+                      <ActivityLine iso={lastActive(r)} />
                     </div>
                   </TableCell>
 
@@ -586,13 +568,9 @@ export function IncompleteOrdersTable({
                         className="h-8 gap-1"
                         disabled={busy || !(r.brand_id ?? brandId)}
                         onClick={() => setConfirmCart(r)}
-                        title="Open & edit as order"
+                        title="Review, call & confirm"
                       >
-                        {busy && convertMut.isPending ? (
-                          <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                        ) : (
-                          <CheckCircle2 className="h-3.5 w-3.5" />
-                        )}
+                        <CheckCircle2 className="h-3.5 w-3.5" />
                         Open
                       </Button>
                       <Button
@@ -668,65 +646,12 @@ export function IncompleteOrdersTable({
         </AlertDialogContent>
       </AlertDialog>
 
-      <AlertDialog open={!!confirmCart} onOpenChange={(o) => !o && setConfirmCart(null)}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle className="flex items-center gap-2">
-              <CheckCircle2 className="h-5 w-5 text-primary" />
-              Open as order draft?
-            </AlertDialogTitle>
-            <AlertDialogDescription asChild>
-              <div className="space-y-2 text-sm">
-                <div>
-                  Ei incomplete checkout theke ekta draft order tairi hobe. Order page e giye customer info, address, items — shob edit korte parben, tarpor Confirm korben.
-                </div>
-                {confirmCart && (
-                  <div className="rounded-md border bg-muted/40 p-2.5 text-xs space-y-1">
-                    <div>
-                      <span className="text-muted-foreground">Customer:</span>{" "}
-                      <span className="font-semibold">{confirmCart.customer_name ?? "—"}</span>
-                    </div>
-                    <div>
-                      <span className="text-muted-foreground">Phone:</span>{" "}
-                      <span className="font-mono">{confirmCart.customer_phone ?? "—"}</span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span>
-                        <span className="text-muted-foreground">Items:</span>{" "}
-                        {(confirmCart.cart_items ?? []).length}
-                      </span>
-                      <span className="font-bold tabular-nums">
-                        ৳{Number(confirmCart.subtotal ?? 0).toLocaleString()}
-                      </span>
-                    </div>
-                  </div>
-                )}
-              </div>
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel disabled={convertMut.isPending}>Cancel</AlertDialogCancel>
-            <AlertDialogAction
-              disabled={convertMut.isPending}
-              onClick={(e) => {
-                e.preventDefault();
-                if (confirmCart) {
-                  const cart = confirmCart;
-                  setConfirmCart(null);
-                  convertMut.mutate(cart);
-                }
-              }}
-            >
-              {convertMut.isPending ? (
-                <Loader2 className="h-4 w-4 animate-spin mr-1.5" />
-              ) : (
-                <CheckCircle2 className="h-4 w-4 mr-1.5" />
-              )}
-              Open & Edit
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+      <IncompleteCartReviewDialog
+        cart={confirmCart}
+        fallbackBrandId={brandId}
+        onClose={() => setConfirmCart(null)}
+        onConfirmed={onOpenOrder}
+      />
 
       <AlertDialog open={!!deleteCart} onOpenChange={(o) => !o && setDeleteCart(null)}>
         <AlertDialogContent>
@@ -767,16 +692,45 @@ export function IncompleteOrdersTable({
   );
 }
 
+function lastActive(r: AbandonedCartRow): string {
+  return r.last_activity_at ?? r.updated_at ?? r.created_at;
+}
+
 function relTime(iso: string): string {
-  const diff = Date.now() - new Date(iso).getTime();
-  const d = Math.floor(diff / 86_400_000);
-  if (d <= 0) {
-    const h = Math.floor(diff / 3_600_000);
-    return h <= 0 ? "just now" : `${h}h ago`;
+  const mins = Math.floor((Date.now() - new Date(iso).getTime()) / 60_000);
+  if (mins < 1) return "just now";
+  if (mins < 60) return `${mins} min ago`;
+  const h = Math.floor(mins / 60);
+  if (h < 24) {
+    const m = mins % 60;
+    return m ? `${h}h ${m}m ago` : `${h}h ago`;
   }
+  const d = Math.floor(h / 24);
   if (d < 30) return `${d} day${d === 1 ? "" : "s"} ago`;
-  const m = Math.floor(d / 30);
-  return `${m} mo ago`;
+  return `${Math.floor(d / 30)} mo ago`;
+}
+
+/** Customer may still be on the site for the first ~10 min — call after that. */
+const CALL_AFTER_MIN = 10;
+
+function ActivityLine({ iso }: { iso: string }) {
+  const mins = (Date.now() - new Date(iso).getTime()) / 60_000;
+  const tag =
+    mins < CALL_AFTER_MIN
+      ? { text: "wait", cls: "bg-amber-100 text-amber-800 dark:bg-amber-950 dark:text-amber-300" }
+      : mins < 24 * 60
+        ? { text: "call now", cls: "bg-green-100 text-green-800 dark:bg-green-950 dark:text-green-300" }
+        : null;
+  return (
+    <div className="mt-0.5 flex items-center gap-1 text-[10px] text-muted-foreground">
+      <span>active {relTime(iso)}</span>
+      {tag && (
+        <span className={cn("rounded-full px-1.5 py-px text-[9px] font-semibold uppercase tracking-wide", tag.cls)}>
+          {tag.text}
+        </span>
+      )}
+    </div>
+  );
 }
 
 function CartProductsCell({ items }: { items: AbandonedCartItem[] }) {

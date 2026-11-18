@@ -33,6 +33,8 @@ export type AbandonedCartRow = {
   converted_order_id: string | null;
   created_at: string;
   updated_at: string;
+  last_activity_at?: string | null;
+  source_site?: string | null;
   followup_status?: string | null;
   followup_count?: number | null;
   last_followup_at?: string | null;
@@ -203,102 +205,176 @@ export const deleteAbandonedCartFn = createServerFn({ method: "POST" })
     return { ok: true };
   });
 
+const reviewItemSchema = z.object({
+  product_id: z.string().min(1),
+  variant_id: z.string().nullable().optional(),
+  variant_label: z.string().nullable().optional(),
+  name: z.string().min(1),
+  image: z.string().nullable().optional(),
+  unit_price: z.number().min(0),
+  quantity: z.number().int().min(1).max(999),
+});
+
+const reviewCustomerSchema = z.object({
+  customer_name: z.string().trim().max(120).nullable().optional(),
+  customer_phone: z.string().trim().max(30).nullable().optional(),
+  shipping_address: z.string().trim().max(500).nullable().optional(),
+  shipping_city: z.string().trim().max(100).nullable().optional(),
+  shipping_district: z.string().trim().max(100).nullable().optional(),
+  shipping_thana: z.string().trim().max(100).nullable().optional(),
+});
+
+function cleanText(v: string | null | undefined): string | null {
+  const t = (v ?? "").trim();
+  return t.length ? t : null;
+}
+
+const SITE_TO_SOURCE_WEBSITE: Record<string, string> = {
+  "toyorakids.com": "toyora",
+  "www.toyorakids.com": "toyora",
+  "hobbyshopbd.com": "main",
+  "www.hobbyshopbd.com": "main",
+};
+
+/**
+ * Save staff edits (address, phone, items...) on an incomplete checkout
+ * WITHOUT creating an order. Used while talking to the customer.
+ */
+export const updateAbandonedCartFn = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d) =>
+    reviewCustomerSchema
+      .extend({
+        id: z.string().uuid(),
+        items: z.array(reviewItemSchema).min(1).max(50),
+      })
+      .parse(d),
+  )
+  .handler(async ({ data, context }) => {
+    await assertStaff(context);
+    const subtotal = data.items.reduce((s, it) => s + it.unit_price * it.quantity, 0);
+    const { error } = await context.supabase
+      .from("abandoned_carts")
+      .update({
+        customer_name: cleanText(data.customer_name),
+        customer_phone: cleanText(data.customer_phone),
+        shipping_address: cleanText(data.shipping_address),
+        shipping_city: cleanText(data.shipping_city),
+        shipping_district: cleanText(data.shipping_district),
+        shipping_thana: cleanText(data.shipping_thana),
+        cart_items: data.items as never,
+        subtotal,
+      })
+      .eq("id", data.id)
+      .eq("is_converted", false);
+    if (error) throw new Error(error.message);
+    return { ok: true };
+  });
+
+/**
+ * Staff has talked to the customer and pressed CONFIRM:
+ * only now is a real (confirmed) order created from the reviewed details.
+ */
 export const convertAbandonedCartFn = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((d) =>
-    z.object({
-      id: z.string().uuid(),
-      brandId: z.string().uuid(),
-    }).parse(d),
+    reviewCustomerSchema
+      .extend({
+        id: z.string().uuid(),
+        brandId: z.string().uuid(),
+        items: z.array(reviewItemSchema).min(1).max(50),
+        shippingFee: z.number().min(0).max(100000).default(0),
+        discount: z.number().min(0).max(1000000).default(0),
+        note: z.string().max(1000).nullable().optional(),
+      })
+      .parse(d),
   )
   .handler(async ({ data, context }) => {
-    const [admin, customerService, operations] = await Promise.all([
-      context.supabase.rpc("has_role", { _user_id: context.userId, _role: "admin" }),
-      context.supabase.rpc("has_role", { _user_id: context.userId, _role: "customer_service" }),
-      context.supabase.rpc("has_role", { _user_id: context.userId, _role: "operations" }),
-    ]);
-    const roleError = admin.error ?? customerService.error ?? operations.error;
-    if (roleError) throw new Error(roleError.message);
-    if (!admin.data && !customerService.data && !operations.data) {
-      throw new Error("Not authorized to confirm incomplete checkouts");
-    }
+    await assertStaff(context);
+    const sb = context.supabase;
 
-    const supabaseAdmin = context.supabase;
+    const name = cleanText(data.customer_name);
+    const phone = cleanText(data.customer_phone);
+    const address = cleanText(data.shipping_address);
+    if (!name) throw new Error("Customer name lagbe");
+    if (!phone || phone.replace(/\D/g, "").length < 10) throw new Error("Sothik phone number lagbe");
+    if (!address) throw new Error("Address lagbe");
 
-    const { data: cart, error: cartErr } = await supabaseAdmin
+    const subtotal = data.items.reduce((s, it) => s + it.unit_price * it.quantity, 0);
+    const discount = Math.min(data.discount, subtotal);
+    const total = Math.max(0, subtotal + data.shippingFee - discount);
+
+    // Claim the cart first so a double-click can never create two orders.
+    const { data: claimed, error: claimErr } = await sb
       .from("abandoned_carts")
-      .select("*")
+      .update({ is_converted: true })
       .eq("id", data.id)
+      .eq("is_converted", false)
+      .select("id, source_site")
       .maybeSingle();
-    if (cartErr) throw new Error(cartErr.message);
-    if (!cart) throw new Error("Cart not found");
-    if (cart.is_converted) throw new Error("Already converted");
+    if (claimErr) throw new Error(claimErr.message);
+    if (!claimed) throw new Error("Ei checkout already order hoye geche");
 
-    const items = (cart.cart_items as unknown as AbandonedCartItem[]) ?? [];
-    if (!items.length) throw new Error("Cart has no items");
+    const release = async () => {
+      await sb.from("abandoned_carts").update({ is_converted: false, converted_order_id: null }).eq("id", data.id);
+    };
 
-    const subtotal = items.reduce((s, it) => {
-      const price = Number(it.unit_price ?? it.price ?? 0);
-      const qty = Number(it.quantity ?? it.qty ?? 1);
-      return s + price * qty;
-    }, 0);
-    const total = subtotal; // shipping/discount = 0 by default; staff can adjust later
-
-    const { data: order, error: oErr } = await supabaseAdmin
+    const now = new Date().toISOString();
+    const district = cleanText(data.shipping_district);
+    const { data: order, error: oErr } = await sb
       .from("orders")
       .insert({
         brand_id: data.brandId,
         source: "incomplete" as never,
+        source_website: SITE_TO_SOURCE_WEBSITE[(claimed as { source_site?: string | null }).source_site ?? ""] ?? null,
         status: "confirmed" as never,
-        web_status: "incomplete" as never,
+        web_status: "complete" as never,
         confirmation_status: "pending" as never,
+        confirmed_at: now,
+        confirmed_by: context.userId,
         subtotal,
         total,
-        shipping_fee: 0,
-        discount_amount: 0,
+        shipping_fee: data.shippingFee,
+        discount_amount: discount,
         is_guest_order: true,
-        shipping_name: cart.customer_name,
-        shipping_phone: cart.customer_phone,
-        shipping_address: cart.shipping_address,
-        shipping_city: cart.shipping_city,
-        shipping_district: cart.shipping_district,
-        shipping_thana: cart.shipping_thana,
-        guest_name: cart.customer_name,
-        guest_phone: cart.customer_phone,
+        shipping_name: name,
+        shipping_phone: phone,
+        shipping_address: address,
+        shipping_city: cleanText(data.shipping_city) ?? district,
+        shipping_district: district,
+        shipping_thana: cleanText(data.shipping_thana),
+        guest_name: name,
+        guest_phone: phone,
         payment_method: "cod",
+        notes: cleanText(data.note),
       })
       .select("id, invoice_no")
       .single();
-    if (oErr) throw new Error(oErr.message);
-
-    const itemRows = items
-      .filter((it) => it.product_id || it.id)
-      .map((it) => {
-        const price = Number(it.unit_price ?? it.price ?? 0);
-          const qty = Number(it.quantity ?? it.qty ?? 1);
-        return {
-          order_id: order.id,
-          product_id: (it.product_id ?? it.id)!,
-          variant_id: it.variant_id ?? null,
-          variant_label: it.variant_label ?? null,
-          name: it.name ?? "Item",
-          image: it.image ?? null,
-          price,
-          unit_price: price,
-          quantity: qty,
-          line_total: price * qty,
-        };
-      });
-
-    if (itemRows.length) {
-      const { error: iErr } = await supabaseAdmin.from("order_items").insert(itemRows);
-      if (iErr) throw new Error(iErr.message);
+    if (oErr) {
+      await release();
+      throw new Error(oErr.message);
     }
 
-    await supabaseAdmin.rpc("mark_abandoned_cart_converted", {
-      _id: data.id,
-      _order_id: order.id,
-    });
+    const itemRows = data.items.map((it) => ({
+      order_id: order.id,
+      product_id: it.product_id,
+      variant_id: it.variant_id ?? null,
+      variant_label: it.variant_label ?? null,
+      name: it.name,
+      image: it.image ?? null,
+      price: it.unit_price,
+      unit_price: it.unit_price,
+      quantity: it.quantity,
+      line_total: it.unit_price * it.quantity,
+    }));
+    const { error: iErr } = await sb.from("order_items").insert(itemRows);
+    if (iErr) {
+      await sb.from("orders").delete().eq("id", order.id);
+      await release();
+      throw new Error(iErr.message);
+    }
+
+    await sb.rpc("mark_abandoned_cart_converted", { _id: data.id, _order_id: order.id });
 
     return { orderId: order.id, invoiceNo: order.invoice_no };
   });
