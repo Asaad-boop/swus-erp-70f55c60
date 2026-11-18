@@ -21,14 +21,15 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { EmptyState } from "@/components/erp/ui";
 import { CameraScanner } from "@/components/erp/dispatch/camera-scanner";
 import { dispatchFeedback } from "@/lib/erp/dispatch/feedback";
+import { beep, unlockBeep, warmScanner } from "@/lib/erp/dispatch/scan-engine";
 import { useBrand } from "@/contexts/brand-context";
 import { cn } from "@/lib/utils";
 import {
   NEXT_LABEL,
   PACK_STAGE,
-  packLookup,
   packQueue,
   packScan,
+  packScanCode,
   packStats,
   packUndo,
   type PackMode,
@@ -123,6 +124,10 @@ function PackingStation() {
     refocus();
   }, [camera, isTouch]); // eslint-disable-line react-hooks/exhaustive-deps
 
+  useEffect(() => {
+    warmScanner();
+  }, []);
+
   const refresh = () => {
     void qc.invalidateQueries({ queryKey: ["packing"] });
   };
@@ -168,9 +173,28 @@ function PackingStation() {
     },
   });
 
+  const [busy, setBusy] = useState(false);
+
+  const okResult = (o: PackOrder) => {
+    const from = PACK_STAGE[o.from_status ?? ""]?.label ?? o.from_status;
+    const to = PACK_STAGE[o.status]?.label ?? o.status;
+    const msg = `${from} → ${to}`;
+    dispatchFeedback(o.status === "ready_to_ship" ? "ready" : "pack");
+    setCurrent({ ok: true, msg, order: o });
+    push({ ok: true, msg: `${o.invoice_no ?? ""} · ${msg}`, order: o });
+    refresh();
+  };
+  const failResult = (msg: string, o?: PackOrder | null) => {
+    beep(false);
+    dispatchFeedback("error");
+    setCurrent({ ok: false, msg, order: o ?? undefined });
+    push({ ok: false, msg, order: o ?? undefined });
+  };
+
+  /** Scanner path: one server round trip finds the order and moves it. */
   const handle = async (raw: string) => {
     const c = raw.trim();
-    if (!c || scan.isPending) return;
+    if (!c || busy) return;
     const now = Date.now();
     if (lastRef.current.code === c && now - lastRef.current.at < 2500) {
       dispatchFeedback("duplicate");
@@ -179,24 +203,18 @@ function PackingStation() {
     lastRef.current = { code: c, at: now };
     setCode("");
     setChoices([]);
+    setBusy(true);
     try {
-      const found = await packLookup(c);
-      if (!found.length) {
-        dispatchFeedback("error");
-        setCurrent({ ok: false, msg: `"${c}" — কোনো order পাওয়া যায়নি` });
-        push({ ok: false, msg: `${c} — not found` });
-        refocus();
-        return;
-      }
-      const exact = found.find((o) => o.invoice_no === c || o.tracking === c || o.id === c);
-      if (!exact && found.length > 1) {
-        setChoices(found);
-        return;
-      }
-      scan.mutate(exact ?? found[0]);
+      const r = await packScanCode(c, mode);
+      if (r.result === "ok") okResult(r.order);
+      else if (r.result === "choose") setChoices(r.choices);
+      else if (r.result === "error") failResult(r.message, r.order);
+      else failResult(`"${c}" — কোনো order পাওয়া যায়নি`);
     } catch (e) {
-      dispatchFeedback("error");
-      setCurrent({ ok: false, msg: errText(e) });
+      failResult(errText(e));
+    } finally {
+      setBusy(false);
+      refocus();
     }
   };
 
@@ -266,7 +284,10 @@ function PackingStation() {
           <div className="mt-3 grid grid-cols-[1fr_auto] gap-2">
             <Button
               size="lg"
-              onClick={() => setCamera((v) => !v)}
+              onClick={() => {
+                unlockBeep();
+                setCamera((v) => !v);
+              }}
               className={cn(
                 "h-14 gap-2 rounded-xl text-base font-semibold",
                 camera ? "bg-rose-600 hover:bg-rose-700" : "bg-indigo-600 hover:bg-indigo-700",
@@ -307,13 +328,8 @@ function PackingStation() {
               autoCapitalize="characters"
               enterKeyHint="go"
             />
-            <Button
-              type="submit"
-              size="lg"
-              className="h-12 px-4"
-              disabled={scan.isPending || !code.trim()}
-            >
-              {scan.isPending ? (
+            <Button type="submit" size="lg" className="h-12 px-4" disabled={busy || !code.trim()}>
+              {busy ? (
                 <Loader2 className="size-5 animate-spin" />
               ) : (
                 <ArrowRight className="size-5" />
@@ -325,7 +341,10 @@ function PackingStation() {
                 size="lg"
                 variant={camera ? "default" : "outline"}
                 className="h-12 px-4"
-                onClick={() => setCamera((v) => !v)}
+                onClick={() => {
+                  unlockBeep();
+                  setCamera((v) => !v);
+                }}
               >
                 {camera ? <CameraOff className="size-5" /> : <Camera className="size-5" />}
               </Button>
@@ -339,7 +358,7 @@ function PackingStation() {
               inline
               continuous
               open={camera}
-              paused={scan.isPending}
+              paused={busy || scan.isPending}
               onClose={() => setCamera(false)}
               onDetect={(c) => void handle(c)}
             />
@@ -367,7 +386,7 @@ function PackingStation() {
           </div>
         )}
 
-        {scan.isPending && !current && (
+        {busy && !current && (
           <div className="mt-3 flex items-center gap-2 text-sm text-muted-foreground">
             <Loader2 className="size-4 animate-spin" /> Checking…
           </div>
