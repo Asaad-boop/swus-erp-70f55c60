@@ -93,7 +93,10 @@ export function IncompleteCartReviewDialog({
     setNote("");
   }, [cart?.id]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  const subtotal = useMemo(() => items.reduce((s, it) => s + it.unit_price * it.quantity, 0), [items]);
+  const subtotal = useMemo(
+    () => items.reduce((s, it) => s + it.unit_price * it.quantity, 0),
+    [items],
+  );
   const fee = Math.max(0, Number(shippingFee) || 0);
   const disc = Math.min(Math.max(0, Number(discount) || 0), subtotal);
   const total = Math.max(0, subtotal + fee - disc);
@@ -161,9 +164,13 @@ export function IncompleteCartReviewDialog({
   const busy = saveMut.isPending || confirmMut.isPending;
 
   const setQty = (idx: number, q: number) =>
-    setItems((prev) => prev.map((it, i) => (i === idx ? { ...it, quantity: Math.max(1, Math.min(999, q)) } : it)));
+    setItems((prev) =>
+      prev.map((it, i) => (i === idx ? { ...it, quantity: Math.max(1, Math.min(999, q)) } : it)),
+    );
   const setPrice = (idx: number, p: number) =>
-    setItems((prev) => prev.map((it, i) => (i === idx ? { ...it, unit_price: Math.max(0, p) } : it)));
+    setItems((prev) =>
+      prev.map((it, i) => (i === idx ? { ...it, unit_price: Math.max(0, p) } : it)),
+    );
   const removeItem = (idx: number) => setItems((prev) => prev.filter((_, i) => i !== idx));
 
   return (
@@ -175,8 +182,8 @@ export function IncompleteCartReviewDialog({
             {cart && <BrandBadge brandId={cart.brand_id} />}
           </DialogTitle>
           <DialogDescription>
-            Customer er sathe kotha bolun, dorkar hole address / product thik korun. "Confirm order" chapar
-            age kono order create hobe na.
+            Customer er sathe kotha bolun, dorkar hole address / product thik korun. "Confirm order"
+            chapar age kono order create hobe na.
             {cart && (
               <span className="block mt-1 text-xs">
                 Started {format(new Date(cart.created_at), "dd/MM/yyyy h:mm a")}
@@ -192,7 +199,12 @@ export function IncompleteCartReviewDialog({
             <div className="space-y-1.5 sm:col-span-2">
               <Label htmlFor="ic-phone">Phone</Label>
               <div className="flex items-center gap-2">
-                <Input id="ic-phone" value={phone} onChange={(e) => setPhone(e.target.value)} inputMode="tel" />
+                <Input
+                  id="ic-phone"
+                  value={phone}
+                  onChange={(e) => setPhone(e.target.value)}
+                  inputMode="tel"
+                />
                 {phone.replace(/\D/g, "").length >= 10 && <PhoneActions phone={phone} />}
               </div>
             </div>
@@ -202,7 +214,12 @@ export function IncompleteCartReviewDialog({
             </div>
             <div className="space-y-1.5 sm:col-span-2">
               <Label htmlFor="ic-addr">Address</Label>
-              <Textarea id="ic-addr" rows={2} value={address} onChange={(e) => setAddress(e.target.value)} />
+              <Textarea
+                id="ic-addr"
+                rows={2}
+                value={address}
+                onChange={(e) => setAddress(e.target.value)}
+              />
             </div>
             <div className="space-y-1.5">
               <Label htmlFor="ic-thana">Thana / Area</Label>
@@ -217,21 +234,35 @@ export function IncompleteCartReviewDialog({
           <section className="space-y-2">
             <Label>Products</Label>
             {items.length === 0 && (
-              <p className="text-sm text-destructive">Kono product nai — order confirm korte kom pokkhe 1ta lagbe.</p>
+              <p className="text-sm text-destructive">
+                Kono product nai — order confirm korte kom pokkhe 1ta lagbe.
+              </p>
             )}
             <div className="divide-y rounded-lg border">
               {items.map((it, idx) => (
-                <div key={`${it.product_id}-${it.variant_id ?? ""}-${idx}`} className="flex items-center gap-3 p-2.5">
+                <div
+                  key={`${it.product_id}-${it.variant_id ?? ""}-${idx}`}
+                  className="flex items-center gap-3 p-2.5"
+                >
                   <div className="h-11 w-11 shrink-0 overflow-hidden rounded-md border bg-muted grid place-items-center">
                     {it.image ? (
-                      <img src={it.image} alt="" className="h-full w-full object-cover" loading="lazy" />
+                      <img
+                        src={it.image}
+                        alt=""
+                        className="h-full w-full object-cover"
+                        loading="lazy"
+                      />
                     ) : (
                       <ImageIcon className="h-4 w-4 text-muted-foreground" />
                     )}
                   </div>
                   <div className="min-w-0 flex-1">
                     <div className="truncate text-sm font-medium">{it.name}</div>
-                    {it.variant_label && <div className="truncate text-xs text-muted-foreground">{it.variant_label}</div>}
+                    {it.variant_label && (
+                      <div className="truncate text-xs text-muted-foreground">
+                        {it.variant_label}
+                      </div>
+                    )}
                     <div className="mt-1 flex items-center gap-1 text-xs text-muted-foreground">
                       ৳
                       <Input
@@ -245,16 +276,39 @@ export function IncompleteCartReviewDialog({
                     </div>
                   </div>
                   <div className="flex items-center gap-1">
-                    <Button type="button" size="icon" variant="outline" className="h-7 w-7" onClick={() => setQty(idx, it.quantity - 1)} aria-label="Decrease">
+                    <Button
+                      type="button"
+                      size="icon"
+                      variant="outline"
+                      className="h-7 w-7"
+                      onClick={() => setQty(idx, it.quantity - 1)}
+                      aria-label="Decrease"
+                    >
                       <Minus className="h-3 w-3" />
                     </Button>
                     <span className="w-7 text-center text-sm tabular-nums">{it.quantity}</span>
-                    <Button type="button" size="icon" variant="outline" className="h-7 w-7" onClick={() => setQty(idx, it.quantity + 1)} aria-label="Increase">
+                    <Button
+                      type="button"
+                      size="icon"
+                      variant="outline"
+                      className="h-7 w-7"
+                      onClick={() => setQty(idx, it.quantity + 1)}
+                      aria-label="Increase"
+                    >
                       <Plus className="h-3 w-3" />
                     </Button>
                   </div>
-                  <div className="w-20 text-right text-sm font-semibold tabular-nums">{money(it.unit_price * it.quantity)}</div>
-                  <Button type="button" size="icon" variant="ghost" className="h-7 w-7 text-destructive" onClick={() => removeItem(idx)} aria-label="Remove">
+                  <div className="w-20 text-right text-sm font-semibold tabular-nums">
+                    {money(it.unit_price * it.quantity)}
+                  </div>
+                  <Button
+                    type="button"
+                    size="icon"
+                    variant="ghost"
+                    className="h-7 w-7 text-destructive"
+                    onClick={() => removeItem(idx)}
+                    aria-label="Remove"
+                  >
                     <Trash2 className="h-3.5 w-3.5" />
                   </Button>
                 </div>
@@ -265,30 +319,72 @@ export function IncompleteCartReviewDialog({
           <section className="grid gap-3 sm:grid-cols-2">
             <div className="space-y-1.5">
               <Label htmlFor="ic-fee">Delivery charge</Label>
-              <Input id="ic-fee" type="number" min={0} value={shippingFee} onChange={(e) => setShippingFee(e.target.value)} />
+              <Input
+                id="ic-fee"
+                type="number"
+                min={0}
+                value={shippingFee}
+                onChange={(e) => setShippingFee(e.target.value)}
+              />
             </div>
             <div className="space-y-1.5">
               <Label htmlFor="ic-disc">Discount</Label>
-              <Input id="ic-disc" type="number" min={0} value={discount} onChange={(e) => setDiscount(e.target.value)} />
+              <Input
+                id="ic-disc"
+                type="number"
+                min={0}
+                value={discount}
+                onChange={(e) => setDiscount(e.target.value)}
+              />
             </div>
             <div className="space-y-1.5 sm:col-span-2">
               <Label htmlFor="ic-note">Note (optional)</Label>
-              <Textarea id="ic-note" rows={2} value={note} onChange={(e) => setNote(e.target.value)} placeholder="Call e ki kotha holo…" />
+              <Textarea
+                id="ic-note"
+                rows={2}
+                value={note}
+                onChange={(e) => setNote(e.target.value)}
+                placeholder="Call e ki kotha holo…"
+              />
             </div>
           </section>
 
           <section className="rounded-lg bg-muted/50 p-3 text-sm space-y-1">
-            <div className="flex justify-between"><span className="text-muted-foreground">Subtotal</span><span className="tabular-nums">{money(subtotal)}</span></div>
-            <div className="flex justify-between"><span className="text-muted-foreground">Delivery</span><span className="tabular-nums">{money(fee)}</span></div>
-            {disc > 0 && <div className="flex justify-between"><span className="text-muted-foreground">Discount</span><span className="tabular-nums">− {money(disc)}</span></div>}
-            <div className="flex justify-between border-t pt-1.5 font-bold"><span>Total (COD)</span><span className="tabular-nums">{money(total)}</span></div>
+            <div className="flex justify-between">
+              <span className="text-muted-foreground">Subtotal</span>
+              <span className="tabular-nums">{money(subtotal)}</span>
+            </div>
+            <div className="flex justify-between">
+              <span className="text-muted-foreground">Delivery</span>
+              <span className="tabular-nums">{money(fee)}</span>
+            </div>
+            {disc > 0 && (
+              <div className="flex justify-between">
+                <span className="text-muted-foreground">Discount</span>
+                <span className="tabular-nums">− {money(disc)}</span>
+              </div>
+            )}
+            <div className="flex justify-between border-t pt-1.5 font-bold">
+              <span>Total (COD)</span>
+              <span className="tabular-nums">{money(total)}</span>
+            </div>
           </section>
         </div>
 
         <DialogFooter className="gap-2 sm:gap-2 flex-col-reverse sm:flex-row">
-          <Button variant="ghost" onClick={onClose} disabled={busy}>Close</Button>
-          <Button variant="outline" onClick={() => saveMut.mutate()} disabled={busy || items.length === 0}>
-            {saveMut.isPending ? <Loader2 className="h-4 w-4 animate-spin mr-1.5" /> : <Save className="h-4 w-4 mr-1.5" />}
+          <Button variant="ghost" onClick={onClose} disabled={busy}>
+            Close
+          </Button>
+          <Button
+            variant="outline"
+            onClick={() => saveMut.mutate()}
+            disabled={busy || items.length === 0}
+          >
+            {saveMut.isPending ? (
+              <Loader2 className="h-4 w-4 animate-spin mr-1.5" />
+            ) : (
+              <Save className="h-4 w-4 mr-1.5" />
+            )}
             Save changes
           </Button>
           <Button
@@ -296,7 +392,11 @@ export function IncompleteCartReviewDialog({
             disabled={busy || missing.length > 0 || !brandId}
             title={missing.length ? `Missing: ${missing.join(", ")}` : undefined}
           >
-            {confirmMut.isPending ? <Loader2 className="h-4 w-4 animate-spin mr-1.5" /> : <CheckCircle2 className="h-4 w-4 mr-1.5" />}
+            {confirmMut.isPending ? (
+              <Loader2 className="h-4 w-4 animate-spin mr-1.5" />
+            ) : (
+              <CheckCircle2 className="h-4 w-4 mr-1.5" />
+            )}
             Confirm order · {money(total)}
           </Button>
         </DialogFooter>

@@ -16,6 +16,7 @@ import {
   BellRing,
   CalendarCheck,
   Trophy,
+  Gift,
 } from "lucide-react";
 
 export type NavItem = {
@@ -71,6 +72,7 @@ export const NAV_GROUPS: Group[] = [
           { to: "/erp/reorder-queue", label: "Reorder Queue", icon: PackageSearch },
           { to: "/erp/purchase-orders", label: "Purchase Orders", icon: ClipboardList },
           { to: "/erp/stocktake", label: "Stocktake", icon: ClipboardCheck },
+          { to: "/erp/gift-box", label: "Islamic Gift Box", icon: Gift },
         ],
       },
       {

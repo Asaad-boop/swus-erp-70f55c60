@@ -94,7 +94,8 @@ const PATH_RULES: { test: (p: string) => boolean; module: Module }[] = [
       p.startsWith("/erp/products") ||
       p.startsWith("/erp/reorder-queue") ||
       p.startsWith("/erp/purchase-orders") ||
-      p.startsWith("/erp/stocktake"),
+      p.startsWith("/erp/stocktake") ||
+      p.startsWith("/erp/gift-box"),
     module: "inventory",
   },
   {
