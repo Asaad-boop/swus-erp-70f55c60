@@ -38,6 +38,8 @@ export type PackOrder = {
 };
 
 export type PackStats = {
+  /** Packer role: may only move Packing → Packed (enforced in pack_scan). */
+  packer_only: boolean;
   to_pack: number;
   packing: number;
   packed: number;

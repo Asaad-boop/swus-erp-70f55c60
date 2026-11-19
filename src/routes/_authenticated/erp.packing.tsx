@@ -114,6 +114,16 @@ function PackingStation() {
     placeholderData: (p) => p,
   });
 
+  const packerOnly = stats.data?.packer_only === true;
+  // Packers work the Packing column, so open it first.
+  const tabInit = useRef(false);
+  useEffect(() => {
+    if (!tabInit.current && stats.data) {
+      tabInit.current = true;
+      if (stats.data.packer_only) setTab("packing");
+    }
+  }, [stats.data]);
+
   // Desktop with a USB scanner: keep the field focused. Phones: never auto-focus
   // (it pops the keyboard and makes the page jump) — the camera is the scanner.
   const refocus = () => {
@@ -242,7 +252,11 @@ function PackingStation() {
       <div className="flex items-end justify-between gap-2">
         <div>
           <h1 className="text-xl font-bold tracking-tight md:text-2xl">Packing Station</h1>
-          <p className="text-xs text-muted-foreground">Invoice scan করুন — order পরের ধাপে যাবে</p>
+          <p className="text-xs text-muted-foreground">
+            {packerOnly
+              ? "Packing-এ থাকা order scan করে Packed করুন"
+              : "Invoice scan করুন — order পরের ধাপে যাবে"}
+          </p>
         </div>
         <div className="rounded-xl border border-emerald-500/30 bg-emerald-500/5 px-3 py-1.5 text-right">
           <div className="text-[10px] font-semibold uppercase tracking-wider text-emerald-700">
@@ -257,28 +271,36 @@ function PackingStation() {
 
       {/* SCANNER */}
       <section className="rounded-2xl border bg-card p-3 md:p-5">
-        <div className="-mx-1 flex gap-1 overflow-x-auto px-1 pb-1">
-          {MODES.map((m) => (
-            <button
-              key={m.key}
-              onClick={() => {
-                setMode(m.key);
-                refocus();
-              }}
-              className={cn(
-                "shrink-0 rounded-lg border px-3 py-2 text-sm font-medium transition-colors",
-                mode === m.key
-                  ? "border-primary bg-primary text-primary-foreground"
-                  : "bg-background hover:bg-muted",
-              )}
-            >
-              {m.label}
-            </button>
-          ))}
-        </div>
-        <p className="mt-1 text-[11px] text-muted-foreground">
-          {MODES.find((m) => m.key === mode)?.hint}
-        </p>
+        {packerOnly ? (
+          <div className="flex items-center gap-2 rounded-lg bg-fuchsia-500/10 px-3 py-2 text-sm font-medium text-fuchsia-800">
+            Scan করলে <b>Packing → Packed</b> হবে
+          </div>
+        ) : (
+          <>
+            <div className="-mx-1 flex gap-1 overflow-x-auto px-1 pb-1">
+              {MODES.map((m) => (
+                <button
+                  key={m.key}
+                  onClick={() => {
+                    setMode(m.key);
+                    refocus();
+                  }}
+                  className={cn(
+                    "shrink-0 rounded-lg border px-3 py-2 text-sm font-medium transition-colors",
+                    mode === m.key
+                      ? "border-primary bg-primary text-primary-foreground"
+                      : "bg-background hover:bg-muted",
+                  )}
+                >
+                  {m.label}
+                </button>
+              ))}
+            </div>
+            <p className="mt-1 text-[11px] text-muted-foreground">
+              {MODES.find((m) => m.key === mode)?.hint}
+            </p>
+          </>
+        )}
 
         {isTouch && (
           <div className="mt-3 grid grid-cols-[1fr_auto] gap-2">
@@ -478,7 +500,7 @@ function PackingStation() {
               )}
               <div className="grid gap-2 md:grid-cols-2">
                 {fresh.map((o) => (
-                  <QueueCard key={o.id} o={o} />
+                  <QueueCard key={o.id} o={o} packerOnly={packerOnly} />
                 ))}
               </div>
               {old.length > 0 && (
@@ -498,7 +520,7 @@ function PackingStation() {
                   {showOld && (
                     <div className="grid gap-2 p-2 pt-0 md:grid-cols-2">
                       {old.map((o) => (
-                        <QueueCard key={o.id} o={o} />
+                        <QueueCard key={o.id} o={o} packerOnly={packerOnly} />
                       ))}
                     </div>
                   )}
@@ -553,12 +575,20 @@ function StageChip({ status }: { status: string }) {
   );
 }
 
-function QueueCard({ o }: { o: PackOrder }) {
+function QueueCard({ o, packerOnly }: { o: PackOrder; packerOnly: boolean }) {
   return (
     <div className="rounded-xl border bg-card p-3">
       <OrderBody o={o} />
       <div className="mt-2 flex items-center justify-between text-[11px] text-muted-foreground">
-        <span>{NEXT_LABEL[o.status] ? `Scan → ${NEXT_LABEL[o.status]}` : ""}</span>
+        <span>
+          {packerOnly
+            ? o.status === "packaging" || o.status === "ready_to_pack"
+              ? "Scan → Packed হবে"
+              : ""
+            : NEXT_LABEL[o.status]
+              ? `Scan → ${NEXT_LABEL[o.status]}`
+              : ""}
+        </span>
         <span>{age(o.created_at)} আগে</span>
       </div>
     </div>
