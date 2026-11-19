@@ -171,6 +171,16 @@ export const Route = createFileRoute("/api/public/cron/sync-courier")({
 
                 let raw: string | null = null;
                 let responsePayload: any = null;
+                // A failed track (e.g. courier 404) must still rotate the shipment
+                // to the back of the queue, otherwise the same failing rows are
+                // retried every minute and starve every other in-flight order.
+                const bumpShipment = async () => {
+                  if (!ship?.id) return;
+                  await supabaseAdmin
+                    .from("courier_shipments")
+                    .update({ updated_at: new Date().toISOString() })
+                    .eq("id", ship.id);
+                };
                 if (provider === "pathao") {
                   if (!identifier) return;
                   const { loadPathaoCreds, createPathaoClient } = await import("@/lib/erp/pathao.server");
@@ -180,7 +190,10 @@ export const Route = createFileRoute("/api/public/cron/sync-courier")({
                     errors.push({ order_id: o.id, error: `pathao.track: ${(e as Error).message}` });
                     return null;
                   });
-                  if (!res) return;
+                  if (!res) {
+                    await bumpShipment();
+                    return;
+                  }
                   responsePayload = res;
                   // pathao.server.ts `call()` already unwraps `json.data`, so
                   // `res` is the inner object: { order_status, order_status_slug, ... }
@@ -198,7 +211,10 @@ export const Route = createFileRoute("/api/public/cron/sync-courier")({
                     errors.push({ order_id: o.id, error: `steadfast.trackByInvoice: ${(e as Error).message}` });
                     return null;
                   });
-                  if (!res) return;
+                  if (!res) {
+                    await bumpShipment();
+                    return;
+                  }
                   responsePayload = res;
                   // Steadfast returns raw json: { status: 200, delivery_status: "..." }
                   raw = res?.delivery_status ?? res?.data?.delivery_status ?? null;
