@@ -60,16 +60,6 @@ function RangeToggle({ value, onChange }: { value: TimeRange; onChange: (v: Time
 }
 
 // ---------------- Types ----------------
-type ActiveSession = {
-  session_id: string;
-  path: string | null;
-  referrer: string | null;
-  country: string | null;
-  user_agent: string | null;
-  first_seen_at: string;
-  last_seen_at: string;
-  brand_id: string | null;
-};
 
 type AnalyticsEvent = {
   id: string;
@@ -96,6 +86,41 @@ type OrderRow = {
   created_at: string;
   brand_id: string | null;
 };
+
+type LiveSession = {
+  session_id: string;
+  brand_id: string | null;
+  first_seen_at: string;
+  last_seen_at: string;
+  path: string | null;
+  referrer: string | null;
+  utm_source: string | null;
+  device_type: string | null;
+  user_agent: string | null;
+  events: number;
+  page_views: number;
+  product_views: number;
+  add_to_cart: boolean;
+  checkout: boolean;
+  purchase: boolean;
+};
+
+/**
+ * Visitors are derived from analytics_events (one row per page/product view,
+ * cart, checkout, purchase) — the storefronts keep sending these. The old
+ * active_sessions heartbeat table stopped receiving writes on 2026-10-30.
+ * `scope` = null means all brands, including events without a brand.
+ */
+async function fetchLiveSessions(sinceMs: number, scope: string[] | null, limit = 300): Promise<LiveSession[]> {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const { data, error } = await (supabase.rpc as any)("live_sessions", {
+    _since: new Date(Date.now() - sinceMs).toISOString(),
+    _brand_ids: scope,
+    _limit: limit,
+  });
+  if (error) throw error;
+  return (data ?? []) as LiveSession[];
+}
 
 // ---------------- Helpers ----------------
 const BDT = new Intl.NumberFormat("en-BD", { style: "currency", currency: "BDT", maximumFractionDigits: 0 });
@@ -215,9 +240,9 @@ function LiveAnalyticsPage() {
     <div className="min-h-screen bg-gradient-to-b from-muted/20 via-background to-background">
       <div className="px-4 lg:px-6 py-5 space-y-5 max-w-[1600px] mx-auto">
         <Header brandLabel={brandLabel} range={range} onRangeChange={setRange} />
-        <PulseBar brandIds={brandIds} range={range} brands={brands} />
+        <PulseBar brandIds={brandIds} scope={isAllBrands ? null : brandIds} range={range} brands={brands} />
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-          <ActiveSessionsPanel brandIds={brandIds} brands={brands} />
+          <ActiveSessionsPanel scope={isAllBrands ? null : brandIds} brands={brands} />
           <EventStreamPanel brandIds={brandIds} range={range} />
         </div>
         <TodaysChartsGrid brandIds={brandIds} />
@@ -260,23 +285,15 @@ function Header({ brandLabel, range, onRangeChange }: { brandLabel: string; rang
 }
 
 // ---------------- Pulse Bar ----------------
-function PulseBar({ brandIds, range, brands }: { brandIds: string[]; range: TimeRange; brands: Brand[] }) {
+function PulseBar({ brandIds, scope, range, brands }: { brandIds: string[]; scope: string[] | null; range: TimeRange; brands: Brand[] }) {
   const meta = rangeMeta(range);
   const windowMs = meta.seconds * 1000;
   // Active visitors (selected window) with per-brand breakdown
   const { data: visitorsData = { total: 0, byBrand: {} as Record<string, number>, unknown: 0 } } = useQuery({
-    queryKey: ["live-visitors", range, brandIds.join(",")],
+    queryKey: ["live-visitors", range, scope?.join(",") ?? "all"],
     queryFn: async () => {
-      const since = new Date(Date.now() - windowMs).toISOString();
-      const { data } = await supabase
-        .from("active_sessions")
-        .select("session_id, brand_id")
-        .gte("last_seen_at", since)
-        .limit(5000);
-      const rows = (data ?? []) as { session_id: string; brand_id: string | null }[];
-      const filtered = brandIds.length > 0
-        ? rows.filter((r) => r.brand_id && brandIds.includes(r.brand_id))
-        : rows;
+      const rows = await fetchLiveSessions(windowMs, scope, 2000);
+      const filtered = rows;
       const byBrand: Record<string, number> = {};
       let unknown = 0;
       for (const r of filtered) {
@@ -412,33 +429,14 @@ function startOfDayISO() {
 }
 
 // ---------------- Active Sessions Panel ----------------
-function ActiveSessionsPanel({ brandIds, brands }: { brandIds: string[]; brands: Brand[] }) {
+/** "Active" = any tracked event in the last 5 minutes; idle after 2 minutes. */
+function ActiveSessionsPanel({ scope, brands }: { scope: string[] | null; brands: Brand[] }) {
   useTicker(15000);
-  const { data: rows = [], refetch } = useQuery({
-    queryKey: ["active-sessions", brandIds.join(",")],
-    queryFn: async () => {
-      const since = new Date(Date.now() - 2 * 60_000).toISOString();
-      let q = supabase
-        .from("active_sessions")
-        .select("session_id, path, referrer, country, user_agent, first_seen_at, last_seen_at, brand_id")
-        .gte("last_seen_at", since)
-        .order("last_seen_at", { ascending: false })
-        .limit(40);
-      if (brandIds.length > 0) q = q.in("brand_id", brandIds);
-      const { data, error } = await q;
-      if (error) throw error;
-      return (data ?? []) as ActiveSession[];
-    },
-    refetchInterval: 10000,
+  const { data: rows = [] } = useQuery({
+    queryKey: ["active-sessions", scope?.join(",") ?? "all"],
+    queryFn: () => fetchLiveSessions(5 * 60_000, scope, 60),
+    refetchInterval: 5000,
   });
-
-  useEffect(() => {
-    const ch = supabase
-      .channel("rt-active-sessions")
-      .on("postgres_changes", { event: "*", schema: "public", table: "active_sessions" }, () => refetch())
-      .subscribe();
-    return () => { supabase.removeChannel(ch); };
-  }, [refetch]);
 
   return (
     <Card className="overflow-hidden">
@@ -457,9 +455,12 @@ function ActiveSessionsPanel({ brandIds, brands }: { brandIds: string[]; brands:
           ) : (
             <ul className="divide-y">
               {rows.map((s) => {
-                const device = deviceFromUA(s.user_agent);
-                const idle = Date.now() - new Date(s.last_seen_at).getTime() > 60_000;
-                const src = classifySource(null, s.referrer);
+                const device =
+                  s.device_type === "mobile" || s.device_type === "tablet" || s.device_type === "desktop"
+                    ? s.device_type
+                    : deviceFromUA(s.user_agent);
+                const idle = Date.now() - new Date(s.last_seen_at).getTime() > 2 * 60_000;
+                const src = classifySource(s.utm_source, s.referrer);
                 const brand = s.brand_id ? brands.find((b) => b.id === s.brand_id) : null;
                 const brandTone =
                   brand?.slug === "toyora" ? "bg-fuchsia-100 text-fuchsia-700 border-fuchsia-200"
@@ -477,7 +478,10 @@ function ActiveSessionsPanel({ brandIds, brands }: { brandIds: string[]; brands:
                         </span>
                       </div>
                       <div className="text-[11px] text-muted-foreground flex items-center gap-2 flex-wrap mt-0.5">
-                        <span className="inline-flex items-center gap-1"><MapPin className="h-3 w-3" />{s.country || "Bangladesh"}</span>
+                        <span className="tabular-nums">{s.page_views + s.product_views} pages</span>
+                        {s.purchase ? <span className="rounded bg-emerald-100 px-1 text-emerald-700">ordered</span>
+                          : s.checkout ? <span className="rounded bg-amber-100 px-1 text-amber-700">checkout</span>
+                          : s.add_to_cart ? <span className="rounded bg-sky-100 px-1 text-sky-700">cart</span> : null}
                         <span>·</span>
                         <span className="inline-flex items-center gap-1"><Globe className="h-3 w-3" />{src}</span>
                         <span>·</span>
@@ -500,12 +504,10 @@ function EventStreamPanel({ brandIds, range }: { brandIds: string[]; range: Time
   useTicker(15000);
   const meta = rangeMeta(range);
   const windowMs = meta.seconds * 1000;
-  const [events, setEvents] = useState<AnalyticsEvent[]>([]);
-  const initialized = useRef(false);
-
-  useEffect(() => {
-    let cancel = false;
-    (async () => {
+  // analytics_events is deliberately not in the realtime publication (RAM), so poll.
+  const { data: events = [] } = useQuery({
+    queryKey: ["live-event-stream", range, brandIds.join(",")],
+    queryFn: async () => {
       const since = new Date(Date.now() - windowMs).toISOString();
       let q = supabase
         .from("analytics_events")
@@ -514,25 +516,10 @@ function EventStreamPanel({ brandIds, range }: { brandIds: string[]; range: Time
         .order("created_at", { ascending: false });
       if (brandIds.length > 0) q = q.in("brand_id", brandIds);
       const { data } = await q.limit(50);
-      if (cancel) return;
-      setEvents((data ?? []) as AnalyticsEvent[]);
-      initialized.current = true;
-    })();
-    return () => { cancel = true; };
-  }, [range, windowMs, brandIds.join(",")]);
-
-  useEffect(() => {
-    const ch = supabase
-      .channel("rt-analytics-events")
-      .on("postgres_changes", { event: "INSERT", schema: "public", table: "analytics_events" }, (payload) => {
-        const row = payload.new as AnalyticsEvent;
-        const rowBrand = (payload.new as { brand_id?: string | null }).brand_id ?? null;
-        if (brandIds.length > 0 && rowBrand && !brandIds.includes(rowBrand)) return;
-        setEvents((prev) => [row, ...prev].slice(0, 50));
-      })
-      .subscribe();
-    return () => { supabase.removeChannel(ch); };
-  }, [brandIds.join(",")]);
+      return (data ?? []) as AnalyticsEvent[];
+    },
+    refetchInterval: 5000,
+  });
 
   const visibleEvents = useMemo(() => {
     const cutoff = Date.now() - windowMs;

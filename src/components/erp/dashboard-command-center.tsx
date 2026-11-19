@@ -126,7 +126,7 @@ export function TodayCommandPanel({ brandIds, enabled }: { brandIds: string[]; e
 }
 
 /* ============================================================
-   2) LIVE VISITORS — real-time pulse from active_sessions
+   2) LIVE VISITORS — pulse from analytics_events (live_sessions RPC)
 ============================================================ */
 export function LiveVisitors() {
   const [refreshKey, setRefreshKey] = useState(0);
@@ -135,13 +135,13 @@ export function LiveVisitors() {
     staleTime: 10_000,
     refetchInterval: 15_000,
     queryFn: async () => {
-      const since = new Date(Date.now() - 5 * 60 * 1000).toISOString();
-      const { data: rows } = await supabase
-        .from("active_sessions")
-        .select("session_id, path, country, last_seen_at, referrer")
-        .gte("last_seen_at", since)
-        .order("last_seen_at", { ascending: false })
-        .limit(50);
+      // Derived from analytics_events — active_sessions no longer receives writes.
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const { data: rows } = await (supabase.rpc as any)("live_sessions", {
+        _since: new Date(Date.now() - 5 * 60 * 1000).toISOString(),
+        _brand_ids: null,
+        _limit: 50,
+      });
       const list = (rows ?? []) as any[];
       const byPath = new Map<string, number>();
       const byCountry = new Map<string, number>();
@@ -157,17 +157,6 @@ export function LiveVisitors() {
     },
   });
 
-  useEffect(() => {
-    const ch = supabase
-      .channel("dash-active-sessions")
-      .on("postgres_changes", { event: "*", schema: "public", table: "active_sessions" }, () =>
-        setRefreshKey((k) => k + 1),
-      )
-      .subscribe();
-    return () => {
-      supabase.removeChannel(ch);
-    };
-  }, []);
 
   const active = data?.active ?? 0;
 
