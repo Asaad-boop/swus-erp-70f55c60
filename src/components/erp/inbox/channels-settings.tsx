@@ -601,7 +601,10 @@ export function ChannelsSettings({
                 />
               </div>
               <div className="space-y-1.5">
-                <Label>Access token</Label>
+                <Label>
+                  Access token
+                  {manual.platform === "whatsapp" && " (optional — khali rakhle Facebook login use hobe)"}
+                </Label>
                 <Input
                   value={manual.token}
                   onChange={(e) => setManual({ ...manual, token: e.target.value })}
@@ -623,7 +626,7 @@ export function ChannelsSettings({
               disabled={
                 !manual?.brandId ||
                 !(manual?.externalId || (manual?.platform === "whatsapp" && manual?.wabaId)) ||
-                !manual?.token ||
+                !(manual?.token || manual?.platform === "whatsapp") ||
                 saveManual.isPending
               }
             >

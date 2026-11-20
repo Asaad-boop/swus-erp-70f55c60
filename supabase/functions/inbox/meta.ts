@@ -107,6 +107,8 @@ export const INBOX_SCOPES = [
   "pages_manage_engagement",
   "pages_read_user_content",
   "business_management",
+  "whatsapp_business_management",
+  "whatsapp_business_messaging",
 ].join(",");
 
 /** Pages the logged-in FB user manages, each with a never-expiring page token + linked IG account. */

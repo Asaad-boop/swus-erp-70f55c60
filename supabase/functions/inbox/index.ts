@@ -666,7 +666,17 @@ const actions: Record<string, (c: Caller, p: any) => Promise<unknown>> = {
     if (!["messenger", "instagram", "whatsapp"].includes(platform)) throw new Error("Bad platform");
     if (!isUuid(p?.brandId)) throw new Error("Brand select koro");
     let externalId = String(p?.externalId ?? "").trim();
-    const token = String(p?.token ?? "").trim();
+    let token = String(p?.token ?? "").trim();
+    if (!token && platform === "whatsapp") {
+      // No token pasted: use the admin's own Facebook login (needs WhatsApp permissions).
+      const { data: sess } = await admin
+        .from("inbox_oauth_sessions")
+        .select("access_token")
+        .eq("user_id", c.userId)
+        .maybeSingle();
+      if (!sess) throw new Error("Age upore 'Login with Facebook' koro, ba token dao");
+      token = sess.access_token;
+    }
     if (token.length < 20) throw new Error("Token thik nai");
     const wabaIdIn = String(p?.wabaId ?? "").trim();
     if (platform === "whatsapp" && !externalId && isDigits(wabaIdIn)) {
