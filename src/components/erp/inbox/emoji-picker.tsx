@@ -1,6 +1,5 @@
 import { useState } from "react";
 import { Smile } from "lucide-react";
-import { Button } from "@/components/ui/button";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { cn } from "@/lib/utils";
 
@@ -19,9 +18,13 @@ export function EmojiPicker({ onPick }: { onPick: (e: string) => void }) {
   return (
     <Popover open={open} onOpenChange={setOpen}>
       <PopoverTrigger asChild>
-        <Button variant="ghost" size="icon" className="shrink-0" title="Emoji">
+        <button
+          type="button"
+          title="Emoji"
+          className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg text-[var(--ib-ink-2,currentColor)] transition-colors hover:bg-[var(--ib-hover,var(--muted))] hover:text-[var(--ib-ink,currentColor)]"
+        >
           <Smile className="h-4 w-4" />
-        </Button>
+        </button>
       </PopoverTrigger>
       <PopoverContent side="top" align="start" className="w-72 p-2">
         <div className="mb-1.5 flex gap-1">

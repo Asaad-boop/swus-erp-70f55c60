@@ -36,10 +36,26 @@ export function PlatformChip({
 }
 
 const DOT: Record<InboxPlatform, string> = {
-  messenger: "bg-blue-500",
-  instagram: "bg-gradient-to-tr from-amber-400 via-pink-500 to-purple-600",
-  whatsapp: "bg-emerald-500",
+  messenger: "bg-[#0866FF]",
+  instagram: "bg-gradient-to-tr from-[#F9CE34] via-[#EE2A7B] to-[#6228D7]",
+  whatsapp: "bg-[#25D366]",
 };
+
+/** Soft, stable tint per person so initials avatars are tellable apart at a glance. */
+const TINTS = [
+  "bg-indigo-100 text-indigo-700 dark:bg-indigo-500/20 dark:text-indigo-200",
+  "bg-sky-100 text-sky-700 dark:bg-sky-500/20 dark:text-sky-200",
+  "bg-emerald-100 text-emerald-700 dark:bg-emerald-500/20 dark:text-emerald-200",
+  "bg-amber-100 text-amber-800 dark:bg-amber-500/20 dark:text-amber-200",
+  "bg-rose-100 text-rose-700 dark:bg-rose-500/20 dark:text-rose-200",
+  "bg-violet-100 text-violet-700 dark:bg-violet-500/20 dark:text-violet-200",
+  "bg-teal-100 text-teal-700 dark:bg-teal-500/20 dark:text-teal-200",
+];
+function tintFor(name: string) {
+  let h = 0;
+  for (let i = 0; i < name.length; i++) h = (h * 31 + name.charCodeAt(i)) >>> 0;
+  return TINTS[h % TINTS.length]!;
+}
 
 export function ContactAvatar({
   name,
@@ -60,29 +76,36 @@ export function ContactAvatar({
       .slice(0, 2)
       .map((w) => w[0]?.toUpperCase())
       .join("") || "?";
+  const badge = Math.max(14, Math.round(size * 0.38));
   return (
     <div className="relative shrink-0" style={{ width: size, height: size }}>
-      {src ? (
-        <img
-          src={src}
-          alt=""
-          className="h-full w-full rounded-full object-cover bg-muted"
-          referrerPolicy="no-referrer"
-          onError={(e) => ((e.currentTarget as HTMLImageElement).style.display = "none")}
-        />
-      ) : (
-        <div className="flex h-full w-full items-center justify-center rounded-full bg-muted text-xs font-semibold text-muted-foreground">
-          {initials}
-        </div>
-      )}
+      <div
+        className={cn(
+          "flex h-full w-full items-center justify-center overflow-hidden rounded-full font-semibold",
+          tintFor(name),
+        )}
+        style={{ fontSize: Math.max(11, Math.round(size * 0.34)) }}
+      >
+        {initials}
+        {src && (
+          <img
+            src={src}
+            alt=""
+            className="absolute inset-0 h-full w-full rounded-full object-cover"
+            referrerPolicy="no-referrer"
+            onError={(e) => ((e.currentTarget as HTMLImageElement).style.display = "none")}
+          />
+        )}
+      </div>
       {platform && (
         <span
           className={cn(
-            "absolute -bottom-0.5 -right-0.5 flex h-4 w-4 items-center justify-center rounded-full ring-2 ring-background",
+            "absolute -bottom-0.5 -right-0.5 flex items-center justify-center rounded-full ring-2 ring-[var(--ib-panel,var(--background))]",
             DOT[platform],
           )}
+          style={{ width: badge, height: badge }}
         >
-          <PlatformIcon platform={platform} className="h-2.5 w-2.5 text-white" />
+          <PlatformIcon platform={platform} className="h-[60%] w-[60%] text-white" />
         </span>
       )}
     </div>

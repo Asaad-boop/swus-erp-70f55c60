@@ -94,11 +94,11 @@ export function CommentsView({
   }, [comments, selectedId]);
 
   return (
-    <div className="flex min-h-0 flex-1">
+    <div className="flex min-h-0 flex-1 gap-2 px-2 pb-2 md:px-3 md:pb-3">
       {/* List */}
       <aside
         className={cn(
-          "flex w-full shrink-0 flex-col border-r border-border/70 md:w-[340px] lg:w-[380px]",
+          "ib-panel flex w-full shrink-0 flex-col overflow-hidden md:w-[340px] lg:w-[380px]",
           selected ? "hidden md:flex" : "flex",
         )}
       >
@@ -240,7 +240,12 @@ export function CommentsView({
       </aside>
 
       {/* Detail */}
-      <section className={cn("min-w-0 flex-1", selected ? "block" : "hidden md:block")}>
+      <section
+        className={cn(
+          "ib-panel min-w-0 flex-1 overflow-hidden",
+          selected ? "block" : "hidden md:block",
+        )}
+      >
         {selected ? (
           <CommentDetail
             key={selected.id}

@@ -13,8 +13,8 @@ import {
   X,
 } from "lucide-react";
 import { toast } from "sonner";
+import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { BrandBadge } from "@/components/erp/brand-badge";
@@ -137,89 +137,149 @@ export function ContactPanel({
 
   const normalizedPhone = phone.replace(/\D/g, "").replace(/^88/, "");
 
+  const orders = ordersQ.data ?? [];
+  const stats = useMemo(() => {
+    const done = orders.filter((o) => /deliver|complete/i.test(o.status));
+    const returned = orders.filter((o) => /return|cancel/i.test(o.status));
+    return {
+      count: orders.length,
+      spent: done.reduce((s2, o) => s2 + Number(o.total ?? 0), 0),
+      returnRate: orders.length ? Math.round((returned.length / orders.length) * 100) : 0,
+    };
+  }, [orders]);
+  const fieldCls =
+    "h-9 w-full rounded-lg border border-[var(--ib-line,var(--border))] bg-[var(--ib-canvas,var(--muted))] px-3 text-sm outline-none transition-colors focus:border-primary/40 focus:bg-[var(--ib-panel,var(--background))] focus:ring-4 focus:ring-primary/10";
+  const sectionTitle = "text-[12.5px] font-semibold text-[var(--ib-ink,inherit)]";
+
   return (
     <div className="flex h-full min-h-0 flex-col">
-      <div className="flex items-center justify-between border-b border-border/70 px-4 py-3">
-        <span className="text-sm font-semibold">Customer</span>
-        <Button variant="ghost" size="icon" className="h-7 w-7" onClick={onClose}>
+      <div className="flex h-16 shrink-0 items-center justify-between border-b border-[var(--ib-line,var(--border))] px-4">
+        <span className="font-display text-[14px] font-semibold">Customer</span>
+        <button
+          type="button"
+          onClick={onClose}
+          className="flex h-8 w-8 items-center justify-center rounded-lg text-[var(--ib-ink-2,inherit)] hover:bg-[var(--ib-hover,var(--muted))]"
+        >
           <X className="h-4 w-4" />
-        </Button>
+        </button>
       </div>
 
-      <div className="min-h-0 flex-1 space-y-5 overflow-y-auto p-4">
-        <div className="flex flex-col items-center gap-2 text-center">
-          <ContactAvatar name={name} src={c.contact_avatar} platform={c.platform} size={64} />
-          <div className="text-sm font-semibold">{name}</div>
+      <div className="ib-scroll min-h-0 flex-1 space-y-6 overflow-y-auto px-4 py-5">
+        <div className="flex flex-col items-center text-center">
+          <ContactAvatar name={name} src={c.contact_avatar} platform={c.platform} size={72} />
+          <div className="mt-3 font-display text-[16px] font-semibold leading-tight">{name}</div>
           {c.contact_username && (
-            <div className="text-xs text-muted-foreground">@{c.contact_username}</div>
+            <div className="mt-0.5 text-[12.5px] text-[var(--ib-ink-2,inherit)]">
+              @{c.contact_username}
+            </div>
           )}
-          <div className="flex items-center gap-1.5">
+          <div className="mt-2 flex items-center gap-1.5">
             <PlatformChip platform={c.platform} />
             <BrandBadge brandId={c.brand_id} variant="compact" />
           </div>
-          <div className="text-[11px] text-muted-foreground">
-            First message {agoLabel(c.created_at)}
+          <div className="mt-1.5 text-[11.5px] text-[var(--ib-ink-3,inherit)]">
+            Prothom message {agoLabel(c.created_at)}
           </div>
-          {profileLinks(c, channel).length > 0 && (
-            <div className="mt-1 flex w-full flex-col gap-1.5">
-              {profileLinks(c, channel).map((l) => (
-                <a
-                  key={l.url}
-                  href={l.url}
-                  target="_blank"
-                  rel="noreferrer"
-                  className="inline-flex items-center justify-center gap-1.5 rounded-lg border px-2.5 py-1.5 text-xs font-medium hover:bg-muted"
-                >
-                  <ExternalLink className="h-3.5 w-3.5" /> {l.label}
-                </a>
-              ))}
-            </div>
-          )}
         </div>
 
-        {/* Contact fields */}
-        <div className="space-y-2">
-          <label className="text-[11px] font-medium uppercase tracking-wide text-muted-foreground">
-            Name
-          </label>
-          <div className="flex gap-2">
-            <Input
-              value={nameEdit}
-              onChange={(e) => setNameEdit(e.target.value)}
-              placeholder="Customer name"
-              className="h-8 text-sm"
-            />
-            {nameEdit.trim() !== (c.contact_name ?? "") && (
-              <Button
-                size="sm"
-                className="h-8"
-                onClick={() => saveContact.mutate({ contact_name: nameEdit.trim() || null })}
+        {savedPhone && (
+          <div className="grid grid-cols-3 divide-x divide-[var(--ib-line,var(--border))] rounded-xl border border-[var(--ib-line,var(--border))] py-2.5 text-center">
+            <div>
+              <div className="tabular font-display text-[17px] font-semibold">{stats.count}</div>
+              <div className="text-[11px] text-[var(--ib-ink-2,inherit)]">Order</div>
+            </div>
+            <div>
+              <div className="tabular font-display text-[17px] font-semibold">
+                ৳{Math.round(stats.spent).toLocaleString("en-BD")}
+              </div>
+              <div className="text-[11px] text-[var(--ib-ink-2,inherit)]">Kineche</div>
+            </div>
+            <div>
+              <div
+                className={cn(
+                  "tabular font-display text-[17px] font-semibold",
+                  stats.returnRate >= 30 && "text-rose-600 dark:text-rose-400",
+                )}
               >
-                Save
-              </Button>
-            )}
+                {stats.returnRate}%
+              </div>
+              <div className="text-[11px] text-[var(--ib-ink-2,inherit)]">Return</div>
+            </div>
           </div>
-          <label className="text-[11px] font-medium uppercase tracking-wide text-muted-foreground">
-            Phone
-          </label>
-          <div className="flex gap-2">
-            <Input
-              value={phone}
-              onChange={(e) => setPhone(e.target.value)}
-              placeholder="01XXXXXXXXX"
-              inputMode="tel"
-              className="h-8 text-sm"
-            />
-            {normalizedPhone !== savedPhone && (
-              <Button
-                size="sm"
-                className="h-8"
-                disabled={normalizedPhone.length > 0 && normalizedPhone.length !== 11}
-                onClick={() => saveContact.mutate({ contact_phone: normalizedPhone || null })}
-              >
-                Save
-              </Button>
+        )}
+
+        <div className="space-y-2">
+          <button
+            type="button"
+            disabled={aiOrder.isPending}
+            onClick={() => aiOrder.mutate()}
+            title="Chat theke naam, phone, thikana ar product tule order form bhore dibe"
+            className="flex h-11 w-full items-center justify-center gap-2 rounded-xl bg-primary text-[13.5px] font-semibold text-primary-foreground shadow-sm transition-all hover:opacity-90 active:scale-[0.99] disabled:opacity-60"
+          >
+            {aiOrder.isPending ? (
+              <Loader2 className="h-4 w-4 animate-spin" />
+            ) : (
+              <Sparkles className="h-4 w-4" />
             )}
+            Chat theke order banao
+          </button>
+          <Link
+            to="/erp/orders/new"
+            search={{
+              phone: savedPhone || detectedPhone || undefined,
+              name: c.contact_name || undefined,
+              brand: c.brand_id,
+              source: PLATFORM_LABEL[c.platform],
+            }}
+            className="flex h-9 w-full items-center justify-center gap-1.5 rounded-xl border border-[var(--ib-line,var(--border))] text-[12.5px] font-medium text-[var(--ib-ink-2,inherit)] hover:bg-[var(--ib-hover,var(--muted))]"
+          >
+            <PlusCircle className="h-4 w-4" /> Khali order form
+          </Link>
+        </div>
+
+        <div className="space-y-3">
+          <div className={sectionTitle}>Contact</div>
+          <div className="space-y-1.5">
+            <label className="text-[11.5px] text-[var(--ib-ink-2,inherit)]">Naam</label>
+            <div className="flex gap-1.5">
+              <input
+                value={nameEdit}
+                onChange={(e) => setNameEdit(e.target.value)}
+                placeholder="Customer er naam"
+                className={fieldCls}
+              />
+              {nameEdit.trim() !== (c.contact_name ?? "") && (
+                <Button
+                  size="sm"
+                  className="h-9 rounded-lg"
+                  onClick={() => saveContact.mutate({ contact_name: nameEdit.trim() || null })}
+                >
+                  Save
+                </Button>
+              )}
+            </div>
+          </div>
+          <div className="space-y-1.5">
+            <label className="text-[11.5px] text-[var(--ib-ink-2,inherit)]">Phone</label>
+            <div className="flex gap-1.5">
+              <input
+                value={phone}
+                onChange={(e) => setPhone(e.target.value)}
+                placeholder="01XXXXXXXXX"
+                inputMode="tel"
+                className={cn(fieldCls, "tabular")}
+              />
+              {normalizedPhone !== savedPhone && (
+                <Button
+                  size="sm"
+                  className="h-9 rounded-lg"
+                  disabled={normalizedPhone.length > 0 && normalizedPhone.length !== 11}
+                  onClick={() => saveContact.mutate({ contact_phone: normalizedPhone || null })}
+                >
+                  Save
+                </Button>
+              )}
+            </div>
           </div>
           {detectedPhone && detectedPhone !== savedPhone && (
             <button
@@ -228,84 +288,66 @@ export function ContactPanel({
                 setPhone(detectedPhone);
                 saveContact.mutate({ contact_phone: detectedPhone });
               }}
-              className="flex w-full items-center gap-2 rounded-lg border border-dashed border-primary/40 bg-primary/5 px-2.5 py-1.5 text-left text-xs"
+              className="flex w-full items-center gap-2 rounded-lg bg-[var(--ib-accent-soft,var(--muted))] px-3 py-2 text-left text-[12.5px]"
             >
               <Sparkles className="h-3.5 w-3.5 text-primary" />
-              Chat e number paisi: <span className="font-mono font-semibold">{detectedPhone}</span>
-              <span className="ml-auto text-primary">Save</span>
+              Chat e number: <span className="tabular font-semibold">{detectedPhone}</span>
+              <span className="ml-auto font-semibold text-primary">Save</span>
             </button>
           )}
-          {savedPhone && (
-            <a
-              href={`tel:${savedPhone}`}
-              className="inline-flex items-center gap-1 text-xs text-primary"
-            >
-              <Phone className="h-3 w-3" /> Call {savedPhone}
-            </a>
-          )}
-        </div>
-
-        <div className="grid grid-cols-[1fr_auto] gap-1.5">
-          <Button
-            className="gap-2 bg-violet-600 text-white hover:bg-violet-700"
-            disabled={aiOrder.isPending}
-            onClick={() => aiOrder.mutate()}
-            title="AI chat theke naam, phone, thikana, product tule order form bhore dibe"
-          >
-            {aiOrder.isPending ? (
-              <Loader2 className="h-4 w-4 animate-spin" />
-            ) : (
-              <Sparkles className="h-4 w-4" />
+          <div className="flex flex-wrap gap-1.5">
+            {savedPhone && (
+              <a
+                href={`tel:${savedPhone}`}
+                className="inline-flex h-8 items-center gap-1.5 rounded-lg border border-[var(--ib-line,var(--border))] px-2.5 text-[12px] font-medium hover:bg-[var(--ib-hover,var(--muted))]"
+              >
+                <Phone className="h-3.5 w-3.5" /> Call
+              </a>
             )}
-            AI diye order
-          </Button>
-          <Button asChild variant="outline" className="gap-1.5" title="Khali form">
-            <Link
-              to="/erp/orders/new"
-              search={{
-                phone: savedPhone || detectedPhone || undefined,
-                name: c.contact_name || undefined,
-                brand: c.brand_id,
-                source: PLATFORM_LABEL[c.platform],
-              }}
-            >
-              <PlusCircle className="h-4 w-4" />
-            </Link>
-          </Button>
+            {profileLinks(c, channel).map((l) => (
+              <a
+                key={l.url}
+                href={l.url}
+                target="_blank"
+                rel="noreferrer"
+                className="inline-flex h-8 items-center gap-1.5 rounded-lg border border-[var(--ib-line,var(--border))] px-2.5 text-[12px] font-medium hover:bg-[var(--ib-hover,var(--muted))]"
+              >
+                <ExternalLink className="h-3.5 w-3.5" /> {l.label}
+              </a>
+            ))}
+          </div>
         </div>
 
-        {/* Orders */}
         <div className="space-y-2">
-          <div className="text-[11px] font-medium uppercase tracking-wide text-muted-foreground">
-            Orders
-          </div>
+          <div className={sectionTitle}>Ager order</div>
           {!savedPhone ? (
-            <div className="text-xs text-muted-foreground">Phone save korle ager order dekhabe</div>
+            <div className="rounded-lg bg-[var(--ib-canvas,var(--muted))] px-3 py-2.5 text-[12px] text-[var(--ib-ink-2,inherit)]">
+              Phone save korle ager order ekhane dekhabe.
+            </div>
           ) : ordersQ.isLoading ? (
             <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
-          ) : (ordersQ.data ?? []).length === 0 ? (
-            <div className="text-xs text-muted-foreground">
-              Ei number e kono order nai — new customer
+          ) : orders.length === 0 ? (
+            <div className="rounded-lg bg-[var(--ib-canvas,var(--muted))] px-3 py-2.5 text-[12px] text-[var(--ib-ink-2,inherit)]">
+              Notun customer — ei number e kono order nai.
             </div>
           ) : (
-            <ul className="space-y-1.5">
-              {ordersQ.data!.map((o) => (
+            <ul className="divide-y divide-[var(--ib-line,var(--border))] overflow-hidden rounded-xl border border-[var(--ib-line,var(--border))]">
+              {orders.map((o) => (
                 <li key={o.id}>
                   <Link
                     to="/erp/orders/$orderId"
                     params={{ orderId: o.id }}
-                    className="flex items-center gap-2 rounded-lg border px-2.5 py-1.5 text-xs hover:bg-muted/50"
+                    className="flex items-center gap-2 px-3 py-2 text-[12.5px] hover:bg-[var(--ib-hover,var(--muted))]"
                   >
-                    <span className="font-mono">
+                    <span className="tabular font-medium">
                       {o.invoice_no ?? o.id.slice(0, 8).toUpperCase()}
                     </span>
                     <Badge variant="outline" className="h-5 px-1.5 text-[10px] capitalize">
                       {o.status.replace(/_/g, " ")}
                     </Badge>
-                    <span className="ml-auto font-medium">
+                    <span className="tabular ml-auto font-semibold">
                       ৳{Math.round(Number(o.total ?? 0)).toLocaleString("en-BD")}
                     </span>
-                    <ExternalLink className="h-3 w-3 text-muted-foreground" />
                   </Link>
                 </li>
               ))}
@@ -313,38 +355,44 @@ export function ContactPanel({
           )}
         </div>
 
-        {/* Notes */}
         <div className="space-y-2">
-          <div className="flex items-center gap-1.5 text-[11px] font-medium uppercase tracking-wide text-muted-foreground">
-            <StickyNote className="h-3 w-3" /> Internal notes
+          <div className={cn(sectionTitle, "flex items-center gap-1.5")}>
+            <StickyNote className="h-3.5 w-3.5 text-amber-500" /> Team note
           </div>
-          <Textarea
-            value={note}
-            onChange={(e) => setNote(e.target.value)}
-            onKeyDown={(e) => {
-              if (e.key === "Enter" && (e.metaKey || e.ctrlKey) && note.trim()) {
-                e.preventDefault();
-                add.mutate();
-              }
-            }}
-            placeholder="Team er jonno note… (customer dekhbe na)"
-            rows={2}
-            className="text-sm"
-          />
-          <Button
-            size="sm"
-            variant="secondary"
-            className="w-full"
-            disabled={!note.trim() || add.isPending || !userId}
-            onClick={() => add.mutate()}
-          >
-            Add note
-          </Button>
-          <ul className="space-y-2">
+          <div className="overflow-hidden rounded-xl border border-[var(--ib-line,var(--border))] focus-within:border-primary/40 focus-within:ring-4 focus-within:ring-primary/10">
+            <Textarea
+              value={note}
+              onChange={(e) => setNote(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === "Enter" && (e.metaKey || e.ctrlKey) && note.trim()) {
+                  e.preventDefault();
+                  add.mutate();
+                }
+              }}
+              placeholder="Shudhu team dekhbe, customer na"
+              rows={2}
+              className="resize-none border-0 text-sm shadow-none focus-visible:ring-0"
+            />
+            <div className="flex justify-end border-t border-[var(--ib-line,var(--border))] px-2 py-1.5">
+              <Button
+                size="sm"
+                variant="ghost"
+                className="h-7 text-[12px]"
+                disabled={!note.trim() || add.isPending || !userId}
+                onClick={() => add.mutate()}
+              >
+                Note rakho
+              </Button>
+            </div>
+          </div>
+          <ul className="space-y-1.5">
             {(notesQ.data ?? []).map((n) => (
-              <li key={n.id} className="group rounded-lg bg-amber-500/10 px-3 py-2 text-xs">
+              <li
+                key={n.id}
+                className="group rounded-lg border-l-[3px] border-amber-400 bg-[var(--ib-amber-soft,var(--muted))] px-3 py-2 text-[12.5px]"
+              >
                 <div className="whitespace-pre-wrap">{n.body}</div>
-                <div className="mt-1 flex items-center text-[10px] text-muted-foreground">
+                <div className="mt-1 flex items-center text-[10.5px] text-[var(--ib-ink-3,inherit)]">
                   {agoLabel(n.created_at)}
                   {(n.created_by === userId || isAdmin) && (
                     <button

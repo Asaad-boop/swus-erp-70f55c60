@@ -1,6 +1,4 @@
 import { Inbox as InboxIcon, Loader2, Search } from "lucide-react";
-import { Input } from "@/components/ui/input";
-import { Button } from "@/components/ui/button";
 import { BrandBadge } from "@/components/erp/brand-badge";
 import { cn } from "@/lib/utils";
 import {
@@ -32,6 +30,9 @@ function waitLabel(iso: string | null) {
   return `${Math.floor(h / 24)}d`;
 }
 
+/** Waiting longer than this turns the "reply baki" marker from calm to urgent. */
+const URGENT_MIN = 30;
+
 type Props = {
   conversations: InboxConversation[];
   isLoading: boolean;
@@ -52,147 +53,211 @@ type Props = {
 export function ConversationList(p: Props) {
   return (
     <div className="flex h-full min-h-0 flex-col">
-      <div className="space-y-2 border-b border-border/70 p-3">
-        <div className="relative">
-          <Search className="pointer-events-none absolute left-2.5 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-          <Input
-            value={p.search}
+      <div className="space-y-2.5 px-3 pb-2 pt-3">
+        <label className="group relative block">
+          <Search className="ib-ink-3 pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2" />
+          <input
             ref={p.searchRef}
+            value={p.search}
             onChange={(e) => p.onSearch(e.target.value)}
-            placeholder="Name, phone, message…  ( / )"
-            className="h-9 pl-8"
+            placeholder="Naam, phone ba message khojo"
+            className="h-10 w-full rounded-xl border border-[var(--ib-line)] bg-[var(--ib-canvas)] pl-9 pr-10 text-sm outline-none transition-colors placeholder:text-[var(--ib-ink-3)] focus:border-primary/40 focus:bg-[var(--ib-panel)] focus:ring-4 focus:ring-primary/10"
           />
-        </div>
-        <div className="-mx-1 flex items-center gap-1 overflow-x-auto px-1 pb-0.5">
-          {VIEWS.map((v) => (
-            <button
-              key={v.key}
-              type="button"
-              title={v.hint}
-              onClick={() => p.onView(v.key)}
-              className={cn(
-                "shrink-0 rounded-md px-2.5 py-1 text-xs font-medium transition-colors",
-                p.view === v.key
-                  ? "bg-foreground text-background"
-                  : "text-muted-foreground hover:bg-muted",
-              )}
-            >
-              {v.label}
-            </button>
-          ))}
+          <kbd className="ib-ink-3 pointer-events-none absolute right-2.5 top-1/2 -translate-y-1/2 rounded-md border border-[var(--ib-line)] bg-[var(--ib-panel)] px-1.5 text-[10px] font-semibold group-focus-within:hidden">
+            /
+          </kbd>
+        </label>
+        <div className="-mx-1 flex items-center gap-0.5 overflow-x-auto px-1 [scrollbar-width:none]">
+          {VIEWS.map((v) => {
+            const on = p.view === v.key;
+            return (
+              <button
+                key={v.key}
+                type="button"
+                title={v.hint}
+                onClick={() => p.onView(v.key)}
+                className={cn(
+                  "h-7 shrink-0 rounded-lg px-2.5 text-xs font-medium transition-colors",
+                  on
+                    ? "bg-[var(--ib-ink)] text-[var(--ib-panel)]"
+                    : "ib-ink-2 hover:bg-[var(--ib-hover)] hover:text-[var(--ib-ink)]",
+                )}
+              >
+                {v.label}
+              </button>
+            );
+          })}
         </div>
       </div>
 
-      <div className="min-h-0 flex-1 overflow-y-auto">
+      <div className="ib-scroll min-h-0 flex-1 overflow-y-auto px-1.5 pb-2 pl-3">
         {p.isLoading ? (
-          <div className="flex items-center justify-center py-16 text-muted-foreground">
-            <Loader2 className="h-5 w-5 animate-spin" />
-          </div>
+          <ListSkeleton />
         ) : p.conversations.length === 0 ? (
-          <div className="flex flex-col items-center justify-center gap-2 px-6 py-16 text-center text-sm text-muted-foreground">
-            <InboxIcon className="h-8 w-8 opacity-40" />
-            {p.search || p.view !== "all"
-              ? "Ei filter e kono conversation nai"
-              : "Ekhono kono message ashe nai"}
+          <div className="flex flex-col items-center justify-center gap-3 px-6 py-16 text-center">
+            <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-[var(--ib-canvas)]">
+              <InboxIcon className="ib-ink-3 h-5 w-5" />
+            </div>
+            <div className="text-sm font-medium">
+              {p.view === "awaiting" && !p.search
+                ? "Shob reply deya shesh"
+                : p.search
+                  ? `"${p.search}" diye kichu pai nai`
+                  : "Ei list khali"}
+            </div>
+            <div className="ib-ink-2 text-xs">
+              {p.view === "awaiting" && !p.search
+                ? "Notun message ashle ekhane chole ashbe."
+                : "Onno filter dekho ba search bodlao."}
+            </div>
           </div>
         ) : (
-          <ul>
-            {p.conversations.map((c) => {
-              const name = displayName(c);
-              const unread = c.unread_count > 0;
-              const active = c.id === p.selectedId;
-              const awaiting = c.status === "open" && c.last_message_direction === "in";
-              const assignee = c.assigned_to
-                ? p.staff.find((s) => s.id === c.assigned_to)
-                : undefined;
-              return (
-                <li key={c.id}>
-                  <button
-                    type="button"
-                    data-conv-id={c.id}
-                    onClick={() => p.onSelect(c.id)}
-                    className={cn(
-                      "flex w-full items-start gap-3 border-b border-border/40 px-3 py-2.5 text-left transition-colors",
-                      active ? "bg-muted" : "hover:bg-muted/50",
-                    )}
-                  >
-                    <ContactAvatar name={name} src={c.contact_avatar} platform={c.platform} />
-                    <div className="min-w-0 flex-1">
-                      <div className="flex items-center gap-2">
-                        <span
-                          className={cn(
-                            "truncate text-sm",
-                            unread ? "font-semibold" : "font-medium",
-                          )}
-                        >
-                          {name}
-                        </span>
-                        <span
-                          className={cn(
-                            "ml-auto shrink-0 text-[11px]",
-                            unread ? "font-semibold text-primary" : "text-muted-foreground",
-                          )}
-                        >
-                          {relTime(c.last_message_at)}
-                        </span>
-                      </div>
-                      <div className="mt-0.5 flex items-center gap-2">
-                        <span
-                          className={cn(
-                            "truncate text-xs",
-                            unread ? "text-foreground" : "text-muted-foreground",
-                          )}
-                        >
-                          {c.last_message_direction === "out" && (
-                            <span className="text-muted-foreground">You: </span>
-                          )}
-                          {c.last_message_preview ?? ""}
-                        </span>
-                        {unread && (
-                          <span className="ml-auto flex h-5 min-w-5 shrink-0 items-center justify-center rounded-full bg-primary px-1.5 text-[10px] font-bold text-primary-foreground">
-                            {c.unread_count > 99 ? "99+" : c.unread_count}
-                          </span>
-                        )}
-                      </div>
-                      {(p.showBrand || awaiting || assignee) && (
-                        <div className="mt-1 flex items-center gap-1.5">
-                          {p.showBrand && <BrandBadge brandId={c.brand_id} variant="compact" />}
-                          {awaiting && (
-                            <span className="rounded bg-amber-500/15 px-1.5 py-px text-[10px] font-medium text-amber-700 dark:text-amber-400">
-                              Reply baki · {waitLabel(c.last_message_at)}
-                            </span>
-                          )}
-                          {assignee && (
-                            <span
-                              title={`Assigned: ${assignee.display_name}`}
-                              className="ml-auto flex h-5 w-5 items-center justify-center rounded-full bg-muted text-[9px] font-bold text-muted-foreground"
-                            >
-                              {initials(assignee.display_name)}
-                            </span>
-                          )}
-                        </div>
-                      )}
-                    </div>
-                  </button>
-                </li>
-              );
-            })}
+          <ul className="space-y-0.5 pr-1.5">
+            {p.conversations.map((c) => (
+              <Row
+                key={c.id}
+                c={c}
+                active={c.id === p.selectedId}
+                onSelect={p.onSelect}
+                showBrand={p.showBrand}
+                assignee={c.assigned_to ? p.staff.find((s) => s.id === c.assigned_to) : undefined}
+              />
+            ))}
           </ul>
         )}
         {p.canLoadMore && !p.isLoading && (
-          <div className="p-3">
-            <Button
-              variant="ghost"
-              size="sm"
-              className="w-full"
-              onClick={p.onLoadMore}
-              disabled={p.isFetchingMore}
-            >
-              {p.isFetchingMore ? <Loader2 className="h-4 w-4 animate-spin" /> : "Load more"}
-            </Button>
-          </div>
+          <button
+            type="button"
+            onClick={p.onLoadMore}
+            disabled={p.isFetchingMore}
+            className="ib-ink-2 mx-auto mt-2 flex h-8 items-center gap-1.5 rounded-lg px-3 text-xs font-medium hover:bg-[var(--ib-hover)]"
+          >
+            {p.isFetchingMore && <Loader2 className="h-3.5 w-3.5 animate-spin" />}
+            Aro dekhao
+          </button>
         )}
       </div>
     </div>
+  );
+}
+
+function Row({
+  c,
+  active,
+  onSelect,
+  showBrand,
+  assignee,
+}: {
+  c: InboxConversation;
+  active: boolean;
+  onSelect: (id: string) => void;
+  showBrand: boolean;
+  assignee?: InboxStaff;
+}) {
+  const name = displayName(c);
+  const unread = c.unread_count > 0;
+  const awaiting = c.status === "open" && c.last_message_direction === "in";
+  const waitedMin = c.last_message_at
+    ? (Date.now() - new Date(c.last_message_at).getTime()) / 60000
+    : 0;
+  const urgent = awaiting && waitedMin >= URGENT_MIN;
+  return (
+    <li>
+      <button
+        type="button"
+        data-conv-id={c.id}
+        data-active={active}
+        onClick={() => onSelect(c.id)}
+        className="ib-row flex w-full items-start gap-3 px-2.5 py-2.5 text-left outline-none focus-visible:ring-2 focus-visible:ring-primary/40"
+      >
+        <ContactAvatar name={name} src={c.contact_avatar} platform={c.platform} size={42} />
+        <div className="min-w-0 flex-1">
+          <div className="flex items-baseline gap-2">
+            <span
+              className={cn(
+                "truncate text-[14px] leading-5",
+                unread ? "font-semibold" : "font-medium",
+              )}
+            >
+              {name}
+            </span>
+            <span
+              className={cn(
+                "tabular ml-auto shrink-0 text-[11px]",
+                unread ? "font-semibold text-primary" : "ib-ink-3",
+              )}
+            >
+              {relTime(c.last_message_at)}
+            </span>
+          </div>
+          <div className="mt-0.5 flex items-center gap-2">
+            <span
+              className={cn(
+                "line-clamp-1 text-[13px] leading-5",
+                unread ? "text-[var(--ib-ink)]" : "ib-ink-2",
+              )}
+            >
+              {c.last_message_direction === "out" && <span className="ib-ink-3">Apni: </span>}
+              {c.last_message_preview ?? ""}
+            </span>
+            {unread && (
+              <span className="tabular ml-auto flex h-[18px] min-w-[18px] shrink-0 items-center justify-center rounded-full bg-primary px-1 text-[10px] font-semibold text-primary-foreground">
+                {c.unread_count > 99 ? "99+" : c.unread_count}
+              </span>
+            )}
+          </div>
+          {(showBrand || awaiting || assignee) && (
+            <div className="mt-1.5 flex items-center gap-1.5">
+              {awaiting && (
+                <span
+                  className={cn(
+                    "inline-flex items-center gap-1 rounded-md px-1.5 py-px text-[10.5px] font-medium",
+                    urgent
+                      ? "bg-rose-500/10 text-rose-600 dark:text-rose-400"
+                      : "bg-[var(--ib-amber-soft)] text-amber-700 dark:text-amber-300",
+                  )}
+                >
+                  <span
+                    className={cn(
+                      "h-1.5 w-1.5 rounded-full",
+                      urgent ? "bg-rose-500" : "bg-amber-500",
+                    )}
+                  />
+                  {waitLabel(c.last_message_at)} dhore opekkha
+                </span>
+              )}
+              {showBrand && <BrandBadge brandId={c.brand_id} variant="compact" />}
+              {assignee && (
+                <span
+                  title={`Assigned: ${assignee.display_name}`}
+                  className="ib-ink-2 ml-auto flex h-5 items-center gap-1 rounded-full bg-[var(--ib-canvas)] pl-0.5 pr-1.5 text-[10px] font-medium"
+                >
+                  <span className="flex h-4 w-4 items-center justify-center rounded-full bg-[var(--ib-panel)] text-[8px] font-bold shadow-sm">
+                    {initials(assignee.display_name)}
+                  </span>
+                  {assignee.display_name.split(" ")[0]}
+                </span>
+              )}
+            </div>
+          )}
+        </div>
+      </button>
+    </li>
+  );
+}
+
+function ListSkeleton() {
+  return (
+    <ul className="space-y-1 pr-1.5" aria-hidden>
+      {Array.from({ length: 8 }).map((_, i) => (
+        <li key={i} className="flex items-start gap-3 px-2.5 py-2.5">
+          <div className="skeleton h-[42px] w-[42px] shrink-0 rounded-full bg-[var(--ib-canvas)]" />
+          <div className="flex-1 space-y-2 pt-1">
+            <div className="skeleton h-3 w-2/5 rounded bg-[var(--ib-canvas)]" />
+            <div className="skeleton h-3 w-4/5 rounded bg-[var(--ib-canvas)]" />
+          </div>
+        </li>
+      ))}
+    </ul>
   );
 }

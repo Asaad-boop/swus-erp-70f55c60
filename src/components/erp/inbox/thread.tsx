@@ -18,7 +18,6 @@ import {
   Sparkles,
   UserPlus,
   X,
-  Zap,
 } from "lucide-react";
 import {
   DropdownMenu,
@@ -29,8 +28,6 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { toast } from "sonner";
-import { Button } from "@/components/ui/button";
-import { Textarea } from "@/components/ui/textarea";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { BrandBadge } from "@/components/erp/brand-badge";
 import { cn } from "@/lib/utils";
@@ -40,6 +37,7 @@ import {
   fillTemplate,
   inboxApi,
   initials,
+  PLATFORM_LABEL,
   QR_CATEGORIES,
   profileLinks,
   updateConversation,
@@ -51,7 +49,7 @@ import {
   type InboxStaff,
   type QuickReply,
 } from "@/lib/erp/inbox/inbox";
-import { ContactAvatar, PlatformChip } from "./shared";
+import { ContactAvatar, PlatformIcon } from "./shared";
 import { WaTemplateDialog } from "./wa-template-dialog";
 import { PriceReplyDialog, type PriceImage } from "./price-reply-dialog";
 import { useConversationPresence } from "./use-conversation-presence";
@@ -126,6 +124,10 @@ function Bubble({
   onPrice,
   onReact,
   onReply,
+  first = true,
+  last = true,
+  avatar,
+  fresh,
 }: {
   m: InboxMessage;
   onRetry: (m: InboxMessage) => void;
@@ -137,65 +139,94 @@ function Bubble({
   onPrice?: (m: InboxMessage, attachmentIndex: number) => void;
   onReact?: (m: InboxMessage, emoji: string | null) => void;
   onReply?: (m: InboxMessage) => void;
+  /** position inside a run of messages from the same side */
+  first?: boolean;
+  last?: boolean;
+  /** customer avatar, shown beside the last bubble of a run */
+  avatar?: React.ReactNode;
+  /** arrived while the thread was open → animate in */
+  fresh?: boolean;
 }) {
   const out = m.direction === "out";
   const reactions = Array.isArray(m.reactions) ? m.reactions : [];
   const pageReaction = reactions.find((r) => r.by === "page")?.emoji ?? null;
   const canReact = !out && !!onReact && !!m.external_message_id;
   const atts = Array.isArray(m.attachments) ? m.attachments : [];
+  const failed = m.status === "failed";
   const quotedImg =
     quoted && (quoted.attachments ?? [])[m.meta?.attachment_index ?? 0]?.type === "image"
       ? quoted.attachments[m.meta?.attachment_index ?? 0]!.url
       : quoted?.attachments?.find((a) => a.type === "image")?.url;
+  // Corners tighten on the side where a run of bubbles stacks.
+  const shape = out
+    ? cn("rounded-[18px]", !first && "rounded-tr-[6px]", !last && "rounded-br-[6px]")
+    : cn("rounded-[18px]", !first && "rounded-tl-[6px]", !last && "rounded-bl-[6px]");
+  const showMeta = last || failed;
   return (
-    <div className={cn("group/msg flex items-center gap-1", out ? "justify-end" : "justify-start")}>
+    <div
+      className={cn(
+        "group/msg flex items-end gap-2",
+        out ? "justify-end" : "justify-start",
+        first ? "mt-3" : "mt-[3px]",
+        fresh && "ib-msg-enter",
+      )}
+    >
+      {!out && <div className="w-7 shrink-0">{last ? avatar : null}</div>}
       <div
         className={cn(
-          "relative flex max-w-[78%] flex-col gap-1",
+          "relative flex max-w-[min(78%,560px)] flex-col gap-1",
           out ? "items-end" : "items-start",
-          reactions.length > 0 && "mb-2",
+          reactions.length > 0 && "mb-2.5",
         )}
       >
         {quoted && (
-          <div className="flex max-w-full items-center gap-2 rounded-xl border-l-2 border-primary/60 bg-muted/60 px-2 py-1 text-[11px] text-muted-foreground">
+          <div
+            className={cn(
+              "flex max-w-full items-center gap-2 rounded-xl border-l-[3px] px-2 py-1 text-[11.5px]",
+              out
+                ? "border-primary/50 bg-[var(--ib-accent-soft)] text-[var(--ib-ink-2)]"
+                : "border-[var(--ib-ink-3)] bg-[var(--ib-in)] text-[var(--ib-ink-2)]",
+            )}
+          >
             {quotedImg && (
               <img
                 src={quotedImg}
                 alt=""
                 referrerPolicy="no-referrer"
-                className="h-8 w-8 rounded object-cover"
+                className="h-8 w-8 rounded-md object-cover"
               />
             )}
             <span className="truncate">
-              {quoted.body?.slice(0, 60) || (quotedImg ? "📷 Customer er chobi" : "Message")}
+              {quoted.body?.slice(0, 60) || (quotedImg ? "Customer er chobi" : "Message")}
             </span>
           </div>
         )}
         {atts.map((a, i) => (
-          <div key={i} className="group/att relative overflow-hidden rounded-2xl">
+          <div key={i} className={cn("group/att relative overflow-hidden", shape)}>
             {!out && onPrice && a.type === "image" && (
               <button
                 type="button"
                 onClick={() => onPrice(m, i)}
-                className="absolute bottom-2 left-2 z-[1] rounded-full bg-black/70 px-2.5 py-1 text-xs font-semibold text-white shadow backdrop-blur transition-opacity hover:bg-black/85 md:opacity-0 md:group-hover/att:opacity-100"
+                className="absolute bottom-2 left-2 z-[1] flex items-center gap-1 rounded-full bg-white/95 px-2.5 py-1 text-xs font-semibold text-neutral-900 shadow-lg ring-1 ring-black/5 backdrop-blur transition-all hover:bg-white md:translate-y-1 md:opacity-0 md:group-hover/att:translate-y-0 md:group-hover/att:opacity-100"
               >
-                ৳ দাম দাও
+                <span className="text-primary">৳</span> Dam dao
               </button>
             )}
             {a.type === "image" || a.type === "sticker" ? (
-              <a href={a.url} target="_blank" rel="noreferrer">
+              <a href={a.url} target="_blank" rel="noreferrer" className="block">
                 <img
                   src={a.url}
                   alt=""
                   className={cn(
-                    "max-h-72 max-w-full rounded-2xl object-cover bg-muted",
+                    "max-h-80 max-w-full bg-[var(--ib-in)] object-cover",
+                    shape,
                     a.type === "sticker" && "max-h-28 bg-transparent",
                   )}
                   referrerPolicy="no-referrer"
                 />
               </a>
             ) : a.type === "video" ? (
-              <video src={a.url} controls className="max-h-72 max-w-full rounded-2xl bg-black" />
+              <video src={a.url} controls className={cn("max-h-80 max-w-full bg-black", shape)} />
             ) : a.type === "audio" ? (
               <audio src={a.url} controls className="max-w-[260px]" />
             ) : (
@@ -203,9 +234,12 @@ function Bubble({
                 href={a.url}
                 target="_blank"
                 rel="noreferrer"
-                className="flex items-center gap-2 rounded-2xl border bg-card px-3 py-2 text-sm"
+                className={cn(
+                  "flex items-center gap-2 border border-[var(--ib-line)] bg-[var(--ib-panel)] px-3 py-2.5 text-sm",
+                  shape,
+                )}
               >
-                <FileText className="h-4 w-4" /> {a.name || "File"}
+                <FileText className="ib-ink-2 h-4 w-4" /> {a.name || "File"}
               </a>
             )}
           </div>
@@ -213,12 +247,15 @@ function Bubble({
         {m.body && (
           <div
             className={cn(
-              "whitespace-pre-wrap break-words rounded-2xl px-3.5 py-2 text-sm leading-relaxed",
+              "whitespace-pre-wrap break-words px-3.5 py-2 text-[14px] leading-[1.45]",
+              shape,
               out
-                ? m.status === "failed"
-                  ? "rounded-br-md bg-destructive/10 text-foreground ring-1 ring-destructive/30"
-                  : "rounded-br-md bg-primary text-primary-foreground"
-                : "rounded-bl-md bg-muted text-foreground",
+                ? failed
+                  ? "bg-rose-500/8 text-[var(--ib-ink)] ring-1 ring-rose-500/30"
+                  : m.status === "pending"
+                    ? "ib-bubble-out opacity-70"
+                    : "ib-bubble-out"
+                : "ib-bubble-in",
             )}
           >
             {linkify(m.body)}
@@ -227,8 +264,9 @@ function Bubble({
         {reactions.length > 0 && (
           <div
             className={cn(
-              "-mt-2.5 flex gap-0.5 rounded-full bg-background px-1 py-px text-xs shadow-sm ring-1 ring-border",
-              out ? "mr-2 self-end" : "ml-2 self-start",
+              "absolute -bottom-3 flex gap-0.5 rounded-full bg-[var(--ib-panel)] px-1.5 py-0.5 text-[13px] leading-none shadow-[var(--ib-shadow-lift)] ring-1 ring-[var(--ib-line)]",
+              out ? "right-2" : "left-2",
+              showMeta && "bottom-3",
             )}
           >
             {reactions.map((r, i) => (
@@ -246,62 +284,64 @@ function Bubble({
             ))}
           </div>
         )}
-        <div className={cn("flex items-center gap-1 px-1 text-[10px] text-muted-foreground")}>
-          {out &&
-            (m.sent_via === "platform" ? (
-              <span title="Meta inbox / phone app theke pathano">
-                {m.msg_type === "template" ? "Template" : "Page/Phone app"} ·
-              </span>
-            ) : author ? (
-              <span className="font-medium text-foreground/70">{author} ·</span>
-            ) : null)}
-          <span>{timeLabel(m.created_at)}</span>
-          <StatusTick m={m} />
-        </div>
-        {m.status === "failed" && (
-          <div className="flex max-w-full items-center gap-2 px-1 text-[11px] text-destructive">
+        {showMeta && (
+          <div className="ib-ink-3 flex items-center gap-1 px-1.5 text-[10.5px]">
+            {out &&
+              (m.sent_via === "platform" ? (
+                <span title="Meta inbox / phone app theke pathano">
+                  {m.msg_type === "template" ? "Template" : "Page/Phone app"} ·
+                </span>
+              ) : author ? (
+                <span className="font-medium text-[var(--ib-ink-2)]">{author} ·</span>
+              ) : null)}
+            <span className="tabular">{timeLabel(m.created_at)}</span>
+            <StatusTick m={m} />
+          </div>
+        )}
+        {failed && (
+          <div className="flex max-w-full items-center gap-2 px-1 text-[11px] text-rose-600 dark:text-rose-400">
             <span className="truncate" title={m.error ?? ""}>
-              {m.error ?? "Failed"}
+              {m.error ?? "Pathano jay nai"}
             </span>
             <button
               type="button"
               onClick={() => onRetry(m)}
               disabled={retrying}
-              className="inline-flex shrink-0 items-center gap-1 font-medium underline"
+              className="inline-flex shrink-0 items-center gap-1 font-semibold underline underline-offset-2"
             >
-              <RotateCcw className="h-3 w-3" /> Retry
+              <RotateCcw className="h-3 w-3" /> Abar pathao
             </button>
           </div>
         )}
+        {canReact && (
+          <div className="pointer-events-none absolute bottom-full left-0 z-[2] mb-1 flex translate-y-1 items-center gap-0.5 rounded-full border border-[var(--ib-line)] bg-[var(--ib-panel)] px-1 py-0.5 opacity-0 shadow-[var(--ib-shadow-lift)] transition-all duration-150 focus-within:pointer-events-auto focus-within:translate-y-0 focus-within:opacity-100 group-hover/msg:pointer-events-auto group-hover/msg:translate-y-0 group-hover/msg:opacity-100">
+            {QUICK_REACTIONS.map((e) => (
+              <button
+                key={e}
+                type="button"
+                onClick={() => onReact!(m, pageReaction === e ? null : e)}
+                className={cn(
+                  "flex h-7 w-7 items-center justify-center rounded-full text-[15px] transition-transform hover:scale-125",
+                  pageReaction === e && "bg-[var(--ib-accent-soft)]",
+                )}
+                title={pageReaction === e ? "Remove" : "React"}
+              >
+                {e}
+              </button>
+            ))}
+            {onReply && (
+              <button
+                type="button"
+                onClick={() => onReply(m)}
+                className="ib-ink-2 ml-0.5 flex h-7 items-center whitespace-nowrap rounded-full px-2 text-[11.5px] font-medium hover:bg-[var(--ib-hover)] hover:text-[var(--ib-ink)]"
+                title="Ei message er reply"
+              >
+                ↩ Reply
+              </button>
+            )}
+          </div>
+        )}
       </div>
-      {canReact && (
-        <div className="flex shrink-0 items-center gap-0.5 rounded-full border bg-background px-1 py-0.5 opacity-0 shadow-sm transition-opacity group-hover/msg:opacity-100">
-          {QUICK_REACTIONS.map((e) => (
-            <button
-              key={e}
-              type="button"
-              onClick={() => onReact!(m, pageReaction === e ? null : e)}
-              className={cn(
-                "flex h-6 w-6 items-center justify-center rounded-full text-sm transition-transform hover:scale-125",
-                pageReaction === e && "bg-primary/15",
-              )}
-              title={pageReaction === e ? "Remove" : "React"}
-            >
-              {e}
-            </button>
-          ))}
-          {onReply && (
-            <button
-              type="button"
-              onClick={() => onReply(m)}
-              className="ml-0.5 flex h-6 items-center rounded-full px-1.5 text-[11px] font-medium text-muted-foreground hover:bg-muted"
-              title="Ei message er reply"
-            >
-              ↩ Reply
-            </button>
-          )}
-        </div>
-      )}
     </div>
   );
 }
@@ -627,6 +667,23 @@ export function Thread({
         ? "24h window closed — ekhon shudhu approved template pathano jabe"
         : "24h window closed — Human Agent tag diye pathano hobe (7 din porjonto)";
 
+  // Messages that arrive while the thread is open slide in; history doesn't.
+  const seenRef = useRef<{ conv: string; ids: Set<string> } | null>(null);
+  const freshIds = useMemo(() => {
+    if (!msgsQ.data) return new Set<string>();
+    if (!seenRef.current || seenRef.current.conv !== c.id) {
+      seenRef.current = { conv: c.id, ids: new Set(messages.map((m) => m.id)) };
+      return new Set<string>();
+    }
+    const fresh = new Set<string>();
+    for (const m of messages) {
+      if (seenRef.current.ids.has(m.id)) continue;
+      // Our own sends animate once as the optimistic bubble, not again when confirmed.
+      if (m.direction === "in" || m.id.startsWith("temp-")) fresh.add(m.id);
+    }
+    return fresh;
+  }, [messages, msgsQ.data, c.id]);
+
   const msgById = useMemo(() => new Map(messages.map((m) => [m.id, m])), [messages]);
   const imageFor = (m: InboxMessage, i: number): PriceImage => ({
     messageId: m.id,
@@ -663,75 +720,90 @@ export function Thread({
     return out;
   }, [messages]);
 
+  const iconBtn =
+    "ib-ink-2 flex h-9 w-9 shrink-0 items-center justify-center rounded-lg transition-colors hover:bg-[var(--ib-hover)] hover:text-[var(--ib-ink)] disabled:opacity-40";
+  const typingPeers = peers.filter((x) => x.typing);
+  const link = profileLinks(c, channel)[0];
+
   return (
     <div className="flex h-full min-h-0 flex-col">
       {/* Header */}
-      <div className="flex items-center gap-3 border-b border-border/70 px-3 py-2.5 md:px-4">
-        <Button variant="ghost" size="icon" className="md:hidden" onClick={onBack}>
+      <div className="flex h-16 shrink-0 items-center gap-3 border-b border-[var(--ib-line)] px-3 md:px-5">
+        <button type="button" className={cn(iconBtn, "md:hidden")} onClick={onBack}>
           <ArrowLeft className="h-4 w-4" />
-        </Button>
-        <ContactAvatar name={name} src={c.contact_avatar} platform={c.platform} size={36} />
+        </button>
+        <ContactAvatar name={name} src={c.contact_avatar} platform={c.platform} size={40} />
         <div className="min-w-0 flex-1">
-          <div className="truncate text-sm font-semibold">{name}</div>
-          <div className="flex items-center gap-1.5 text-[11px] text-muted-foreground">
-            <PlatformChip platform={c.platform} />
-            <BrandBadge brandId={c.brand_id} variant="compact" />
-            {channel && <span className="hidden truncate sm:inline">· {channel.name}</span>}
+          <div className="flex items-center gap-2">
+            <span className="truncate font-display text-[15px] font-semibold leading-5">
+              {name}
+            </span>
+            {c.status === "done" && (
+              <span className="shrink-0 rounded-md bg-emerald-500/10 px-1.5 py-px text-[10.5px] font-medium text-emerald-700 dark:text-emerald-400">
+                Done
+              </span>
+            )}
           </div>
-          {peers.length > 0 && (
+          {peers.length > 0 ? (
             <div
               className={cn(
-                "mt-0.5 truncate text-[11px] font-medium",
-                peers.some((x) => x.typing)
+                "mt-0.5 flex items-center gap-1.5 truncate text-[12px] font-medium",
+                typingPeers.length
                   ? "text-amber-600 dark:text-amber-400"
                   : "text-sky-600 dark:text-sky-400",
               )}
             >
-              {peers.some((x) => x.typing)
-                ? `✍️ ${peers
-                    .filter((x) => x.typing)
-                    .map((x) => x.name)
-                    .join(", ")} reply likhche…`
-                : `👁 ${peers.map((x) => x.name).join(", ")} ei chat dekhche`}
+              <span className="relative flex h-1.5 w-1.5">
+                <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-current opacity-60" />
+                <span className="relative inline-flex h-1.5 w-1.5 rounded-full bg-current" />
+              </span>
+              {typingPeers.length
+                ? `${typingPeers.map((x) => x.name).join(", ")} reply likhche…`
+                : `${peers.map((x) => x.name).join(", ")} ei chat dekhche`}
+            </div>
+          ) : (
+            <div className="ib-ink-2 mt-0.5 flex items-center gap-1.5 text-[12px]">
+              <PlatformIcon platform={c.platform} className="h-3.5 w-3.5" />
+              <span className="truncate">{channel?.name ?? PLATFORM_LABEL[c.platform]}</span>
+              <BrandBadge brandId={c.brand_id} variant="compact" />
             </div>
           )}
         </div>
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
-            <Button
-              variant="outline"
-              size="sm"
-              className="gap-1.5"
+            <button
+              type="button"
+              className="ib-ink-2 flex h-9 items-center gap-1.5 rounded-lg border border-[var(--ib-line)] px-2.5 text-[13px] font-medium transition-colors hover:bg-[var(--ib-hover)] hover:text-[var(--ib-ink)]"
               title={assignee ? `Assigned: ${assignee.display_name}` : "Assign"}
             >
               {assignee ? (
-                <span className="flex h-5 w-5 items-center justify-center rounded-full bg-muted text-[9px] font-bold">
+                <span className="flex h-5 w-5 items-center justify-center rounded-full bg-[var(--ib-accent-soft)] text-[9px] font-bold text-primary">
                   {initials(assignee.display_name)}
                 </span>
               ) : (
-                <UserPlus className="h-3.5 w-3.5" />
+                <UserPlus className="h-4 w-4" />
               )}
-              <span className="hidden max-w-[90px] truncate lg:inline">
-                {assignee ? assignee.display_name : "Assign"}
+              <span className="hidden max-w-[96px] truncate lg:inline">
+                {assignee ? assignee.display_name.split(" ")[0] : "Assign"}
               </span>
-            </Button>
+            </button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end" className="max-h-80 w-56 overflow-y-auto">
-            <DropdownMenuLabel className="text-xs">Assign to</DropdownMenuLabel>
+            <DropdownMenuLabel className="text-xs">Kar kache dibe?</DropdownMenuLabel>
             {currentUserId && c.assigned_to !== currentUserId && (
               <DropdownMenuItem onClick={() => assign.mutate(currentUserId)}>
-                Amake (me)
+                Amake dao
               </DropdownMenuItem>
             )}
             {staff
-              .filter((s) => s.id !== currentUserId)
-              .map((s) => (
-                <DropdownMenuItem key={s.id} onClick={() => assign.mutate(s.id)}>
+              .filter((x) => x.id !== currentUserId)
+              .map((x) => (
+                <DropdownMenuItem key={x.id} onClick={() => assign.mutate(x.id)}>
                   <span className="mr-2 flex h-5 w-5 items-center justify-center rounded-full bg-muted text-[9px] font-bold">
-                    {initials(s.display_name)}
+                    {initials(x.display_name)}
                   </span>
-                  <span className="truncate">{s.display_name}</span>
-                  {s.id === c.assigned_to && <Check className="ml-auto h-3.5 w-3.5" />}
+                  <span className="truncate">{x.display_name}</span>
+                  {x.id === c.assigned_to && <Check className="ml-auto h-3.5 w-3.5" />}
                 </DropdownMenuItem>
               ))}
             {c.assigned_to && (
@@ -742,361 +814,343 @@ export function Thread({
             )}
           </DropdownMenuContent>
         </DropdownMenu>
-        <Button
-          variant={c.status === "done" ? "outline" : "default"}
-          size="sm"
+        <button
+          type="button"
           title="Done / Reopen (E)"
           onClick={() => toggleDone.mutate()}
           disabled={toggleDone.isPending}
-          className="gap-1.5"
+          className={cn(
+            "flex h-9 items-center gap-1.5 rounded-lg px-3 text-[13px] font-semibold transition-colors disabled:opacity-60",
+            c.status === "done"
+              ? "ib-ink-2 border border-[var(--ib-line)] hover:bg-[var(--ib-hover)]"
+              : "bg-[var(--ib-ink)] text-[var(--ib-panel)] hover:opacity-90",
+          )}
         >
           {c.status === "done" ? (
-            <RotateCcw className="h-3.5 w-3.5" />
+            <RotateCcw className="h-4 w-4" />
           ) : (
-            <CheckCircle2 className="h-3.5 w-3.5" />
+            <CheckCircle2 className="h-4 w-4" />
           )}
           <span className="hidden sm:inline">{c.status === "done" ? "Reopen" : "Done"}</span>
-        </Button>
-        {profileLinks(c, channel)[0] && (
-          <Button variant="ghost" size="icon" asChild title={profileLinks(c, channel)[0]!.label}>
-            <a href={profileLinks(c, channel)[0]!.url} target="_blank" rel="noreferrer">
-              <ExternalLink className="h-4 w-4" />
-            </a>
-          </Button>
+        </button>
+        <div className="mx-0.5 hidden h-6 w-px bg-[var(--ib-line)] sm:block" />
+        {link && (
+          <a
+            href={link.url}
+            target="_blank"
+            rel="noreferrer"
+            className={iconBtn}
+            title={link.label}
+          >
+            <ExternalLink className="h-4 w-4" />
+          </a>
         )}
-        <Button variant="ghost" size="icon" onClick={onTogglePanel} title="Customer info">
+        <button type="button" className={iconBtn} onClick={onTogglePanel} title="Customer info">
           <PanelRight className="h-4 w-4" />
-        </Button>
+        </button>
       </div>
 
       {/* Messages */}
-      <div ref={scrollRef} className="min-h-0 flex-1 overflow-y-auto px-3 py-4 md:px-6">
+      <div
+        ref={scrollRef}
+        className="ib-scroll min-h-0 flex-1 overflow-y-auto px-3 pb-6 pt-2 md:px-6"
+      >
         {msgsQ.isLoading ? (
-          <div className="flex justify-center py-10 text-muted-foreground">
-            <Loader2 className="h-5 w-5 animate-spin" />
+          <div className="mx-auto max-w-3xl space-y-4 py-6" aria-hidden>
+            {[60, 40, 70, 30, 55].map((w, i) => (
+              <div key={i} className={cn("flex", i % 2 ? "justify-end" : "justify-start")}>
+                <div
+                  className="skeleton h-9 rounded-[18px] bg-[var(--ib-in)]"
+                  style={{ width: `${w}%` }}
+                />
+              </div>
+            ))}
+          </div>
+        ) : messages.length === 0 ? (
+          <div className="ib-ink-2 flex h-full items-center justify-center text-sm">
+            Ekhono kono message nai
           </div>
         ) : (
-          <div className="space-y-2">
+          <div className="mx-auto max-w-3xl">
             {grouped.map((g) => (
               <Fragment key={g.day}>
-                <div className="sticky top-0 z-[1] flex justify-center py-1">
-                  <span className="rounded-full bg-background/90 px-2.5 py-0.5 text-[10px] font-medium text-muted-foreground shadow-sm ring-1 ring-border/60">
+                <div className="sticky top-0 z-[3] flex items-center gap-3 py-3">
+                  <div className="h-px flex-1 bg-[var(--ib-line)]" />
+                  <span className="ib-ink-3 rounded-full bg-[var(--ib-panel)] px-2 text-[11px] font-medium">
                     {g.day}
                   </span>
+                  <div className="h-px flex-1 bg-[var(--ib-line)]" />
                 </div>
-                {g.items.map((m) => (
-                  <Bubble
-                    key={m.id}
-                    m={m}
-                    author={staffName(m.sent_by)}
-                    quoted={m.reply_to ? (msgById.get(m.reply_to) ?? null) : null}
-                    onPrice={(pm, i) => setPriceImages([imageFor(pm, i)])}
-                    onReact={(rm, emoji) => react.mutate({ m: rm, emoji })}
-                    onReply={(rm) => {
-                      setReplyTo(rm);
-                      inputRef.current?.focus();
-                    }}
-                    retrying={send.isPending}
-                    onRetry={(fm) =>
-                      send.mutate({
-                        text: fm.body,
-                        attachment:
-                          fm.attachments?.[0] && fm.attachments[0].type !== "sticker"
-                            ? {
-                                url: fm.attachments[0].url,
-                                type: fm.attachments[0].type as
-                                  "image" | "video" | "audio" | "file",
-                              }
-                            : null,
-                        retryOfMessageId: fm.id,
-                      })
-                    }
-                  />
-                ))}
+                {g.items.map((m, i) => {
+                  const prev = g.items[i - 1];
+                  const next = g.items[i + 1];
+                  const gap = (a?: InboxMessage, b?: InboxMessage) =>
+                    !!a &&
+                    !!b &&
+                    a.direction === b.direction &&
+                    (a.sent_by ?? "") === (b.sent_by ?? "") &&
+                    Math.abs(new Date(b.created_at).getTime() - new Date(a.created_at).getTime()) <
+                      5 * 60_000;
+                  const first = !gap(prev, m);
+                  const last = !gap(m, next);
+                  return (
+                    <Bubble
+                      key={m.id}
+                      m={m}
+                      first={first}
+                      last={last}
+                      fresh={freshIds.has(m.id)}
+                      avatar={<ContactAvatar name={name} src={c.contact_avatar} size={28} />}
+                      author={staffName(m.sent_by)}
+                      quoted={m.reply_to ? (msgById.get(m.reply_to) ?? null) : null}
+                      onPrice={(pm, idx) => setPriceImages([imageFor(pm, idx)])}
+                      onReact={(rm, emoji) => react.mutate({ m: rm, emoji })}
+                      onReply={(rm) => {
+                        setReplyTo(rm);
+                        inputRef.current?.focus();
+                      }}
+                      retrying={send.isPending}
+                      onRetry={(fm) =>
+                        send.mutate({
+                          text: fm.body,
+                          attachment:
+                            fm.attachments?.[0] && fm.attachments[0].type !== "sticker"
+                              ? {
+                                  url: fm.attachments[0].url,
+                                  type: fm.attachments[0].type as
+                                    "image" | "video" | "audio" | "file",
+                                }
+                              : null,
+                          retryOfMessageId: fm.id,
+                        })
+                      }
+                    />
+                  );
+                })}
               </Fragment>
             ))}
           </div>
         )}
       </div>
 
-      {/* Composer */}
-      <div className="border-t border-border/70 bg-background">
-        {windowNote && (
-          <div className="flex items-center gap-1.5 bg-amber-500/10 px-4 py-1.5 text-[11px] text-amber-700 dark:text-amber-400">
-            <Clock className="h-3 w-3" /> {windowNote}
-            {c.platform === "whatsapp" && hoursLeft === null && (
-              <button
-                type="button"
-                onClick={() => setTplOpen(true)}
-                className="ml-auto rounded bg-amber-600 px-2 py-0.5 font-semibold text-white hover:bg-amber-700"
-              >
-                Template pathao
-              </button>
-            )}
-          </div>
-        )}
-        {c.platform === "whatsapp" && (
-          <WaTemplateDialog open={tplOpen} onOpenChange={setTplOpen} conversation={c} />
-        )}
-        <PriceReplyDialog
-          open={!!priceImages}
-          onOpenChange={(o) => !o && setPriceImages(null)}
-          conversation={c}
-          images={priceImages ?? []}
-        />
-        {pendingImages.length > 0 && (
-          <div className="flex items-center gap-2 border-b border-border/50 bg-violet-500/5 px-3 py-1.5">
-            <div className="flex -space-x-2">
-              {pendingImages.slice(0, 4).map((im) => (
-                <img
-                  key={`${im.messageId}:${im.attachmentIndex}`}
-                  src={im.url}
-                  alt=""
-                  referrerPolicy="no-referrer"
-                  className="h-7 w-7 rounded-md object-cover ring-2 ring-background"
-                />
-              ))}
-            </div>
-            <span className="text-xs text-muted-foreground">
-              Customer {pendingImages.length}ta chobi diyeche
-            </span>
-            <Button
-              size="sm"
-              className="ml-auto h-7 gap-1 bg-violet-600 text-white hover:bg-violet-700"
-              onClick={() => setPriceImages(pendingImages)}
-            >
-              ৳ {pendingImages.length > 1 ? "Shob chobir dam dao" : "Dam dao"}
-            </Button>
-          </div>
-        )}
+      {c.platform === "whatsapp" && (
+        <WaTemplateDialog open={tplOpen} onOpenChange={setTplOpen} conversation={c} />
+      )}
+      <PriceReplyDialog
+        open={!!priceImages}
+        onOpenChange={(o) => !o && setPriceImages(null)}
+        conversation={c}
+        images={priceImages ?? []}
+      />
 
-        {brandReplies.length > 0 && (
-          <div className="space-y-1.5 px-3 pt-2">
-            <div className="flex items-center gap-1 overflow-x-auto [scrollbar-width:none]">
-              <Zap className="h-3.5 w-3.5 shrink-0 text-amber-500" />
-              {[{ key: "top", label: "Top" }, ...qrCats].map((cat) => (
-                <button
-                  key={cat.key}
-                  type="button"
-                  onClick={() => setQrCat(cat.key)}
-                  className={cn(
-                    "shrink-0 rounded px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide",
-                    qrCat === cat.key
-                      ? "bg-amber-500/15 text-amber-700 dark:text-amber-400"
-                      : "text-muted-foreground hover:text-foreground",
-                  )}
-                >
-                  {cat.label}
-                </button>
-              ))}
+      {/* Composer */}
+      <div className="shrink-0 px-3 pb-3 md:px-5 md:pb-4">
+        <div className="mx-auto max-w-3xl">
+          {brandReplies.length > 0 && (
+            <div className="mb-2 flex items-center gap-1.5">
+              <div className="flex shrink-0 items-center gap-0.5 rounded-lg bg-[var(--ib-canvas)] p-0.5">
+                {[{ key: "top", label: "Top" }, ...qrCats].map((cat) => (
+                  <button
+                    key={cat.key}
+                    type="button"
+                    onClick={() => setQrCat(cat.key)}
+                    className={cn(
+                      "h-6 rounded-md px-2 text-[11px] font-medium transition-colors",
+                      qrCat === cat.key
+                        ? "bg-[var(--ib-panel)] text-[var(--ib-ink)] shadow-sm"
+                        : "ib-ink-3 hover:text-[var(--ib-ink)]",
+                    )}
+                  >
+                    {cat.label}
+                  </button>
+                ))}
+              </div>
+              <div className="flex min-w-0 items-center gap-1.5 overflow-x-auto py-0.5 [mask-image:linear-gradient(to_right,black_92%,transparent)] [scrollbar-width:none]">
+                {visibleReplies.map((q) => (
+                  <Tooltip key={q.id}>
+                    <TooltipTrigger asChild>
+                      <button
+                        type="button"
+                        disabled={send.isPending}
+                        onClick={(e) => (e.shiftKey || e.altKey ? insertQuick(q) : sendQuick(q))}
+                        className="ib-chip h-7 shrink-0 px-3 text-[12.5px] font-medium disabled:opacity-50"
+                      >
+                        {q.title}
+                        {q.image_url && <span className="ib-ink-3 ml-1">· chobi</span>}
+                      </button>
+                    </TooltipTrigger>
+                    <TooltipContent side="top" className="max-w-xs whitespace-pre-wrap text-xs">
+                      {fillTemplate(q.body, c)}
+                      <div className="mt-1 opacity-60">Click = pathao · Shift+click = age edit</div>
+                    </TooltipContent>
+                  </Tooltip>
+                ))}
+              </div>
             </div>
-            <div className="flex items-center gap-1.5 overflow-x-auto [scrollbar-width:none]">
-              {visibleReplies.map((q) => (
-                <Tooltip key={q.id}>
-                  <TooltipTrigger asChild>
+          )}
+
+          <div className="ib-dock relative">
+            {slashMatches.length > 0 && (
+              <div className="absolute bottom-full left-0 right-0 z-10 mb-2 overflow-hidden rounded-2xl border border-[var(--ib-line)] bg-[var(--ib-panel)] p-1 shadow-[var(--ib-shadow-lift)]">
+                {slashMatches.map((q, i) => (
+                  <button
+                    key={q.id}
+                    type="button"
+                    onMouseDown={(e) => {
+                      e.preventDefault();
+                      insertQuick(q);
+                    }}
+                    className={cn(
+                      "flex w-full items-start gap-3 rounded-xl px-3 py-2 text-left text-sm",
+                      i === slashIndex
+                        ? "bg-[var(--ib-accent-soft)]"
+                        : "hover:bg-[var(--ib-hover)]",
+                    )}
+                  >
+                    <span className="shrink-0 pt-px text-xs font-semibold text-primary">
+                      {q.shortcut}
+                    </span>
+                    <span className="min-w-0">
+                      <span className="block font-medium">{q.title}</span>
+                      <span className="ib-ink-2 block truncate text-xs">
+                        {fillTemplate(q.body, c)}
+                      </span>
+                    </span>
+                  </button>
+                ))}
+              </div>
+            )}
+
+            {(windowNote || pendingImages.length > 0) && (
+              <div className="space-y-px overflow-hidden rounded-t-[17px] border-b border-[var(--ib-line)]">
+                {windowNote && (
+                  <div className="flex items-center gap-2 bg-[var(--ib-amber-soft)] px-4 py-2 text-[12px] text-amber-800 dark:text-amber-300">
+                    <Clock className="h-3.5 w-3.5 shrink-0" />
+                    <span className="min-w-0 flex-1">{windowNote}</span>
+                    {c.platform === "whatsapp" && hoursLeft === null && (
+                      <button
+                        type="button"
+                        onClick={() => setTplOpen(true)}
+                        className="shrink-0 rounded-md bg-amber-600 px-2.5 py-1 text-[11.5px] font-semibold text-white hover:bg-amber-700"
+                      >
+                        Template pathao
+                      </button>
+                    )}
+                  </div>
+                )}
+                {pendingImages.length > 0 && (
+                  <div className="flex items-center gap-3 bg-[var(--ib-accent-soft)] px-3 py-2">
+                    <div className="flex -space-x-2">
+                      {pendingImages.slice(0, 4).map((im) => (
+                        <img
+                          key={`${im.messageId}:${im.attachmentIndex}`}
+                          src={im.url}
+                          alt=""
+                          referrerPolicy="no-referrer"
+                          className="h-8 w-8 rounded-lg object-cover ring-2 ring-[var(--ib-panel)]"
+                        />
+                      ))}
+                    </div>
+                    <span className="ib-ink-2 min-w-0 flex-1 truncate text-[12.5px]">
+                      Customer {pendingImages.length}ta chobi diyeche
+                    </span>
                     <button
                       type="button"
-                      disabled={send.isPending}
-                      onClick={(e) => (e.shiftKey || e.altKey ? insertQuick(q) : sendQuick(q))}
-                      className="shrink-0 rounded-full border border-border bg-card px-2.5 py-1 text-xs font-medium transition-colors hover:border-primary hover:bg-primary/5 disabled:opacity-50"
+                      onClick={() => setPriceImages(pendingImages)}
+                      className="shrink-0 rounded-lg bg-primary px-3 py-1.5 text-[12px] font-semibold text-primary-foreground shadow-sm hover:opacity-90"
                     >
-                      {q.image_url && "🖼 "}
-                      {q.title}
+                      ৳ {pendingImages.length > 1 ? "Shob chobir dam dao" : "Dam dao"}
                     </button>
-                  </TooltipTrigger>
-                  <TooltipContent side="top" className="max-w-xs whitespace-pre-wrap text-xs">
-                    {fillTemplate(q.body, c)}
-                    <div className="mt-1 opacity-60">Click = send · Shift+click = edit first</div>
-                  </TooltipContent>
-                </Tooltip>
-              ))}
-            </div>
-          </div>
-        )}
-
-        <div className="relative p-3">
-          {slashMatches.length > 0 && (
-            <div className="absolute bottom-full left-3 right-3 mb-1 overflow-hidden rounded-xl border bg-popover shadow-lg">
-              {slashMatches.map((q, i) => (
-                <button
-                  key={q.id}
-                  type="button"
-                  onMouseDown={(e) => {
-                    e.preventDefault();
-                    insertQuick(q);
-                  }}
-                  className={cn(
-                    "flex w-full items-start gap-3 px-3 py-2 text-left text-sm",
-                    i === slashIndex ? "bg-muted" : "hover:bg-muted/60",
-                  )}
-                >
-                  <span className="shrink-0 font-mono text-xs text-primary">{q.shortcut}</span>
-                  <span className="min-w-0">
-                    <span className="block font-medium">{q.title}</span>
-                    <span className="block truncate text-xs text-muted-foreground">
-                      {fillTemplate(q.body, c)}
-                    </span>
-                  </span>
-                </button>
-              ))}
-            </div>
-          )}
-
-          {aiReplies && aiReplies.length > 0 && (
-            <div className="mb-2 space-y-1 rounded-lg border border-violet-500/30 bg-violet-500/5 p-2">
-              <div className="flex items-center gap-1 text-[11px] font-medium text-violet-700 dark:text-violet-300">
-                <Sparkles className="h-3 w-3" /> AI suggestion — click = box e boshbe, edit kore
-                pathao
-                <button
-                  type="button"
-                  onClick={() => setAiReplies(null)}
-                  className="ml-auto rounded p-0.5 hover:bg-muted"
-                >
-                  <X className="h-3 w-3" />
-                </button>
+                  </div>
+                )}
               </div>
-              {aiReplies.map((r, i) => (
-                <button
-                  key={i}
-                  type="button"
-                  onClick={() => {
-                    setText(r);
-                    setAiReplies(null);
-                    requestAnimationFrame(() => inputRef.current?.focus());
-                  }}
-                  className="block w-full rounded-md bg-background px-2.5 py-1.5 text-left text-sm hover:ring-1 hover:ring-violet-500/50"
-                >
-                  {r}
-                </button>
-              ))}
-            </div>
-          )}
-          {replyTo && (
-            <div className="mb-2 flex items-center gap-2 rounded-lg border-l-2 border-primary bg-muted/40 px-2 py-1.5 text-xs">
-              {replyTo.attachments?.find((a) => a.type === "image") && (
-                <img
-                  src={replyTo.attachments.find((a) => a.type === "image")!.url}
-                  alt=""
-                  referrerPolicy="no-referrer"
-                  className="h-8 w-8 rounded object-cover"
-                />
-              )}
-              <span className="min-w-0 flex-1 truncate">
-                <span className="font-medium">↩ Reply: </span>
-                {replyTo.body || "📷 Chobi"}
-              </span>
-              <button
-                type="button"
-                onClick={() => setReplyTo(null)}
-                className="rounded p-1 hover:bg-muted"
-              >
-                <X className="h-3.5 w-3.5" />
-              </button>
-            </div>
-          )}
-          {attachment && (
-            <div className="mb-2 flex items-center gap-2 rounded-lg border bg-muted/40 p-2 text-xs">
-              {attachment.type === "image" ? (
-                <img src={attachment.url} alt="" className="h-12 w-12 rounded object-cover" />
-              ) : (
-                <FileText className="h-5 w-5" />
-              )}
-              <span className="min-w-0 flex-1 truncate">{attachment.name}</span>
-              <button
-                type="button"
-                onClick={() => setAttachment(null)}
-                className="rounded p-1 hover:bg-muted"
-              >
-                <X className="h-3.5 w-3.5" />
-              </button>
-            </div>
-          )}
-
-          {voice.listening && (
-            <div className="mb-1.5 flex items-center gap-1.5 text-xs text-muted-foreground">
-              <span className="h-2 w-2 animate-pulse rounded-full bg-destructive" />
-              {voice.interim || "Bolo… (Bangla)"}
-            </div>
-          )}
-          <div className="flex items-end gap-2">
-            <input
-              ref={fileRef}
-              type="file"
-              className="hidden"
-              accept="image/*,video/mp4,audio/*,application/pdf"
-              onChange={(e) => onPickFile(e.target.files?.[0])}
-            />
-            <Button
-              variant="ghost"
-              size="icon"
-              className="shrink-0"
-              onClick={() => fileRef.current?.click()}
-              disabled={uploading}
-              title="Photo / file"
-            >
-              {uploading ? (
-                <Loader2 className="h-4 w-4 animate-spin" />
-              ) : (
-                <Paperclip className="h-4 w-4" />
-              )}
-            </Button>
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  className="shrink-0 text-violet-600"
-                  title="AI"
-                  disabled={suggest.isPending || rewrite.isPending}
-                >
-                  {suggest.isPending || rewrite.isPending ? (
-                    <Loader2 className="h-4 w-4 animate-spin" />
-                  ) : (
-                    <Sparkles className="h-4 w-4" />
-                  )}
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent side="top" align="start" className="w-56">
-                <DropdownMenuItem onClick={() => suggest.mutate()}>
-                  ✨ Reply suggest koro
-                </DropdownMenuItem>
-                <DropdownMenuSeparator />
-                <DropdownMenuLabel className="text-xs">
-                  {text.trim() ? "Lekha ta bodlao" : "Age kichu likho, tarpor…"}
-                </DropdownMenuLabel>
-                {(
-                  [
-                    ["polite", "🙏 Aro bhodro"],
-                    ["short", "✂️ Choto koro"],
-                    ["sales", "💰 Sell-focused"],
-                    ["fix", "✔️ Banan thik koro"],
-                    ["bangla", "অ Banglish → বাংলা"],
-                    ["english", "A English e"],
-                  ] as const
-                ).map(([mode, label]) => (
-                  <DropdownMenuItem
-                    key={mode}
-                    disabled={!text.trim()}
-                    onClick={() => rewrite.mutate(mode)}
-                  >
-                    {label}
-                  </DropdownMenuItem>
-                ))}
-              </DropdownMenuContent>
-            </DropdownMenu>
-            <EmojiPicker onPick={insertAtCursor} />
-            {voice.supported && (
-              <Button
-                variant={voice.listening ? "destructive" : "ghost"}
-                size="icon"
-                className={cn("shrink-0", voice.listening && "animate-pulse")}
-                onClick={() => (voice.listening ? voice.stop() : voice.start())}
-                title={voice.listening ? "Thamao" : "Bangla voice typing"}
-              >
-                <Mic className="h-4 w-4" />
-              </Button>
             )}
-            <Textarea
+
+            {(aiReplies?.length || replyTo || attachment || voice.listening) && (
+              <div className="space-y-2 px-3 pt-3">
+                {aiReplies && aiReplies.length > 0 && (
+                  <div className="space-y-1.5">
+                    <div className="flex items-center gap-1.5 text-[12px] font-medium text-violet-700 dark:text-violet-300">
+                      <Sparkles className="h-3.5 w-3.5" /> AI er 3ta uttor — ekta bechhe edit kore
+                      pathao
+                      <button
+                        type="button"
+                        onClick={() => setAiReplies(null)}
+                        className="ib-ink-3 ml-auto rounded-md p-1 hover:bg-[var(--ib-hover)]"
+                      >
+                        <X className="h-3.5 w-3.5" />
+                      </button>
+                    </div>
+                    {aiReplies.map((r, i) => (
+                      <button
+                        key={i}
+                        type="button"
+                        onClick={() => {
+                          setText(r);
+                          setAiReplies(null);
+                          requestAnimationFrame(() => inputRef.current?.focus());
+                        }}
+                        className="block w-full rounded-xl border border-violet-500/20 bg-violet-500/[0.04] px-3 py-2 text-left text-[13.5px] leading-snug transition-colors hover:border-violet-500/50 hover:bg-violet-500/[0.08]"
+                      >
+                        {r}
+                      </button>
+                    ))}
+                  </div>
+                )}
+                {replyTo && (
+                  <div className="flex items-center gap-2 rounded-xl border-l-[3px] border-primary bg-[var(--ib-canvas)] px-2.5 py-1.5 text-[12.5px]">
+                    {replyTo.attachments?.find((a) => a.type === "image") && (
+                      <img
+                        src={replyTo.attachments.find((a) => a.type === "image")!.url}
+                        alt=""
+                        referrerPolicy="no-referrer"
+                        className="h-8 w-8 rounded-md object-cover"
+                      />
+                    )}
+                    <span className="min-w-0 flex-1 truncate">
+                      <span className="font-medium">Reply: </span>
+                      <span className="ib-ink-2">{replyTo.body || "Chobi"}</span>
+                    </span>
+                    <button
+                      type="button"
+                      onClick={() => setReplyTo(null)}
+                      className="ib-ink-3 rounded-md p-1 hover:bg-[var(--ib-hover)]"
+                    >
+                      <X className="h-3.5 w-3.5" />
+                    </button>
+                  </div>
+                )}
+                {attachment && (
+                  <div className="inline-flex max-w-full items-center gap-2 rounded-xl border border-[var(--ib-line)] bg-[var(--ib-canvas)] p-1.5 pr-2 text-[12.5px]">
+                    {attachment.type === "image" ? (
+                      <img
+                        src={attachment.url}
+                        alt=""
+                        className="h-12 w-12 rounded-lg object-cover"
+                      />
+                    ) : (
+                      <FileText className="ib-ink-2 m-2 h-5 w-5" />
+                    )}
+                    <span className="min-w-0 truncate">{attachment.name}</span>
+                    <button
+                      type="button"
+                      onClick={() => setAttachment(null)}
+                      className="ib-ink-3 rounded-md p-1 hover:bg-[var(--ib-hover)]"
+                    >
+                      <X className="h-3.5 w-3.5" />
+                    </button>
+                  </div>
+                )}
+                {voice.listening && (
+                  <div className="ib-ink-2 flex items-center gap-2 text-[12.5px]">
+                    <span className="h-2 w-2 animate-pulse rounded-full bg-rose-500" />
+                    {voice.interim || "Bolo, ami likhchi…"}
+                  </div>
+                )}
+              </div>
+            )}
+
+            <textarea
               id="inbox-composer"
               ref={inputRef}
               value={text}
@@ -1104,21 +1158,107 @@ export function Thread({
               onKeyDown={onKeyDown}
               onPaste={onPaste}
               rows={1}
-              placeholder="Reply likho… ( / = quick reply, Enter = send, Shift+Enter = new line )"
-              className="max-h-40 min-h-[40px] resize-none py-2.5"
+              placeholder={`${name.split(" ")[0]} ke reply likho…`}
+              className="block max-h-44 min-h-[52px] w-full resize-none bg-transparent px-4 pb-1 pt-3.5 text-[14.5px] leading-relaxed outline-none placeholder:text-[var(--ib-ink-3)]"
             />
-            <Button
-              size="icon"
-              className="shrink-0"
-              onClick={submit}
-              disabled={send.isPending || uploading || (!text.trim() && !attachment)}
-            >
-              {send.isPending ? (
-                <Loader2 className="h-4 w-4 animate-spin" />
-              ) : (
-                <Send className="h-4 w-4" />
+
+            <div className="flex items-center gap-0.5 px-2 pb-2">
+              <input
+                ref={fileRef}
+                type="file"
+                className="hidden"
+                accept="image/*,video/mp4,audio/*,application/pdf"
+                onChange={(e) => onPickFile(e.target.files?.[0])}
+              />
+              <button
+                type="button"
+                className={iconBtn}
+                onClick={() => fileRef.current?.click()}
+                disabled={uploading}
+                title="Chobi / file"
+              >
+                {uploading ? (
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                ) : (
+                  <Paperclip className="h-4 w-4" />
+                )}
+              </button>
+              <EmojiPicker onPick={insertAtCursor} />
+              {voice.supported && (
+                <button
+                  type="button"
+                  className={cn(
+                    iconBtn,
+                    voice.listening &&
+                      "bg-rose-500/10 text-rose-600 hover:bg-rose-500/15 hover:text-rose-600",
+                  )}
+                  onClick={() => (voice.listening ? voice.stop() : voice.start())}
+                  title={voice.listening ? "Thamao" : "Bangla voice typing"}
+                >
+                  <Mic className="h-4 w-4" />
+                </button>
               )}
-            </Button>
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <button
+                    type="button"
+                    className="flex h-9 shrink-0 items-center gap-1.5 rounded-lg px-2.5 text-[12.5px] font-medium text-violet-700 transition-colors hover:bg-violet-500/10 disabled:opacity-50 dark:text-violet-300"
+                    title="AI"
+                    disabled={suggest.isPending || rewrite.isPending}
+                  >
+                    {suggest.isPending || rewrite.isPending ? (
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                    ) : (
+                      <Sparkles className="h-4 w-4" />
+                    )}
+                    AI
+                  </button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent side="top" align="start" className="w-56">
+                  <DropdownMenuItem onClick={() => suggest.mutate()}>
+                    Reply suggest koro
+                  </DropdownMenuItem>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuLabel className="text-xs font-normal text-muted-foreground">
+                    {text.trim() ? "Lekha ta bodlao" : "Age kichu likho, tarpor bodlate parbe"}
+                  </DropdownMenuLabel>
+                  {(
+                    [
+                      ["polite", "Aro bhodro"],
+                      ["short", "Choto koro"],
+                      ["sales", "Bikri-mukhi"],
+                      ["fix", "Banan thik koro"],
+                      ["bangla", "Banglish theke বাংলা"],
+                      ["english", "English e"],
+                    ] as const
+                  ).map(([mode, label]) => (
+                    <DropdownMenuItem
+                      key={mode}
+                      disabled={!text.trim()}
+                      onClick={() => rewrite.mutate(mode)}
+                    >
+                      {label}
+                    </DropdownMenuItem>
+                  ))}
+                </DropdownMenuContent>
+              </DropdownMenu>
+              <span className="ib-ink-3 ml-auto hidden pr-2 text-[11px] lg:inline">
+                Enter pathao · Shift+Enter notun line · / quick reply
+              </span>
+              <button
+                type="button"
+                onClick={submit}
+                disabled={send.isPending || uploading || (!text.trim() && !attachment)}
+                className="ml-auto flex h-9 shrink-0 items-center gap-1.5 rounded-xl bg-primary px-4 text-[13px] font-semibold text-primary-foreground shadow-sm transition-all hover:opacity-90 active:scale-[0.97] disabled:opacity-40 lg:ml-0"
+              >
+                {send.isPending ? (
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                ) : (
+                  <Send className="h-4 w-4" />
+                )}
+                Pathao
+              </button>
+            </div>
           </div>
         </div>
       </div>

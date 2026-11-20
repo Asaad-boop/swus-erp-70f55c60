@@ -54,7 +54,7 @@ function InboxPage() {
   const search = Route.useSearch();
   const navigate = useNavigate({ from: "/erp/inbox" });
   const qc = useQueryClient();
-  const { brands, brandIds: scopedBrandIds } = useBrand();
+  const { brands } = useBrand();
   const { isAdmin, userId } = useCurrentRole();
   const tab: Tab = search.tab ?? "inbox";
 
@@ -355,10 +355,10 @@ function InboxPage() {
   ];
 
   return (
-    <div className="flex h-[calc(100dvh-3.5rem)] min-h-0 flex-col">
+    <div className="inbox-studio flex h-[calc(100dvh-3.5rem)] min-h-0 flex-col">
       {/* Top bar */}
-      <div className="flex flex-wrap items-center gap-2 border-b border-border/70 px-3 py-2 md:px-4">
-        <div className="flex items-center gap-1 rounded-lg bg-muted p-0.5">
+      <div className="flex flex-wrap items-center gap-2 px-3 pb-2 pt-3 md:px-4">
+        <div className="ib-seg flex items-center gap-0.5">
           {tabs
             .filter((t) => t.show)
             .map((t) => (
@@ -374,21 +374,17 @@ function InboxPage() {
                     }),
                   })
                 }
-                className={cn(
-                  "inline-flex items-center gap-1.5 rounded-md px-3 py-1.5 text-xs font-medium transition-colors",
-                  tab === t.key
-                    ? "bg-background shadow-sm"
-                    : "text-muted-foreground hover:text-foreground",
-                )}
+                data-on={tab === t.key}
+                className="ib-ink-2 inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-[13px] font-medium transition-colors hover:text-[var(--ib-ink)]"
               >
                 <t.icon className="h-3.5 w-3.5" /> {t.label}
                 {t.key === "comments" && (openComments ?? 0) > 0 && (
-                  <span className="ml-0.5 rounded-full bg-primary px-1.5 text-[10px] font-bold text-primary-foreground">
+                  <span className="tabular ml-0.5 rounded-full bg-primary px-1.5 text-[10px] font-semibold leading-4 text-primary-foreground">
                     {openComments! > 99 ? "99+" : openComments}
                   </span>
                 )}
                 {t.key === "inbox" && unreadTotal > 0 && (
-                  <span className="ml-0.5 rounded-full bg-primary px-1.5 text-[10px] font-bold text-primary-foreground">
+                  <span className="tabular ml-0.5 rounded-full bg-primary px-1.5 text-[10px] font-semibold leading-4 text-primary-foreground">
                     {unreadTotal > 99 ? "99+" : unreadTotal}
                   </span>
                 )}
@@ -401,7 +397,7 @@ function InboxPage() {
             <button
               type="button"
               title="Notification settings"
-              className="order-last ml-auto rounded-md p-1.5 text-muted-foreground hover:bg-muted hover:text-foreground"
+              className="ib-ink-2 order-last ml-auto flex h-8 w-8 items-center justify-center rounded-lg transition-colors hover:bg-[var(--ib-panel)] hover:text-[var(--ib-ink)] hover:shadow-sm"
             >
               {soundOn || desktopOn ? (
                 <Bell className="h-4 w-4" />
@@ -433,7 +429,7 @@ function InboxPage() {
 
         {(tab === "inbox" || tab === "comments") && (
           <>
-            <div className="mx-1 hidden h-5 w-px bg-border md:block" />
+            <div className="mx-1 hidden h-5 w-px bg-[var(--ib-line)] md:block" />
             <div className="flex items-center gap-1 overflow-x-auto">
               <FilterChip
                 active={brandFilter === "all"}
@@ -457,7 +453,7 @@ function InboxPage() {
                 </FilterChip>
               ))}
             </div>
-            <div className="mx-1 hidden h-5 w-px bg-border md:block" />
+            <div className="mx-1 hidden h-5 w-px bg-[var(--ib-line)] md:block" />
             <div className="flex items-center gap-1">
               <FilterChip active={platform === "all"} onClick={() => setPlatform("all")}>
                 All
@@ -494,19 +490,19 @@ function InboxPage() {
           onOpenConversation={(id) => navigate({ search: { c: id } })}
         />
       ) : tab === "replies" ? (
-        <div className="min-h-0 flex-1 overflow-y-auto">
+        <div className="ib-panel ib-scroll mx-2 mb-2 min-h-0 flex-1 overflow-y-auto md:mx-3 md:mb-3">
           <QuickRepliesManager replies={repliesQ.data ?? []} />
         </div>
       ) : tab === "channels" && isAdmin ? (
-        <div className="min-h-0 flex-1 overflow-y-auto">
+        <div className="ib-panel ib-scroll mx-2 mb-2 min-h-0 flex-1 overflow-y-auto md:mx-3 md:mb-3">
           <ChannelsSettings channels={channels} metaParam={search.meta} />
         </div>
       ) : (
-        <div className="flex min-h-0 flex-1">
+        <div className="flex min-h-0 flex-1 gap-2 px-2 pb-2 md:px-3 md:pb-3">
           {/* List */}
           <aside
             className={cn(
-              "w-full shrink-0 border-r border-border/70 md:w-[320px] lg:w-[340px]",
+              "ib-panel w-full shrink-0 overflow-hidden md:w-[330px] lg:w-[350px]",
               selected ? "hidden md:block" : "block",
             )}
           >
@@ -545,7 +541,12 @@ function InboxPage() {
           </aside>
 
           {/* Thread */}
-          <section className={cn("min-w-0 flex-1", selected ? "block" : "hidden md:block")}>
+          <section
+            className={cn(
+              "ib-panel min-w-0 flex-1 overflow-hidden",
+              selected ? "block" : "hidden md:block",
+            )}
+          >
             {selected ? (
               <Thread
                 conversation={selected}
@@ -560,14 +561,22 @@ function InboxPage() {
                 }}
               />
             ) : (
-              <div className="flex h-full flex-col items-center justify-center gap-2 text-sm text-muted-foreground">
-                <MessagesSquare className="h-10 w-10 opacity-30" />
-                Bam pash theke ekta conversation select koro
-                <div className="text-xs opacity-70">
-                  {scopedBrandIds.length > 0 && `${conversations.length} conversation · `}Messenger
-                  · Instagram · WhatsApp ek jaygay
+              <div className="flex h-full flex-col items-center justify-center gap-3 px-6 text-center">
+                <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-[var(--ib-accent-soft)] text-primary">
+                  <MessagesSquare className="h-6 w-6" />
                 </div>
-                <div className="mt-3 flex flex-wrap justify-center gap-x-3 gap-y-1 text-[11px] opacity-70">
+                <div>
+                  <div className="font-display text-base font-semibold">
+                    {unreadTotal > 0
+                      ? `${unreadTotal}ta chat e notun message ache`
+                      : "Shob message er reply hoye geche"}
+                  </div>
+                  <div className="ib-ink-2 mt-1 text-sm">
+                    Bam pash theke ekta conversation kholo. Messenger, Instagram ar WhatsApp
+                    ekhanei.
+                  </div>
+                </div>
+                <div className="ib-ink-3 mt-2 flex flex-wrap justify-center gap-x-4 gap-y-1.5 text-xs">
                   {[
                     ["J / K", "next / prev"],
                     ["/", "search"],
@@ -575,7 +584,9 @@ function InboxPage() {
                     ["E", "done"],
                   ].map(([k, l]) => (
                     <span key={k}>
-                      <kbd className="rounded border bg-muted px-1 font-mono text-[10px]">{k}</kbd>{" "}
+                      <kbd className="rounded-md border border-[var(--ib-line)] bg-[var(--ib-panel)] px-1.5 py-0.5 text-[10px] font-semibold shadow-sm">
+                        {k}
+                      </kbd>{" "}
                       {l}
                     </span>
                   ))}
@@ -598,7 +609,7 @@ function InboxPage() {
 
           {/* Customer panel */}
           {selected && panelOpen && (
-            <aside className="hidden w-[300px] shrink-0 border-l border-border/70 xl:block">
+            <aside className="ib-panel hidden w-[310px] shrink-0 overflow-hidden xl:block">
               <ContactPanel
                 conversation={selected}
                 channel={channelFor(selected.channel_id)}
@@ -629,10 +640,10 @@ function FilterChip({
       title={title}
       onClick={onClick}
       className={cn(
-        "inline-flex shrink-0 items-center gap-1 rounded-full border px-2.5 py-1 text-xs font-medium transition-colors",
+        "inline-flex h-7 shrink-0 items-center gap-1 rounded-full px-2.5 text-xs font-medium transition-all",
         active
-          ? "border-foreground bg-foreground text-background"
-          : "border-border text-muted-foreground hover:bg-muted",
+          ? "bg-[var(--ib-panel)] text-[var(--ib-ink)] shadow-[var(--ib-shadow)] ring-1 ring-[var(--ib-line)]"
+          : "ib-ink-2 hover:bg-[var(--ib-panel)]/60 hover:text-[var(--ib-ink)]",
       )}
     >
       {children}
