@@ -1,7 +1,7 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { MessagesSquare, Plug, Zap } from "lucide-react";
+import { MessageCircle, MessagesSquare, Plug, Zap } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useBrand } from "@/contexts/brand-context";
 import { useCurrentRole } from "@/hooks/use-current-role";
@@ -22,15 +22,17 @@ import { ContactPanel } from "@/components/erp/inbox/contact-panel";
 import { QuickRepliesManager } from "@/components/erp/inbox/quick-replies-manager";
 import { ChannelsSettings } from "@/components/erp/inbox/channels-settings";
 import { PlatformIcon } from "@/components/erp/inbox/shared";
+import { CommentsView } from "@/components/erp/inbox/comments-view";
+import { db } from "@/lib/erp/inbox/inbox";
 import { Sheet, SheetContent } from "@/components/ui/sheet";
 
-type Tab = "inbox" | "replies" | "channels";
+type Tab = "inbox" | "comments" | "replies" | "channels";
 type InboxSearch = { tab?: Tab; c?: string; meta?: string };
 
 export const Route = createFileRoute("/_authenticated/erp/inbox")({
   head: () => ({ meta: [{ title: "Inbox — ERP" }] }),
   validateSearch: (s: Record<string, unknown>): InboxSearch => ({
-    tab: s.tab === "replies" || s.tab === "channels" ? s.tab : undefined,
+    tab: s.tab === "replies" || s.tab === "channels" || s.tab === "comments" ? s.tab : undefined,
     c: typeof s.c === "string" ? s.c : undefined,
     meta: typeof s.meta === "string" ? s.meta : undefined,
   }),
@@ -80,6 +82,23 @@ function InboxPage() {
 
   const channelsQ = useQuery({ queryKey: ["inbox", "channels"], queryFn: fetchChannels });
   const repliesQ = useQuery({ queryKey: ["inbox", "quick-replies"], queryFn: fetchQuickReplies });
+  const { data: openComments } = useQuery({
+    queryKey: ["inbox", "comment-count", brandIds],
+    enabled: brandIds.length > 0,
+    refetchInterval: 60_000,
+    queryFn: async () => {
+      const { count, error } = await db
+        .from("inbox_comments")
+        .select("id", { count: "exact", head: true })
+        .in("brand_id", brandIds)
+        .eq("is_from_page", false)
+        .eq("is_deleted", false)
+        .eq("status", "open")
+        .is("replied_at", null);
+      if (error) return 0;
+      return count ?? 0;
+    },
+  });
   const channels = channelsQ.data ?? [];
 
   // Selected conversation may be outside the current filter (e.g. just marked done) — fetch it on its own.
@@ -137,6 +156,21 @@ function InboxPage() {
       )
       .on(
         "postgres_changes" as any,
+        { event: "*", schema: "public", table: "inbox_comments" },
+        (payload: any) => {
+          qc.invalidateQueries({ queryKey: ["inbox", "comments"] });
+          qc.invalidateQueries({ queryKey: ["inbox", "comment-count"] });
+          if (payload.eventType === "INSERT" && payload.new && !payload.new.is_from_page) {
+            try {
+              beepSuccess();
+            } catch {
+              /* audio blocked */
+            }
+          }
+        },
+      )
+      .on(
+        "postgres_changes" as any,
         { event: "*", schema: "public", table: "inbox_conversations" },
         () => {
           qc.invalidateQueries({ queryKey: ["inbox", "conversations"] });
@@ -162,7 +196,8 @@ function InboxPage() {
   const channelFor = (id: string) => channels.find((c) => c.id === id);
 
   const tabs: Array<{ key: Tab; label: string; icon: typeof Zap; show: boolean }> = [
-    { key: "inbox", label: "Inbox", icon: MessagesSquare, show: true },
+    { key: "inbox", label: "Messages", icon: MessagesSquare, show: true },
+    { key: "comments", label: "Comments", icon: MessageCircle, show: true },
     { key: "replies", label: "Quick replies", icon: Zap, show: true },
     { key: "channels", label: "Channels", icon: Plug, show: isAdmin },
   ];
@@ -195,11 +230,21 @@ function InboxPage() {
                 )}
               >
                 <t.icon className="h-3.5 w-3.5" /> {t.label}
+                {t.key === "comments" && (openComments ?? 0) > 0 && (
+                  <span className="ml-0.5 rounded-full bg-primary px-1.5 text-[10px] font-bold text-primary-foreground">
+                    {openComments! > 99 ? "99+" : openComments}
+                  </span>
+                )}
+                {t.key === "inbox" && unreadTotal > 0 && (
+                  <span className="ml-0.5 rounded-full bg-primary px-1.5 text-[10px] font-bold text-primary-foreground">
+                    {unreadTotal > 99 ? "99+" : unreadTotal}
+                  </span>
+                )}
               </button>
             ))}
         </div>
 
-        {tab === "inbox" && (
+        {(tab === "inbox" || tab === "comments") && (
           <>
             <div className="mx-1 hidden h-5 w-px bg-border md:block" />
             <div className="flex items-center gap-1 overflow-x-auto">
@@ -230,7 +275,10 @@ function InboxPage() {
               <FilterChip active={platform === "all"} onClick={() => setPlatform("all")}>
                 All
               </FilterChip>
-              {(["messenger", "instagram", "whatsapp"] as const).map((p) => (
+              {(tab === "comments"
+                ? (["messenger", "instagram"] as const)
+                : (["messenger", "instagram", "whatsapp"] as const)
+              ).map((p) => (
                 <FilterChip
                   key={p}
                   active={platform === p}
@@ -238,7 +286,9 @@ function InboxPage() {
                   title={PLATFORM_LABEL[p]}
                 >
                   <PlatformIcon platform={p} className="h-3.5 w-3.5" />
-                  <span className="hidden lg:inline">{PLATFORM_LABEL[p]}</span>
+                  <span className="hidden lg:inline">
+                    {tab === "comments" && p === "messenger" ? "Facebook" : PLATFORM_LABEL[p]}
+                  </span>
                 </FilterChip>
               ))}
             </div>
@@ -246,7 +296,17 @@ function InboxPage() {
         )}
       </div>
 
-      {tab === "replies" ? (
+      {tab === "comments" ? (
+        <CommentsView
+          brandIds={brandIds}
+          platform={
+            platform === "messenger" ? "facebook" : platform === "instagram" ? "instagram" : "all"
+          }
+          showBrand={brandFilter === "all" && brands.length > 1}
+          quickReplies={repliesQ.data ?? []}
+          onOpenConversation={(id) => navigate({ search: { c: id } })}
+        />
+      ) : tab === "replies" ? (
         <div className="min-h-0 flex-1 overflow-y-auto">
           <QuickRepliesManager replies={repliesQ.data ?? []} />
         </div>

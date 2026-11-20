@@ -6,6 +6,7 @@ import {
   copyToStorage,
   copyWhatsAppMedia,
   fetchContactProfile,
+  fetchPostInfo,
   type ContactProfile,
   type InboxAttachment,
   type InboxPlatform,
@@ -343,6 +344,164 @@ async function handleWhatsApp(ctx: Ctx, entry: any) {
   }
 }
 
+// ── Comments (Facebook feed + Instagram comments) ─────────────────────
+type CommentInput = {
+  channel: Channel;
+  platform: "facebook" | "instagram";
+  ownerId: string; // page id / IG account id — comments from it are the page's own
+  postId: string | null;
+  commentId: string;
+  parentId: string | null;
+  authorId: string | null;
+  authorName: string | null;
+  authorUsername: string | null;
+  body: string | null;
+  attachmentUrl: string | null;
+  createdAt: Date;
+};
+
+async function ensurePost(
+  ctx: Ctx,
+  platform: "facebook" | "instagram",
+  channel: Channel,
+  postId: string,
+) {
+  const { data: existing } = await ctx.admin
+    .from("inbox_posts")
+    .select("id, fetched_at")
+    .eq("platform", platform)
+    .eq("external_post_id", postId)
+    .maybeSingle();
+  if (existing?.fetched_at) return existing.id as string;
+  const token = await getToken(ctx, channel.id);
+  const info = token ? await fetchPostInfo(platform, postId, token) : null;
+  const { data, error } = await ctx.admin
+    .from("inbox_posts")
+    .upsert(
+      {
+        channel_id: channel.id,
+        brand_id: channel.brand_id,
+        platform,
+        external_post_id: postId,
+        message: info?.message ?? null,
+        permalink: info?.permalink ?? null,
+        image_url: info?.imageUrl ?? null,
+        fetched_at: info ? new Date().toISOString() : null,
+      },
+      { onConflict: "platform,external_post_id" },
+    )
+    .select("id")
+    .single();
+  if (error) throw error;
+  return data.id as string;
+}
+
+async function upsertComment(ctx: Ctx, c: CommentInput) {
+  const isFromPage = Boolean(c.authorId) && c.authorId === c.ownerId;
+  const postRowId = c.postId ? await ensurePost(ctx, c.platform, c.channel, c.postId) : null;
+  const { error } = await ctx.admin.from("inbox_comments").upsert(
+    {
+      channel_id: c.channel.id,
+      brand_id: c.channel.brand_id,
+      platform: c.platform,
+      post_id: postRowId,
+      external_comment_id: c.commentId,
+      external_parent_id: c.parentId,
+      author_id: c.authorId,
+      author_name: c.authorName,
+      author_username: c.authorUsername,
+      is_from_page: isFromPage,
+      body: c.body,
+      attachment_url: c.attachmentUrl,
+      status: isFromPage ? "done" : "open",
+      created_at: c.createdAt.toISOString(),
+    },
+    { onConflict: "external_comment_id", ignoreDuplicates: false },
+  );
+  if (error) throw error;
+  // A reply from the page (made here or anywhere else) answers the thread.
+  if (isFromPage && c.parentId) {
+    await ctx.admin
+      .from("inbox_comments")
+      .update({ replied_at: c.createdAt.toISOString(), status: "done" })
+      .eq("external_comment_id", c.parentId)
+      .is("replied_at", null);
+  }
+}
+
+async function handleFacebookFeed(ctx: Ctx, entry: any) {
+  const pageId = String(entry.id);
+  const changes = (entry.changes ?? []).filter(
+    (ch: any) => ch?.field === "feed" && ch?.value?.item === "comment",
+  );
+  if (changes.length === 0) return;
+  const channel = await getChannel(ctx, "messenger", pageId);
+  if (!channel) return;
+  for (const ch of changes) {
+    const v = ch.value;
+    const commentId = v.comment_id ? String(v.comment_id) : null;
+    if (!commentId) continue;
+    if (v.verb === "remove") {
+      await ctx.admin
+        .from("inbox_comments")
+        .update({ is_deleted: true })
+        .eq("external_comment_id", commentId);
+      continue;
+    }
+    if (v.verb === "hide" || v.verb === "unhide") {
+      await ctx.admin
+        .from("inbox_comments")
+        .update({ is_hidden: v.verb === "hide" })
+        .eq("external_comment_id", commentId);
+      continue;
+    }
+    const postId = v.post_id ? String(v.post_id) : null;
+    const parentId = v.parent_id && String(v.parent_id) !== postId ? String(v.parent_id) : null;
+    await upsertComment(ctx, {
+      channel,
+      platform: "facebook",
+      ownerId: pageId,
+      postId,
+      commentId,
+      parentId,
+      authorId: v.from?.id ? String(v.from.id) : null,
+      authorName: v.from?.name ?? null,
+      authorUsername: null,
+      body: v.message ?? null,
+      attachmentUrl: v.photo ?? v.video ?? null,
+      createdAt: new Date((Number(v.created_time) || Date.now() / 1000) * 1000),
+    });
+  }
+}
+
+async function handleInstagramComments(ctx: Ctx, entry: any) {
+  const igId = String(entry.id);
+  const changes = (entry.changes ?? []).filter(
+    (ch: any) => ch?.field === "comments" || ch?.field === "live_comments",
+  );
+  if (changes.length === 0) return;
+  const channel = await getChannel(ctx, "instagram", igId);
+  if (!channel) return;
+  for (const ch of changes) {
+    const v = ch.value;
+    if (!v?.id) continue;
+    await upsertComment(ctx, {
+      channel,
+      platform: "instagram",
+      ownerId: igId,
+      postId: v.media?.id ? String(v.media.id) : null,
+      commentId: String(v.id),
+      parentId: v.parent_id ? String(v.parent_id) : null,
+      authorId: v.from?.id ? String(v.from.id) : null,
+      authorName: v.from?.username ?? null,
+      authorUsername: v.from?.username ?? null,
+      body: v.text ?? null,
+      attachmentUrl: null,
+      createdAt: new Date(),
+    });
+  }
+}
+
 export async function processInboxWebhook(
   admin: any,
   payload: any,
@@ -351,8 +510,12 @@ export async function processInboxWebhook(
   const ctx: Ctx = { admin, ownAppId, channels: new Map(), tokens: new Map() };
   const object = payload?.object;
   for (const entry of payload?.entry ?? []) {
-    if (object === "page") await handleMetaMessaging(ctx, "messenger", entry);
-    else if (object === "instagram") await handleMetaMessaging(ctx, "instagram", entry);
-    else if (object === "whatsapp_business_account") await handleWhatsApp(ctx, entry);
+    if (object === "page") {
+      await handleMetaMessaging(ctx, "messenger", entry);
+      await handleFacebookFeed(ctx, entry);
+    } else if (object === "instagram") {
+      await handleMetaMessaging(ctx, "instagram", entry);
+      await handleInstagramComments(ctx, entry);
+    } else if (object === "whatsapp_business_account") await handleWhatsApp(ctx, entry);
   }
 }

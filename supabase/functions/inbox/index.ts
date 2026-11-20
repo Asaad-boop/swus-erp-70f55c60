@@ -15,6 +15,9 @@ import {
   INBOX_GRAPH_VERSION,
   INBOX_SCOPES,
   listManagedPages,
+  privateReplyToComment,
+  replyToComment,
+  setCommentHidden,
   sendPlatformMessage,
   signState,
   subscribePage,
@@ -241,7 +244,140 @@ function previewFor(text: string | null, attachmentType?: string | null) {
         : "📎 File";
 }
 
+async function loadCommentForCaller(c: Caller, commentId: unknown) {
+  if (!isUuid(commentId)) throw new Error("Bad comment");
+  // RLS on the caller's client is the access check.
+  const { data: cm, error } = await c.db
+    .from("inbox_comments")
+    .select(
+      "id, channel_id, brand_id, platform, post_id, external_comment_id, external_parent_id, author_id, author_name, author_username",
+    )
+    .eq("id", commentId)
+    .maybeSingle();
+  if (error) throw error;
+  if (!cm) throw new Error("Comment not found");
+  const [{ data: channel }, { data: secret }] = await Promise.all([
+    admin
+      .from("inbox_channels")
+      .select("id, platform, external_id, page_id, brand_id, is_active")
+      .eq("id", cm.channel_id)
+      .maybeSingle(),
+    admin
+      .from("inbox_channel_secrets")
+      .select("access_token")
+      .eq("channel_id", cm.channel_id)
+      .maybeSingle(),
+  ]);
+  if (!channel?.is_active || !secret?.access_token)
+    throw new Error("Ei page/IG ta disconnected — Channels theke abar connect koro");
+  return { cm, channel, token: secret.access_token as string };
+}
+
 const actions: Record<string, (c: Caller, p: any) => Promise<unknown>> = {
+  async comment_reply(c, p) {
+    const text = typeof p?.text === "string" ? p.text.trim().slice(0, 2000) : "";
+    if (!text) throw new Error("Reply khali");
+    const { cm, channel, token } = await loadCommentForCaller(c, p?.commentId);
+    // Instagram only allows replies on top-level comments.
+    const target =
+      cm.platform === "instagram"
+        ? (cm.external_parent_id ?? cm.external_comment_id)
+        : cm.external_comment_id;
+    const newId = await replyToComment(cm.platform, target, text, token);
+    const now = new Date().toISOString();
+    if (newId) {
+      await admin.from("inbox_comments").upsert(
+        {
+          channel_id: cm.channel_id,
+          brand_id: cm.brand_id,
+          platform: cm.platform,
+          post_id: cm.post_id,
+          external_comment_id: newId,
+          external_parent_id: cm.external_parent_id ?? cm.external_comment_id,
+          author_id: cm.platform === "facebook" ? channel.page_id : channel.external_id,
+          author_name: null,
+          is_from_page: true,
+          body: text,
+          status: "done",
+          replied_by: c.userId,
+          created_at: now,
+        },
+        { onConflict: "external_comment_id" },
+      );
+    }
+    await admin
+      .from("inbox_comments")
+      .update({ replied_at: now, replied_by: c.userId, status: "done" })
+      .eq("id", cm.id);
+    if (isUuid(p?.quickReplyId)) await c.db.rpc("inbox_bump_quick_reply", { _id: p.quickReplyId });
+    return { ok: true, id: newId };
+  },
+
+  async comment_private_reply(c, p) {
+    const text = typeof p?.text === "string" ? p.text.trim().slice(0, 2000) : "";
+    if (!text) throw new Error("Message khali");
+    const { cm, channel, token } = await loadCommentForCaller(c, p?.commentId);
+    if (!channel.page_id) throw new Error("Page ID nai");
+    const r = await privateReplyToComment(channel.page_id, cm.external_comment_id, text, token);
+    const now = new Date().toISOString();
+    await admin
+      .from("inbox_comments")
+      .update({ private_replied_at: now, replied_at: now, replied_by: c.userId, status: "done" })
+      .eq("id", cm.id);
+    // Put the DM into the Messages inbox right away.
+    let conversationId: string | null = null;
+    if (r.recipientId) {
+      const dmPlatform = cm.platform === "facebook" ? "messenger" : "instagram";
+      const { data: dmChannel } = await admin
+        .from("inbox_channels")
+        .select("id")
+        .eq("platform", dmPlatform)
+        .eq("page_id", channel.page_id)
+        .eq("is_active", true)
+        .maybeSingle();
+      if (dmChannel) {
+        await admin.rpc("inbox_ingest_message", {
+          _channel_id: dmChannel.id,
+          _external_user_id: r.recipientId,
+          _direction: "out",
+          _external_message_id: r.messageId,
+          _msg_type: "text",
+          _body: text,
+          _attachments: [],
+          _created_at: now,
+          _contact_name: cm.author_name,
+          _contact_username: cm.author_username,
+          _contact_avatar: null,
+          _contact_phone: null,
+          _sent_via: "erp",
+        });
+        const { data: conv } = await admin
+          .from("inbox_conversations")
+          .select("id")
+          .eq("channel_id", dmChannel.id)
+          .eq("external_user_id", r.recipientId)
+          .maybeSingle();
+        conversationId = conv?.id ?? null;
+        if (r.messageId) {
+          await admin
+            .from("inbox_messages")
+            .update({ sent_by: c.userId })
+            .eq("external_message_id", r.messageId);
+        }
+      }
+    }
+    if (isUuid(p?.quickReplyId)) await c.db.rpc("inbox_bump_quick_reply", { _id: p.quickReplyId });
+    return { ok: true, conversationId };
+  },
+
+  async comment_hide(c, p) {
+    const hidden = Boolean(p?.hidden);
+    const { cm, token } = await loadCommentForCaller(c, p?.commentId);
+    await setCommentHidden(cm.platform, cm.external_comment_id, hidden, token);
+    await admin.from("inbox_comments").update({ is_hidden: hidden }).eq("id", cm.id);
+    return { ok: true };
+  },
+
   async setup_info(c, p) {
     needAdmin(c);
     const s = await loadSettings();

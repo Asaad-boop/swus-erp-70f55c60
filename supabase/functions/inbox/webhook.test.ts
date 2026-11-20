@@ -32,6 +32,7 @@ const CHANNELS: Record<string, any> = {
 function fakeAdmin() {
   const rpc = vi.fn(async () => ({ data: "msg-id", error: null }));
   const updates: any[] = [];
+  const upserts: any[] = [];
   const from = (table: string) => {
     const filters: Record<string, any> = {};
     const q: any = {
@@ -42,6 +43,15 @@ function fakeAdmin() {
       },
       in: () => q,
       lte: () => q,
+      is: () => q,
+      upsert: (row: any) => {
+        upserts.push({ table, row });
+        return q;
+      },
+      single: async () => ({
+        data: { id: table === "inbox_posts" ? "post-row" : "row" },
+        error: null,
+      }),
       update: (patch: any) => {
         updates.push({ table, patch, filters });
         return q;
@@ -62,6 +72,7 @@ function fakeAdmin() {
     rpc,
     from,
     updates,
+    upserts,
     storage: {
       from: () => ({
         upload: async () => ({ error: null }),
@@ -221,6 +232,107 @@ describe("processInboxWebhook", () => {
       ],
     });
     expect(admin.rpc).not.toHaveBeenCalled();
+  });
+});
+
+describe("comments", () => {
+  it("stores a Facebook page comment as open and links the post", async () => {
+    const admin = fakeAdmin();
+    await processInboxWebhook(admin, {
+      object: "page",
+      entry: [
+        {
+          id: "111",
+          changes: [
+            {
+              field: "feed",
+              value: {
+                item: "comment",
+                verb: "add",
+                comment_id: "111_c1",
+                post_id: "111_p1",
+                parent_id: "111_p1",
+                from: { id: "u9", name: "Rahim" },
+                message: "dam koto?",
+                created_time: 1700000000,
+              },
+            },
+          ],
+        },
+      ],
+    });
+    const c = admin.upserts.find((u: any) => u.table === "inbox_comments")!.row;
+    expect(c).toMatchObject({
+      platform: "facebook",
+      external_comment_id: "111_c1",
+      external_parent_id: null,
+      author_name: "Rahim",
+      is_from_page: false,
+      status: "open",
+      post_id: "post-row",
+    });
+  });
+
+  it("marks the parent replied when the page itself replies", async () => {
+    const admin = fakeAdmin();
+    await processInboxWebhook(admin, {
+      object: "page",
+      entry: [
+        {
+          id: "111",
+          changes: [
+            {
+              field: "feed",
+              value: {
+                item: "comment",
+                verb: "add",
+                comment_id: "111_c2",
+                post_id: "111_p1",
+                parent_id: "111_c1",
+                from: { id: "111", name: "Toyora" },
+                message: "inbox check korun",
+                created_time: 1700000001,
+              },
+            },
+          ],
+        },
+      ],
+    });
+    const c = admin.upserts.find((u: any) => u.table === "inbox_comments")!.row;
+    expect(c).toMatchObject({ is_from_page: true, status: "done", external_parent_id: "111_c1" });
+    expect(
+      admin.updates.some((u: any) => u.table === "inbox_comments" && u.patch.status === "done"),
+    ).toBe(true);
+  });
+
+  it("stores an Instagram comment", async () => {
+    const admin = fakeAdmin();
+    await processInboxWebhook(admin, {
+      object: "instagram",
+      entry: [
+        {
+          id: "222",
+          changes: [
+            {
+              field: "comments",
+              value: {
+                id: "ig_c1",
+                text: "price?",
+                from: { id: "ig9", username: "karim" },
+                media: { id: "m1" },
+              },
+            },
+          ],
+        },
+      ],
+    });
+    const c = admin.upserts.find((u: any) => u.table === "inbox_comments")!.row;
+    expect(c).toMatchObject({
+      platform: "instagram",
+      external_comment_id: "ig_c1",
+      author_username: "karim",
+      is_from_page: false,
+    });
   });
 });
 

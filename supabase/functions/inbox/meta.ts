@@ -103,6 +103,9 @@ export const INBOX_SCOPES = [
   "pages_read_engagement",
   "instagram_basic",
   "instagram_manage_messages",
+  "instagram_manage_comments",
+  "pages_manage_engagement",
+  "pages_read_user_content",
   "business_management",
 ].join(",");
 
@@ -156,7 +159,7 @@ export async function listManagedPages(userToken: string) {
 export async function subscribePage(pageId: string, pageToken: string) {
   const res = await fetch(
     `${GRAPH}/${pageId}/subscribed_apps?${new URLSearchParams({
-      subscribed_fields: "messages,message_echoes,message_reads,messaging_postbacks",
+      subscribed_fields: "messages,message_echoes,message_reads,messaging_postbacks,feed",
       access_token: pageToken,
     })}`,
     { method: "POST" },
@@ -365,4 +368,82 @@ export async function copyWhatsAppMedia(
   } catch {
     return null;
   }
+}
+
+// ── comments ──────────────────────────────────────────────────────────
+export type PostInfo = {
+  message: string | null;
+  permalink: string | null;
+  imageUrl: string | null;
+};
+
+/** Caption, link and picture for a Facebook post or Instagram media (best effort). */
+export async function fetchPostInfo(
+  platform: "facebook" | "instagram",
+  postId: string,
+  token: string,
+): Promise<PostInfo | null> {
+  try {
+    if (platform === "facebook") {
+      const j = await graphGet(`/${postId}`, token, {
+        fields: "message,permalink_url,full_picture",
+      });
+      return {
+        message: j.message ?? null,
+        permalink: j.permalink_url ?? null,
+        imageUrl: j.full_picture ?? null,
+      };
+    }
+    const j = await graphGet(`/${postId}`, token, {
+      fields: "caption,permalink,media_url,thumbnail_url,media_type",
+    });
+    return {
+      message: j.caption ?? null,
+      permalink: j.permalink ?? null,
+      imageUrl:
+        (j.media_type === "VIDEO" ? j.thumbnail_url : j.media_url) ?? j.thumbnail_url ?? null,
+    };
+  } catch {
+    return null;
+  }
+}
+
+/** Public reply under a comment. Returns the new comment id. */
+export async function replyToComment(
+  platform: "facebook" | "instagram",
+  commentId: string,
+  text: string,
+  token: string,
+): Promise<string | null> {
+  const path = platform === "facebook" ? `/${commentId}/comments` : `/${commentId}/replies`;
+  const j = await graphPost(path, token, { message: text });
+  return j?.id ?? null;
+}
+
+/** Private reply: opens a DM with the commenter (one per comment, within 7 days). */
+export async function privateReplyToComment(
+  pageId: string,
+  commentId: string,
+  text: string,
+  token: string,
+) {
+  const j = await graphPost(`/${pageId}/messages`, token, {
+    recipient: { comment_id: commentId },
+    message: { text },
+  });
+  return {
+    recipientId: (j?.recipient_id as string | undefined) ?? null,
+    messageId: (j?.message_id as string | undefined) ?? null,
+  };
+}
+
+/** Hide / unhide a comment. */
+export async function setCommentHidden(
+  platform: "facebook" | "instagram",
+  commentId: string,
+  hidden: boolean,
+  token: string,
+) {
+  const body = platform === "facebook" ? { is_hidden: hidden } : { hide: hidden };
+  await graphPost(`/${commentId}`, token, body);
 }
