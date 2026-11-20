@@ -429,3 +429,6 @@ CREATE TABLE IF NOT EXISTS public.inbox_settings (
 );
 ALTER TABLE public.inbox_settings ENABLE ROW LEVEL SECURITY;
 INSERT INTO public.inbox_settings (id) VALUES (1) ON CONFLICT (id) DO NOTHING;
+
+-- Link to the conversation in the page's Meta inbox (one click from there to the customer's profile).
+ALTER TABLE public.inbox_conversations ADD COLUMN IF NOT EXISTS thread_url text;

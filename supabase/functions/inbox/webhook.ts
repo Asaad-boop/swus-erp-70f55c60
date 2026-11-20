@@ -6,6 +6,7 @@ import {
   copyToStorage,
   copyWhatsAppMedia,
   fetchContactProfile,
+  type ContactProfile,
   type InboxAttachment,
   type InboxPlatform,
 } from "./meta.ts";
@@ -58,11 +59,11 @@ async function getToken(ctx: Ctx, channelId: string): Promise<string | null> {
 async function conversationExists(ctx: Ctx, channelId: string, userId: string) {
   const { data } = await ctx.admin
     .from("inbox_conversations")
-    .select("id, contact_name")
+    .select("id, contact_name, thread_url")
     .eq("channel_id", channelId)
     .eq("external_user_id", userId)
     .maybeSingle();
-  return data as { id: string; contact_name: string | null } | null;
+  return data as { id: string; contact_name: string | null; thread_url: string | null } | null;
 }
 
 async function ingest(
@@ -188,10 +189,9 @@ async function handleMetaMessaging(ctx: Ctx, platform: "messenger" | "instagram"
     const type = attachments[0]?.type ?? "text";
 
     // First message from a new customer → fetch name/photo once.
-    let profile: { name: string | null; username: string | null; avatar: string | null } | null =
-      null;
+    let profile: ContactProfile | null = null;
     const existing = await conversationExists(ctx, channel.id, userId);
-    if (!existing || !existing.contact_name) {
+    if (!existing || !existing.contact_name || !existing.thread_url) {
       const token = await getToken(ctx, channel.id);
       if (token) profile = await fetchContactProfile(platform, userId, token, channel.page_id);
     }
@@ -210,6 +210,16 @@ async function handleMetaMessaging(ctx: Ctx, platform: "messenger" | "instagram"
       contactAvatar: profile?.avatar,
       sentVia: isEcho ? "platform" : null,
     });
+    if (profile?.threadUrl || profile?.username) {
+      const patch: Record<string, string> = {};
+      if (profile.threadUrl) patch.thread_url = profile.threadUrl;
+      if (profile.username) patch.contact_username = profile.username;
+      await ctx.admin
+        .from("inbox_conversations")
+        .update(patch)
+        .eq("channel_id", channel.id)
+        .eq("external_user_id", userId);
+    }
   }
 }
 

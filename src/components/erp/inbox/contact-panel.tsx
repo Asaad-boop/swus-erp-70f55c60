@@ -27,7 +27,9 @@ import {
   fetchOrdersByPhone,
   findBdPhone,
   PLATFORM_LABEL,
+  profileLinks,
   updateConversation,
+  type InboxChannel,
   type InboxConversation,
   type InboxMessage,
 } from "@/lib/erp/inbox/inbox";
@@ -35,9 +37,11 @@ import { agoLabel, ContactAvatar, PlatformChip } from "./shared";
 
 export function ContactPanel({
   conversation: c,
+  channel,
   onClose,
 }: {
   conversation: InboxConversation;
+  channel?: InboxChannel;
   onClose: () => void;
 }) {
   const qc = useQueryClient();
@@ -130,6 +134,21 @@ export function ContactPanel({
           <div className="text-[11px] text-muted-foreground">
             First message {agoLabel(c.created_at)}
           </div>
+          {profileLinks(c, channel).length > 0 && (
+            <div className="mt-1 flex w-full flex-col gap-1.5">
+              {profileLinks(c, channel).map((l) => (
+                <a
+                  key={l.url}
+                  href={l.url}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="inline-flex items-center justify-center gap-1.5 rounded-lg border px-2.5 py-1.5 text-xs font-medium hover:bg-muted"
+                >
+                  <ExternalLink className="h-3.5 w-3.5" /> {l.label}
+                </a>
+              ))}
+            </div>
+          )}
         </div>
 
         {/* Contact fields */}

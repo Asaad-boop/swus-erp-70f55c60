@@ -325,7 +325,11 @@ function InboxPage() {
           {selected && (
             <Sheet open={sheetOpen} onOpenChange={setSheetOpen}>
               <SheetContent side="right" className="w-[320px] p-0 xl:hidden [&>button]:hidden">
-                <ContactPanel conversation={selected} onClose={() => setSheetOpen(false)} />
+                <ContactPanel
+                  conversation={selected}
+                  channel={channelFor(selected.channel_id)}
+                  onClose={() => setSheetOpen(false)}
+                />
               </SheetContent>
             </Sheet>
           )}
@@ -333,7 +337,11 @@ function InboxPage() {
           {/* Customer panel */}
           {selected && panelOpen && (
             <aside className="hidden w-[300px] shrink-0 border-l border-border/70 xl:block">
-              <ContactPanel conversation={selected} onClose={() => setPanelOpen(false)} />
+              <ContactPanel
+                conversation={selected}
+                channel={channelFor(selected.channel_id)}
+                onClose={() => setPanelOpen(false)}
+              />
             </aside>
           )}
         </div>

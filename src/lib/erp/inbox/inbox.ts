@@ -41,6 +41,7 @@ export type InboxConversation = {
   last_message_preview: string | null;
   last_message_direction: "in" | "out" | null;
   last_inbound_at: string | null;
+  thread_url: string | null;
   created_at: string;
 };
 
@@ -339,4 +340,46 @@ export async function inboxApi<T = any>(
   }
   if (!data?.ok) throw new Error(data?.error ?? "Inbox request failed");
   return data.data as T;
+}
+
+export type ProfileLink = { label: string; url: string; kind: "profile" | "thread" };
+
+/**
+ * One-click links for a customer. Meta never exposes a Facebook profile URL for a
+ * Messenger PSID, so Messenger opens the thread in the page inbox, where the
+ * customer's profile is one click away. Instagram has a public profile by username.
+ */
+export function profileLinks(
+  c: InboxConversation,
+  channel?: Pick<InboxChannel, "page_id"> | null,
+): ProfileLink[] {
+  const out: ProfileLink[] = [];
+  if (c.platform === "instagram" && c.contact_username) {
+    out.push({
+      kind: "profile",
+      label: "Instagram profile",
+      url: `https://www.instagram.com/${encodeURIComponent(c.contact_username)}/`,
+    });
+  }
+  if (c.platform === "whatsapp") {
+    out.push({
+      kind: "profile",
+      label: "WhatsApp e kholo",
+      url: `https://wa.me/${c.external_user_id.replace(/\D/g, "")}`,
+    });
+  }
+  if (c.thread_url) {
+    out.push({
+      kind: "thread",
+      label: c.platform === "instagram" ? "Meta inbox e chat" : "Facebook e chat + profile",
+      url: c.thread_url,
+    });
+  } else if (channel?.page_id && c.platform !== "whatsapp") {
+    out.push({
+      kind: "thread",
+      label: "Page inbox kholo",
+      url: `https://business.facebook.com/latest/inbox/all?asset_id=${channel.page_id}`,
+    });
+  }
+  return out;
 }

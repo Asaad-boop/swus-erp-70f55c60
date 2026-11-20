@@ -167,51 +167,62 @@ export async function subscribePage(pageId: string, pageToken: string) {
 }
 
 // ── contact profiles ──────────────────────────────────────────────────
+export type ContactProfile = {
+  name: string | null;
+  username: string | null;
+  avatar: string | null;
+  threadUrl: string | null;
+};
+
 /**
- * Contact name/photo. Tries the user profile first (needs the "Business Asset User
- * Profile Access" feature for non-app users), then falls back to the page's
- * conversation participants, which only needs pages_messaging.
+ * Contact name/photo + a link to the thread in the page's Meta inbox.
+ * The user profile needs the "Business Asset User Profile Access" feature for
+ * people outside the app; the page conversation lookup only needs pages_messaging,
+ * so it fills the name when the profile is refused and always supplies the link.
  */
 export async function fetchContactProfile(
   platform: InboxPlatform,
   userId: string,
   token: string,
   pageId?: string | null,
-) {
+): Promise<ContactProfile | null> {
+  const out: ContactProfile = { name: null, username: null, avatar: null, threadUrl: null };
   try {
     if (platform === "messenger") {
       const j = await graphGet(`/${userId}`, token, { fields: "first_name,last_name,profile_pic" });
-      const name = [j.first_name, j.last_name].filter(Boolean).join(" ") || null;
-      if (name) return { name, username: null, avatar: j.profile_pic ?? null };
-    }
-    if (platform === "instagram") {
+      out.name = [j.first_name, j.last_name].filter(Boolean).join(" ") || null;
+      out.avatar = j.profile_pic ?? null;
+    } else if (platform === "instagram") {
       const j = await graphGet(`/${userId}`, token, { fields: "name,username,profile_pic" });
-      if (j.name || j.username) {
-        return {
-          name: j.name ?? j.username ?? null,
-          username: j.username ?? null,
-          avatar: j.profile_pic ?? null,
-        };
-      }
+      out.name = j.name ?? j.username ?? null;
+      out.username = j.username ?? null;
+      out.avatar = j.profile_pic ?? null;
     }
   } catch {
     // fall through to the conversation lookup
   }
-  if (!pageId || (platform !== "messenger" && platform !== "instagram")) return null;
-  try {
-    const j = await graphGet(`/${pageId}/conversations`, token, {
-      platform,
-      user_id: userId,
-      fields: "participants",
-    });
-    const people: any[] = j?.data?.[0]?.participants?.data ?? [];
-    const me = people.find((x) => String(x?.id) === String(userId));
-    if (!me) return null;
-    const name = me.name ?? me.username ?? null;
-    return { name, username: me.username ?? null, avatar: null };
-  } catch {
-    return null;
+  if (pageId && (platform === "messenger" || platform === "instagram")) {
+    try {
+      const j = await graphGet(`/${pageId}/conversations`, token, {
+        platform,
+        user_id: userId,
+        fields: "participants,link",
+      });
+      const conv = j?.data?.[0];
+      const people: any[] = conv?.participants?.data ?? [];
+      const me = people.find((x) => String(x?.id) === String(userId));
+      if (me) {
+        out.name = out.name ?? me.name ?? me.username ?? null;
+        out.username = out.username ?? me.username ?? null;
+      }
+      if (typeof conv?.link === "string" && conv.link.startsWith("/")) {
+        out.threadUrl = `https://www.facebook.com${conv.link}`;
+      }
+    } catch {
+      // keep whatever the profile lookup gave
+    }
   }
+  return out.name || out.username || out.avatar || out.threadUrl ? out : null;
 }
 
 // ── sending ───────────────────────────────────────────────────────────

@@ -6,6 +6,7 @@ import {
   Check,
   CheckCheck,
   CheckCircle2,
+  ExternalLink,
   Clock,
   FileText,
   Loader2,
@@ -27,6 +28,7 @@ import {
   fetchMessages,
   fillTemplate,
   inboxApi,
+  profileLinks,
   updateConversation,
   uploadInboxMedia,
   windowHoursLeft,
@@ -414,6 +416,13 @@ export function Thread({ conversation: c, channel, quickReplies, onBack, onToggl
           )}
           <span className="hidden sm:inline">{c.status === "done" ? "Reopen" : "Done"}</span>
         </Button>
+        {profileLinks(c, channel)[0] && (
+          <Button variant="ghost" size="icon" asChild title={profileLinks(c, channel)[0]!.label}>
+            <a href={profileLinks(c, channel)[0]!.url} target="_blank" rel="noreferrer">
+              <ExternalLink className="h-4 w-4" />
+            </a>
+          </Button>
+        )}
         <Button variant="ghost" size="icon" onClick={onTogglePanel} title="Customer info">
           <PanelRight className="h-4 w-4" />
         </Button>
