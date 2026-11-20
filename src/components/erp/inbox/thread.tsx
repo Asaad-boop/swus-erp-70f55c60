@@ -49,6 +49,7 @@ import {
   type QuickReply,
 } from "@/lib/erp/inbox/inbox";
 import { ContactAvatar, PlatformChip } from "./shared";
+import { WaTemplateDialog } from "./wa-template-dialog";
 
 type Props = {
   conversation: InboxConversation;
@@ -395,6 +396,7 @@ export function Thread({
     onError: (e: Error) => toast.error(e.message),
   });
   const assignee = c.assigned_to ? staff.find((s) => s.id === c.assigned_to) : undefined;
+  const [tplOpen, setTplOpen] = useState(false);
 
   const hoursLeft = windowHoursLeft(c.last_inbound_at);
   const windowNote =
@@ -403,7 +405,7 @@ export function Thread({
         ? `Reply window: ${Math.max(1, Math.round(hoursLeft * 60))}m left`
         : null
       : c.platform === "whatsapp"
-        ? "24h window closed — customer reply na dile WhatsApp-e message jabe na"
+        ? "24h window closed — ekhon shudhu approved template pathano jabe"
         : "24h window closed — Human Agent tag diye pathano hobe (7 din porjonto)";
 
   // Group messages by day
@@ -554,7 +556,19 @@ export function Thread({
         {windowNote && (
           <div className="flex items-center gap-1.5 bg-amber-500/10 px-4 py-1.5 text-[11px] text-amber-700 dark:text-amber-400">
             <Clock className="h-3 w-3" /> {windowNote}
+            {c.platform === "whatsapp" && hoursLeft === null && (
+              <button
+                type="button"
+                onClick={() => setTplOpen(true)}
+                className="ml-auto rounded bg-amber-600 px-2 py-0.5 font-semibold text-white hover:bg-amber-700"
+              >
+                Template pathao
+              </button>
+            )}
           </div>
+        )}
+        {c.platform === "whatsapp" && (
+          <WaTemplateDialog open={tplOpen} onOpenChange={setTplOpen} conversation={c} />
         )}
 
         {brandReplies.length > 0 && (

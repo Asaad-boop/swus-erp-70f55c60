@@ -12,6 +12,7 @@
 import { createClient } from "jsr:@supabase/supabase-js@2";
 import {
   graphGet,
+  graphPost,
   INBOX_GRAPH_VERSION,
   INBOX_SCOPES,
   listManagedPages,
@@ -205,7 +206,7 @@ async function handleEmbeddedSignup(code: string, appId: string, appSecret: stri
           brand_id: existing?.brand_id ?? brandId,
           platform: "whatsapp",
           external_id: String(n.id),
-          page_id: null,
+          page_id: waba, // WhatsApp: page_id holds the WABA ID (for templates)
           name: label,
           username: n.display_phone_number ?? null,
           created_by: null,
@@ -381,7 +382,117 @@ async function loadCommentForCaller(c: Caller, commentId: unknown) {
   return { cm, channel, token: secret.access_token as string };
 }
 
+async function loadWaForCaller(c: Caller, conversationId: unknown) {
+  if (!isUuid(conversationId)) throw new Error("Bad conversation");
+  const { data: conv, error } = await c.db
+    .from("inbox_conversations")
+    .select("id, brand_id, channel_id, platform, external_user_id, contact_name, assigned_to")
+    .eq("id", conversationId)
+    .maybeSingle();
+  if (error) throw error;
+  if (!conv) throw new Error("Conversation not found");
+  if (conv.platform !== "whatsapp") throw new Error("Template shudhu WhatsApp e");
+  const [{ data: channel }, { data: secret }] = await Promise.all([
+    admin.from("inbox_channels").select("id, external_id, page_id, is_active").eq("id", conv.channel_id).maybeSingle(),
+    admin.from("inbox_channel_secrets").select("access_token").eq("channel_id", conv.channel_id).maybeSingle(),
+  ]);
+  if (!channel?.is_active || !secret?.access_token) throw new Error("Channel connected nai");
+  if (!channel.page_id) throw new Error("WhatsApp Business Account ID save kora nai — Channels e abar connect koro");
+  return { conv, channel, token: secret.access_token as string };
+}
+
+function templateBody(components: any[]): string {
+  return String(components?.find((x: any) => x.type === "BODY")?.text ?? "");
+}
+
 const actions: Record<string, (c: Caller, p: any) => Promise<unknown>> = {
+  async wa_templates(c, p) {
+    const { channel, token } = await loadWaForCaller(c, p?.conversationId);
+    const j = await graphGet(`/${channel.page_id}/message_templates`, token, {
+      fields: "name,language,category,status,components",
+      limit: "200",
+    });
+    return {
+      templates: (j?.data ?? [])
+        .filter((t: any) => t.status === "APPROVED")
+        .map((t: any) => {
+          const body = templateBody(t.components);
+          const header = t.components?.find((x: any) => x.type === "HEADER");
+          return {
+            name: t.name,
+            language: t.language,
+            category: t.category,
+            body,
+            params: new Set(body.match(/\{\{\d+\}\}/g) ?? []).size,
+            headerFormat: header?.format ?? null,
+            headerText: header?.format === "TEXT" ? header.text : null,
+            footer: t.components?.find((x: any) => x.type === "FOOTER")?.text ?? null,
+          };
+        }),
+    };
+  },
+
+  async wa_send_template(c, p) {
+    const { conv, channel, token } = await loadWaForCaller(c, p?.conversationId);
+    const name = String(p?.name ?? "");
+    const language = String(p?.language ?? "");
+    if (!/^[a-z0-9_]{1,512}$/.test(name) || !/^[A-Za-z_]{2,10}$/.test(language))
+      throw new Error("Template thik nai");
+    const params: string[] = (Array.isArray(p?.params) ? p.params : [])
+      .slice(0, 20)
+      .map((x: unknown) => String(x ?? "").trim());
+    if (params.some((x) => !x)) throw new Error("Shob {{ }} ghor puron koro");
+    // Re-read the approved body from Meta so the saved text matches what was sent.
+    const list = await graphGet(`/${channel.page_id}/message_templates`, token, {
+      name,
+      fields: "name,language,status,components",
+    });
+    const tpl = (list?.data ?? []).find(
+      (t: any) => t.name === name && t.language === language && t.status === "APPROVED",
+    );
+    if (!tpl) throw new Error("Ei template approved na");
+    const body = templateBody(tpl.components);
+    const rendered = body.replace(/\{\{(\d+)\}\}/g, (_m, i) => params[Number(i) - 1] ?? "");
+    const j = await graphPost(`/${channel.external_id}/messages`, token, {
+      messaging_product: "whatsapp",
+      recipient_type: "individual",
+      to: conv.external_user_id,
+      type: "template",
+      template: {
+        name,
+        language: { code: language },
+        ...(params.length
+          ? { components: [{ type: "body", parameters: params.map((text) => ({ type: "text", text })) }] }
+          : {}),
+      },
+    });
+    const messageId: string | null = j?.messages?.[0]?.id ?? null;
+    const { error: insErr } = await admin.from("inbox_messages").insert({
+      conversation_id: conv.id,
+      brand_id: conv.brand_id,
+      direction: "out",
+      external_message_id: messageId,
+      msg_type: "template",
+      body: rendered || `[template: ${name}]`,
+      attachments: [],
+      sent_by: c.userId,
+      sent_via: "erp",
+      status: "sent",
+    });
+    if (insErr && (insErr as any).code !== "23505") throw insErr;
+    await admin
+      .from("inbox_conversations")
+      .update({
+        last_message_at: new Date().toISOString(),
+        last_message_preview: previewFor(rendered || name),
+        last_message_direction: "out",
+        unread_count: 0,
+        ...(conv.assigned_to ? {} : { assigned_to: c.userId }),
+      })
+      .eq("id", conv.id);
+    return { ok: true, messageId };
+  },
+
   async comment_reply(c, p) {
     const text = typeof p?.text === "string" ? p.text.trim().slice(0, 2000) : "";
     if (!text) throw new Error("Reply khali");
@@ -678,7 +789,7 @@ const actions: Record<string, (c: Caller, p: any) => Promise<unknown>> = {
       token = sess.access_token;
     }
     if (token.length < 20) throw new Error("Token thik nai");
-    const wabaIdIn = String(p?.wabaId ?? "").trim();
+    let wabaIdIn = String(p?.wabaId ?? "").trim();
     if (platform === "whatsapp" && !externalId && isDigits(wabaIdIn)) {
       // Only the WABA ID was given: pick its phone number automatically.
       const nums = await graphGet(`/${wabaIdIn}/phone_numbers`, token, {
@@ -700,7 +811,7 @@ const actions: Record<string, (c: Caller, p: any) => Promise<unknown>> = {
       name =
         name || [j.verified_name, j.display_phone_number].filter(Boolean).join(" · ") || "WhatsApp";
       username = j.display_phone_number ?? null;
-      pageId = null;
+      pageId = isDigits(wabaIdIn) ? wabaIdIn : null; // WhatsApp: page_id = WABA ID
     } else if (platform === "messenger") {
       const j = await graphGet(`/${externalId}`, token, { fields: "name" });
       name = name || j.name;
