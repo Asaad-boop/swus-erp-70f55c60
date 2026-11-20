@@ -474,10 +474,10 @@ export function ChannelsSettings({
           <h3 className="text-sm font-semibold">WhatsApp Business (Cloud API)</h3>
         </div>
         <p className="text-xs text-muted-foreground">
-          Meta Business → WhatsApp Manager e number add koro. Tarpor app er WhatsApp → API Setup
-          theke <b>Phone number ID</b> ar Business Settings → System users theke
-          <b> permanent token</b> (whatsapp_business_messaging permission) niye ekhane dao. Note:
-          Cloud API te number nile oi number e normal WhatsApp Business app ar cholbe na.
+          Business Settings → WhatsApp accounts theke <b>WhatsApp Business Account ID</b> ar
+          System users theke <b>permanent token</b> (whatsapp_business_messaging +
+          whatsapp_business_management) niye ekhane dao. Coexistence number (WhatsApp Business app
+          + RepliBee) o kaj kore — phone e app cholte thakbe.
         </p>
         <div className="flex flex-wrap gap-2">
           <Button
@@ -562,7 +562,7 @@ export function ChannelsSettings({
               <div className="space-y-1.5">
                 <Label>
                   {manual.platform === "whatsapp"
-                    ? "Phone number ID"
+                    ? "Phone number ID (optional — WABA ID dile auto)"
                     : manual.platform === "messenger"
                       ? "Facebook Page ID"
                       : "Instagram account ID"}
@@ -621,7 +621,10 @@ export function ChannelsSettings({
             <Button
               onClick={() => saveManual.mutate()}
               disabled={
-                !manual?.brandId || !manual?.externalId || !manual?.token || saveManual.isPending
+                !manual?.brandId ||
+                !(manual?.externalId || (manual?.platform === "whatsapp" && manual?.wabaId)) ||
+                !manual?.token ||
+                saveManual.isPending
               }
             >
               {saveManual.isPending && <Loader2 className="mr-1.5 h-4 w-4 animate-spin" />} Connect

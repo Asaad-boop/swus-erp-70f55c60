@@ -665,10 +665,20 @@ const actions: Record<string, (c: Caller, p: any) => Promise<unknown>> = {
     const platform = String(p?.platform);
     if (!["messenger", "instagram", "whatsapp"].includes(platform)) throw new Error("Bad platform");
     if (!isUuid(p?.brandId)) throw new Error("Brand select koro");
-    const externalId = String(p?.externalId ?? "").trim();
-    if (!isDigits(externalId)) throw new Error("ID shudhu number hobe");
+    let externalId = String(p?.externalId ?? "").trim();
     const token = String(p?.token ?? "").trim();
     if (token.length < 20) throw new Error("Token thik nai");
+    const wabaIdIn = String(p?.wabaId ?? "").trim();
+    if (platform === "whatsapp" && !externalId && isDigits(wabaIdIn)) {
+      // Only the WABA ID was given: pick its phone number automatically.
+      const nums = await graphGet(`/${wabaIdIn}/phone_numbers`, token, {
+        fields: "id,display_phone_number,verified_name",
+      });
+      const list: any[] = nums?.data ?? [];
+      if (!list.length) throw new Error("Ei WhatsApp account e kono number pai nai");
+      externalId = String(list[0].id);
+    }
+    if (!isDigits(externalId)) throw new Error("ID shudhu number hobe");
     let name: string | null = String(p?.name ?? "").trim() || null;
     let username: string | null = null;
     let pageId: string | null = String(p?.pageId ?? "").trim() || null;
