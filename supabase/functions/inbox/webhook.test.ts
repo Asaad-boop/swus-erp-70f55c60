@@ -336,6 +336,44 @@ describe("comments", () => {
   });
 });
 
+describe("whatsapp coexistence", () => {
+  it("records replies typed in the WhatsApp Business app as outbound", async () => {
+    const admin = fakeAdmin();
+    await processInboxWebhook(admin, {
+      object: "whatsapp_business_account",
+      entry: [
+        {
+          changes: [
+            {
+              field: "smb_message_echoes",
+              value: {
+                metadata: { phone_number_id: "333" },
+                message_echoes: [
+                  {
+                    from: "8801964437520",
+                    to: "8801711000000",
+                    id: "wamid.echo1",
+                    timestamp: "1700000000",
+                    type: "text",
+                    text: { body: "ji bolen" },
+                  },
+                ],
+              },
+            },
+          ],
+        },
+      ],
+    });
+    expect((admin.rpc.mock.calls[0] as any)[1]).toMatchObject({
+      _channel_id: "ch-w",
+      _external_user_id: "8801711000000",
+      _direction: "out",
+      _body: "ji bolen",
+      _sent_via: "platform",
+    });
+  });
+});
+
 describe("helpers", () => {
   it("finds BD phone numbers incl. Bangla digits and +88", () => {
     expect(findBdPhone("amar number 01712-345678")).toBe("01712345678");

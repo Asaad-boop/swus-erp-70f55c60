@@ -132,8 +132,116 @@ async function handleWebhook(req: Request, url: URL) {
 // ════════════════════════════════════════════════════════════════════
 // OAuth return
 // ════════════════════════════════════════════════════════════════════
+const DEFAULT_ERP_ORIGIN = "https://erp.hobbyshopbd.com";
+
+/**
+ * Meta-hosted Embedded Signup return (no signed state): exchange the code for a
+ * business token, find the WhatsApp Business Accounts it was granted, subscribe
+ * our app to each and connect every phone number as an inbox channel.
+ * Works for WhatsApp Business App numbers onboarded with coexistence too.
+ */
+async function handleEmbeddedSignup(code: string, appId: string, appSecret: string) {
+  const tok = await graphRaw("/oauth/access_token", {
+    client_id: appId,
+    client_secret: appSecret,
+    redirect_uri: REDIRECT_URI,
+    code,
+  });
+  const token: string = tok.access_token;
+  const dbg = await graphRaw("/debug_token", {
+    input_token: token,
+    access_token: `${appId}|${appSecret}`,
+  });
+  const scopes: any[] = dbg?.data?.granular_scopes ?? [];
+  const wabaIds = new Set<string>();
+  for (const sc of scopes) {
+    if (
+      sc?.scope === "whatsapp_business_management" ||
+      sc?.scope === "whatsapp_business_messaging"
+    ) {
+      for (const id of sc?.target_ids ?? []) wabaIds.add(String(id));
+    }
+  }
+  if (wabaIds.size === 0) throw new Error("No WhatsApp Business Account was shared");
+
+  const { data: brands } = await admin
+    .from("brands")
+    .select("id, name")
+    .eq("is_active", true)
+    .order("name");
+  const pickBrand = (label: string) => {
+    const l = label.toLowerCase().replace(/[^a-z0-9]/g, "");
+    const hit = (brands ?? []).find((b: any) => {
+      const n = String(b.name)
+        .toLowerCase()
+        .replace(/[^a-z0-9]/g, "");
+      return n && (l.includes(n) || n.includes(l));
+    });
+    return (hit ?? (brands ?? [])[0])?.id as string | undefined;
+  };
+
+  let connected = 0;
+  for (const waba of wabaIds) {
+    await fetch(`https://graph.facebook.com/${INBOX_GRAPH_VERSION}/${waba}/subscribed_apps`, {
+      method: "POST",
+      headers: { Authorization: `Bearer ${token}` },
+    }).catch(() => null);
+    const nums = await graphGet(`/${waba}/phone_numbers`, token, {
+      fields: "id,display_phone_number,verified_name",
+    }).catch(() => ({ data: [] }));
+    for (const n of nums?.data ?? []) {
+      const label =
+        [n.verified_name, n.display_phone_number].filter(Boolean).join(" · ") || "WhatsApp";
+      const brandId = pickBrand(String(n.verified_name ?? ""));
+      if (!brandId) continue;
+      const { data: existing } = await admin
+        .from("inbox_channels")
+        .select("brand_id")
+        .eq("platform", "whatsapp")
+        .eq("external_id", String(n.id))
+        .maybeSingle();
+      await upsertChannel(
+        {
+          brand_id: existing?.brand_id ?? brandId,
+          platform: "whatsapp",
+          external_id: String(n.id),
+          page_id: null,
+          name: label,
+          username: n.display_phone_number ?? null,
+          created_by: null,
+        },
+        token,
+      );
+      connected++;
+    }
+  }
+  return connected;
+}
+
 async function handleOAuthCallback(url: URL) {
   let origin = "";
+  // Meta-hosted Embedded Signup comes back without our signed state.
+  const rawState = url.searchParams.get("state") ?? "";
+  if (!rawState.includes(".")) {
+    const back = (q: string) =>
+      Response.redirect(`${DEFAULT_ERP_ORIGIN}/erp/inbox?tab=channels&meta=${q}`, 302);
+    try {
+      if (url.searchParams.get("error")) return back("cancelled");
+      const code = url.searchParams.get("code");
+      if (!code) return back("error");
+      const { appId, appSecret } = requireApp(await loadSettings());
+      const n = await handleEmbeddedSignup(code, appId, appSecret);
+      return back(n > 0 ? "whatsapp_connected" : "whatsapp_none");
+    } catch (e) {
+      console.error("[inbox embedded signup]", e);
+      await admin.from("inbox_webhook_events").insert({
+        object: "embedded_signup",
+        payload: {},
+        error: String((e as any)?.message ?? e).slice(0, 1000),
+      });
+      return back("whatsapp_error");
+    }
+  }
   const back = (q: string) =>
     origin
       ? Response.redirect(`${origin}/erp/inbox?tab=channels&meta=${q}`, 302)
@@ -212,7 +320,7 @@ async function upsertChannel(
     name: string;
     username?: string | null;
     avatar_url?: string | null;
-    created_by: string;
+    created_by: string | null;
   },
   token: string,
 ) {

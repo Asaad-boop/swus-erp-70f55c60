@@ -107,6 +107,12 @@ export function ChannelsSettings({
       toast.success("Facebook connected — ekhon page gula select koro");
     else if (metaParam === "error") toast.error("Facebook login fail korse, abar try koro");
     else if (metaParam === "cancelled") toast("Facebook login cancel kora hoyeche");
+    else if (metaParam === "whatsapp_connected")
+      toast.success("WhatsApp number connected ✅ Brand thik ache kina niche check koro");
+    else if (metaParam === "whatsapp_none")
+      toast.error("WhatsApp signup hoyeche, kintu kono number pawa jay nai");
+    else if (metaParam === "whatsapp_error")
+      toast.error("WhatsApp connect fail korse — Step 1 er 'Last webhook error' dekho");
   }, [metaParam]);
 
   const [picks, setPicks] = useState<Record<string, PagePick>>({});

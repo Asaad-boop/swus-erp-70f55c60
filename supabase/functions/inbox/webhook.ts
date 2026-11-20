@@ -332,6 +332,25 @@ async function handleWhatsApp(ctx: Ctx, entry: any) {
       });
     }
 
+    // Coexistence: replies typed in the WhatsApp Business app on the phone.
+    for (const m of v.message_echoes ?? []) {
+      const to = m?.to ? String(m.to) : null;
+      if (!to) continue;
+      const parsed = waBody(m);
+      await ingest(ctx, {
+        channel,
+        userId: to,
+        direction: "out",
+        mid: m.id ?? null,
+        type: parsed.type,
+        body: parsed.body,
+        attachments: [],
+        at: new Date((Number(m.timestamp) || Date.now() / 1000) * 1000),
+        contactPhone: to.startsWith("880") ? `0${to.slice(3)}` : to,
+        sentVia: "platform",
+      });
+    }
+
     for (const s of v.statuses ?? []) {
       if (!s?.id || !s?.status) continue;
       const status = ["sent", "delivered", "read", "failed"].includes(s.status) ? s.status : null;
