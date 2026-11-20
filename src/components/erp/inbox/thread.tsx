@@ -15,6 +15,7 @@ import {
   PanelRight,
   RotateCcw,
   Send,
+  Sparkles,
   UserPlus,
   X,
   Zap,
@@ -39,6 +40,7 @@ import {
   fillTemplate,
   inboxApi,
   initials,
+  QR_CATEGORIES,
   profileLinks,
   updateConversation,
   uploadInboxMedia,
@@ -55,6 +57,7 @@ import { PriceReplyDialog, type PriceImage } from "./price-reply-dialog";
 import { useConversationPresence } from "./use-conversation-presence";
 import { useVoiceTyping } from "./use-voice-typing";
 import { EmojiPicker } from "./emoji-picker";
+import { rewriteReplyFn, suggestRepliesFn } from "@/lib/erp/inbox/inbox-ai.functions";
 
 const QUICK_REACTIONS = ["❤️", "👍", "😊", "🙏", "😂", "😮"];
 
@@ -377,6 +380,21 @@ export function Thread({
       .slice(0, 8);
   }, [brandReplies, slashQuery]);
   useEffect(() => setSlashIndex(0), [slashQuery]);
+  const [qrCat, setQrCat] = useState("top");
+  const qrCats = useMemo(
+    () =>
+      QR_CATEGORIES.filter((k) => brandReplies.some((q) => (q.category || "general") === k.key)),
+    [brandReplies],
+  );
+  const visibleReplies = useMemo(
+    () =>
+      qrCat === "top"
+        ? [...brandReplies]
+            .sort((a, b) => b.use_count - a.use_count || a.sort_order - b.sort_order)
+            .slice(0, 10)
+        : brandReplies.filter((q) => (q.category || "general") === qrCat),
+    [brandReplies, qrCat],
+  );
 
   const send = useMutation({
     mutationFn: (v: {
@@ -514,7 +532,28 @@ export function Thread({
   const [tplOpen, setTplOpen] = useState(false);
   const [priceImages, setPriceImages] = useState<PriceImage[] | null>(null);
   const [replyTo, setReplyTo] = useState<InboxMessage | null>(null);
-  useEffect(() => setReplyTo(null), [c.id]);
+  const [aiReplies, setAiReplies] = useState<string[] | null>(null);
+  useEffect(() => {
+    setReplyTo(null);
+    setAiReplies(null);
+  }, [c.id]);
+  const suggest = useMutation({
+    mutationFn: () => suggestRepliesFn({ data: { conversationId: c.id } }),
+    onSuccess: (r) => {
+      if (!r.replies.length) toast.error(r.reason ?? "AI kichu dite pareni");
+      setAiReplies(r.replies);
+    },
+    onError: (e: Error) => toast.error(e.message),
+  });
+  const rewrite = useMutation({
+    mutationFn: (mode: "polite" | "short" | "sales" | "fix" | "bangla" | "english") =>
+      rewriteReplyFn({ data: { text, mode } }),
+    onSuccess: (r) => {
+      if (r.text) setText(r.text);
+      else toast.error(r.reason ?? "AI error");
+    },
+    onError: (e: Error) => toast.error(e.message),
+  });
   const react = useMutation({
     mutationFn: ({ m, emoji }: { m: InboxMessage; emoji: string | null }) =>
       inboxApi("react", { messageId: m.id, emoji }),
@@ -832,26 +871,46 @@ export function Thread({
         )}
 
         {brandReplies.length > 0 && (
-          <div className="flex items-center gap-1.5 overflow-x-auto px-3 pt-2 [scrollbar-width:none]">
-            <Zap className="h-3.5 w-3.5 shrink-0 text-amber-500" />
-            {brandReplies.slice(0, 12).map((q) => (
-              <Tooltip key={q.id}>
-                <TooltipTrigger asChild>
-                  <button
-                    type="button"
-                    disabled={send.isPending}
-                    onClick={(e) => (e.shiftKey || e.altKey ? insertQuick(q) : sendQuick(q))}
-                    className="shrink-0 rounded-full border border-border bg-card px-2.5 py-1 text-xs font-medium transition-colors hover:border-primary hover:bg-primary/5 disabled:opacity-50"
-                  >
-                    {q.title}
-                  </button>
-                </TooltipTrigger>
-                <TooltipContent side="top" className="max-w-xs whitespace-pre-wrap text-xs">
-                  {fillTemplate(q.body, c)}
-                  <div className="mt-1 opacity-60">Click = send · Shift+click = edit first</div>
-                </TooltipContent>
-              </Tooltip>
-            ))}
+          <div className="space-y-1.5 px-3 pt-2">
+            <div className="flex items-center gap-1 overflow-x-auto [scrollbar-width:none]">
+              <Zap className="h-3.5 w-3.5 shrink-0 text-amber-500" />
+              {[{ key: "top", label: "Top" }, ...qrCats].map((cat) => (
+                <button
+                  key={cat.key}
+                  type="button"
+                  onClick={() => setQrCat(cat.key)}
+                  className={cn(
+                    "shrink-0 rounded px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide",
+                    qrCat === cat.key
+                      ? "bg-amber-500/15 text-amber-700 dark:text-amber-400"
+                      : "text-muted-foreground hover:text-foreground",
+                  )}
+                >
+                  {cat.label}
+                </button>
+              ))}
+            </div>
+            <div className="flex items-center gap-1.5 overflow-x-auto [scrollbar-width:none]">
+              {visibleReplies.map((q) => (
+                <Tooltip key={q.id}>
+                  <TooltipTrigger asChild>
+                    <button
+                      type="button"
+                      disabled={send.isPending}
+                      onClick={(e) => (e.shiftKey || e.altKey ? insertQuick(q) : sendQuick(q))}
+                      className="shrink-0 rounded-full border border-border bg-card px-2.5 py-1 text-xs font-medium transition-colors hover:border-primary hover:bg-primary/5 disabled:opacity-50"
+                    >
+                      {q.image_url && "🖼 "}
+                      {q.title}
+                    </button>
+                  </TooltipTrigger>
+                  <TooltipContent side="top" className="max-w-xs whitespace-pre-wrap text-xs">
+                    {fillTemplate(q.body, c)}
+                    <div className="mt-1 opacity-60">Click = send · Shift+click = edit first</div>
+                  </TooltipContent>
+                </Tooltip>
+              ))}
+            </div>
           </div>
         )}
 
@@ -883,6 +942,35 @@ export function Thread({
             </div>
           )}
 
+          {aiReplies && aiReplies.length > 0 && (
+            <div className="mb-2 space-y-1 rounded-lg border border-violet-500/30 bg-violet-500/5 p-2">
+              <div className="flex items-center gap-1 text-[11px] font-medium text-violet-700 dark:text-violet-300">
+                <Sparkles className="h-3 w-3" /> AI suggestion — click = box e boshbe, edit kore
+                pathao
+                <button
+                  type="button"
+                  onClick={() => setAiReplies(null)}
+                  className="ml-auto rounded p-0.5 hover:bg-muted"
+                >
+                  <X className="h-3 w-3" />
+                </button>
+              </div>
+              {aiReplies.map((r, i) => (
+                <button
+                  key={i}
+                  type="button"
+                  onClick={() => {
+                    setText(r);
+                    setAiReplies(null);
+                    requestAnimationFrame(() => inputRef.current?.focus());
+                  }}
+                  className="block w-full rounded-md bg-background px-2.5 py-1.5 text-left text-sm hover:ring-1 hover:ring-violet-500/50"
+                >
+                  {r}
+                </button>
+              ))}
+            </div>
+          )}
           {replyTo && (
             <div className="mb-2 flex items-center gap-2 rounded-lg border-l-2 border-primary bg-muted/40 px-2 py-1.5 text-xs">
               {replyTo.attachments?.find((a) => a.type === "image") && (
@@ -952,6 +1040,50 @@ export function Thread({
                 <Paperclip className="h-4 w-4" />
               )}
             </Button>
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="shrink-0 text-violet-600"
+                  title="AI"
+                  disabled={suggest.isPending || rewrite.isPending}
+                >
+                  {suggest.isPending || rewrite.isPending ? (
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                  ) : (
+                    <Sparkles className="h-4 w-4" />
+                  )}
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent side="top" align="start" className="w-56">
+                <DropdownMenuItem onClick={() => suggest.mutate()}>
+                  ✨ Reply suggest koro
+                </DropdownMenuItem>
+                <DropdownMenuSeparator />
+                <DropdownMenuLabel className="text-xs">
+                  {text.trim() ? "Lekha ta bodlao" : "Age kichu likho, tarpor…"}
+                </DropdownMenuLabel>
+                {(
+                  [
+                    ["polite", "🙏 Aro bhodro"],
+                    ["short", "✂️ Choto koro"],
+                    ["sales", "💰 Sell-focused"],
+                    ["fix", "✔️ Banan thik koro"],
+                    ["bangla", "অ Banglish → বাংলা"],
+                    ["english", "A English e"],
+                  ] as const
+                ).map(([mode, label]) => (
+                  <DropdownMenuItem
+                    key={mode}
+                    disabled={!text.trim()}
+                    onClick={() => rewrite.mutate(mode)}
+                  >
+                    {label}
+                  </DropdownMenuItem>
+                ))}
+              </DropdownMenuContent>
+            </DropdownMenu>
             <EmojiPicker onPick={insertAtCursor} />
             {voice.supported && (
               <Button

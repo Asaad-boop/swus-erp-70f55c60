@@ -79,7 +79,19 @@ export type QuickReply = {
   image_url: string | null;
   sort_order: number;
   use_count: number;
+  category: string;
 };
+
+export const QR_CATEGORIES: Array<{ key: string; label: string }> = [
+  { key: "greeting", label: "Greeting" },
+  { key: "price", label: "Dam / Stock" },
+  { key: "order", label: "Order" },
+  { key: "delivery", label: "Delivery" },
+  { key: "payment", label: "Payment" },
+  { key: "offer", label: "Offer" },
+  { key: "followup", label: "Follow-up" },
+  { key: "general", label: "Other" },
+];
 
 export type InboxNote = {
   id: string;
@@ -301,6 +313,7 @@ export async function saveQuickReply(
     body: q.body,
     image_url: q.image_url ?? null,
     sort_order: q.sort_order ?? 0,
+    category: q.category || "general",
     updated_at: new Date().toISOString(),
   };
   const { error } = q.id

@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
-import { Link } from "@tanstack/react-router";
+import { Link, useNavigate } from "@tanstack/react-router";
+import { extractOrderFn } from "@/lib/erp/inbox/inbox-ai.functions";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   ExternalLink,
@@ -76,6 +77,31 @@ export function ContactPanel({
   }, [msgs, msgsQ.data]);
 
   const savedPhone = (c.contact_phone ?? "").replace(/\D/g, "").replace(/^88/, "");
+  const navigate = useNavigate();
+  const aiOrder = useMutation({
+    mutationFn: () => extractOrderFn({ data: { conversationId: c.id } }),
+    onSuccess: (r) => {
+      const got = [r.name && "naam", r.phone && "phone", r.address && "thikana"]
+        .filter(Boolean)
+        .join(", ");
+      toast.success(
+        `${got || "Kichu"} pawa geche${r.productIds.length ? ` + ${r.productIds.length}ta product` : ""} — check kore order dao`,
+      );
+      navigate({
+        to: "/erp/orders/new",
+        search: {
+          phone: r.phone || savedPhone || detectedPhone || undefined,
+          name: r.name || c.contact_name || undefined,
+          brand: c.brand_id,
+          source: PLATFORM_LABEL[c.platform],
+          address: r.address || undefined,
+          note: r.note || undefined,
+          items: r.productIds.length ? r.productIds.join(",") : undefined,
+        },
+      });
+    },
+    onError: (e: Error) => toast.error(e.message),
+  });
   const ordersQ = useQuery({
     queryKey: ["inbox", "orders-by-phone", savedPhone],
     queryFn: () => fetchOrdersByPhone(savedPhone),
@@ -219,19 +245,34 @@ export function ContactPanel({
           )}
         </div>
 
-        <Button asChild className="w-full gap-2">
-          <Link
-            to="/erp/orders/new"
-            search={{
-              phone: savedPhone || detectedPhone || undefined,
-              name: c.contact_name || undefined,
-              brand: c.brand_id,
-              source: PLATFORM_LABEL[c.platform],
-            }}
+        <div className="grid grid-cols-[1fr_auto] gap-1.5">
+          <Button
+            className="gap-2 bg-violet-600 text-white hover:bg-violet-700"
+            disabled={aiOrder.isPending}
+            onClick={() => aiOrder.mutate()}
+            title="AI chat theke naam, phone, thikana, product tule order form bhore dibe"
           >
-            <PlusCircle className="h-4 w-4" /> Create order
-          </Link>
-        </Button>
+            {aiOrder.isPending ? (
+              <Loader2 className="h-4 w-4 animate-spin" />
+            ) : (
+              <Sparkles className="h-4 w-4" />
+            )}
+            AI diye order
+          </Button>
+          <Button asChild variant="outline" className="gap-1.5" title="Khali form">
+            <Link
+              to="/erp/orders/new"
+              search={{
+                phone: savedPhone || detectedPhone || undefined,
+                name: c.contact_name || undefined,
+                brand: c.brand_id,
+                source: PLATFORM_LABEL[c.platform],
+              }}
+            >
+              <PlusCircle className="h-4 w-4" />
+            </Link>
+          </Button>
+        </div>
 
         {/* Orders */}
         <div className="space-y-2">

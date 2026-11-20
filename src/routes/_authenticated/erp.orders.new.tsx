@@ -40,7 +40,16 @@ import { DUE_COLLECT_METHODS, moveOrderToPreorder, promiseDateFromDays } from "@
 import { bdPhoneError, normalizeBdPhone } from "@/lib/erp/orders";
 import { sendOrderSms } from "@/lib/erp/sms/sms.functions";
 
-type NewOrderSearch = { phone?: string; name?: string; brand?: string; source?: string };
+type NewOrderSearch = {
+  phone?: string;
+  name?: string;
+  brand?: string;
+  source?: string;
+  address?: string;
+  note?: string;
+  /** comma-separated product ids */
+  items?: string;
+};
 
 export const Route = createFileRoute("/_authenticated/erp/orders/new")({
   head: () => ({ meta: [{ title: "New Order — ERP" }] }),
@@ -50,6 +59,12 @@ export const Route = createFileRoute("/_authenticated/erp/orders/new")({
     name: typeof s.name === "string" ? s.name.slice(0, 120) : undefined,
     brand: typeof s.brand === "string" ? s.brand : undefined,
     source: typeof s.source === "string" ? s.source.slice(0, 40) : undefined,
+    address: typeof s.address === "string" ? s.address.slice(0, 500) : undefined,
+    note: typeof s.note === "string" ? s.note.slice(0, 500) : undefined,
+    items:
+      typeof s.items === "string" && /^[0-9a-f-]{36}(,[0-9a-f-]{36}){0,19}$/i.test(s.items)
+        ? s.items
+        : undefined,
   }),
   component: NewOrderPage,
 });
@@ -138,11 +153,45 @@ function NewOrderPage() {
     prefillApplied.current = true;
     if (prefill.phone) setPhone(prefill.phone);
     if (prefill.name) setName(prefill.name);
+    if (prefill.address) setAddress(prefill.address);
+    if (prefill.note) setCustomerNote(prefill.note);
+    if (prefill.items) {
+      const ids = prefill.items.split(",");
+      void supabase
+        .from("products")
+        .select("id, title, price, image, available_stock")
+        .in("id", ids)
+        .then(({ data }) => {
+          const rows = (data ?? []) as Array<{
+            id: string;
+            title: string;
+            price: number | null;
+            image: string | null;
+            available_stock: number | null;
+          }>;
+          rows.sort((a, b) => ids.indexOf(a.id) - ids.indexOf(b.id));
+          setItems((prev) =>
+            prev.length
+              ? prev
+              : rows.map((p) => ({
+                  product_id: p.id,
+                  name: p.title,
+                  unit_price: Number(p.price ?? 0),
+                  quantity: 1,
+                  image: p.image,
+                  stock: p.available_stock,
+                  variant_id: null,
+                  variant_label: null,
+                })),
+          );
+        });
+    }
     if (prefill.source) setOrderSource(prefill.source);
     if (prefill.brand && brands.some((b) => b.id === prefill.brand)) {
       setPickedBrandId(prefill.brand);
       setBrandChosen(true);
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [brands, prefill.brand, prefill.name, prefill.phone, prefill.source]);
 
   // ── brand-defined order sources ───────────────────────────────────────

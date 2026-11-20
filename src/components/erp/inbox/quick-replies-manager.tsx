@@ -24,6 +24,7 @@ import { BrandBadge } from "@/components/erp/brand-badge";
 import { useBrand } from "@/contexts/brand-context";
 import {
   deleteQuickReply,
+  QR_CATEGORIES,
   saveQuickReply,
   uploadInboxMedia,
   type QuickReply,
@@ -38,7 +39,10 @@ const EMPTY: Draft = {
   brand_id: null,
   image_url: null,
   sort_order: 0,
+  category: "general",
 };
+
+const catLabel = (k: string) => QR_CATEGORIES.find((c) => c.key === k)?.label ?? k;
 
 export function QuickRepliesManager({ replies }: { replies: QuickReply[] }) {
   const qc = useQueryClient();
@@ -98,45 +102,56 @@ export function QuickRepliesManager({ replies }: { replies: QuickReply[] }) {
             Ekhono kono quick reply nai
           </div>
         )}
-        {replies.map((q) => (
-          <div key={q.id} className="flex items-start gap-3 p-3">
-            <Zap className="mt-0.5 h-4 w-4 shrink-0 text-amber-500" />
-            <div className="min-w-0 flex-1">
-              <div className="flex flex-wrap items-center gap-2">
-                <span className="font-mono text-xs text-primary">{q.shortcut}</span>
-                <span className="text-sm font-medium">{q.title}</span>
-                {q.brand_id ? (
-                  <BrandBadge brandId={q.brand_id} variant="compact" />
-                ) : (
-                  <span className="text-[10px] text-muted-foreground">All brands</span>
+        {[...replies]
+          .sort(
+            (a, b) =>
+              QR_CATEGORIES.findIndex((c) => c.key === a.category) -
+                QR_CATEGORIES.findIndex((c) => c.key === b.category) || a.sort_order - b.sort_order,
+          )
+          .map((q) => (
+            <div key={q.id} className="flex items-start gap-3 p-3">
+              <Zap className="mt-0.5 h-4 w-4 shrink-0 text-amber-500" />
+              <div className="min-w-0 flex-1">
+                <div className="flex flex-wrap items-center gap-2">
+                  <span className="font-mono text-xs text-primary">{q.shortcut}</span>
+                  <span className="text-sm font-medium">{q.title}</span>
+                  <span className="rounded bg-muted px-1.5 text-[10px] text-muted-foreground">
+                    {catLabel(q.category)}
+                  </span>
+                  {q.brand_id ? (
+                    <BrandBadge brandId={q.brand_id} variant="compact" />
+                  ) : (
+                    <span className="text-[10px] text-muted-foreground">All brands</span>
+                  )}
+                  <span className="text-[10px] text-muted-foreground">· used {q.use_count}×</span>
+                </div>
+                <div className="mt-1 whitespace-pre-wrap text-xs text-muted-foreground">
+                  {q.body}
+                </div>
+                {q.image_url && (
+                  <img src={q.image_url} alt="" className="mt-2 h-16 w-16 rounded object-cover" />
                 )}
-                <span className="text-[10px] text-muted-foreground">· used {q.use_count}×</span>
               </div>
-              <div className="mt-1 whitespace-pre-wrap text-xs text-muted-foreground">{q.body}</div>
-              {q.image_url && (
-                <img src={q.image_url} alt="" className="mt-2 h-16 w-16 rounded object-cover" />
-              )}
+              <Button
+                variant="ghost"
+                size="icon"
+                className="h-8 w-8"
+                onClick={() => setDraft({ ...q })}
+              >
+                <Pencil className="h-3.5 w-3.5" />
+              </Button>
+              <Button
+                variant="ghost"
+                size="icon"
+                className="h-8 w-8 text-destructive"
+                onClick={() => {
+                  if (confirm(`Delete "${q.title}"?`)) del.mutate(q.id);
+                }}
+              >
+                <Trash2 className="h-3.5 w-3.5" />
+              </Button>
             </div>
-            <Button
-              variant="ghost"
-              size="icon"
-              className="h-8 w-8"
-              onClick={() => setDraft({ ...q })}
-            >
-              <Pencil className="h-3.5 w-3.5" />
-            </Button>
-            <Button
-              variant="ghost"
-              size="icon"
-              className="h-8 w-8 text-destructive"
-              onClick={() => {
-                if (confirm(`Delete "${q.title}"?`)) del.mutate(q.id);
-              }}
-            >
-              <Trash2 className="h-3.5 w-3.5" />
-            </Button>
-          </div>
-        ))}
+          ))}
       </div>
 
       <Dialog open={!!draft} onOpenChange={(o) => !o && setDraft(null)}>
@@ -175,6 +190,26 @@ export function QuickRepliesManager({ replies }: { replies: QuickReply[] }) {
                       ))}
                     </SelectContent>
                   </Select>
+                </div>
+              </div>
+              <div className="space-y-1.5">
+                <Label>Category</Label>
+                <div className="flex flex-wrap gap-1">
+                  {QR_CATEGORIES.map((c) => (
+                    <button
+                      key={c.key}
+                      type="button"
+                      onClick={() => setDraft({ ...draft, category: c.key })}
+                      className={
+                        "rounded-full border px-2.5 py-0.5 text-xs " +
+                        ((draft.category ?? "general") === c.key
+                          ? "border-foreground bg-foreground text-background"
+                          : "text-muted-foreground hover:bg-muted")
+                      }
+                    >
+                      {c.label}
+                    </button>
+                  ))}
                 </div>
               </div>
               <div className="space-y-1.5">
