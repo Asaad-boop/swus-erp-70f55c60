@@ -1,6 +1,6 @@
 /**
  * Inbox ↔ Meta Graph API (Messenger, Instagram DM, WhatsApp Cloud API).
- * Server-only. Tokens live in `inbox_channel_secrets` (service role only).
+ * Runtime-neutral (Deno edge function + vitest). Tokens live in `inbox_channel_secrets` (service role only).
  */
 export const INBOX_GRAPH_VERSION = "v21.0";
 const GRAPH = `https://graph.facebook.com/${INBOX_GRAPH_VERSION}`;
@@ -13,18 +13,6 @@ export type InboxAttachment = {
   url: string;
   name?: string | null;
 };
-
-export function serverEnv(key: string): string | undefined {
-  return (globalThis as any).__LOVABLE_RUNTIME_ENV__?.[key] || process.env[key];
-}
-
-export function inboxAppCreds() {
-  const appId = serverEnv("META_APP_ID");
-  const appSecret = serverEnv("META_APP_SECRET");
-  if (!appId || !appSecret)
-    throw new Error("META_APP_ID / META_APP_SECRET server secret set kora nai");
-  return { appId, appSecret };
-}
 
 async function hmacHex(secret: string, msg: string) {
   const key = await crypto.subtle.importKey(
@@ -45,23 +33,39 @@ function timingSafeEqual(a: string, b: string) {
   return r === 0;
 }
 
-/** Webhook verify token. INBOX_VERIFY_TOKEN if set, otherwise derived from the app secret (stable, no extra secret needed). */
-export async function inboxVerifyToken(): Promise<string> {
-  const explicit = serverEnv("INBOX_VERIFY_TOKEN");
-  if (explicit) return explicit;
-  const { appSecret } = inboxAppCreds();
-  return "swus-inbox-" + (await hmacHex(appSecret, "swus-inbox-verify")).slice(0, 24);
-}
-
 /** Validate Meta's X-Hub-Signature-256 header against the raw body. */
 export async function verifyMetaSignature(
   rawBody: string,
   header: string | null,
-): Promise<boolean> {
+  appSecret: string,
+) {
   if (!header?.startsWith("sha256=")) return false;
-  const { appSecret } = inboxAppCreds();
   const expected = await hmacHex(appSecret, rawBody);
   return timingSafeEqual(header.slice(7), expected);
+}
+
+/** Signed OAuth state: {uid, origin, exp}. */
+export type OAuthState = { uid: string; origin: string; exp: number };
+function b64url(s: string) {
+  return btoa(unescape(encodeURIComponent(s)))
+    .replace(/\+/g, "-")
+    .replace(/\//g, "_")
+    .replace(/=+$/, "");
+}
+function fromB64url(s: string) {
+  return decodeURIComponent(escape(atob(s.replace(/-/g, "+").replace(/_/g, "/"))));
+}
+export async function signState(st: OAuthState, secret: string) {
+  const body = b64url(JSON.stringify(st));
+  return `${body}.${await hmacHex(secret, body)}`;
+}
+export async function verifyState(token: string, secret: string): Promise<OAuthState> {
+  const [body, sig] = token.split(".");
+  if (!body || !sig || !timingSafeEqual(await hmacHex(secret, body), sig))
+    throw new Error("Invalid state");
+  const st = JSON.parse(fromB64url(body)) as OAuthState;
+  if (Date.now() > st.exp) throw new Error("Login link expired");
+  return st;
 }
 
 export async function graphGet(path: string, token: string, params: Record<string, string> = {}) {
@@ -101,10 +105,6 @@ export const INBOX_SCOPES = [
   "instagram_manage_messages",
   "business_management",
 ].join(",");
-
-export function inboxRedirectUri(origin: string) {
-  return `${origin}/api/public/inbox/oauth-callback`;
-}
 
 /** Pages the logged-in FB user manages, each with a never-expiring page token + linked IG account. */
 export async function listManagedPages(userToken: string) {

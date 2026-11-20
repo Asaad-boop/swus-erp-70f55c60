@@ -1,6 +1,5 @@
 import { Fragment, useEffect, useMemo, useRef, useState, type KeyboardEvent } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { useServerFn } from "@tanstack/react-start";
 import {
   AlertCircle,
   ArrowLeft,
@@ -23,11 +22,11 @@ import { Textarea } from "@/components/ui/textarea";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { BrandBadge } from "@/components/erp/brand-badge";
 import { cn } from "@/lib/utils";
-import { inboxSendFn } from "@/lib/erp/inbox/inbox.functions";
 import {
   displayName,
   fetchMessages,
   fillTemplate,
+  inboxApi,
   updateConversation,
   uploadInboxMedia,
   windowHoursLeft,
@@ -179,7 +178,6 @@ function Bubble({
 
 export function Thread({ conversation: c, channel, quickReplies, onBack, onTogglePanel }: Props) {
   const qc = useQueryClient();
-  const sendFn = useServerFn(inboxSendFn);
   const [text, setText] = useState("");
   const [attachment, setAttachment] = useState<{
     url: string;
@@ -251,7 +249,7 @@ export function Thread({ conversation: c, channel, quickReplies, onBack, onToggl
       attachment?: { url: string; type: "image" | "video" | "audio" | "file" } | null;
       quickReplyId?: string | null;
       retryOfMessageId?: string | null;
-    }) => sendFn({ data: { conversationId: c.id, ...v } }),
+    }) => inboxApi("send", { conversationId: c.id, ...v }),
     onMutate: async (v) => {
       // Optimistic bubble
       await qc.cancelQueries({ queryKey: ["inbox", "messages", c.id] });

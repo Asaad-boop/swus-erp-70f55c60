@@ -315,3 +315,28 @@ export async function fetchOrdersByPhone(phone: string): Promise<PhoneOrder[]> {
   if (error) throw error;
   return (data ?? []) as PhoneOrder[];
 }
+
+/**
+ * Call the `inbox` edge function (sending, channel setup). Secrets and the
+ * service role only exist there; the browser sends its own session JWT.
+ */
+export async function inboxApi<T = any>(
+  action: string,
+  payload: Record<string, unknown> = {},
+): Promise<T> {
+  const { data, error } = await supabase.functions.invoke("inbox", {
+    body: { action, ...payload },
+  });
+  if (error) {
+    let msg = error.message;
+    try {
+      const body = await (error as any).context?.json?.();
+      if (body?.error) msg = body.error;
+    } catch {
+      /* keep generic message */
+    }
+    throw new Error(msg);
+  }
+  if (!data?.ok) throw new Error(data?.error ?? "Inbox request failed");
+  return data.data as T;
+}

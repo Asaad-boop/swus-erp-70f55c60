@@ -417,3 +417,15 @@ REVOKE ALL ON FUNCTION public.inbox_bump_quick_reply(uuid) FROM PUBLIC, anon;
 GRANT EXECUTE ON FUNCTION public.inbox_bump_quick_reply(uuid) TO authenticated, service_role;
 REVOKE ALL ON FUNCTION public.inbox_channels_brand_sync() FROM PUBLIC, anon, authenticated;
 GRANT EXECUTE ON FUNCTION public.inbox_ingest_message(uuid,text,text,text,text,text,jsonb,timestamptz,text,text,text,text,text) TO service_role;
+
+-- ── Meta app credentials + webhook verify token (service role only; set from Inbox → Channels) ──
+CREATE TABLE IF NOT EXISTS public.inbox_settings (
+  id integer PRIMARY KEY DEFAULT 1 CHECK (id = 1),
+  meta_app_id text,
+  meta_app_secret text,
+  verify_token text NOT NULL DEFAULT encode(gen_random_bytes(18), 'hex'),
+  updated_by uuid,
+  updated_at timestamptz NOT NULL DEFAULT now()
+);
+ALTER TABLE public.inbox_settings ENABLE ROW LEVEL SECURITY;
+INSERT INTO public.inbox_settings (id) VALUES (1) ON CONFLICT (id) DO NOTHING;

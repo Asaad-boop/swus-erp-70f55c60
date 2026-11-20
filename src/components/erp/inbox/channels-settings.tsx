@@ -1,6 +1,5 @@
 import { useEffect, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { useServerFn } from "@tanstack/react-start";
 import { AlertTriangle, CheckCircle2, Copy, Facebook, Loader2, Plug, Unplug } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
@@ -23,15 +22,33 @@ import {
 } from "@/components/ui/dialog";
 import { BrandBadge } from "@/components/erp/brand-badge";
 import { useBrand } from "@/contexts/brand-context";
-import { db, type InboxChannel, type InboxPlatform } from "@/lib/erp/inbox/inbox";
-import {
-  inboxConnectManualFn,
-  inboxConnectPagesFn,
-  inboxDisconnectFn,
-  inboxListMetaPagesFn,
-  inboxMetaLoginUrlFn,
-  inboxSetupInfoFn,
-} from "@/lib/erp/inbox/inbox.functions";
+import { db, inboxApi, type InboxChannel, type InboxPlatform } from "@/lib/erp/inbox/inbox";
+
+type SetupInfo = {
+  appConfigured: boolean;
+  appId: string | null;
+  callbackUrl: string;
+  verifyToken: string;
+  redirectUri: string;
+  fbSession: { name: string | null; expiresAt: string | null } | null;
+  lastWebhookError: { error: string | null; at: string } | null;
+};
+type MetaPage = {
+  id: string;
+  name: string;
+  picture: string | null;
+  instagram: {
+    id: string;
+    username: string | null;
+    name: string | null;
+    picture: string | null;
+  } | null;
+  messengerConnected: boolean;
+  instagramConnected: boolean;
+  brandId: string | null;
+};
+type PagesResult = { connected: boolean; pages: MetaPage[] };
+type ConnectResult = { results: Array<{ pageId: string; ok: boolean; error?: string }> };
 import { ContactAvatar, PlatformChip } from "./shared";
 
 function CopyRow({ label, value }: { label: string; value: string | null }) {
@@ -72,22 +89,15 @@ export function ChannelsSettings({
 }) {
   const qc = useQueryClient();
   const { brands } = useBrand();
-  const origin = typeof window !== "undefined" ? window.location.origin : "https://example.com";
-
-  const setupFn = useServerFn(inboxSetupInfoFn);
-  const loginFn = useServerFn(inboxMetaLoginUrlFn);
-  const listFn = useServerFn(inboxListMetaPagesFn);
-  const connectFn = useServerFn(inboxConnectPagesFn);
-  const manualFn = useServerFn(inboxConnectManualFn);
-  const disconnectFn = useServerFn(inboxDisconnectFn);
+  const origin = typeof window !== "undefined" ? window.location.origin : "";
 
   const setupQ = useQuery({
     queryKey: ["inbox", "setup"],
-    queryFn: () => setupFn({ data: { origin } }),
+    queryFn: () => inboxApi<SetupInfo>("setup_info"),
   });
   const pagesQ = useQuery({
     queryKey: ["inbox", "meta-pages"],
-    queryFn: () => listFn(),
+    queryFn: () => inboxApi<PagesResult>("list_pages"),
     enabled: !!setupQ.data?.fbSession,
     retry: false,
   });
@@ -118,7 +128,7 @@ export function ChannelsSettings({
   }, [pagesQ.data]);
 
   const login = useMutation({
-    mutationFn: () => loginFn({ data: { origin } }),
+    mutationFn: () => inboxApi<{ url: string }>("login_url", { origin }),
     onSuccess: (r) => {
       window.location.href = r.url;
     },
@@ -132,7 +142,7 @@ export function ChannelsSettings({
         .map(([pageId, v]) => ({ pageId, ...v }));
       if (pages.length === 0)
         throw new Error("Kono page select kora hoy nai (brand + Messenger/IG tick dao)");
-      return connectFn({ data: { pages } });
+      return inboxApi<ConnectResult>("connect_pages", { pages });
     },
     onSuccess: (r) => {
       const failed = r.results.filter((x) => !x.ok);
@@ -145,7 +155,7 @@ export function ChannelsSettings({
   });
 
   const disconnect = useMutation({
-    mutationFn: (channelId: string) => disconnectFn({ data: { channelId } }),
+    mutationFn: (channelId: string) => inboxApi("disconnect", { channelId }),
     onSuccess: () => {
       toast.success("Disconnected");
       qc.invalidateQueries({ queryKey: ["inbox"] });
@@ -179,15 +189,13 @@ export function ChannelsSettings({
   }>(null);
   const saveManual = useMutation({
     mutationFn: () =>
-      manualFn({
-        data: {
-          platform: manual!.platform,
-          brandId: manual!.brandId,
-          externalId: manual!.externalId.trim(),
-          pageId: manual!.pageId.trim() || null,
-          name: manual!.name.trim() || null,
-          token: manual!.token.trim(),
-        },
+      inboxApi("connect_manual", {
+        platform: manual!.platform,
+        brandId: manual!.brandId,
+        externalId: manual!.externalId.trim(),
+        pageId: manual!.pageId.trim() || null,
+        name: manual!.name.trim() || null,
+        token: manual!.token.trim(),
       }),
     onSuccess: () => {
       toast.success("Channel connected ✅");
@@ -198,6 +206,7 @@ export function ChannelsSettings({
   });
 
   const setup = setupQ.data;
+  const [editApp, setEditApp] = useState(false);
   const active = channels.filter((c) => c.is_active);
   const inactive = channels.filter((c) => !c.is_active);
 
@@ -291,13 +300,27 @@ export function ChannelsSettings({
         ) : setupQ.error ? (
           <div className="text-sm text-destructive">{(setupQ.error as Error).message}</div>
         ) : !setup?.appConfigured ? (
-          <div className="rounded-lg bg-amber-500/10 p-3 text-sm text-amber-800 dark:text-amber-300">
-            Server e <code>META_APP_ID</code> ar <code>META_APP_SECRET</code> secret set kora nai.
-            Lovable → Project settings → Secrets e add koro (marketing er Meta login o eta use
-            kore).
-          </div>
+          <AppCredsForm onSaved={() => qc.invalidateQueries({ queryKey: ["inbox", "setup"] })} />
         ) : (
           <>
+            <div className="flex items-center gap-2 text-xs text-muted-foreground">
+              Meta App ID: <code>{setup.appId}</code>
+              <button
+                type="button"
+                className="text-primary underline"
+                onClick={() => setEditApp((v) => !v)}
+              >
+                {editApp ? "Cancel" : "Change"}
+              </button>
+            </div>
+            {editApp && (
+              <AppCredsForm
+                onSaved={() => {
+                  setEditApp(false);
+                  qc.invalidateQueries({ queryKey: ["inbox", "setup"] });
+                }}
+              />
+            )}
             <CopyRow label="Callback URL" value={setup.callbackUrl} />
             <CopyRow label="Verify token" value={setup.verifyToken} />
             <CopyRow label="Valid OAuth redirect URI" value={setup.redirectUri} />
@@ -316,8 +339,8 @@ export function ChannelsSettings({
                 field subscribe.
               </li>
               <li>
-                Facebook Login → Settings → Valid OAuth Redirect URIs e upore redirect URI ta add
-                koro.
+                <b>Facebook Login for Business</b> product add koro → Settings → Valid OAuth
+                Redirect URIs e upore redirect URI ta add koro.
               </li>
               <li>
                 Live customer der message pete app ke <b>Live mode</b> e nite hobe ar{" "}
@@ -586,6 +609,55 @@ export function ChannelsSettings({
           </DialogFooter>
         </DialogContent>
       </Dialog>
+    </div>
+  );
+}
+
+function AppCredsForm({ onSaved }: { onSaved: () => void }) {
+  const [appId, setAppId] = useState("");
+  const [appSecret, setAppSecret] = useState("");
+  const save = useMutation({
+    mutationFn: () => inboxApi("save_app", { appId: appId.trim(), appSecret: appSecret.trim() }),
+    onSuccess: () => {
+      toast.success("Meta App saved ✅");
+      onSaved();
+    },
+    onError: (e: Error) => toast.error(e.message),
+  });
+  return (
+    <div className="space-y-3 rounded-lg border bg-muted/30 p-3">
+      <p className="text-xs text-muted-foreground">
+        developers.facebook.com → My Apps → tomar app (Business type) → <b>App settings → Basic</b>{" "}
+        theke App ID ar App Secret copy kore dao. Secret ta shudhu server e thakbe, browser e
+        kokhono ashbe na.
+      </p>
+      <div className="grid gap-3 sm:grid-cols-2">
+        <div className="space-y-1.5">
+          <Label>App ID</Label>
+          <Input
+            value={appId}
+            onChange={(e) => setAppId(e.target.value)}
+            placeholder="1234567890123456"
+            inputMode="numeric"
+          />
+        </div>
+        <div className="space-y-1.5">
+          <Label>App Secret</Label>
+          <Input
+            value={appSecret}
+            onChange={(e) => setAppSecret(e.target.value)}
+            type="password"
+            placeholder="32 character"
+          />
+        </div>
+      </div>
+      <Button
+        size="sm"
+        onClick={() => save.mutate()}
+        disabled={!appId.trim() || !appSecret.trim() || save.isPending}
+      >
+        {save.isPending && <Loader2 className="mr-1.5 h-4 w-4 animate-spin" />} Save & verify
+      </Button>
     </div>
   );
 }

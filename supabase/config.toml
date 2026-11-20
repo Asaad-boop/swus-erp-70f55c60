@@ -1,1 +1,3 @@
 project_id = "bgsspipkjeuceftuatue"
+[functions.inbox]
+verify_jwt = false

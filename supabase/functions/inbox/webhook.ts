@@ -1,15 +1,14 @@
 /**
  * Inbox webhook ingestion — one endpoint for Messenger, Instagram and WhatsApp.
- * Called from /api/public/inbox/webhook after the signature is verified.
+ * Called by the `inbox` edge function after the signature is verified.
  */
 import {
   copyToStorage,
   copyWhatsAppMedia,
   fetchContactProfile,
-  serverEnv,
   type InboxAttachment,
   type InboxPlatform,
-} from "./meta.server";
+} from "./meta.ts";
 
 type Channel = {
   id: string;
@@ -21,6 +20,7 @@ type Channel = {
 
 type Ctx = {
   admin: any;
+  ownAppId: string | null;
   channels: Map<string, Channel>;
   tokens: Map<string, string | null>;
 };
@@ -112,7 +112,7 @@ function mapMetaAttachmentType(t: string | undefined, payload: any): InboxAttach
 async function handleMetaMessaging(ctx: Ctx, platform: "messenger" | "instagram", entry: any) {
   const channel = await getChannel(ctx, platform, String(entry.id));
   if (!channel) return;
-  const ownAppId = serverEnv("META_APP_ID");
+  const ownAppId = ctx.ownAppId;
 
   for (const ev of entry.messaging ?? []) {
     const msg = ev.message;
@@ -333,8 +333,12 @@ async function handleWhatsApp(ctx: Ctx, entry: any) {
   }
 }
 
-export async function processInboxWebhook(admin: any, payload: any) {
-  const ctx: Ctx = { admin, channels: new Map(), tokens: new Map() };
+export async function processInboxWebhook(
+  admin: any,
+  payload: any,
+  ownAppId: string | null = null,
+) {
+  const ctx: Ctx = { admin, ownAppId, channels: new Map(), tokens: new Map() };
   const object = payload?.object;
   for (const entry of payload?.entry ?? []) {
     if (object === "page") await handleMetaMessaging(ctx, "messenger", entry);
