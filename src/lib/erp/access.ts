@@ -13,6 +13,7 @@ import type { PageMode } from "@/lib/erp/access-profile.model";
 
 export type Module =
   | "dashboard"
+  | "inbox"
   | "orders"
   | "inventory"
   | "fulfillment"
@@ -31,6 +32,7 @@ export type Module =
 export const ROLE_MODULES: Record<string, Module[]> = {
   admin: [
     "dashboard",
+    "inbox",
     "orders",
     "inventory",
     "fulfillment",
@@ -46,12 +48,12 @@ export const ROLE_MODULES: Record<string, Module[]> = {
     "settings",
     "diagnostics",
   ],
-  operations: ["dashboard", "orders", "inventory", "fulfillment", "packing", "supply", "crm", "analytics"],
+  operations: ["dashboard", "inbox", "orders", "inventory", "fulfillment", "packing", "supply", "crm", "analytics"],
   accountant: ["dashboard", "finance", "analytics"],
   warehouse_staff: ["dashboard", "inventory", "fulfillment", "packing", "supply"],
   // Packers: packing station only (scan to move confirmed → packed → ready). No orders/courier/finance.
   packer: ["dashboard", "packing"],
-  customer_service: ["dashboard", "orders", "crm", "customer_accounts"],
+  customer_service: ["dashboard", "inbox", "orders", "crm", "customer_accounts"],
   marketing_manager: ["dashboard", "marketing", "analytics"],
   cargo_agent: ["dashboard", "supply"],
   moderator: ["dashboard"],
@@ -87,6 +89,7 @@ export function getAllowedModules(roles: string[]): Set<Module> {
 /** Path → module. Order matters: more specific patterns first. */
 const PATH_RULES: { test: (p: string) => boolean; module: Module }[] = [
   { test: (p) => p === "/erp" || p === "/erp/", module: "dashboard" },
+  { test: (p) => p.startsWith("/erp/inbox"), module: "inbox" },
   { test: (p) => p.startsWith("/erp/orders"), module: "orders" },
   {
     test: (p) =>

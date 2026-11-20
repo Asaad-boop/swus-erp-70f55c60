@@ -28,6 +28,7 @@ import { Route as AuthenticatedErpFinanceRouteImport } from './routes/_authentic
 import { Route as AuthenticatedErpGiftBoxRouteImport } from './routes/_authenticated/erp.gift-box'
 import { Route as AuthenticatedErpHrRouteImport } from './routes/_authenticated/erp.hr'
 import { Route as AuthenticatedErpImportsRouteImport } from './routes/_authenticated/erp.imports'
+import { Route as AuthenticatedErpInboxRouteImport } from './routes/_authenticated/erp.inbox'
 import { Route as AuthenticatedErpInventoryRouteImport } from './routes/_authenticated/erp.inventory'
 import { Route as AuthenticatedErpInventoryReportsRouteImport } from './routes/_authenticated/erp.inventory-reports'
 import { Route as AuthenticatedErpMarketingRouteImport } from './routes/_authenticated/erp.marketing'
@@ -115,6 +116,8 @@ import { Route as ApiPublicCronRunRecurringRouteImport } from './routes/api/publ
 import { Route as ApiPublicCronSyncCourierRouteImport } from './routes/api/public/cron.sync-courier'
 import { Route as ApiPublicCronSyncMarketingRouteImport } from './routes/api/public/cron.sync-marketing'
 import { Route as ApiPublicCronSyncPathaoInvoicesRouteImport } from './routes/api/public/cron.sync-pathao-invoices'
+import { Route as ApiPublicInboxOauthCallbackRouteImport } from './routes/api/public/inbox.oauth-callback'
+import { Route as ApiPublicInboxWebhookRouteImport } from './routes/api/public/inbox.webhook'
 import { Route as ApiPublicInstapayBackfillRouteImport } from './routes/api/public/instapay.backfill'
 import { Route as ApiPublicMetaOauthCallbackRouteImport } from './routes/api/public/meta/oauth-callback'
 import { Route as ApiPublicMktTrackRouteImport } from './routes/api/public/mkt.track'
@@ -223,6 +226,11 @@ const AuthenticatedErpHrRoute = AuthenticatedErpHrRouteImport.update({
 const AuthenticatedErpImportsRoute = AuthenticatedErpImportsRouteImport.update({
   id: '/imports',
   path: '/imports',
+  getParentRoute: () => AuthenticatedErpRoute,
+} as any)
+const AuthenticatedErpInboxRoute = AuthenticatedErpInboxRouteImport.update({
+  id: '/inbox',
+  path: '/inbox',
   getParentRoute: () => AuthenticatedErpRoute,
 } as any)
 const AuthenticatedErpInventoryRoute =
@@ -737,6 +745,17 @@ const ApiPublicCronSyncPathaoInvoicesRoute =
     path: '/api/public/cron/sync-pathao-invoices',
     getParentRoute: () => rootRouteImport,
   } as any)
+const ApiPublicInboxOauthCallbackRoute =
+  ApiPublicInboxOauthCallbackRouteImport.update({
+    id: '/api/public/inbox/oauth-callback',
+    path: '/api/public/inbox/oauth-callback',
+    getParentRoute: () => rootRouteImport,
+  } as any)
+const ApiPublicInboxWebhookRoute = ApiPublicInboxWebhookRouteImport.update({
+  id: '/api/public/inbox/webhook',
+  path: '/api/public/inbox/webhook',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ApiPublicInstapayBackfillRoute =
   ApiPublicInstapayBackfillRouteImport.update({
     id: '/api/public/instapay/backfill',
@@ -813,6 +832,7 @@ export interface FileRoutesByFullPath {
   '/erp/gift-box': typeof AuthenticatedErpGiftBoxRoute
   '/erp/hr': typeof AuthenticatedErpHrRouteWithChildren
   '/erp/imports': typeof AuthenticatedErpImportsRouteWithChildren
+  '/erp/inbox': typeof AuthenticatedErpInboxRoute
   '/erp/inventory': typeof AuthenticatedErpInventoryRouteWithChildren
   '/erp/inventory-reports': typeof AuthenticatedErpInventoryReportsRoute
   '/erp/marketing': typeof AuthenticatedErpMarketingRouteWithChildren
@@ -890,6 +910,8 @@ export interface FileRoutesByFullPath {
   '/api/public/cron/sync-courier': typeof ApiPublicCronSyncCourierRoute
   '/api/public/cron/sync-marketing': typeof ApiPublicCronSyncMarketingRoute
   '/api/public/cron/sync-pathao-invoices': typeof ApiPublicCronSyncPathaoInvoicesRoute
+  '/api/public/inbox/oauth-callback': typeof ApiPublicInboxOauthCallbackRoute
+  '/api/public/inbox/webhook': typeof ApiPublicInboxWebhookRoute
   '/api/public/instapay/backfill': typeof ApiPublicInstapayBackfillRoute
   '/api/public/meta/oauth-callback': typeof ApiPublicMetaOauthCallbackRoute
   '/api/public/mkt/track': typeof ApiPublicMktTrackRoute
@@ -925,6 +947,7 @@ export interface FileRoutesByTo {
   '/erp/deploy-sync': typeof AuthenticatedErpDeploySyncRoute
   '/erp/diagnostics': typeof AuthenticatedErpDiagnosticsRoute
   '/erp/gift-box': typeof AuthenticatedErpGiftBoxRoute
+  '/erp/inbox': typeof AuthenticatedErpInboxRoute
   '/erp/inventory': typeof AuthenticatedErpInventoryRouteWithChildren
   '/erp/inventory-reports': typeof AuthenticatedErpInventoryReportsRoute
   '/erp/packing': typeof AuthenticatedErpPackingRoute
@@ -998,6 +1021,8 @@ export interface FileRoutesByTo {
   '/api/public/cron/sync-courier': typeof ApiPublicCronSyncCourierRoute
   '/api/public/cron/sync-marketing': typeof ApiPublicCronSyncMarketingRoute
   '/api/public/cron/sync-pathao-invoices': typeof ApiPublicCronSyncPathaoInvoicesRoute
+  '/api/public/inbox/oauth-callback': typeof ApiPublicInboxOauthCallbackRoute
+  '/api/public/inbox/webhook': typeof ApiPublicInboxWebhookRoute
   '/api/public/instapay/backfill': typeof ApiPublicInstapayBackfillRoute
   '/api/public/meta/oauth-callback': typeof ApiPublicMetaOauthCallbackRoute
   '/api/public/mkt/track': typeof ApiPublicMktTrackRoute
@@ -1040,6 +1065,7 @@ export interface FileRoutesById {
   '/_authenticated/erp/gift-box': typeof AuthenticatedErpGiftBoxRoute
   '/_authenticated/erp/hr': typeof AuthenticatedErpHrRouteWithChildren
   '/_authenticated/erp/imports': typeof AuthenticatedErpImportsRouteWithChildren
+  '/_authenticated/erp/inbox': typeof AuthenticatedErpInboxRoute
   '/_authenticated/erp/inventory': typeof AuthenticatedErpInventoryRouteWithChildren
   '/_authenticated/erp/inventory-reports': typeof AuthenticatedErpInventoryReportsRoute
   '/_authenticated/erp/marketing': typeof AuthenticatedErpMarketingRouteWithChildren
@@ -1117,6 +1143,8 @@ export interface FileRoutesById {
   '/api/public/cron/sync-courier': typeof ApiPublicCronSyncCourierRoute
   '/api/public/cron/sync-marketing': typeof ApiPublicCronSyncMarketingRoute
   '/api/public/cron/sync-pathao-invoices': typeof ApiPublicCronSyncPathaoInvoicesRoute
+  '/api/public/inbox/oauth-callback': typeof ApiPublicInboxOauthCallbackRoute
+  '/api/public/inbox/webhook': typeof ApiPublicInboxWebhookRoute
   '/api/public/instapay/backfill': typeof ApiPublicInstapayBackfillRoute
   '/api/public/meta/oauth-callback': typeof ApiPublicMetaOauthCallbackRoute
   '/api/public/mkt/track': typeof ApiPublicMktTrackRoute
@@ -1159,6 +1187,7 @@ export interface FileRouteTypes {
     | '/erp/gift-box'
     | '/erp/hr'
     | '/erp/imports'
+    | '/erp/inbox'
     | '/erp/inventory'
     | '/erp/inventory-reports'
     | '/erp/marketing'
@@ -1236,6 +1265,8 @@ export interface FileRouteTypes {
     | '/api/public/cron/sync-courier'
     | '/api/public/cron/sync-marketing'
     | '/api/public/cron/sync-pathao-invoices'
+    | '/api/public/inbox/oauth-callback'
+    | '/api/public/inbox/webhook'
     | '/api/public/instapay/backfill'
     | '/api/public/meta/oauth-callback'
     | '/api/public/mkt/track'
@@ -1271,6 +1302,7 @@ export interface FileRouteTypes {
     | '/erp/deploy-sync'
     | '/erp/diagnostics'
     | '/erp/gift-box'
+    | '/erp/inbox'
     | '/erp/inventory'
     | '/erp/inventory-reports'
     | '/erp/packing'
@@ -1344,6 +1376,8 @@ export interface FileRouteTypes {
     | '/api/public/cron/sync-courier'
     | '/api/public/cron/sync-marketing'
     | '/api/public/cron/sync-pathao-invoices'
+    | '/api/public/inbox/oauth-callback'
+    | '/api/public/inbox/webhook'
     | '/api/public/instapay/backfill'
     | '/api/public/meta/oauth-callback'
     | '/api/public/mkt/track'
@@ -1385,6 +1419,7 @@ export interface FileRouteTypes {
     | '/_authenticated/erp/gift-box'
     | '/_authenticated/erp/hr'
     | '/_authenticated/erp/imports'
+    | '/_authenticated/erp/inbox'
     | '/_authenticated/erp/inventory'
     | '/_authenticated/erp/inventory-reports'
     | '/_authenticated/erp/marketing'
@@ -1462,6 +1497,8 @@ export interface FileRouteTypes {
     | '/api/public/cron/sync-courier'
     | '/api/public/cron/sync-marketing'
     | '/api/public/cron/sync-pathao-invoices'
+    | '/api/public/inbox/oauth-callback'
+    | '/api/public/inbox/webhook'
     | '/api/public/instapay/backfill'
     | '/api/public/meta/oauth-callback'
     | '/api/public/mkt/track'
@@ -1504,6 +1541,8 @@ export interface RootRouteChildren {
   ApiPublicCronSyncCourierRoute: typeof ApiPublicCronSyncCourierRoute
   ApiPublicCronSyncMarketingRoute: typeof ApiPublicCronSyncMarketingRoute
   ApiPublicCronSyncPathaoInvoicesRoute: typeof ApiPublicCronSyncPathaoInvoicesRoute
+  ApiPublicInboxOauthCallbackRoute: typeof ApiPublicInboxOauthCallbackRoute
+  ApiPublicInboxWebhookRoute: typeof ApiPublicInboxWebhookRoute
   ApiPublicInstapayBackfillRoute: typeof ApiPublicInstapayBackfillRoute
   ApiPublicMetaOauthCallbackRoute: typeof ApiPublicMetaOauthCallbackRoute
   ApiPublicMktTrackRoute: typeof ApiPublicMktTrackRoute
@@ -1646,6 +1685,13 @@ declare module '@tanstack/react-router' {
       path: '/imports'
       fullPath: '/erp/imports'
       preLoaderRoute: typeof AuthenticatedErpImportsRouteImport
+      parentRoute: typeof AuthenticatedErpRoute
+    }
+    '/_authenticated/erp/inbox': {
+      id: '/_authenticated/erp/inbox'
+      path: '/inbox'
+      fullPath: '/erp/inbox'
+      preLoaderRoute: typeof AuthenticatedErpInboxRouteImport
       parentRoute: typeof AuthenticatedErpRoute
     }
     '/_authenticated/erp/inventory': {
@@ -2257,6 +2303,20 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiPublicCronSyncPathaoInvoicesRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/public/inbox/oauth-callback': {
+      id: '/api/public/inbox/oauth-callback'
+      path: '/api/public/inbox/oauth-callback'
+      fullPath: '/api/public/inbox/oauth-callback'
+      preLoaderRoute: typeof ApiPublicInboxOauthCallbackRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/public/inbox/webhook': {
+      id: '/api/public/inbox/webhook'
+      path: '/api/public/inbox/webhook'
+      fullPath: '/api/public/inbox/webhook'
+      preLoaderRoute: typeof ApiPublicInboxWebhookRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/public/instapay/backfill': {
       id: '/api/public/instapay/backfill'
       path: '/api/public/instapay/backfill'
@@ -2577,6 +2637,7 @@ interface AuthenticatedErpRouteChildren {
   AuthenticatedErpGiftBoxRoute: typeof AuthenticatedErpGiftBoxRoute
   AuthenticatedErpHrRoute: typeof AuthenticatedErpHrRouteWithChildren
   AuthenticatedErpImportsRoute: typeof AuthenticatedErpImportsRouteWithChildren
+  AuthenticatedErpInboxRoute: typeof AuthenticatedErpInboxRoute
   AuthenticatedErpInventoryRoute: typeof AuthenticatedErpInventoryRouteWithChildren
   AuthenticatedErpInventoryReportsRoute: typeof AuthenticatedErpInventoryReportsRoute
   AuthenticatedErpMarketingRoute: typeof AuthenticatedErpMarketingRouteWithChildren
@@ -2613,6 +2674,7 @@ const AuthenticatedErpRouteChildren: AuthenticatedErpRouteChildren = {
   AuthenticatedErpGiftBoxRoute: AuthenticatedErpGiftBoxRoute,
   AuthenticatedErpHrRoute: AuthenticatedErpHrRouteWithChildren,
   AuthenticatedErpImportsRoute: AuthenticatedErpImportsRouteWithChildren,
+  AuthenticatedErpInboxRoute: AuthenticatedErpInboxRoute,
   AuthenticatedErpInventoryRoute: AuthenticatedErpInventoryRouteWithChildren,
   AuthenticatedErpInventoryReportsRoute: AuthenticatedErpInventoryReportsRoute,
   AuthenticatedErpMarketingRoute: AuthenticatedErpMarketingRouteWithChildren,
@@ -2678,6 +2740,8 @@ const rootRouteChildren: RootRouteChildren = {
   ApiPublicCronSyncCourierRoute: ApiPublicCronSyncCourierRoute,
   ApiPublicCronSyncMarketingRoute: ApiPublicCronSyncMarketingRoute,
   ApiPublicCronSyncPathaoInvoicesRoute: ApiPublicCronSyncPathaoInvoicesRoute,
+  ApiPublicInboxOauthCallbackRoute: ApiPublicInboxOauthCallbackRoute,
+  ApiPublicInboxWebhookRoute: ApiPublicInboxWebhookRoute,
   ApiPublicInstapayBackfillRoute: ApiPublicInstapayBackfillRoute,
   ApiPublicMetaOauthCallbackRoute: ApiPublicMetaOauthCallbackRoute,
   ApiPublicMktTrackRoute: ApiPublicMktTrackRoute,

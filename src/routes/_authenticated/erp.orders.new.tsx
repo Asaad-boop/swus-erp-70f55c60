@@ -40,8 +40,17 @@ import { DUE_COLLECT_METHODS, moveOrderToPreorder, promiseDateFromDays } from "@
 import { bdPhoneError, normalizeBdPhone } from "@/lib/erp/orders";
 import { sendOrderSms } from "@/lib/erp/sms/sms.functions";
 
+type NewOrderSearch = { phone?: string; name?: string; brand?: string; source?: string };
+
 export const Route = createFileRoute("/_authenticated/erp/orders/new")({
   head: () => ({ meta: [{ title: "New Order — ERP" }] }),
+  // Optional prefill, e.g. from Inbox → "Create order".
+  validateSearch: (s: Record<string, unknown>): NewOrderSearch => ({
+    phone: typeof s.phone === "string" ? s.phone.slice(0, 20) : undefined,
+    name: typeof s.name === "string" ? s.name.slice(0, 120) : undefined,
+    brand: typeof s.brand === "string" ? s.brand : undefined,
+    source: typeof s.source === "string" ? s.source.slice(0, 40) : undefined,
+  }),
   component: NewOrderPage,
 });
 
@@ -119,6 +128,22 @@ function NewOrderPage() {
   const [preorderNote, setPreorderNote] = useState("");
   const [isCrossSale, setIsCrossSale] = useState(false);
   const [orderSource, setOrderSource] = useState<string>("");
+
+  // ── prefill from URL (Inbox → Create order) ───────────────────────────
+  const prefill = Route.useSearch();
+  const prefillApplied = useRef(false);
+  useEffect(() => {
+    if (prefillApplied.current || brands.length === 0) return;
+    if (!prefill.phone && !prefill.name && !prefill.brand) return;
+    prefillApplied.current = true;
+    if (prefill.phone) setPhone(prefill.phone);
+    if (prefill.name) setName(prefill.name);
+    if (prefill.source) setOrderSource(prefill.source);
+    if (prefill.brand && brands.some((b) => b.id === prefill.brand)) {
+      setPickedBrandId(prefill.brand);
+      setBrandChosen(true);
+    }
+  }, [brands, prefill.brand, prefill.name, prefill.phone, prefill.source]);
 
   // ── brand-defined order sources ───────────────────────────────────────
   const { data: brandSources = [] } = useQuery({

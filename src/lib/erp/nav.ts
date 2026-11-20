@@ -17,6 +17,7 @@ import {
   CalendarCheck,
   Trophy,
   Gift,
+  MessagesSquare,
 } from "lucide-react";
 
 export type NavItem = {
@@ -45,6 +46,14 @@ export const NAV_GROUPS: Group[] = [
     kind: "accordion",
     label: "Sales",
     sections: [
+      {
+        key: "inbox",
+        label: "Inbox",
+        icon: MessagesSquare,
+        items: [
+          { to: "/erp/inbox", label: "Inbox", icon: MessagesSquare },
+        ],
+      },
       {
         key: "orders",
         label: "Orders",

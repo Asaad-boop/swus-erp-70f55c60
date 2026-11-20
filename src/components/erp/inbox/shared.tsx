@@ -1,0 +1,110 @@
+import { Facebook, Instagram, MessageCircle } from "lucide-react";
+import { cn } from "@/lib/utils";
+import { PLATFORM_LABEL, PLATFORM_TONE, type InboxPlatform } from "@/lib/erp/inbox/inbox";
+
+export function PlatformIcon({
+  platform,
+  className,
+}: {
+  platform: InboxPlatform;
+  className?: string;
+}) {
+  if (platform === "instagram") return <Instagram className={className} />;
+  if (platform === "whatsapp") return <MessageCircle className={className} />;
+  return <Facebook className={className} />;
+}
+
+export function PlatformChip({
+  platform,
+  className,
+}: {
+  platform: InboxPlatform;
+  className?: string;
+}) {
+  return (
+    <span
+      className={cn(
+        "inline-flex items-center gap-1 rounded-full border px-1.5 py-0.5 text-[10px] font-medium",
+        PLATFORM_TONE[platform],
+        className,
+      )}
+    >
+      <PlatformIcon platform={platform} className="h-3 w-3" />
+      {PLATFORM_LABEL[platform]}
+    </span>
+  );
+}
+
+const DOT: Record<InboxPlatform, string> = {
+  messenger: "bg-blue-500",
+  instagram: "bg-gradient-to-tr from-amber-400 via-pink-500 to-purple-600",
+  whatsapp: "bg-emerald-500",
+};
+
+export function ContactAvatar({
+  name,
+  src,
+  platform,
+  size = 40,
+}: {
+  name: string;
+  src?: string | null;
+  platform?: InboxPlatform;
+  size?: number;
+}) {
+  const initials =
+    name
+      .replace(/^@/, "")
+      .split(/\s+/)
+      .filter(Boolean)
+      .slice(0, 2)
+      .map((w) => w[0]?.toUpperCase())
+      .join("") || "?";
+  return (
+    <div className="relative shrink-0" style={{ width: size, height: size }}>
+      {src ? (
+        <img
+          src={src}
+          alt=""
+          className="h-full w-full rounded-full object-cover bg-muted"
+          referrerPolicy="no-referrer"
+          onError={(e) => ((e.currentTarget as HTMLImageElement).style.display = "none")}
+        />
+      ) : (
+        <div className="flex h-full w-full items-center justify-center rounded-full bg-muted text-xs font-semibold text-muted-foreground">
+          {initials}
+        </div>
+      )}
+      {platform && (
+        <span
+          className={cn(
+            "absolute -bottom-0.5 -right-0.5 flex h-4 w-4 items-center justify-center rounded-full ring-2 ring-background",
+            DOT[platform],
+          )}
+        >
+          <PlatformIcon platform={platform} className="h-2.5 w-2.5 text-white" />
+        </span>
+      )}
+    </div>
+  );
+}
+
+export function relTime(iso: string | null) {
+  if (!iso) return "";
+  const d = new Date(iso);
+  const diff = Date.now() - d.getTime();
+  const min = Math.floor(diff / 60000);
+  if (min < 1) return "now";
+  if (min < 60) return `${min}m`;
+  const h = Math.floor(min / 60);
+  if (h < 24) return `${h}h`;
+  const days = Math.floor(h / 24);
+  if (days < 7) return `${days}d`;
+  return d.toLocaleDateString("en-GB", { day: "numeric", month: "short" });
+}
+
+export function agoLabel(iso: string | null) {
+  const r = relTime(iso);
+  if (!r) return "";
+  return r === "now" ? "just now" : /\d[mhd]$/.test(r) ? `${r} ago` : r;
+}

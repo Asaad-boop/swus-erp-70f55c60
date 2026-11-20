@@ -1,0 +1,371 @@
+import { createFileRoute, useNavigate } from "@tanstack/react-router";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { MessagesSquare, Plug, Zap } from "lucide-react";
+import { supabase } from "@/integrations/supabase/client";
+import { useBrand } from "@/contexts/brand-context";
+import { useCurrentRole } from "@/hooks/use-current-role";
+import { cn } from "@/lib/utils";
+import { beepSuccess } from "@/lib/erp/audio-feedback";
+import {
+  CONV_PAGE,
+  fetchChannels,
+  fetchConversations,
+  fetchQuickReplies,
+  PLATFORM_LABEL,
+  type InboxConversation,
+  type InboxPlatform,
+} from "@/lib/erp/inbox/inbox";
+import { ConversationList } from "@/components/erp/inbox/conversation-list";
+import { Thread } from "@/components/erp/inbox/thread";
+import { ContactPanel } from "@/components/erp/inbox/contact-panel";
+import { QuickRepliesManager } from "@/components/erp/inbox/quick-replies-manager";
+import { ChannelsSettings } from "@/components/erp/inbox/channels-settings";
+import { PlatformIcon } from "@/components/erp/inbox/shared";
+import { Sheet, SheetContent } from "@/components/ui/sheet";
+
+type Tab = "inbox" | "replies" | "channels";
+type InboxSearch = { tab?: Tab; c?: string; meta?: string };
+
+export const Route = createFileRoute("/_authenticated/erp/inbox")({
+  head: () => ({ meta: [{ title: "Inbox — ERP" }] }),
+  validateSearch: (s: Record<string, unknown>): InboxSearch => ({
+    tab: s.tab === "replies" || s.tab === "channels" ? s.tab : undefined,
+    c: typeof s.c === "string" ? s.c : undefined,
+    meta: typeof s.meta === "string" ? s.meta : undefined,
+  }),
+  component: InboxPage,
+});
+
+function InboxPage() {
+  const search = Route.useSearch();
+  const navigate = useNavigate({ from: "/erp/inbox" });
+  const qc = useQueryClient();
+  const { brands, brandIds: scopedBrandIds } = useBrand();
+  const { isAdmin } = useCurrentRole();
+  const tab: Tab = search.tab ?? "inbox";
+
+  // ── filters ─────────────────────────────────────────────────────────
+  const [brandFilter, setBrandFilter] = useState<string>("all");
+  const [platform, setPlatform] = useState<InboxPlatform | "all">("all");
+  const [status, setStatus] = useState<"open" | "done" | "all">("open");
+  const [unreadOnly, setUnreadOnly] = useState(false);
+  const [searchText, setSearchText] = useState("");
+  const [debounced, setDebounced] = useState("");
+  const [limit, setLimit] = useState(CONV_PAGE);
+  const [panelOpen, setPanelOpen] = useState(true);
+  const [sheetOpen, setSheetOpen] = useState(false);
+  useEffect(() => {
+    const t = setTimeout(() => setDebounced(searchText), 250);
+    return () => clearTimeout(t);
+  }, [searchText]);
+
+  const allBrandIds = useMemo(() => brands.map((b) => b.id), [brands]);
+  const brandIds = brandFilter === "all" ? allBrandIds : [brandFilter];
+
+  const filters = { brandIds, platform, status, unreadOnly, search: debounced };
+  const convQ = useQuery({
+    queryKey: ["inbox", "conversations", filters, limit],
+    queryFn: () => fetchConversations(filters, limit),
+    enabled: brandIds.length > 0,
+    refetchInterval: 30_000,
+    placeholderData: (prev, prevQuery) =>
+      // keep the list while typing / paging, never across a brand switch
+      prevQuery &&
+      JSON.stringify((prevQuery.queryKey[2] as any)?.brandIds) === JSON.stringify(brandIds)
+        ? prev
+        : undefined,
+  });
+  const conversations = convQ.data ?? [];
+
+  const channelsQ = useQuery({ queryKey: ["inbox", "channels"], queryFn: fetchChannels });
+  const repliesQ = useQuery({ queryKey: ["inbox", "quick-replies"], queryFn: fetchQuickReplies });
+  const channels = channelsQ.data ?? [];
+
+  // Selected conversation may be outside the current filter (e.g. just marked done) — fetch it on its own.
+  const selectedId = search.c ?? null;
+  const selectedFromList = conversations.find((c) => c.id === selectedId) ?? null;
+  const selectedQ = useQuery({
+    queryKey: ["inbox", "conversations", "one", selectedId],
+    queryFn: async () => {
+      const { data, error } = await (supabase as any)
+        .from("inbox_conversations")
+        .select("*")
+        .eq("id", selectedId)
+        .maybeSingle();
+      if (error) throw error;
+      return data as InboxConversation | null;
+    },
+    enabled: !!selectedId && !selectedFromList,
+  });
+  const selected = selectedFromList ?? selectedQ.data ?? null;
+
+  const select = (id: string | null) =>
+    navigate({ search: (s: InboxSearch) => ({ ...s, c: id ?? undefined }) });
+
+  // ── realtime ────────────────────────────────────────────────────────
+  const selectedRef = useRef<string | null>(selectedId);
+  selectedRef.current = selectedId;
+  useEffect(() => {
+    const ch = supabase
+      .channel("inbox-live")
+      .on(
+        "postgres_changes" as any,
+        { event: "INSERT", schema: "public", table: "inbox_messages" },
+        (payload: any) => {
+          const m = payload.new;
+          qc.invalidateQueries({ queryKey: ["inbox", "messages", m.conversation_id] });
+          qc.invalidateQueries({ queryKey: ["inbox", "conversations"] });
+          if (
+            m.direction === "in" &&
+            (document.hidden || selectedRef.current !== m.conversation_id)
+          ) {
+            try {
+              beepSuccess();
+            } catch {
+              /* audio blocked */
+            }
+          }
+        },
+      )
+      .on(
+        "postgres_changes" as any,
+        { event: "UPDATE", schema: "public", table: "inbox_messages" },
+        (payload: any) => {
+          qc.invalidateQueries({ queryKey: ["inbox", "messages", payload.new.conversation_id] });
+        },
+      )
+      .on(
+        "postgres_changes" as any,
+        { event: "*", schema: "public", table: "inbox_conversations" },
+        () => {
+          qc.invalidateQueries({ queryKey: ["inbox", "conversations"] });
+        },
+      )
+      .subscribe();
+    return () => {
+      supabase.removeChannel(ch);
+    };
+  }, [qc]);
+
+  // Unread count in the browser tab title
+  const unreadTotal = conversations.reduce((n, c) => n + (c.unread_count > 0 ? 1 : 0), 0);
+  useEffect(() => {
+    const base = "Inbox — ERP";
+    document.title = unreadTotal > 0 ? `(${unreadTotal}) ${base}` : base;
+    return () => {
+      document.title = base;
+    };
+  }, [unreadTotal]);
+
+  const noChannels = channelsQ.isSuccess && channels.filter((c) => c.is_active).length === 0;
+  const channelFor = (id: string) => channels.find((c) => c.id === id);
+
+  const tabs: Array<{ key: Tab; label: string; icon: typeof Zap; show: boolean }> = [
+    { key: "inbox", label: "Inbox", icon: MessagesSquare, show: true },
+    { key: "replies", label: "Quick replies", icon: Zap, show: true },
+    { key: "channels", label: "Channels", icon: Plug, show: isAdmin },
+  ];
+
+  return (
+    <div className="flex h-[calc(100dvh-3.5rem)] min-h-0 flex-col">
+      {/* Top bar */}
+      <div className="flex flex-wrap items-center gap-2 border-b border-border/70 px-3 py-2 md:px-4">
+        <div className="flex items-center gap-1 rounded-lg bg-muted p-0.5">
+          {tabs
+            .filter((t) => t.show)
+            .map((t) => (
+              <button
+                key={t.key}
+                type="button"
+                onClick={() =>
+                  navigate({
+                    search: (s: InboxSearch) => ({
+                      ...s,
+                      tab: t.key === "inbox" ? undefined : t.key,
+                      meta: undefined,
+                    }),
+                  })
+                }
+                className={cn(
+                  "inline-flex items-center gap-1.5 rounded-md px-3 py-1.5 text-xs font-medium transition-colors",
+                  tab === t.key
+                    ? "bg-background shadow-sm"
+                    : "text-muted-foreground hover:text-foreground",
+                )}
+              >
+                <t.icon className="h-3.5 w-3.5" /> {t.label}
+              </button>
+            ))}
+        </div>
+
+        {tab === "inbox" && (
+          <>
+            <div className="mx-1 hidden h-5 w-px bg-border md:block" />
+            <div className="flex items-center gap-1 overflow-x-auto">
+              <FilterChip
+                active={brandFilter === "all"}
+                onClick={() => {
+                  setBrandFilter("all");
+                  setLimit(CONV_PAGE);
+                }}
+              >
+                All brands
+              </FilterChip>
+              {brands.map((b) => (
+                <FilterChip
+                  key={b.id}
+                  active={brandFilter === b.id}
+                  onClick={() => {
+                    setBrandFilter(b.id);
+                    setLimit(CONV_PAGE);
+                  }}
+                >
+                  {b.name}
+                </FilterChip>
+              ))}
+            </div>
+            <div className="mx-1 hidden h-5 w-px bg-border md:block" />
+            <div className="flex items-center gap-1">
+              <FilterChip active={platform === "all"} onClick={() => setPlatform("all")}>
+                All
+              </FilterChip>
+              {(["messenger", "instagram", "whatsapp"] as const).map((p) => (
+                <FilterChip
+                  key={p}
+                  active={platform === p}
+                  onClick={() => setPlatform(p)}
+                  title={PLATFORM_LABEL[p]}
+                >
+                  <PlatformIcon platform={p} className="h-3.5 w-3.5" />
+                  <span className="hidden lg:inline">{PLATFORM_LABEL[p]}</span>
+                </FilterChip>
+              ))}
+            </div>
+          </>
+        )}
+      </div>
+
+      {tab === "replies" ? (
+        <div className="min-h-0 flex-1 overflow-y-auto">
+          <QuickRepliesManager replies={repliesQ.data ?? []} />
+        </div>
+      ) : tab === "channels" && isAdmin ? (
+        <div className="min-h-0 flex-1 overflow-y-auto">
+          <ChannelsSettings channels={channels} metaParam={search.meta} />
+        </div>
+      ) : (
+        <div className="flex min-h-0 flex-1">
+          {/* List */}
+          <aside
+            className={cn(
+              "w-full shrink-0 border-r border-border/70 md:w-[320px] lg:w-[340px]",
+              selected ? "hidden md:block" : "block",
+            )}
+          >
+            {noChannels && (
+              <div className="m-3 rounded-lg border border-dashed p-3 text-xs text-muted-foreground">
+                Kono page connect kora nai.{" "}
+                {isAdmin ? (
+                  <button
+                    type="button"
+                    className="font-medium text-primary underline"
+                    onClick={() => navigate({ search: { tab: "channels" } })}
+                  >
+                    Channels e giye connect koro
+                  </button>
+                ) : (
+                  "Admin ke bolo Channels connect korte."
+                )}
+              </div>
+            )}
+            <ConversationList
+              conversations={conversations}
+              isLoading={convQ.isLoading}
+              selectedId={selectedId}
+              onSelect={(id) => select(id)}
+              search={searchText}
+              onSearch={setSearchText}
+              status={status}
+              onStatus={setStatus}
+              unreadOnly={unreadOnly}
+              onUnreadOnly={setUnreadOnly}
+              showBrand={brandFilter === "all" && brands.length > 1}
+              canLoadMore={conversations.length >= limit}
+              onLoadMore={() => setLimit((l) => l + CONV_PAGE)}
+              isFetchingMore={convQ.isFetching}
+            />
+          </aside>
+
+          {/* Thread */}
+          <section className={cn("min-w-0 flex-1", selected ? "block" : "hidden md:block")}>
+            {selected ? (
+              <Thread
+                conversation={selected}
+                channel={channelFor(selected.channel_id)}
+                quickReplies={repliesQ.data ?? []}
+                onBack={() => select(null)}
+                onTogglePanel={() => {
+                  if (typeof window !== "undefined" && window.innerWidth < 1280) setSheetOpen(true);
+                  else setPanelOpen((v) => !v);
+                }}
+              />
+            ) : (
+              <div className="flex h-full flex-col items-center justify-center gap-2 text-sm text-muted-foreground">
+                <MessagesSquare className="h-10 w-10 opacity-30" />
+                Bam pash theke ekta conversation select koro
+                <div className="text-xs opacity-70">
+                  {scopedBrandIds.length > 0 && `${conversations.length} conversation · `}Messenger
+                  · Instagram · WhatsApp ek jaygay
+                </div>
+              </div>
+            )}
+          </section>
+
+          {selected && (
+            <Sheet open={sheetOpen} onOpenChange={setSheetOpen}>
+              <SheetContent side="right" className="w-[320px] p-0 xl:hidden [&>button]:hidden">
+                <ContactPanel conversation={selected} onClose={() => setSheetOpen(false)} />
+              </SheetContent>
+            </Sheet>
+          )}
+
+          {/* Customer panel */}
+          {selected && panelOpen && (
+            <aside className="hidden w-[300px] shrink-0 border-l border-border/70 xl:block">
+              <ContactPanel conversation={selected} onClose={() => setPanelOpen(false)} />
+            </aside>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+
+function FilterChip({
+  active,
+  onClick,
+  children,
+  title,
+}: {
+  active: boolean;
+  onClick: () => void;
+  children: React.ReactNode;
+  title?: string;
+}) {
+  return (
+    <button
+      type="button"
+      title={title}
+      onClick={onClick}
+      className={cn(
+        "inline-flex shrink-0 items-center gap-1 rounded-full border px-2.5 py-1 text-xs font-medium transition-colors",
+        active
+          ? "border-foreground bg-foreground text-background"
+          : "border-border text-muted-foreground hover:bg-muted",
+      )}
+    >
+      {children}
+    </button>
+  );
+}
