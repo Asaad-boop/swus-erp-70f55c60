@@ -184,6 +184,7 @@ export function ChannelsSettings({
     brandId: string;
     externalId: string;
     pageId: string;
+    wabaId: string;
     name: string;
     token: string;
   }>(null);
@@ -194,6 +195,7 @@ export function ChannelsSettings({
         brandId: manual!.brandId,
         externalId: manual!.externalId.trim(),
         pageId: manual!.pageId.trim() || null,
+        wabaId: manual!.wabaId.trim() || null,
         name: manual!.name.trim() || null,
         token: manual!.token.trim(),
       }),
@@ -480,6 +482,7 @@ export function ChannelsSettings({
                 brandId: brands[0]?.id ?? "",
                 externalId: "",
                 pageId: "",
+                wabaId: "",
                 name: "",
                 token: "",
               })
@@ -496,6 +499,7 @@ export function ChannelsSettings({
                 brandId: brands[0]?.id ?? "",
                 externalId: "",
                 pageId: "",
+                wabaId: "",
                 name: "",
                 token: "",
               })
@@ -563,6 +567,16 @@ export function ChannelsSettings({
                   placeholder="1234567890"
                 />
               </div>
+              {manual.platform === "whatsapp" && (
+                <div className="space-y-1.5">
+                  <Label>WhatsApp Business Account ID</Label>
+                  <Input
+                    value={manual.wabaId}
+                    onChange={(e) => setManual({ ...manual, wabaId: e.target.value })}
+                    placeholder="API Setup page e Phone number ID er niche thake"
+                  />
+                </div>
+              )}
               {manual.platform === "instagram" && (
                 <div className="space-y-1.5">
                   <Label>Linked Facebook Page ID</Label>

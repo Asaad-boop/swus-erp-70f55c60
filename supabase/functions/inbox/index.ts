@@ -461,6 +461,27 @@ const actions: Record<string, (c: Caller, p: any) => Promise<unknown>> = {
       },
       token,
     );
+    const wabaId = String(p?.wabaId ?? "").trim();
+    if (platform === "whatsapp" && isDigits(wabaId)) {
+      // Route this WhatsApp Business Account's webhooks to our app.
+      try {
+        const r = await fetch(
+          `https://graph.facebook.com/${INBOX_GRAPH_VERSION}/${wabaId}/subscribed_apps`,
+          {
+            method: "POST",
+            headers: { Authorization: `Bearer ${token}` },
+          },
+        );
+        const j: any = await r.json().catch(() => ({}));
+        if (!r.ok || j?.error)
+          throw new Error(j?.error?.message || `WABA subscribe failed (${r.status})`);
+      } catch (e: any) {
+        await admin
+          .from("inbox_channels")
+          .update({ last_error: String(e?.message ?? e).slice(0, 500) })
+          .eq("id", id);
+      }
+    }
     if (platform !== "whatsapp" && pageId) {
       try {
         await subscribePage(pageId, token);
