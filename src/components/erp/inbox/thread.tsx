@@ -10,6 +10,7 @@ import {
   Clock,
   FileText,
   Loader2,
+  Mic,
   Paperclip,
   PanelRight,
   RotateCcw,
@@ -50,6 +51,9 @@ import {
 } from "@/lib/erp/inbox/inbox";
 import { ContactAvatar, PlatformChip } from "./shared";
 import { WaTemplateDialog } from "./wa-template-dialog";
+import { PriceReplyDialog, type PriceImage } from "./price-reply-dialog";
+import { useConversationPresence } from "./use-conversation-presence";
+import { useVoiceTyping } from "./use-voice-typing";
 
 type Props = {
   conversation: InboxConversation;
@@ -111,18 +115,54 @@ function Bubble({
   m,
   onRetry,
   retrying,
+  author,
+  quoted,
+  onPrice,
 }: {
   m: InboxMessage;
   onRetry: (m: InboxMessage) => void;
   retrying: boolean;
+  /** who sent an outgoing message */
+  author?: string | null;
+  /** the message this one quotes */
+  quoted?: InboxMessage | null;
+  onPrice?: (m: InboxMessage, attachmentIndex: number) => void;
 }) {
   const out = m.direction === "out";
   const atts = Array.isArray(m.attachments) ? m.attachments : [];
+  const quotedImg =
+    quoted && (quoted.attachments ?? [])[m.meta?.attachment_index ?? 0]?.type === "image"
+      ? quoted.attachments[m.meta?.attachment_index ?? 0]!.url
+      : quoted?.attachments?.find((a) => a.type === "image")?.url;
   return (
     <div className={cn("flex", out ? "justify-end" : "justify-start")}>
       <div className={cn("flex max-w-[78%] flex-col gap-1", out ? "items-end" : "items-start")}>
+        {quoted && (
+          <div className="flex max-w-full items-center gap-2 rounded-xl border-l-2 border-primary/60 bg-muted/60 px-2 py-1 text-[11px] text-muted-foreground">
+            {quotedImg && (
+              <img
+                src={quotedImg}
+                alt=""
+                referrerPolicy="no-referrer"
+                className="h-8 w-8 rounded object-cover"
+              />
+            )}
+            <span className="truncate">
+              {quoted.body?.slice(0, 60) || (quotedImg ? "📷 Customer er chobi" : "Message")}
+            </span>
+          </div>
+        )}
         {atts.map((a, i) => (
-          <div key={i} className="overflow-hidden rounded-2xl">
+          <div key={i} className="group/att relative overflow-hidden rounded-2xl">
+            {!out && onPrice && a.type === "image" && (
+              <button
+                type="button"
+                onClick={() => onPrice(m, i)}
+                className="absolute bottom-2 left-2 z-[1] rounded-full bg-black/70 px-2.5 py-1 text-xs font-semibold text-white shadow backdrop-blur transition-opacity hover:bg-black/85 md:opacity-0 md:group-hover/att:opacity-100"
+              >
+                ৳ দাম দাও
+              </button>
+            )}
             {a.type === "image" || a.type === "sticker" ? (
               <a href={a.url} target="_blank" rel="noreferrer">
                 <img
@@ -166,9 +206,14 @@ function Bubble({
           </div>
         )}
         <div className={cn("flex items-center gap-1 px-1 text-[10px] text-muted-foreground")}>
-          {out && m.sent_via === "platform" && (
-            <span title="Sent from Meta inbox / phone">via app ·</span>
-          )}
+          {out &&
+            (m.sent_via === "platform" ? (
+              <span title="Meta inbox / phone app theke pathano">
+                {m.msg_type === "template" ? "Template" : "Page/Phone app"} ·
+              </span>
+            ) : author ? (
+              <span className="font-medium text-foreground/70">{author} ·</span>
+            ) : null)}
           <span>{timeLabel(m.created_at)}</span>
           <StatusTick m={m} />
         </div>
@@ -397,6 +442,31 @@ export function Thread({
   });
   const assignee = c.assigned_to ? staff.find((s) => s.id === c.assigned_to) : undefined;
   const [tplOpen, setTplOpen] = useState(false);
+  const [priceImages, setPriceImages] = useState<PriceImage[] | null>(null);
+  const [typingNow, setTypingNow] = useState(false);
+  useEffect(() => {
+    if (!text.trim()) {
+      setTypingNow(false);
+      return;
+    }
+    setTypingNow(true);
+    const t = setTimeout(() => setTypingNow(false), 5000);
+    return () => clearTimeout(t);
+  }, [text]);
+  const voice = useVoiceTyping((t) =>
+    setText((cur) => (cur && !cur.endsWith(" ") && !cur.endsWith("\n") ? `${cur} ${t}` : cur + t)),
+  );
+  useEffect(() => {
+    if (voice.error) toast.error(voice.error);
+  }, [voice.error]);
+  const myName = staff.find((s) => s.id === currentUserId)?.display_name ?? "Staff";
+  const peers = useConversationPresence(c.id, { userId: currentUserId, name: myName }, typingNow);
+  const staffName = (id: string | null) =>
+    id
+      ? id === currentUserId
+        ? "You"
+        : (staff.find((s) => s.id === id)?.display_name ?? null)
+      : null;
 
   const hoursLeft = windowHoursLeft(c.last_inbound_at);
   const windowNote =
@@ -407,6 +477,30 @@ export function Thread({
       : c.platform === "whatsapp"
         ? "24h window closed — ekhon shudhu approved template pathano jabe"
         : "24h window closed — Human Agent tag diye pathano hobe (7 din porjonto)";
+
+  const msgById = useMemo(() => new Map(messages.map((m) => [m.id, m])), [messages]);
+  const imageFor = (m: InboxMessage, i: number): PriceImage => ({
+    messageId: m.id,
+    attachmentIndex: i,
+    url: m.attachments[i]!.url,
+    hint: m.body,
+  });
+  // Customer photos since our last reply that haven't been priced yet.
+  const pendingImages = useMemo(() => {
+    const out: PriceImage[] = [];
+    for (let i = messages.length - 1; i >= 0; i--) {
+      const m = messages[i]!;
+      if (m.direction === "out") break;
+      const near = messages
+        .slice(Math.max(0, i - 2), i + 3)
+        .find((x) => x.direction === "in" && x.body)?.body;
+      (m.attachments ?? []).forEach((a, j) => {
+        if (a.type === "image")
+          out.unshift({ messageId: m.id, attachmentIndex: j, url: a.url, hint: m.body || near });
+      });
+    }
+    return out.slice(-10);
+  }, [messages]);
 
   // Group messages by day
   const grouped = useMemo(() => {
@@ -435,6 +529,23 @@ export function Thread({
             <BrandBadge brandId={c.brand_id} variant="compact" />
             {channel && <span className="hidden truncate sm:inline">· {channel.name}</span>}
           </div>
+          {peers.length > 0 && (
+            <div
+              className={cn(
+                "mt-0.5 truncate text-[11px] font-medium",
+                peers.some((x) => x.typing)
+                  ? "text-amber-600 dark:text-amber-400"
+                  : "text-sky-600 dark:text-sky-400",
+              )}
+            >
+              {peers.some((x) => x.typing)
+                ? `✍️ ${peers
+                    .filter((x) => x.typing)
+                    .map((x) => x.name)
+                    .join(", ")} reply likhche…`
+                : `👁 ${peers.map((x) => x.name).join(", ")} ei chat dekhche`}
+            </div>
+          )}
         </div>
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
@@ -528,6 +639,9 @@ export function Thread({
                   <Bubble
                     key={m.id}
                     m={m}
+                    author={staffName(m.sent_by)}
+                    quoted={m.reply_to ? (msgById.get(m.reply_to) ?? null) : null}
+                    onPrice={(pm, i) => setPriceImages([imageFor(pm, i)])}
                     retrying={send.isPending}
                     onRetry={(fm) =>
                       send.mutate({
@@ -569,6 +683,37 @@ export function Thread({
         )}
         {c.platform === "whatsapp" && (
           <WaTemplateDialog open={tplOpen} onOpenChange={setTplOpen} conversation={c} />
+        )}
+        <PriceReplyDialog
+          open={!!priceImages}
+          onOpenChange={(o) => !o && setPriceImages(null)}
+          conversation={c}
+          images={priceImages ?? []}
+        />
+        {pendingImages.length > 0 && (
+          <div className="flex items-center gap-2 border-b border-border/50 bg-violet-500/5 px-3 py-1.5">
+            <div className="flex -space-x-2">
+              {pendingImages.slice(0, 4).map((im) => (
+                <img
+                  key={`${im.messageId}:${im.attachmentIndex}`}
+                  src={im.url}
+                  alt=""
+                  referrerPolicy="no-referrer"
+                  className="h-7 w-7 rounded-md object-cover ring-2 ring-background"
+                />
+              ))}
+            </div>
+            <span className="text-xs text-muted-foreground">
+              Customer {pendingImages.length}ta chobi diyeche
+            </span>
+            <Button
+              size="sm"
+              className="ml-auto h-7 gap-1 bg-violet-600 text-white hover:bg-violet-700"
+              onClick={() => setPriceImages(pendingImages)}
+            >
+              ৳ {pendingImages.length > 1 ? "Shob chobir dam dao" : "Dam dao"}
+            </Button>
+          </div>
         )}
 
         {brandReplies.length > 0 && (
@@ -641,6 +786,12 @@ export function Thread({
             </div>
           )}
 
+          {voice.listening && (
+            <div className="mb-1.5 flex items-center gap-1.5 text-xs text-muted-foreground">
+              <span className="h-2 w-2 animate-pulse rounded-full bg-destructive" />
+              {voice.interim || "Bolo… (Bangla)"}
+            </div>
+          )}
           <div className="flex items-end gap-2">
             <input
               ref={fileRef}
@@ -663,6 +814,17 @@ export function Thread({
                 <Paperclip className="h-4 w-4" />
               )}
             </Button>
+            {voice.supported && (
+              <Button
+                variant={voice.listening ? "destructive" : "ghost"}
+                size="icon"
+                className={cn("shrink-0", voice.listening && "animate-pulse")}
+                onClick={() => (voice.listening ? voice.stop() : voice.start())}
+                title={voice.listening ? "Thamao" : "Bangla voice typing"}
+              >
+                <Mic className="h-4 w-4" />
+              </Button>
+            )}
             <Textarea
               id="inbox-composer"
               ref={inputRef}

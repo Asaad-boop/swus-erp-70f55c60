@@ -1,7 +1,15 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { MessageCircle, MessagesSquare, Plug, Zap } from "lucide-react";
+import { Bell, BellOff, MessageCircle, MessagesSquare, Plug, Zap } from "lucide-react";
+import {
+  DropdownMenu,
+  DropdownMenuCheckboxItem,
+  DropdownMenuContent,
+  DropdownMenuLabel,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import { displayName } from "@/lib/erp/inbox/inbox";
 import { supabase } from "@/integrations/supabase/client";
 import { useBrand } from "@/contexts/brand-context";
 import { useCurrentRole } from "@/hooks/use-current-role";
@@ -198,6 +206,45 @@ function InboxPage() {
     return () => window.removeEventListener("keydown", onKey);
   }, [tab, qc]);
 
+  // ── alert prefs ─────────────────────────────────────────────────────
+  const readPref = (k: string, d: boolean) => {
+    try {
+      const v = localStorage.getItem(k);
+      return v == null ? d : v === "1";
+    } catch {
+      return d;
+    }
+  };
+  const [soundOn, setSoundOn] = useState(() => readPref("inbox.sound", true));
+  const [desktopOn, setDesktopOn] = useState(
+    () =>
+      readPref("inbox.desktop", false) &&
+      typeof Notification !== "undefined" &&
+      Notification.permission === "granted",
+  );
+  const savePref = (k: string, v: boolean) => {
+    try {
+      localStorage.setItem(k, v ? "1" : "0");
+    } catch {
+      /* storage blocked */
+    }
+  };
+  const toggleDesktop = async () => {
+    if (typeof Notification === "undefined") return;
+    if (desktopOn) {
+      setDesktopOn(false);
+      savePref("inbox.desktop", false);
+      return;
+    }
+    const perm =
+      Notification.permission === "granted" ? "granted" : await Notification.requestPermission();
+    const ok = perm === "granted";
+    setDesktopOn(ok);
+    savePref("inbox.desktop", ok);
+  };
+  const alertRef = useRef({ soundOn, desktopOn, conversations });
+  alertRef.current = { soundOn, desktopOn, conversations };
+
   // ── realtime ────────────────────────────────────────────────────────
   const selectedRef = useRef<string | null>(selectedId);
   selectedRef.current = selectedId;
@@ -211,14 +258,38 @@ function InboxPage() {
           const m = payload.new;
           qc.invalidateQueries({ queryKey: ["inbox", "messages", m.conversation_id] });
           qc.invalidateQueries({ queryKey: ["inbox", "conversations"] });
+          qc.invalidateQueries({ queryKey: ["inbox", "unread-badge"] });
           if (
             m.direction === "in" &&
             (document.hidden || selectedRef.current !== m.conversation_id)
           ) {
-            try {
-              beepSuccess();
-            } catch {
-              /* audio blocked */
+            const prefs = alertRef.current;
+            if (prefs.soundOn) {
+              try {
+                beepSuccess();
+              } catch {
+                /* audio blocked */
+              }
+            }
+            if (prefs.desktopOn && document.hidden && typeof Notification !== "undefined") {
+              const conv = prefs.conversations.find((x) => x.id === m.conversation_id);
+              const title = conv ? displayName(conv) : "Notun message";
+              const body =
+                m.body?.slice(0, 120) || (m.attachments?.length ? "📷 Chobi pathiyeche" : "");
+              try {
+                const n = new Notification(title, {
+                  body,
+                  tag: m.conversation_id,
+                  icon: conv?.contact_avatar ?? undefined,
+                });
+                n.onclick = () => {
+                  window.focus();
+                  navigate({ search: { c: m.conversation_id } });
+                  n.close();
+                };
+              } catch {
+                /* notifications blocked */
+              }
             }
           }
         },
@@ -236,7 +307,12 @@ function InboxPage() {
         (payload: any) => {
           qc.invalidateQueries({ queryKey: ["inbox", "comments"] });
           qc.invalidateQueries({ queryKey: ["inbox", "comment-count"] });
-          if (payload.eventType === "INSERT" && payload.new && !payload.new.is_from_page) {
+          if (
+            alertRef.current.soundOn &&
+            payload.eventType === "INSERT" &&
+            payload.new &&
+            !payload.new.is_from_page
+          ) {
             try {
               beepSuccess();
             } catch {
@@ -319,6 +395,41 @@ function InboxPage() {
               </button>
             ))}
         </div>
+
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <button
+              type="button"
+              title="Notification settings"
+              className="order-last ml-auto rounded-md p-1.5 text-muted-foreground hover:bg-muted hover:text-foreground"
+            >
+              {soundOn || desktopOn ? (
+                <Bell className="h-4 w-4" />
+              ) : (
+                <BellOff className="h-4 w-4" />
+              )}
+            </button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end" className="w-56">
+            <DropdownMenuLabel className="text-xs">Notun message ashle</DropdownMenuLabel>
+            <DropdownMenuCheckboxItem
+              checked={soundOn}
+              onCheckedChange={(v) => {
+                setSoundOn(!!v);
+                savePref("inbox.sound", !!v);
+              }}
+            >
+              Sound
+            </DropdownMenuCheckboxItem>
+            <DropdownMenuCheckboxItem
+              checked={desktopOn}
+              onCheckedChange={() => void toggleDesktop()}
+              disabled={typeof Notification === "undefined"}
+            >
+              Desktop notification (onno tab e thakleo)
+            </DropdownMenuCheckboxItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
 
         {(tab === "inbox" || tab === "comments") && (
           <>

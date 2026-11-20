@@ -4,6 +4,7 @@ import { ChevronDown, Star } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import type { NavItem } from "@/lib/erp/nav";
+import { InboxUnreadBadge } from "@/components/erp/inbox/inbox-unread-badge";
 
 export function favKey(i: { to: string; label: string; search?: Record<string, string> }) {
   return i.to + "|" + (i.search ? JSON.stringify(i.search) : "") + "|" + i.label;
@@ -67,6 +68,7 @@ export const NavLinkRow = memo(function NavLinkRow({
         )}
         <Icon className={cn("h-4 w-4 shrink-0", active && "text-primary")} />
         {!mini && <span className="truncate">{item.label}</span>}
+        {item.to === "/erp/inbox" && <InboxUnreadBadge mini={mini} />}
       </Link>
       {!mini && onPin && (
         <button

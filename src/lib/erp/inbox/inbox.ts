@@ -65,6 +65,8 @@ export type InboxMessage = {
   status: "pending" | "sent" | "delivered" | "read" | "failed" | "received";
   error: string | null;
   created_at: string;
+  reply_to?: string | null;
+  meta?: { product_id?: string; attachment_index?: number } | null;
 };
 
 export type QuickReply = {

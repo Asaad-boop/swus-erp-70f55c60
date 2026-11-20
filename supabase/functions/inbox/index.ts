@@ -898,6 +898,16 @@ const actions: Record<string, (c: Caller, p: any) => Promise<unknown>> = {
         : null;
     if (!text && !att) throw new Error("Message is empty");
     const retryOf = isUuid(p?.retryOfMessageId) ? String(p.retryOfMessageId) : null;
+    const replyTo = isUuid(p?.replyToMessageId) ? String(p.replyToMessageId) : null;
+    const meta =
+      p?.meta && typeof p.meta === "object" && !Array.isArray(p.meta)
+        ? {
+            product_id: isUuid(p.meta.product_id) ? p.meta.product_id : undefined,
+            attachment_index: Number.isInteger(p.meta.attachment_index)
+              ? p.meta.attachment_index
+              : undefined,
+          }
+        : null;
 
     // RLS on the caller's own client is the access check.
     const { data: conv, error: cErr } = await c.db
@@ -925,11 +935,23 @@ const actions: Record<string, (c: Caller, p: any) => Promise<unknown>> = {
     if (!secret?.access_token)
       throw new Error("Channel token nai — Channels tab theke abar connect koro");
 
+    let replyToExternalId: string | null = null;
+    if (replyTo) {
+      const { data: q } = await admin
+        .from("inbox_messages")
+        .select("external_message_id")
+        .eq("id", replyTo)
+        .eq("conversation_id", conv.id)
+        .maybeSingle();
+      replyToExternalId = q?.external_message_id ?? null;
+    }
+
     const attachments = att ? [att] : [];
     const msgType = att?.type ?? "text";
     let messageId: string | null = null;
     try {
       const r = await sendPlatformMessage({
+        replyToExternalId,
         platform: channel.platform,
         senderId:
           channel.platform === "whatsapp"
@@ -974,6 +996,8 @@ const actions: Record<string, (c: Caller, p: any) => Promise<unknown>> = {
       sent_by: c.userId,
       sent_via: "erp",
       status: "sent",
+      reply_to: replyTo,
+      meta,
     });
     if (insErr) {
       // The platform echo got here first — claim that row as ours.

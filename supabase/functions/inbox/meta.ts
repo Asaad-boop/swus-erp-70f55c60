@@ -241,6 +241,8 @@ export type SendInput = {
   attachment?: { type: "image" | "video" | "audio" | "file"; url: string } | null;
   /** last customer message time — decides the 24h window */
   lastInboundAt?: string | null;
+  /** platform message id to quote (Messenger/IG reply_to, WhatsApp context) */
+  replyToExternalId?: string | null;
 };
 
 export const WINDOW_MS = 24 * 60 * 60 * 1000;
@@ -259,6 +261,7 @@ export async function sendPlatformMessage(input: SendInput): Promise<{ messageId
       messaging_product: "whatsapp",
       recipient_type: "individual",
       to: input.recipientId,
+      ...(input.replyToExternalId ? { context: { message_id: input.replyToExternalId } } : {}),
     };
     const body = input.attachment
       ? {
@@ -276,12 +279,13 @@ export async function sendPlatformMessage(input: SendInput): Promise<{ messageId
 
   // Messenger + Instagram both go through the page's /messages edge.
   // Outside 24h: HUMAN_AGENT tag (allowed up to 7 days, needs the Human Agent permission).
-  const envelope = (message: unknown) => ({
+  const envelope = (message: unknown, quote = true) => ({
     recipient: { id: input.recipientId },
     ...(outsideWindow
       ? { messaging_type: "MESSAGE_TAG", tag: "HUMAN_AGENT" }
       : { messaging_type: "RESPONSE" }),
     message,
+    ...(quote && input.replyToExternalId ? { reply_to: { mid: input.replyToExternalId } } : {}),
   });
 
   let lastId: string | null = null;
@@ -299,11 +303,18 @@ export async function sendPlatformMessage(input: SendInput): Promise<{ messageId
     lastId = j?.message_id ?? null;
   }
   if (input.text && input.text.trim()) {
-    const j = await graphPost(
-      `/${input.senderId}/messages`,
-      input.token,
-      envelope({ text: input.text }),
-    );
+    let j: any;
+    try {
+      j = await graphPost(`/${input.senderId}/messages`, input.token, envelope({ text: input.text }));
+    } catch (e) {
+      // Quoting isn't available everywhere — send it plain rather than fail.
+      if (!input.replyToExternalId) throw e;
+      j = await graphPost(
+        `/${input.senderId}/messages`,
+        input.token,
+        envelope({ text: input.text }, false),
+      );
+    }
     lastId = j?.message_id ?? lastId;
   }
   return { messageId: lastId };
