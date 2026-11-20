@@ -1,33 +1,92 @@
 import { format } from "date-fns";
 import { useEffect, useState } from "react";
-import { User, Phone, MapPin, Package, Clock, Loader2, Hash, Calendar, Globe, UserCog, ListChecks, StickyNote, Send, AlertTriangle, Truck, Pencil, Lock, ShieldAlert, Save, X, CalendarClock, PhoneCall, Copy, MessageCircle, CheckCircle2, PauseCircle, PhoneOff, Wallet, History, Tag as TagIcon, ClipboardCopy, ShieldCheck, Command, Repeat2, UserCheck } from "lucide-react";
+import {
+  User,
+  Phone,
+  MapPin,
+  Package,
+  Clock,
+  Loader2,
+  Hash,
+  Calendar,
+  Globe,
+  UserCog,
+  ListChecks,
+  StickyNote,
+  Send,
+  AlertTriangle,
+  Truck,
+  Pencil,
+  Lock,
+  ShieldAlert,
+  Save,
+  X,
+  CalendarClock,
+  PhoneCall,
+  Copy,
+  MessageCircle,
+  CheckCircle2,
+  PauseCircle,
+  PhoneOff,
+  Wallet,
+  History,
+  Tag as TagIcon,
+  ClipboardCopy,
+  ShieldCheck,
+  Command,
+  Repeat2,
+  UserCheck,
+} from "lucide-react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+} from "@/components/ui/dialog";
 import { DialogFooter } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { useOrderDetail, useStaffList } from "@/hooks/erp/use-orders-query";
 import { useOrderLock } from "@/hooks/erp/use-order-lock";
 import { useLogCallAttempt } from "@/hooks/erp/use-order-ops";
-import { STATUS_GROUPS, STATUS_BADGE, bdPhoneError, customerName, customerPhone, invoiceDisplay, statusBadge, type OrderStatus } from "@/lib/erp/orders";
+import {
+  STATUS_GROUPS,
+  STATUS_BADGE,
+  bdPhoneError,
+  customerName,
+  customerPhone,
+  invoiceDisplay,
+  statusBadge,
+  type OrderStatus,
+} from "@/lib/erp/orders";
 import { setOrderActualShippingCostFn } from "@/lib/erp/courier-sync.functions";
 import { confirmOrderAdvanceReceivedFn } from "@/lib/erp/finance/advance.functions";
 import { PreorderConvertDialog } from "@/components/erp/orders/preorder-convert-dialog";
 import { OrderItemsEditor } from "@/components/erp/orders/order-items-editor";
-import { OrderCourierScoreStrip, OrderLocationIntel } from "@/components/erp/orders/order-delivery-intel";
-import { OrderActivityFeed } from "@/components/erp/orders/order-activity-feed";
+import {
+  OrderCourierScoreStrip,
+  OrderLocationIntel,
+} from "@/components/erp/orders/order-delivery-intel";
+import { OrderJourney } from "@/components/erp/orders/order-journey";
 import { CustomerHistoryCard } from "@/components/erp/orders/customer-history-card";
 import { OrderBillingEditor } from "@/components/erp/orders/order-billing-editor";
 import { fireOrderSms } from "@/lib/erp/sms/notify";
 import { cn } from "@/lib/utils";
-
 
 type Props = { orderId: string | null; onClose: () => void; mode?: "web" | "fulfillment" };
 
@@ -76,7 +135,13 @@ function formatRemaining(ms: number): string {
   return m > 0 ? `${m}m ${r}s` : `${r}s`;
 }
 
-function LockCountdown({ lastHeartbeatAt, tone }: { lastHeartbeatAt: string; tone: "emerald" | "amber" }) {
+function LockCountdown({
+  lastHeartbeatAt,
+  tone,
+}: {
+  lastHeartbeatAt: string;
+  tone: "emerald" | "amber";
+}) {
   const [, setTick] = useState(0);
   useEffect(() => {
     const id = window.setInterval(() => setTick((t) => t + 1), 1000);
@@ -85,9 +150,10 @@ function LockCountdown({ lastHeartbeatAt, tone }: { lastHeartbeatAt: string; ton
   const last = new Date(lastHeartbeatAt).getTime();
   const remaining = LOCK_STALE_MS - (Date.now() - last);
   const secondsAgo = Math.max(0, Math.floor((Date.now() - last) / 1000));
-  const cls = tone === "emerald"
-    ? "text-emerald-700 dark:text-emerald-300"
-    : "text-amber-700 dark:text-amber-300";
+  const cls =
+    tone === "emerald"
+      ? "text-emerald-700 dark:text-emerald-300"
+      : "text-amber-700 dark:text-amber-300";
   return (
     <span className={`tabular-nums ${cls}`}>
       Expires in {formatRemaining(remaining)} · heartbeat {secondsAgo}s ago
@@ -107,7 +173,10 @@ const WEB_STATUS_OPTIONS: { value: string; label: string }[] = [
 ];
 
 function webStatusLabel(status: string | null | undefined) {
-  return WEB_STATUS_OPTIONS.find((o) => o.value === status)?.label ?? (status ?? "Processing").replace(/_/g, " ");
+  return (
+    WEB_STATUS_OPTIONS.find((o) => o.value === status)?.label ??
+    (status ?? "Processing").replace(/_/g, " ")
+  );
 }
 
 /** Compact product thumbnail with graceful fallback. */
@@ -121,7 +190,14 @@ function ItemThumb({ src, alt }: { src: string | null | undefined; alt: string }
           <Package className="h-5 w-5 opacity-50" />
         </div>
       ) : (
-        <img src={url} alt={alt} loading="lazy" referrerPolicy="no-referrer" onError={() => setFailed(true)} className="h-full w-full object-cover" />
+        <img
+          src={url}
+          alt={alt}
+          loading="lazy"
+          referrerPolicy="no-referrer"
+          onError={() => setFailed(true)}
+          className="h-full w-full object-cover"
+        />
       )}
     </div>
   );
@@ -129,7 +205,9 @@ function ItemThumb({ src, alt }: { src: string | null | undefined; alt: string }
 
 /** Past order footprint for the same phone number (repeat / risk signal). */
 function useCustomerFootprint(phone: string | null, currentId: string | null) {
-  const digits = String(phone ?? "").replace(/\D/g, "").slice(-11);
+  const digits = String(phone ?? "")
+    .replace(/\D/g, "")
+    .slice(-11);
   return useQuery({
     queryKey: ["order-drawer-footprint", digits],
     enabled: digits.length === 11,
@@ -143,7 +221,9 @@ function useCustomerFootprint(phone: string | null, currentId: string | null) {
         .limit(100);
       if (error) throw error;
       const rows = (data ?? []).filter((r) => r.id !== currentId);
-      const delivered = rows.filter((r) => r.status === "delivered" || r.status === "completed" || r.status === "paid").length;
+      const delivered = rows.filter(
+        (r) => r.status === "delivered" || r.status === "completed" || r.status === "paid",
+      ).length;
       const returned = rows.filter((r) => String(r.status ?? "").includes("return")).length;
       const cancelled = rows.filter((r) => r.status === "cancelled" || r.status === "fake").length;
       return { total: rows.length, delivered, returned, cancelled, last: rows[0] ?? null };
@@ -162,13 +242,26 @@ const QUICK_NOTES = [
 ];
 
 /** Simple risk read from the customer's past-order footprint. */
-function riskFrom(fp: { total: number; delivered: number; returned: number; cancelled: number } | undefined) {
+function riskFrom(
+  fp: { total: number; delivered: number; returned: number; cancelled: number } | undefined,
+) {
   if (!fp || fp.total === 0) return null;
   const bad = fp.returned + fp.cancelled;
   const rate = bad / fp.total;
-  if (fp.total >= 2 && rate >= 0.5) return { level: "high" as const, label: "High risk customer", detail: `${bad}/${fp.total} order return/cancel hoyeche` };
-  if (bad > 0) return { level: "watch" as const, label: "Watch", detail: `${bad} past return/cancel` };
-  if (fp.delivered >= 2) return { level: "good" as const, label: "Trusted repeat customer", detail: `${fp.delivered} successful delivery` };
+  if (fp.total >= 2 && rate >= 0.5)
+    return {
+      level: "high" as const,
+      label: "High risk customer",
+      detail: `${bad}/${fp.total} order return/cancel hoyeche`,
+    };
+  if (bad > 0)
+    return { level: "watch" as const, label: "Watch", detail: `${bad} past return/cancel` };
+  if (fp.delivered >= 2)
+    return {
+      level: "good" as const,
+      label: "Trusted repeat customer",
+      detail: `${fp.delivered} successful delivery`,
+    };
   return null;
 }
 
@@ -182,8 +275,6 @@ const CALL_STATUS_OPTIONS: { value: string; label: string }[] = [
   { value: "customer_cancelled", label: "Customer cancelled" },
   { value: "needs_followup", label: "Needs follow-up" },
 ];
-
-
 
 export function OrderDrawer({ orderId, onClose, mode = "fulfillment" }: Props) {
   const qc = useQueryClient();
@@ -211,7 +302,9 @@ export function OrderDrawer({ orderId, onClose, mode = "fulfillment" }: Props) {
   const confirmAdvance = useMutation({
     mutationFn: () => confirmAdvanceFn({ data: { orderId: orderId! } }),
     onSuccess: (r) => {
-      toast.success(r.alreadyRecorded ? "Already recorded in accounts" : "Advance recorded in accounts ✓");
+      toast.success(
+        r.alreadyRecorded ? "Already recorded in accounts" : "Advance recorded in accounts ✓",
+      );
       qc.invalidateQueries({ queryKey: ["order-detail", orderId] });
       qc.invalidateQueries({ queryKey: ["finance"] });
     },
@@ -224,9 +317,23 @@ export function OrderDrawer({ orderId, onClose, mode = "fulfillment" }: Props) {
   const notes = data?.notes ?? [];
   const subtotal = Number(order?.subtotal ?? 0);
   const shippingFee = Number(order?.shipping_fee ?? 0);
-  const actualShippingCost = (order as { actual_shipping_cost?: number | null } | undefined)?.actual_shipping_cost;
-  const actualShippingSource = (order as { actual_shipping_source?: string | null } | undefined)?.actual_shipping_source;
-  const actualShippingBreakdown = (order as { actual_shipping_breakdown?: { delivery?: number; cod?: number; extra?: number; total?: number } | null } | undefined)?.actual_shipping_breakdown ?? null;
+  const actualShippingCost = (order as { actual_shipping_cost?: number | null } | undefined)
+    ?.actual_shipping_cost;
+  const actualShippingSource = (order as { actual_shipping_source?: string | null } | undefined)
+    ?.actual_shipping_source;
+  const actualShippingBreakdown =
+    (
+      order as
+        | {
+            actual_shipping_breakdown?: {
+              delivery?: number;
+              cod?: number;
+              extra?: number;
+              total?: number;
+            } | null;
+          }
+        | undefined
+    )?.actual_shipping_breakdown ?? null;
   const hasActual = actualShippingCost !== undefined && actualShippingCost !== null;
   const actualNum = hasActual ? Number(actualShippingCost) : 0;
   const shippingLoss = hasActual ? actualNum - shippingFee : 0;
@@ -236,21 +343,30 @@ export function OrderDrawer({ orderId, onClose, mode = "fulfillment" }: Props) {
   const dueTotal = Math.max(0, grossTotal - advanceAmount);
   const payableTotal = advanceAmount > 0 ? dueTotal : Number(order?.total ?? grossTotal);
   const advanceSource = (order as { advance_source?: string | null } | undefined)?.advance_source;
-  const advancePaymentNumber = (order as { advance_payment_number?: string | null } | undefined)?.advance_payment_number;
+  const advancePaymentNumber = (order as { advance_payment_number?: string | null } | undefined)
+    ?.advance_payment_number;
   const advanceTxnId = (order as { advance_txn_id?: string | null } | undefined)?.advance_txn_id;
   const editingBlocked = mode === "web" && lockState.heldByOther;
   const phone = order ? customerPhone(order) : "";
   const { data: footprint } = useCustomerFootprint(phone || null, orderId);
-  const callAttempts = Number((order as { call_attempt_count?: number | null } | undefined)?.call_attempt_count ?? 0);
-  const callStatus = (order as { call_status?: string | null } | undefined)?.call_status ?? "not_called";
+  const callAttempts = Number(
+    (order as { call_attempt_count?: number | null } | undefined)?.call_attempt_count ?? 0,
+  );
+  const callStatus =
+    (order as { call_status?: string | null } | undefined)?.call_status ?? "not_called";
   const lastCallAt = (order as { last_call_at?: string | null } | undefined)?.last_call_at ?? null;
   const orderTags = ((order as { tags?: string[] | null } | undefined)?.tags ?? []).filter(Boolean);
-  const trackingNumber = (order as { tracking_number?: string | null } | undefined)?.tracking_number ?? null;
-  const courierNameVal = (order as { courier_name?: string | null } | undefined)?.courier_name ?? null;
+  const trackingNumber =
+    (order as { tracking_number?: string | null } | undefined)?.tracking_number ?? null;
+  const courierNameVal =
+    (order as { courier_name?: string | null } | undefined)?.courier_name ?? null;
 
   const setCallStatus = useMutation({
     mutationFn: async (value: string) => {
-      const { error } = await supabase.from("orders").update({ call_status: value as never }).eq("id", orderId!);
+      const { error } = await supabase
+        .from("orders")
+        .update({ call_status: value as never })
+        .eq("id", orderId!);
       if (error) throw error;
     },
     onSuccess: () => {
@@ -262,7 +378,12 @@ export function OrderDrawer({ orderId, onClose, mode = "fulfillment" }: Props) {
     onError: (e: Error) => toast.error(e.message),
   });
 
-  useEffect(() => { setItemsEditing(false); setBillingEditing(false); setCustomerEditing(false); setTab("details"); }, [orderId]);
+  useEffect(() => {
+    setItemsEditing(false);
+    setBillingEditing(false);
+    setCustomerEditing(false);
+    setTab("details");
+  }, [orderId]);
 
   useEffect(() => {
     if (!order || customerEditing) return;
@@ -271,7 +392,9 @@ export function OrderDrawer({ orderId, onClose, mode = "fulfillment" }: Props) {
 
   const startCustomerEdit = () => {
     if (editingBlocked) {
-      toast.error(`Order opened by ${lockState.lock?.user_name ?? "another user"}. Takeover first.`);
+      toast.error(
+        `Order opened by ${lockState.lock?.user_name ?? "another user"}. Takeover first.`,
+      );
       return;
     }
     setCustomerDraft(draftFromOrder(order));
@@ -285,7 +408,9 @@ export function OrderDrawer({ orderId, onClose, mode = "fulfillment" }: Props) {
 
   const guardedAction = (action: () => void) => {
     if (editingBlocked) {
-      toast.error(`Order opened by ${lockState.lock?.user_name ?? "another user"}. Takeover first.`);
+      toast.error(
+        `Order opened by ${lockState.lock?.user_name ?? "another user"}. Takeover first.`,
+      );
       return;
     }
     action();
@@ -293,7 +418,10 @@ export function OrderDrawer({ orderId, onClose, mode = "fulfillment" }: Props) {
 
   const updateStatus = useMutation({
     mutationFn: async (status: OrderStatus) => {
-      const { error } = await supabase.rpc("transition_order_status", { _order_id: orderId!, _new_status: status });
+      const { error } = await supabase.rpc("transition_order_status", {
+        _order_id: orderId!,
+        _new_status: status,
+      });
       if (error) throw error;
     },
     onSuccess: (_d, vars) => {
@@ -322,9 +450,9 @@ export function OrderDrawer({ orderId, onClose, mode = "fulfillment" }: Props) {
         customer_note: customerDraft.customer_note.trim() || null,
         ...(order?.is_guest_order
           ? {
-            guest_name: customerDraft.shipping_name.trim() || null,
-            guest_phone: customerDraft.shipping_phone.trim() || null,
-          }
+              guest_name: customerDraft.shipping_name.trim() || null,
+              guest_phone: customerDraft.shipping_phone.trim() || null,
+            }
           : {}),
       };
       const { error } = await supabase.from("orders").update(payload).eq("id", orderId);
@@ -343,16 +471,28 @@ export function OrderDrawer({ orderId, onClose, mode = "fulfillment" }: Props) {
   });
 
   const updateWebStatus = useMutation({
-    mutationFn: async ({ web_status, extra }: { web_status: string; extra?: Record<string, unknown> }) => {
+    mutationFn: async ({
+      web_status,
+      extra,
+    }: {
+      web_status: string;
+      extra?: Record<string, unknown>;
+    }) => {
       const now = new Date().toISOString();
       const { data: auth } = await supabase.auth.getUser();
       // Promote the pipeline status based on the DB's current status (not a possibly
       // stale client copy) so a "complete"/"cancelled" web status can never leave the
       // order stuck at `new` — which would hide it from the Order List.
       if (web_status === "complete" || web_status === "cancelled") {
-        const promo = web_status === "complete"
-          ? { status: "confirmed" as never, confirmation_status: "pending" as never, confirmed_at: now, confirmed_by: auth.user?.id ?? null }
-          : { status: "cancelled" as never, cancelled_at: now };
+        const promo =
+          web_status === "complete"
+            ? {
+                status: "confirmed" as never,
+                confirmation_status: "pending" as never,
+                confirmed_at: now,
+                confirmed_by: auth.user?.id ?? null,
+              }
+            : { status: "cancelled" as never, cancelled_at: now };
         const { error: promoError } = await supabase
           .from("orders")
           .update({ web_status: web_status as never, ...promo, ...(extra ?? {}) })
@@ -397,13 +537,24 @@ export function OrderDrawer({ orderId, onClose, mode = "fulfillment" }: Props) {
 
   const submitAdvance = () => {
     if (editingBlocked) {
-      toast.error(`Order opened by ${lockState.lock?.user_name ?? "another user"}. Takeover first.`);
+      toast.error(
+        `Order opened by ${lockState.lock?.user_name ?? "another user"}. Takeover first.`,
+      );
       return;
     }
     const amt = Number(advAmount);
-    if (!amt || amt <= 0) { toast.error("Enter a valid advance amount"); return; }
-    if (!advSource) { toast.error("Select advance payment source"); return; }
-    if (!advNumber || advNumber.length < 4) { toast.error("Enter payment number (min 4 digits)"); return; }
+    if (!amt || amt <= 0) {
+      toast.error("Enter a valid advance amount");
+      return;
+    }
+    if (!advSource) {
+      toast.error("Select advance payment source");
+      return;
+    }
+    if (!advNumber || advNumber.length < 4) {
+      toast.error("Enter payment number (min 4 digits)");
+      return;
+    }
     updateWebStatus.mutate({
       web_status: "advance_payment",
       extra: {
@@ -418,7 +569,10 @@ export function OrderDrawer({ orderId, onClose, mode = "fulfillment" }: Props) {
 
   const assignStaff = useMutation({
     mutationFn: async (userId: string | null) => {
-      const { error } = await supabase.from("orders").update({ assigned_to: userId }).eq("id", orderId!);
+      const { error } = await supabase
+        .from("orders")
+        .update({ assigned_to: userId })
+        .eq("id", orderId!);
       if (error) throw error;
     },
     onSuccess: () => {
@@ -445,7 +599,9 @@ export function OrderDrawer({ orderId, onClose, mode = "fulfillment" }: Props) {
 
   const openFeeDialog = () => {
     if (editingBlocked) {
-      toast.error(`Order opened by ${lockState.lock?.user_name ?? "another user"}. Takeover first.`);
+      toast.error(
+        `Order opened by ${lockState.lock?.user_name ?? "another user"}. Takeover first.`,
+      );
       return;
     }
     setFeeAmount(hasActual ? String(actualNum) : "");
@@ -456,7 +612,11 @@ export function OrderDrawer({ orderId, onClose, mode = "fulfillment" }: Props) {
     mutationFn: async (body?: string) => {
       const text = (body ?? note).trim();
       if (!text) throw new Error("Note khali");
-      const { error } = await supabase.rpc("add_order_note", { _order_id: orderId!, _body: text, _is_internal: true });
+      const { error } = await supabase.rpc("add_order_note", {
+        _order_id: orderId!,
+        _body: text,
+        _is_internal: true,
+      });
       if (error) throw error;
     },
     onSuccess: () => {
@@ -479,7 +639,10 @@ export function OrderDrawer({ orderId, onClose, mode = "fulfillment" }: Props) {
       `${customerName(order)} · ${customerPhone(order)}`,
       `${order.shipping_address ?? ""}, ${[order.shipping_thana, order.shipping_city, order.shipping_district].filter(Boolean).join(", ")}`,
       "",
-      ...items.map((it) => `• ${it.name}${it.variant_label ? ` (${it.variant_label})` : ""} × ${it.quantity} = ৳${Number(it.line_total ?? Number(it.unit_price ?? it.price) * it.quantity).toLocaleString()}`),
+      ...items.map(
+        (it) =>
+          `• ${it.name}${it.variant_label ? ` (${it.variant_label})` : ""} × ${it.quantity} = ৳${Number(it.line_total ?? Number(it.unit_price ?? it.price) * it.quantity).toLocaleString()}`,
+      ),
       "",
       `Subtotal: ৳${subtotal.toLocaleString()}`,
       `Shipping: ৳${shippingFee.toLocaleString()}`,
@@ -511,12 +674,26 @@ export function OrderDrawer({ orderId, onClose, mode = "fulfillment" }: Props) {
       if (t && (t.tagName === "INPUT" || t.tagName === "TEXTAREA" || t.isContentEditable)) return;
       if (e.metaKey || e.ctrlKey || e.altKey) return;
       const k = e.key.toLowerCase();
-      if (k === "c") { e.preventDefault(); confirmPrimary(); }
-      else if (k === "h" && mode === "web") { e.preventDefault(); onPickWebStatus("on_hold"); }
-      else if (k === "r" && mode === "web") { e.preventDefault(); onPickWebStatus("no_response"); }
-      else if (k === "a" && mode === "web") { e.preventDefault(); onPickWebStatus("advance_payment"); }
-      else if (k === "p" && phone) { e.preventDefault(); window.location.href = `tel:${phone}`; if (orderId) logCall.mutate({ orderId, attempts: callAttempts, currentStatus: callStatus }); }
-      else if (k === "y") { e.preventDefault(); copySummary(); }
+      if (k === "c") {
+        e.preventDefault();
+        confirmPrimary();
+      } else if (k === "h" && mode === "web") {
+        e.preventDefault();
+        onPickWebStatus("on_hold");
+      } else if (k === "r" && mode === "web") {
+        e.preventDefault();
+        onPickWebStatus("no_response");
+      } else if (k === "a" && mode === "web") {
+        e.preventDefault();
+        onPickWebStatus("advance_payment");
+      } else if (k === "p" && phone) {
+        e.preventDefault();
+        window.location.href = `tel:${phone}`;
+        if (orderId) logCall.mutate({ orderId, attempts: callAttempts, currentStatus: callStatus });
+      } else if (k === "y") {
+        e.preventDefault();
+        copySummary();
+      }
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
@@ -527,7 +704,9 @@ export function OrderDrawer({ orderId, onClose, mode = "fulfillment" }: Props) {
     <Dialog open={!!orderId} onOpenChange={(o) => !o && onClose()}>
       <DialogContent className="max-w-5xl w-[96vw] max-h-[92vh] overflow-hidden p-0 gap-0 border-border/60 rounded-2xl duration-300 data-[state=open]:zoom-in-95">
         {isLoading || !order ? (
-          <div className="flex items-center justify-center h-60"><Loader2 className="h-6 w-6 animate-spin text-muted-foreground" /></div>
+          <div className="flex items-center justify-center h-60">
+            <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+          </div>
         ) : (
           <>
             <DialogHeader className="border-b bg-card px-5 py-3.5">
@@ -535,8 +714,15 @@ export function OrderDrawer({ orderId, onClose, mode = "fulfillment" }: Props) {
                 <div className="min-w-0 text-left">
                   <DialogTitle className="flex flex-wrap items-center gap-2 font-mono text-[17px] tracking-tight">
                     #{invoiceDisplay(order)}
-                    <Badge className={statusBadge(mode === "web" ? "confirmed" : order.status).className + " rounded-full px-2.5 py-0.5 text-[11px]"}>
-                      {mode === "web" ? webStatusLabel((order as { web_status?: string | null }).web_status) : statusBadge(order.status).label}
+                    <Badge
+                      className={
+                        statusBadge(mode === "web" ? "confirmed" : order.status).className +
+                        " rounded-full px-2.5 py-0.5 text-[11px]"
+                      }
+                    >
+                      {mode === "web"
+                        ? webStatusLabel((order as { web_status?: string | null }).web_status)
+                        : statusBadge(order.status).label}
                     </Badge>
                   </DialogTitle>
                   <DialogDescription className="mt-0.5 flex flex-wrap items-center gap-x-2 gap-y-0.5 text-[11px]">
@@ -544,9 +730,15 @@ export function OrderDrawer({ orderId, onClose, mode = "fulfillment" }: Props) {
                     <span className="text-muted-foreground/50">·</span>
                     <span className="tabular-nums">{customerPhone(order)}</span>
                     <span className="text-muted-foreground/50">·</span>
-                    <span className="inline-flex items-center gap-1"><Calendar className="h-3 w-3" />{format(new Date(order.created_at), "dd MMM yyyy, hh:mm a")}</span>
+                    <span className="inline-flex items-center gap-1">
+                      <Calendar className="h-3 w-3" />
+                      {format(new Date(order.created_at), "dd MMM yyyy, hh:mm a")}
+                    </span>
                     <span className="text-muted-foreground/50">·</span>
-                    <span className="inline-flex items-center gap-1"><Globe className="h-3 w-3" />{order.source ?? "—"}</span>
+                    <span className="inline-flex items-center gap-1">
+                      <Globe className="h-3 w-3" />
+                      {order.source ?? "—"}
+                    </span>
                   </DialogDescription>
                 </div>
                 <div className="flex items-center gap-2">
@@ -567,15 +759,18 @@ export function OrderDrawer({ orderId, onClose, mode = "fulfillment" }: Props) {
                     <MapPin className="h-3.5 w-3.5" />
                   </button>
                   <div className="rounded-lg border bg-muted/40 px-3 py-1 text-right">
-                    <div className="text-[9px] uppercase tracking-wider text-muted-foreground">{advanceAmount > 0 ? "Due" : "Total"}</div>
-                    <div className="text-base font-bold tabular-nums leading-tight">৳ {payableTotal.toLocaleString()}</div>
+                    <div className="text-[9px] uppercase tracking-wider text-muted-foreground">
+                      {advanceAmount > 0 ? "Due" : "Total"}
+                    </div>
+                    <div className="text-base font-bold tabular-nums leading-tight">
+                      ৳ {payableTotal.toLocaleString()}
+                    </div>
                   </div>
                 </div>
               </div>
             </DialogHeader>
 
             <div className="overflow-y-auto max-h-[calc(92vh-80px)] bg-muted/20">
-
               {lockState.error && (
                 <div className="px-5 pt-4">
                   <div className="flex items-center gap-2 rounded-lg border border-rose-400/60 bg-rose-50 px-4 py-2.5 text-sm text-rose-800 shadow-sm dark:bg-rose-950/40 dark:text-rose-200">
@@ -594,14 +789,23 @@ export function OrderDrawer({ orderId, onClose, mode = "fulfillment" }: Props) {
                           Order opened by {lockState.lock.user_name ?? "another user"}
                         </div>
                         <div className="text-[11px] text-amber-700/80 dark:text-amber-300/80">
-                          Same order ekhane edit korle conflict hote pare. Takeover korle oder access bondho hoye jabe.
+                          Same order ekhane edit korle conflict hote pare. Takeover korle oder
+                          access bondho hoye jabe.
                         </div>
                         <div className="text-[11px] font-medium mt-0.5">
-                          <LockCountdown lastHeartbeatAt={lockState.lock.last_heartbeat_at} tone="amber" />
+                          <LockCountdown
+                            lastHeartbeatAt={lockState.lock.last_heartbeat_at}
+                            tone="amber"
+                          />
                         </div>
                       </div>
                     </div>
-                    <Button size="sm" variant="default" className="bg-amber-600 hover:bg-amber-700 text-white gap-1.5" onClick={() => lockState.takeOver()}>
+                    <Button
+                      size="sm"
+                      variant="default"
+                      className="bg-amber-600 hover:bg-amber-700 text-white gap-1.5"
+                      onClick={() => lockState.takeOver()}
+                    >
                       <Lock className="h-3.5 w-3.5" /> Takeover
                     </Button>
                   </div>
@@ -612,11 +816,12 @@ export function OrderDrawer({ orderId, onClose, mode = "fulfillment" }: Props) {
                   <div className="inline-flex items-center gap-2 rounded-md border border-emerald-400/50 bg-emerald-50 dark:bg-emerald-950/40 px-3 py-1.5 text-[11px] font-medium text-emerald-800 dark:text-emerald-200">
                     <span className="h-1.5 w-1.5 rounded-full bg-emerald-500 animate-pulse" />
                     You are editing this order
+                    {lockState.lock && <span className="mx-1 text-emerald-400">·</span>}
                     {lockState.lock && (
-                      <span className="mx-1 text-emerald-400">·</span>
-                    )}
-                    {lockState.lock && (
-                      <LockCountdown lastHeartbeatAt={lockState.lock.last_heartbeat_at} tone="emerald" />
+                      <LockCountdown
+                        lastHeartbeatAt={lockState.lock.last_heartbeat_at}
+                        tone="emerald"
+                      />
                     )}
                   </div>
                 </div>
@@ -627,13 +832,19 @@ export function OrderDrawer({ orderId, onClose, mode = "fulfillment" }: Props) {
                     <div className="mx-auto mb-3 flex h-12 w-12 items-center justify-center rounded-full bg-amber-500/15 text-amber-600 dark:text-amber-300">
                       <ShieldAlert className="h-6 w-6" />
                     </div>
-                    <h3 className="text-base font-semibold text-foreground">This order is locked</h3>
+                    <h3 className="text-base font-semibold text-foreground">
+                      This order is locked
+                    </h3>
                     <p className="mx-auto mt-2 max-w-md text-sm text-muted-foreground">
-                      {lockState.lock?.user_name ?? "Another user"} is working on this order. Takeover korle tar session close hoye tomar edit access open hobe.
+                      {lockState.lock?.user_name ?? "Another user"} is working on this order.
+                      Takeover korle tar session close hoye tomar edit access open hobe.
                     </p>
                     {lockState.lock && (
                       <div className="mt-3 text-xs font-medium">
-                        <LockCountdown lastHeartbeatAt={lockState.lock.last_heartbeat_at} tone="amber" />
+                        <LockCountdown
+                          lastHeartbeatAt={lockState.lock.last_heartbeat_at}
+                          tone="amber"
+                        />
                       </div>
                     )}
                     <Button className="mt-5 gap-1.5" onClick={() => lockState.takeOver()}>
@@ -642,670 +853,1140 @@ export function OrderDrawer({ orderId, onClose, mode = "fulfillment" }: Props) {
                   </div>
                 </div>
               ) : (
-              <>
-              {/* ACTION BAR — one compact row, sticky */}
-              <div className="sticky top-0 z-20 space-y-2 border-b bg-background/95 px-5 py-2.5 backdrop-blur">
-                <div className="flex flex-wrap items-center gap-1.5">
-                  {mode === "web" ? (
-                    <Button
-                      className="h-9 gap-2 rounded-lg bg-emerald-600 px-4 font-semibold text-white transition hover:bg-emerald-700"
-                      disabled={updateWebStatus.isPending}
-                      onClick={() => onPickWebStatus("complete")}
-                    >
-                      {updateWebStatus.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <CheckCircle2 className="h-4 w-4" />} Confirm
-                    </Button>
-                  ) : order.status !== "confirmed" && order.status !== "delivered" ? (
-                    <Button
-                      className="h-9 gap-2 rounded-lg bg-emerald-600 px-4 font-semibold text-white transition hover:bg-emerald-700"
-                      disabled={updateStatus.isPending}
-                      onClick={() => guardedAction(() => updateStatus.mutate("confirmed" as OrderStatus))}
-                    >
-                      {updateStatus.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <CheckCircle2 className="h-4 w-4" />} Confirm
-                    </Button>
-                  ) : null}
-
-                  {phone && (
-                    <>
-                      <a
-                        href={`tel:${phone}`}
-                        onClick={() => orderId && logCall.mutate({ orderId, attempts: callAttempts, currentStatus: callStatus })}
-                        className="inline-flex h-9 items-center gap-1.5 rounded-lg border border-primary/40 bg-primary/10 px-3 text-xs font-semibold text-primary transition-colors hover:bg-primary/20"
-                      >
-                        <PhoneCall className="h-3.5 w-3.5" /> Call{callAttempts > 0 ? ` (${callAttempts})` : ""}
-                      </a>
-                      <a
-                        href={`https://wa.me/88${phone.replace(/\D/g, "").slice(-11)}`}
-                        target="_blank"
-                        rel="noreferrer"
-                        title="WhatsApp"
-                        className="grid h-9 w-9 place-items-center rounded-lg border text-muted-foreground transition-colors hover:text-foreground"
-                      >
-                        <MessageCircle className="h-4 w-4" />
-                      </a>
-                    </>
-                  )}
-
-                  <span className="mx-0.5 hidden h-6 w-px bg-border sm:block" />
-
-                  {mode === "web" ? (
-                    <>
-                      <Button size="sm" variant="outline" className="h-9 gap-1.5 border-amber-300 text-amber-700 hover:bg-amber-50 dark:border-amber-900 dark:text-amber-300" disabled={updateWebStatus.isPending} onClick={() => onPickWebStatus("good_but_no_response")}>
-                        <UserCheck className="h-3.5 w-3.5" /> Good, no response
-                      </Button>
-                      <Button size="sm" variant="outline" className="h-9 gap-1.5" disabled={updateWebStatus.isPending} onClick={() => onPickWebStatus("no_response")}>
-                        <PhoneOff className="h-3.5 w-3.5" /> No response
-                      </Button>
-                      <Button size="sm" variant="outline" className="h-9 gap-1.5" disabled={updateWebStatus.isPending} onClick={() => onPickWebStatus("on_hold")}>
-                        <PauseCircle className="h-3.5 w-3.5" /> Hold
-                      </Button>
-                      <Button size="sm" variant="outline" className="h-9 gap-1.5 border-violet-300 text-violet-700 dark:border-violet-900 dark:text-violet-300" disabled={updateWebStatus.isPending} onClick={() => onPickWebStatus("advance_payment")}>
-                        <Wallet className="h-3.5 w-3.5" /> Advance
-                      </Button>
-                      <Button size="sm" variant="outline" className="h-9 gap-1.5 text-destructive" disabled={updateWebStatus.isPending} onClick={() => onPickWebStatus("cancelled")}>
-                        <X className="h-3.5 w-3.5" /> Cancel
-                      </Button>
-                    </>
-                  ) : (
-                    <>
-                      {(["packed", "ready_to_ship", "delivered"] as OrderStatus[])
-                        .filter((s) => s !== order.status)
-                        .map((s) => (
-                          <Button key={s} size="sm" variant="outline" className="h-9 gap-1.5" disabled={updateStatus.isPending} onClick={() => guardedAction(() => updateStatus.mutate(s))}>
-                            {STATUS_BADGE[s]?.label ?? s.replace(/_/g, " ")}
-                          </Button>
-                        ))}
-                      <Button size="sm" variant="outline" className="h-9 gap-1.5 text-destructive" disabled={updateStatus.isPending} onClick={() => guardedAction(() => updateStatus.mutate("cancelled" as OrderStatus))}>
-                        <X className="h-3.5 w-3.5" /> Cancel
-                      </Button>
-                    </>
-                  )}
-
-                  <div className="ml-auto flex items-center gap-1.5">
-                    <span className="text-[10px] uppercase tracking-wider text-muted-foreground">Call</span>
-                    <Select value={callStatus} disabled={setCallStatus.isPending || editingBlocked} onValueChange={(v) => guardedAction(() => setCallStatus.mutate(v))}>
-                      <SelectTrigger className="h-9 w-[160px] text-xs"><SelectValue /></SelectTrigger>
-                      <SelectContent>
-                        {CALL_STATUS_OPTIONS.map((o) => (
-                          <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-                </div>
-
-                {(lastCallAt || orderTags.length > 0 || trackingNumber) && (
-                  <div className="flex flex-wrap items-center gap-2 text-[11px] text-muted-foreground">
-                    {lastCallAt && <span className="inline-flex items-center gap-1"><Clock className="h-3 w-3" />Last call {format(new Date(lastCallAt), "dd MMM, hh:mm a")}</span>}
-                    {trackingNumber && (
-                      <span className="inline-flex items-center gap-1"><Truck className="h-3 w-3" />{courierNameVal ?? "Courier"} · <span className="font-mono text-foreground">{trackingNumber}</span></span>
-                    )}
-                    {orderTags.map((t) => (
-                      <Badge key={t} variant="outline" className="h-5 gap-1 px-1.5 text-[10px]"><TagIcon className="h-2.5 w-2.5" />{t}</Badge>
-                    ))}
-                  </div>
-                )}
-
-                {/* Tabs */}
-                <div className="flex items-center gap-1" role="tablist">
-                  {([
-                    ["details", `Details`],
-                    ["activity", `Activity${notes.length ? ` (${notes.length})` : ""}`],
-                  ] as const).map(([key, label]) => (
-                    <button
-                      key={key}
-                      type="button"
-                      role="tab"
-                      aria-selected={tab === key}
-                      onClick={() => setTab(key)}
-                      className={cn(
-                        "rounded-lg px-3 py-1.5 text-[12px] font-medium transition-colors",
-                        tab === key ? "bg-foreground text-background" : "text-muted-foreground hover:bg-muted",
-                      )}
-                    >
-                      {label}
-                    </button>
-                  ))}
-                  <span className="ml-auto hidden items-center gap-1.5 text-[10px] text-muted-foreground md:inline-flex">
-                    <Command className="h-3 w-3" />
-                    {(["C confirm", ...(mode === "web" ? ["A advance", "H hold"] : []), "P call"]).map((s) => (
-                      <kbd key={s} className="rounded border bg-muted px-1.5 py-0.5 font-mono text-[9px]">{s}</kbd>
-                    ))}
-                  </span>
-                </div>
-              </div>
-
-              <div className="px-5 pt-4">
-                <OrderCourierScoreStrip phone={phone} brandId={(order as { brand_id?: string | null }).brand_id ?? null} />
-              </div>
-
-
-              {(risk || isDuplicateRisk) && (
-                <div className="flex flex-wrap gap-2 px-5 pt-4">
-                  {risk && (
-                    <div className={cn(
-                      "inline-flex items-center gap-2 rounded-lg border px-3 py-2 text-xs font-medium",
-                      risk.level === "high" && "border-rose-300/70 bg-rose-50 text-rose-800 dark:border-rose-900/60 dark:bg-rose-950/40 dark:text-rose-200",
-                      risk.level === "watch" && "border-amber-300/70 bg-amber-50 text-amber-800 dark:border-amber-900/60 dark:bg-amber-950/40 dark:text-amber-200",
-                      risk.level === "good" && "border-emerald-300/70 bg-emerald-50 text-emerald-800 dark:border-emerald-900/60 dark:bg-emerald-950/40 dark:text-emerald-200",
-                    )}>
-                      {risk.level === "good" ? <ShieldCheck className="h-4 w-4 shrink-0" /> : <AlertTriangle className="h-4 w-4 shrink-0" />}
-                      <span>{risk.label} · <span className="font-normal opacity-80">{risk.detail}</span></span>
-                    </div>
-                  )}
-                  {isDuplicateRisk && (
-                    <div className="inline-flex items-center gap-2 rounded-lg border border-violet-300/70 bg-violet-50 px-3 py-2 text-xs font-medium text-violet-800 dark:border-violet-900/60 dark:bg-violet-950/40 dark:text-violet-200">
-                      <Repeat2 className="h-4 w-4 shrink-0" />
-                      Possible duplicate — same number theke {lastOrderAt ? format(lastOrderAt, "dd MMM, hh:mm a") : ""} e ekta order ache
-                    </div>
-                  )}
-                </div>
-              )}
-
-              <div className="grid lg:grid-cols-3 gap-4 p-5">
-
-                {/* LEFT — Customer + Items (2 cols) */}
-                <div className="lg:col-span-2 space-y-4">
-                  {tab === "details" && (
-                  <div className="space-y-4 animate-in fade-in-0 slide-in-from-bottom-1 duration-200">
-                  {/* Customer */}
-                  <section className="rounded-2xl border bg-card p-4 shadow-sm transition-shadow duration-300 hover:shadow-md">
-
-                    <div className="mb-3 flex items-center justify-between gap-2">
-                      <h3 className="text-xs font-bold uppercase tracking-wider text-muted-foreground flex items-center gap-1.5"><User className="h-3.5 w-3.5" />Customer</h3>
-                      {customerEditing ? (
-                        <div className="flex items-center gap-1.5">
-                          <Button size="sm" variant="ghost" className="h-7 px-2 gap-1" onClick={cancelCustomerEdit} disabled={saveCustomer.isPending}>
-                            <X className="h-3.5 w-3.5" />Cancel
-                          </Button>
-                          <Button size="sm" className="h-7 px-2 gap-1" onClick={() => guardedAction(() => saveCustomer.mutate())} disabled={saveCustomer.isPending || editingBlocked}>
-                            {saveCustomer.isPending ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Save className="h-3.5 w-3.5" />}
-                            Save
-                          </Button>
-                        </div>
-                      ) : (
-                        <Button size="sm" variant="outline" className="h-7 px-2 gap-1" onClick={startCustomerEdit} disabled={editingBlocked}>
-                          <Pencil className="h-3.5 w-3.5" />Edit
-                        </Button>
-                      )}
-                    </div>
-                    {customerEditing ? (
-                      <div className="grid gap-3 text-sm sm:grid-cols-2">
-                        <div className="space-y-1">
-                          <Label className="text-[11px] text-muted-foreground">Name</Label>
-                          <Input value={customerDraft.shipping_name} onChange={(e) => setCustomerDraft((d) => ({ ...d, shipping_name: e.target.value }))} className="h-8" />
-                        </div>
-                        <div className="space-y-1">
-                          <Label className="text-[11px] text-muted-foreground">Phone Number</Label>
-                          <Input value={customerDraft.shipping_phone} onChange={(e) => setCustomerDraft((d) => ({ ...d, shipping_phone: e.target.value }))} className="h-8 font-mono" />
-                        </div>
-                        <div className="space-y-1 sm:col-span-2">
-                          <Label className="text-[11px] text-muted-foreground">Address</Label>
-                          <Textarea rows={3} value={customerDraft.shipping_address} onChange={(e) => setCustomerDraft((d) => ({ ...d, shipping_address: e.target.value }))} className="resize-none text-sm" />
-                        </div>
-                        <div className="space-y-1">
-                          <Label className="text-[11px] text-muted-foreground">Thana / Zone</Label>
-                          <Input value={customerDraft.shipping_thana} onChange={(e) => setCustomerDraft((d) => ({ ...d, shipping_thana: e.target.value }))} className="h-8" />
-                        </div>
-                        <div className="space-y-1">
-                          <Label className="text-[11px] text-muted-foreground">City</Label>
-                          <Input value={customerDraft.shipping_city} onChange={(e) => setCustomerDraft((d) => ({ ...d, shipping_city: e.target.value }))} className="h-8" />
-                        </div>
-                        <div className="space-y-1">
-                          <Label className="text-[11px] text-muted-foreground">District</Label>
-                          <Input value={customerDraft.shipping_district} onChange={(e) => setCustomerDraft((d) => ({ ...d, shipping_district: e.target.value }))} className="h-8" />
-                        </div>
-                        <div className="space-y-1">
-                          <Label className="text-[11px] text-muted-foreground">Shipping Note</Label>
-                          <Input value={customerDraft.shipping_note} onChange={(e) => setCustomerDraft((d) => ({ ...d, shipping_note: e.target.value }))} className="h-8" />
-                        </div>
-                        <div className="space-y-1 sm:col-span-2">
-                          <Label className="text-[11px] text-muted-foreground">Customer Note</Label>
-                          <Textarea rows={2} value={customerDraft.customer_note} onChange={(e) => setCustomerDraft((d) => ({ ...d, customer_note: e.target.value }))} className="resize-none text-sm" />
-                        </div>
-                      </div>
-                    ) : (
-                      <div className="text-sm">
-                        {/* Identity row */}
-                        <div className="flex items-center gap-3">
-                          <div className="grid h-11 w-11 shrink-0 place-items-center rounded-full bg-primary/10 text-base font-bold uppercase text-primary">
-                            {(customerName(order).trim()[0] ?? "?")}
-                          </div>
-                          <div className="min-w-0 flex-1">
-                            <div className="flex flex-wrap items-center gap-2">
-                              <span className="truncate text-[15px] font-semibold">{customerName(order)}</span>
-                              {footprint && footprint.total > 0 && (
-                                <span className="inline-flex items-center gap-1.5 rounded-full border bg-muted/50 px-2 py-0.5 text-[10px] font-medium">
-                                  <History className="h-3 w-3" />
-                                  {footprint.total} past
-                                  <span className="text-emerald-600 dark:text-emerald-400">{footprint.delivered}✓</span>
-                                  {footprint.returned > 0 && <span className="text-rose-600 dark:text-rose-400">{footprint.returned}↩</span>}
-                                  {footprint.cancelled > 0 && <span className="text-muted-foreground">{footprint.cancelled}✕</span>}
-                                </span>
-                              )}
-                            </div>
-                            <div className="mt-0.5 flex items-center gap-1.5">
-                              <a
-                                href={`tel:${customerPhone(order)}`}
-                                title="Call customer (logs a call attempt)"
-                                onClick={() => {
-                                  if (!orderId) return;
-                                  logCall.mutate({ orderId, attempts: callAttempts, currentStatus: callStatus });
-                                }}
-                                className="inline-flex items-center gap-1.5 text-[13px] font-semibold tabular-nums text-foreground transition-colors hover:text-primary"
-                              >
-                                <Phone className="h-3 w-3 text-muted-foreground" />{customerPhone(order)}
-                              </a>
-                              <button
-                                type="button"
-                                title="Copy phone"
-                                onClick={() => { navigator.clipboard.writeText(customerPhone(order)); toast.success("Phone copied"); }}
-                                className="text-muted-foreground transition-colors hover:text-foreground"
-                              >
-                                <Copy className="h-3 w-3" />
-                              </button>
-                            </div>
-                          </div>
-                        </div>
-
-                        {/* Address block */}
-                        <div className="mt-3 flex items-start gap-2.5 rounded-lg border bg-muted/30 px-3 py-2.5">
-                          <MapPin className="mt-0.5 h-4 w-4 shrink-0 text-muted-foreground" />
-                          <div className="min-w-0 flex-1">
-                            <p className="leading-relaxed text-foreground">{order.shipping_address || "—"}</p>
-                            {[order.shipping_thana, order.shipping_city, order.shipping_district].filter(Boolean).length > 0 && (
-                              <p className="mt-0.5 text-xs text-muted-foreground">{[order.shipping_thana, order.shipping_city, order.shipping_district].filter(Boolean).join(" · ")}</p>
-                            )}
-                          </div>
-                          <button
-                            type="button"
-                            title="Copy address"
-                            onClick={copyAddress}
-                            className="shrink-0 text-muted-foreground transition-colors hover:text-foreground"
-                          >
-                            <Copy className="h-3.5 w-3.5" />
-                          </button>
-                        </div>
-
-                        {/* Notes */}
-                        {(((order as { shipping_note?: string | null }).shipping_note ?? "").trim() || (order.customer_note ?? "").trim()) && (
-                          <div className="mt-2.5 grid gap-2 sm:grid-cols-2">
-                            {((order as { shipping_note?: string | null }).shipping_note ?? "").trim() && (
-                              <div className="rounded-lg border border-sky-200/70 bg-sky-50/70 p-2.5 dark:border-sky-900/50 dark:bg-sky-950/30">
-                                <div className="mb-0.5 flex items-center gap-1 text-[10px] font-bold uppercase tracking-wider text-sky-700 dark:text-sky-300">
-                                  <StickyNote className="h-3 w-3" />Shipping Note
-                                </div>
-                                <p className="text-xs leading-snug text-foreground">{(order as { shipping_note?: string | null }).shipping_note}</p>
-                              </div>
-                            )}
-                            {(order.customer_note ?? "").trim() && (
-                              <div className="rounded-lg border border-amber-200/70 bg-amber-50/70 p-2.5 dark:border-amber-900/50 dark:bg-amber-950/30">
-                                <div className="mb-0.5 flex items-center gap-1 text-[10px] font-bold uppercase tracking-wider text-amber-700 dark:text-amber-300">
-                                  <StickyNote className="h-3 w-3" />Customer Note
-                                </div>
-                                <p className="text-xs leading-snug text-foreground">{order.customer_note}</p>
-                              </div>
-                            )}
-                          </div>
-                        )}
-                      </div>
-                     )}
-
-                    <OrderLocationIntel
-                      orderId={orderId}
-                      address={[order.shipping_address, order.shipping_thana, order.shipping_city, order.shipping_district]
-                        .filter(Boolean)
-                        .join(", ")}
-                    />
-                  </section>
-
-                  <CustomerHistoryCard phone={phone || null} currentOrderId={orderId} />
-
-
-
-
-
-
-
-                  {/* Items */}
-                  <section className="rounded-2xl border bg-card p-4 shadow-sm transition-shadow duration-300 hover:shadow-md">
-                    <div className="mb-3 flex items-center justify-between gap-2">
-                      <h3 className="text-xs font-bold uppercase tracking-wider text-muted-foreground flex items-center gap-1.5"><Package className="h-3.5 w-3.5" />Items ({items.length})</h3>
-                      {!itemsEditing && (
+                <>
+                  {/* ACTION BAR — one compact row, sticky */}
+                  <div className="sticky top-0 z-20 space-y-2 border-b bg-background/95 px-5 py-2.5 backdrop-blur">
+                    <div className="flex flex-wrap items-center gap-1.5">
+                      {mode === "web" ? (
                         <Button
-                          size="sm"
-                          variant="outline"
-                          className="h-7 px-2 gap-1"
-                          onClick={() => guardedAction(() => setItemsEditing(true))}
-                          disabled={editingBlocked}
+                          className="h-9 gap-2 rounded-lg bg-emerald-600 px-4 font-semibold text-white transition hover:bg-emerald-700"
+                          disabled={updateWebStatus.isPending}
+                          onClick={() => onPickWebStatus("complete")}
                         >
-                          <Pencil className="h-3.5 w-3.5" />Edit / Add product
+                          {updateWebStatus.isPending ? (
+                            <Loader2 className="h-4 w-4 animate-spin" />
+                          ) : (
+                            <CheckCircle2 className="h-4 w-4" />
+                          )}{" "}
+                          Confirm
                         </Button>
-                      )}
-                    </div>
-                    {itemsEditing ? (
-                      <OrderItemsEditor
-                        orderId={orderId!}
-                        shippingFee={shippingFee}
-                        discountAmount={discountAmount}
-                        disabled={editingBlocked}
-                        onDone={() => setItemsEditing(false)}
-                        items={items.map((it) => ({
-                          id: it.id,
-                          product_id: (it as { product_id: string }).product_id,
-                          variant_id: (it as { variant_id?: string | null }).variant_id ?? null,
-                          variant_label: it.variant_label ?? null,
-                          name: it.name ?? "Item",
-                          image: (it as { image?: string | null }).image ?? null,
-                          unit_price: Number(it.unit_price ?? it.price ?? 0),
-                          quantity: Number(it.quantity ?? 1),
-                        }))}
-                      />
-                    ) : (
-                    <div className="overflow-hidden rounded-xl border divide-y divide-border/60">
-                      {items.map((it) => (
-                        <div key={it.id} className="flex items-center gap-3 bg-card px-3 py-2.5 text-sm transition-colors hover:bg-muted/40">
-                          <ItemThumb src={(it as { image?: string | null }).image} alt={it.name ?? "item"} />
-                          <div className="flex-1 min-w-0">
-                            <div className="truncate text-[13px] font-semibold">{it.name}</div>
-                            <div className="mt-1 flex flex-wrap items-center gap-1.5 text-[11px] text-muted-foreground">
-                              {it.variant_label && (
-                                <span className="rounded-full border bg-muted/50 px-1.5 py-px">{it.variant_label}</span>
-                              )}
-                              <span className="inline-flex items-center gap-1 tabular-nums">
-                                <span className="rounded-full bg-muted px-1.5 py-px font-semibold text-foreground">×{it.quantity}</span>
-                                ৳{Number(it.unit_price ?? it.price).toLocaleString()}
-                              </span>
-                            </div>
-                          </div>
-                          <div className="shrink-0 text-right">
-                            <div className="text-[13px] font-bold tabular-nums">৳{Number(it.line_total ?? Number(it.price) * it.quantity).toLocaleString()}</div>
-                            <div className="text-[10px] text-muted-foreground tabular-nums">৳{Number(it.unit_price ?? it.price).toLocaleString()} each</div>
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                    )}
+                      ) : order.status !== "confirmed" && order.status !== "delivered" ? (
+                        <Button
+                          className="h-9 gap-2 rounded-lg bg-emerald-600 px-4 font-semibold text-white transition hover:bg-emerald-700"
+                          disabled={updateStatus.isPending}
+                          onClick={() =>
+                            guardedAction(() => updateStatus.mutate("confirmed" as OrderStatus))
+                          }
+                        >
+                          {updateStatus.isPending ? (
+                            <Loader2 className="h-4 w-4 animate-spin" />
+                          ) : (
+                            <CheckCircle2 className="h-4 w-4" />
+                          )}{" "}
+                          Confirm
+                        </Button>
+                      ) : null}
 
-                    <div className="mt-4 pt-3 border-t space-y-1.5 text-sm">
-                      <div className="flex items-center justify-between">
-                        <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Billing</span>
-                        {!billingEditing && (
+                      {phone && (
+                        <>
+                          <a
+                            href={`tel:${phone}`}
+                            onClick={() =>
+                              orderId &&
+                              logCall.mutate({
+                                orderId,
+                                attempts: callAttempts,
+                                currentStatus: callStatus,
+                              })
+                            }
+                            className="inline-flex h-9 items-center gap-1.5 rounded-lg border border-primary/40 bg-primary/10 px-3 text-xs font-semibold text-primary transition-colors hover:bg-primary/20"
+                          >
+                            <PhoneCall className="h-3.5 w-3.5" /> Call
+                            {callAttempts > 0 ? ` (${callAttempts})` : ""}
+                          </a>
+                          <a
+                            href={`https://wa.me/88${phone.replace(/\D/g, "").slice(-11)}`}
+                            target="_blank"
+                            rel="noreferrer"
+                            title="WhatsApp"
+                            className="grid h-9 w-9 place-items-center rounded-lg border text-muted-foreground transition-colors hover:text-foreground"
+                          >
+                            <MessageCircle className="h-4 w-4" />
+                          </a>
+                        </>
+                      )}
+
+                      <span className="mx-0.5 hidden h-6 w-px bg-border sm:block" />
+
+                      {mode === "web" ? (
+                        <>
                           <Button
                             size="sm"
                             variant="outline"
-                            className="h-7 px-2 gap-1"
-                            onClick={() => guardedAction(() => setBillingEditing(true))}
-                            disabled={editingBlocked}
+                            className="h-9 gap-1.5 border-amber-300 text-amber-700 hover:bg-amber-50 dark:border-amber-900 dark:text-amber-300"
+                            disabled={updateWebStatus.isPending}
+                            onClick={() => onPickWebStatus("good_but_no_response")}
                           >
-                            <Pencil className="h-3.5 w-3.5" />Edit billing
+                            <UserCheck className="h-3.5 w-3.5" /> Good, no response
                           </Button>
-                        )}
-                      </div>
-                      {billingEditing && orderId && (
-                        <OrderBillingEditor
-                          orderId={orderId}
-                          subtotal={subtotal}
-                          shippingFee={shippingFee}
-                          discountAmount={discountAmount}
-                          advanceAmount={advanceAmount}
-                          disabled={editingBlocked}
-                          onDone={() => setBillingEditing(false)}
-                        />
-                      )}
-                      <div className="flex justify-between"><span className="text-muted-foreground">Subtotal</span><span className="tabular-nums">৳ {subtotal.toLocaleString()}</span></div>
-                      <div className="flex justify-between"><span className="text-muted-foreground">Shipping</span><span className="tabular-nums">৳ {shippingFee.toLocaleString()}</span></div>
-                      {(mode !== "web" || hasActual) && (
-                      <div className="rounded-md border bg-muted/30 p-2.5 mt-1 space-y-1">
-
-                        <div className="flex items-center justify-between text-[11px] uppercase tracking-wider text-muted-foreground">
-                          <span className="inline-flex items-center gap-1"><Truck className="h-3 w-3" /> Courier Actual Charge</span>
-                          <button onClick={openFeeDialog} className="text-primary hover:underline inline-flex items-center gap-0.5">
-                            <Pencil className="h-3 w-3" /> {hasActual ? "Edit" : "Set"}
-                          </button>
-                        </div>
-                        {hasActual ? (
-                          <>
-                            <div className="flex justify-between text-sm">
-                              <span className="text-muted-foreground">Courier charged us</span>
-                              <span className="tabular-nums font-medium">৳ {actualNum.toLocaleString()}</span>
-                            </div>
-                            {actualShippingBreakdown && (Number(actualShippingBreakdown.delivery ?? 0) > 0 || Number(actualShippingBreakdown.cod ?? 0) > 0 || Number(actualShippingBreakdown.extra ?? 0) > 0) && (
-                              <div className="rounded bg-background/60 border border-dashed px-2 py-1.5 space-y-0.5 text-[11px]">
-                                <div className="flex justify-between"><span className="text-muted-foreground">Delivery charge</span><span className="tabular-nums">৳ {Number(actualShippingBreakdown.delivery ?? 0).toLocaleString()}</span></div>
-                                <div className="flex justify-between"><span className="text-muted-foreground">COD charge</span><span className="tabular-nums">৳ {Number(actualShippingBreakdown.cod ?? 0).toLocaleString()}</span></div>
-                                {Number(actualShippingBreakdown.extra ?? 0) > 0 && (
-                                  <div className="flex justify-between"><span className="text-muted-foreground">Extra charge</span><span className="tabular-nums">৳ {Number(actualShippingBreakdown.extra ?? 0).toLocaleString()}</span></div>
-                                )}
-                                <div className="flex justify-between font-semibold pt-1 mt-1 border-t border-dashed"><span>Total delivery charge</span><span className="tabular-nums">৳ {Number(actualShippingBreakdown.total ?? actualNum).toLocaleString()}</span></div>
-                              </div>
-                            )}
-                            <div className={`flex justify-between text-sm font-semibold ${shippingLoss > 0 ? "text-rose-600 dark:text-rose-400" : "text-emerald-600 dark:text-emerald-400"}`}>
-                              <span>{shippingLoss > 0 ? "Shipping loss" : "Shipping margin"}</span>
-                              <span className="tabular-nums">{shippingLoss > 0 ? "− " : "+ "}৳ {Math.abs(shippingLoss).toLocaleString()}</span>
-                            </div>
-                            <div className="text-[10px] text-muted-foreground">Source: {actualShippingSource ?? "—"}</div>
-                          </>
-                        ) : (
-                          <p className="text-[11px] text-muted-foreground italic">Courier sync er por automatic bose jabe, ba manually set koro.</p>
-                        )}
-                      </div>
-                      )}
-
-                      {discountAmount > 0 && (
-                        <div className="flex justify-between text-emerald-600 dark:text-emerald-400"><span>Discount</span><span className="tabular-nums">− ৳ {discountAmount.toLocaleString()}</span></div>
-                      )}
-                      {advanceAmount > 0 && (
-                        <div className="space-y-1.5 rounded-md border bg-muted/30 p-2.5">
-                          <div className="flex justify-between font-semibold text-emerald-600 dark:text-emerald-400"><span>Advance Paid</span><span className="tabular-nums">− ৳ {advanceAmount.toLocaleString()}</span></div>
-                          <div className="grid grid-cols-1 sm:grid-cols-3 gap-1.5 text-[11px] text-muted-foreground">
-                            <span><b className="text-foreground">Source:</b> {advanceSource || "—"}</span>
-                            <span><b className="text-foreground">Number:</b> {advancePaymentNumber || "—"}</span>
-                            <span><b className="text-foreground">Txn ID:</b> {advanceTxnId || "—"}</span>
-                          </div>
-                          <div className="pt-1.5 border-t flex items-center justify-between gap-2 flex-wrap">
-                            <span className="text-[11px] text-muted-foreground">
-                              {advancePaymentNumber
-                                ? "Payment number diyecho — accounts e record koro."
-                                : "Payment number ID pele niche entry diye Confirm Received chapo."}
-                            </span>
-                            <Button
-                              size="sm"
-                              className="bg-emerald-600 hover:bg-emerald-700 text-white h-7"
-                              disabled={!advancePaymentNumber || confirmAdvance.isPending}
-                              onClick={() => confirmAdvance.mutate()}
-                            >
-                              {confirmAdvance.isPending ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : "Confirm Received"}
-                            </Button>
-                          </div>
-                        </div>
-                      )}
-                      <div className="flex justify-between font-bold text-base pt-2 mt-1 border-t"><span>{advanceAmount > 0 ? "Due Total" : "Total"}</span><span className="tabular-nums text-primary">৳ {payableTotal.toLocaleString()}</span></div>
-                    </div>
-                  </section>
-                  </div>
-                  )}
-
-                  {tab === "activity" && orderId && (
-                    <div className="animate-in fade-in-0 slide-in-from-bottom-1 duration-200">
-                      <OrderActivityFeed
-                        orderId={orderId}
-                        createdAt={order.created_at}
-                        source={(order as { source?: string | null }).source ?? null}
-                        createdById={(order as { user_id?: string | null }).user_id ?? null}
-                      />
-                    </div>
-                  )}
-                </div>
-
-                {/* RIGHT — Actions + Notes */}
-                <div className="space-y-4 lg:sticky lg:top-[132px] lg:self-start">
-
-                  {/* Status + Assign */}
-                  <section className="rounded-2xl border bg-card p-4 space-y-3 shadow-sm transition-shadow duration-300 hover:shadow-md">
-                    <h3 className="text-xs font-bold uppercase tracking-wider text-muted-foreground flex items-center gap-1.5"><ListChecks className="h-3.5 w-3.5" />Manage</h3>
-                    <div>
-                      <label className="text-[11px] font-semibold text-muted-foreground mb-1.5 block">Status</label>
-                      {mode === "web" ? (
-                    <Select
-                      value={(order as { web_status?: string | null }).web_status ?? "processing"}
-                      disabled={updateWebStatus.isPending || editingBlocked}
-                      onValueChange={onPickWebStatus}
-                    >
-                      <SelectTrigger className="h-9"><SelectValue /></SelectTrigger>
-                      <SelectContent>
-                        {WEB_STATUS_OPTIONS.map((o) => (
-                          <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  ) : (
-                    <Select value={order.status} disabled={updateStatus.isPending || editingBlocked} onValueChange={(v) => guardedAction(() => updateStatus.mutate(v as OrderStatus))}>
-                      <SelectTrigger className="h-9"><SelectValue /></SelectTrigger>
-                      <SelectContent>
-                        {STATUS_GROUPS.map((g) => (
-                          <div key={g.key}>
-                            <div className="px-2 pt-1.5 pb-0.5 text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
-                              {g.label}
-                            </div>
-                            {g.statuses.map((s) => (
-                              <SelectItem key={s} value={s}>
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            className="h-9 gap-1.5"
+                            disabled={updateWebStatus.isPending}
+                            onClick={() => onPickWebStatus("no_response")}
+                          >
+                            <PhoneOff className="h-3.5 w-3.5" /> No response
+                          </Button>
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            className="h-9 gap-1.5"
+                            disabled={updateWebStatus.isPending}
+                            onClick={() => onPickWebStatus("on_hold")}
+                          >
+                            <PauseCircle className="h-3.5 w-3.5" /> Hold
+                          </Button>
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            className="h-9 gap-1.5 border-violet-300 text-violet-700 dark:border-violet-900 dark:text-violet-300"
+                            disabled={updateWebStatus.isPending}
+                            onClick={() => onPickWebStatus("advance_payment")}
+                          >
+                            <Wallet className="h-3.5 w-3.5" /> Advance
+                          </Button>
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            className="h-9 gap-1.5 text-destructive"
+                            disabled={updateWebStatus.isPending}
+                            onClick={() => onPickWebStatus("cancelled")}
+                          >
+                            <X className="h-3.5 w-3.5" /> Cancel
+                          </Button>
+                        </>
+                      ) : (
+                        <>
+                          {(["packed", "ready_to_ship", "delivered"] as OrderStatus[])
+                            .filter((s) => s !== order.status)
+                            .map((s) => (
+                              <Button
+                                key={s}
+                                size="sm"
+                                variant="outline"
+                                className="h-9 gap-1.5"
+                                disabled={updateStatus.isPending}
+                                onClick={() => guardedAction(() => updateStatus.mutate(s))}
+                              >
                                 {STATUS_BADGE[s]?.label ?? s.replace(/_/g, " ")}
+                              </Button>
+                            ))}
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            className="h-9 gap-1.5 text-destructive"
+                            disabled={updateStatus.isPending}
+                            onClick={() =>
+                              guardedAction(() => updateStatus.mutate("cancelled" as OrderStatus))
+                            }
+                          >
+                            <X className="h-3.5 w-3.5" /> Cancel
+                          </Button>
+                        </>
+                      )}
+
+                      <div className="ml-auto flex items-center gap-1.5">
+                        <span className="text-[10px] uppercase tracking-wider text-muted-foreground">
+                          Call
+                        </span>
+                        <Select
+                          value={callStatus}
+                          disabled={setCallStatus.isPending || editingBlocked}
+                          onValueChange={(v) => guardedAction(() => setCallStatus.mutate(v))}
+                        >
+                          <SelectTrigger className="h-9 w-[160px] text-xs">
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {CALL_STATUS_OPTIONS.map((o) => (
+                              <SelectItem key={o.value} value={o.value}>
+                                {o.label}
                               </SelectItem>
                             ))}
-                          </div>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  )}
+                          </SelectContent>
+                        </Select>
+                      </div>
                     </div>
-                    <div>
-                      <label className="text-[11px] font-semibold text-muted-foreground mb-1.5 flex items-center gap-1"><UserCog className="h-3 w-3" />Assigned to</label>
-                      <Select
-                        value={order.assigned_to ?? "none"}
-                        disabled={assignStaff.isPending || editingBlocked}
-                        onValueChange={(v) => guardedAction(() => assignStaff.mutate(v === "none" ? null : v))}
-                      >
-                        <SelectTrigger className="h-9"><SelectValue placeholder="Unassigned" /></SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="none">— Unassigned —</SelectItem>
-                          {staff.map((s) => (
-                            <SelectItem key={s.id} value={s.id}>{s.display_name ?? s.id.slice(0, 8)}</SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    </div>
-                    {order.status !== "pre_order" && (
-                      <Button
-                        variant="outline"
-                        className="w-full gap-1.5 border-indigo-300 text-indigo-700 hover:bg-indigo-50 dark:border-indigo-900 dark:text-indigo-300"
-                        disabled={editingBlocked}
-                        onClick={() => guardedAction(() => setPreorderOpen(true))}
-                      >
-                        <CalendarClock className="h-3.5 w-3.5" /> Convert to Pre-order
-                      </Button>
-                    )}
-                  </section>
 
-                  {/* Notes */}
-                  <section className="rounded-2xl border bg-card p-4 shadow-sm transition-shadow duration-300 hover:shadow-md">
-                    <h3 className="text-xs font-bold uppercase tracking-wider text-muted-foreground mb-3 flex items-center gap-1.5"><StickyNote className="h-3.5 w-3.5" />Notes</h3>
-                    <div className="space-y-2 mb-3">
-                      <Textarea
-                        placeholder="Add internal note…"
-                        value={note}
-                        onChange={(e) => setNote(e.target.value)}
-                        rows={2}
-                        className="resize-none text-sm"
-                      />
-                      <Button size="sm" className="w-full gap-1.5" disabled={!note.trim() || addNote.isPending || editingBlocked} onClick={() => guardedAction(() => addNote.mutate(undefined))}>
-                        <Send className="h-3.5 w-3.5" />Add Note
-                      </Button>
-                      <div className="flex flex-wrap gap-1.5 pt-1">
-                        {QUICK_NOTES.map((q) => (
-                          <button
-                            key={q}
-                            type="button"
-                            disabled={addNote.isPending || editingBlocked}
-                            onClick={() => guardedAction(() => addNote.mutate(q))}
-                            className="rounded-full border bg-muted/40 px-2.5 py-1 text-[10px] font-medium text-muted-foreground transition-colors hover:border-primary/40 hover:bg-primary/10 hover:text-primary disabled:opacity-50"
+                    {(lastCallAt || orderTags.length > 0 || trackingNumber) && (
+                      <div className="flex flex-wrap items-center gap-2 text-[11px] text-muted-foreground">
+                        {lastCallAt && (
+                          <span className="inline-flex items-center gap-1">
+                            <Clock className="h-3 w-3" />
+                            Last call {format(new Date(lastCallAt), "dd MMM, hh:mm a")}
+                          </span>
+                        )}
+                        {trackingNumber && (
+                          <span className="inline-flex items-center gap-1">
+                            <Truck className="h-3 w-3" />
+                            {courierNameVal ?? "Courier"} ·{" "}
+                            <span className="font-mono text-foreground">{trackingNumber}</span>
+                          </span>
+                        )}
+                        {orderTags.map((t) => (
+                          <Badge key={t} variant="outline" className="h-5 gap-1 px-1.5 text-[10px]">
+                            <TagIcon className="h-2.5 w-2.5" />
+                            {t}
+                          </Badge>
+                        ))}
+                      </div>
+                    )}
+
+                    {/* Tabs */}
+                    <div className="flex items-center gap-1" role="tablist">
+                      {(
+                        [
+                          ["details", `Details`],
+                          ["activity", `Activity${notes.length ? ` (${notes.length})` : ""}`],
+                        ] as const
+                      ).map(([key, label]) => (
+                        <button
+                          key={key}
+                          type="button"
+                          role="tab"
+                          aria-selected={tab === key}
+                          onClick={() => setTab(key)}
+                          className={cn(
+                            "rounded-lg px-3 py-1.5 text-[12px] font-medium transition-colors",
+                            tab === key
+                              ? "bg-foreground text-background"
+                              : "text-muted-foreground hover:bg-muted",
+                          )}
+                        >
+                          {label}
+                        </button>
+                      ))}
+                      <span className="ml-auto hidden items-center gap-1.5 text-[10px] text-muted-foreground md:inline-flex">
+                        <Command className="h-3 w-3" />
+                        {[
+                          "C confirm",
+                          ...(mode === "web" ? ["A advance", "H hold"] : []),
+                          "P call",
+                        ].map((s) => (
+                          <kbd
+                            key={s}
+                            className="rounded border bg-muted px-1.5 py-0.5 font-mono text-[9px]"
                           >
-                            + {q}
-                          </button>
+                            {s}
+                          </kbd>
                         ))}
-                      </div>
+                      </span>
                     </div>
-                    {notes.length > 0 ? (
-                      <div className="space-y-2 max-h-72 overflow-y-auto pr-1">
-                        {notes.map((n) => (
-                          <div key={n.id} className="p-3 rounded-lg border-l-4 border-l-amber-500 bg-amber-50/80 dark:bg-amber-950/30 shadow-sm">
-                            <div className="text-[10px] font-medium text-muted-foreground mb-1 uppercase tracking-wide">{format(new Date(n.created_at), "dd MMM, hh:mm a")}</div>
-                            <div className="text-sm font-semibold text-foreground dark:text-amber-50 whitespace-pre-wrap leading-relaxed">{n.body}</div>
-                          </div>
-                        ))}
-                      </div>
-                    ) : (
-                      <p className="text-xs text-muted-foreground italic text-center py-3">No notes yet</p>
-                    )}
-                  </section>
-                </div>
-              </div>
-              </>
-              )}
+                  </div>
 
+                  <div className="px-5 pt-4">
+                    <OrderCourierScoreStrip
+                      phone={phone}
+                      brandId={(order as { brand_id?: string | null }).brand_id ?? null}
+                    />
+                  </div>
+
+                  {(risk || isDuplicateRisk) && (
+                    <div className="flex flex-wrap gap-2 px-5 pt-4">
+                      {risk && (
+                        <div
+                          className={cn(
+                            "inline-flex items-center gap-2 rounded-lg border px-3 py-2 text-xs font-medium",
+                            risk.level === "high" &&
+                              "border-rose-300/70 bg-rose-50 text-rose-800 dark:border-rose-900/60 dark:bg-rose-950/40 dark:text-rose-200",
+                            risk.level === "watch" &&
+                              "border-amber-300/70 bg-amber-50 text-amber-800 dark:border-amber-900/60 dark:bg-amber-950/40 dark:text-amber-200",
+                            risk.level === "good" &&
+                              "border-emerald-300/70 bg-emerald-50 text-emerald-800 dark:border-emerald-900/60 dark:bg-emerald-950/40 dark:text-emerald-200",
+                          )}
+                        >
+                          {risk.level === "good" ? (
+                            <ShieldCheck className="h-4 w-4 shrink-0" />
+                          ) : (
+                            <AlertTriangle className="h-4 w-4 shrink-0" />
+                          )}
+                          <span>
+                            {risk.label} ·{" "}
+                            <span className="font-normal opacity-80">{risk.detail}</span>
+                          </span>
+                        </div>
+                      )}
+                      {isDuplicateRisk && (
+                        <div className="inline-flex items-center gap-2 rounded-lg border border-violet-300/70 bg-violet-50 px-3 py-2 text-xs font-medium text-violet-800 dark:border-violet-900/60 dark:bg-violet-950/40 dark:text-violet-200">
+                          <Repeat2 className="h-4 w-4 shrink-0" />
+                          Possible duplicate — same number theke{" "}
+                          {lastOrderAt ? format(lastOrderAt, "dd MMM, hh:mm a") : ""} e ekta order
+                          ache
+                        </div>
+                      )}
+                    </div>
+                  )}
+
+                  <div className="grid lg:grid-cols-3 gap-4 p-5">
+                    {/* LEFT — Customer + Items (2 cols) */}
+                    <div className="lg:col-span-2 space-y-4">
+                      {tab === "details" && (
+                        <div className="space-y-4 animate-in fade-in-0 slide-in-from-bottom-1 duration-200">
+                          {/* Customer */}
+                          <section className="rounded-2xl border bg-card p-4 shadow-sm transition-shadow duration-300 hover:shadow-md">
+                            <div className="mb-3 flex items-center justify-between gap-2">
+                              <h3 className="text-xs font-bold uppercase tracking-wider text-muted-foreground flex items-center gap-1.5">
+                                <User className="h-3.5 w-3.5" />
+                                Customer
+                              </h3>
+                              {customerEditing ? (
+                                <div className="flex items-center gap-1.5">
+                                  <Button
+                                    size="sm"
+                                    variant="ghost"
+                                    className="h-7 px-2 gap-1"
+                                    onClick={cancelCustomerEdit}
+                                    disabled={saveCustomer.isPending}
+                                  >
+                                    <X className="h-3.5 w-3.5" />
+                                    Cancel
+                                  </Button>
+                                  <Button
+                                    size="sm"
+                                    className="h-7 px-2 gap-1"
+                                    onClick={() => guardedAction(() => saveCustomer.mutate())}
+                                    disabled={saveCustomer.isPending || editingBlocked}
+                                  >
+                                    {saveCustomer.isPending ? (
+                                      <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                                    ) : (
+                                      <Save className="h-3.5 w-3.5" />
+                                    )}
+                                    Save
+                                  </Button>
+                                </div>
+                              ) : (
+                                <Button
+                                  size="sm"
+                                  variant="outline"
+                                  className="h-7 px-2 gap-1"
+                                  onClick={startCustomerEdit}
+                                  disabled={editingBlocked}
+                                >
+                                  <Pencil className="h-3.5 w-3.5" />
+                                  Edit
+                                </Button>
+                              )}
+                            </div>
+                            {customerEditing ? (
+                              <div className="grid gap-3 text-sm sm:grid-cols-2">
+                                <div className="space-y-1">
+                                  <Label className="text-[11px] text-muted-foreground">Name</Label>
+                                  <Input
+                                    value={customerDraft.shipping_name}
+                                    onChange={(e) =>
+                                      setCustomerDraft((d) => ({
+                                        ...d,
+                                        shipping_name: e.target.value,
+                                      }))
+                                    }
+                                    className="h-8"
+                                  />
+                                </div>
+                                <div className="space-y-1">
+                                  <Label className="text-[11px] text-muted-foreground">
+                                    Phone Number
+                                  </Label>
+                                  <Input
+                                    value={customerDraft.shipping_phone}
+                                    onChange={(e) =>
+                                      setCustomerDraft((d) => ({
+                                        ...d,
+                                        shipping_phone: e.target.value,
+                                      }))
+                                    }
+                                    className="h-8 font-mono"
+                                  />
+                                </div>
+                                <div className="space-y-1 sm:col-span-2">
+                                  <Label className="text-[11px] text-muted-foreground">
+                                    Address
+                                  </Label>
+                                  <Textarea
+                                    rows={3}
+                                    value={customerDraft.shipping_address}
+                                    onChange={(e) =>
+                                      setCustomerDraft((d) => ({
+                                        ...d,
+                                        shipping_address: e.target.value,
+                                      }))
+                                    }
+                                    className="resize-none text-sm"
+                                  />
+                                </div>
+                                <div className="space-y-1">
+                                  <Label className="text-[11px] text-muted-foreground">
+                                    Thana / Zone
+                                  </Label>
+                                  <Input
+                                    value={customerDraft.shipping_thana}
+                                    onChange={(e) =>
+                                      setCustomerDraft((d) => ({
+                                        ...d,
+                                        shipping_thana: e.target.value,
+                                      }))
+                                    }
+                                    className="h-8"
+                                  />
+                                </div>
+                                <div className="space-y-1">
+                                  <Label className="text-[11px] text-muted-foreground">City</Label>
+                                  <Input
+                                    value={customerDraft.shipping_city}
+                                    onChange={(e) =>
+                                      setCustomerDraft((d) => ({
+                                        ...d,
+                                        shipping_city: e.target.value,
+                                      }))
+                                    }
+                                    className="h-8"
+                                  />
+                                </div>
+                                <div className="space-y-1">
+                                  <Label className="text-[11px] text-muted-foreground">
+                                    District
+                                  </Label>
+                                  <Input
+                                    value={customerDraft.shipping_district}
+                                    onChange={(e) =>
+                                      setCustomerDraft((d) => ({
+                                        ...d,
+                                        shipping_district: e.target.value,
+                                      }))
+                                    }
+                                    className="h-8"
+                                  />
+                                </div>
+                                <div className="space-y-1">
+                                  <Label className="text-[11px] text-muted-foreground">
+                                    Shipping Note
+                                  </Label>
+                                  <Input
+                                    value={customerDraft.shipping_note}
+                                    onChange={(e) =>
+                                      setCustomerDraft((d) => ({
+                                        ...d,
+                                        shipping_note: e.target.value,
+                                      }))
+                                    }
+                                    className="h-8"
+                                  />
+                                </div>
+                                <div className="space-y-1 sm:col-span-2">
+                                  <Label className="text-[11px] text-muted-foreground">
+                                    Customer Note
+                                  </Label>
+                                  <Textarea
+                                    rows={2}
+                                    value={customerDraft.customer_note}
+                                    onChange={(e) =>
+                                      setCustomerDraft((d) => ({
+                                        ...d,
+                                        customer_note: e.target.value,
+                                      }))
+                                    }
+                                    className="resize-none text-sm"
+                                  />
+                                </div>
+                              </div>
+                            ) : (
+                              <div className="text-sm">
+                                {/* Identity row */}
+                                <div className="flex items-center gap-3">
+                                  <div className="grid h-11 w-11 shrink-0 place-items-center rounded-full bg-primary/10 text-base font-bold uppercase text-primary">
+                                    {customerName(order).trim()[0] ?? "?"}
+                                  </div>
+                                  <div className="min-w-0 flex-1">
+                                    <div className="flex flex-wrap items-center gap-2">
+                                      <span className="truncate text-[15px] font-semibold">
+                                        {customerName(order)}
+                                      </span>
+                                      {footprint && footprint.total > 0 && (
+                                        <span className="inline-flex items-center gap-1.5 rounded-full border bg-muted/50 px-2 py-0.5 text-[10px] font-medium">
+                                          <History className="h-3 w-3" />
+                                          {footprint.total} past
+                                          <span className="text-emerald-600 dark:text-emerald-400">
+                                            {footprint.delivered}✓
+                                          </span>
+                                          {footprint.returned > 0 && (
+                                            <span className="text-rose-600 dark:text-rose-400">
+                                              {footprint.returned}↩
+                                            </span>
+                                          )}
+                                          {footprint.cancelled > 0 && (
+                                            <span className="text-muted-foreground">
+                                              {footprint.cancelled}✕
+                                            </span>
+                                          )}
+                                        </span>
+                                      )}
+                                    </div>
+                                    <div className="mt-0.5 flex items-center gap-1.5">
+                                      <a
+                                        href={`tel:${customerPhone(order)}`}
+                                        title="Call customer (logs a call attempt)"
+                                        onClick={() => {
+                                          if (!orderId) return;
+                                          logCall.mutate({
+                                            orderId,
+                                            attempts: callAttempts,
+                                            currentStatus: callStatus,
+                                          });
+                                        }}
+                                        className="inline-flex items-center gap-1.5 text-[13px] font-semibold tabular-nums text-foreground transition-colors hover:text-primary"
+                                      >
+                                        <Phone className="h-3 w-3 text-muted-foreground" />
+                                        {customerPhone(order)}
+                                      </a>
+                                      <button
+                                        type="button"
+                                        title="Copy phone"
+                                        onClick={() => {
+                                          navigator.clipboard.writeText(customerPhone(order));
+                                          toast.success("Phone copied");
+                                        }}
+                                        className="text-muted-foreground transition-colors hover:text-foreground"
+                                      >
+                                        <Copy className="h-3 w-3" />
+                                      </button>
+                                    </div>
+                                  </div>
+                                </div>
+
+                                {/* Address block */}
+                                <div className="mt-3 flex items-start gap-2.5 rounded-lg border bg-muted/30 px-3 py-2.5">
+                                  <MapPin className="mt-0.5 h-4 w-4 shrink-0 text-muted-foreground" />
+                                  <div className="min-w-0 flex-1">
+                                    <p className="leading-relaxed text-foreground">
+                                      {order.shipping_address || "—"}
+                                    </p>
+                                    {[
+                                      order.shipping_thana,
+                                      order.shipping_city,
+                                      order.shipping_district,
+                                    ].filter(Boolean).length > 0 && (
+                                      <p className="mt-0.5 text-xs text-muted-foreground">
+                                        {[
+                                          order.shipping_thana,
+                                          order.shipping_city,
+                                          order.shipping_district,
+                                        ]
+                                          .filter(Boolean)
+                                          .join(" · ")}
+                                      </p>
+                                    )}
+                                  </div>
+                                  <button
+                                    type="button"
+                                    title="Copy address"
+                                    onClick={copyAddress}
+                                    className="shrink-0 text-muted-foreground transition-colors hover:text-foreground"
+                                  >
+                                    <Copy className="h-3.5 w-3.5" />
+                                  </button>
+                                </div>
+
+                                {/* Notes */}
+                                {((
+                                  (order as { shipping_note?: string | null }).shipping_note ?? ""
+                                ).trim() ||
+                                  (order.customer_note ?? "").trim()) && (
+                                  <div className="mt-2.5 grid gap-2 sm:grid-cols-2">
+                                    {(
+                                      (order as { shipping_note?: string | null }).shipping_note ??
+                                      ""
+                                    ).trim() && (
+                                      <div className="rounded-lg border border-sky-200/70 bg-sky-50/70 p-2.5 dark:border-sky-900/50 dark:bg-sky-950/30">
+                                        <div className="mb-0.5 flex items-center gap-1 text-[10px] font-bold uppercase tracking-wider text-sky-700 dark:text-sky-300">
+                                          <StickyNote className="h-3 w-3" />
+                                          Shipping Note
+                                        </div>
+                                        <p className="text-xs leading-snug text-foreground">
+                                          {
+                                            (order as { shipping_note?: string | null })
+                                              .shipping_note
+                                          }
+                                        </p>
+                                      </div>
+                                    )}
+                                    {(order.customer_note ?? "").trim() && (
+                                      <div className="rounded-lg border border-amber-200/70 bg-amber-50/70 p-2.5 dark:border-amber-900/50 dark:bg-amber-950/30">
+                                        <div className="mb-0.5 flex items-center gap-1 text-[10px] font-bold uppercase tracking-wider text-amber-700 dark:text-amber-300">
+                                          <StickyNote className="h-3 w-3" />
+                                          Customer Note
+                                        </div>
+                                        <p className="text-xs leading-snug text-foreground">
+                                          {order.customer_note}
+                                        </p>
+                                      </div>
+                                    )}
+                                  </div>
+                                )}
+                              </div>
+                            )}
+
+                            <OrderLocationIntel
+                              orderId={orderId}
+                              address={[
+                                order.shipping_address,
+                                order.shipping_thana,
+                                order.shipping_city,
+                                order.shipping_district,
+                              ]
+                                .filter(Boolean)
+                                .join(", ")}
+                            />
+                          </section>
+
+                          <CustomerHistoryCard phone={phone || null} currentOrderId={orderId} />
+
+                          {/* Items */}
+                          <section className="rounded-2xl border bg-card p-4 shadow-sm transition-shadow duration-300 hover:shadow-md">
+                            <div className="mb-3 flex items-center justify-between gap-2">
+                              <h3 className="text-xs font-bold uppercase tracking-wider text-muted-foreground flex items-center gap-1.5">
+                                <Package className="h-3.5 w-3.5" />
+                                Items ({items.length})
+                              </h3>
+                              {!itemsEditing && (
+                                <Button
+                                  size="sm"
+                                  variant="outline"
+                                  className="h-7 px-2 gap-1"
+                                  onClick={() => guardedAction(() => setItemsEditing(true))}
+                                  disabled={editingBlocked}
+                                >
+                                  <Pencil className="h-3.5 w-3.5" />
+                                  Edit / Add product
+                                </Button>
+                              )}
+                            </div>
+                            {itemsEditing ? (
+                              <OrderItemsEditor
+                                orderId={orderId!}
+                                shippingFee={shippingFee}
+                                discountAmount={discountAmount}
+                                disabled={editingBlocked}
+                                onDone={() => setItemsEditing(false)}
+                                items={items.map((it) => ({
+                                  id: it.id,
+                                  product_id: (it as { product_id: string }).product_id,
+                                  variant_id:
+                                    (it as { variant_id?: string | null }).variant_id ?? null,
+                                  variant_label: it.variant_label ?? null,
+                                  name: it.name ?? "Item",
+                                  image: (it as { image?: string | null }).image ?? null,
+                                  unit_price: Number(it.unit_price ?? it.price ?? 0),
+                                  quantity: Number(it.quantity ?? 1),
+                                }))}
+                              />
+                            ) : (
+                              <div className="overflow-hidden rounded-xl border divide-y divide-border/60">
+                                {items.map((it) => (
+                                  <div
+                                    key={it.id}
+                                    className="flex items-center gap-3 bg-card px-3 py-2.5 text-sm transition-colors hover:bg-muted/40"
+                                  >
+                                    <ItemThumb
+                                      src={(it as { image?: string | null }).image}
+                                      alt={it.name ?? "item"}
+                                    />
+                                    <div className="flex-1 min-w-0">
+                                      <div className="truncate text-[13px] font-semibold">
+                                        {it.name}
+                                      </div>
+                                      <div className="mt-1 flex flex-wrap items-center gap-1.5 text-[11px] text-muted-foreground">
+                                        {it.variant_label && (
+                                          <span className="rounded-full border bg-muted/50 px-1.5 py-px">
+                                            {it.variant_label}
+                                          </span>
+                                        )}
+                                        <span className="inline-flex items-center gap-1 tabular-nums">
+                                          <span className="rounded-full bg-muted px-1.5 py-px font-semibold text-foreground">
+                                            ×{it.quantity}
+                                          </span>
+                                          ৳{Number(it.unit_price ?? it.price).toLocaleString()}
+                                        </span>
+                                      </div>
+                                    </div>
+                                    <div className="shrink-0 text-right">
+                                      <div className="text-[13px] font-bold tabular-nums">
+                                        ৳
+                                        {Number(
+                                          it.line_total ?? Number(it.price) * it.quantity,
+                                        ).toLocaleString()}
+                                      </div>
+                                      <div className="text-[10px] text-muted-foreground tabular-nums">
+                                        ৳{Number(it.unit_price ?? it.price).toLocaleString()} each
+                                      </div>
+                                    </div>
+                                  </div>
+                                ))}
+                              </div>
+                            )}
+
+                            <div className="mt-4 pt-3 border-t space-y-1.5 text-sm">
+                              <div className="flex items-center justify-between">
+                                <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
+                                  Billing
+                                </span>
+                                {!billingEditing && (
+                                  <Button
+                                    size="sm"
+                                    variant="outline"
+                                    className="h-7 px-2 gap-1"
+                                    onClick={() => guardedAction(() => setBillingEditing(true))}
+                                    disabled={editingBlocked}
+                                  >
+                                    <Pencil className="h-3.5 w-3.5" />
+                                    Edit billing
+                                  </Button>
+                                )}
+                              </div>
+                              {billingEditing && orderId && (
+                                <OrderBillingEditor
+                                  orderId={orderId}
+                                  subtotal={subtotal}
+                                  shippingFee={shippingFee}
+                                  discountAmount={discountAmount}
+                                  advanceAmount={advanceAmount}
+                                  disabled={editingBlocked}
+                                  onDone={() => setBillingEditing(false)}
+                                />
+                              )}
+                              <div className="flex justify-between">
+                                <span className="text-muted-foreground">Subtotal</span>
+                                <span className="tabular-nums">৳ {subtotal.toLocaleString()}</span>
+                              </div>
+                              <div className="flex justify-between">
+                                <span className="text-muted-foreground">Shipping</span>
+                                <span className="tabular-nums">
+                                  ৳ {shippingFee.toLocaleString()}
+                                </span>
+                              </div>
+                              {(mode !== "web" || hasActual) && (
+                                <div className="rounded-md border bg-muted/30 p-2.5 mt-1 space-y-1">
+                                  <div className="flex items-center justify-between text-[11px] uppercase tracking-wider text-muted-foreground">
+                                    <span className="inline-flex items-center gap-1">
+                                      <Truck className="h-3 w-3" /> Courier Actual Charge
+                                    </span>
+                                    <button
+                                      onClick={openFeeDialog}
+                                      className="text-primary hover:underline inline-flex items-center gap-0.5"
+                                    >
+                                      <Pencil className="h-3 w-3" /> {hasActual ? "Edit" : "Set"}
+                                    </button>
+                                  </div>
+                                  {hasActual ? (
+                                    <>
+                                      <div className="flex justify-between text-sm">
+                                        <span className="text-muted-foreground">
+                                          Courier charged us
+                                        </span>
+                                        <span className="tabular-nums font-medium">
+                                          ৳ {actualNum.toLocaleString()}
+                                        </span>
+                                      </div>
+                                      {actualShippingBreakdown &&
+                                        (Number(actualShippingBreakdown.delivery ?? 0) > 0 ||
+                                          Number(actualShippingBreakdown.cod ?? 0) > 0 ||
+                                          Number(actualShippingBreakdown.extra ?? 0) > 0) && (
+                                          <div className="rounded bg-background/60 border border-dashed px-2 py-1.5 space-y-0.5 text-[11px]">
+                                            <div className="flex justify-between">
+                                              <span className="text-muted-foreground">
+                                                Delivery charge
+                                              </span>
+                                              <span className="tabular-nums">
+                                                ৳{" "}
+                                                {Number(
+                                                  actualShippingBreakdown.delivery ?? 0,
+                                                ).toLocaleString()}
+                                              </span>
+                                            </div>
+                                            <div className="flex justify-between">
+                                              <span className="text-muted-foreground">
+                                                COD charge
+                                              </span>
+                                              <span className="tabular-nums">
+                                                ৳{" "}
+                                                {Number(
+                                                  actualShippingBreakdown.cod ?? 0,
+                                                ).toLocaleString()}
+                                              </span>
+                                            </div>
+                                            {Number(actualShippingBreakdown.extra ?? 0) > 0 && (
+                                              <div className="flex justify-between">
+                                                <span className="text-muted-foreground">
+                                                  Extra charge
+                                                </span>
+                                                <span className="tabular-nums">
+                                                  ৳{" "}
+                                                  {Number(
+                                                    actualShippingBreakdown.extra ?? 0,
+                                                  ).toLocaleString()}
+                                                </span>
+                                              </div>
+                                            )}
+                                            <div className="flex justify-between font-semibold pt-1 mt-1 border-t border-dashed">
+                                              <span>Total delivery charge</span>
+                                              <span className="tabular-nums">
+                                                ৳{" "}
+                                                {Number(
+                                                  actualShippingBreakdown.total ?? actualNum,
+                                                ).toLocaleString()}
+                                              </span>
+                                            </div>
+                                          </div>
+                                        )}
+                                      <div
+                                        className={`flex justify-between text-sm font-semibold ${shippingLoss > 0 ? "text-rose-600 dark:text-rose-400" : "text-emerald-600 dark:text-emerald-400"}`}
+                                      >
+                                        <span>
+                                          {shippingLoss > 0 ? "Shipping loss" : "Shipping margin"}
+                                        </span>
+                                        <span className="tabular-nums">
+                                          {shippingLoss > 0 ? "− " : "+ "}৳{" "}
+                                          {Math.abs(shippingLoss).toLocaleString()}
+                                        </span>
+                                      </div>
+                                      <div className="text-[10px] text-muted-foreground">
+                                        Source: {actualShippingSource ?? "—"}
+                                      </div>
+                                    </>
+                                  ) : (
+                                    <p className="text-[11px] text-muted-foreground italic">
+                                      Courier sync er por automatic bose jabe, ba manually set koro.
+                                    </p>
+                                  )}
+                                </div>
+                              )}
+
+                              {discountAmount > 0 && (
+                                <div className="flex justify-between text-emerald-600 dark:text-emerald-400">
+                                  <span>Discount</span>
+                                  <span className="tabular-nums">
+                                    − ৳ {discountAmount.toLocaleString()}
+                                  </span>
+                                </div>
+                              )}
+                              {advanceAmount > 0 && (
+                                <div className="space-y-1.5 rounded-md border bg-muted/30 p-2.5">
+                                  <div className="flex justify-between font-semibold text-emerald-600 dark:text-emerald-400">
+                                    <span>Advance Paid</span>
+                                    <span className="tabular-nums">
+                                      − ৳ {advanceAmount.toLocaleString()}
+                                    </span>
+                                  </div>
+                                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-1.5 text-[11px] text-muted-foreground">
+                                    <span>
+                                      <b className="text-foreground">Source:</b>{" "}
+                                      {advanceSource || "—"}
+                                    </span>
+                                    <span>
+                                      <b className="text-foreground">Number:</b>{" "}
+                                      {advancePaymentNumber || "—"}
+                                    </span>
+                                    <span>
+                                      <b className="text-foreground">Txn ID:</b>{" "}
+                                      {advanceTxnId || "—"}
+                                    </span>
+                                  </div>
+                                  <div className="pt-1.5 border-t flex items-center justify-between gap-2 flex-wrap">
+                                    <span className="text-[11px] text-muted-foreground">
+                                      {advancePaymentNumber
+                                        ? "Payment number diyecho — accounts e record koro."
+                                        : "Payment number ID pele niche entry diye Confirm Received chapo."}
+                                    </span>
+                                    <Button
+                                      size="sm"
+                                      className="bg-emerald-600 hover:bg-emerald-700 text-white h-7"
+                                      disabled={!advancePaymentNumber || confirmAdvance.isPending}
+                                      onClick={() => confirmAdvance.mutate()}
+                                    >
+                                      {confirmAdvance.isPending ? (
+                                        <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                                      ) : (
+                                        "Confirm Received"
+                                      )}
+                                    </Button>
+                                  </div>
+                                </div>
+                              )}
+                              <div className="flex justify-between font-bold text-base pt-2 mt-1 border-t">
+                                <span>{advanceAmount > 0 ? "Due Total" : "Total"}</span>
+                                <span className="tabular-nums text-primary">
+                                  ৳ {payableTotal.toLocaleString()}
+                                </span>
+                              </div>
+                            </div>
+                          </section>
+                        </div>
+                      )}
+
+                      {tab === "activity" && orderId && (
+                        <div className="animate-in fade-in-0 slide-in-from-bottom-1 duration-200">
+                          <OrderJourney orderId={orderId} />
+                        </div>
+                      )}
+                    </div>
+
+                    {/* RIGHT — Actions + Notes */}
+                    <div className="space-y-4 lg:sticky lg:top-[132px] lg:self-start">
+                      {/* Status + Assign */}
+                      <section className="rounded-2xl border bg-card p-4 space-y-3 shadow-sm transition-shadow duration-300 hover:shadow-md">
+                        <h3 className="text-xs font-bold uppercase tracking-wider text-muted-foreground flex items-center gap-1.5">
+                          <ListChecks className="h-3.5 w-3.5" />
+                          Manage
+                        </h3>
+                        <div>
+                          <label className="text-[11px] font-semibold text-muted-foreground mb-1.5 block">
+                            Status
+                          </label>
+                          {mode === "web" ? (
+                            <Select
+                              value={
+                                (order as { web_status?: string | null }).web_status ?? "processing"
+                              }
+                              disabled={updateWebStatus.isPending || editingBlocked}
+                              onValueChange={onPickWebStatus}
+                            >
+                              <SelectTrigger className="h-9">
+                                <SelectValue />
+                              </SelectTrigger>
+                              <SelectContent>
+                                {WEB_STATUS_OPTIONS.map((o) => (
+                                  <SelectItem key={o.value} value={o.value}>
+                                    {o.label}
+                                  </SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
+                          ) : (
+                            <Select
+                              value={order.status}
+                              disabled={updateStatus.isPending || editingBlocked}
+                              onValueChange={(v) =>
+                                guardedAction(() => updateStatus.mutate(v as OrderStatus))
+                              }
+                            >
+                              <SelectTrigger className="h-9">
+                                <SelectValue />
+                              </SelectTrigger>
+                              <SelectContent>
+                                {STATUS_GROUPS.map((g) => (
+                                  <div key={g.key}>
+                                    <div className="px-2 pt-1.5 pb-0.5 text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
+                                      {g.label}
+                                    </div>
+                                    {g.statuses.map((s) => (
+                                      <SelectItem key={s} value={s}>
+                                        {STATUS_BADGE[s]?.label ?? s.replace(/_/g, " ")}
+                                      </SelectItem>
+                                    ))}
+                                  </div>
+                                ))}
+                              </SelectContent>
+                            </Select>
+                          )}
+                        </div>
+                        <div>
+                          <label className="text-[11px] font-semibold text-muted-foreground mb-1.5 flex items-center gap-1">
+                            <UserCog className="h-3 w-3" />
+                            Assigned to
+                          </label>
+                          <Select
+                            value={order.assigned_to ?? "none"}
+                            disabled={assignStaff.isPending || editingBlocked}
+                            onValueChange={(v) =>
+                              guardedAction(() => assignStaff.mutate(v === "none" ? null : v))
+                            }
+                          >
+                            <SelectTrigger className="h-9">
+                              <SelectValue placeholder="Unassigned" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="none">— Unassigned —</SelectItem>
+                              {staff.map((s) => (
+                                <SelectItem key={s.id} value={s.id}>
+                                  {s.display_name ?? s.id.slice(0, 8)}
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                        </div>
+                        {order.status !== "pre_order" && (
+                          <Button
+                            variant="outline"
+                            className="w-full gap-1.5 border-indigo-300 text-indigo-700 hover:bg-indigo-50 dark:border-indigo-900 dark:text-indigo-300"
+                            disabled={editingBlocked}
+                            onClick={() => guardedAction(() => setPreorderOpen(true))}
+                          >
+                            <CalendarClock className="h-3.5 w-3.5" /> Convert to Pre-order
+                          </Button>
+                        )}
+                      </section>
+
+                      {/* Notes */}
+                      <section className="rounded-2xl border bg-card p-4 shadow-sm transition-shadow duration-300 hover:shadow-md">
+                        <h3 className="text-xs font-bold uppercase tracking-wider text-muted-foreground mb-3 flex items-center gap-1.5">
+                          <StickyNote className="h-3.5 w-3.5" />
+                          Notes
+                        </h3>
+                        <div className="space-y-2 mb-3">
+                          <Textarea
+                            placeholder="Add internal note…"
+                            value={note}
+                            onChange={(e) => setNote(e.target.value)}
+                            rows={2}
+                            className="resize-none text-sm"
+                          />
+                          <Button
+                            size="sm"
+                            className="w-full gap-1.5"
+                            disabled={!note.trim() || addNote.isPending || editingBlocked}
+                            onClick={() => guardedAction(() => addNote.mutate(undefined))}
+                          >
+                            <Send className="h-3.5 w-3.5" />
+                            Add Note
+                          </Button>
+                          <div className="flex flex-wrap gap-1.5 pt-1">
+                            {QUICK_NOTES.map((q) => (
+                              <button
+                                key={q}
+                                type="button"
+                                disabled={addNote.isPending || editingBlocked}
+                                onClick={() => guardedAction(() => addNote.mutate(q))}
+                                className="rounded-full border bg-muted/40 px-2.5 py-1 text-[10px] font-medium text-muted-foreground transition-colors hover:border-primary/40 hover:bg-primary/10 hover:text-primary disabled:opacity-50"
+                              >
+                                + {q}
+                              </button>
+                            ))}
+                          </div>
+                        </div>
+                        {notes.length > 0 ? (
+                          <div className="space-y-2 max-h-72 overflow-y-auto pr-1">
+                            {notes.map((n) => (
+                              <div
+                                key={n.id}
+                                className="p-3 rounded-lg border-l-4 border-l-amber-500 bg-amber-50/80 dark:bg-amber-950/30 shadow-sm"
+                              >
+                                <div className="text-[10px] font-medium text-muted-foreground mb-1 uppercase tracking-wide">
+                                  {format(new Date(n.created_at), "dd MMM, hh:mm a")}
+                                </div>
+                                <div className="text-sm font-semibold text-foreground dark:text-amber-50 whitespace-pre-wrap leading-relaxed">
+                                  {n.body}
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        ) : (
+                          <p className="text-xs text-muted-foreground italic text-center py-3">
+                            No notes yet
+                          </p>
+                        )}
+                      </section>
+                    </div>
+                  </div>
+                </>
+              )}
             </div>
           </>
         )}
 
         <Dialog open={advOpen} onOpenChange={setAdvOpen}>
-      <DialogContent className="sm:max-w-md">
-        <DialogHeader>
-          <DialogTitle>Advance Payment</DialogTitle>
-          <DialogDescription>Customer kotota advance pay korlo, ki diye?</DialogDescription>
-        </DialogHeader>
-        <div className="space-y-3">
-          <div>
-            <Label>Advance Amount (৳) <span className="text-rose-600">*</span></Label>
-            <Input type="number" min={1} autoFocus value={advAmount} onChange={(e) => setAdvAmount(e.target.value)} placeholder="e.g. 100" />
-          </div>
-          <div>
-            <Label>Payment Source <span className="text-rose-600">*</span></Label>
-            <Select value={advSource} onValueChange={setAdvSource}>
-              <SelectTrigger><SelectValue placeholder="Select source" /></SelectTrigger>
-              <SelectContent>
-                <SelectItem value="bKash">bKash</SelectItem>
-                <SelectItem value="Nagad">Nagad</SelectItem>
-                <SelectItem value="Rocket">Rocket</SelectItem>
-                <SelectItem value="Upay">Upay</SelectItem>
-                <SelectItem value="Bank">Bank Transfer</SelectItem>
-                <SelectItem value="Card">Card</SelectItem>
-                <SelectItem value="Cash">Cash</SelectItem>
-                <SelectItem value="Other">Other</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-          <div>
-            <Label>Payment Number / Last 4 Digits <span className="text-rose-600">*</span></Label>
-            <Input
-              inputMode="numeric"
-              maxLength={20}
-              value={advNumber}
-              onChange={(e) => setAdvNumber(e.target.value.replace(/[^0-9]/g, ""))}
-              placeholder="e.g. 01712345678 or 5678"
-            />
-            <p className="mt-1 text-[10px] text-muted-foreground">Full number ba last 4 digit — jeta accept koreche.</p>
-          </div>
-          <div>
-            <Label className="text-muted-foreground">Transaction ID <span className="text-muted-foreground/70">(optional)</span></Label>
-            <Input maxLength={50} value={advTxnId} onChange={(e) => setAdvTxnId(e.target.value)} placeholder="e.g. 9F7A2BX1Q" />
-          </div>
-        </div>
-        <DialogFooter>
-          <Button variant="ghost" onClick={() => setAdvOpen(false)}>Cancel</Button>
-          <Button disabled={updateWebStatus.isPending} onClick={submitAdvance} className="bg-emerald-600 hover:bg-emerald-700 text-white">
-            {updateWebStatus.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : "Confirm"}
-          </Button>
-        </DialogFooter>
-      </DialogContent>
+          <DialogContent className="sm:max-w-md">
+            <DialogHeader>
+              <DialogTitle>Advance Payment</DialogTitle>
+              <DialogDescription>Customer kotota advance pay korlo, ki diye?</DialogDescription>
+            </DialogHeader>
+            <div className="space-y-3">
+              <div>
+                <Label>
+                  Advance Amount (৳) <span className="text-rose-600">*</span>
+                </Label>
+                <Input
+                  type="number"
+                  min={1}
+                  autoFocus
+                  value={advAmount}
+                  onChange={(e) => setAdvAmount(e.target.value)}
+                  placeholder="e.g. 100"
+                />
+              </div>
+              <div>
+                <Label>
+                  Payment Source <span className="text-rose-600">*</span>
+                </Label>
+                <Select value={advSource} onValueChange={setAdvSource}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select source" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="bKash">bKash</SelectItem>
+                    <SelectItem value="Nagad">Nagad</SelectItem>
+                    <SelectItem value="Rocket">Rocket</SelectItem>
+                    <SelectItem value="Upay">Upay</SelectItem>
+                    <SelectItem value="Bank">Bank Transfer</SelectItem>
+                    <SelectItem value="Card">Card</SelectItem>
+                    <SelectItem value="Cash">Cash</SelectItem>
+                    <SelectItem value="Other">Other</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div>
+                <Label>
+                  Payment Number / Last 4 Digits <span className="text-rose-600">*</span>
+                </Label>
+                <Input
+                  inputMode="numeric"
+                  maxLength={20}
+                  value={advNumber}
+                  onChange={(e) => setAdvNumber(e.target.value.replace(/[^0-9]/g, ""))}
+                  placeholder="e.g. 01712345678 or 5678"
+                />
+                <p className="mt-1 text-[10px] text-muted-foreground">
+                  Full number ba last 4 digit — jeta accept koreche.
+                </p>
+              </div>
+              <div>
+                <Label className="text-muted-foreground">
+                  Transaction ID <span className="text-muted-foreground/70">(optional)</span>
+                </Label>
+                <Input
+                  maxLength={50}
+                  value={advTxnId}
+                  onChange={(e) => setAdvTxnId(e.target.value)}
+                  placeholder="e.g. 9F7A2BX1Q"
+                />
+              </div>
+            </div>
+            <DialogFooter>
+              <Button variant="ghost" onClick={() => setAdvOpen(false)}>
+                Cancel
+              </Button>
+              <Button
+                disabled={updateWebStatus.isPending}
+                onClick={submitAdvance}
+                className="bg-emerald-600 hover:bg-emerald-700 text-white"
+              >
+                {updateWebStatus.isPending ? (
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                ) : (
+                  "Confirm"
+                )}
+              </Button>
+            </DialogFooter>
+          </DialogContent>
         </Dialog>
 
         <Dialog open={feeOpen} onOpenChange={setFeeOpen}>
@@ -1313,7 +1994,8 @@ export function OrderDrawer({ orderId, onClose, mode = "fulfillment" }: Props) {
             <DialogHeader>
               <DialogTitle>Courier Actual Charge</DialogTitle>
               <DialogDescription>
-                Courier (Pathao/Steadfast) amader theke koto taka delivery charge niyeche? Eta finance e expense entry hisebe boshe jabe.
+                Courier (Pathao/Steadfast) amader theke koto taka delivery charge niyeche? Eta
+                finance e expense entry hisebe boshe jabe.
               </DialogDescription>
             </DialogHeader>
             <div className="space-y-3">
@@ -1322,7 +2004,9 @@ export function OrderDrawer({ orderId, onClose, mode = "fulfillment" }: Props) {
                 <Input value={`৳ ${shippingFee.toLocaleString()}`} disabled />
               </div>
               <div>
-                <Label>Courier Actual Charge (৳) <span className="text-rose-600">*</span></Label>
+                <Label>
+                  Courier Actual Charge (৳) <span className="text-rose-600">*</span>
+                </Label>
                 <Input
                   type="number"
                   step="0.01"
@@ -1334,17 +2018,33 @@ export function OrderDrawer({ orderId, onClose, mode = "fulfillment" }: Props) {
                 />
                 {feeAmount && Number(feeAmount) > 0 && (
                   <p className="mt-1 text-[11px] text-muted-foreground">
-                    {Number(feeAmount) > shippingFee
-                      ? <>Loss: <span className="text-rose-600 font-semibold">৳ {(Number(feeAmount) - shippingFee).toLocaleString()}</span></>
-                      : <>Margin: <span className="text-emerald-600 font-semibold">৳ {(shippingFee - Number(feeAmount)).toLocaleString()}</span></>}
+                    {Number(feeAmount) > shippingFee ? (
+                      <>
+                        Loss:{" "}
+                        <span className="text-rose-600 font-semibold">
+                          ৳ {(Number(feeAmount) - shippingFee).toLocaleString()}
+                        </span>
+                      </>
+                    ) : (
+                      <>
+                        Margin:{" "}
+                        <span className="text-emerald-600 font-semibold">
+                          ৳ {(shippingFee - Number(feeAmount)).toLocaleString()}
+                        </span>
+                      </>
+                    )}
                   </p>
                 )}
               </div>
             </div>
             <DialogFooter>
-              <Button variant="ghost" onClick={() => setFeeOpen(false)}>Cancel</Button>
+              <Button variant="ghost" onClick={() => setFeeOpen(false)}>
+                Cancel
+              </Button>
               <Button
-                disabled={saveFee.isPending || !feeAmount || Number(feeAmount) < 0 || editingBlocked}
+                disabled={
+                  saveFee.isPending || !feeAmount || Number(feeAmount) < 0 || editingBlocked
+                }
                 onClick={() => guardedAction(() => saveFee.mutate(Number(feeAmount)))}
               >
                 {saveFee.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : "Save"}

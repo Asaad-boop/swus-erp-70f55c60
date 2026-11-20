@@ -2,10 +2,39 @@ import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { format, formatDistanceToNow } from "date-fns";
 import {
-  ArrowLeft, Printer, Truck, Loader2, Phone, MessageCircle, Plus, Minus, Trash2,
-  Search, Star, Tag as TagIcon, XCircle, Smartphone, Save, Undo2, CheckCircle2,
-  ChevronLeft, ChevronRight, RotateCcw, Repeat, Copy, Check, MapPin, ShieldCheck, ShieldAlert, CalendarClock, RefreshCw,
-  ChevronDown, Globe, Facebook, Instagram, MoreHorizontal,
+  ArrowLeft,
+  Printer,
+  Truck,
+  Loader2,
+  Phone,
+  MessageCircle,
+  Plus,
+  Minus,
+  Trash2,
+  Search,
+  Star,
+  Tag as TagIcon,
+  XCircle,
+  Smartphone,
+  Save,
+  Undo2,
+  CheckCircle2,
+  ChevronLeft,
+  ChevronRight,
+  RotateCcw,
+  Repeat,
+  Copy,
+  Check,
+  MapPin,
+  ShieldCheck,
+  ShieldAlert,
+  CalendarClock,
+  RefreshCw,
+  ChevronDown,
+  Globe,
+  Facebook,
+  Instagram,
+  MoreHorizontal,
 } from "lucide-react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { PreorderConvertDialog } from "@/components/erp/orders/preorder-convert-dialog";
@@ -13,25 +42,61 @@ import { useServerFn } from "@tanstack/react-start";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { fetchCourierHistoryFn } from "@/lib/erp/courier-history.functions";
-import { pathaoCitiesFn, pathaoZonesFn, pathaoAreasFn, pathaoDetectForOrderFn, pathaoMatchAddressFn } from "@/lib/erp/pathao.functions";
+import {
+  pathaoCitiesFn,
+  pathaoZonesFn,
+  pathaoAreasFn,
+  pathaoDetectForOrderFn,
+  pathaoMatchAddressFn,
+} from "@/lib/erp/pathao.functions";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Switch } from "@/components/ui/switch";
 import { Textarea } from "@/components/ui/textarea";
-import { Select, SelectContent, SelectGroup, SelectItem, SelectLabel, SelectTrigger, SelectValue } from "@/components/ui/select";
+import {
+  Select,
+  SelectContent,
+  SelectGroup,
+  SelectItem,
+  SelectLabel,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
-import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
+import {
+  Dialog,
+  DialogContent,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+} from "@/components/ui/dialog";
 import { useOrderDetail } from "@/hooks/erp/use-orders-query";
 import { useLogCallAttempt } from "@/hooks/erp/use-order-ops";
-import { bdPhoneError, customerName, customerPhone, invoiceDisplay, settlementBadge, statusBadge, type OrderStatus } from "@/lib/erp/orders";
+import {
+  bdPhoneError,
+  customerName,
+  customerPhone,
+  invoiceDisplay,
+  settlementBadge,
+  statusBadge,
+  type OrderStatus,
+} from "@/lib/erp/orders";
 import { PrintableInvoice } from "@/components/erp/orders/order-invoice";
 import { BookPathaoDialog } from "@/components/erp/courier/book-pathao-dialog";
 import { BookSteadfastDialog } from "@/components/erp/courier/book-steadfast-dialog";
 import {
-  OrderTimeline, ShipmentPanel, CustomerHistoryPanel, AttributionPanel,
-  ReturnDialog, ExchangeDialog, useOrderNeighbors, OrderCasesPanel, ActivityLogPanel,
+  ShipmentPanel,
+  CustomerHistoryPanel,
+  AttributionPanel,
+  ReturnDialog,
+  ExchangeDialog,
+  useOrderNeighbors,
+  OrderCasesPanel,
+  ActivityLogPanel,
 } from "@/components/erp/orders/order-detail-extras";
+import { OrderJourney } from "@/components/erp/orders/order-journey";
 import { useCurrentRole } from "@/hooks/use-current-role";
 import { useOrderLock } from "@/hooks/erp/use-order-lock";
 import type { OrderLockState } from "@/hooks/erp/use-order-lock";
@@ -76,11 +141,21 @@ function normalizePaymentSource(value: string | null): string | null {
 }
 
 function parseWebsiteAdvanceDetails(text: string) {
-  const advanceMatch = text.match(/(?:advance\s*(?:paid|payment|amount)?|paid\s*advance)\s*[:\-]?\s*(?:৳|tk\.?|bdt)?\s*([0-9,]+(?:\.[0-9]+)?)/i);
-  const dueMatch = text.match(/(?:due\s*(?:on\s*delivery|amount)?|cod\s*due)\s*[:\-]?\s*(?:৳|tk\.?|bdt)?\s*([0-9,]+(?:\.[0-9]+)?)/i);
-  const sourceMatch = text.match(/(?:payment(?:\s*method)?|method|source)\s*[:\-]\s*([A-Za-z\- ]{2,24})/i);
-  const phoneMatch = text.match(/(?:from|sender|payment\s*(?:no|number)|(?:b\s*-?kash|bkash|nagad|rocket)\s*(?:no|number))\s*[:\-]\s*(\+?\d[\d\s\-]{5,24})/i);
-  const txnMatch = text.match(/(?:trx\s*id|trxid|transaction\s*id|txn\s*id|txn)\s*[:\-]\s*([A-Za-z0-9_-]{4,60})/i);
+  const advanceMatch = text.match(
+    /(?:advance\s*(?:paid|payment|amount)?|paid\s*advance)\s*[:\-]?\s*(?:৳|tk\.?|bdt)?\s*([0-9,]+(?:\.[0-9]+)?)/i,
+  );
+  const dueMatch = text.match(
+    /(?:due\s*(?:on\s*delivery|amount)?|cod\s*due)\s*[:\-]?\s*(?:৳|tk\.?|bdt)?\s*([0-9,]+(?:\.[0-9]+)?)/i,
+  );
+  const sourceMatch = text.match(
+    /(?:payment(?:\s*method)?|method|source)\s*[:\-]\s*([A-Za-z\- ]{2,24})/i,
+  );
+  const phoneMatch = text.match(
+    /(?:from|sender|payment\s*(?:no|number)|(?:b\s*-?kash|bkash|nagad|rocket)\s*(?:no|number))\s*[:\-]\s*(\+?\d[\d\s\-]{5,24})/i,
+  );
+  const txnMatch = text.match(
+    /(?:trx\s*id|trxid|transaction\s*id|txn\s*id|txn)\s*[:\-]\s*([A-Za-z0-9_-]{4,60})/i,
+  );
   return {
     amount: parseMoneyText(advanceMatch?.[1]),
     due: parseMoneyText(dueMatch?.[1]),
@@ -90,8 +165,16 @@ function parseWebsiteAdvanceDetails(text: string) {
   };
 }
 
-function isWebsiteOrderSource(order: { source?: string | null; source_platform?: string | null; source_website?: string | null } | null | undefined) {
-  const text = [order?.source, order?.source_platform, order?.source_website].filter(Boolean).join(" ").toLowerCase();
+function isWebsiteOrderSource(
+  order:
+    | { source?: string | null; source_platform?: string | null; source_website?: string | null }
+    | null
+    | undefined,
+) {
+  const text = [order?.source, order?.source_platform, order?.source_website]
+    .filter(Boolean)
+    .join(" ")
+    .toLowerCase();
   return /website|pixel|utm|direct|organic|shopify|hobbyshop|toyora/.test(text);
 }
 
@@ -103,7 +186,8 @@ function pathaoSourceLabel(source?: string) {
 function sourceLabel(source?: string | null): string {
   if (!source) return "—";
   const s = source.toLowerCase();
-  if (s === "pixel" || s === "website" || s === "utm" || s === "direct" || s === "organic") return "Website";
+  if (s === "pixel" || s === "website" || s === "utm" || s === "direct" || s === "organic")
+    return "Website";
   if (s === "facebook" || s === "fb" || s === "meta") return "Facebook";
   if (s === "instagram" || s === "ig") return "Instagram";
   if (s === "google") return "Google";
@@ -117,10 +201,13 @@ function callLogHighlight(lastCallAt?: string | null) {
   const mins = Math.max(0, Math.floor((now - then) / 60000));
   const hours = Math.floor(mins / 60);
   const text =
-    mins < 1 ? "এইমাত্র কল হয়েছে" :
-    mins < 60 ? `${mins} মিনিট আগে` :
-    hours < 24 ? `${hours} ঘণ্টা আগে` :
-    formatDistanceToNow(new Date(lastCallAt), { addSuffix: true });
+    mins < 1
+      ? "এইমাত্র কল হয়েছে"
+      : mins < 60
+        ? `${mins} মিনিট আগে`
+        : hours < 24
+          ? `${hours} ঘণ্টা আগে`
+          : formatDistanceToNow(new Date(lastCallAt), { addSuffix: true });
   const tone = mins < 5 ? "fresh" : mins < 60 ? "warm" : "cold";
   return { text, tone };
 }
@@ -134,26 +221,42 @@ const SOURCE_PLATFORM_OPTIONS = [
   { value: "Other", label: "Other", icon: MoreHorizontal, group: "Other" },
 ] as const;
 
-function CopyChip({ value, className, children }: { value: string; className?: string; children: React.ReactNode }) {
+function CopyChip({
+  value,
+  className,
+  children,
+}: {
+  value: string;
+  className?: string;
+  children: React.ReactNode;
+}) {
   const [copied, setCopied] = useState(false);
   return (
     <button
       type="button"
       onClick={(e) => {
         e.stopPropagation();
-        navigator.clipboard.writeText(value).then(() => {
-          setCopied(true);
-          toast.success("Copied to clipboard");
-          setTimeout(() => setCopied(false), 1200);
-        }).catch(() => toast.error("Copy failed"));
+        navigator.clipboard
+          .writeText(value)
+          .then(() => {
+            setCopied(true);
+            toast.success("Copied to clipboard");
+            setTimeout(() => setCopied(false), 1200);
+          })
+          .catch(() => toast.error("Copy failed"));
       }}
-      className={cn("group inline-flex items-center gap-1 rounded-md px-1.5 py-0.5 hover:bg-gray-100 dark:hover:bg-muted/50 transition-colors", className)}
+      className={cn(
+        "group inline-flex items-center gap-1 rounded-md px-1.5 py-0.5 hover:bg-gray-100 dark:hover:bg-muted/50 transition-colors",
+        className,
+      )}
       title="Click to copy"
     >
       {children}
-      {copied
-        ? <Check className="h-3 w-3 text-emerald-600" />
-        : <Copy className="h-3 w-3 text-gray-300 group-hover:text-gray-500 transition-colors" />}
+      {copied ? (
+        <Check className="h-3 w-3 text-emerald-600" />
+      ) : (
+        <Copy className="h-3 w-3 text-gray-300 group-hover:text-gray-500 transition-colors" />
+      )}
     </button>
   );
 }
@@ -164,7 +267,15 @@ function CopyChip({ value, className, children }: { value: string; className?: s
 
 /** Unified section shell — optionally collapsible to keep the page calm. */
 function Panel({
-  title, accent = "bg-gray-300", right, children, collapsible = false, defaultOpen = true, className, bodyClassName, lazy = false,
+  title,
+  accent = "bg-gray-300",
+  right,
+  children,
+  collapsible = false,
+  defaultOpen = true,
+  className,
+  bodyClassName,
+  lazy = false,
 }: {
   title: React.ReactNode;
   accent?: string;
@@ -179,26 +290,50 @@ function Panel({
   const [open, setOpen] = useState(defaultOpen);
   const isOpen = collapsible ? open : true;
   return (
-    <section className={cn("surface-panel rise-in group/panel relative rounded-2xl overflow-hidden", lazy && "lazy-panel", className)}>
+    <section
+      className={cn(
+        "surface-panel rise-in group/panel relative rounded-2xl overflow-hidden",
+        lazy && "lazy-panel",
+        className,
+      )}
+    >
       <span className="pointer-events-none absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-white/60 to-transparent dark:via-white/10" />
       <header className="surface-head px-3.5 py-2 sm:px-4 grid grid-cols-[minmax(0,1fr)_auto] items-center gap-3">
         <button
           type="button"
           disabled={!collapsible}
           onClick={() => setOpen((v) => !v)}
-          className={cn("flex min-w-0 items-center gap-2.5 text-left", collapsible && "group cursor-pointer")}
+          className={cn(
+            "flex min-w-0 items-center gap-2.5 text-left",
+            collapsible && "group cursor-pointer",
+          )}
         >
-          <span className={cn("h-4 w-1 shrink-0 rounded-full transition-transform duration-300 group-hover/panel:scale-y-110", accent)} />
-          <h3 className="font-display truncate text-[12px] font-semibold uppercase tracking-[0.08em] text-gray-600 dark:text-muted-foreground">{title}</h3>
+          <span
+            className={cn(
+              "h-4 w-1 shrink-0 rounded-full transition-transform duration-300 group-hover/panel:scale-y-110",
+              accent,
+            )}
+          />
+          <h3 className="font-display truncate text-[12px] font-semibold uppercase tracking-[0.08em] text-gray-600 dark:text-muted-foreground">
+            {title}
+          </h3>
           {collapsible && (
-            <ChevronDown className={cn("h-3.5 w-3.5 shrink-0 text-muted-foreground transition-transform duration-300", isOpen && "rotate-180")} />
+            <ChevronDown
+              className={cn(
+                "h-3.5 w-3.5 shrink-0 text-muted-foreground transition-transform duration-300",
+                isOpen && "rotate-180",
+              )}
+            />
           )}
         </button>
         {right ? <div className="shrink-0">{right}</div> : null}
       </header>
       {isOpen && (
-        <div className={cn("border-t border-gray-100 dark:border-border", bodyClassName ?? "p-3.5")}>{children}</div>
-
+        <div
+          className={cn("border-t border-gray-100 dark:border-border", bodyClassName ?? "p-3.5")}
+        >
+          {children}
+        </div>
       )}
     </section>
   );
@@ -207,27 +342,89 @@ function Panel({
 type StatCell = { total: number; success: number; cancel: number };
 
 const STAT_COLUMNS = [
-  { key: "ourRecord", label: "Our Record", dot: "bg-indigo-500", bar: "bg-indigo-500", tint: "from-indigo-500/[0.07]" },
-  { key: "overall",   label: "Overall",    dot: "bg-sky-500",    bar: "bg-sky-500",    tint: "from-sky-500/[0.07]" },
-  { key: "pathao",    label: "Pathao",     dot: "bg-rose-500",   bar: "bg-rose-500",   tint: "from-rose-500/[0.07]" },
-  { key: "steadfast", label: "Other couriers",  dot: "bg-amber-500",  bar: "bg-amber-500",  tint: "from-amber-500/[0.07]" },
+  {
+    key: "ourRecord",
+    label: "Our Record",
+    dot: "bg-indigo-500",
+    bar: "bg-indigo-500",
+    tint: "from-indigo-500/[0.07]",
+  },
+  {
+    key: "overall",
+    label: "Overall",
+    dot: "bg-sky-500",
+    bar: "bg-sky-500",
+    tint: "from-sky-500/[0.07]",
+  },
+  {
+    key: "pathao",
+    label: "Pathao",
+    dot: "bg-rose-500",
+    bar: "bg-rose-500",
+    tint: "from-rose-500/[0.07]",
+  },
+  {
+    key: "steadfast",
+    label: "Other couriers",
+    dot: "bg-amber-500",
+    bar: "bg-amber-500",
+    tint: "from-amber-500/[0.07]",
+  },
 ] as const;
 
 type CourierRow = { name: string; label: string; total: number; success: number; cancel: number };
 
 function toneFor(pct: number, empty: boolean) {
-  if (empty) return { text: "text-muted-foreground/60", ring: "stroke-muted-foreground/30", bar: "bg-muted-foreground/30", chip: "bg-muted/40 text-muted-foreground ring-border", glow: "" };
-  if (pct >= 80) return { text: "text-emerald-600 dark:text-emerald-400", ring: "stroke-emerald-500", bar: "bg-emerald-500", chip: "bg-emerald-500/10 text-emerald-700 dark:text-emerald-300 ring-emerald-500/30", glow: "shadow-[0_0_16px_-2px_rgba(16,185,129,0.4)]" };
-  if (pct >= 50) return { text: "text-amber-600 dark:text-amber-400", ring: "stroke-amber-500", bar: "bg-amber-500", chip: "bg-amber-500/10 text-amber-700 dark:text-amber-300 ring-amber-500/30", glow: "shadow-[0_0_16px_-2px_rgba(245,158,11,0.4)]" };
-  return { text: "text-rose-600 dark:text-rose-400", ring: "stroke-rose-500", bar: "bg-rose-500", chip: "bg-rose-500/10 text-rose-700 dark:text-rose-300 ring-rose-500/30", glow: "shadow-[0_0_16px_-2px_rgba(244,63,94,0.4)]" };
+  if (empty)
+    return {
+      text: "text-muted-foreground/60",
+      ring: "stroke-muted-foreground/30",
+      bar: "bg-muted-foreground/30",
+      chip: "bg-muted/40 text-muted-foreground ring-border",
+      glow: "",
+    };
+  if (pct >= 80)
+    return {
+      text: "text-emerald-600 dark:text-emerald-400",
+      ring: "stroke-emerald-500",
+      bar: "bg-emerald-500",
+      chip: "bg-emerald-500/10 text-emerald-700 dark:text-emerald-300 ring-emerald-500/30",
+      glow: "shadow-[0_0_16px_-2px_rgba(16,185,129,0.4)]",
+    };
+  if (pct >= 50)
+    return {
+      text: "text-amber-600 dark:text-amber-400",
+      ring: "stroke-amber-500",
+      bar: "bg-amber-500",
+      chip: "bg-amber-500/10 text-amber-700 dark:text-amber-300 ring-amber-500/30",
+      glow: "shadow-[0_0_16px_-2px_rgba(245,158,11,0.4)]",
+    };
+  return {
+    text: "text-rose-600 dark:text-rose-400",
+    ring: "stroke-rose-500",
+    bar: "bg-rose-500",
+    chip: "bg-rose-500/10 text-rose-700 dark:text-rose-300 ring-rose-500/30",
+    glow: "shadow-[0_0_16px_-2px_rgba(244,63,94,0.4)]",
+  };
 }
 
 /** Bangla verdict for a success percentage. */
 function banglaVerdict(pct: number, empty: boolean) {
   if (empty) return { label: "তথ্য নেই", chip: "bg-muted/50 text-muted-foreground ring-border" };
-  if (pct >= 80) return { label: "ভালো", chip: "bg-emerald-500/10 text-emerald-700 dark:text-emerald-300 ring-emerald-500/30" };
-  if (pct >= 50) return { label: "মিডিয়াম", chip: "bg-amber-500/10 text-amber-700 dark:text-amber-300 ring-amber-500/30" };
-  return { label: "খারাপ", chip: "bg-rose-500/10 text-rose-700 dark:text-rose-300 ring-rose-500/30" };
+  if (pct >= 80)
+    return {
+      label: "ভালো",
+      chip: "bg-emerald-500/10 text-emerald-700 dark:text-emerald-300 ring-emerald-500/30",
+    };
+  if (pct >= 50)
+    return {
+      label: "মিডিয়াম",
+      chip: "bg-amber-500/10 text-amber-700 dark:text-amber-300 ring-amber-500/30",
+    };
+  return {
+    label: "খারাপ",
+    chip: "bg-rose-500/10 text-rose-700 dark:text-rose-300 ring-rose-500/30",
+  };
 }
 
 function StatsStrip({
@@ -283,9 +480,7 @@ function StatsStrip({
       </div>
     );
   }
-  const courierRows = couriers
-    .filter((c) => c.total > 0)
-    .sort((a, b) => b.total - a.total);
+  const courierRows = couriers.filter((c) => c.total > 0).sort((a, b) => b.total - a.total);
   if (cardCount === 0 && courierRows.length === 0) return null;
   // Hero = Overall if present, else the first visible column.
   const heroCol = visibleColumns.find((c) => c.key === "overall") ?? visibleColumns[0];
@@ -304,35 +499,50 @@ function StatsStrip({
           <div className="flex items-center gap-2.5">
             <div className="relative shrink-0">
               <svg viewBox="0 0 36 36" className="h-11 w-11 -rotate-90">
-
-                <circle cx="18" cy="18" r={R} className="fill-none stroke-muted/60" strokeWidth="3" />
-                <circle cx="18" cy="18" r={R}
+                <circle
+                  cx="18"
+                  cy="18"
+                  r={R}
+                  className="fill-none stroke-muted/60"
+                  strokeWidth="3"
+                />
+                <circle
+                  cx="18"
+                  cy="18"
+                  r={R}
                   className={cn("fill-none transition-all duration-700 ease-out", heroTone.ring)}
-                  strokeWidth="3.5" strokeLinecap="round" strokeDasharray={C}
-                  strokeDashoffset={heroDenom === 0 ? C : C * (1 - heroPct / 100)} />
+                  strokeWidth="3.5"
+                  strokeLinecap="round"
+                  strokeDasharray={C}
+                  strokeDashoffset={heroDenom === 0 ? C : C * (1 - heroPct / 100)}
+                />
               </svg>
               <div className="absolute inset-0 flex items-center justify-center">
                 <span className={cn("text-[11px] font-bold tabular-nums", heroTone.text)}>
                   {heroDenom === 0 ? "—" : `${heroPct}%`}
                 </span>
               </div>
-
             </div>
             <div className="leading-tight">
               <div className="flex items-center gap-2">
                 <span className="text-[10px] font-bold uppercase tracking-[0.12em] text-muted-foreground">
                   Success rate
                 </span>
-                <span className={cn(
-                  "inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-bold ring-1 ring-inset",
-                  banglaVerdict(heroPct, heroDenom === 0).chip,
-                )}>
+                <span
+                  className={cn(
+                    "inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-bold ring-1 ring-inset",
+                    banglaVerdict(heroPct, heroDenom === 0).chip,
+                  )}
+                >
                   {banglaVerdict(heroPct, heroDenom === 0).label}
                 </span>
               </div>
               <div className="text-sm font-semibold tabular-nums text-foreground">
-                {hero.success}<span className="text-muted-foreground/60">/{heroDenom || hero.total}</span>
-                <span className="ml-2 text-xs font-medium text-rose-600 dark:text-rose-400">{hero.cancel} cancel</span>
+                {hero.success}
+                <span className="text-muted-foreground/60">/{heroDenom || hero.total}</span>
+                <span className="ml-2 text-xs font-medium text-rose-600 dark:text-rose-400">
+                  {hero.cancel} cancel
+                </span>
               </div>
             </div>
           </div>
@@ -352,8 +562,12 @@ function StatsStrip({
                 >
                   <span className={cn("h-1.5 w-1.5 rounded-full", c.dot)} />
                   <span className="text-muted-foreground">{c.label}</span>
-                  <span className={cn("font-bold tabular-nums", t.text)}>{denom === 0 ? "—" : `${pct}%`}</span>
-                  <span className="tabular-nums text-muted-foreground/70">{s.success}/{denom || s.total}</span>
+                  <span className={cn("font-bold tabular-nums", t.text)}>
+                    {denom === 0 ? "—" : `${pct}%`}
+                  </span>
+                  <span className="tabular-nums text-muted-foreground/70">
+                    {s.success}/{denom || s.total}
+                  </span>
                 </span>
               );
             })}
@@ -375,7 +589,9 @@ function StatsStrip({
       {(courierRows.length > 0 || loading || refreshing) && (
         <div className="border-t border-border/60">
           {courierRows.length === 0 ? (
-            <p className="px-4 py-2.5 text-[11px] text-muted-foreground/70">Courier data ashche...</p>
+            <p className="px-4 py-2.5 text-[11px] text-muted-foreground/70">
+              Courier data ashche...
+            </p>
           ) : (
             <ul className="divide-y divide-border/40">
               {courierRows.map((c) => {
@@ -383,18 +599,33 @@ function StatsStrip({
                 const pct = denom > 0 ? Math.round((c.success / denom) * 100) : 0;
                 const t = toneFor(pct, denom === 0);
                 return (
-                  <li key={c.name} className="flex items-center gap-3 px-3.5 py-1 transition-colors hover:bg-muted/30">
-                    <span className="w-24 shrink-0 truncate text-[11px] font-medium text-foreground">{c.label}</span>
+                  <li
+                    key={c.name}
+                    className="flex items-center gap-3 px-3.5 py-1 transition-colors hover:bg-muted/30"
+                  >
+                    <span className="w-24 shrink-0 truncate text-[11px] font-medium text-foreground">
+                      {c.label}
+                    </span>
                     <div className="h-1 flex-1 overflow-hidden rounded-full bg-muted">
-                      <div className={cn("h-full rounded-full transition-all duration-700", t.bar)} style={{ width: `${denom === 0 ? 0 : pct}%` }} />
+                      <div
+                        className={cn("h-full rounded-full transition-all duration-700", t.bar)}
+                        style={{ width: `${denom === 0 ? 0 : pct}%` }}
+                      />
                     </div>
-                    <span className={cn("w-9 shrink-0 text-right text-[11px] font-bold tabular-nums", t.text)}>
+                    <span
+                      className={cn(
+                        "w-9 shrink-0 text-right text-[11px] font-bold tabular-nums",
+                        t.text,
+                      )}
+                    >
                       {denom === 0 ? "—" : `${pct}%`}
                     </span>
-                    <span className={cn(
-                      "w-16 shrink-0 rounded-full px-1.5 py-0.5 text-center text-[10px] font-bold ring-1 ring-inset",
-                      banglaVerdict(pct, denom === 0).chip,
-                    )}>
+                    <span
+                      className={cn(
+                        "w-16 shrink-0 rounded-full px-1.5 py-0.5 text-center text-[10px] font-bold ring-1 ring-inset",
+                        banglaVerdict(pct, denom === 0).chip,
+                      )}
+                    >
                       {banglaVerdict(pct, denom === 0).label}
                     </span>
                     <span className="w-14 shrink-0 text-right text-[10px] tabular-nums text-muted-foreground">
@@ -410,8 +641,12 @@ function StatsStrip({
 
       {showFraud && (
         <div className="border-t border-border/60 bg-muted/20 px-4 py-2.5">
-          <span className="text-[10px] font-bold uppercase tracking-[0.12em] text-muted-foreground">Fraud note</span>
-          <p className="mt-1 text-[11px] leading-snug text-foreground/80 whitespace-pre-wrap">{fraudNote}</p>
+          <span className="text-[10px] font-bold uppercase tracking-[0.12em] text-muted-foreground">
+            Fraud note
+          </span>
+          <p className="mt-1 text-[11px] leading-snug text-foreground/80 whitespace-pre-wrap">
+            {fraudNote}
+          </p>
         </div>
       )}
     </div>
@@ -422,7 +657,15 @@ function StatsStrip({
 /*  Field shell                                                                */
 /* -------------------------------------------------------------------------- */
 
-function FieldShell({ label, children, className }: { label: string; children: React.ReactNode; className?: string }) {
+function FieldShell({
+  label,
+  children,
+  className,
+}: {
+  label: string;
+  children: React.ReactNode;
+  className?: string;
+}) {
   return (
     <div className={cn("space-y-1", className)}>
       <label className="text-[11px] font-medium text-muted-foreground">{label}</label>
@@ -467,7 +710,10 @@ function useCrossSellIds(currentProductIds: string[]) {
         .in("product_id", currentProductIds)
         .limit(400);
       if (e1) throw e1;
-      const orderIds = Array.from(new Set((seedRows ?? []).map((r) => r.order_id as string))).slice(0, 300);
+      const orderIds = Array.from(new Set((seedRows ?? []).map((r) => r.order_id as string))).slice(
+        0,
+        300,
+      );
       if (orderIds.length === 0) return [] as string[];
       // Step 2: oi order gulor onno product gulo count kori
       const { data: coRows, error: e2 } = await supabase
@@ -491,11 +737,17 @@ function useCrossSellIds(currentProductIds: string[]) {
 }
 
 type SearchProduct = ProductLite & {
-  slug: string; sku: string | null; brand_id: string | null; brands: { name: string } | null;
+  slug: string;
+  sku: string | null;
+  brand_id: string | null;
+  brands: { name: string } | null;
 };
 
 function ProductSearchPanel({
-  brandId, onAdd, currentProductIds = [], addedCount,
+  brandId,
+  onAdd,
+  currentProductIds = [],
+  addedCount,
 }: {
   brandId: string | null;
   onAdd: (p: ProductLite, v?: VariantLite, qty?: number) => void;
@@ -508,7 +760,9 @@ function ProductSearchPanel({
   const [qty, setQty] = useState(1);
   const inputRef = useRef<HTMLInputElement>(null);
 
-  useEffect(() => { inputRef.current?.focus(); }, []);
+  useEffect(() => {
+    inputRef.current?.focus();
+  }, []);
   useEffect(() => {
     const t = setTimeout(() => setDebounced(q.trim()), 250);
     return () => clearTimeout(t);
@@ -530,13 +784,17 @@ function ProductSearchPanel({
       if (searching) {
         const c = debounced.replace(/[,()]/g, " ");
         q2 = q2.or(`title.ilike.%${c}%,slug.ilike.%${c}%,sku.ilike.%${c}%,barcode.ilike.%${c}%`);
-        q2 = q2.order("is_featured", { ascending: false }).order("created_at", { ascending: false });
+        q2 = q2
+          .order("is_featured", { ascending: false })
+          .order("created_at", { ascending: false });
       } else if (tab === "suggested" && (crossIds ?? []).length > 0) {
         q2 = q2.in("id", crossIds!);
       } else if (tab === "featured") {
         q2 = q2.eq("is_featured", true).order("created_at", { ascending: false });
       } else {
-        q2 = q2.order("is_featured", { ascending: false }).order("created_at", { ascending: false });
+        q2 = q2
+          .order("is_featured", { ascending: false })
+          .order("created_at", { ascending: false });
       }
 
       const { data, error } = await q2;
@@ -573,7 +831,12 @@ function ProductSearchPanel({
   });
 
   const toLite = (p: SearchProduct): ProductLite => ({
-    id: p.id, title: p.title, price: Number(p.price), image: p.image, stock: p.stock, is_featured: p.is_featured,
+    id: p.id,
+    title: p.title,
+    price: Number(p.price),
+    image: p.image,
+    stock: p.stock,
+    is_featured: p.is_featured,
   });
 
   const handleAdd = (p: SearchProduct, v?: VariantLite) => {
@@ -607,7 +870,10 @@ function ProductSearchPanel({
           {q && (
             <button
               type="button"
-              onClick={() => { setQ(""); inputRef.current?.focus(); }}
+              onClick={() => {
+                setQ("");
+                inputRef.current?.focus();
+              }}
               className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
               aria-label="Clear search"
             >
@@ -616,13 +882,22 @@ function ProductSearchPanel({
           )}
         </div>
         <div className="flex items-center gap-1 rounded-md border px-1 h-9">
-          <button type="button" className="p-1 text-muted-foreground hover:text-foreground disabled:opacity-40"
-            disabled={qty <= 1} onClick={() => setQty((n) => Math.max(1, n - 1))} aria-label="Decrease qty">
+          <button
+            type="button"
+            className="p-1 text-muted-foreground hover:text-foreground disabled:opacity-40"
+            disabled={qty <= 1}
+            onClick={() => setQty((n) => Math.max(1, n - 1))}
+            aria-label="Decrease qty"
+          >
             <Minus className="h-3 w-3" />
           </button>
           <span className="w-6 text-center text-xs font-semibold tabular-nums">{qty}</span>
-          <button type="button" className="p-1 text-muted-foreground hover:text-foreground"
-            onClick={() => setQty((n) => Math.min(99, n + 1))} aria-label="Increase qty">
+          <button
+            type="button"
+            className="p-1 text-muted-foreground hover:text-foreground"
+            onClick={() => setQty((n) => Math.min(99, n + 1))}
+            aria-label="Increase qty"
+          >
             <Plus className="h-3 w-3" />
           </button>
         </div>
@@ -630,11 +905,13 @@ function ProductSearchPanel({
 
       {!searching && (
         <div className="flex items-center gap-1.5">
-          {([
-            { key: "suggested", label: "Upsell picks" },
-            { key: "featured", label: "Featured" },
-            { key: "all", label: "All products" },
-          ] as const).map((t) => (
+          {(
+            [
+              { key: "suggested", label: "Upsell picks" },
+              { key: "featured", label: "Featured" },
+              { key: "all", label: "All products" },
+            ] as const
+          ).map((t) => (
             <button
               key={t.key}
               type="button"
@@ -645,7 +922,9 @@ function ProductSearchPanel({
                   ? "border-indigo-400 bg-indigo-500/10 text-indigo-700 dark:text-indigo-300"
                   : "text-muted-foreground hover:bg-muted",
               )}
-            >{t.label}</button>
+            >
+              {t.label}
+            </button>
           ))}
           <span className="ml-auto text-[10px] text-muted-foreground">Enter = add top result</span>
         </div>
@@ -653,11 +932,15 @@ function ProductSearchPanel({
 
       <div className="max-h-[380px] overflow-y-auto -mx-2">
         {isFetching && (results ?? []).length === 0 && (
-          <div className="flex justify-center py-6"><Loader2 className="h-4 w-4 animate-spin text-muted-foreground" /></div>
+          <div className="flex justify-center py-6">
+            <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
+          </div>
         )}
         {!isFetching && (results ?? []).length === 0 && (
           <p className="text-xs text-muted-foreground text-center py-6">
-            {suggestedEmpty ? "No upsell suggestion yet — try Featured or All products" : "No products found"}
+            {suggestedEmpty
+              ? "No upsell suggestion yet — try Featured or All products"
+              : "No products found"}
           </p>
         )}
         <ul className="divide-y">
@@ -665,78 +948,102 @@ function ProductSearchPanel({
             const vs = variantsByProduct?.get(p.id) ?? [];
             const inCart = addedCount?.(p.id, null) ?? 0;
             return (
-            <li key={p.id} className="px-2 py-2 hover:bg-muted/40 transition-colors">
-             <div className="flex items-center gap-3">
-              <div className="h-10 w-10 rounded-md bg-muted shrink-0 overflow-hidden flex items-center justify-center">
-                {p.image
-                  ? <img src={p.image} alt="" className="h-full w-full object-cover" />
-                  : <span className="text-[8px] text-muted-foreground">No Image</span>}
-              </div>
-              <div className="flex-1 min-w-0">
-                <div className="text-xs font-medium truncate flex items-center gap-1">
-                  {p.is_featured && <Star className="h-3 w-3 text-amber-500 fill-amber-500 shrink-0" />}
-                  {p.title}
-                  {inCart > 0 && (
-                    <span className="ml-1 shrink-0 rounded-full bg-emerald-500/15 px-1.5 py-px text-[9px] font-bold text-emerald-700 dark:text-emerald-300">
-                      In order ×{inCart}
+              <li key={p.id} className="px-2 py-2 hover:bg-muted/40 transition-colors">
+                <div className="flex items-center gap-3">
+                  <div className="h-10 w-10 rounded-md bg-muted shrink-0 overflow-hidden flex items-center justify-center">
+                    {p.image ? (
+                      <img src={p.image} alt="" className="h-full w-full object-cover" />
+                    ) : (
+                      <span className="text-[8px] text-muted-foreground">No Image</span>
+                    )}
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <div className="text-xs font-medium truncate flex items-center gap-1">
+                      {p.is_featured && (
+                        <Star className="h-3 w-3 text-amber-500 fill-amber-500 shrink-0" />
+                      )}
+                      {p.title}
+                      {inCart > 0 && (
+                        <span className="ml-1 shrink-0 rounded-full bg-emerald-500/15 px-1.5 py-px text-[9px] font-bold text-emerald-700 dark:text-emerald-300">
+                          In order ×{inCart}
+                        </span>
+                      )}
+                    </div>
+                    <div className="flex items-center gap-1.5">
+                      <span className="text-[10px] text-muted-foreground font-mono">
+                        SKU: {p.sku ?? p.slug?.slice(0, 24) ?? p.id.slice(0, 8)}
+                      </span>
+                      {p.brands?.name && (
+                        <span
+                          className={cn(
+                            "rounded px-1 py-px text-[9px] font-semibold",
+                            p.brand_id === brandId
+                              ? "bg-sky-500/10 text-sky-700 dark:text-sky-300"
+                              : "bg-muted text-muted-foreground",
+                          )}
+                        >
+                          {p.brands.name}
+                        </span>
+                      )}
+                    </div>
+                    <div className="flex items-center gap-2 text-[10px] mt-0.5">
+                      <span className="text-rose-600">Price: ৳{bdtCompact(Number(p.price))}</span>
+                      <span
+                        className={cn("text-muted-foreground", p.stock <= 0 && "text-rose-600")}
+                      >
+                        Stock: {p.stock}
+                      </span>
+                    </div>
+                  </div>
+                  {vs.length === 0 ? (
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      className="h-7 px-2 text-[11px]"
+                      onClick={() => handleAdd(p)}
+                    >
+                      <Plus className="h-3 w-3 mr-1" />
+                      Add{qty > 1 ? ` ×${qty}` : ""}
+                    </Button>
+                  ) : (
+                    <span className="shrink-0 rounded-full bg-indigo-500/10 px-2 py-0.5 text-[9px] font-bold uppercase tracking-wide text-indigo-700 dark:text-indigo-300">
+                      Select color
                     </span>
                   )}
                 </div>
-                <div className="flex items-center gap-1.5">
-                  <span className="text-[10px] text-muted-foreground font-mono">SKU: {p.sku ?? p.slug?.slice(0, 24) ?? p.id.slice(0, 8)}</span>
-                  {p.brands?.name && (
-                    <span className={cn(
-                      "rounded px-1 py-px text-[9px] font-semibold",
-                      p.brand_id === brandId
-                        ? "bg-sky-500/10 text-sky-700 dark:text-sky-300"
-                        : "bg-muted text-muted-foreground",
-                    )}>{p.brands.name}</span>
-                  )}
-                </div>
-                <div className="flex items-center gap-2 text-[10px] mt-0.5">
-                  <span className="text-rose-600">Price: ৳{bdtCompact(Number(p.price))}</span>
-                  <span className={cn("text-muted-foreground", p.stock <= 0 && "text-rose-600")}>Stock: {p.stock}</span>
-                </div>
-              </div>
-              {vs.length === 0 ? (
-                <Button size="sm" variant="outline" className="h-7 px-2 text-[11px]"
-                  onClick={() => handleAdd(p)}>
-                  <Plus className="h-3 w-3 mr-1" />Add{qty > 1 ? ` ×${qty}` : ""}
-                </Button>
-              ) : (
-                <span className="shrink-0 rounded-full bg-indigo-500/10 px-2 py-0.5 text-[9px] font-bold uppercase tracking-wide text-indigo-700 dark:text-indigo-300">
-                  Select color
-                </span>
-              )}
-             </div>
-             {vs.length > 0 && (
-               <div className="mt-2 flex flex-wrap gap-1.5 pl-[52px]">
-                 {vs.map((v) => {
-                   const out = (v.stock ?? 0) <= 0;
-                   const vCount = addedCount?.(p.id, v.id) ?? 0;
-                   return (
-                     <button
-                       key={v.id}
-                       type="button"
-                        title={`Add ${v.color_name ?? "variant"}${out ? " (backorder)" : ""}`}
-                       onClick={() => handleAdd(p, v)}
-                       className={cn(
-                         "inline-flex items-center gap-1.5 rounded-full border px-2 py-1 text-[10px] font-medium transition-colors",
-                          "hover:border-indigo-400 hover:bg-indigo-500/10",
-                          out && "border-dashed",
-                          vCount > 0 && "border-emerald-400 bg-emerald-500/10",
-                       )}
-                     >
-                       <span className="h-3 w-3 rounded-full border shrink-0" style={{ background: v.color_hex || "transparent" }} />
-                       <span className="truncate max-w-[90px]">{v.color_name ?? v.sku ?? "Variant"}</span>
-                       <span className="tabular-nums text-muted-foreground">{v.stock ?? 0}</span>
-                       <Plus className="h-2.5 w-2.5" />
-                     </button>
-                   );
-                 })}
-               </div>
-             )}
-            </li>
+                {vs.length > 0 && (
+                  <div className="mt-2 flex flex-wrap gap-1.5 pl-[52px]">
+                    {vs.map((v) => {
+                      const out = (v.stock ?? 0) <= 0;
+                      const vCount = addedCount?.(p.id, v.id) ?? 0;
+                      return (
+                        <button
+                          key={v.id}
+                          type="button"
+                          title={`Add ${v.color_name ?? "variant"}${out ? " (backorder)" : ""}`}
+                          onClick={() => handleAdd(p, v)}
+                          className={cn(
+                            "inline-flex items-center gap-1.5 rounded-full border px-2 py-1 text-[10px] font-medium transition-colors",
+                            "hover:border-indigo-400 hover:bg-indigo-500/10",
+                            out && "border-dashed",
+                            vCount > 0 && "border-emerald-400 bg-emerald-500/10",
+                          )}
+                        >
+                          <span
+                            className="h-3 w-3 rounded-full border shrink-0"
+                            style={{ background: v.color_hex || "transparent" }}
+                          />
+                          <span className="truncate max-w-[90px]">
+                            {v.color_name ?? v.sku ?? "Variant"}
+                          </span>
+                          <span className="tabular-nums text-muted-foreground">{v.stock ?? 0}</span>
+                          <Plus className="h-2.5 w-2.5" />
+                        </button>
+                      );
+                    })}
+                  </div>
+                )}
+              </li>
             );
           })}
         </ul>
@@ -745,14 +1052,19 @@ function ProductSearchPanel({
   );
 }
 
-
 /* -------------------------------------------------------------------------- */
 /*  Page                                                                       */
 /* -------------------------------------------------------------------------- */
 
 type WebStatus =
-  | "processing" | "incomplete" | "good_but_no_response" | "no_response"
-  | "advance_payment" | "on_hold" | "complete" | "cancelled";
+  | "processing"
+  | "incomplete"
+  | "good_but_no_response"
+  | "no_response"
+  | "advance_payment"
+  | "on_hold"
+  | "complete"
+  | "cancelled";
 
 const WEB_STATUSES: { key: WebStatus; label: string }[] = [
   { key: "processing", label: "Processing" },
@@ -801,12 +1113,25 @@ function OrderDetailsPage() {
   /* ------------------------------ Local form state ------------------------- */
 
   const [form, setForm] = useState({
-    mobile: "", name: "", delivery_method: "", address: "", shipping_note: "",
-    city_id: "", zone_id: "", area_id: "",
-    source_platform: "", is_preorder: false, is_cross_sale: false,
-    discount: 0, advance: 0, shipping_fee: 0,
-    advance_source: "", advance_payment_number: "", advance_txn_id: "",
-    note_input: "", tag_input: "",
+    mobile: "",
+    name: "",
+    delivery_method: "",
+    address: "",
+    shipping_note: "",
+    city_id: "",
+    zone_id: "",
+    area_id: "",
+    source_platform: "",
+    is_preorder: false,
+    is_cross_sale: false,
+    discount: 0,
+    advance: 0,
+    shipping_fee: 0,
+    advance_source: "",
+    advance_payment_number: "",
+    advance_txn_id: "",
+    note_input: "",
+    tag_input: "",
   });
   const [baseline, setBaseline] = useState<typeof form | null>(null);
   const [formReady, setFormReady] = useState(false);
@@ -850,8 +1175,12 @@ function OrderDetailsPage() {
     if (pathaoDetected.city) {
       setDetection({
         city: { id: String(pathaoDetected.city.id), name: pathaoDetected.city.name },
-        zone: pathaoDetected.zone ? { id: String(pathaoDetected.zone.id), name: pathaoDetected.zone.name } : undefined,
-        area: pathaoDetected.area ? { id: String(pathaoDetected.area.id), name: pathaoDetected.area.name } : undefined,
+        zone: pathaoDetected.zone
+          ? { id: String(pathaoDetected.zone.id), name: pathaoDetected.zone.name }
+          : undefined,
+        area: pathaoDetected.area
+          ? { id: String(pathaoDetected.area.id), name: pathaoDetected.area.name }
+          : undefined,
         source: pathaoDetected.source,
         confidence: pathaoDetected.confidence,
       });
@@ -891,7 +1220,9 @@ function OrderDetailsPage() {
     enabled: !!form.city_id,
     staleTime: 60 * 60_000,
     queryFn: async () => {
-      const r = await fetchZones({ data: { cityId: Number(form.city_id), brandId: order?.brand_id ?? undefined } });
+      const r = await fetchZones({
+        data: { cityId: Number(form.city_id), brandId: order?.brand_id ?? undefined },
+      });
       return ((r as { items: { zone_id: number; zone_name: string }[] }).items ?? []).map((z) => ({
         id: String(z.zone_id),
         name_en: z.zone_name,
@@ -903,7 +1234,9 @@ function OrderDetailsPage() {
     enabled: !!form.zone_id,
     staleTime: 60 * 60_000,
     queryFn: async () => {
-      const r = await fetchAreas({ data: { zoneId: Number(form.zone_id), brandId: order?.brand_id ?? undefined } });
+      const r = await fetchAreas({
+        data: { zoneId: Number(form.zone_id), brandId: order?.brand_id ?? undefined },
+      });
       return ((r as { items: { area_id: number; area_name: string }[] }).items ?? []).map((a) => ({
         id: String(a.area_id),
         name_en: a.area_name,
@@ -920,7 +1253,9 @@ function OrderDetailsPage() {
   const [detecting, setDetecting] = useState(false);
   const [detectionAttempted, setDetectionAttempted] = useState(false);
   const [confirmAttempted, setConfirmAttempted] = useState(false);
-  const detectCacheRef = useRef<Map<string, { detection: Detection | null; suggestions: Hit[] }>>(new Map());
+  const detectCacheRef = useRef<Map<string, { detection: Detection | null; suggestions: Hit[] }>>(
+    new Map(),
+  );
   const lastDetectedAddrRef = useRef<string>("");
 
   const runDetection = async (address: string, applyResult: boolean) => {
@@ -934,7 +1269,9 @@ function OrderDetailsPage() {
     }
     setDetecting(true);
     try {
-      const r: any = await matchAddressFn({ data: { address: trimmed, brandId: order?.brand_id ?? undefined } });
+      const r: any = await matchAddressFn({
+        data: { address: trimmed, brandId: order?.brand_id ?? undefined },
+      });
       if (!r?.found || !r.city) {
         detectCacheRef.current.set(trimmed, { detection: null, suggestions: [] });
         setCitySuggestions([]);
@@ -1017,7 +1354,9 @@ function OrderDetailsPage() {
         .neq("id", orderId)
         .limit(2000);
       if (error) throw error;
-      let total = 0, success = 0, cancel = 0;
+      let total = 0,
+        success = 0,
+        cancel = 0;
       (data ?? []).forEach((o) => {
         total++;
         const s = (o.status ?? "") + " " + (o.web_status ?? "");
@@ -1032,34 +1371,46 @@ function OrderDetailsPage() {
   const [refreshing, setRefreshing] = useState(false);
 
   // FAST PATH: read the DB-cached row directly so cards appear instantly on reload
-type HistProvider = { name: string; label?: string; total: number; success: number; cancelled: number; ok: boolean; error?: string };
-
-/** Pathao = our own API; every other courier comes from BDCourier and is summed together. */
-function splitCourierProviders(providers?: HistProvider[] | null) {
-  const list = providers ?? [];
-  const pathao = list.find((p) => p.name === "pathao");
-  const others = list.filter((p) => p.name !== "pathao");
-  const okOthers = others.filter((p) => p.ok);
-  const failed = others.find((p) => !p.ok);
-  return {
-    pathao: { total: pathao?.total ?? 0, success: pathao?.success ?? 0, cancel: pathao?.cancelled ?? 0 },
-    steadfast: {
-      total: okOthers.reduce((s, p) => s + p.total, 0),
-      success: okOthers.reduce((s, p) => s + p.success, 0),
-      cancel: okOthers.reduce((s, p) => s + p.cancelled, 0),
-    },
-    steadfastError: okOthers.length > 0 ? "" : failed?.error ?? "",
-    couriers: list
-      .filter((p) => p.ok)
-      .map((p) => ({
-        name: p.name,
-        label: p.label ?? p.name.charAt(0).toUpperCase() + p.name.slice(1),
-        total: p.total,
-        success: p.success,
-        cancel: p.cancelled,
-      })),
+  type HistProvider = {
+    name: string;
+    label?: string;
+    total: number;
+    success: number;
+    cancelled: number;
+    ok: boolean;
+    error?: string;
   };
-}
+
+  /** Pathao = our own API; every other courier comes from BDCourier and is summed together. */
+  function splitCourierProviders(providers?: HistProvider[] | null) {
+    const list = providers ?? [];
+    const pathao = list.find((p) => p.name === "pathao");
+    const others = list.filter((p) => p.name !== "pathao");
+    const okOthers = others.filter((p) => p.ok);
+    const failed = others.find((p) => !p.ok);
+    return {
+      pathao: {
+        total: pathao?.total ?? 0,
+        success: pathao?.success ?? 0,
+        cancel: pathao?.cancelled ?? 0,
+      },
+      steadfast: {
+        total: okOthers.reduce((s, p) => s + p.total, 0),
+        success: okOthers.reduce((s, p) => s + p.success, 0),
+        cancel: okOthers.reduce((s, p) => s + p.cancelled, 0),
+      },
+      steadfastError: okOthers.length > 0 ? "" : (failed?.error ?? ""),
+      couriers: list
+        .filter((p) => p.ok)
+        .map((p) => ({
+          name: p.name,
+          label: p.label ?? p.name.charAt(0).toUpperCase() + p.name.slice(1),
+          total: p.total,
+          success: p.success,
+          cancel: p.cancelled,
+        })),
+    };
+  }
 
   const { data: cachedCourierHistory } = useQuery({
     queryKey: ["courier-history-cache", phone],
@@ -1078,12 +1429,18 @@ function splitCourierProviders(providers?: HistProvider[] | null) {
   });
 
   // SLOW PATH: hits external couriers if cache stale; runs in background
-  const { data: freshCourierHistory, refetch: refetchHistory, isFetching: courierFetching } = useQuery({
+  const {
+    data: freshCourierHistory,
+    refetch: refetchHistory,
+    isFetching: courierFetching,
+  } = useQuery({
     queryKey: ["courier-history", order?.brand_id, phone],
     enabled: !!order?.brand_id && !!phone && phone.length >= 11,
     staleTime: 5 * 60_000,
     queryFn: async () => {
-      const { results } = await fetchCourierHistory({ data: { phones: [phone], brandId: order!.brand_id! } });
+      const { results } = await fetchCourierHistory({
+        data: { phones: [phone], brandId: order!.brand_id! },
+      });
       const r = results[phone];
       return splitCourierProviders(r?.providers);
     },
@@ -1107,18 +1464,26 @@ function splitCourierProviders(providers?: HistProvider[] | null) {
   /* ------------------------------ Item arithmetic -------------------------- */
 
   const itemsSubtotal = useMemo(
-    () => items.reduce(
-      (s, it) => (it as any).is_combo_child
-        ? s
-        : s + Number(it.line_total ?? Number(it.unit_price ?? it.price) * it.quantity),
-      0,
-    ),
+    () =>
+      items.reduce(
+        (s, it) =>
+          (it as any).is_combo_child
+            ? s
+            : s + Number(it.line_total ?? Number(it.unit_price ?? it.price) * it.quantity),
+        0,
+      ),
     [items],
   );
-  const grandTotal = Math.max(0, itemsSubtotal + Number(form.shipping_fee) - Number(form.discount) - Number(form.advance));
+  const grandTotal = Math.max(
+    0,
+    itemsSubtotal + Number(form.shipping_fee) - Number(form.discount) - Number(form.advance),
+  );
 
   /* ------------------------------ Live stock per item ---------------------- */
-  const productIds = useMemo(() => Array.from(new Set(items.map((it) => it.product_id).filter(Boolean))), [items]);
+  const productIds = useMemo(
+    () => Array.from(new Set(items.map((it) => it.product_id).filter(Boolean))),
+    [items],
+  );
   const { data: stockMap } = useQuery({
     queryKey: ["order-item-stock", productIds.sort().join(",")],
     enabled: productIds.length > 0,
@@ -1141,7 +1506,8 @@ function splitCourierProviders(providers?: HistProvider[] | null) {
         .eq("order_id", orderId)
         .not("device_type", "is", null)
         .order("created_at", { ascending: false })
-        .limit(1).maybeSingle();
+        .limit(1)
+        .maybeSingle();
       return data;
     },
   });
@@ -1151,9 +1517,12 @@ function splitCourierProviders(providers?: HistProvider[] | null) {
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {
       const tag = (e.target as HTMLElement)?.tagName;
-      if (tag === "INPUT" || tag === "TEXTAREA" || (e.target as HTMLElement)?.isContentEditable) return;
-      if (e.key === "ArrowLeft" && neighbors.prev) navigate({ to: "/erp/orders/$orderId", params: { orderId: neighbors.prev } });
-      else if (e.key === "ArrowRight" && neighbors.next) navigate({ to: "/erp/orders/$orderId", params: { orderId: neighbors.next } });
+      if (tag === "INPUT" || tag === "TEXTAREA" || (e.target as HTMLElement)?.isContentEditable)
+        return;
+      if (e.key === "ArrowLeft" && neighbors.prev)
+        navigate({ to: "/erp/orders/$orderId", params: { orderId: neighbors.prev } });
+      else if (e.key === "ArrowRight" && neighbors.next)
+        navigate({ to: "/erp/orders/$orderId", params: { orderId: neighbors.next } });
     };
     window.addEventListener("keydown", handler);
     return () => window.removeEventListener("keydown", handler);
@@ -1171,62 +1540,88 @@ function splitCourierProviders(providers?: HistProvider[] | null) {
     // Payment already verified (bKash/Nagad screenshot check) — number optional.
     if (order?.verified_at) return null;
     if (!form.advance_source) return "Select advance payment source";
-    if (!form.advance_payment_number || form.advance_payment_number.length < 4) return "Enter payment number or last 4 digits";
+    if (!form.advance_payment_number || form.advance_payment_number.length < 4)
+      return "Enter payment number or last 4 digits";
     return null;
   };
 
   const updateStatus = useMutation({
     mutationFn: async (status: OrderStatus) => {
-      const { error } = await supabase.rpc("transition_order_status", { _order_id: orderId, _new_status: status });
+      const { error } = await supabase.rpc("transition_order_status", {
+        _order_id: orderId,
+        _new_status: status,
+      });
       if (error) throw error;
     },
-    onSuccess: () => { toast.success("Status updated"); qc.invalidateQueries({ queryKey: ["orders"] }); invalidate(); },
+    onSuccess: () => {
+      toast.success("Status updated");
+      qc.invalidateQueries({ queryKey: ["orders"] });
+      invalidate();
+    },
     onError: (e: Error) => toast.error(e.message),
   });
 
   const verifyPayment = useMutation({
     mutationFn: async (verify: boolean) => {
       // Payable = items + delivery − discount (advance বাদে)
-      const payable = Math.max(0, itemsSubtotal + Number(form.shipping_fee) - Number(form.discount));
+      const payable = Math.max(
+        0,
+        itemsSubtotal + Number(form.shipping_fee) - Number(form.discount),
+      );
       const currentAdvance = Number(form.advance || order?.advance_amount || 0);
       const advanceText = [
         order?.notes,
         order?.customer_note,
         order?.latest_note,
         ...notes.map((n) => n.body),
-      ].filter(Boolean).join("\n");
+      ]
+        .filter(Boolean)
+        .join("\n");
       const parsedAdvance = parseWebsiteAdvanceDetails(advanceText);
       const websiteOrder = isWebsiteOrderSource(order);
-      const authoritativeAdvance = parsedAdvance.amount != null ? parsedAdvance.amount : currentAdvance;
+      const authoritativeAdvance =
+        parsedAdvance.amount != null ? parsedAdvance.amount : currentAdvance;
       if (verify && websiteOrder && order?.is_preorder && parsedAdvance.amount == null) {
-        throw new Error("Website pre-order advance missing — enter the actual paid amount before verifying.");
+        throw new Error(
+          "Website pre-order advance missing — enter the actual paid amount before verifying.",
+        );
       }
       if (verify && websiteOrder && authoritativeAdvance <= 0) {
-        throw new Error("Website advance amount missing — enter the actual paid amount before verifying.");
+        throw new Error(
+          "Website advance amount missing — enter the actual paid amount before verifying.",
+        );
       }
-      const verifiedAdvance = authoritativeAdvance > 0 ? Math.min(payable, authoritativeAdvance) : payable;
+      const verifiedAdvance =
+        authoritativeAdvance > 0 ? Math.min(payable, authoritativeAdvance) : payable;
       const remainingDue = Math.max(0, payable - verifiedAdvance);
       const keepPreorderAdvance = !verify && !!order?.is_preorder && currentAdvance > 0;
       const patch = verify
         ? {
             verified_at: new Date().toISOString(),
             advance_amount: verifiedAdvance,
-            advance_source: parsedAdvance.source || form.advance_source || order?.advance_source || order?.payment_method || "bKash",
-            advance_payment_number: parsedAdvance.paymentNumber || form.advance_payment_number || order?.advance_payment_number || null,
-            advance_txn_id: parsedAdvance.txnId || form.advance_txn_id || order?.advance_txn_id || null,
+            advance_source:
+              parsedAdvance.source ||
+              form.advance_source ||
+              order?.advance_source ||
+              order?.payment_method ||
+              "bKash",
+            advance_payment_number:
+              parsedAdvance.paymentNumber ||
+              form.advance_payment_number ||
+              order?.advance_payment_number ||
+              null,
+            advance_txn_id:
+              parsedAdvance.txnId || form.advance_txn_id || order?.advance_txn_id || null,
             total: parsedAdvance.due != null ? parsedAdvance.due : remainingDue,
-            payment_status: remainingDue <= 0 ? "paid" as const : "partial" as const,
+            payment_status: remainingDue <= 0 ? ("paid" as const) : ("partial" as const),
           }
         : {
             verified_at: null as string | null,
             advance_amount: keepPreorderAdvance ? currentAdvance : 0,
             total: payable,
-            payment_status: keepPreorderAdvance ? "partial" as const : "unpaid" as const,
+            payment_status: keepPreorderAdvance ? ("partial" as const) : ("unpaid" as const),
           };
-      const { error } = await supabase
-        .from("orders")
-        .update(patch)
-        .eq("id", orderId);
+      const { error } = await supabase.from("orders").update(patch).eq("id", orderId);
       if (error) throw error;
       return {
         payable,
@@ -1243,9 +1638,13 @@ function splitCourierProviders(providers?: HistProvider[] | null) {
     onSuccess: (res, verify) => {
       setForm((f) => ({
         ...f,
-        advance: verify ? res.advance : (res.keepPreorderAdvance ? res.currentAdvance : 0),
-        advance_source: verify ? (res.source || f.advance_source || order?.payment_method || "bKash") : f.advance_source,
-        advance_payment_number: verify ? (res.paymentNumber ?? f.advance_payment_number) : f.advance_payment_number,
+        advance: verify ? res.advance : res.keepPreorderAdvance ? res.currentAdvance : 0,
+        advance_source: verify
+          ? res.source || f.advance_source || order?.payment_method || "bKash"
+          : f.advance_source,
+        advance_payment_number: verify
+          ? (res.paymentNumber ?? f.advance_payment_number)
+          : f.advance_payment_number,
         advance_txn_id: verify ? (res.txnId ?? f.advance_txn_id) : f.advance_txn_id,
       }));
       toast.success(
@@ -1269,7 +1668,10 @@ function splitCourierProviders(providers?: HistProvider[] | null) {
       if (advanceError) throw new Error(advanceError);
       // 1) Persist any pending customer + pricing edits first
       const subtotal = itemsSubtotal;
-      const total = Math.max(0, subtotal + Number(form.shipping_fee) - Number(form.discount) - Number(form.advance));
+      const total = Math.max(
+        0,
+        subtotal + Number(form.shipping_fee) - Number(form.discount) - Number(form.advance),
+      );
       const basePayload = {
         shipping_phone: form.mobile,
         shipping_name: form.name,
@@ -1282,8 +1684,10 @@ function splitCourierProviders(providers?: HistProvider[] | null) {
         pathao_zone_name: zones?.find((z) => z.id === form.zone_id)?.name_en ?? null,
         pathao_area_id: form.area_id ? Number(form.area_id) : null,
         pathao_area_name: areas?.find((a) => a.id === form.area_id)?.name_en ?? null,
-        shipping_city: cities?.find((c) => c.id === form.city_id)?.name_en ?? order?.shipping_city ?? null,
-        shipping_thana: zones?.find((z) => z.id === form.zone_id)?.name_en ?? order?.shipping_thana ?? null,
+        shipping_city:
+          cities?.find((c) => c.id === form.city_id)?.name_en ?? order?.shipping_city ?? null,
+        shipping_thana:
+          zones?.find((z) => z.id === form.zone_id)?.name_en ?? order?.shipping_thana ?? null,
         source_platform: form.source_platform,
         is_preorder: form.is_preorder,
         is_cross_sale: form.is_cross_sale,
@@ -1293,14 +1697,18 @@ function splitCourierProviders(providers?: HistProvider[] | null) {
         advance_amount: Number(form.advance),
         advance_source: Number(form.advance) > 0 ? form.advance_source : null,
         advance_payment_number: Number(form.advance) > 0 ? form.advance_payment_number : null,
-        advance_txn_id: Number(form.advance) > 0 && form.advance_txn_id ? form.advance_txn_id : null,
+        advance_txn_id:
+          Number(form.advance) > 0 && form.advance_txn_id ? form.advance_txn_id : null,
         total,
         web_status: "complete" as const,
       };
       const updatePayload = order?.is_guest_order
         ? { ...basePayload, guest_name: form.name, guest_phone: form.mobile }
         : basePayload;
-      const { error: upErr } = await supabase.from("orders").update(updatePayload).eq("id", orderId);
+      const { error: upErr } = await supabase
+        .from("orders")
+        .update(updatePayload)
+        .eq("id", orderId);
       if (upErr) throw upErr;
 
       // 2) Transition status -> confirmed (reserves stock + sets confirmed_at)
@@ -1323,7 +1731,18 @@ function splitCourierProviders(providers?: HistProvider[] | null) {
   });
 
   const updateWebStatus = useMutation({
-    mutationFn: async ({ status, extra }: { status: WebStatus; extra?: Partial<{ hold_reason: string; cancellation_reason: string; cancel_reason: string; advance_amount: number }> }) => {
+    mutationFn: async ({
+      status,
+      extra,
+    }: {
+      status: WebStatus;
+      extra?: Partial<{
+        hold_reason: string;
+        cancellation_reason: string;
+        cancel_reason: string;
+        advance_amount: number;
+      }>;
+    }) => {
       const { error } = await supabase
         .from("orders")
         .update({ web_status: status, ...(extra ?? {}) })
@@ -1352,24 +1771,41 @@ function splitCourierProviders(providers?: HistProvider[] | null) {
   const submitPendingWebStatus = async () => {
     if (!pendingWebStatus) return;
     if (pendingWebStatus === "on_hold") {
-      if (!pendingReason.trim()) { toast.error("Please provide a hold reason"); return; }
+      if (!pendingReason.trim()) {
+        toast.error("Please provide a hold reason");
+        return;
+      }
       updateWebStatus.mutate({ status: "on_hold", extra: { hold_reason: pendingReason.trim() } });
     } else if (pendingWebStatus === "cancelled") {
-      if (!pendingReason.trim()) { toast.error("Please provide a cancellation reason"); return; }
+      if (!pendingReason.trim()) {
+        toast.error("Please provide a cancellation reason");
+        return;
+      }
       updateWebStatus.mutate({
         status: "cancelled",
         extra: { cancellation_reason: pendingReason.trim(), cancel_reason: pendingReason.trim() },
       });
     } else if (pendingWebStatus === "advance_payment") {
       const amt = Number(pendingAdvance);
-      if (!amt || amt <= 0) { toast.error("Enter a valid advance amount"); return; }
+      if (!amt || amt <= 0) {
+        toast.error("Enter a valid advance amount");
+        return;
+      }
       updateWebStatus.mutate({
         status: "advance_payment",
         extra: { advance_amount: amt },
       });
       const note = pendingReason.trim();
       if (note) {
-        try { await supabase.rpc("add_order_note", { _order_id: orderId, _body: `Advance note: ${note}`, _is_internal: true }); } catch { /* non-fatal */ }
+        try {
+          await supabase.rpc("add_order_note", {
+            _order_id: orderId,
+            _body: `Advance note: ${note}`,
+            _is_internal: true,
+          });
+        } catch {
+          /* non-fatal */
+        }
       }
       setForm((f) => ({ ...f, advance: amt }));
     }
@@ -1392,8 +1828,10 @@ function splitCourierProviders(providers?: HistProvider[] | null) {
         pathao_zone_name: zones?.find((z) => z.id === form.zone_id)?.name_en ?? null,
         pathao_area_id: form.area_id ? Number(form.area_id) : null,
         pathao_area_name: areas?.find((a) => a.id === form.area_id)?.name_en ?? null,
-        shipping_city: cities?.find((c) => c.id === form.city_id)?.name_en ?? order?.shipping_city ?? null,
-        shipping_thana: zones?.find((z) => z.id === form.zone_id)?.name_en ?? order?.shipping_thana ?? null,
+        shipping_city:
+          cities?.find((c) => c.id === form.city_id)?.name_en ?? order?.shipping_city ?? null,
+        shipping_thana:
+          zones?.find((z) => z.id === form.zone_id)?.name_en ?? order?.shipping_thana ?? null,
         source_platform: form.source_platform,
         is_preorder: form.is_preorder,
         is_cross_sale: form.is_cross_sale,
@@ -1402,7 +1840,11 @@ function splitCourierProviders(providers?: HistProvider[] | null) {
       const { error } = await supabase.from("orders").update(payload).eq("id", orderId);
       if (error) throw error;
     },
-    onSuccess: () => { toast.success("Customer details saved"); setBaseline((b) => b ? { ...b, ...form } : b); invalidate(); },
+    onSuccess: () => {
+      toast.success("Customer details saved");
+      setBaseline((b) => (b ? { ...b, ...form } : b));
+      invalidate();
+    },
     onError: (e: Error) => toast.error(e.message),
   });
 
@@ -1411,28 +1853,41 @@ function splitCourierProviders(providers?: HistProvider[] | null) {
       const advanceError = getAdvanceValidationError();
       if (advanceError) throw new Error(advanceError);
       const subtotal = itemsSubtotal;
-      const total = Math.max(0, subtotal + Number(form.shipping_fee) - Number(form.discount) - Number(form.advance));
-      const { error } = await supabase.from("orders").update({
-        subtotal, shipping_fee: Number(form.shipping_fee), discount_amount: Number(form.discount),
-        advance_amount: Number(form.advance),
-        advance_source: Number(form.advance) > 0 ? form.advance_source : null,
-        advance_payment_number: Number(form.advance) > 0 ? form.advance_payment_number : null,
-        advance_txn_id: Number(form.advance) > 0 && form.advance_txn_id ? form.advance_txn_id : null,
-        total,
-      }).eq("id", orderId);
+      const total = Math.max(
+        0,
+        subtotal + Number(form.shipping_fee) - Number(form.discount) - Number(form.advance),
+      );
+      const { error } = await supabase
+        .from("orders")
+        .update({
+          subtotal,
+          shipping_fee: Number(form.shipping_fee),
+          discount_amount: Number(form.discount),
+          advance_amount: Number(form.advance),
+          advance_source: Number(form.advance) > 0 ? form.advance_source : null,
+          advance_payment_number: Number(form.advance) > 0 ? form.advance_payment_number : null,
+          advance_txn_id:
+            Number(form.advance) > 0 && form.advance_txn_id ? form.advance_txn_id : null,
+          total,
+        })
+        .eq("id", orderId);
       if (error) throw error;
     },
     onSuccess: () => {
       toast.success("Pricing saved");
-      setBaseline((b) => b ? {
-        ...b,
-        discount: form.discount,
-        advance: form.advance,
-        shipping_fee: form.shipping_fee,
-        advance_source: form.advance_source,
-        advance_payment_number: form.advance_payment_number,
-        advance_txn_id: form.advance_txn_id,
-      } : b);
+      setBaseline((b) =>
+        b
+          ? {
+              ...b,
+              discount: form.discount,
+              advance: form.advance,
+              shipping_fee: form.shipping_fee,
+              advance_source: form.advance_source,
+              advance_payment_number: form.advance_payment_number,
+              advance_txn_id: form.advance_txn_id,
+            }
+          : b,
+      );
       invalidate();
     },
     onError: (e: Error) => toast.error(e.message),
@@ -1440,12 +1895,15 @@ function splitCourierProviders(providers?: HistProvider[] | null) {
 
   const updateItem = useMutation({
     mutationFn: async (input: { id: string; quantity?: number; unit_price?: number }) => {
-      const it = items.find((x) => x.id === input.id); if (!it) return;
+      const it = items.find((x) => x.id === input.id);
+      if (!it) return;
       const quantity = input.quantity ?? it.quantity;
       const unit_price = input.unit_price ?? Number(it.unit_price ?? it.price);
       const line_total = quantity * unit_price;
-      const { error } = await supabase.from("order_items")
-        .update({ quantity, unit_price, price: unit_price, line_total }).eq("id", input.id);
+      const { error } = await supabase
+        .from("order_items")
+        .update({ quantity, unit_price, price: unit_price, line_total })
+        .eq("id", input.id);
       if (error) throw error;
     },
     onSuccess: invalidate,
@@ -1457,7 +1915,10 @@ function splitCourierProviders(providers?: HistProvider[] | null) {
       const { error } = await supabase.from("order_items").delete().eq("id", id);
       if (error) throw error;
     },
-    onSuccess: () => { toast.success("Item removed"); invalidate(); },
+    onSuccess: () => {
+      toast.success("Item removed");
+      invalidate();
+    },
     onError: (e: Error) => toast.error(e.message),
   });
 
@@ -1466,33 +1927,52 @@ function splitCourierProviders(providers?: HistProvider[] | null) {
       const { error } = await supabase.from("order_notes").delete().eq("id", id);
       if (error) throw error;
     },
-    onSuccess: () => { toast.success("Note deleted"); invalidate(); },
+    onSuccess: () => {
+      toast.success("Note deleted");
+      invalidate();
+    },
     onError: (e: Error) => toast.error(e.message),
   });
 
   const addItem = useMutation({
     mutationFn: async ({ p, v, qty = 1 }: { p: ProductLite; v?: VariantLite; qty?: number }) => {
       const n = Math.max(1, Math.min(99, Math.round(qty)));
-      const existing = items.find((x) =>
-        x.product_id === p.id && ((x as any).variant_id ?? null) === (v?.id ?? null));
-      if (existing) { await updateItem.mutateAsync({ id: existing.id, quantity: existing.quantity + n }); return; }
+      const existing = items.find(
+        (x) => x.product_id === p.id && ((x as any).variant_id ?? null) === (v?.id ?? null),
+      );
+      if (existing) {
+        await updateItem.mutateAsync({ id: existing.id, quantity: existing.quantity + n });
+        return;
+      }
       const unit_price = p.price;
       const variant_label = v ? [v.color_name, v.sku].filter(Boolean).join(" · ") : null;
       const { error } = await supabase.from("order_items").insert({
-        order_id: orderId, product_id: p.id, name: p.title, image: v?.image || p.image,
-        variant_id: v?.id ?? null, variant_label,
-        quantity: n, price: unit_price, unit_price, line_total: unit_price * n,
+        order_id: orderId,
+        product_id: p.id,
+        name: p.title,
+        image: v?.image || p.image,
+        variant_id: v?.id ?? null,
+        variant_label,
+        quantity: n,
+        price: unit_price,
+        unit_price,
+        line_total: unit_price * n,
       });
       if (error) throw error;
     },
-    onSuccess: () => { toast.success("Item added"); invalidate(); },
+    onSuccess: () => {
+      toast.success("Item added");
+      invalidate();
+    },
     onError: (e: Error) => toast.error(e.message),
   });
 
-
   const updateTags = useMutation({
     mutationFn: async (tags: string[]) => {
-      const { error } = await supabase.from("orders").update({ order_tags: tags }).eq("id", orderId);
+      const { error } = await supabase
+        .from("orders")
+        .update({ order_tags: tags })
+        .eq("id", orderId);
       if (error) throw error;
     },
     onSuccess: invalidate,
@@ -1501,7 +1981,11 @@ function splitCourierProviders(providers?: HistProvider[] | null) {
 
   const addNote = useMutation({
     mutationFn: async () => {
-      const { error } = await supabase.rpc("add_order_note", { _order_id: orderId, _body: form.note_input, _is_internal: true });
+      const { error } = await supabase.rpc("add_order_note", {
+        _order_id: orderId,
+        _body: form.note_input,
+        _is_internal: true,
+      });
       if (error) throw error;
     },
     onSuccess: () => {
@@ -1518,8 +2002,11 @@ function splitCourierProviders(providers?: HistProvider[] | null) {
   const [bookOpen, setBookOpen] = useState(false);
   const [bookSteadfastOpen, setBookSteadfastOpen] = useState(false);
   const [showAddProducts, setShowAddProducts] = useState(false);
-  const [insightTab, setInsightTab] = useState<"history" | "cases" | "attribution" | "activity">("history");
-  const isWebOrder = order?.status === "new" && ["website", "pixel", "utm"].includes(String(order?.source ?? ""));
+  const [insightTab, setInsightTab] = useState<"history" | "cases" | "attribution" | "activity">(
+    "history",
+  );
+  const isWebOrder =
+    order?.status === "new" && ["website", "pixel", "utm"].includes(String(order?.source ?? ""));
   const [returnOpen, setReturnOpen] = useState(false);
   const [exchangeOpen, setExchangeOpen] = useState(false);
   const [pendingWebStatus, setPendingWebStatus] = useState<WebStatus | null>(null);
@@ -1528,13 +2015,20 @@ function splitCourierProviders(providers?: HistProvider[] | null) {
   const [draftWebStatus, setDraftWebStatus] = useState<WebStatus | "">("");
 
   if (isLoading || !order) {
-    return <div className="flex items-center justify-center h-64"><Loader2 className="h-6 w-6 animate-spin" /></div>;
+    return (
+      <div className="flex items-center justify-center h-64">
+        <Loader2 className="h-6 w-6 animate-spin" />
+      </div>
+    );
   }
 
   const tags: string[] = order.order_tags ?? [];
   // Only treat as fraud note when we actually have fraud data — not generic API errors
   const rawFraud = courierHistory?.steadfastError || "";
-  const isRealFraud = /fraud|cancel|return/i.test(rawFraud) && rawFraud.length > 0 && !/unauthor|forbidden|not\s*found|invalid|error|failed|timeout/i.test(rawFraud);
+  const isRealFraud =
+    /fraud|cancel|return/i.test(rawFraud) &&
+    rawFraud.length > 0 &&
+    !/unauthor|forbidden|not\s*found|invalid|error|failed|timeout/i.test(rawFraud);
   const fraudNote = isRealFraud ? rawFraud : "";
 
   /* ------------------------------ Render ----------------------------------- */
@@ -1547,37 +2041,89 @@ function splitCourierProviders(providers?: HistProvider[] | null) {
         <span className="pointer-events-none absolute inset-x-0 bottom-0 h-px bg-gradient-to-r from-transparent via-primary/40 to-transparent" />
         <div className="max-w-[1600px] mx-auto px-3 sm:px-4 md:px-6 py-2.5 grid grid-cols-[minmax(0,1fr)_auto] items-center gap-3">
           <div className="flex min-w-0 items-center gap-2">
-            <Button asChild size="sm" variant="ghost" className="h-8 px-2 text-gray-600 hover:text-gray-900">
-              <Link to="/erp/orders/web"><ArrowLeft className="h-4 w-4 sm:mr-1" /><span className="hidden sm:inline">Orders</span></Link>
+            <Button
+              asChild
+              size="sm"
+              variant="ghost"
+              className="h-8 px-2 text-gray-600 hover:text-gray-900"
+            >
+              <Link to="/erp/orders/web">
+                <ArrowLeft className="h-4 w-4 sm:mr-1" />
+                <span className="hidden sm:inline">Orders</span>
+              </Link>
             </Button>
             <span className="h-4 w-px bg-border" />
             <div className="flex items-baseline gap-2 min-w-0">
-              <span className="hidden sm:inline text-[11px] uppercase tracking-wider text-muted-foreground">Order</span>
+              <span className="hidden sm:inline text-[11px] uppercase tracking-wider text-muted-foreground">
+                Order
+              </span>
               <CopyChip value={invoiceDisplay(order)} className="-mx-1">
-                <span className="font-mono text-sm font-semibold text-foreground truncate">#{invoiceDisplay(order)}</span>
+                <span className="font-mono text-sm font-semibold text-foreground truncate">
+                  #{invoiceDisplay(order)}
+                </span>
               </CopyChip>
-              <Badge variant="outline" className={cn("h-5 px-1.5 text-[10px] hidden sm:inline-flex", statusBadge(order.status).className)}>{statusBadge(order.status).label}</Badge>
+              <Badge
+                variant="outline"
+                className={cn(
+                  "h-5 px-1.5 text-[10px] hidden sm:inline-flex",
+                  statusBadge(order.status).className,
+                )}
+              >
+                {statusBadge(order.status).label}
+              </Badge>
               {(() => {
                 const s = settlementBadge(order);
                 return s ? (
-                  <Badge variant="outline" className={cn("h-5 px-1.5 text-[10px] font-bold uppercase tracking-wide hidden sm:inline-flex", s.className)}>{s.label}</Badge>
+                  <Badge
+                    variant="outline"
+                    className={cn(
+                      "h-5 px-1.5 text-[10px] font-bold uppercase tracking-wide hidden sm:inline-flex",
+                      s.className,
+                    )}
+                  >
+                    {s.label}
+                  </Badge>
                 ) : null;
               })()}
             </div>
             {neighbors.total > 0 && (
               <div className="flex items-center gap-1 ml-2">
-                <Button size="sm" variant="outline" className="h-7 w-7 p-0" disabled={!neighbors.prev}
-                  onClick={() => neighbors.prev && navigate({ to: "/erp/orders/$orderId", params: { orderId: neighbors.prev } })}
-                  title="Previous order (← arrow key)"><ChevronLeft className="h-3.5 w-3.5" /></Button>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  className="h-7 w-7 p-0"
+                  disabled={!neighbors.prev}
+                  onClick={() =>
+                    neighbors.prev &&
+                    navigate({ to: "/erp/orders/$orderId", params: { orderId: neighbors.prev } })
+                  }
+                  title="Previous order (← arrow key)"
+                >
+                  <ChevronLeft className="h-3.5 w-3.5" />
+                </Button>
                 <span className="text-[10px] text-gray-500 tabular-nums px-1">
                   {neighbors.index + 1}/{neighbors.total}
                 </span>
-                <Button size="sm" variant="outline" className="h-7 w-7 p-0" disabled={!neighbors.next}
-                  onClick={() => neighbors.next && navigate({ to: "/erp/orders/$orderId", params: { orderId: neighbors.next } })}
-                  title="Next order (→ arrow key)"><ChevronRight className="h-3.5 w-3.5" /></Button>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  className="h-7 w-7 p-0"
+                  disabled={!neighbors.next}
+                  onClick={() =>
+                    neighbors.next &&
+                    navigate({ to: "/erp/orders/$orderId", params: { orderId: neighbors.next } })
+                  }
+                  title="Next order (→ arrow key)"
+                >
+                  <ChevronRight className="h-3.5 w-3.5" />
+                </Button>
                 <span className="hidden lg:inline-flex items-center gap-0.5 ml-1.5 text-[9px] text-gray-400">
-                  <kbd className="px-1 py-0.5 rounded border border-gray-200 dark:border-border bg-gray-50 dark:bg-muted/40 font-mono text-[9px] leading-none">←</kbd>
-                  <kbd className="px-1 py-0.5 rounded border border-gray-200 dark:border-border bg-gray-50 dark:bg-muted/40 font-mono text-[9px] leading-none">→</kbd>
+                  <kbd className="px-1 py-0.5 rounded border border-gray-200 dark:border-border bg-gray-50 dark:bg-muted/40 font-mono text-[9px] leading-none">
+                    ←
+                  </kbd>
+                  <kbd className="px-1 py-0.5 rounded border border-gray-200 dark:border-border bg-gray-50 dark:bg-muted/40 font-mono text-[9px] leading-none">
+                    →
+                  </kbd>
                 </span>
               </div>
             )}
@@ -1585,19 +2131,51 @@ function splitCourierProviders(providers?: HistProvider[] | null) {
           <div className="flex shrink-0 items-center gap-2">
             <div className="hidden lg:flex items-center gap-2 text-[11px] text-muted-foreground">
               <span className="text-gray-400">Created</span>
-              <span className="text-emerald-600 font-medium">{formatDistanceToNow(new Date(order.created_at), { addSuffix: true })}</span>
+              <span className="text-emerald-600 font-medium">
+                {formatDistanceToNow(new Date(order.created_at), { addSuffix: true })}
+              </span>
               <span className="h-3 w-px bg-gray-200" />
               <span className="text-gray-400">Updated</span>
-              <span className="font-medium text-gray-700">{formatDistanceToNow(new Date(order.updated_at ?? order.created_at), { addSuffix: true })}</span>
+              <span className="font-medium text-gray-700">
+                {formatDistanceToNow(new Date(order.updated_at ?? order.created_at), {
+                  addSuffix: true,
+                })}
+              </span>
             </div>
             {!isWebOrder && (
               <>
-                <Button size="sm" variant="outline" className="h-8 px-2 sm:px-3 transition-transform active:scale-95" onClick={() => {
-                  window.print();
-                  void import("@/lib/erp/mark-printed").then(({ markOrdersPrinted }) => markOrdersPrinted([order.id]));
-                }}><Printer className="h-3.5 w-3.5 sm:mr-1" /><span className="hidden sm:inline">Invoice</span></Button>
-                <Button size="sm" variant="outline" className="h-8 px-2 sm:px-3 transition-transform active:scale-95" onClick={() => setBookOpen(true)}><Truck className="h-3.5 w-3.5 sm:mr-1" /><span className="hidden sm:inline">Pathao</span></Button>
-                <Button size="sm" variant="outline" className="h-8 px-2 sm:px-3 hidden sm:inline-flex transition-transform active:scale-95" onClick={() => setBookSteadfastOpen(true)}><Truck className="h-3.5 w-3.5 mr-1" />Steadfast</Button>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  className="h-8 px-2 sm:px-3 transition-transform active:scale-95"
+                  onClick={() => {
+                    window.print();
+                    void import("@/lib/erp/mark-printed").then(({ markOrdersPrinted }) =>
+                      markOrdersPrinted([order.id]),
+                    );
+                  }}
+                >
+                  <Printer className="h-3.5 w-3.5 sm:mr-1" />
+                  <span className="hidden sm:inline">Invoice</span>
+                </Button>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  className="h-8 px-2 sm:px-3 transition-transform active:scale-95"
+                  onClick={() => setBookOpen(true)}
+                >
+                  <Truck className="h-3.5 w-3.5 sm:mr-1" />
+                  <span className="hidden sm:inline">Pathao</span>
+                </Button>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  className="h-8 px-2 sm:px-3 hidden sm:inline-flex transition-transform active:scale-95"
+                  onClick={() => setBookSteadfastOpen(true)}
+                >
+                  <Truck className="h-3.5 w-3.5 mr-1" />
+                  Steadfast
+                </Button>
               </>
             )}
           </div>
@@ -1607,7 +2185,6 @@ function splitCourierProviders(providers?: HistProvider[] | null) {
       <div className="max-w-[1600px] mx-auto p-3 md:px-4 md:py-3 grid grid-cols-1 xl:grid-cols-[minmax(0,1fr)_minmax(320px,360px)] gap-3 items-start">
         {/* MAIN */}
         <div className="space-y-3 min-w-0">
-
           {/* Stats strip */}
           <StatsStrip
             stats={stats}
@@ -1616,7 +2193,11 @@ function splitCourierProviders(providers?: HistProvider[] | null) {
             refreshing={refreshing}
             couriers={courierHistory?.couriers ?? []}
             loading={courierLoading || (courierFetching && !courierHistory)}
-            onRefresh={async () => { setRefreshing(true); await refetchHistory(); setRefreshing(false); }}
+            onRefresh={async () => {
+              setRefreshing(true);
+              await refetchHistory();
+              setRefreshing(false);
+            }}
           />
 
           {/* Customer row */}
@@ -1625,22 +2206,50 @@ function splitCourierProviders(providers?: HistProvider[] | null) {
             accent="bg-indigo-500"
             bodyClassName="p-3.5"
             right={(() => {
-              const customerKeys = ["mobile","name","delivery_method","address","shipping_note","city_id","zone_id","area_id","source_platform","is_preorder","is_cross_sale"] as const;
-              const dirty = !!baseline && customerKeys.some((k) => (form as any)[k] !== (baseline as any)[k]);
+              const customerKeys = [
+                "mobile",
+                "name",
+                "delivery_method",
+                "address",
+                "shipping_note",
+                "city_id",
+                "zone_id",
+                "area_id",
+                "source_platform",
+                "is_preorder",
+                "is_cross_sale",
+              ] as const;
+              const dirty =
+                !!baseline && customerKeys.some((k) => (form as any)[k] !== (baseline as any)[k]);
               return (
                 <div className="flex items-center gap-2">
                   {dirty && (
                     <span className="hidden sm:inline-flex items-center gap-1.5 text-[10px] font-medium text-amber-600">
-                      <span className="h-1.5 w-1.5 rounded-full bg-amber-500 animate-pulse" />Unsaved
+                      <span className="h-1.5 w-1.5 rounded-full bg-amber-500 animate-pulse" />
+                      Unsaved
                     </span>
                   )}
-                  <Button size="sm" variant="ghost" className="h-7 px-2 text-[11px]" disabled={!dirty || saveCustomer.isPending}
-                    onClick={() => baseline && setForm({ ...form, ...baseline })}>
-                    <Undo2 className="h-3.5 w-3.5 mr-1" />Discard
+                  <Button
+                    size="sm"
+                    variant="ghost"
+                    className="h-7 px-2 text-[11px]"
+                    disabled={!dirty || saveCustomer.isPending}
+                    onClick={() => baseline && setForm({ ...form, ...baseline })}
+                  >
+                    <Undo2 className="h-3.5 w-3.5 mr-1" />
+                    Discard
                   </Button>
-                  <Button size="sm" className="h-7 px-3 text-[11px] bg-indigo-600 hover:bg-indigo-700 text-white" disabled={!dirty || saveCustomer.isPending}
-                    onClick={() => saveCustomer.mutate()}>
-                    {saveCustomer.isPending ? <Loader2 className="h-3.5 w-3.5 mr-1 animate-spin" /> : <Save className="h-3.5 w-3.5 mr-1" />}
+                  <Button
+                    size="sm"
+                    className="h-7 px-3 text-[11px] bg-indigo-600 hover:bg-indigo-700 text-white"
+                    disabled={!dirty || saveCustomer.isPending}
+                    onClick={() => saveCustomer.mutate()}
+                  >
+                    {saveCustomer.isPending ? (
+                      <Loader2 className="h-3.5 w-3.5 mr-1 animate-spin" />
+                    ) : (
+                      <Save className="h-3.5 w-3.5 mr-1" />
+                    )}
                     Save Customer
                   </Button>
                 </div>
@@ -1648,261 +2257,390 @@ function splitCourierProviders(providers?: HistProvider[] | null) {
             })()}
           >
             <div className="space-y-2.5">
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-x-3 gap-y-2.5">
-
-              <FieldShell label="Mobile Number">
-                <div className="relative">
-                  <Input value={form.mobile} onChange={(e) => setForm({ ...form, mobile: e.target.value })} className="h-9 pr-14 font-mono" />
-                  <div className="absolute right-1 top-1/2 -translate-y-1/2 flex items-center gap-0.5">
-                    <a
-                      href={`tel:${form.mobile}`}
-                      title="Call customer (logs a call attempt)"
-                      onClick={() => {
-                        if (!order) return;
-                        const o = order as { call_attempt_count?: number | null; call_status?: string | null };
-                        logCall.mutate({
-                          orderId,
-                          attempts: o.call_attempt_count ?? 0,
-                          currentStatus: o.call_status ?? null,
-                        });
-                      }}
-                      className="grid h-7 w-7 place-items-center rounded-full hover:bg-emerald-500/10 text-emerald-600 transition-colors"
-                    ><Phone className="h-3.5 w-3.5" /></a>
-                    <a href={`https://wa.me/${form.mobile.replace(/^0/, "880")}`} target="_blank" rel="noreferrer" className="grid h-7 w-7 place-items-center rounded-full hover:bg-emerald-500/10 text-emerald-600 transition-colors"><MessageCircle className="h-3.5 w-3.5" /></a>
-                  </div>
-                </div>
-                <div className="mt-1.5 flex flex-wrap items-center gap-2">
-                  {(() => {
-                    const n = Number((order as { call_attempt_count?: number | null } | undefined)?.call_attempt_count ?? 0);
-                    return n > 0 ? (
-                      <span className="inline-flex items-center gap-1 rounded-full bg-slate-100 dark:bg-slate-900 px-1.5 py-0.5 text-[10px] font-semibold tabular-nums text-slate-600 dark:text-slate-300 ring-1 ring-slate-200 dark:ring-slate-700" title={`${n} call attempt${n > 1 ? "s" : ""} logged`}>
-                        <Phone className="h-3 w-3" /> ×{n}
-                      </span>
-                    ) : null;
-                  })()}
-                  {(() => {
-                    const h = callLogHighlight(order.last_call_at);
-                    const cls =
-                      h.tone === "fresh"
-                        ? "bg-emerald-500/10 text-emerald-700 dark:text-emerald-300 ring-emerald-500/30 animate-pulse"
-                        : h.tone === "warm"
-                        ? "bg-amber-500/10 text-amber-700 dark:text-amber-300 ring-amber-500/30"
-                        : h.tone === "cold"
-                        ? "bg-muted/50 text-muted-foreground ring-border"
-                        : "bg-slate-100 dark:bg-slate-900 text-slate-500 dark:text-slate-400 ring-slate-200 dark:ring-slate-700";
-                    const dot =
-                      h.tone === "fresh" ? "bg-emerald-500" :
-                      h.tone === "warm" ? "bg-amber-500" :
-                      h.tone === "cold" ? "bg-muted-foreground/60" :
-                      "bg-slate-400";
-                    return (
-                      <span className={cn("inline-flex items-center gap-1.5 rounded-full px-2 py-0.5 text-[10px] font-medium ring-1", cls)} title={order.last_call_at ? `Last call: ${format(new Date(order.last_call_at), "dd MMM yyyy, h:mm a")}` : undefined}>
-                        <span className={cn("h-1.5 w-1.5 rounded-full", dot)} />
-                        {h.text}
-                      </span>
-                    );
-                  })()}
-                </div>
-                {stats.ourRecord.total > 0 && (
-                  <p className="text-[10px] text-sky-600">Check Our Record above for customer history</p>
-                )}
-              </FieldShell>
-              <FieldShell label="Name">
-                <Input value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} className="h-9" />
-              </FieldShell>
-              <FieldShell label="Delivery Method">
-                <Select value={form.delivery_method || ""} onValueChange={(v) => setForm({ ...form, delivery_method: v })}>
-                  <SelectTrigger className="h-9"><SelectValue placeholder="Choose courier" /></SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="pathao">Pathao</SelectItem>
-                    <SelectItem value="steadfast">Steadfast</SelectItem>
-                    <SelectItem value="redx">RedX</SelectItem>
-                    <SelectItem value="own">Own Delivery</SelectItem>
-                  </SelectContent>
-                </Select>
-              </FieldShell>
-            </div>
-
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-x-3 gap-y-2.5">
-              <FieldShell label="Address">
-                <Textarea
-                  rows={2}
-
-                  value={form.address}
-                  onChange={(e) => setForm({ ...form, address: e.target.value })}
-                  className="resize-none"
-                />
-                <div className="mt-1.5 space-y-1.5">
-                  {detecting && (
-                    <div className="inline-flex items-center gap-1.5 text-[10px] text-gray-500">
-                      <Loader2 className="h-3 w-3 animate-spin" />Detecting location…
-                    </div>
-                  )}
-                  {detection && !detecting && (
-                    <div className="inline-flex items-center gap-1.5 rounded-full bg-emerald-50 dark:bg-emerald-500/10 border border-emerald-200 dark:border-emerald-500/30 px-2 py-0.5 text-[10px] font-medium text-emerald-700 dark:text-emerald-300">
-                      <Check className="h-3 w-3" />
-                      <span>
-                        {pathaoSourceLabel(detection.source)}: {detection.city.name}
-                        {detection.zone && ` → ${detection.zone.name}`}
-                        {detection.area && ` → ${detection.area.name}`}
-                      </span>
-                      <button
-                        type="button"
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-x-3 gap-y-2.5">
+                <FieldShell label="Mobile Number">
+                  <div className="relative">
+                    <Input
+                      value={form.mobile}
+                      onChange={(e) => setForm({ ...form, mobile: e.target.value })}
+                      className="h-9 pr-14 font-mono"
+                    />
+                    <div className="absolute right-1 top-1/2 -translate-y-1/2 flex items-center gap-0.5">
+                      <a
+                        href={`tel:${form.mobile}`}
+                        title="Call customer (logs a call attempt)"
                         onClick={() => {
-                          setDetection(null);
-                          setForm((f) => ({ ...f, city_id: "", zone_id: "", area_id: "" }));
+                          if (!order) return;
+                          const o = order as {
+                            call_attempt_count?: number | null;
+                            call_status?: string | null;
+                          };
+                          logCall.mutate({
+                            orderId,
+                            attempts: o.call_attempt_count ?? 0,
+                            currentStatus: o.call_status ?? null,
+                          });
                         }}
-                        className="ml-0.5 rounded-full hover:bg-emerald-100 dark:hover:bg-emerald-500/20 p-0.5"
-                        title="Clear detection"
-                      ><XCircle className="h-3 w-3" /></button>
+                        className="grid h-7 w-7 place-items-center rounded-full hover:bg-emerald-500/10 text-emerald-600 transition-colors"
+                      >
+                        <Phone className="h-3.5 w-3.5" />
+                      </a>
+                      <a
+                        href={`https://wa.me/${form.mobile.replace(/^0/, "880")}`}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="grid h-7 w-7 place-items-center rounded-full hover:bg-emerald-500/10 text-emerald-600 transition-colors"
+                      >
+                        <MessageCircle className="h-3.5 w-3.5" />
+                      </a>
                     </div>
+                  </div>
+                  <div className="mt-1.5 flex flex-wrap items-center gap-2">
+                    {(() => {
+                      const n = Number(
+                        (order as { call_attempt_count?: number | null } | undefined)
+                          ?.call_attempt_count ?? 0,
+                      );
+                      return n > 0 ? (
+                        <span
+                          className="inline-flex items-center gap-1 rounded-full bg-slate-100 dark:bg-slate-900 px-1.5 py-0.5 text-[10px] font-semibold tabular-nums text-slate-600 dark:text-slate-300 ring-1 ring-slate-200 dark:ring-slate-700"
+                          title={`${n} call attempt${n > 1 ? "s" : ""} logged`}
+                        >
+                          <Phone className="h-3 w-3" /> ×{n}
+                        </span>
+                      ) : null;
+                    })()}
+                    {(() => {
+                      const h = callLogHighlight(order.last_call_at);
+                      const cls =
+                        h.tone === "fresh"
+                          ? "bg-emerald-500/10 text-emerald-700 dark:text-emerald-300 ring-emerald-500/30 animate-pulse"
+                          : h.tone === "warm"
+                            ? "bg-amber-500/10 text-amber-700 dark:text-amber-300 ring-amber-500/30"
+                            : h.tone === "cold"
+                              ? "bg-muted/50 text-muted-foreground ring-border"
+                              : "bg-slate-100 dark:bg-slate-900 text-slate-500 dark:text-slate-400 ring-slate-200 dark:ring-slate-700";
+                      const dot =
+                        h.tone === "fresh"
+                          ? "bg-emerald-500"
+                          : h.tone === "warm"
+                            ? "bg-amber-500"
+                            : h.tone === "cold"
+                              ? "bg-muted-foreground/60"
+                              : "bg-slate-400";
+                      return (
+                        <span
+                          className={cn(
+                            "inline-flex items-center gap-1.5 rounded-full px-2 py-0.5 text-[10px] font-medium ring-1",
+                            cls,
+                          )}
+                          title={
+                            order.last_call_at
+                              ? `Last call: ${format(new Date(order.last_call_at), "dd MMM yyyy, h:mm a")}`
+                              : undefined
+                          }
+                        >
+                          <span className={cn("h-1.5 w-1.5 rounded-full", dot)} />
+                          {h.text}
+                        </span>
+                      );
+                    })()}
+                  </div>
+                  {stats.ourRecord.total > 0 && (
+                    <p className="text-[10px] text-sky-600">
+                      Check Our Record above for customer history
+                    </p>
                   )}
-                  {!detection && citySuggestions.length > 0 && !detecting && (
-                    <div className="flex flex-wrap items-center gap-1.5">
-                      <span className="inline-flex items-center gap-1 text-[10px] text-gray-500">
-                        <MapPin className="h-3 w-3" />Did you mean
-                      </span>
-                      {citySuggestions.map((c) => (
-                        <button
-                          key={c.id}
-                          type="button"
-                          onClick={() => {
-                            setForm((f) => ({ ...f, city_id: c.id, zone_id: "", area_id: "" }));
-                            // Re-run detection but pin to this city by injecting cached city pick
-                            const trimmed = form.address.trim();
-                            const cached = detectCacheRef.current.get(trimmed);
-                            // Force a fresh detection that auto-applies now that city is chosen
-                            detectCacheRef.current.delete(trimmed);
-                            void runDetection(trimmed, true).catch(() => void cached);
-                          }}
-                          className="inline-flex items-center rounded-full bg-indigo-50 dark:bg-indigo-500/10 border border-indigo-200 dark:border-indigo-500/30 text-indigo-700 dark:text-indigo-300 px-2 py-0.5 text-[10px] font-medium hover:bg-indigo-100 dark:hover:bg-indigo-500/20"
-                        >{c.name}</button>
-                      ))}
-                    </div>
-                  )}
-                </div>
-              </FieldShell>
-              <FieldShell label="Shipping Note">
-                <ShippingNotePresets
-                  value={form.shipping_note}
-                  onChange={(v) => setForm({ ...form, shipping_note: v.slice(0, 150) })}
-                />
-              </FieldShell>
-              <div className="space-y-3">
-                <FieldShell label="Source Platform">
-                  <Select value={form.source_platform} onValueChange={(v) => setForm({ ...form, source_platform: v })}>
+                </FieldShell>
+                <FieldShell label="Name">
+                  <Input
+                    value={form.name}
+                    onChange={(e) => setForm({ ...form, name: e.target.value })}
+                    className="h-9"
+                  />
+                </FieldShell>
+                <FieldShell label="Delivery Method">
+                  <Select
+                    value={form.delivery_method || ""}
+                    onValueChange={(v) => setForm({ ...form, delivery_method: v })}
+                  >
                     <SelectTrigger className="h-9">
-                      <SelectValue placeholder="Select source platform">
-                        {(() => {
-                          const opt = SOURCE_PLATFORM_OPTIONS.find((o) => o.value === form.source_platform);
-                          if (!opt) return null;
-                          const Icon = opt.icon;
-                          return (
-                            <span className="flex items-center gap-2">
-                              <Icon className="h-3.5 w-3.5 text-muted-foreground" />
-                              <span>{opt.label}</span>
-                            </span>
-                          );
-                        })()}
-                      </SelectValue>
+                      <SelectValue placeholder="Choose courier" />
                     </SelectTrigger>
                     <SelectContent>
-                      {["Online", "Social", "Messaging", "Direct", "Other"].map((group) => {
-                        const items = SOURCE_PLATFORM_OPTIONS.filter((o) => o.group === group);
-                        if (items.length === 0) return null;
-                        return (
-                          <SelectGroup key={group}>
-                            <SelectLabel className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
-                              {group}
-                            </SelectLabel>
-                            {items.map((item) => {
-                              const Icon = item.icon;
-                              return (
-                                <SelectItem key={item.value} value={item.value}>
-                                  <span className="flex items-center gap-2">
-                                    <Icon className={cn("h-3.5 w-3.5", item.value === "Website" && "text-sky-600", item.value === "Facebook" && "text-blue-600", item.value === "Instagram" && "text-pink-600", item.value === "WhatsApp" && "text-emerald-600", item.value === "Phone" && "text-amber-600")} />
-                                    <span>{item.label}</span>
-                                  </span>
-                                </SelectItem>
-                              );
-                            })}
-                          </SelectGroup>
-                        );
-                      })}
+                      <SelectItem value="pathao">Pathao</SelectItem>
+                      <SelectItem value="steadfast">Steadfast</SelectItem>
+                      <SelectItem value="redx">RedX</SelectItem>
+                      <SelectItem value="own">Own Delivery</SelectItem>
                     </SelectContent>
                   </Select>
                 </FieldShell>
-                <div className="grid grid-cols-2 gap-2">
-                  <div className="flex items-center justify-between rounded-md border px-2.5 py-2">
-                    <span className="text-[11px]">Preorder</span>
-                    <Switch checked={form.is_preorder} onCheckedChange={(v) => setForm({ ...form, is_preorder: v })} />
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-x-3 gap-y-2.5">
+                <FieldShell label="Address">
+                  <Textarea
+                    rows={2}
+
+                    value={form.address}
+                    onChange={(e) => setForm({ ...form, address: e.target.value })}
+                    className="resize-none"
+                  />
+                  <div className="mt-1.5 space-y-1.5">
+                    {detecting && (
+                      <div className="inline-flex items-center gap-1.5 text-[10px] text-gray-500">
+                        <Loader2 className="h-3 w-3 animate-spin" />
+                        Detecting location…
+                      </div>
+                    )}
+                    {detection && !detecting && (
+                      <div className="inline-flex items-center gap-1.5 rounded-full bg-emerald-50 dark:bg-emerald-500/10 border border-emerald-200 dark:border-emerald-500/30 px-2 py-0.5 text-[10px] font-medium text-emerald-700 dark:text-emerald-300">
+                        <Check className="h-3 w-3" />
+                        <span>
+                          {pathaoSourceLabel(detection.source)}: {detection.city.name}
+                          {detection.zone && ` → ${detection.zone.name}`}
+                          {detection.area && ` → ${detection.area.name}`}
+                        </span>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setDetection(null);
+                            setForm((f) => ({ ...f, city_id: "", zone_id: "", area_id: "" }));
+                          }}
+                          className="ml-0.5 rounded-full hover:bg-emerald-100 dark:hover:bg-emerald-500/20 p-0.5"
+                          title="Clear detection"
+                        >
+                          <XCircle className="h-3 w-3" />
+                        </button>
+                      </div>
+                    )}
+                    {!detection && citySuggestions.length > 0 && !detecting && (
+                      <div className="flex flex-wrap items-center gap-1.5">
+                        <span className="inline-flex items-center gap-1 text-[10px] text-gray-500">
+                          <MapPin className="h-3 w-3" />
+                          Did you mean
+                        </span>
+                        {citySuggestions.map((c) => (
+                          <button
+                            key={c.id}
+                            type="button"
+                            onClick={() => {
+                              setForm((f) => ({ ...f, city_id: c.id, zone_id: "", area_id: "" }));
+                              // Re-run detection but pin to this city by injecting cached city pick
+                              const trimmed = form.address.trim();
+                              const cached = detectCacheRef.current.get(trimmed);
+                              // Force a fresh detection that auto-applies now that city is chosen
+                              detectCacheRef.current.delete(trimmed);
+                              void runDetection(trimmed, true).catch(() => void cached);
+                            }}
+                            className="inline-flex items-center rounded-full bg-indigo-50 dark:bg-indigo-500/10 border border-indigo-200 dark:border-indigo-500/30 text-indigo-700 dark:text-indigo-300 px-2 py-0.5 text-[10px] font-medium hover:bg-indigo-100 dark:hover:bg-indigo-500/20"
+                          >
+                            {c.name}
+                          </button>
+                        ))}
+                      </div>
+                    )}
                   </div>
-                  <div className="flex items-center justify-between rounded-md border px-2.5 py-2">
-                    <span className="text-[11px]">Cross Sale</span>
-                    <Switch checked={form.is_cross_sale} onCheckedChange={(v) => setForm({ ...form, is_cross_sale: v })} />
+                </FieldShell>
+                <FieldShell label="Shipping Note">
+                  <ShippingNotePresets
+                    value={form.shipping_note}
+                    onChange={(v) => setForm({ ...form, shipping_note: v.slice(0, 150) })}
+                  />
+                </FieldShell>
+                <div className="space-y-3">
+                  <FieldShell label="Source Platform">
+                    <Select
+                      value={form.source_platform}
+                      onValueChange={(v) => setForm({ ...form, source_platform: v })}
+                    >
+                      <SelectTrigger className="h-9">
+                        <SelectValue placeholder="Select source platform">
+                          {(() => {
+                            const opt = SOURCE_PLATFORM_OPTIONS.find(
+                              (o) => o.value === form.source_platform,
+                            );
+                            if (!opt) return null;
+                            const Icon = opt.icon;
+                            return (
+                              <span className="flex items-center gap-2">
+                                <Icon className="h-3.5 w-3.5 text-muted-foreground" />
+                                <span>{opt.label}</span>
+                              </span>
+                            );
+                          })()}
+                        </SelectValue>
+                      </SelectTrigger>
+                      <SelectContent>
+                        {["Online", "Social", "Messaging", "Direct", "Other"].map((group) => {
+                          const items = SOURCE_PLATFORM_OPTIONS.filter((o) => o.group === group);
+                          if (items.length === 0) return null;
+                          return (
+                            <SelectGroup key={group}>
+                              <SelectLabel className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
+                                {group}
+                              </SelectLabel>
+                              {items.map((item) => {
+                                const Icon = item.icon;
+                                return (
+                                  <SelectItem key={item.value} value={item.value}>
+                                    <span className="flex items-center gap-2">
+                                      <Icon
+                                        className={cn(
+                                          "h-3.5 w-3.5",
+                                          item.value === "Website" && "text-sky-600",
+                                          item.value === "Facebook" && "text-blue-600",
+                                          item.value === "Instagram" && "text-pink-600",
+                                          item.value === "WhatsApp" && "text-emerald-600",
+                                          item.value === "Phone" && "text-amber-600",
+                                        )}
+                                      />
+                                      <span>{item.label}</span>
+                                    </span>
+                                  </SelectItem>
+                                );
+                              })}
+                            </SelectGroup>
+                          );
+                        })}
+                      </SelectContent>
+                    </Select>
+                  </FieldShell>
+                  <div className="grid grid-cols-2 gap-2">
+                    <div className="flex items-center justify-between rounded-md border px-2.5 py-2">
+                      <span className="text-[11px]">Preorder</span>
+                      <Switch
+                        checked={form.is_preorder}
+                        onCheckedChange={(v) => setForm({ ...form, is_preorder: v })}
+                      />
+                    </div>
+                    <div className="flex items-center justify-between rounded-md border px-2.5 py-2">
+                      <span className="text-[11px]">Cross Sale</span>
+                      <Switch
+                        checked={form.is_cross_sale}
+                        onCheckedChange={(v) => setForm({ ...form, is_cross_sale: v })}
+                      />
+                    </div>
                   </div>
                 </div>
               </div>
-            </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-x-3 gap-y-2.5">
-
-              <div className="space-y-1">
-                <div className="flex items-center justify-between">
-                  <label className="text-[11px] font-medium text-muted-foreground">City</label>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      const addr = (form.address || order?.shipping_address || "").trim();
-                      if (addr.length < 4) return;
-                      lastDetectedAddrRef.current = "";
-                      detectCacheRef.current.delete(addr);
-                      setDetectionAttempted(true);
-                      void runDetection(addr, true);
-                    }}
-                    disabled={detecting}
-                    className="text-[10px] text-muted-foreground hover:text-foreground underline underline-offset-2 disabled:opacity-50"
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-x-3 gap-y-2.5">
+                <div className="space-y-1">
+                  <div className="flex items-center justify-between">
+                    <label className="text-[11px] font-medium text-muted-foreground">City</label>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const addr = (form.address || order?.shipping_address || "").trim();
+                        if (addr.length < 4) return;
+                        lastDetectedAddrRef.current = "";
+                        detectCacheRef.current.delete(addr);
+                        setDetectionAttempted(true);
+                        void runDetection(addr, true);
+                      }}
+                      disabled={detecting}
+                      className="text-[10px] text-muted-foreground hover:text-foreground underline underline-offset-2 disabled:opacity-50"
+                    >
+                      {detecting ? "Detecting…" : "🔍 Detect"}
+                    </button>
+                  </div>
+                  <Select
+                    value={form.city_id}
+                    onValueChange={(v) =>
+                      setForm({ ...form, city_id: v, zone_id: "", area_id: "" })
+                    }
                   >
-                    {detecting ? "Detecting…" : "🔍 Detect"}
-                  </button>
+                    <SelectTrigger
+                      className={`h-9 ${confirmAttempted && !form.city_id ? "border-red-500 ring-1 ring-red-500" : ""}`}
+                    >
+                      <SelectValue placeholder={detecting ? "Detecting…" : "Select city"} />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {(cities ?? []).map((c) => (
+                        <SelectItem key={c.id} value={c.id}>
+                          {c.name_en}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  {detectionAttempted &&
+                    !detecting &&
+                    !detection &&
+                    !form.city_id &&
+                    citySuggestions.length === 0 && (
+                      <p className="text-[10px] text-muted-foreground">
+                        Could not detect — please select manually
+                      </p>
+                    )}
                 </div>
-                <Select value={form.city_id} onValueChange={(v) => setForm({ ...form, city_id: v, zone_id: "", area_id: "" })}>
-                  <SelectTrigger className={`h-9 ${confirmAttempted && !form.city_id ? "border-red-500 ring-1 ring-red-500" : ""}`}><SelectValue placeholder={detecting ? "Detecting…" : "Select city"} /></SelectTrigger>
-                  <SelectContent>{(cities ?? []).map((c) => <SelectItem key={c.id} value={c.id}>{c.name_en}</SelectItem>)}</SelectContent>
-                </Select>
-                {detectionAttempted && !detecting && !detection && !form.city_id && citySuggestions.length === 0 && (
-                  <p className="text-[10px] text-muted-foreground">Could not detect — please select manually</p>
-                )}
+                <FieldShell label="Zone">
+                  <Select
+                    value={form.zone_id}
+                    onValueChange={(v) => setForm({ ...form, zone_id: v, area_id: "" })}
+                    disabled={!form.city_id}
+                  >
+                    <SelectTrigger
+                      className={`h-9 ${confirmAttempted && !form.zone_id ? "border-red-500 ring-1 ring-red-500" : ""}`}
+                    >
+                      <SelectValue placeholder="Select zone" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {(zones ?? []).map((z) => (
+                        <SelectItem key={z.id} value={z.id}>
+                          {z.name_en}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </FieldShell>
+                <FieldShell label="Area">
+                  <Select
+                    value={form.area_id}
+                    onValueChange={(v) => setForm({ ...form, area_id: v })}
+                    disabled={!form.zone_id}
+                  >
+                    <SelectTrigger className="h-9">
+                      <SelectValue placeholder="Select an area" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {(areas ?? []).map((a) => (
+                        <SelectItem key={a.id} value={a.id}>
+                          {a.name_en}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </FieldShell>
               </div>
-              <FieldShell label="Zone">
-                <Select value={form.zone_id} onValueChange={(v) => setForm({ ...form, zone_id: v, area_id: "" })} disabled={!form.city_id}>
-                  <SelectTrigger className={`h-9 ${confirmAttempted && !form.zone_id ? "border-red-500 ring-1 ring-red-500" : ""}`}><SelectValue placeholder="Select zone" /></SelectTrigger>
-                  <SelectContent>{(zones ?? []).map((z) => <SelectItem key={z.id} value={z.id}>{z.name_en}</SelectItem>)}</SelectContent>
-                </Select>
-              </FieldShell>
-              <FieldShell label="Area">
-                <Select value={form.area_id} onValueChange={(v) => setForm({ ...form, area_id: v })} disabled={!form.zone_id}>
-                  <SelectTrigger className="h-9"><SelectValue placeholder="Select an area" /></SelectTrigger>
-                  <SelectContent>{(areas ?? []).map((a) => <SelectItem key={a.id} value={a.id}>{a.name_en}</SelectItem>)}</SelectContent>
-                </Select>
-              </FieldShell>
-            </div>
             </div>
           </Panel>
 
           {/* Ordered Products (add-products folded in) */}
           <Panel
-            title={<span className="inline-flex items-center gap-2">Ordered Products
-              <span className="inline-flex items-center justify-center min-w-[20px] h-5 px-1.5 rounded-full bg-gray-100 dark:bg-muted text-[10px] font-semibold text-gray-600 tabular-nums">{items.length}</span>
-            </span>}
+            title={
+              <span className="inline-flex items-center gap-2">
+                Ordered Products
+                <span className="inline-flex items-center justify-center min-w-[20px] h-5 px-1.5 rounded-full bg-gray-100 dark:bg-muted text-[10px] font-semibold text-gray-600 tabular-nums">
+                  {items.length}
+                </span>
+              </span>
+            }
             accent="bg-emerald-500"
             bodyClassName="p-4"
             right={
               <div className="flex items-center gap-2">
-                <span className="text-[11px] text-gray-500 tabular-nums">৳{bdtCompact(itemsSubtotal)}</span>
-                <Button size="sm" variant={showAddProducts ? "secondary" : "outline"} className="h-7 px-2 text-[11px]"
-                  onClick={() => setShowAddProducts((v) => !v)}>
-                  <Plus className="h-3 w-3 mr-1" />{showAddProducts ? "Close" : "Add"}
+                <span className="text-[11px] text-gray-500 tabular-nums">
+                  ৳{bdtCompact(itemsSubtotal)}
+                </span>
+                <Button
+                  size="sm"
+                  variant={showAddProducts ? "secondary" : "outline"}
+                  className="h-7 px-2 text-[11px]"
+                  onClick={() => setShowAddProducts((v) => !v)}
+                >
+                  <Plus className="h-3 w-3 mr-1" />
+                  {showAddProducts ? "Close" : "Add"}
                 </Button>
               </div>
             }
@@ -1915,88 +2653,149 @@ function splitCourierProviders(providers?: HistProvider[] | null) {
                     currentProductIds={productIds}
                     addedCount={(pid, vid) =>
                       items
-                        .filter((x) => x.product_id === pid && ((x as any).variant_id ?? null) === vid)
-                        .reduce((s, x) => s + Number(x.quantity ?? 0), 0)}
+                        .filter(
+                          (x) => x.product_id === pid && ((x as any).variant_id ?? null) === vid,
+                        )
+                        .reduce((s, x) => s + Number(x.quantity ?? 0), 0)
+                    }
                     onAdd={(p, v, qty) => addItem.mutate({ p, v, qty })}
                   />
-
                 </div>
               )}
               {items.length === 0 ? (
-                <p className="text-xs text-muted-foreground text-center py-8">No items in this order</p>
+                <p className="text-xs text-muted-foreground text-center py-8">
+                  No items in this order
+                </p>
               ) : (
                 <ul className="divide-y divide-gray-100 dark:divide-border -mx-2">
-                  {items.filter((it) => !(it as any).is_combo_child).map((it) => {
-                    const unit = Number(it.unit_price ?? it.price);
-                    const total = Number(it.line_total ?? unit * it.quantity);
-                    const children = items.filter((c) => (c as any).combo_parent_item_id === it.id);
-                    const isCombo = children.length > 0;
-                    return (
-                      <li key={it.id} className="px-2 py-3 rounded-lg hover:bg-gray-50/70 dark:hover:bg-muted/30 transition-colors">
-                        <div className="flex items-start gap-3">
-                          <div className="h-12 w-12 rounded-lg bg-gray-100 dark:bg-muted ring-1 ring-gray-200/70 dark:ring-border shrink-0 overflow-hidden flex items-center justify-center">
-                            {it.image ? <img src={it.image} alt="" className="h-full w-full object-cover" /> : <span className="text-[8px] text-muted-foreground">No Image</span>}
-                          </div>
-                          <div className="flex-1 min-w-0">
-                            <div className="flex items-center gap-2">
-                              <div className="text-xs font-mono text-muted-foreground">{it.product_id.slice(0, 8)}</div>
-                              {isCombo && (
-                                <span className="rounded bg-violet-500/15 text-violet-700 dark:text-violet-300 px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wide">
-                                  Combo
-                                </span>
+                  {items
+                    .filter((it) => !(it as any).is_combo_child)
+                    .map((it) => {
+                      const unit = Number(it.unit_price ?? it.price);
+                      const total = Number(it.line_total ?? unit * it.quantity);
+                      const children = items.filter(
+                        (c) => (c as any).combo_parent_item_id === it.id,
+                      );
+                      const isCombo = children.length > 0;
+                      return (
+                        <li
+                          key={it.id}
+                          className="px-2 py-3 rounded-lg hover:bg-gray-50/70 dark:hover:bg-muted/30 transition-colors"
+                        >
+                          <div className="flex items-start gap-3">
+                            <div className="h-12 w-12 rounded-lg bg-gray-100 dark:bg-muted ring-1 ring-gray-200/70 dark:ring-border shrink-0 overflow-hidden flex items-center justify-center">
+                              {it.image ? (
+                                <img src={it.image} alt="" className="h-full w-full object-cover" />
+                              ) : (
+                                <span className="text-[8px] text-muted-foreground">No Image</span>
                               )}
                             </div>
-                             <div className="text-sm font-medium truncate">{it.name}</div>
-                             {it.variant_label && (
-                               <div className="mt-0.5 inline-flex items-center gap-1 rounded-md bg-indigo-500/10 px-1.5 py-0.5 text-[10px] font-semibold text-indigo-700 dark:text-indigo-300 ring-1 ring-inset ring-indigo-500/20">
-                                 <span className="opacity-70">Variant:</span>
-                                 <span>{it.variant_label}</span>
-                               </div>
-                             )}
-                             <div className="flex items-center gap-2 text-[10px]">
-                               <span className="text-rose-600">৳{bdtCompact(unit)}</span>
-                               {(() => {
-                                 if (isCombo) return null;
-                                 const s = stockMap?.get(it.product_id);
-                                 if (s === undefined) return null;
-                                 if (s <= 0) return <span className="rounded px-1 py-0.5 bg-rose-500/15 text-rose-600 font-semibold">Out of stock</span>;
-                                 if (s < 5) return <span className="rounded px-1 py-0.5 bg-amber-500/15 text-amber-700 dark:text-amber-300 font-semibold">Stock: {s}</span>;
-                                 return <span className="rounded px-1 py-0.5 bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 font-semibold">Stock: {s}</span>;
-                               })()}
-                             </div>
-                             {isCombo && (
-                               <div className="mt-2 rounded-md border border-violet-200 dark:border-violet-800/50 bg-violet-50/40 dark:bg-violet-950/20 px-2 py-1.5">
-                                 <div className="text-[10px] font-semibold uppercase tracking-wide text-violet-700 dark:text-violet-300 mb-1">Includes</div>
-                                 <ul className="space-y-1">
-                                   {children.map((c) => (
-                                     <li key={c.id} className="flex items-center gap-2 text-[11px]">
-                                       {c.image ? <img src={c.image} alt="" className="h-5 w-5 rounded object-cover" /> : <span className="h-5 w-5 rounded bg-muted" />}
-                                       <span className="truncate flex-1">{c.name}</span>
-                                       <span className="text-muted-foreground tabular-nums">× {c.quantity}</span>
-                                     </li>
-                                   ))}
-                                 </ul>
-                               </div>
-                             )}
+                            <div className="flex-1 min-w-0">
+                              <div className="flex items-center gap-2">
+                                <div className="text-xs font-mono text-muted-foreground">
+                                  {it.product_id.slice(0, 8)}
+                                </div>
+                                {isCombo && (
+                                  <span className="rounded bg-violet-500/15 text-violet-700 dark:text-violet-300 px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wide">
+                                    Combo
+                                  </span>
+                                )}
+                              </div>
+                              <div className="text-sm font-medium truncate">{it.name}</div>
+                              {it.variant_label && (
+                                <div className="mt-0.5 inline-flex items-center gap-1 rounded-md bg-indigo-500/10 px-1.5 py-0.5 text-[10px] font-semibold text-indigo-700 dark:text-indigo-300 ring-1 ring-inset ring-indigo-500/20">
+                                  <span className="opacity-70">Variant:</span>
+                                  <span>{it.variant_label}</span>
+                                </div>
+                              )}
+                              <div className="flex items-center gap-2 text-[10px]">
+                                <span className="text-rose-600">৳{bdtCompact(unit)}</span>
+                                {(() => {
+                                  if (isCombo) return null;
+                                  const s = stockMap?.get(it.product_id);
+                                  if (s === undefined) return null;
+                                  if (s <= 0)
+                                    return (
+                                      <span className="rounded px-1 py-0.5 bg-rose-500/15 text-rose-600 font-semibold">
+                                        Out of stock
+                                      </span>
+                                    );
+                                  if (s < 5)
+                                    return (
+                                      <span className="rounded px-1 py-0.5 bg-amber-500/15 text-amber-700 dark:text-amber-300 font-semibold">
+                                        Stock: {s}
+                                      </span>
+                                    );
+                                  return (
+                                    <span className="rounded px-1 py-0.5 bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 font-semibold">
+                                      Stock: {s}
+                                    </span>
+                                  );
+                                })()}
+                              </div>
+                              {isCombo && (
+                                <div className="mt-2 rounded-md border border-violet-200 dark:border-violet-800/50 bg-violet-50/40 dark:bg-violet-950/20 px-2 py-1.5">
+                                  <div className="text-[10px] font-semibold uppercase tracking-wide text-violet-700 dark:text-violet-300 mb-1">
+                                    Includes
+                                  </div>
+                                  <ul className="space-y-1">
+                                    {children.map((c) => (
+                                      <li
+                                        key={c.id}
+                                        className="flex items-center gap-2 text-[11px]"
+                                      >
+                                        {c.image ? (
+                                          <img
+                                            src={c.image}
+                                            alt=""
+                                            className="h-5 w-5 rounded object-cover"
+                                          />
+                                        ) : (
+                                          <span className="h-5 w-5 rounded bg-muted" />
+                                        )}
+                                        <span className="truncate flex-1">{c.name}</span>
+                                        <span className="text-muted-foreground tabular-nums">
+                                          × {c.quantity}
+                                        </span>
+                                      </li>
+                                    ))}
+                                  </ul>
+                                </div>
+                              )}
+                            </div>
+                            <button
+                              onClick={() => deleteItem.mutate(it.id)}
+                              className="p-1.5 rounded-md hover:bg-rose-500/10 text-gray-400 hover:text-rose-600 transition-colors"
+                              title="Remove item"
+                            >
+                              <Trash2 className="h-3.5 w-3.5" />
+                            </button>
                           </div>
-                          <button onClick={() => deleteItem.mutate(it.id)} className="p-1.5 rounded-md hover:bg-rose-500/10 text-gray-400 hover:text-rose-600 transition-colors" title="Remove item">
-                            <Trash2 className="h-3.5 w-3.5" />
-                          </button>
-                        </div>
-                        <div className="grid grid-cols-3 gap-2 mt-2">
-                          <FieldShell label="Qty">
-                            <QtyInput value={it.quantity} onChange={(v) => updateItem.mutate({ id: it.id, quantity: v })} />
-                          </FieldShell>
-                          <FieldShell label="Price">
-                            <QtyInput value={unit} onChange={(v) => updateItem.mutate({ id: it.id, unit_price: v })} step={10} />
-                          </FieldShell>
-                          <FieldShell label="Total">
-                            <Input value={bdtCompact(total)} readOnly className="h-8 text-xs bg-gray-50 dark:bg-muted/40 border-gray-100 tabular-nums font-semibold" />
-                          </FieldShell>
-                        </div>
-                      </li>
-                    );
-                  })}
+                          <div className="grid grid-cols-3 gap-2 mt-2">
+                            <FieldShell label="Qty">
+                              <QtyInput
+                                value={it.quantity}
+                                onChange={(v) => updateItem.mutate({ id: it.id, quantity: v })}
+                              />
+                            </FieldShell>
+                            <FieldShell label="Price">
+                              <QtyInput
+                                value={unit}
+                                onChange={(v) => updateItem.mutate({ id: it.id, unit_price: v })}
+                                step={10}
+                              />
+                            </FieldShell>
+                            <FieldShell label="Total">
+                              <Input
+                                value={bdtCompact(total)}
+                                readOnly
+                                className="h-8 text-xs bg-gray-50 dark:bg-muted/40 border-gray-100 tabular-nums font-semibold"
+                              />
+                            </FieldShell>
+                          </div>
+                        </li>
+                      );
+                    })}
                 </ul>
               )}
             </div>
@@ -2005,115 +2804,151 @@ function splitCourierProviders(providers?: HistProvider[] | null) {
           {/* Totals row */}
           <Panel title="Pricing & Totals" accent="bg-amber-500" bodyClassName="p-3.5">
             <div>
-            <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
-              <FieldShell label="Discount">
-                <NumInput value={form.discount} onChange={(v) => setForm({ ...form, discount: v })} />
-              </FieldShell>
-              <FieldShell label="Advance">
-                <NumInput value={form.advance} onChange={(v) => setForm({ ...form, advance: v })} />
-              </FieldShell>
-              {Number(form.advance) > 0 && (
-                <div className="col-span-2 md:col-span-5 grid gap-3 rounded-lg border bg-muted/30 p-3 sm:grid-cols-3">
-                  <FieldShell label="Advance Source *">
-                    <Select value={form.advance_source} onValueChange={(v) => setForm({ ...form, advance_source: v })}>
-                      <SelectTrigger className="h-9"><SelectValue placeholder="Select source" /></SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="bKash">bKash</SelectItem>
-                        <SelectItem value="Nagad">Nagad</SelectItem>
-                        <SelectItem value="Rocket">Rocket</SelectItem>
-                        <SelectItem value="Upay">Upay</SelectItem>
-                        <SelectItem value="Bank">Bank Transfer</SelectItem>
-                        <SelectItem value="Card">Card</SelectItem>
-                        <SelectItem value="Cash">Cash</SelectItem>
-                        <SelectItem value="Other">Other</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </FieldShell>
-                  <FieldShell label="Payment No / Last 4 *">
-                    <Input
-                      inputMode="numeric"
-                      maxLength={20}
-                      value={form.advance_payment_number}
-                      onChange={(e) => setForm({ ...form, advance_payment_number: e.target.value.replace(/[^0-9]/g, "") })}
-                      placeholder="017... or 5678"
-                      className="h-9 tabular-nums"
-                    />
-                  </FieldShell>
-                  <FieldShell label="Transaction ID (optional)">
-                    <Input
-                      maxLength={50}
-                      value={form.advance_txn_id}
-                      onChange={(e) => setForm({ ...form, advance_txn_id: e.target.value })}
-                      placeholder="Txn ID"
-                      className="h-9"
-                    />
-                  </FieldShell>
-                </div>
-              )}
-              <FieldShell label="Sub Total">
-                <Input value={bdtCompact(itemsSubtotal)} readOnly className="h-9 bg-muted/40 tabular-nums" />
-              </FieldShell>
-              <FieldShell label="Delivery Charge">
-                <NumInput value={form.shipping_fee} onChange={(v) => setForm({ ...form, shipping_fee: v })} />
-              </FieldShell>
-              <FieldShell label="Grand Total">
-                <Input value={`৳ ${bdtCompact(grandTotal)}`} readOnly className="h-9 bg-indigo-50 dark:bg-indigo-500/10 border-indigo-200 dark:border-indigo-500/30 text-indigo-700 dark:text-indigo-300 font-bold tabular-nums" />
-              </FieldShell>
-            </div>
-            {order.payment_method?.toLowerCase().includes("cod") && (
-              <div className="mt-3 rounded-lg border border-amber-200 bg-amber-50 dark:bg-amber-500/10 dark:border-amber-500/30 px-3 py-2 text-[11px] text-amber-800 dark:text-amber-300 text-center">
-                Cash on Delivery (COD) — please confirm with the customer before booking.
+              <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
+                <FieldShell label="Discount">
+                  <NumInput
+                    value={form.discount}
+                    onChange={(v) => setForm({ ...form, discount: v })}
+                  />
+                </FieldShell>
+                <FieldShell label="Advance">
+                  <NumInput
+                    value={form.advance}
+                    onChange={(v) => setForm({ ...form, advance: v })}
+                  />
+                </FieldShell>
+                {Number(form.advance) > 0 && (
+                  <div className="col-span-2 md:col-span-5 grid gap-3 rounded-lg border bg-muted/30 p-3 sm:grid-cols-3">
+                    <FieldShell label="Advance Source *">
+                      <Select
+                        value={form.advance_source}
+                        onValueChange={(v) => setForm({ ...form, advance_source: v })}
+                      >
+                        <SelectTrigger className="h-9">
+                          <SelectValue placeholder="Select source" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="bKash">bKash</SelectItem>
+                          <SelectItem value="Nagad">Nagad</SelectItem>
+                          <SelectItem value="Rocket">Rocket</SelectItem>
+                          <SelectItem value="Upay">Upay</SelectItem>
+                          <SelectItem value="Bank">Bank Transfer</SelectItem>
+                          <SelectItem value="Card">Card</SelectItem>
+                          <SelectItem value="Cash">Cash</SelectItem>
+                          <SelectItem value="Other">Other</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </FieldShell>
+                    <FieldShell label="Payment No / Last 4 *">
+                      <Input
+                        inputMode="numeric"
+                        maxLength={20}
+                        value={form.advance_payment_number}
+                        onChange={(e) =>
+                          setForm({
+                            ...form,
+                            advance_payment_number: e.target.value.replace(/[^0-9]/g, ""),
+                          })
+                        }
+                        placeholder="017... or 5678"
+                        className="h-9 tabular-nums"
+                      />
+                    </FieldShell>
+                    <FieldShell label="Transaction ID (optional)">
+                      <Input
+                        maxLength={50}
+                        value={form.advance_txn_id}
+                        onChange={(e) => setForm({ ...form, advance_txn_id: e.target.value })}
+                        placeholder="Txn ID"
+                        className="h-9"
+                      />
+                    </FieldShell>
+                  </div>
+                )}
+                <FieldShell label="Sub Total">
+                  <Input
+                    value={bdtCompact(itemsSubtotal)}
+                    readOnly
+                    className="h-9 bg-muted/40 tabular-nums"
+                  />
+                </FieldShell>
+                <FieldShell label="Delivery Charge">
+                  <NumInput
+                    value={form.shipping_fee}
+                    onChange={(v) => setForm({ ...form, shipping_fee: v })}
+                  />
+                </FieldShell>
+                <FieldShell label="Grand Total">
+                  <Input
+                    value={`৳ ${bdtCompact(grandTotal)}`}
+                    readOnly
+                    className="h-9 bg-indigo-50 dark:bg-indigo-500/10 border-indigo-200 dark:border-indigo-500/30 text-indigo-700 dark:text-indigo-300 font-bold tabular-nums"
+                  />
+                </FieldShell>
               </div>
-            )}
-            {order.status !== "confirmed" && order.web_status !== "complete" ? (
-              <>
-              {confirmAttempted && (!form.city_id || !form.zone_id) && (
-                <div className="mt-3 rounded-md border border-red-300 bg-red-50 dark:bg-red-500/10 dark:border-red-500/30 px-3 py-2 text-[12px] text-red-700 dark:text-red-300 text-center">
-                  City and Zone required before confirming order
+              {order.payment_method?.toLowerCase().includes("cod") && (
+                <div className="mt-3 rounded-lg border border-amber-200 bg-amber-50 dark:bg-amber-500/10 dark:border-amber-500/30 px-3 py-2 text-[11px] text-amber-800 dark:text-amber-300 text-center">
+                  Cash on Delivery (COD) — please confirm with the customer before booking.
                 </div>
               )}
-              <Button
-                className="w-full mt-4 h-11 bg-gradient-to-r from-primary to-indigo-500 text-primary-foreground shadow-lg shadow-primary/25 transition-all duration-200 hover:shadow-xl hover:shadow-primary/30 hover:brightness-105 active:scale-[0.98]"
-                size="lg"
-                disabled={confirmOrder.isPending}
-                onClick={() => {
-                  if (!form.city_id || !form.zone_id) {
-                    setConfirmAttempted(true);
-                    return;
-                  }
-                  setConfirmAttempted(false);
-                  confirmOrder.mutate();
-                }}
-              >
-                {confirmOrder.isPending
-                  ? <Loader2 className="h-4 w-4 animate-spin" />
-                  : <><CheckCircle2 className="h-4 w-4 mr-1.5" />Confirm Order (৳{bdtCompact(grandTotal)}.00)</>}
-              </Button>
-              <Button
-                variant="outline"
-                className="w-full mt-2 h-10 gap-1.5 border-indigo-300 text-indigo-700 hover:bg-indigo-50 dark:border-indigo-900 dark:text-indigo-300"
-                onClick={() => setPreorderOpen(true)}
-              >
-                <CalendarClock className="h-4 w-4" />
-                Move to Pre-order
-              </Button>
-              </>
-            ) : (
-              <Button
-                className="w-full mt-4 h-11"
-                size="lg"
-                variant="outline"
-                disabled={savePricing.isPending}
-                onClick={() => savePricing.mutate()}
-              >
-                {savePricing.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : `Save Order (৳${bdtCompact(grandTotal)}.00)`}
-              </Button>
-            )}
+              {order.status !== "confirmed" && order.web_status !== "complete" ? (
+                <>
+                  {confirmAttempted && (!form.city_id || !form.zone_id) && (
+                    <div className="mt-3 rounded-md border border-red-300 bg-red-50 dark:bg-red-500/10 dark:border-red-500/30 px-3 py-2 text-[12px] text-red-700 dark:text-red-300 text-center">
+                      City and Zone required before confirming order
+                    </div>
+                  )}
+                  <Button
+                    className="w-full mt-4 h-11 bg-gradient-to-r from-primary to-indigo-500 text-primary-foreground shadow-lg shadow-primary/25 transition-all duration-200 hover:shadow-xl hover:shadow-primary/30 hover:brightness-105 active:scale-[0.98]"
+                    size="lg"
+                    disabled={confirmOrder.isPending}
+                    onClick={() => {
+                      if (!form.city_id || !form.zone_id) {
+                        setConfirmAttempted(true);
+                        return;
+                      }
+                      setConfirmAttempted(false);
+                      confirmOrder.mutate();
+                    }}
+                  >
+                    {confirmOrder.isPending ? (
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                    ) : (
+                      <>
+                        <CheckCircle2 className="h-4 w-4 mr-1.5" />
+                        Confirm Order (৳{bdtCompact(grandTotal)}.00)
+                      </>
+                    )}
+                  </Button>
+                  <Button
+                    variant="outline"
+                    className="w-full mt-2 h-10 gap-1.5 border-indigo-300 text-indigo-700 hover:bg-indigo-50 dark:border-indigo-900 dark:text-indigo-300"
+                    onClick={() => setPreorderOpen(true)}
+                  >
+                    <CalendarClock className="h-4 w-4" />
+                    Move to Pre-order
+                  </Button>
+                </>
+              ) : (
+                <Button
+                  className="w-full mt-4 h-11"
+                  size="lg"
+                  variant="outline"
+                  disabled={savePricing.isPending}
+                  onClick={() => savePricing.mutate()}
+                >
+                  {savePricing.isPending ? (
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                  ) : (
+                    `Save Order (৳${bdtCompact(grandTotal)}.00)`
+                  )}
+                </Button>
+              )}
             </div>
           </Panel>
 
           {/* Order Timeline (self-collapsible) */}
-          <OrderTimeline orderId={orderId} />
+          <OrderJourney orderId={orderId} />
         </div>
 
         {/* RIGHT SIDEBAR */}
@@ -2121,33 +2956,63 @@ function splitCourierProviders(providers?: HistProvider[] | null) {
           <Panel
             title="Order Summary"
             accent="bg-emerald-500"
-            right={<span className="text-[10px] font-mono text-gray-500">#{invoiceDisplay(order)}</span>}
+            right={
+              <span className="text-[10px] font-mono text-gray-500">#{invoiceDisplay(order)}</span>
+            }
             bodyClassName="p-3"
           >
             <div className="space-y-1 text-xs">
-
-              <Row label="Date" value={format(new Date(order.created_at), "dd MMM yyyy, hh:mm a")} />
-              <Row label="Status" value={
-                <div className="flex items-center gap-1.5">
-                  <Badge className={statusBadge(order.status).className}>{statusBadge(order.status).label}</Badge>
-                  {(() => {
-                    const s = settlementBadge(order);
-                    return s ? <Badge variant="outline" className={cn("font-bold uppercase tracking-wide", s.className)}>{s.label}</Badge> : null;
-                  })()}
-                </div>
-              } />
+              <Row
+                label="Date"
+                value={format(new Date(order.created_at), "dd MMM yyyy, hh:mm a")}
+              />
+              <Row
+                label="Status"
+                value={
+                  <div className="flex items-center gap-1.5">
+                    <Badge className={statusBadge(order.status).className}>
+                      {statusBadge(order.status).label}
+                    </Badge>
+                    {(() => {
+                      const s = settlementBadge(order);
+                      return s ? (
+                        <Badge
+                          variant="outline"
+                          className={cn("font-bold uppercase tracking-wide", s.className)}
+                        >
+                          {s.label}
+                        </Badge>
+                      ) : null;
+                    })()}
+                  </div>
+                }
+              />
               <Row label="Payment" value={order.payment_method ?? "—"} />
               <Row label="Source" value={sourceLabel(order.source)} />
-              <Row label="Device" value={<span className="inline-flex items-center gap-1 capitalize"><Smartphone className="h-3 w-3 text-gray-400" />{sessionInfo?.device_type || "Not tracked"}</span>} />
-              <Row label="Mobile" value={
-                <CopyChip value={`+88${form.mobile}`} className="-mx-1">
-                  <span className="font-mono">+88{form.mobile}</span>
-                </CopyChip>
-              } />
+              <Row
+                label="Device"
+                value={
+                  <span className="inline-flex items-center gap-1 capitalize">
+                    <Smartphone className="h-3 w-3 text-gray-400" />
+                    {sessionInfo?.device_type || "Not tracked"}
+                  </span>
+                }
+              />
+              <Row
+                label="Mobile"
+                value={
+                  <CopyChip value={`+88${form.mobile}`} className="-mx-1">
+                    <span className="font-mono">+88{form.mobile}</span>
+                  </CopyChip>
+                }
+              />
               <div className="h-px bg-border my-2" />
               <Row label="Subtotal" value={`৳${bdtCompact(itemsSubtotal)}`} />
               <Row label="Delivery" value={`৳${bdtCompact(form.shipping_fee)}`} />
-              <Row label="Total" value={<span className="font-bold text-foreground">৳{bdtCompact(grandTotal)}</span>} />
+              <Row
+                label="Total"
+                value={<span className="font-bold text-foreground">৳{bdtCompact(grandTotal)}</span>}
+              />
             </div>
           </Panel>
 
@@ -2158,45 +3023,54 @@ function splitCourierProviders(providers?: HistProvider[] | null) {
             // COD orders e verification card dorkar nei — sudhu digital (bKash/Nagad/Rocket) hole show koro.
             if (!isDigitalPay) return null;
             const verified = !!order.verified_at;
-            const txnId = order.advance_txn_id
-              ?? (order as { transaction_id?: string | null }).transaction_id
-              ?? null;
+            const txnId =
+              order.advance_txn_id ??
+              (order as { transaction_id?: string | null }).transaction_id ??
+              null;
             const payNumber = order.advance_payment_number ?? null;
             const method = order.payment_method ?? "—";
             return (
-              <section className={cn(
-                "rounded-2xl border shadow-sm overflow-hidden",
-                verified
-                  ? "border-emerald-200 dark:border-emerald-900/50 bg-emerald-50/40 dark:bg-emerald-950/20"
-                  : "border-pink-200 dark:border-pink-900/50 bg-pink-50/40 dark:bg-pink-950/20"
-              )}>
+              <section
+                className={cn(
+                  "rounded-2xl border shadow-sm overflow-hidden",
+                  verified
+                    ? "border-emerald-200 dark:border-emerald-900/50 bg-emerald-50/40 dark:bg-emerald-950/20"
+                    : "border-pink-200 dark:border-pink-900/50 bg-pink-50/40 dark:bg-pink-950/20",
+                )}
+              >
                 <header className="px-5 py-3 border-b border-gray-100 dark:border-border flex items-center justify-between">
                   <div className="flex items-center gap-2">
-                    {verified
-                      ? <ShieldCheck className="h-4 w-4 text-emerald-600" />
-                      : <ShieldAlert className="h-4 w-4 text-pink-600" />}
-                    <h3 className="text-[13px] font-semibold">
-                      Payment Verification
-                    </h3>
+                    {verified ? (
+                      <ShieldCheck className="h-4 w-4 text-emerald-600" />
+                    ) : (
+                      <ShieldAlert className="h-4 w-4 text-pink-600" />
+                    )}
+                    <h3 className="text-[13px] font-semibold">Payment Verification</h3>
                   </div>
-                  <Badge className={cn(
-                    "text-[10px] font-bold uppercase",
-                    verified
-                      ? "bg-emerald-600 hover:bg-emerald-600 text-white"
-                      : "bg-pink-600 hover:bg-pink-600 text-white"
-                  )}>
+                  <Badge
+                    className={cn(
+                      "text-[10px] font-bold uppercase",
+                      verified
+                        ? "bg-emerald-600 hover:bg-emerald-600 text-white"
+                        : "bg-pink-600 hover:bg-pink-600 text-white",
+                    )}
+                  >
                     {verified ? "Verified" : "Pending"}
                   </Badge>
                 </header>
                 <div className="p-4 space-y-2 text-xs">
                   <div className="flex items-center justify-between">
                     <span className="text-gray-500">Method</span>
-                    <Badge variant="outline" className="capitalize">{method}</Badge>
+                    <Badge variant="outline" className="capitalize">
+                      {method}
+                    </Badge>
                   </div>
                   {Number(order.advance_amount ?? 0) > 0 && (
                     <div className="flex items-center justify-between">
                       <span className="text-gray-500">Amount</span>
-                      <span className="font-semibold tabular-nums">৳{bdtCompact(Number(order.advance_amount))}</span>
+                      <span className="font-semibold tabular-nums">
+                        ৳{bdtCompact(Number(order.advance_amount))}
+                      </span>
                     </div>
                   )}
                   {payNumber && (
@@ -2222,7 +3096,8 @@ function splitCourierProviders(providers?: HistProvider[] | null) {
                   )}
                   {verified && order.verified_at && (
                     <div className="text-[11px] text-emerald-700 dark:text-emerald-400 pt-1">
-                      ✓ Verified {formatDistanceToNow(new Date(order.verified_at), { addSuffix: true })}
+                      ✓ Verified{" "}
+                      {formatDistanceToNow(new Date(order.verified_at), { addSuffix: true })}
                     </div>
                   )}
                   <div className="pt-2 flex gap-2">
@@ -2234,7 +3109,8 @@ function splitCourierProviders(providers?: HistProvider[] | null) {
                         disabled={verifyPayment.isPending}
                         onClick={() => verifyPayment.mutate(false)}
                       >
-                        <Undo2 className="h-3.5 w-3.5 mr-1" />Unverify
+                        <Undo2 className="h-3.5 w-3.5 mr-1" />
+                        Unverify
                       </Button>
                     ) : (
                       <Button
@@ -2243,9 +3119,11 @@ function splitCourierProviders(providers?: HistProvider[] | null) {
                         disabled={verifyPayment.isPending}
                         onClick={() => verifyPayment.mutate(true)}
                       >
-                        {verifyPayment.isPending
-                          ? <Loader2 className="h-3.5 w-3.5 mr-1 animate-spin" />
-                          : <ShieldCheck className="h-3.5 w-3.5 mr-1" />}
+                        {verifyPayment.isPending ? (
+                          <Loader2 className="h-3.5 w-3.5 mr-1 animate-spin" />
+                        ) : (
+                          <ShieldCheck className="h-3.5 w-3.5 mr-1" />
+                        )}
                         Mark Verified
                       </Button>
                     )}
@@ -2267,34 +3145,51 @@ function splitCourierProviders(providers?: HistProvider[] | null) {
 
           {/* Tags — folded until needed */}
           <Panel
-            title={<span className="inline-flex items-center gap-1.5"><TagIcon className="h-3.5 w-3.5 text-amber-600" />Order Tags</span>}
+            title={
+              <span className="inline-flex items-center gap-1.5">
+                <TagIcon className="h-3.5 w-3.5 text-amber-600" />
+                Order Tags
+              </span>
+            }
             accent="bg-amber-500"
             collapsible
             defaultOpen={tags.length > 0}
             bodyClassName="p-3"
             lazy
-            right={tags.length > 0 ? <span className="text-[10px] text-gray-500 tabular-nums">{tags.length}</span> : null}
+            right={
+              tags.length > 0 ? (
+                <span className="text-[10px] text-gray-500 tabular-nums">{tags.length}</span>
+              ) : null
+            }
           >
             <div className="space-y-2">
               <div className="flex flex-wrap gap-1.5 min-h-[24px]">
                 {tags.length === 0 && <span className="text-xs text-gray-400">No tags yet</span>}
                 {tags.map((t) => (
-                  <button key={t} onClick={() => updateTags.mutate(tags.filter((x) => x !== t))}
-                    className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-indigo-50 dark:bg-indigo-500/10 text-indigo-700 dark:text-indigo-300 ring-1 ring-inset ring-indigo-200/60 dark:ring-indigo-500/30 text-[11px] font-medium hover:bg-indigo-100 dark:hover:bg-indigo-500/20 transition-colors">
-                    {t}<XCircle className="h-3 w-3" />
+                  <button
+                    key={t}
+                    onClick={() => updateTags.mutate(tags.filter((x) => x !== t))}
+                    className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-indigo-50 dark:bg-indigo-500/10 text-indigo-700 dark:text-indigo-300 ring-1 ring-inset ring-indigo-200/60 dark:ring-indigo-500/30 text-[11px] font-medium hover:bg-indigo-100 dark:hover:bg-indigo-500/20 transition-colors"
+                  >
+                    {t}
+                    <XCircle className="h-3 w-3" />
                   </button>
                 ))}
               </div>
               <div className="flex gap-2">
-                <Input value={form.tag_input} onChange={(e) => setForm({ ...form, tag_input: e.target.value })}
-                  placeholder="Add tag…" className="h-8 text-xs"
+                <Input
+                  value={form.tag_input}
+                  onChange={(e) => setForm({ ...form, tag_input: e.target.value })}
+                  placeholder="Add tag…"
+                  className="h-8 text-xs"
                   onKeyDown={(e) => {
                     if (e.key === "Enter" && form.tag_input.trim()) {
                       e.preventDefault();
                       updateTags.mutate(Array.from(new Set([...tags, form.tag_input.trim()])));
                       setForm((f) => ({ ...f, tag_input: "" }));
                     }
-                  }} />
+                  }}
+                />
               </div>
             </div>
           </Panel>
@@ -2306,10 +3201,14 @@ function splitCourierProviders(providers?: HistProvider[] | null) {
                 disabled={updateWebStatus.isPending}
                 onValueChange={(v) => setDraftWebStatus(v as WebStatus)}
               >
-                <SelectTrigger className="h-8 text-xs"><SelectValue placeholder="Change status" /></SelectTrigger>
+                <SelectTrigger className="h-8 text-xs">
+                  <SelectValue placeholder="Change status" />
+                </SelectTrigger>
                 <SelectContent>
                   {WEB_STATUSES.map((s) => (
-                    <SelectItem key={s.key} value={s.key} className="text-xs">{s.label}</SelectItem>
+                    <SelectItem key={s.key} value={s.key} className="text-xs">
+                      {s.label}
+                    </SelectItem>
                   ))}
                 </SelectContent>
               </Select>
@@ -2322,36 +3221,67 @@ function splitCourierProviders(providers?: HistProvider[] | null) {
                     disabled={!changed || updateWebStatus.isPending}
                     onClick={() => draftWebStatus && onPickWebStatus(draftWebStatus as WebStatus)}
                   >
-                    {updateWebStatus.isPending
-                      ? <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                      : "Update Status"}
+                    {updateWebStatus.isPending ? (
+                      <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                    ) : (
+                      "Update Status"
+                    )}
                   </Button>
                 );
               })()}
               <div className="space-y-1.5 pt-2 border-t border-gray-100 dark:border-border">
-                <label className="text-[11px] font-medium text-gray-500 uppercase tracking-wider">Internal Notes</label>
-                <Textarea rows={2} value={form.note_input} onChange={(e) => setForm({ ...form, note_input: e.target.value })} placeholder="Internal note…" className="text-xs resize-none" />
-                <Button size="sm" variant="outline" className="w-full h-7 text-xs" disabled={!form.note_input.trim() || addNote.isPending} onClick={() => addNote.mutate()}>Add Note</Button>
+                <label className="text-[11px] font-medium text-gray-500 uppercase tracking-wider">
+                  Internal Notes
+                </label>
+                <Textarea
+                  rows={2}
+                  value={form.note_input}
+                  onChange={(e) => setForm({ ...form, note_input: e.target.value })}
+                  placeholder="Internal note…"
+                  className="text-xs resize-none"
+                />
+                <Button
+                  size="sm"
+                  variant="outline"
+                  className="w-full h-7 text-xs"
+                  disabled={!form.note_input.trim() || addNote.isPending}
+                  onClick={() => addNote.mutate()}
+                >
+                  Add Note
+                </Button>
                 {notes.length > 0 && (
                   <div className="space-y-1.5 pt-2 max-h-56 overflow-y-auto">
                     {notes.map((n: any) => {
-                      const canDelete = isAdmin || (currentUserId && n.created_by === currentUserId);
+                      const canDelete =
+                        isAdmin || (currentUserId && n.created_by === currentUserId);
                       return (
-                        <div key={n.id} className="rounded-lg border border-gray-100 dark:border-border bg-gray-50/60 dark:bg-muted/20 px-2.5 py-2 text-xs group hover:border-gray-200 dark:hover:border-border/80 transition-colors">
+                        <div
+                          key={n.id}
+                          className="rounded-lg border border-gray-100 dark:border-border bg-gray-50/60 dark:bg-muted/20 px-2.5 py-2 text-xs group hover:border-gray-200 dark:hover:border-border/80 transition-colors"
+                        >
                           <div className="flex items-center justify-between gap-1">
                             <div className="text-[10px] text-gray-500 truncate">
-                              <span className="font-semibold text-gray-700 dark:text-foreground">{n.author_name || (n.created_by ? "Staff" : "System")}</span>
-                              <span className="text-gray-400"> · {format(new Date(n.created_at), "dd MMM, hh:mm a")}</span>
+                              <span className="font-semibold text-gray-700 dark:text-foreground">
+                                {n.author_name || (n.created_by ? "Staff" : "System")}
+                              </span>
+                              <span className="text-gray-400">
+                                {" "}
+                                · {format(new Date(n.created_at), "dd MMM, hh:mm a")}
+                              </span>
                             </div>
                             {canDelete && (
                               <button
                                 onClick={() => deleteNote.mutate(n.id)}
                                 className="opacity-0 group-hover:opacity-100 transition-opacity p-1 rounded hover:bg-rose-500/10 text-gray-400 hover:text-rose-600"
                                 title="Delete note"
-                              ><Trash2 className="h-3 w-3" /></button>
+                              >
+                                <Trash2 className="h-3 w-3" />
+                              </button>
                             )}
                           </div>
-                          <div className="whitespace-pre-wrap leading-snug mt-1 text-gray-700 dark:text-foreground">{n.body}</div>
+                          <div className="whitespace-pre-wrap leading-snug mt-1 text-gray-700 dark:text-foreground">
+                            {n.body}
+                          </div>
                         </div>
                       );
                     })}
@@ -2361,14 +3291,20 @@ function splitCourierProviders(providers?: HistProvider[] | null) {
               <div className="grid grid-cols-2 gap-1.5 pt-2 border-t border-gray-100 dark:border-border">
                 <a
                   href={`https://wa.me/${form.mobile.replace(/^0/, "880")}?text=${encodeURIComponent("আপনার অর্ডারটি প্রস্তুত আছে। ডেলিভারি দিতে আসছি। অনুগ্রহ করে ফোন রাখুন।")}`}
-                  target="_blank" rel="noreferrer"
+                  target="_blank"
+                  rel="noreferrer"
                   className="inline-flex items-center justify-center gap-1 h-7 px-2 rounded-md border bg-emerald-500/5 border-emerald-500/30 text-emerald-700 dark:text-emerald-300 text-[11px] hover:bg-emerald-500/10"
-                >📱 Send Reminder</a>
+                >
+                  📱 Send Reminder
+                </a>
                 <a
                   href={`https://wa.me/${form.mobile.replace(/^0/, "880")}?text=${encodeURIComponent("আপনার অর্ডার কনফার্ম করতে অগ্রিম পেমেন্ট পাঠান: bKash/Nagad " + (form.advance_payment_number || "[number]"))}`}
-                  target="_blank" rel="noreferrer"
+                  target="_blank"
+                  rel="noreferrer"
                   className="inline-flex items-center justify-center gap-1 h-7 px-2 rounded-md border bg-emerald-500/5 border-emerald-500/30 text-emerald-700 dark:text-emerald-300 text-[11px] hover:bg-emerald-500/10"
-                >💰 Request Advance</a>
+                >
+                  💰 Request Advance
+                </a>
               </div>
               {(() => {
                 const s = ((order.status ?? "") + " " + (order.web_status ?? "")).toLowerCase();
@@ -2376,11 +3312,23 @@ function splitCourierProviders(providers?: HistProvider[] | null) {
                 if (!showRMA) return null;
                 return (
                   <div className="grid grid-cols-2 gap-1.5 pt-2 border-t">
-                    <Button size="sm" variant="outline" className="h-7 text-[11px]" onClick={() => setReturnOpen(true)}>
-                      <RotateCcw className="h-3 w-3 mr-1" />Initiate Return
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      className="h-7 text-[11px]"
+                      onClick={() => setReturnOpen(true)}
+                    >
+                      <RotateCcw className="h-3 w-3 mr-1" />
+                      Initiate Return
                     </Button>
-                    <Button size="sm" variant="outline" className="h-7 text-[11px]" onClick={() => setExchangeOpen(true)}>
-                      <Repeat className="h-3 w-3 mr-1" />Initiate Exchange
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      className="h-7 text-[11px]"
+                      onClick={() => setExchangeOpen(true)}
+                    >
+                      <Repeat className="h-3 w-3 mr-1" />
+                      Initiate Exchange
                     </Button>
                   </div>
                 );
@@ -2391,12 +3339,14 @@ function splitCourierProviders(providers?: HistProvider[] | null) {
           {/* Insights — one at a time instead of four stacked cards */}
           <div className="space-y-3 lazy-panel">
             <div className="surface-panel flex items-center gap-1 rounded-xl p-1">
-              {([
-                ["history", "Customer"],
-                ["cases", "Cases"],
-                ["attribution", "Source"],
-                ["activity", "Activity"],
-              ] as const).map(([key, label]) => (
+              {(
+                [
+                  ["history", "Customer"],
+                  ["cases", "Cases"],
+                  ["attribution", "Source"],
+                  ["activity", "Activity"],
+                ] as const
+              ).map(([key, label]) => (
                 <button
                   key={key}
                   type="button"
@@ -2407,10 +3357,18 @@ function splitCourierProviders(providers?: HistProvider[] | null) {
                       ? "bg-primary text-primary-foreground shadow-sm shadow-primary/25"
                       : "text-muted-foreground hover:bg-muted/60",
                   )}
-                >{label}</button>
+                >
+                  {label}
+                </button>
               ))}
             </div>
-            {insightTab === "history" && <CustomerHistoryPanel brandId={order.brand_id ?? null} phone={phone} currentOrderId={orderId} />}
+            {insightTab === "history" && (
+              <CustomerHistoryPanel
+                brandId={order.brand_id ?? null}
+                phone={phone}
+                currentOrderId={orderId}
+              />
+            )}
             {insightTab === "cases" && <OrderCasesPanel orderId={orderId} />}
             {insightTab === "attribution" && <AttributionPanel orderId={orderId} />}
             {insightTab === "activity" && <ActivityLogPanel orderId={orderId} />}
@@ -2419,16 +3377,31 @@ function splitCourierProviders(providers?: HistProvider[] | null) {
       </div>
 
       <PrintableInvoice order={order} items={items as never} />
-      <BookPathaoDialog open={bookOpen} onOpenChange={setBookOpen} orderId={orderId} defaultAmount={Number(order.total ?? 0)} brandId={order.brand_id ?? null} />
-      <BookSteadfastDialog open={bookSteadfastOpen} onOpenChange={setBookSteadfastOpen} orderId={orderId} defaultAmount={Number(order.total ?? 0)} />
+      <BookPathaoDialog
+        open={bookOpen}
+        onOpenChange={setBookOpen}
+        orderId={orderId}
+        defaultAmount={Number(order.total ?? 0)}
+        brandId={order.brand_id ?? null}
+      />
+      <BookSteadfastDialog
+        open={bookSteadfastOpen}
+        onOpenChange={setBookSteadfastOpen}
+        orderId={orderId}
+        defaultAmount={Number(order.total ?? 0)}
+      />
       <ReturnDialog
         open={returnOpen}
         onOpenChange={setReturnOpen}
         orderId={orderId}
         brandId={order.brand_id ?? null}
         items={items.map((it) => ({
-          id: it.id, product_id: it.product_id, name: it.name,
-          quantity: it.quantity, unit_price: it.unit_price ?? null, price: it.price ?? null,
+          id: it.id,
+          product_id: it.product_id,
+          name: it.name,
+          quantity: it.quantity,
+          unit_price: it.unit_price ?? null,
+          price: it.price ?? null,
         }))}
       />
       <ExchangeDialog
@@ -2437,11 +3410,18 @@ function splitCourierProviders(providers?: HistProvider[] | null) {
         orderId={orderId}
         brandId={order.brand_id ?? null}
         items={items.map((it) => ({
-          id: it.id, product_id: it.product_id, name: it.name,
-          quantity: it.quantity, unit_price: it.unit_price ?? null, price: it.price ?? null,
+          id: it.id,
+          product_id: it.product_id,
+          name: it.name,
+          quantity: it.quantity,
+          unit_price: it.unit_price ?? null,
+          price: it.price ?? null,
         }))}
       />
-      <Dialog open={pendingWebStatus !== null} onOpenChange={(o) => !o && setPendingWebStatus(null)}>
+      <Dialog
+        open={pendingWebStatus !== null}
+        onOpenChange={(o) => !o && setPendingWebStatus(null)}
+      >
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
             <DialogTitle>
@@ -2451,8 +3431,10 @@ function splitCourierProviders(providers?: HistProvider[] | null) {
             </DialogTitle>
             <DialogDescription>
               {pendingWebStatus === "on_hold" && "Why are you putting this order on hold?"}
-              {pendingWebStatus === "cancelled" && "Please tell us why this order is being cancelled."}
-              {pendingWebStatus === "advance_payment" && "How much advance does the customer need to pay?"}
+              {pendingWebStatus === "cancelled" &&
+                "Please tell us why this order is being cancelled."}
+              {pendingWebStatus === "advance_payment" &&
+                "How much advance does the customer need to pay?"}
             </DialogDescription>
           </DialogHeader>
           {pendingWebStatus === "advance_payment" ? (
@@ -2462,7 +3444,9 @@ function splitCourierProviders(providers?: HistProvider[] | null) {
                   Advance Amount (৳) <span className="text-rose-600">*</span>
                 </label>
                 <Input
-                  type="number" min={1} autoFocus
+                  type="number"
+                  min={1}
+                  autoFocus
                   value={pendingAdvance}
                   onChange={(e) => setPendingAdvance(e.target.value)}
                   placeholder="e.g. 100"
@@ -2480,24 +3464,32 @@ function splitCourierProviders(providers?: HistProvider[] | null) {
                   placeholder="e.g. customer ke advance jonno bola hoyeche…"
                   className="resize-none"
                 />
-                <p className="text-[10px] text-muted-foreground">Source/payment details order create form e add koren.</p>
+                <p className="text-[10px] text-muted-foreground">
+                  Source/payment details order create form e add koren.
+                </p>
               </div>
             </div>
           ) : (
             <div className="space-y-2">
               <label className="text-xs text-muted-foreground">Reason</label>
               <Textarea
-                rows={3} autoFocus maxLength={500}
+                rows={3}
+                autoFocus
+                maxLength={500}
                 value={pendingReason}
                 onChange={(e) => setPendingReason(e.target.value)}
                 placeholder="Type the reason…"
                 className="resize-none"
               />
-              <div className="text-[10px] text-right text-muted-foreground">{pendingReason.length}/500</div>
+              <div className="text-[10px] text-right text-muted-foreground">
+                {pendingReason.length}/500
+              </div>
             </div>
           )}
           <DialogFooter>
-            <Button variant="ghost" onClick={() => setPendingWebStatus(null)}>Cancel</Button>
+            <Button variant="ghost" onClick={() => setPendingWebStatus(null)}>
+              Cancel
+            </Button>
             <Button
               disabled={updateWebStatus.isPending}
               onClick={submitPendingWebStatus}
@@ -2581,23 +3573,67 @@ function OrderLockBanner({ lock }: { lock: OrderLockState }) {
 /*  Small input helpers                                                        */
 /* -------------------------------------------------------------------------- */
 
-function QtyInput({ value, onChange, step = 1 }: { value: number; onChange: (v: number) => void; step?: number }) {
+function QtyInput({
+  value,
+  onChange,
+  step = 1,
+}: {
+  value: number;
+  onChange: (v: number) => void;
+  step?: number;
+}) {
   const [local, setLocal] = useState(String(value));
-  useEffect(() => { setLocal(String(value)); }, [value]);
-  const commit = (n: number) => { const v = Math.max(0, Number.isFinite(n) ? n : 0); onChange(v); setLocal(String(v)); };
+  useEffect(() => {
+    setLocal(String(value));
+  }, [value]);
+  const commit = (n: number) => {
+    const v = Math.max(0, Number.isFinite(n) ? n : 0);
+    onChange(v);
+    setLocal(String(v));
+  };
   return (
     <div className="flex items-center h-8 rounded-md border overflow-hidden">
-      <button type="button" className="px-2 h-full hover:bg-muted text-muted-foreground" onClick={() => commit(Number(local) - step)}><Minus className="h-3 w-3" /></button>
-      <input value={local} onChange={(e) => setLocal(e.target.value)} onBlur={() => commit(Number(local))}
-        className="flex-1 min-w-0 text-center text-xs bg-transparent outline-none tabular-nums" />
-      <button type="button" className="px-2 h-full hover:bg-muted text-muted-foreground" onClick={() => commit(Number(local) + step)}><Plus className="h-3 w-3" /></button>
+      <button
+        type="button"
+        className="px-2 h-full hover:bg-muted text-muted-foreground"
+        onClick={() => commit(Number(local) - step)}
+      >
+        <Minus className="h-3 w-3" />
+      </button>
+      <input
+        value={local}
+        onChange={(e) => setLocal(e.target.value)}
+        onBlur={() => commit(Number(local))}
+        className="flex-1 min-w-0 text-center text-xs bg-transparent outline-none tabular-nums"
+      />
+      <button
+        type="button"
+        className="px-2 h-full hover:bg-muted text-muted-foreground"
+        onClick={() => commit(Number(local) + step)}
+      >
+        <Plus className="h-3 w-3" />
+      </button>
     </div>
   );
 }
 
-function NumInput({ value, onChange, onCommit }: { value: number; onChange: (v: number) => void; onCommit?: () => void }) {
+function NumInput({
+  value,
+  onChange,
+  onCommit,
+}: {
+  value: number;
+  onChange: (v: number) => void;
+  onCommit?: () => void;
+}) {
   return (
-    <Input type="number" value={value} onChange={(e) => onChange(Number(e.target.value) || 0)} onBlur={onCommit} className="h-9 tabular-nums" />
+    <Input
+      type="number"
+      value={value}
+      onChange={(e) => onChange(Number(e.target.value) || 0)}
+      onBlur={onCommit}
+      className="h-9 tabular-nums"
+    />
   );
 }
 
@@ -2624,7 +3660,13 @@ const DEFAULT_SHIPPING_PRESETS = [
 ];
 const SHIPPING_PRESETS_KEY = "erp:shipping_note_presets";
 
-function ShippingNotePresets({ value, onChange }: { value: string; onChange: (v: string) => void }) {
+function ShippingNotePresets({
+  value,
+  onChange,
+}: {
+  value: string;
+  onChange: (v: string) => void;
+}) {
   const [custom, setCustom] = useState<string[]>([]);
   const [newPreset, setNewPreset] = useState("");
   const [open, setOpen] = useState(false);
@@ -2633,12 +3675,18 @@ function ShippingNotePresets({ value, onChange }: { value: string; onChange: (v:
     try {
       const raw = localStorage.getItem(SHIPPING_PRESETS_KEY);
       if (raw) setCustom(JSON.parse(raw));
-    } catch { /* ignore */ }
+    } catch {
+      /* ignore */
+    }
   }, []);
 
   const persist = (list: string[]) => {
     setCustom(list);
-    try { localStorage.setItem(SHIPPING_PRESETS_KEY, JSON.stringify(list)); } catch { /* ignore */ }
+    try {
+      localStorage.setItem(SHIPPING_PRESETS_KEY, JSON.stringify(list));
+    } catch {
+      /* ignore */
+    }
   };
 
   const apply = (text: string) => {
@@ -2670,9 +3718,13 @@ function ShippingNotePresets({ value, onChange }: { value: string; onChange: (v:
             <span className="flex items-center gap-1.5">
               <Plus className="h-3 w-3" />
               Quick presets
-              <span className="rounded-full bg-background px-1.5 py-px text-[10px] tabular-nums text-foreground">{all.length}</span>
+              <span className="rounded-full bg-background px-1.5 py-px text-[10px] tabular-nums text-foreground">
+                {all.length}
+              </span>
             </span>
-            <ChevronDown className={cn("h-3.5 w-3.5 transition-transform duration-200", open && "rotate-180")} />
+            <ChevronDown
+              className={cn("h-3.5 w-3.5 transition-transform duration-200", open && "rotate-180")}
+            />
           </button>
         </CollapsibleTrigger>
         <CollapsibleContent className="space-y-2 overflow-hidden data-[state=closed]:animate-collapsible-up data-[state=open]:animate-collapsible-down">
@@ -2680,8 +3732,13 @@ function ShippingNotePresets({ value, onChange }: { value: string; onChange: (v:
             {all.map((p, i) => {
               const isCustom = i >= DEFAULT_SHIPPING_PRESETS.length;
               return (
-                <span key={`${p}-${i}`} className="group inline-flex items-center gap-1 rounded-full border bg-muted/40 hover:bg-muted px-2 py-0.5 text-[11px]">
-                  <button type="button" onClick={() => apply(p)} className="truncate max-w-[180px]">{p}</button>
+                <span
+                  key={`${p}-${i}`}
+                  className="group inline-flex items-center gap-1 rounded-full border bg-muted/40 hover:bg-muted px-2 py-0.5 text-[11px]"
+                >
+                  <button type="button" onClick={() => apply(p)} className="truncate max-w-[180px]">
+                    {p}
+                  </button>
                   {isCustom && (
                     <button
                       type="button"
@@ -2714,7 +3771,9 @@ function ShippingNotePresets({ value, onChange }: { value: string; onChange: (v:
                 persist([...custom, t]);
                 setNewPreset("");
               }}
-            >Save</Button>
+            >
+              Save
+            </Button>
           </div>
         </CollapsibleContent>
       </Collapsible>
