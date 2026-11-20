@@ -167,25 +167,51 @@ export async function subscribePage(pageId: string, pageToken: string) {
 }
 
 // ── contact profiles ──────────────────────────────────────────────────
-export async function fetchContactProfile(platform: InboxPlatform, userId: string, token: string) {
+/**
+ * Contact name/photo. Tries the user profile first (needs the "Business Asset User
+ * Profile Access" feature for non-app users), then falls back to the page's
+ * conversation participants, which only needs pages_messaging.
+ */
+export async function fetchContactProfile(
+  platform: InboxPlatform,
+  userId: string,
+  token: string,
+  pageId?: string | null,
+) {
   try {
     if (platform === "messenger") {
       const j = await graphGet(`/${userId}`, token, { fields: "first_name,last_name,profile_pic" });
       const name = [j.first_name, j.last_name].filter(Boolean).join(" ") || null;
-      return { name, username: null, avatar: j.profile_pic ?? null };
+      if (name) return { name, username: null, avatar: j.profile_pic ?? null };
     }
     if (platform === "instagram") {
       const j = await graphGet(`/${userId}`, token, { fields: "name,username,profile_pic" });
-      return {
-        name: j.name ?? j.username ?? null,
-        username: j.username ?? null,
-        avatar: j.profile_pic ?? null,
-      };
+      if (j.name || j.username) {
+        return {
+          name: j.name ?? j.username ?? null,
+          username: j.username ?? null,
+          avatar: j.profile_pic ?? null,
+        };
+      }
     }
   } catch {
-    // Profile lookup needs approved permissions; never block ingestion on it.
+    // fall through to the conversation lookup
   }
-  return null;
+  if (!pageId || (platform !== "messenger" && platform !== "instagram")) return null;
+  try {
+    const j = await graphGet(`/${pageId}/conversations`, token, {
+      platform,
+      user_id: userId,
+      fields: "participants",
+    });
+    const people: any[] = j?.data?.[0]?.participants?.data ?? [];
+    const me = people.find((x) => String(x?.id) === String(userId));
+    if (!me) return null;
+    const name = me.name ?? me.username ?? null;
+    return { name, username: me.username ?? null, avatar: null };
+  } catch {
+    return null;
+  }
 }
 
 // ── sending ───────────────────────────────────────────────────────────

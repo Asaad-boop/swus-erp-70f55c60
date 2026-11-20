@@ -193,7 +193,7 @@ async function handleMetaMessaging(ctx: Ctx, platform: "messenger" | "instagram"
     const existing = await conversationExists(ctx, channel.id, userId);
     if (!existing || !existing.contact_name) {
       const token = await getToken(ctx, channel.id);
-      if (token) profile = await fetchContactProfile(platform, userId, token);
+      if (token) profile = await fetchContactProfile(platform, userId, token, channel.page_id);
     }
 
     await ingest(ctx, {
