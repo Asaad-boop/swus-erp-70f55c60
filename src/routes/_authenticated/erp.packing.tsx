@@ -115,14 +115,6 @@ function PackingStation() {
   });
 
   const packerOnly = stats.data?.packer_only === true;
-  // Packers work the Packing column, so open it first.
-  const tabInit = useRef(false);
-  useEffect(() => {
-    if (!tabInit.current && stats.data) {
-      tabInit.current = true;
-      if (stats.data.packer_only) setTab("packing");
-    }
-  }, [stats.data]);
 
   // Desktop with a USB scanner: keep the field focused. Phones: never auto-focus
   // (it pops the keyboard and makes the page jump) — the camera is the scanner.
@@ -254,7 +246,7 @@ function PackingStation() {
           <h1 className="text-xl font-bold tracking-tight md:text-2xl">Packing Station</h1>
           <p className="text-xs text-muted-foreground">
             {packerOnly
-              ? "Packing-এ থাকা order scan করে Packed করুন"
+              ? "Pending order scan করলে Packing, Packing order scan করলে Packed"
               : "Invoice scan করুন — order পরের ধাপে যাবে"}
           </p>
         </div>
@@ -273,7 +265,7 @@ function PackingStation() {
       <section className="rounded-2xl border bg-card p-3 md:p-5">
         {packerOnly ? (
           <div className="flex items-center gap-2 rounded-lg bg-fuchsia-500/10 px-3 py-2 text-sm font-medium text-fuchsia-800">
-            Scan করলে <b>Packing → Packed</b> হবে
+            Scan করলে <b>Pending → Packing</b>, আবার scan করলে <b>Packing → Packed</b>
           </div>
         ) : (
           <>
@@ -582,9 +574,11 @@ function QueueCard({ o, packerOnly }: { o: PackOrder; packerOnly: boolean }) {
       <div className="mt-2 flex items-center justify-between text-[11px] text-muted-foreground">
         <span>
           {packerOnly
-            ? o.status === "packaging" || o.status === "ready_to_pack"
-              ? "Scan → Packed হবে"
-              : ""
+            ? o.status === "confirmed"
+              ? "Scan → Packing-এ যাবে"
+              : o.status === "packaging" || o.status === "ready_to_pack"
+                ? "Scan → Packed হবে"
+                : ""
             : NEXT_LABEL[o.status]
               ? `Scan → ${NEXT_LABEL[o.status]}`
               : ""}
