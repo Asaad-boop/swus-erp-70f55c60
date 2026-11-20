@@ -54,6 +54,9 @@ import { WaTemplateDialog } from "./wa-template-dialog";
 import { PriceReplyDialog, type PriceImage } from "./price-reply-dialog";
 import { useConversationPresence } from "./use-conversation-presence";
 import { useVoiceTyping } from "./use-voice-typing";
+import { EmojiPicker } from "./emoji-picker";
+
+const QUICK_REACTIONS = ["❤️", "👍", "😊", "🙏", "😂", "😮"];
 
 type Props = {
   conversation: InboxConversation;
@@ -118,6 +121,8 @@ function Bubble({
   author,
   quoted,
   onPrice,
+  onReact,
+  onReply,
 }: {
   m: InboxMessage;
   onRetry: (m: InboxMessage) => void;
@@ -127,16 +132,27 @@ function Bubble({
   /** the message this one quotes */
   quoted?: InboxMessage | null;
   onPrice?: (m: InboxMessage, attachmentIndex: number) => void;
+  onReact?: (m: InboxMessage, emoji: string | null) => void;
+  onReply?: (m: InboxMessage) => void;
 }) {
   const out = m.direction === "out";
+  const reactions = Array.isArray(m.reactions) ? m.reactions : [];
+  const pageReaction = reactions.find((r) => r.by === "page")?.emoji ?? null;
+  const canReact = !out && !!onReact && !!m.external_message_id;
   const atts = Array.isArray(m.attachments) ? m.attachments : [];
   const quotedImg =
     quoted && (quoted.attachments ?? [])[m.meta?.attachment_index ?? 0]?.type === "image"
       ? quoted.attachments[m.meta?.attachment_index ?? 0]!.url
       : quoted?.attachments?.find((a) => a.type === "image")?.url;
   return (
-    <div className={cn("flex", out ? "justify-end" : "justify-start")}>
-      <div className={cn("flex max-w-[78%] flex-col gap-1", out ? "items-end" : "items-start")}>
+    <div className={cn("group/msg flex items-center gap-1", out ? "justify-end" : "justify-start")}>
+      <div
+        className={cn(
+          "relative flex max-w-[78%] flex-col gap-1",
+          out ? "items-end" : "items-start",
+          reactions.length > 0 && "mb-2",
+        )}
+      >
         {quoted && (
           <div className="flex max-w-full items-center gap-2 rounded-xl border-l-2 border-primary/60 bg-muted/60 px-2 py-1 text-[11px] text-muted-foreground">
             {quotedImg && (
@@ -205,6 +221,28 @@ function Bubble({
             {linkify(m.body)}
           </div>
         )}
+        {reactions.length > 0 && (
+          <div
+            className={cn(
+              "-mt-2.5 flex gap-0.5 rounded-full bg-background px-1 py-px text-xs shadow-sm ring-1 ring-border",
+              out ? "mr-2 self-end" : "ml-2 self-start",
+            )}
+          >
+            {reactions.map((r, i) => (
+              <button
+                key={i}
+                type="button"
+                title={
+                  r.by === "page" ? "Amader reaction (click = remove)" : "Customer er reaction"
+                }
+                disabled={r.by !== "page" || !canReact}
+                onClick={() => onReact?.(m, null)}
+              >
+                {r.emoji}
+              </button>
+            ))}
+          </div>
+        )}
         <div className={cn("flex items-center gap-1 px-1 text-[10px] text-muted-foreground")}>
           {out &&
             (m.sent_via === "platform" ? (
@@ -233,6 +271,34 @@ function Bubble({
           </div>
         )}
       </div>
+      {canReact && (
+        <div className="flex shrink-0 items-center gap-0.5 rounded-full border bg-background px-1 py-0.5 opacity-0 shadow-sm transition-opacity group-hover/msg:opacity-100">
+          {QUICK_REACTIONS.map((e) => (
+            <button
+              key={e}
+              type="button"
+              onClick={() => onReact!(m, pageReaction === e ? null : e)}
+              className={cn(
+                "flex h-6 w-6 items-center justify-center rounded-full text-sm transition-transform hover:scale-125",
+                pageReaction === e && "bg-primary/15",
+              )}
+              title={pageReaction === e ? "Remove" : "React"}
+            >
+              {e}
+            </button>
+          ))}
+          {onReply && (
+            <button
+              type="button"
+              onClick={() => onReply(m)}
+              className="ml-0.5 flex h-6 items-center rounded-full px-1.5 text-[11px] font-medium text-muted-foreground hover:bg-muted"
+              title="Ei message er reply"
+            >
+              ↩ Reply
+            </button>
+          )}
+        </div>
+      )}
     </div>
   );
 }
@@ -318,6 +384,7 @@ export function Thread({
       attachment?: { url: string; type: "image" | "video" | "audio" | "file" } | null;
       quickReplyId?: string | null;
       retryOfMessageId?: string | null;
+      replyToMessageId?: string | null;
     }) => inboxApi("send", { conversationId: c.id, ...v }),
     onMutate: async (v) => {
       // Optimistic bubble
@@ -337,6 +404,7 @@ export function Thread({
         status: "pending",
         error: null,
         created_at: new Date().toISOString(),
+        reply_to: v.replyToMessageId ?? null,
       };
       qc.setQueryData<InboxMessage[]>(["inbox", "messages", c.id], (old) => [...(old ?? []), temp]);
     },
@@ -354,9 +422,11 @@ export function Thread({
     send.mutate({
       text: t || null,
       attachment: attachment ? { url: attachment.url, type: attachment.type } : null,
+      replyToMessageId: replyTo?.id ?? null,
     });
     setText("");
     setAttachment(null);
+    setReplyTo(null);
   };
 
   const sendQuick = (q: QuickReply) => {
@@ -443,6 +513,46 @@ export function Thread({
   const assignee = c.assigned_to ? staff.find((s) => s.id === c.assigned_to) : undefined;
   const [tplOpen, setTplOpen] = useState(false);
   const [priceImages, setPriceImages] = useState<PriceImage[] | null>(null);
+  const [replyTo, setReplyTo] = useState<InboxMessage | null>(null);
+  useEffect(() => setReplyTo(null), [c.id]);
+  const react = useMutation({
+    mutationFn: ({ m, emoji }: { m: InboxMessage; emoji: string | null }) =>
+      inboxApi("react", { messageId: m.id, emoji }),
+    onMutate: ({ m, emoji }) => {
+      qc.setQueryData<InboxMessage[]>(["inbox", "messages", c.id], (old) =>
+        (old ?? []).map((x) =>
+          x.id === m.id
+            ? {
+                ...x,
+                reactions: [
+                  ...(x.reactions ?? []).filter((r) => r.by !== "page"),
+                  ...(emoji ? [{ by: "page" as const, emoji }] : []),
+                ],
+              }
+            : x,
+        ),
+      );
+    },
+    onError: (e: Error) => {
+      toast.error(e.message);
+      qc.invalidateQueries({ queryKey: ["inbox", "messages", c.id] });
+    },
+  });
+  const insertAtCursor = (str: string) => {
+    const el = inputRef.current;
+    if (!el) {
+      setText((t) => t + str);
+      return;
+    }
+    const start = el.selectionStart ?? text.length;
+    const end = el.selectionEnd ?? text.length;
+    const next = text.slice(0, start) + str + text.slice(end);
+    setText(next);
+    requestAnimationFrame(() => {
+      el.focus();
+      el.setSelectionRange(start + str.length, start + str.length);
+    });
+  };
   const [typingNow, setTypingNow] = useState(false);
   useEffect(() => {
     if (!text.trim()) {
@@ -642,6 +752,11 @@ export function Thread({
                     author={staffName(m.sent_by)}
                     quoted={m.reply_to ? (msgById.get(m.reply_to) ?? null) : null}
                     onPrice={(pm, i) => setPriceImages([imageFor(pm, i)])}
+                    onReact={(rm, emoji) => react.mutate({ m: rm, emoji })}
+                    onReply={(rm) => {
+                      setReplyTo(rm);
+                      inputRef.current?.focus();
+                    }}
                     retrying={send.isPending}
                     onRetry={(fm) =>
                       send.mutate({
@@ -768,6 +883,29 @@ export function Thread({
             </div>
           )}
 
+          {replyTo && (
+            <div className="mb-2 flex items-center gap-2 rounded-lg border-l-2 border-primary bg-muted/40 px-2 py-1.5 text-xs">
+              {replyTo.attachments?.find((a) => a.type === "image") && (
+                <img
+                  src={replyTo.attachments.find((a) => a.type === "image")!.url}
+                  alt=""
+                  referrerPolicy="no-referrer"
+                  className="h-8 w-8 rounded object-cover"
+                />
+              )}
+              <span className="min-w-0 flex-1 truncate">
+                <span className="font-medium">↩ Reply: </span>
+                {replyTo.body || "📷 Chobi"}
+              </span>
+              <button
+                type="button"
+                onClick={() => setReplyTo(null)}
+                className="rounded p-1 hover:bg-muted"
+              >
+                <X className="h-3.5 w-3.5" />
+              </button>
+            </div>
+          )}
           {attachment && (
             <div className="mb-2 flex items-center gap-2 rounded-lg border bg-muted/40 p-2 text-xs">
               {attachment.type === "image" ? (
@@ -814,6 +952,7 @@ export function Thread({
                 <Paperclip className="h-4 w-4" />
               )}
             </Button>
+            <EmojiPicker onPick={insertAtCursor} />
             {voice.supported && (
               <Button
                 variant={voice.listening ? "destructive" : "ghost"}

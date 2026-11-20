@@ -161,7 +161,8 @@ export async function listManagedPages(userToken: string) {
 export async function subscribePage(pageId: string, pageToken: string) {
   const res = await fetch(
     `${GRAPH}/${pageId}/subscribed_apps?${new URLSearchParams({
-      subscribed_fields: "messages,message_echoes,message_reads,messaging_postbacks,feed",
+      subscribed_fields:
+        "messages,message_echoes,message_reads,messaging_postbacks,message_reactions,feed",
       access_token: pageToken,
     })}`,
     { method: "POST" },
@@ -247,6 +248,33 @@ export type SendInput = {
 
 export const WINDOW_MS = 24 * 60 * 60 * 1000;
 
+/** React to (emoji) or unreact (null) a customer's message. */
+export async function sendReaction(input: {
+  platform: InboxPlatform;
+  senderId: string;
+  token: string;
+  recipientId: string;
+  externalMessageId: string;
+  emoji: string | null;
+}) {
+  if (input.platform === "whatsapp") {
+    return graphPost(`/${input.senderId}/messages`, input.token, {
+      messaging_product: "whatsapp",
+      recipient_type: "individual",
+      to: input.recipientId,
+      type: "reaction",
+      reaction: { message_id: input.externalMessageId, emoji: input.emoji ?? "" },
+    });
+  }
+  return graphPost(`/${input.senderId}/messages`, input.token, {
+    recipient: { id: input.recipientId },
+    sender_action: input.emoji ? "react" : "unreact",
+    payload: input.emoji
+      ? { message_id: input.externalMessageId, reaction: input.emoji }
+      : { message_id: input.externalMessageId },
+  });
+}
+
 export async function sendPlatformMessage(input: SendInput): Promise<{ messageId: string | null }> {
   const outsideWindow =
     !input.lastInboundAt || Date.now() - new Date(input.lastInboundAt).getTime() > WINDOW_MS;
@@ -293,19 +321,26 @@ export async function sendPlatformMessage(input: SendInput): Promise<{ messageId
     const j = await graphPost(
       `/${input.senderId}/messages`,
       input.token,
-      envelope({
-        attachment: {
-          type: input.attachment.type,
-          payload: { url: input.attachment.url, is_reusable: true },
+      envelope(
+        {
+          attachment: {
+            type: input.attachment.type,
+            payload: { url: input.attachment.url, is_reusable: true },
+          },
         },
-      }),
+        !input.text?.trim(),
+      ),
     );
     lastId = j?.message_id ?? null;
   }
   if (input.text && input.text.trim()) {
     let j: any;
     try {
-      j = await graphPost(`/${input.senderId}/messages`, input.token, envelope({ text: input.text }));
+      j = await graphPost(
+        `/${input.senderId}/messages`,
+        input.token,
+        envelope({ text: input.text }),
+      );
     } catch (e) {
       // Quoting isn't available everywhere — send it plain rather than fail.
       if (!input.replyToExternalId) throw e;

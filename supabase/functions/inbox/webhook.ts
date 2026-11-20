@@ -103,6 +103,28 @@ async function ingest(
   if (error) throw error;
 }
 
+// ── reactions ─────────────────────────────────────────────────────────
+/** Set (or clear, emoji=null) one side's reaction on a stored message, found by platform id. */
+export async function applyReaction(
+  admin: any,
+  channelId: string,
+  externalMessageId: string,
+  by: "customer" | "page",
+  emoji: string | null,
+) {
+  const { data: row } = await admin
+    .from("inbox_messages")
+    .select("id, reactions, conversation_id, inbox_conversations!inner(channel_id)")
+    .eq("external_message_id", externalMessageId)
+    .eq("inbox_conversations.channel_id", channelId)
+    .maybeSingle();
+  if (!row) return false;
+  const list = (Array.isArray(row.reactions) ? row.reactions : []).filter((r: any) => r?.by !== by);
+  if (emoji) list.push({ by, emoji, at: new Date().toISOString() });
+  await admin.from("inbox_messages").update({ reactions: list }).eq("id", row.id);
+  return true;
+}
+
 // ── Messenger / Instagram ─────────────────────────────────────────────
 function mapMetaAttachmentType(t: string | undefined, payload: any): InboxAttachment["type"] {
   if (payload?.sticker_id) return "sticker";
@@ -132,6 +154,20 @@ async function handleMetaMessaging(ctx: Ctx, platform: "messenger" | "instagram"
           .in("status", ["sent", "delivered"])
           .lte("created_at", new Date(Number(ev.read.watermark)).toISOString());
       }
+      continue;
+    }
+
+    // Customer reacted / unreacted to a message.
+    if (ev.reaction?.mid && ev.sender?.id) {
+      const r = ev.reaction;
+      const fromPage = String(ev.sender.id) === String(entry.id);
+      await applyReaction(
+        ctx.admin,
+        channel.id,
+        String(r.mid),
+        fromPage ? "page" : "customer",
+        r.action === "unreact" ? null : (r.emoji ?? (r.reaction === "love" ? "❤️" : "👍")),
+      );
       continue;
     }
 
@@ -303,6 +339,16 @@ async function handleWhatsApp(ctx: Ctx, entry: any) {
 
     for (const m of v.messages ?? []) {
       const from = String(m.from);
+      if (m.type === "reaction" && m.reaction?.message_id) {
+        await applyReaction(
+          ctx.admin,
+          channel.id,
+          String(m.reaction.message_id),
+          "customer",
+          m.reaction.emoji || null,
+        );
+        continue;
+      }
       const parsed = waBody(m);
       const attachments: InboxAttachment[] = [];
       if (parsed.mediaId && parsed.mediaType) {

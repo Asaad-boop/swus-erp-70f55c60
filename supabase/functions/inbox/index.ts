@@ -13,6 +13,7 @@ import { createClient } from "jsr:@supabase/supabase-js@2";
 import {
   graphGet,
   graphPost,
+  sendReaction,
   INBOX_GRAPH_VERSION,
   INBOX_SCOPES,
   listManagedPages,
@@ -393,11 +394,20 @@ async function loadWaForCaller(c: Caller, conversationId: unknown) {
   if (!conv) throw new Error("Conversation not found");
   if (conv.platform !== "whatsapp") throw new Error("Template shudhu WhatsApp e");
   const [{ data: channel }, { data: secret }] = await Promise.all([
-    admin.from("inbox_channels").select("id, external_id, page_id, is_active").eq("id", conv.channel_id).maybeSingle(),
-    admin.from("inbox_channel_secrets").select("access_token").eq("channel_id", conv.channel_id).maybeSingle(),
+    admin
+      .from("inbox_channels")
+      .select("id, external_id, page_id, is_active")
+      .eq("id", conv.channel_id)
+      .maybeSingle(),
+    admin
+      .from("inbox_channel_secrets")
+      .select("access_token")
+      .eq("channel_id", conv.channel_id)
+      .maybeSingle(),
   ]);
   if (!channel?.is_active || !secret?.access_token) throw new Error("Channel connected nai");
-  if (!channel.page_id) throw new Error("WhatsApp Business Account ID save kora nai — Channels e abar connect koro");
+  if (!channel.page_id)
+    throw new Error("WhatsApp Business Account ID save kora nai — Channels e abar connect koro");
   return { conv, channel, token: secret.access_token as string };
 }
 
@@ -406,6 +416,54 @@ function templateBody(components: any[]): string {
 }
 
 const actions: Record<string, (c: Caller, p: any) => Promise<unknown>> = {
+  async react(c, p) {
+    if (!isUuid(p?.messageId)) throw new Error("Bad message");
+    const emoji =
+      typeof p?.emoji === "string" && p.emoji.trim() ? p.emoji.trim().slice(0, 16) : null;
+    // RLS on the caller's client decides access.
+    const { data: msg, error } = await c.db
+      .from("inbox_messages")
+      .select(
+        "id, reactions, external_message_id, conversation_id, inbox_conversations!inner(channel_id, external_user_id)",
+      )
+      .eq("id", p.messageId)
+      .maybeSingle();
+    if (error) throw error;
+    if (!msg) throw new Error("Message not found");
+    if (!msg.external_message_id) throw new Error("Ei message e reaction dewa jabe na");
+    const conv: any = (msg as any).inbox_conversations;
+    const [{ data: channel }, { data: secret }] = await Promise.all([
+      admin
+        .from("inbox_channels")
+        .select("platform, external_id, page_id, is_active")
+        .eq("id", conv.channel_id)
+        .maybeSingle(),
+      admin
+        .from("inbox_channel_secrets")
+        .select("access_token")
+        .eq("channel_id", conv.channel_id)
+        .maybeSingle(),
+    ]);
+    if (!channel?.is_active || !secret?.access_token) throw new Error("Channel connected nai");
+    await sendReaction({
+      platform: channel.platform,
+      senderId:
+        channel.platform === "whatsapp"
+          ? channel.external_id
+          : (channel.page_id ?? channel.external_id),
+      token: secret.access_token,
+      recipientId: conv.external_user_id,
+      externalMessageId: msg.external_message_id,
+      emoji,
+    });
+    const list = (Array.isArray(msg.reactions) ? msg.reactions : []).filter(
+      (r: any) => r?.by !== "page",
+    );
+    if (emoji) list.push({ by: "page", emoji, at: new Date().toISOString(), user: c.userId });
+    await admin.from("inbox_messages").update({ reactions: list }).eq("id", msg.id);
+    return { ok: true, reactions: list };
+  },
+
   async wa_templates(c, p) {
     const { channel, token } = await loadWaForCaller(c, p?.conversationId);
     const j = await graphGet(`/${channel.page_id}/message_templates`, token, {
@@ -462,7 +520,11 @@ const actions: Record<string, (c: Caller, p: any) => Promise<unknown>> = {
         name,
         language: { code: language },
         ...(params.length
-          ? { components: [{ type: "body", parameters: params.map((text) => ({ type: "text", text })) }] }
+          ? {
+              components: [
+                { type: "body", parameters: params.map((text) => ({ type: "text", text })) },
+              ],
+            }
           : {}),
       },
     });

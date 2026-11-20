@@ -66,6 +66,7 @@ export type InboxMessage = {
   error: string | null;
   created_at: string;
   reply_to?: string | null;
+  reactions?: Array<{ by: "customer" | "page"; emoji: string; at?: string }>;
   meta?: { product_id?: string; attachment_index?: number } | null;
 };
 
