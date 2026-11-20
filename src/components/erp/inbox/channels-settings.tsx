@@ -474,10 +474,10 @@ export function ChannelsSettings({
           <h3 className="text-sm font-semibold">WhatsApp Business (Cloud API)</h3>
         </div>
         <p className="text-xs text-muted-foreground">
-          Business Settings → WhatsApp accounts theke <b>WhatsApp Business Account ID</b> ar
-          System users theke <b>permanent token</b> (whatsapp_business_messaging +
-          whatsapp_business_management) niye ekhane dao. Coexistence number (WhatsApp Business app
-          + RepliBee) o kaj kore — phone e app cholte thakbe.
+          Business Settings → WhatsApp accounts theke <b>WhatsApp Business Account ID</b> ar System
+          users theke <b>permanent token</b> (whatsapp_business_messaging +
+          whatsapp_business_management) niye ekhane dao. Coexistence number (WhatsApp Business app +
+          RepliBee) o kaj kore — phone e app cholte thakbe.
         </p>
         <div className="flex flex-wrap gap-2">
           <Button
@@ -603,7 +603,8 @@ export function ChannelsSettings({
               <div className="space-y-1.5">
                 <Label>
                   Access token
-                  {manual.platform === "whatsapp" && " (optional — khali rakhle Facebook login use hobe)"}
+                  {manual.platform === "whatsapp" &&
+                    " (optional — khali rakhle Facebook login use hobe)"}
                 </Label>
                 <Input
                   value={manual.token}

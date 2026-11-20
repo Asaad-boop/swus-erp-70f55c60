@@ -14,9 +14,18 @@ import {
   PanelRight,
   RotateCcw,
   Send,
+  UserPlus,
   X,
   Zap,
 } from "lucide-react";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
@@ -28,6 +37,7 @@ import {
   fetchMessages,
   fillTemplate,
   inboxApi,
+  initials,
   profileLinks,
   updateConversation,
   uploadInboxMedia,
@@ -35,6 +45,7 @@ import {
   type InboxChannel,
   type InboxConversation,
   type InboxMessage,
+  type InboxStaff,
   type QuickReply,
 } from "@/lib/erp/inbox/inbox";
 import { ContactAvatar, PlatformChip } from "./shared";
@@ -43,6 +54,8 @@ type Props = {
   conversation: InboxConversation;
   channel: InboxChannel | undefined;
   quickReplies: QuickReply[];
+  staff: InboxStaff[];
+  currentUserId: string | null;
   onBack: () => void;
   onTogglePanel: () => void;
 };
@@ -178,7 +191,15 @@ function Bubble({
   );
 }
 
-export function Thread({ conversation: c, channel, quickReplies, onBack, onTogglePanel }: Props) {
+export function Thread({
+  conversation: c,
+  channel,
+  quickReplies,
+  staff,
+  currentUserId,
+  onBack,
+  onTogglePanel,
+}: Props) {
   const qc = useQueryClient();
   const [text, setText] = useState("");
   const [attachment, setAttachment] = useState<{
@@ -364,6 +385,17 @@ export function Thread({ conversation: c, channel, quickReplies, onBack, onToggl
     onError: (e: Error) => toast.error(e.message),
   });
 
+  const assign = useMutation({
+    mutationFn: (userId: string | null) => updateConversation(c.id, { assigned_to: userId }),
+    onSuccess: (_d, userId) => {
+      qc.invalidateQueries({ queryKey: ["inbox", "conversations"] });
+      const who = staff.find((s) => s.id === userId)?.display_name;
+      toast.success(userId ? `Assigned: ${who ?? "staff"}` : "Unassigned");
+    },
+    onError: (e: Error) => toast.error(e.message),
+  });
+  const assignee = c.assigned_to ? staff.find((s) => s.id === c.assigned_to) : undefined;
+
   const hoursLeft = windowHoursLeft(c.last_inbound_at);
   const windowNote =
     hoursLeft !== null
@@ -402,9 +434,56 @@ export function Thread({ conversation: c, channel, quickReplies, onBack, onToggl
             {channel && <span className="hidden truncate sm:inline">· {channel.name}</span>}
           </div>
         </div>
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <Button
+              variant="outline"
+              size="sm"
+              className="gap-1.5"
+              title={assignee ? `Assigned: ${assignee.display_name}` : "Assign"}
+            >
+              {assignee ? (
+                <span className="flex h-5 w-5 items-center justify-center rounded-full bg-muted text-[9px] font-bold">
+                  {initials(assignee.display_name)}
+                </span>
+              ) : (
+                <UserPlus className="h-3.5 w-3.5" />
+              )}
+              <span className="hidden max-w-[90px] truncate lg:inline">
+                {assignee ? assignee.display_name : "Assign"}
+              </span>
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end" className="max-h-80 w-56 overflow-y-auto">
+            <DropdownMenuLabel className="text-xs">Assign to</DropdownMenuLabel>
+            {currentUserId && c.assigned_to !== currentUserId && (
+              <DropdownMenuItem onClick={() => assign.mutate(currentUserId)}>
+                Amake (me)
+              </DropdownMenuItem>
+            )}
+            {staff
+              .filter((s) => s.id !== currentUserId)
+              .map((s) => (
+                <DropdownMenuItem key={s.id} onClick={() => assign.mutate(s.id)}>
+                  <span className="mr-2 flex h-5 w-5 items-center justify-center rounded-full bg-muted text-[9px] font-bold">
+                    {initials(s.display_name)}
+                  </span>
+                  <span className="truncate">{s.display_name}</span>
+                  {s.id === c.assigned_to && <Check className="ml-auto h-3.5 w-3.5" />}
+                </DropdownMenuItem>
+              ))}
+            {c.assigned_to && (
+              <>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem onClick={() => assign.mutate(null)}>Unassign</DropdownMenuItem>
+              </>
+            )}
+          </DropdownMenuContent>
+        </DropdownMenu>
         <Button
           variant={c.status === "done" ? "outline" : "default"}
           size="sm"
+          title="Done / Reopen (E)"
           onClick={() => toggleDone.mutate()}
           disabled={toggleDone.isPending}
           className="gap-1.5"
@@ -571,6 +650,7 @@ export function Thread({ conversation: c, channel, quickReplies, onBack, onToggl
               )}
             </Button>
             <Textarea
+              id="inbox-composer"
               ref={inputRef}
               value={text}
               onChange={(e) => setText(e.target.value)}

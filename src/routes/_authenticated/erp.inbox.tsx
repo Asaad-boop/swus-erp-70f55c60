@@ -11,7 +11,10 @@ import {
   CONV_PAGE,
   fetchChannels,
   fetchConversations,
+  fetchInboxStaff,
   fetchQuickReplies,
+  updateConversation,
+  type InboxView,
   PLATFORM_LABEL,
   type InboxConversation,
   type InboxPlatform,
@@ -44,14 +47,29 @@ function InboxPage() {
   const navigate = useNavigate({ from: "/erp/inbox" });
   const qc = useQueryClient();
   const { brands, brandIds: scopedBrandIds } = useBrand();
-  const { isAdmin } = useCurrentRole();
+  const { isAdmin, userId } = useCurrentRole();
   const tab: Tab = search.tab ?? "inbox";
 
   // ── filters ─────────────────────────────────────────────────────────
   const [brandFilter, setBrandFilter] = useState<string>("all");
   const [platform, setPlatform] = useState<InboxPlatform | "all">("all");
-  const [status, setStatus] = useState<"open" | "done" | "all">("open");
-  const [unreadOnly, setUnreadOnly] = useState(false);
+  const [view, setViewState] = useState<InboxView>(() => {
+    try {
+      return (localStorage.getItem("inbox.view") as InboxView) || "open";
+    } catch {
+      return "open";
+    }
+  });
+  const setView = (v: InboxView) => {
+    setViewState(v);
+    setLimit(CONV_PAGE);
+    try {
+      localStorage.setItem("inbox.view", v);
+    } catch {
+      /* storage blocked */
+    }
+  };
+  const searchRef = useRef<HTMLInputElement>(null);
   const [searchText, setSearchText] = useState("");
   const [debounced, setDebounced] = useState("");
   const [limit, setLimit] = useState(CONV_PAGE);
@@ -65,7 +83,7 @@ function InboxPage() {
   const allBrandIds = useMemo(() => brands.map((b) => b.id), [brands]);
   const brandIds = brandFilter === "all" ? allBrandIds : [brandFilter];
 
-  const filters = { brandIds, platform, status, unreadOnly, search: debounced };
+  const filters = { brandIds, platform, view, userId, search: debounced };
   const convQ = useQuery({
     queryKey: ["inbox", "conversations", filters, limit],
     queryFn: () => fetchConversations(filters, limit),
@@ -82,6 +100,12 @@ function InboxPage() {
 
   const channelsQ = useQuery({ queryKey: ["inbox", "channels"], queryFn: fetchChannels });
   const repliesQ = useQuery({ queryKey: ["inbox", "quick-replies"], queryFn: fetchQuickReplies });
+  const staffQ = useQuery({
+    queryKey: ["inbox", "staff"],
+    queryFn: fetchInboxStaff,
+    staleTime: 5 * 60_000,
+  });
+  const staff = staffQ.data ?? [];
   const { data: openComments } = useQuery({
     queryKey: ["inbox", "comment-count", brandIds],
     enabled: brandIds.length > 0,
@@ -121,6 +145,58 @@ function InboxPage() {
 
   const select = (id: string | null) =>
     navigate({ search: (s: InboxSearch) => ({ ...s, c: id ?? undefined }) });
+
+  // ── keyboard shortcuts ──────────────────────────────────────────────
+  // j/k or ↓/↑ move · / search · r reply box · e done/reopen · Esc back
+  const kbd = useRef({ conversations, selected, select });
+  kbd.current = { conversations, selected, select };
+  useEffect(() => {
+    if (tab !== "inbox") return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.metaKey || e.ctrlKey || e.altKey) return;
+      const t = e.target as HTMLElement | null;
+      const typing =
+        !!t && (t.tagName === "INPUT" || t.tagName === "TEXTAREA" || t.isContentEditable);
+      const { conversations: list, selected: cur, select: go } = kbd.current;
+      if (e.key === "Escape") {
+        if (typing) (t as HTMLElement).blur();
+        return;
+      }
+      if (typing) return;
+      const idx = cur ? list.findIndex((c) => c.id === cur.id) : -1;
+      const move = (d: number) => {
+        const next = list[Math.min(list.length - 1, Math.max(0, idx + d))];
+        if (next) {
+          e.preventDefault();
+          go(next.id);
+          document
+            .querySelector(`[data-conv-id="${next.id}"]`)
+            ?.scrollIntoView({ block: "nearest" });
+        }
+      };
+      if (e.key === "j" || e.key === "ArrowDown") move(1);
+      else if (e.key === "k" || e.key === "ArrowUp") move(-1);
+      else if (e.key === "/") {
+        e.preventDefault();
+        searchRef.current?.focus();
+      } else if (e.key === "r" && cur) {
+        e.preventDefault();
+        (document.getElementById("inbox-composer") as HTMLTextAreaElement | null)?.focus();
+      } else if (e.key === "e" && cur) {
+        e.preventDefault();
+        const nextStatus = cur.status === "done" ? "open" : "done";
+        void updateConversation(cur.id, { status: nextStatus }).then(() =>
+          qc.invalidateQueries({ queryKey: ["inbox", "conversations"] }),
+        );
+        if (nextStatus === "done") {
+          const next = list[idx + 1] ?? list[idx - 1];
+          if (next && next.id !== cur.id) go(next.id);
+        }
+      }
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [tab, qc]);
 
   // ── realtime ────────────────────────────────────────────────────────
   const selectedRef = useRef<string | null>(selectedId);
@@ -346,10 +422,10 @@ function InboxPage() {
               onSelect={(id) => select(id)}
               search={searchText}
               onSearch={setSearchText}
-              status={status}
-              onStatus={setStatus}
-              unreadOnly={unreadOnly}
-              onUnreadOnly={setUnreadOnly}
+              view={view}
+              onView={setView}
+              staff={staff}
+              searchRef={searchRef}
               showBrand={brandFilter === "all" && brands.length > 1}
               canLoadMore={conversations.length >= limit}
               onLoadMore={() => setLimit((l) => l + CONV_PAGE)}
@@ -364,6 +440,8 @@ function InboxPage() {
                 conversation={selected}
                 channel={channelFor(selected.channel_id)}
                 quickReplies={repliesQ.data ?? []}
+                staff={staff}
+                currentUserId={userId}
                 onBack={() => select(null)}
                 onTogglePanel={() => {
                   if (typeof window !== "undefined" && window.innerWidth < 1280) setSheetOpen(true);
@@ -377,6 +455,19 @@ function InboxPage() {
                 <div className="text-xs opacity-70">
                   {scopedBrandIds.length > 0 && `${conversations.length} conversation · `}Messenger
                   · Instagram · WhatsApp ek jaygay
+                </div>
+                <div className="mt-3 flex flex-wrap justify-center gap-x-3 gap-y-1 text-[11px] opacity-70">
+                  {[
+                    ["J / K", "next / prev"],
+                    ["/", "search"],
+                    ["R", "reply"],
+                    ["E", "done"],
+                  ].map(([k, l]) => (
+                    <span key={k}>
+                      <kbd className="rounded border bg-muted px-1 font-mono text-[10px]">{k}</kbd>{" "}
+                      {l}
+                    </span>
+                  ))}
                 </div>
               </div>
             )}

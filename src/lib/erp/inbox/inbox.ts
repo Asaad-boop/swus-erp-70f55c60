@@ -148,13 +148,34 @@ export function findBdPhone(text: string | null | undefined): string | null {
   return m ? m[1]! : null;
 }
 
+export type InboxView = "open" | "awaiting" | "mine" | "unassigned" | "unread" | "done" | "all";
+
 export type ConversationFilters = {
   brandIds: string[];
   platform: InboxPlatform | "all";
-  status: "open" | "done" | "all";
-  unreadOnly: boolean;
+  view: InboxView;
+  userId: string | null;
   search: string;
 };
+
+export type InboxStaff = { id: string; display_name: string };
+
+export async function fetchInboxStaff(): Promise<InboxStaff[]> {
+  const { data, error } = await db.rpc("inbox_staff");
+  if (error) throw error;
+  return (data ?? []) as InboxStaff[];
+}
+
+export function initials(name: string) {
+  return (
+    name
+      .split(/\s+/)
+      .filter(Boolean)
+      .slice(0, 2)
+      .map((w) => w[0]!.toUpperCase())
+      .join("") || "?"
+  );
+}
 
 export const CONV_PAGE = 60;
 
@@ -171,8 +192,26 @@ export async function fetchConversations(
     .order("id", { ascending: false })
     .limit(limit);
   if (f.platform !== "all") q = q.eq("platform", f.platform);
-  if (f.status !== "all") q = q.eq("status", f.status);
-  if (f.unreadOnly) q = q.gt("unread_count", 0);
+  switch (f.view) {
+    case "open":
+      q = q.eq("status", "open");
+      break;
+    case "awaiting":
+      q = q.eq("status", "open").eq("last_message_direction", "in");
+      break;
+    case "mine":
+      q = f.userId ? q.eq("status", "open").eq("assigned_to", f.userId) : q.limit(0);
+      break;
+    case "unassigned":
+      q = q.eq("status", "open").is("assigned_to", null);
+      break;
+    case "unread":
+      q = q.gt("unread_count", 0);
+      break;
+    case "done":
+      q = q.eq("status", "done");
+      break;
+  }
   const s = f.search.trim().replace(/[%,()]/g, "");
   if (s)
     q = q.or(

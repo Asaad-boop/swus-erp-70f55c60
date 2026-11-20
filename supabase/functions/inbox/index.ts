@@ -791,7 +791,7 @@ const actions: Record<string, (c: Caller, p: any) => Promise<unknown>> = {
     // RLS on the caller's own client is the access check.
     const { data: conv, error: cErr } = await c.db
       .from("inbox_conversations")
-      .select("id, brand_id, channel_id, platform, external_user_id, last_inbound_at")
+      .select("id, brand_id, channel_id, platform, external_user_id, last_inbound_at, assigned_to")
       .eq("id", p.conversationId)
       .maybeSingle();
     if (cErr) throw cErr;
@@ -882,6 +882,8 @@ const actions: Record<string, (c: Caller, p: any) => Promise<unknown>> = {
         last_message_preview: previewFor(text, att?.type),
         last_message_direction: "out",
         unread_count: 0,
+        // First staff to reply owns an unassigned conversation.
+        ...(conv.assigned_to ? {} : { assigned_to: c.userId }),
       })
       .eq("id", conv.id);
     if (isUuid(p?.quickReplyId)) await c.db.rpc("inbox_bump_quick_reply", { _id: p.quickReplyId });
