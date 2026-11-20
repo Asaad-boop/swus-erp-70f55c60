@@ -3,6 +3,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   AlertCircle,
   ArrowLeft,
+  ChevronDown,
   Check,
   CheckCheck,
   CheckCircle2,
@@ -948,23 +949,29 @@ export function Thread({
         <div className="mx-auto max-w-3xl">
           {brandReplies.length > 0 && (
             <div className="mb-2 flex items-center gap-1.5">
-              <div className="flex shrink-0 items-center gap-0.5 rounded-lg bg-[var(--ib-canvas)] p-0.5">
-                {[{ key: "top", label: "Top" }, ...qrCats].map((cat) => (
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
                   <button
-                    key={cat.key}
                     type="button"
-                    onClick={() => setQrCat(cat.key)}
-                    className={cn(
-                      "h-6 rounded-md px-2 text-[11px] font-medium transition-colors",
-                      qrCat === cat.key
-                        ? "bg-[var(--ib-panel)] text-[var(--ib-ink)] shadow-sm"
-                        : "ib-ink-3 hover:text-[var(--ib-ink)]",
-                    )}
+                    className="ib-ink-2 flex h-7 shrink-0 items-center gap-1 rounded-lg bg-[var(--ib-canvas)] px-2.5 text-[12px] font-medium hover:text-[var(--ib-ink)]"
+                    title="Quick reply category"
                   >
-                    {cat.label}
+                    <span className="text-amber-500">⚡</span>
+                    {qrCat === "top"
+                      ? "Top"
+                      : (qrCats.find((x) => x.key === qrCat)?.label ?? "Top")}
+                    <ChevronDown className="h-3 w-3 opacity-60" />
                   </button>
-                ))}
-              </div>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent side="top" align="start" className="w-44">
+                  {[{ key: "top", label: "Top (beshi use)" }, ...qrCats].map((cat) => (
+                    <DropdownMenuItem key={cat.key} onClick={() => setQrCat(cat.key)}>
+                      {cat.label}
+                      {qrCat === cat.key && <Check className="ml-auto h-3.5 w-3.5" />}
+                    </DropdownMenuItem>
+                  ))}
+                </DropdownMenuContent>
+              </DropdownMenu>
               <div className="flex min-w-0 items-center gap-1.5 overflow-x-auto py-0.5 [mask-image:linear-gradient(to_right,black_92%,transparent)] [scrollbar-width:none]">
                 {visibleReplies.map((q) => (
                   <Tooltip key={q.id}>

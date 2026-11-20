@@ -335,6 +335,9 @@ function InboxPage() {
   }, [qc]);
 
   // Unread count in the browser tab title
+  const awaitingTotal = conversations.filter(
+    (c) => c.status === "open" && c.last_message_direction === "in",
+  ).length;
   const unreadTotal = conversations.reduce((n, c) => n + (c.unread_count > 0 ? 1 : 0), 0);
   useEffect(() => {
     const base = "Inbox — ERP";
@@ -567,9 +570,11 @@ function InboxPage() {
                 </div>
                 <div>
                   <div className="font-display text-base font-semibold">
-                    {unreadTotal > 0
-                      ? `${unreadTotal}ta chat e notun message ache`
-                      : "Shob message er reply hoye geche"}
+                    {awaitingTotal > 0
+                      ? `${awaitingTotal}ta chat e reply baki`
+                      : unreadTotal > 0
+                        ? `${unreadTotal}ta chat e notun message`
+                        : "Kono chat kholo"}
                   </div>
                   <div className="ib-ink-2 mt-1 text-sm">
                     Bam pash theke ekta conversation kholo. Messenger, Instagram ar WhatsApp

@@ -1416,3 +1416,5 @@ img { transition: opacity 220ms var(--ease-butter); }
 @media (prefers-reduced-motion: reduce) {
   .inbox-studio .ib-msg-enter { animation: none; }
 }
+.inbox-studio .overflow-x-auto { scrollbar-width: none; }
+.inbox-studio .overflow-x-auto::-webkit-scrollbar { display: none; }
