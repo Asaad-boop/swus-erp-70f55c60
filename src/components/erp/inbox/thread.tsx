@@ -377,6 +377,17 @@ export function Thread({
   });
   const messages = useMemo(() => msgsQ.data ?? [], [msgsQ.data]);
 
+  // Missing photo → ask the server to try Meta again (cheap; it rate-limits itself).
+  useEffect(() => {
+    if (c.contact_avatar || c.platform === "whatsapp") return;
+    inboxApi<{ avatar: string | null }>("refresh_contact", { conversationId: c.id })
+      .then((r) => {
+        if (r?.avatar) qc.invalidateQueries({ queryKey: ["inbox", "conversations"] });
+      })
+      .catch(() => {});
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [c.id]);
+
   // Opening a thread clears its unread badge.
   useEffect(() => {
     if (c.unread_count > 0) {

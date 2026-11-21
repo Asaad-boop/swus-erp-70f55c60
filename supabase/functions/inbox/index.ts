@@ -14,6 +14,7 @@ import {
   graphGet,
   graphPost,
   sendReaction,
+  fetchContactProfile,
   INBOX_GRAPH_VERSION,
   INBOX_SCOPES,
   listManagedPages,
@@ -26,7 +27,7 @@ import {
   verifyMetaSignature,
   verifyState,
 } from "./meta.ts";
-import { processInboxWebhook } from "./webhook.ts";
+import { processInboxWebhook, saveAvatar } from "./webhook.ts";
 
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
 const SERVICE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
@@ -416,6 +417,47 @@ function templateBody(components: any[]): string {
 }
 
 const actions: Record<string, (c: Caller, p: any) => Promise<unknown>> = {
+  /** Try again to load a customer's name/photo (Meta only allows it after App Review). */
+  async refresh_contact(c, p) {
+    if (!isUuid(p?.conversationId)) throw new Error("Bad conversation");
+    const { data: conv } = await c.db
+      .from("inbox_conversations")
+      .select(
+        "id, brand_id, channel_id, platform, external_user_id, contact_name, contact_avatar, avatar_checked_at",
+      )
+      .eq("id", p.conversationId)
+      .maybeSingle();
+    if (!conv) throw new Error("Conversation not found");
+    if (conv.contact_avatar || conv.platform === "whatsapp") return { avatar: conv.contact_avatar };
+    if (
+      conv.avatar_checked_at &&
+      Date.now() - new Date(conv.avatar_checked_at).getTime() < 6 * 3600_000
+    )
+      return { avatar: null, skipped: true };
+    const [{ data: channel }, { data: secret }] = await Promise.all([
+      admin.from("inbox_channels").select("page_id").eq("id", conv.channel_id).maybeSingle(),
+      admin
+        .from("inbox_channel_secrets")
+        .select("access_token")
+        .eq("channel_id", conv.channel_id)
+        .maybeSingle(),
+    ]);
+    if (!secret?.access_token) return { avatar: null };
+    const profile = await fetchContactProfile(
+      conv.platform,
+      conv.external_user_id,
+      secret.access_token,
+      channel?.page_id,
+    );
+    await saveAvatar(admin, conv.id, conv.brand_id, conv.platform, profile?.avatar ?? null);
+    if (profile?.name && !conv.contact_name)
+      await admin
+        .from("inbox_conversations")
+        .update({ contact_name: profile.name })
+        .eq("id", conv.id);
+    return { avatar: profile?.avatar ?? null };
+  },
+
   async react(c, p) {
     if (!isUuid(p?.messageId)) throw new Error("Bad message");
     const emoji =

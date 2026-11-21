@@ -60,11 +60,39 @@ async function getToken(ctx: Ctx, channelId: string): Promise<string | null> {
 async function conversationExists(ctx: Ctx, channelId: string, userId: string) {
   const { data } = await ctx.admin
     .from("inbox_conversations")
-    .select("id, contact_name, thread_url")
+    .select("id, contact_name, thread_url, contact_avatar, avatar_checked_at")
     .eq("channel_id", channelId)
     .eq("external_user_id", userId)
     .maybeSingle();
-  return data as { id: string; contact_name: string | null; thread_url: string | null } | null;
+  return data as {
+    id: string;
+    contact_name: string | null;
+    thread_url: string | null;
+    contact_avatar: string | null;
+    avatar_checked_at: string | null;
+  } | null;
+}
+
+const AVATAR_RETRY_MS = 12 * 60 * 60 * 1000;
+
+/** Store a profile photo in our bucket (Meta's CDN links expire) and remember we tried. */
+export async function saveAvatar(
+  admin: any,
+  conversationId: string,
+  brandId: string,
+  platform: string,
+  avatarUrl: string | null,
+) {
+  const stored = avatarUrl
+    ? await copyToStorage(admin, avatarUrl, `${brandId}/${platform}/avatars`)
+    : null;
+  await admin
+    .from("inbox_conversations")
+    .update({
+      avatar_checked_at: new Date().toISOString(),
+      ...(stored || avatarUrl ? { contact_avatar: stored ?? avatarUrl } : {}),
+    })
+    .eq("id", conversationId);
 }
 
 async function ingest(
@@ -228,7 +256,12 @@ async function handleMetaMessaging(ctx: Ctx, platform: "messenger" | "instagram"
     // First message from a new customer → fetch name/photo once.
     let profile: ContactProfile | null = null;
     const existing = await conversationExists(ctx, channel.id, userId);
-    if (!existing || !existing.contact_name || !existing.thread_url) {
+    const avatarDue =
+      !!existing &&
+      !existing.contact_avatar &&
+      (!existing.avatar_checked_at ||
+        Date.now() - new Date(existing.avatar_checked_at).getTime() > AVATAR_RETRY_MS);
+    if (!existing || !existing.contact_name || !existing.thread_url || avatarDue) {
       const token = await getToken(ctx, channel.id);
       if (token) profile = await fetchContactProfile(platform, userId, token, channel.page_id);
     }
@@ -244,9 +277,13 @@ async function handleMetaMessaging(ctx: Ctx, platform: "messenger" | "instagram"
       at,
       contactName: profile?.name,
       contactUsername: profile?.username,
-      contactAvatar: profile?.avatar,
       sentVia: isEcho ? "platform" : null,
     });
+    if (profile && (!existing || avatarDue || !existing.contact_avatar)) {
+      const conv = await conversationExists(ctx, channel.id, userId);
+      if (conv && !conv.contact_avatar)
+        await saveAvatar(ctx.admin, conv.id, channel.brand_id, platform, profile.avatar);
+    }
     if (profile?.threadUrl || profile?.username) {
       const patch: Record<string, string> = {};
       if (profile.threadUrl) patch.thread_url = profile.threadUrl;
