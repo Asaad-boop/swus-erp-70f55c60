@@ -1,4 +1,4 @@
-import { pathAllowedBy } from "@/lib/erp/permissions/page-catalog";
+import { PAGE_BY_PATH, pathAllowedBy } from "@/lib/erp/permissions/page-catalog";
 import type { PageMode } from "@/lib/erp/access-profile.model";
 
 /**
@@ -48,9 +48,21 @@ export const ROLE_MODULES: Record<string, Module[]> = {
     "settings",
     "diagnostics",
   ],
-  operations: ["dashboard", "inbox", "orders", "inventory", "fulfillment", "packing", "supply", "crm", "analytics"],
-  accountant: ["dashboard", "finance", "analytics"],
-  warehouse_staff: ["dashboard", "inventory", "fulfillment", "packing", "supply"],
+  operations: [
+    "dashboard",
+    "inbox",
+    "orders",
+    "inventory",
+    "fulfillment",
+    "packing",
+    "supply",
+    "crm",
+    "analytics",
+  ],
+  // Finance data only; analytics needs order data accountants can't read.
+  accountant: ["dashboard", "finance"],
+  // Stock + packing. Courier/returns need order data → Operations.
+  warehouse_staff: ["dashboard", "inventory", "packing"],
   // Packers: packing station only (scan to move confirmed → packed → ready). No orders/courier/finance.
   packer: ["dashboard", "packing"],
   customer_service: ["dashboard", "inbox", "orders", "crm", "customer_accounts"],
@@ -146,7 +158,8 @@ export function canAccessPath(roles: string[], pathname: string): boolean {
   // staff who don't own the full Orders module — packers, warehouse,
   // fulfillment, CS often open an order from Dispatch/Courier/CRM/Returns.
   // Grant detail-view when any operationally adjacent module is allowed.
-  const isOrderDetail = /^\/erp\/orders\/[^/]+$/.test(pathname);
+  // Named order pages (/erp/orders/list, /web, …) are NOT detail pages.
+  const isOrderDetail = /^\/erp\/orders\/[^/]+$/.test(pathname) && !PAGE_BY_PATH[pathname];
   if (isOrderDetail) {
     if (
       allowed.has("fulfillment") ||

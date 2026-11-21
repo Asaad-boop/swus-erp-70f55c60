@@ -1,5 +1,3 @@
-import { z } from "zod";
-
 export const APP_ROLES = [
   "owner",
   "admin",
@@ -28,18 +26,30 @@ export const ROLE_REGISTRY: Record<AppRole, { label: string; description: string
     label: "Operations",
     description: "Orders, inventory, fulfillment and supply chain",
   },
-  accountant: { label: "Accountant", description: "Finance, reports and reconciliation" },
+  accountant: { label: "Accountant", description: "Finance pages" },
   warehouse_staff: {
     label: "Warehouse staff",
-    description: "Inventory, stocktake and fulfillment",
+    description: "Products, stock, stocktake and packing",
   },
-  packer: { label: "Packer", description: "Packing Station only — scan orders to packing → packed → ready to ship" },
+  packer: {
+    label: "Packer",
+    description: "Packing Station only — scan orders to packing → packed → ready to ship",
+  },
   customer_service: { label: "Customer service", description: "Orders, customers and follow-up" },
   marketing_manager: { label: "Marketing manager", description: "Growth, campaigns and analytics" },
   cargo_agent: { label: "Cargo agent", description: "Imports and cargo workflow" },
-  hr_admin: { label: "HR administrator", description: "Reserved for the new HRM module (dashboard only for now)" },
-  hr_manager: { label: "HR manager", description: "Reserved for the new HRM module (dashboard only for now)" },
-  employee: { label: "Employee", description: "Basic staff login — dashboard plus any granted pages" },
+  hr_admin: {
+    label: "HR administrator",
+    description: "Reserved for the new HRM module (dashboard only for now)",
+  },
+  hr_manager: {
+    label: "HR manager",
+    description: "Reserved for the new HRM module (dashboard only for now)",
+  },
+  employee: {
+    label: "Employee",
+    description: "Basic staff login — dashboard plus any granted pages",
+  },
   moderator: { label: "Moderator", description: "Limited dashboard access" },
   customer: { label: "Customer", description: "Storefront only; not a staff role" },
 };
@@ -70,36 +80,3 @@ export type AccessWorkspaceUser = {
   brandIds: string[];
   updatedAt: string | null;
 };
-
-const roleEnum = z.enum(APP_ROLES);
-
-export const replaceAccessProfileSchema = z.object({
-  userId: z.string().uuid(),
-  roles: z.array(roleEnum).min(1).max(10),
-  brandMode: z.enum(["all", "selected"]),
-  brandIds: z.array(z.string().uuid()).max(50),
-  pageMode: z.enum(["role_default", "custom"]),
-  allowedPages: z.array(z.string()).max(250),
-});
-
-export const createAccessUserSchema = z.object({
-  email: z.string().trim().email().max(255),
-  password: z.string().min(8).max(72),
-  displayName: z.string().trim().min(1).max(100),
-  roles: z.array(roleEnum).min(1).max(10),
-  brandMode: z.enum(["all", "selected"]),
-  brandIds: z.array(z.string().uuid()).max(50),
-  pageMode: z.enum(["role_default", "custom"]),
-  allowedPages: z.array(z.string()).max(250),
-});
-
-export const userIdSchema = z.object({ userId: z.string().uuid() });
-export const passwordSchema = z.object({
-  userId: z.string().uuid(),
-  password: z.string().min(8).max(72),
-});
-export const banSchema = z.object({ userId: z.string().uuid(), ban: z.boolean() });
-export const authLinkSchema = z.object({
-  email: z.string().email(),
-  type: z.enum(["recovery", "magiclink"]),
-});
