@@ -49,6 +49,8 @@ type NewOrderSearch = {
   note?: string;
   /** comma-separated product ids */
   items?: string;
+  /** inbox conversation the order came from (ad attribution) */
+  conv?: string;
 };
 
 export const Route = createFileRoute("/_authenticated/erp/orders/new")({
@@ -65,6 +67,8 @@ export const Route = createFileRoute("/_authenticated/erp/orders/new")({
       typeof s.items === "string" && /^[0-9a-f-]{36}(,[0-9a-f-]{36}){0,19}$/i.test(s.items)
         ? s.items
         : undefined,
+    conv:
+      typeof s.conv === "string" && /^[0-9a-f-]{36}$/i.test(s.conv) ? s.conv : undefined,
   }),
   component: NewOrderPage,
 });
@@ -669,6 +673,8 @@ function NewOrderPage() {
           is_preorder: isPreorder,
           is_cross_sale: isCrossSale,
           courier_name: deliveryMethod !== "manual" ? deliveryMethod : null,
+          // Links the order to its inbox chat; the DB copies the chat's ad onto the order.
+          ...(prefill.conv ? ({ inbox_conversation_id: prefill.conv } as Record<string, string>) : {}),
         })
         .select("id, invoice_no")
         .single();

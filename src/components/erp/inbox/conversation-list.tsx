@@ -16,6 +16,7 @@ const VIEWS: Array<{ key: InboxView; label: string; hint: string }> = [
   { key: "mine", label: "Amar", hint: "Amake assign kora" },
   { key: "unassigned", label: "Unassigned", hint: "Karo kache assign kora nai" },
   { key: "unread", label: "Unread", hint: "Pora hoy nai" },
+  { key: "ads", label: "Ad theke", hint: "Message ad e click kore asha open chat" },
   { key: "done", label: "Done", hint: "Shesh kora conversation" },
   { key: "all", label: "All", hint: "Shob" },
 ];
@@ -206,8 +207,9 @@ function Row({
               </span>
             )}
           </div>
-          {(showBrand || awaiting || assignee) && (
+          {(showBrand || awaiting || assignee || c.ad_id) && (
             <div className="mt-1.5 flex items-center gap-1.5">
+              {c.ad_id && <AdChip c={c} />}
               {awaiting && (
                 <span
                   className={cn(
@@ -243,6 +245,27 @@ function Row({
         </div>
       </button>
     </li>
+  );
+}
+
+/** Small "Ad" marker: which ad started this chat (fresh clicks glow for 24h). */
+export function AdChip({ c }: { c: InboxConversation }) {
+  const fresh = c.ad_at ? Date.now() - new Date(c.ad_at).getTime() < 24 * 3_600_000 : false;
+  return (
+    <span
+      title={`Ad: ${c.ad_title ?? c.ad_id}${c.ad_source === "backfill" ? " (ager chat, icebreaker theke dhora)" : ""}`}
+      className={cn(
+        "inline-flex max-w-[140px] items-center gap-1 rounded-md px-1.5 py-px text-[10.5px] font-medium",
+        fresh
+          ? "bg-violet-500/10 text-violet-700 dark:text-violet-300"
+          : "bg-[var(--ib-canvas)] ib-ink-2",
+      )}
+    >
+      <svg viewBox="0 0 16 16" className="h-2.5 w-2.5 shrink-0" fill="currentColor" aria-hidden>
+        <path d="M2 6.5v3a1 1 0 0 0 1 1h1.5l3.8 2.6a.5.5 0 0 0 .7-.4V3.3a.5.5 0 0 0-.7-.4L4.5 5.5H3a1 1 0 0 0-1 1Zm9.2-2.2a.6.6 0 0 1 .85.1 6 6 0 0 1 0 7.2.6.6 0 1 1-.95-.75 4.8 4.8 0 0 0 0-5.7.6.6 0 0 1 .1-.85Z" />
+      </svg>
+      <span className="truncate">{c.ad_title || "Ad"}</span>
+    </span>
   );
 }
 

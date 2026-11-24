@@ -43,6 +43,15 @@ export type InboxConversation = {
   last_inbound_at: string | null;
   thread_url: string | null;
   created_at: string;
+  /** Meta ad that started (or last re-opened) this chat */
+  ad_id?: string | null;
+  ad_title?: string | null;
+  ad_photo?: string | null;
+  ad_source?: string | null;
+  ad_at?: string | null;
+  ad_first_at?: string | null;
+  ad_count?: number;
+  ad_autoreplied_at?: string | null;
 };
 
 export type InboxAttachment = {
@@ -163,7 +172,8 @@ export function findBdPhone(text: string | null | undefined): string | null {
   return m ? m[1]! : null;
 }
 
-export type InboxView = "open" | "awaiting" | "mine" | "unassigned" | "unread" | "done" | "all";
+export type InboxView =
+  "open" | "awaiting" | "mine" | "unassigned" | "unread" | "ads" | "done" | "all";
 
 export type ConversationFilters = {
   brandIds: string[];
@@ -222,6 +232,9 @@ export async function fetchConversations(
       break;
     case "unread":
       q = q.gt("unread_count", 0);
+      break;
+    case "ads":
+      q = q.eq("status", "open").not("ad_id", "is", null);
       break;
     case "done":
       q = q.eq("status", "done");
@@ -437,4 +450,105 @@ export function profileLinks(
     });
   }
   return out;
+}
+
+// ── message ads ───────────────────────────────────────────────────────
+export type AdReportRow = {
+  ad_id: string | null;
+  ad_name: string;
+  campaign_name: string | null;
+  thumbnail: string | null;
+  brand_id: string;
+  chats: number;
+  replied: number;
+  unreplied: number;
+  median_reply_min: number | null;
+  orders: number;
+  delivered: number;
+  revenue: number;
+  spend: number;
+  meta_chats: number;
+};
+
+export async function fetchAdReport(
+  brandIds: string[],
+  from: Date,
+  to: Date,
+): Promise<AdReportRow[]> {
+  if (brandIds.length === 0) return [];
+  const { data, error } = await db.rpc("inbox_ad_report", {
+    _brand_ids: brandIds,
+    _from: from.toISOString(),
+    _to: to.toISOString(),
+  });
+  if (error) throw error;
+  return ((data ?? []) as any[]).map((r) => ({
+    ...r,
+    revenue: Number(r.revenue ?? 0),
+    spend: Number(r.spend ?? 0),
+    median_reply_min: r.median_reply_min == null ? null : Number(r.median_reply_min),
+  })) as AdReportRow[];
+}
+
+export type AdAutoReply = {
+  id: string;
+  brand_id: string;
+  ad_id: string | null;
+  ad_name: string | null;
+  body: string;
+  image_url: string | null;
+  is_active: boolean;
+  sent_count: number;
+  updated_at: string;
+};
+
+export async function fetchAdAutoReplies(brandIds: string[]): Promise<AdAutoReply[]> {
+  if (brandIds.length === 0) return [];
+  const { data, error } = await db
+    .from("inbox_ad_autoreplies")
+    .select("*")
+    .in("brand_id", brandIds)
+    .order("created_at");
+  if (error) throw error;
+  return (data ?? []) as AdAutoReply[];
+}
+
+export async function saveAdAutoReply(
+  r: Partial<AdAutoReply> & { brand_id: string; body: string },
+) {
+  const row = {
+    brand_id: r.brand_id,
+    ad_id: r.ad_id || null,
+    ad_name: r.ad_name || null,
+    body: r.body,
+    image_url: r.image_url || null,
+    is_active: r.is_active ?? true,
+    updated_at: new Date().toISOString(),
+  };
+  const { error } = r.id
+    ? await db.from("inbox_ad_autoreplies").update(row).eq("id", r.id)
+    : await db.from("inbox_ad_autoreplies").insert(row);
+  if (error) throw error;
+}
+
+export async function deleteAdAutoReply(id: string) {
+  const { error } = await db.from("inbox_ad_autoreplies").delete().eq("id", id);
+  if (error) throw error;
+}
+
+/** Ad-type ads the brand has run recently, for picking a per-ad auto-reply. */
+export async function fetchBrandAds(brandId: string) {
+  const { data, error } = await db
+    .from("mkt_ads")
+    .select("external_id, name, effective_status, creative_thumbnail, updated_at")
+    .eq("brand_id", brandId)
+    .order("updated_at", { ascending: false })
+    .limit(150);
+  if (error) throw error;
+  return (data ?? []) as Array<{
+    external_id: string;
+    name: string | null;
+    effective_status: string | null;
+    creative_thumbnail: string | null;
+  }>;
 }

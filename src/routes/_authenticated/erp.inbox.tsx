@@ -1,7 +1,7 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { Bell, BellOff, MessageCircle, MessagesSquare, Plug, Zap } from "lucide-react";
+import { Bell, BellOff, Megaphone, MessageCircle, MessagesSquare, Plug, Zap } from "lucide-react";
 import {
   DropdownMenu,
   DropdownMenuCheckboxItem,
@@ -34,16 +34,20 @@ import { QuickRepliesManager } from "@/components/erp/inbox/quick-replies-manage
 import { ChannelsSettings } from "@/components/erp/inbox/channels-settings";
 import { PlatformIcon } from "@/components/erp/inbox/shared";
 import { CommentsView } from "@/components/erp/inbox/comments-view";
+import { AdsView } from "@/components/erp/inbox/ads-view";
 import { db } from "@/lib/erp/inbox/inbox";
 import { Sheet, SheetContent } from "@/components/ui/sheet";
 
-type Tab = "inbox" | "comments" | "replies" | "channels";
+type Tab = "inbox" | "comments" | "ads" | "replies" | "channels";
 type InboxSearch = { tab?: Tab; c?: string; meta?: string };
 
 export const Route = createFileRoute("/_authenticated/erp/inbox")({
   head: () => ({ meta: [{ title: "Inbox — ERP" }] }),
   validateSearch: (s: Record<string, unknown>): InboxSearch => ({
-    tab: s.tab === "replies" || s.tab === "channels" || s.tab === "comments" ? s.tab : undefined,
+    tab:
+      s.tab === "replies" || s.tab === "channels" || s.tab === "comments" || s.tab === "ads"
+        ? s.tab
+        : undefined,
     c: typeof s.c === "string" ? s.c : undefined,
     meta: typeof s.meta === "string" ? s.meta : undefined,
   }),
@@ -353,6 +357,7 @@ function InboxPage() {
   const tabs: Array<{ key: Tab; label: string; icon: typeof Zap; show: boolean }> = [
     { key: "inbox", label: "Messages", icon: MessagesSquare, show: true },
     { key: "comments", label: "Comments", icon: MessageCircle, show: true },
+    { key: "ads", label: "Ad report", icon: Megaphone, show: true },
     { key: "replies", label: "Quick replies", icon: Zap, show: true },
     { key: "channels", label: "Channels", icon: Plug, show: isAdmin },
   ];
@@ -430,7 +435,7 @@ function InboxPage() {
           </DropdownMenuContent>
         </DropdownMenu>
 
-        {(tab === "inbox" || tab === "comments") && (
+        {(tab === "inbox" || tab === "comments" || tab === "ads") && (
           <>
             <div className="mx-1 hidden h-5 w-px bg-[var(--ib-line)] md:block" />
             <div className="flex items-center gap-1 overflow-x-auto">
@@ -456,33 +461,46 @@ function InboxPage() {
                 </FilterChip>
               ))}
             </div>
-            <div className="mx-1 hidden h-5 w-px bg-[var(--ib-line)] md:block" />
-            <div className="flex items-center gap-1">
-              <FilterChip active={platform === "all"} onClick={() => setPlatform("all")}>
-                All
-              </FilterChip>
-              {(tab === "comments"
-                ? (["messenger", "instagram"] as const)
-                : (["messenger", "instagram", "whatsapp"] as const)
-              ).map((p) => (
-                <FilterChip
-                  key={p}
-                  active={platform === p}
-                  onClick={() => setPlatform(p)}
-                  title={PLATFORM_LABEL[p]}
-                >
-                  <PlatformIcon platform={p} className="h-3.5 w-3.5" />
-                  <span className="hidden lg:inline">
-                    {tab === "comments" && p === "messenger" ? "Facebook" : PLATFORM_LABEL[p]}
-                  </span>
-                </FilterChip>
-              ))}
-            </div>
+            {tab !== "ads" && (
+              <>
+                <div className="mx-1 hidden h-5 w-px bg-[var(--ib-line)] md:block" />
+                <div className="flex items-center gap-1">
+                  <FilterChip active={platform === "all"} onClick={() => setPlatform("all")}>
+                    All
+                  </FilterChip>
+                  {(tab === "comments"
+                    ? (["messenger", "instagram"] as const)
+                    : (["messenger", "instagram", "whatsapp"] as const)
+                  ).map((p) => (
+                    <FilterChip
+                      key={p}
+                      active={platform === p}
+                      onClick={() => setPlatform(p)}
+                      title={PLATFORM_LABEL[p]}
+                    >
+                      <PlatformIcon platform={p} className="h-3.5 w-3.5" />
+                      <span className="hidden lg:inline">
+                        {tab === "comments" && p === "messenger" ? "Facebook" : PLATFORM_LABEL[p]}
+                      </span>
+                    </FilterChip>
+                  ))}
+                </div>
+              </>
+            )}
           </>
         )}
       </div>
 
-      {tab === "comments" ? (
+      {tab === "ads" ? (
+        <AdsView
+          brandIds={brandIds}
+          showBrand={brandFilter === "all" && brands.length > 1}
+          onOpenAdQueue={() => {
+            setView("ads");
+            navigate({ search: {} });
+          }}
+        />
+      ) : tab === "comments" ? (
         <CommentsView
           brandIds={brandIds}
           platform={

@@ -7,6 +7,7 @@ import {
   copyWhatsAppMedia,
   fetchContactProfile,
   fetchPostInfo,
+  sendPlatformMessage,
   type ContactProfile,
   type InboxAttachment,
   type InboxPlatform,
@@ -153,6 +154,140 @@ export async function applyReaction(
   return true;
 }
 
+// ── message ads (click-to-Messenger / Instagram / WhatsApp) ───────────
+type AdReferral = {
+  adId: string | null;
+  title: string | null;
+  photo: string | null;
+  postId: string | null;
+  source: string;
+  ref: string | null;
+  ctwaClid: string | null;
+  payload: any;
+};
+
+function metaReferral(ev: any): AdReferral | null {
+  const r = ev?.referral ?? ev?.message?.referral ?? ev?.postback?.referral;
+  if (!r) return null;
+  const ctx = r.ads_context_data ?? {};
+  if (r.source !== "ADS" && !r.ad_id) return null;
+  return {
+    adId: r.ad_id ? String(r.ad_id) : null,
+    title: ctx.ad_title ?? null,
+    photo: ctx.photo_url ?? ctx.video_url ?? null,
+    postId: ctx.post_id ? String(ctx.post_id) : null,
+    source: String(r.source ?? "ADS"),
+    ref: r.ref ?? null,
+    ctwaClid: null,
+    payload: r,
+  };
+}
+
+function waReferral(m: any): AdReferral | null {
+  const r = m?.referral;
+  if (!r) return null;
+  return {
+    adId: r.source_type === "ad" && r.source_id ? String(r.source_id) : null,
+    title: r.headline ?? r.body ?? null,
+    photo: r.image_url ?? r.thumbnail_url ?? null,
+    postId: r.source_type === "post" && r.source_id ? String(r.source_id) : null,
+    source: r.source_type === "ad" ? "CTWA" : String(r.source_type ?? "CTWA"),
+    ref: r.source_url ?? null,
+    ctwaClid: r.ctwa_clid ?? null,
+    payload: r,
+  };
+}
+
+async function recordReferral(ctx: Ctx, channel: Channel, userId: string, r: AdReferral, at: Date) {
+  const { error } = await ctx.admin.rpc("inbox_record_referral", {
+    _channel_id: channel.id,
+    _external_user_id: userId,
+    _ad_id: r.adId,
+    _ad_title: r.title,
+    _photo: r.photo,
+    _post_id: r.postId,
+    _source: r.source,
+    _ref: r.ref,
+    _ctwa_clid: r.ctwaClid,
+    _payload: r.payload,
+    _at: at.toISOString(),
+  });
+  if (error) console.error("inbox_record_referral", error.message);
+}
+
+/** First message after an ad click → send the brand's instant ad reply (once per click). */
+async function maybeAdAutoReply(ctx: Ctx, channel: Channel, userId: string) {
+  const { data: conv } = await ctx.admin
+    .from("inbox_conversations")
+    .select("id, brand_id, ad_at, contact_name")
+    .eq("channel_id", channel.id)
+    .eq("external_user_id", userId)
+    .maybeSingle();
+  if (!conv?.ad_at || Date.now() - new Date(conv.ad_at).getTime() > 30 * 60 * 1000) return;
+  const { data: rows, error } = await ctx.admin.rpc("inbox_claim_ad_autoreply", {
+    _conversation_id: conv.id,
+  });
+  if (error) return console.error("inbox_claim_ad_autoreply", error.message);
+  const rule = (rows ?? [])[0] as { body: string; image_url: string | null } | undefined;
+  if (!rule) return;
+  const token = await getToken(ctx, channel.id);
+  if (!token) return;
+  const senderId =
+    channel.platform === "whatsapp"
+      ? channel.external_id
+      : (channel.page_id ?? channel.external_id);
+  const now = new Date().toISOString();
+  const first =
+    String(conv.contact_name ?? "")
+      .trim()
+      .split(/\s+/)[0] ?? "";
+  const text = (rule.body ?? "")
+    .replace(/\s*\{name\}/g, first ? ` ${first}` : "")
+    .replace(/^\s+/, "");
+  const parts: { text: string | null; image: string | null }[] = [];
+  if (rule.image_url) parts.push({ text: null, image: rule.image_url });
+  if (text.trim()) parts.push({ text, image: null });
+  for (const part of parts) {
+    let messageId: string | null = null;
+    let err: string | null = null;
+    try {
+      const r = await sendPlatformMessage({
+        platform: channel.platform,
+        senderId,
+        token,
+        recipientId: userId,
+        text: part.text,
+        attachment: part.image ? { type: "image", url: part.image } : null,
+        lastInboundAt: now,
+      });
+      messageId = r.messageId;
+    } catch (e: any) {
+      err = String(e?.message ?? e).slice(0, 500);
+    }
+    await ctx.admin.from("inbox_messages").insert({
+      conversation_id: conv.id,
+      brand_id: conv.brand_id,
+      direction: "out",
+      external_message_id: messageId,
+      msg_type: part.image ? "image" : "text",
+      body: part.text,
+      attachments: part.image ? [{ type: "image", url: part.image }] : [],
+      sent_via: "auto",
+      status: err ? "failed" : "sent",
+      error: err,
+    });
+    if (err) break;
+  }
+  await ctx.admin
+    .from("inbox_conversations")
+    .update({
+      last_message_at: new Date().toISOString(),
+      last_message_preview: text.slice(0, 140) || "📷 Photo",
+      last_message_direction: "out",
+    })
+    .eq("id", conv.id);
+}
+
 // ── Messenger / Instagram ─────────────────────────────────────────────
 function mapMetaAttachmentType(t: string | undefined, payload: any): InboxAttachment["type"] {
   if (payload?.sticker_id) return "sticker";
@@ -199,6 +334,14 @@ async function handleMetaMessaging(ctx: Ctx, platform: "messenger" | "instagram"
       continue;
     }
 
+    const referral = metaReferral(ev);
+
+    // Ad click that opened the chat without a message yet (messaging_referrals).
+    if (referral && !msg && !ev.postback && ev.sender?.id) {
+      await recordReferral(ctx, channel, String(ev.sender.id), referral, at);
+      continue;
+    }
+
     if (ev.postback && ev.sender?.id) {
       await ingest(ctx, {
         channel,
@@ -210,6 +353,8 @@ async function handleMetaMessaging(ctx: Ctx, platform: "messenger" | "instagram"
         attachments: [],
         at,
       });
+      if (referral) await recordReferral(ctx, channel, String(ev.sender.id), referral, at);
+      await maybeAdAutoReply(ctx, channel, String(ev.sender.id));
       continue;
     }
 
@@ -279,6 +424,10 @@ async function handleMetaMessaging(ctx: Ctx, platform: "messenger" | "instagram"
       contactUsername: profile?.username,
       sentVia: isEcho ? "platform" : null,
     });
+    if (!isEcho) {
+      if (referral) await recordReferral(ctx, channel, userId, referral, at);
+      await maybeAdAutoReply(ctx, channel, userId);
+    }
     if (profile && (!existing || avatarDue || !existing.contact_avatar)) {
       const conv = await conversationExists(ctx, channel.id, userId);
       if (conv && !conv.contact_avatar)
@@ -413,6 +562,10 @@ async function handleWhatsApp(ctx: Ctx, entry: any) {
         contactName: names.get(from) ?? null,
         contactPhone: from.startsWith("880") ? `0${from.slice(3)}` : from,
       });
+      const ref = waReferral(m);
+      const at = new Date((Number(m.timestamp) || Date.now() / 1000) * 1000);
+      if (ref) await recordReferral(ctx, channel, from, ref, at);
+      await maybeAdAutoReply(ctx, channel, from);
     }
 
     // Coexistence: replies typed in the WhatsApp Business app on the phone.

@@ -292,6 +292,13 @@ function Bubble({
                 <span title="Meta inbox / phone app theke pathano">
                   {m.msg_type === "template" ? "Template" : "Page/Phone app"} ·
                 </span>
+              ) : m.sent_via === "auto" ? (
+                <span
+                  className="font-medium text-violet-600 dark:text-violet-400"
+                  title="Ad chat er instant auto-reply"
+                >
+                  ⚡ Auto-reply ·
+                </span>
               ) : author ? (
                 <span className="font-medium text-[var(--ib-ink-2)]">{author} ·</span>
               ) : null)}

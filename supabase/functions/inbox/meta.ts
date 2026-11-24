@@ -162,7 +162,7 @@ export async function subscribePage(pageId: string, pageToken: string) {
   const res = await fetch(
     `${GRAPH}/${pageId}/subscribed_apps?${new URLSearchParams({
       subscribed_fields:
-        "messages,message_echoes,message_reads,messaging_postbacks,message_reactions,feed",
+        "messages,message_echoes,message_reads,messaging_postbacks,message_reactions,messaging_referrals,feed",
       access_token: pageToken,
     })}`,
     { method: "POST" },

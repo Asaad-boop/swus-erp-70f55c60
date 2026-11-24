@@ -5,6 +5,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   ExternalLink,
   Loader2,
+  Megaphone,
   Phone,
   PlusCircle,
   Sparkles,
@@ -97,6 +98,7 @@ export function ContactPanel({
           address: r.address || undefined,
           note: r.note || undefined,
           items: r.productIds.length ? r.productIds.join(",") : undefined,
+          conv: c.id,
         },
       });
     },
@@ -182,6 +184,34 @@ export function ContactPanel({
           </div>
         </div>
 
+        {c.ad_id && (
+          <div className="rounded-xl border border-violet-500/20 bg-violet-500/[0.06] p-2.5">
+            <div className="flex items-center gap-2.5">
+              {c.ad_photo ? (
+                <img
+                  src={c.ad_photo}
+                  alt=""
+                  className="h-11 w-11 shrink-0 rounded-lg object-cover"
+                />
+              ) : (
+                <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-lg bg-violet-500/10 text-violet-600">
+                  <Megaphone className="h-4 w-4" />
+                </div>
+              )}
+              <div className="min-w-0 flex-1">
+                <div className="text-[10.5px] font-medium text-violet-700 dark:text-violet-300">
+                  Ad theke esheche{(c.ad_count ?? 0) > 1 ? ` · ${c.ad_count} bar click` : ""}
+                </div>
+                <div className="truncate text-[13px] font-medium">{c.ad_title || "Message ad"}</div>
+                <div className="text-[11px] text-[var(--ib-ink-3,inherit)]">
+                  {c.ad_at ? agoLabel(c.ad_at) : ""}
+                  {c.ad_autoreplied_at ? " · auto-reply gese" : ""}
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+
         {savedPhone && (
           <div className="grid grid-cols-3 divide-x divide-[var(--ib-line,var(--border))] rounded-xl border border-[var(--ib-line,var(--border))] py-2.5 text-center">
             <div>
@@ -230,6 +260,7 @@ export function ContactPanel({
               name: c.contact_name || undefined,
               brand: c.brand_id,
               source: PLATFORM_LABEL[c.platform],
+              conv: c.id,
             }}
             className="flex h-9 w-full items-center justify-center gap-1.5 rounded-xl border border-[var(--ib-line,var(--border))] text-[12.5px] font-medium text-[var(--ib-ink-2,inherit)] hover:bg-[var(--ib-hover,var(--muted))]"
           >
