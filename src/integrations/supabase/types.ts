@@ -344,6 +344,7 @@ export type Database = {
           followup_status: string
           id: string
           is_converted: boolean
+          last_activity_at: string | null
           last_followup_at: string | null
           last_followup_channel: string | null
           last_step: string | null
@@ -352,6 +353,7 @@ export type Database = {
           shipping_city: string | null
           shipping_district: string | null
           shipping_thana: string | null
+          source_site: string | null
           subtotal: number
           updated_at: string
           user_id: string | null
@@ -368,6 +370,7 @@ export type Database = {
           followup_status?: string
           id?: string
           is_converted?: boolean
+          last_activity_at?: string | null
           last_followup_at?: string | null
           last_followup_channel?: string | null
           last_step?: string | null
@@ -376,6 +379,7 @@ export type Database = {
           shipping_city?: string | null
           shipping_district?: string | null
           shipping_thana?: string | null
+          source_site?: string | null
           subtotal?: number
           updated_at?: string
           user_id?: string | null
@@ -392,6 +396,7 @@ export type Database = {
           followup_status?: string
           id?: string
           is_converted?: boolean
+          last_activity_at?: string | null
           last_followup_at?: string | null
           last_followup_channel?: string | null
           last_step?: string | null
@@ -400,6 +405,7 @@ export type Database = {
           shipping_city?: string | null
           shipping_district?: string | null
           shipping_thana?: string | null
+          source_site?: string | null
           subtotal?: number
           updated_at?: string
           user_id?: string | null
@@ -7672,6 +7678,728 @@ export type Database = {
           },
         ]
       }
+      inbox_ad_autoreplies: {
+        Row: {
+          ad_id: string | null
+          ad_name: string | null
+          body: string
+          brand_id: string
+          created_at: string
+          created_by: string | null
+          id: string
+          image_url: string | null
+          is_active: boolean
+          sent_count: number
+          updated_at: string
+        }
+        Insert: {
+          ad_id?: string | null
+          ad_name?: string | null
+          body: string
+          brand_id: string
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          image_url?: string | null
+          is_active?: boolean
+          sent_count?: number
+          updated_at?: string
+        }
+        Update: {
+          ad_id?: string | null
+          ad_name?: string | null
+          body?: string
+          brand_id?: string
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          image_url?: string | null
+          is_active?: boolean
+          sent_count?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "inbox_ad_autoreplies_brand_id_fkey"
+            columns: ["brand_id"]
+            isOneToOne: false
+            referencedRelation: "brands"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      inbox_ad_referrals: {
+        Row: {
+          ad_id: string | null
+          ad_title: string | null
+          brand_id: string
+          channel_id: string
+          conversation_id: string | null
+          created_at: string
+          ctwa_clid: string | null
+          external_user_id: string
+          id: string
+          payload: Json | null
+          photo_url: string | null
+          platform: string
+          post_id: string | null
+          ref: string | null
+          source: string | null
+        }
+        Insert: {
+          ad_id?: string | null
+          ad_title?: string | null
+          brand_id: string
+          channel_id: string
+          conversation_id?: string | null
+          created_at?: string
+          ctwa_clid?: string | null
+          external_user_id: string
+          id?: string
+          payload?: Json | null
+          photo_url?: string | null
+          platform: string
+          post_id?: string | null
+          ref?: string | null
+          source?: string | null
+        }
+        Update: {
+          ad_id?: string | null
+          ad_title?: string | null
+          brand_id?: string
+          channel_id?: string
+          conversation_id?: string | null
+          created_at?: string
+          ctwa_clid?: string | null
+          external_user_id?: string
+          id?: string
+          payload?: Json | null
+          photo_url?: string | null
+          platform?: string
+          post_id?: string | null
+          ref?: string | null
+          source?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "inbox_ad_referrals_channel_id_fkey"
+            columns: ["channel_id"]
+            isOneToOne: false
+            referencedRelation: "inbox_channels"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "inbox_ad_referrals_conversation_id_fkey"
+            columns: ["conversation_id"]
+            isOneToOne: false
+            referencedRelation: "inbox_conversations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      inbox_channel_secrets: {
+        Row: {
+          access_token: string
+          channel_id: string
+          updated_at: string
+        }
+        Insert: {
+          access_token: string
+          channel_id: string
+          updated_at?: string
+        }
+        Update: {
+          access_token?: string
+          channel_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "inbox_channel_secrets_channel_id_fkey"
+            columns: ["channel_id"]
+            isOneToOne: true
+            referencedRelation: "inbox_channels"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      inbox_channels: {
+        Row: {
+          avatar_url: string | null
+          brand_id: string
+          created_at: string
+          created_by: string | null
+          external_id: string
+          id: string
+          is_active: boolean
+          last_error: string | null
+          name: string
+          page_id: string | null
+          platform: string
+          updated_at: string
+          username: string | null
+        }
+        Insert: {
+          avatar_url?: string | null
+          brand_id: string
+          created_at?: string
+          created_by?: string | null
+          external_id: string
+          id?: string
+          is_active?: boolean
+          last_error?: string | null
+          name: string
+          page_id?: string | null
+          platform: string
+          updated_at?: string
+          username?: string | null
+        }
+        Update: {
+          avatar_url?: string | null
+          brand_id?: string
+          created_at?: string
+          created_by?: string | null
+          external_id?: string
+          id?: string
+          is_active?: boolean
+          last_error?: string | null
+          name?: string
+          page_id?: string | null
+          platform?: string
+          updated_at?: string
+          username?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "inbox_channels_brand_id_fkey"
+            columns: ["brand_id"]
+            isOneToOne: false
+            referencedRelation: "brands"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      inbox_comments: {
+        Row: {
+          attachment_url: string | null
+          author_id: string | null
+          author_name: string | null
+          author_username: string | null
+          body: string | null
+          brand_id: string
+          channel_id: string
+          created_at: string
+          external_comment_id: string
+          external_parent_id: string | null
+          id: string
+          is_deleted: boolean
+          is_from_page: boolean
+          is_hidden: boolean
+          platform: string
+          post_id: string | null
+          private_replied_at: string | null
+          replied_at: string | null
+          replied_by: string | null
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          attachment_url?: string | null
+          author_id?: string | null
+          author_name?: string | null
+          author_username?: string | null
+          body?: string | null
+          brand_id: string
+          channel_id: string
+          created_at?: string
+          external_comment_id: string
+          external_parent_id?: string | null
+          id?: string
+          is_deleted?: boolean
+          is_from_page?: boolean
+          is_hidden?: boolean
+          platform: string
+          post_id?: string | null
+          private_replied_at?: string | null
+          replied_at?: string | null
+          replied_by?: string | null
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          attachment_url?: string | null
+          author_id?: string | null
+          author_name?: string | null
+          author_username?: string | null
+          body?: string | null
+          brand_id?: string
+          channel_id?: string
+          created_at?: string
+          external_comment_id?: string
+          external_parent_id?: string | null
+          id?: string
+          is_deleted?: boolean
+          is_from_page?: boolean
+          is_hidden?: boolean
+          platform?: string
+          post_id?: string | null
+          private_replied_at?: string | null
+          replied_at?: string | null
+          replied_by?: string | null
+          status?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "inbox_comments_brand_id_fkey"
+            columns: ["brand_id"]
+            isOneToOne: false
+            referencedRelation: "brands"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "inbox_comments_channel_id_fkey"
+            columns: ["channel_id"]
+            isOneToOne: false
+            referencedRelation: "inbox_channels"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "inbox_comments_post_id_fkey"
+            columns: ["post_id"]
+            isOneToOne: false
+            referencedRelation: "inbox_posts"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      inbox_conversations: {
+        Row: {
+          ad_at: string | null
+          ad_autoreplied_at: string | null
+          ad_count: number
+          ad_first_at: string | null
+          ad_id: string | null
+          ad_photo: string | null
+          ad_post_id: string | null
+          ad_source: string | null
+          ad_title: string | null
+          assigned_to: string | null
+          avatar_checked_at: string | null
+          brand_id: string
+          channel_id: string
+          complaint_at: string | null
+          complaint_resolved_at: string | null
+          complaint_text: string | null
+          contact_avatar: string | null
+          contact_name: string | null
+          contact_phone: string | null
+          contact_username: string | null
+          created_at: string
+          external_user_id: string
+          id: string
+          last_inbound_at: string | null
+          last_message_at: string | null
+          last_message_direction: string | null
+          last_message_preview: string | null
+          last_order_at: string | null
+          order_count: number
+          platform: string
+          snooze_note: string | null
+          snoozed_until: string | null
+          status: string
+          tags: string[]
+          thread_url: string | null
+          unread_count: number
+          updated_at: string
+        }
+        Insert: {
+          ad_at?: string | null
+          ad_autoreplied_at?: string | null
+          ad_count?: number
+          ad_first_at?: string | null
+          ad_id?: string | null
+          ad_photo?: string | null
+          ad_post_id?: string | null
+          ad_source?: string | null
+          ad_title?: string | null
+          assigned_to?: string | null
+          avatar_checked_at?: string | null
+          brand_id: string
+          channel_id: string
+          complaint_at?: string | null
+          complaint_resolved_at?: string | null
+          complaint_text?: string | null
+          contact_avatar?: string | null
+          contact_name?: string | null
+          contact_phone?: string | null
+          contact_username?: string | null
+          created_at?: string
+          external_user_id: string
+          id?: string
+          last_inbound_at?: string | null
+          last_message_at?: string | null
+          last_message_direction?: string | null
+          last_message_preview?: string | null
+          last_order_at?: string | null
+          order_count?: number
+          platform: string
+          snooze_note?: string | null
+          snoozed_until?: string | null
+          status?: string
+          tags?: string[]
+          thread_url?: string | null
+          unread_count?: number
+          updated_at?: string
+        }
+        Update: {
+          ad_at?: string | null
+          ad_autoreplied_at?: string | null
+          ad_count?: number
+          ad_first_at?: string | null
+          ad_id?: string | null
+          ad_photo?: string | null
+          ad_post_id?: string | null
+          ad_source?: string | null
+          ad_title?: string | null
+          assigned_to?: string | null
+          avatar_checked_at?: string | null
+          brand_id?: string
+          channel_id?: string
+          complaint_at?: string | null
+          complaint_resolved_at?: string | null
+          complaint_text?: string | null
+          contact_avatar?: string | null
+          contact_name?: string | null
+          contact_phone?: string | null
+          contact_username?: string | null
+          created_at?: string
+          external_user_id?: string
+          id?: string
+          last_inbound_at?: string | null
+          last_message_at?: string | null
+          last_message_direction?: string | null
+          last_message_preview?: string | null
+          last_order_at?: string | null
+          order_count?: number
+          platform?: string
+          snooze_note?: string | null
+          snoozed_until?: string | null
+          status?: string
+          tags?: string[]
+          thread_url?: string | null
+          unread_count?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "inbox_conversations_brand_id_fkey"
+            columns: ["brand_id"]
+            isOneToOne: false
+            referencedRelation: "brands"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "inbox_conversations_channel_id_fkey"
+            columns: ["channel_id"]
+            isOneToOne: false
+            referencedRelation: "inbox_channels"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      inbox_messages: {
+        Row: {
+          attachments: Json
+          body: string | null
+          brand_id: string
+          conversation_id: string
+          created_at: string
+          direction: string
+          error: string | null
+          external_message_id: string | null
+          id: string
+          meta: Json | null
+          msg_type: string
+          reactions: Json
+          reply_to: string | null
+          sent_by: string | null
+          sent_via: string | null
+          status: string
+        }
+        Insert: {
+          attachments?: Json
+          body?: string | null
+          brand_id: string
+          conversation_id: string
+          created_at?: string
+          direction: string
+          error?: string | null
+          external_message_id?: string | null
+          id?: string
+          meta?: Json | null
+          msg_type?: string
+          reactions?: Json
+          reply_to?: string | null
+          sent_by?: string | null
+          sent_via?: string | null
+          status?: string
+        }
+        Update: {
+          attachments?: Json
+          body?: string | null
+          brand_id?: string
+          conversation_id?: string
+          created_at?: string
+          direction?: string
+          error?: string | null
+          external_message_id?: string | null
+          id?: string
+          meta?: Json | null
+          msg_type?: string
+          reactions?: Json
+          reply_to?: string | null
+          sent_by?: string | null
+          sent_via?: string | null
+          status?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "inbox_messages_conversation_id_fkey"
+            columns: ["conversation_id"]
+            isOneToOne: false
+            referencedRelation: "inbox_conversations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "inbox_messages_reply_to_fkey"
+            columns: ["reply_to"]
+            isOneToOne: false
+            referencedRelation: "inbox_messages"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      inbox_notes: {
+        Row: {
+          body: string
+          brand_id: string
+          conversation_id: string
+          created_at: string
+          created_by: string | null
+          id: string
+        }
+        Insert: {
+          body: string
+          brand_id: string
+          conversation_id: string
+          created_at?: string
+          created_by?: string | null
+          id?: string
+        }
+        Update: {
+          body?: string
+          brand_id?: string
+          conversation_id?: string
+          created_at?: string
+          created_by?: string | null
+          id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "inbox_notes_conversation_id_fkey"
+            columns: ["conversation_id"]
+            isOneToOne: false
+            referencedRelation: "inbox_conversations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      inbox_oauth_sessions: {
+        Row: {
+          access_token: string
+          created_at: string
+          expires_at: string | null
+          fb_user_name: string | null
+          user_id: string
+        }
+        Insert: {
+          access_token: string
+          created_at?: string
+          expires_at?: string | null
+          fb_user_name?: string | null
+          user_id: string
+        }
+        Update: {
+          access_token?: string
+          created_at?: string
+          expires_at?: string | null
+          fb_user_name?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
+      inbox_posts: {
+        Row: {
+          brand_id: string
+          channel_id: string
+          created_at: string
+          external_post_id: string
+          fetched_at: string | null
+          id: string
+          image_url: string | null
+          is_ad: boolean
+          message: string | null
+          permalink: string | null
+          platform: string
+        }
+        Insert: {
+          brand_id: string
+          channel_id: string
+          created_at?: string
+          external_post_id: string
+          fetched_at?: string | null
+          id?: string
+          image_url?: string | null
+          is_ad?: boolean
+          message?: string | null
+          permalink?: string | null
+          platform: string
+        }
+        Update: {
+          brand_id?: string
+          channel_id?: string
+          created_at?: string
+          external_post_id?: string
+          fetched_at?: string | null
+          id?: string
+          image_url?: string | null
+          is_ad?: boolean
+          message?: string | null
+          permalink?: string | null
+          platform?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "inbox_posts_brand_id_fkey"
+            columns: ["brand_id"]
+            isOneToOne: false
+            referencedRelation: "brands"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "inbox_posts_channel_id_fkey"
+            columns: ["channel_id"]
+            isOneToOne: false
+            referencedRelation: "inbox_channels"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      inbox_quick_replies: {
+        Row: {
+          body: string
+          brand_id: string | null
+          category: string
+          created_at: string
+          created_by: string | null
+          id: string
+          image_url: string | null
+          shortcut: string
+          sort_order: number
+          title: string
+          updated_at: string
+          use_count: number
+        }
+        Insert: {
+          body: string
+          brand_id?: string | null
+          category?: string
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          image_url?: string | null
+          shortcut: string
+          sort_order?: number
+          title: string
+          updated_at?: string
+          use_count?: number
+        }
+        Update: {
+          body?: string
+          brand_id?: string | null
+          category?: string
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          image_url?: string | null
+          shortcut?: string
+          sort_order?: number
+          title?: string
+          updated_at?: string
+          use_count?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "inbox_quick_replies_brand_id_fkey"
+            columns: ["brand_id"]
+            isOneToOne: false
+            referencedRelation: "brands"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      inbox_settings: {
+        Row: {
+          id: number
+          meta_app_id: string | null
+          meta_app_secret: string | null
+          updated_at: string
+          updated_by: string | null
+          verify_token: string
+        }
+        Insert: {
+          id?: number
+          meta_app_id?: string | null
+          meta_app_secret?: string | null
+          updated_at?: string
+          updated_by?: string | null
+          verify_token?: string
+        }
+        Update: {
+          id?: number
+          meta_app_id?: string | null
+          meta_app_secret?: string | null
+          updated_at?: string
+          updated_by?: string | null
+          verify_token?: string
+        }
+        Relationships: []
+      }
+      inbox_webhook_events: {
+        Row: {
+          error: string | null
+          id: number
+          object: string | null
+          payload: Json
+          received_at: string
+        }
+        Insert: {
+          error?: string | null
+          id?: never
+          object?: string | null
+          payload: Json
+          received_at?: string
+        }
+        Update: {
+          error?: string | null
+          id?: never
+          object?: string | null
+          payload?: Json
+          received_at?: string
+        }
+        Relationships: []
+      }
       inv_snapshot_rows: {
         Row: {
           available_stock: number
@@ -7814,6 +8542,341 @@ export type Database = {
           variant_id?: string | null
         }
         Relationships: []
+      }
+      kigb_batch_lines: {
+        Row: {
+          batch_id: string
+          damaged_qty: number | null
+          extra_alloc_bdt: number | null
+          good_qty: number | null
+          id: string
+          landed_unit_cost: number | null
+          ordered_qty: number
+          paid_qty: number | null
+          part_id: string
+          qc_note: string | null
+          received_qty: number | null
+          unit_price_bdt: number
+          unit_price_rmb: number | null
+        }
+        Insert: {
+          batch_id: string
+          damaged_qty?: number | null
+          extra_alloc_bdt?: number | null
+          good_qty?: number | null
+          id?: string
+          landed_unit_cost?: number | null
+          ordered_qty: number
+          paid_qty?: number | null
+          part_id: string
+          qc_note?: string | null
+          received_qty?: number | null
+          unit_price_bdt?: number
+          unit_price_rmb?: number | null
+        }
+        Update: {
+          batch_id?: string
+          damaged_qty?: number | null
+          extra_alloc_bdt?: number | null
+          good_qty?: number | null
+          id?: string
+          landed_unit_cost?: number | null
+          ordered_qty?: number
+          paid_qty?: number | null
+          part_id?: string
+          qc_note?: string | null
+          received_qty?: number | null
+          unit_price_bdt?: number
+          unit_price_rmb?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "kigb_batch_lines_batch_id_fkey"
+            columns: ["batch_id"]
+            isOneToOne: false
+            referencedRelation: "kigb_batches"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "kigb_batch_lines_part_id_fkey"
+            columns: ["part_id"]
+            isOneToOne: false
+            referencedRelation: "kigb_parts"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      kigb_batches: {
+        Row: {
+          agent_fee_bdt: number
+          allocation: string
+          batch_no: string
+          cargo_bdt: number
+          china_shipping_bdt: number
+          created_at: string
+          created_by: string | null
+          expected_at: string | null
+          id: string
+          kind: string
+          notes: string | null
+          ordered_at: string | null
+          other_cost_bdt: number
+          received_at: string | null
+          received_by: string | null
+          rmb_rate: number | null
+          status: string
+          supplier: string | null
+          updated_at: string
+        }
+        Insert: {
+          agent_fee_bdt?: number
+          allocation?: string
+          batch_no?: string
+          cargo_bdt?: number
+          china_shipping_bdt?: number
+          created_at?: string
+          created_by?: string | null
+          expected_at?: string | null
+          id?: string
+          kind: string
+          notes?: string | null
+          ordered_at?: string | null
+          other_cost_bdt?: number
+          received_at?: string | null
+          received_by?: string | null
+          rmb_rate?: number | null
+          status?: string
+          supplier?: string | null
+          updated_at?: string
+        }
+        Update: {
+          agent_fee_bdt?: number
+          allocation?: string
+          batch_no?: string
+          cargo_bdt?: number
+          china_shipping_bdt?: number
+          created_at?: string
+          created_by?: string | null
+          expected_at?: string | null
+          id?: string
+          kind?: string
+          notes?: string | null
+          ordered_at?: string | null
+          other_cost_bdt?: number
+          received_at?: string | null
+          received_by?: string | null
+          rmb_rate?: number | null
+          status?: string
+          supplier?: string | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      kigb_movements: {
+        Row: {
+          created_at: string
+          created_by: string | null
+          delta: number
+          id: string
+          idempotency_key: string | null
+          note: string | null
+          on_hand_after: number
+          order_id: string | null
+          part_id: string
+          reason: string
+          ref_id: string | null
+          ref_type: string | null
+          total_cost: number
+          unit_cost: number
+          wac_after: number
+        }
+        Insert: {
+          created_at?: string
+          created_by?: string | null
+          delta: number
+          id?: string
+          idempotency_key?: string | null
+          note?: string | null
+          on_hand_after: number
+          order_id?: string | null
+          part_id: string
+          reason: string
+          ref_id?: string | null
+          ref_type?: string | null
+          total_cost?: number
+          unit_cost?: number
+          wac_after: number
+        }
+        Update: {
+          created_at?: string
+          created_by?: string | null
+          delta?: number
+          id?: string
+          idempotency_key?: string | null
+          note?: string | null
+          on_hand_after?: number
+          order_id?: string | null
+          part_id?: string
+          reason?: string
+          ref_id?: string | null
+          ref_type?: string | null
+          total_cost?: number
+          unit_cost?: number
+          wac_after?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "kigb_movements_part_id_fkey"
+            columns: ["part_id"]
+            isOneToOne: false
+            referencedRelation: "kigb_parts"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      kigb_parts: {
+        Row: {
+          active: boolean
+          code: string
+          color: string
+          id: string
+          name: string
+          on_hand: number
+          reorder_point: number
+          sort: number
+          source: string
+          updated_at: string
+          wac: number
+        }
+        Insert: {
+          active?: boolean
+          code: string
+          color: string
+          id?: string
+          name: string
+          on_hand?: number
+          reorder_point?: number
+          sort?: number
+          source: string
+          updated_at?: string
+          wac?: number
+        }
+        Update: {
+          active?: boolean
+          code?: string
+          color?: string
+          id?: string
+          name?: string
+          on_hand?: number
+          reorder_point?: number
+          sort?: number
+          source?: string
+          updated_at?: string
+          wac?: number
+        }
+        Relationships: []
+      }
+      kigb_settings: {
+        Row: {
+          ad_cost_per_order: number
+          blue_variant_id: string | null
+          default_color: string
+          delivery_cost: number
+          id: number
+          kit_product_id: string | null
+          packaging_cost: number
+          pink_variant_id: string | null
+          sell_price_pair: number
+          sell_price_single: number
+          sync_cost: boolean
+          updated_at: string
+        }
+        Insert: {
+          ad_cost_per_order?: number
+          blue_variant_id?: string | null
+          default_color?: string
+          delivery_cost?: number
+          id?: number
+          kit_product_id?: string | null
+          packaging_cost?: number
+          pink_variant_id?: string | null
+          sell_price_pair?: number
+          sell_price_single?: number
+          sync_cost?: boolean
+          updated_at?: string
+        }
+        Update: {
+          ad_cost_per_order?: number
+          blue_variant_id?: string | null
+          default_color?: string
+          delivery_cost?: number
+          id?: number
+          kit_product_id?: string | null
+          packaging_cost?: number
+          pink_variant_id?: string | null
+          sell_price_pair?: number
+          sell_price_single?: number
+          sync_cost?: boolean
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "kigb_settings_blue_variant_id_fkey"
+            columns: ["blue_variant_id"]
+            isOneToOne: false
+            referencedRelation: "inv_missing_cost"
+            referencedColumns: ["variant_id"]
+          },
+          {
+            foreignKeyName: "kigb_settings_blue_variant_id_fkey"
+            columns: ["blue_variant_id"]
+            isOneToOne: false
+            referencedRelation: "product_variants"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "kigb_settings_kit_product_id_fkey"
+            columns: ["kit_product_id"]
+            isOneToOne: false
+            referencedRelation: "inv_missing_cost"
+            referencedColumns: ["product_id"]
+          },
+          {
+            foreignKeyName: "kigb_settings_kit_product_id_fkey"
+            columns: ["kit_product_id"]
+            isOneToOne: false
+            referencedRelation: "products"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "kigb_settings_kit_product_id_fkey"
+            columns: ["kit_product_id"]
+            isOneToOne: false
+            referencedRelation: "v_combo_summary"
+            referencedColumns: ["combo_product_id"]
+          },
+          {
+            foreignKeyName: "kigb_settings_kit_product_id_fkey"
+            columns: ["kit_product_id"]
+            isOneToOne: false
+            referencedRelation: "v_inv_drift"
+            referencedColumns: ["product_id"]
+          },
+          {
+            foreignKeyName: "kigb_settings_pink_variant_id_fkey"
+            columns: ["pink_variant_id"]
+            isOneToOne: false
+            referencedRelation: "inv_missing_cost"
+            referencedColumns: ["variant_id"]
+          },
+          {
+            foreignKeyName: "kigb_settings_pink_variant_id_fkey"
+            columns: ["pink_variant_id"]
+            isOneToOne: false
+            referencedRelation: "product_variants"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       local_po_items: {
         Row: {
@@ -10441,6 +11504,7 @@ export type Database = {
           courier_fee: number
           courier_name: string | null
           created_at: string
+          created_by: string | null
           customer_ip: string | null
           customer_note: string | null
           delivered_at: string | null
@@ -10465,6 +11529,7 @@ export type Database = {
           hold_until: string | null
           id: string
           in_transit_at: string | null
+          inbox_conversation_id: string | null
           internal_note: string | null
           invoice_no: string | null
           is_cross_sale: boolean
@@ -10567,6 +11632,7 @@ export type Database = {
           courier_fee?: number
           courier_name?: string | null
           created_at?: string
+          created_by?: string | null
           customer_ip?: string | null
           customer_note?: string | null
           delivered_at?: string | null
@@ -10591,6 +11657,7 @@ export type Database = {
           hold_until?: string | null
           id?: string
           in_transit_at?: string | null
+          inbox_conversation_id?: string | null
           internal_note?: string | null
           invoice_no?: string | null
           is_cross_sale?: boolean
@@ -10693,6 +11760,7 @@ export type Database = {
           courier_fee?: number
           courier_name?: string | null
           created_at?: string
+          created_by?: string | null
           customer_ip?: string | null
           customer_note?: string | null
           delivered_at?: string | null
@@ -10717,6 +11785,7 @@ export type Database = {
           hold_until?: string | null
           id?: string
           in_transit_at?: string | null
+          inbox_conversation_id?: string | null
           internal_note?: string | null
           invoice_no?: string | null
           is_cross_sale?: boolean
@@ -10816,6 +11885,13 @@ export type Database = {
             columns: ["delivery_zone_id"]
             isOneToOne: false
             referencedRelation: "bd_zones"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "orders_inbox_conversation_id_fkey"
+            columns: ["inbox_conversation_id"]
+            isOneToOne: false
+            referencedRelation: "inbox_conversations"
             referencedColumns: ["id"]
           },
         ]
@@ -11220,6 +12296,7 @@ export type Database = {
           brief_url: string | null
           content_type: string
           created_at: string
+          creative_code: string | null
           creator_id: string | null
           deal_id: string | null
           due_date: string | null
@@ -11238,6 +12315,7 @@ export type Database = {
           shared_with: string[]
           shoot_id: string | null
           stage: string
+          tags: string[]
           title: string
           updated_at: string
           visibility: string
@@ -11248,6 +12326,7 @@ export type Database = {
           brief_url?: string | null
           content_type?: string
           created_at?: string
+          creative_code?: string | null
           creator_id?: string | null
           deal_id?: string | null
           due_date?: string | null
@@ -11266,6 +12345,7 @@ export type Database = {
           shared_with?: string[]
           shoot_id?: string | null
           stage?: string
+          tags?: string[]
           title: string
           updated_at?: string
           visibility?: string
@@ -11276,6 +12356,7 @@ export type Database = {
           brief_url?: string | null
           content_type?: string
           created_at?: string
+          creative_code?: string | null
           creator_id?: string | null
           deal_id?: string | null
           due_date?: string | null
@@ -11294,6 +12375,7 @@ export type Database = {
           shared_with?: string[]
           shoot_id?: string | null
           stage?: string
+          tags?: string[]
           title?: string
           updated_at?: string
           visibility?: string
@@ -11408,13 +12490,19 @@ export type Database = {
         Row: {
           content_item_id: string
           created_at: string
+          drive_file_id: string | null
+          drive_url: string | null
+          duration_sec: number | null
           file_name: string | null
           id: string
           kind: string
           mime_type: string | null
           note: string | null
           size_bytes: number | null
-          storage_path: string
+          storage: string
+          storage_path: string | null
+          tags: string[]
+          thumbnail_url: string | null
           uploaded_by: string
           version: number
           workspace_id: string
@@ -11422,13 +12510,19 @@ export type Database = {
         Insert: {
           content_item_id: string
           created_at?: string
+          drive_file_id?: string | null
+          drive_url?: string | null
+          duration_sec?: number | null
           file_name?: string | null
           id?: string
           kind?: string
           mime_type?: string | null
           note?: string | null
           size_bytes?: number | null
-          storage_path: string
+          storage?: string
+          storage_path?: string | null
+          tags?: string[]
+          thumbnail_url?: string | null
           uploaded_by?: string
           version?: number
           workspace_id: string
@@ -11436,13 +12530,19 @@ export type Database = {
         Update: {
           content_item_id?: string
           created_at?: string
+          drive_file_id?: string | null
+          drive_url?: string | null
+          duration_sec?: number | null
           file_name?: string | null
           id?: string
           kind?: string
           mime_type?: string | null
           note?: string | null
           size_bytes?: number | null
-          storage_path?: string
+          storage?: string
+          storage_path?: string | null
+          tags?: string[]
+          thumbnail_url?: string | null
           uploaded_by?: string
           version?: number
           workspace_id?: string
@@ -12048,6 +13148,54 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      os_drive_connection: {
+        Row: {
+          account_email: string | null
+          connected_at: string
+          connected_by: string
+          id: number
+          refresh_token: string
+          root_folder_id: string | null
+          share_anyone_with_link: boolean
+        }
+        Insert: {
+          account_email?: string | null
+          connected_at?: string
+          connected_by: string
+          id?: number
+          refresh_token: string
+          root_folder_id?: string | null
+          share_anyone_with_link?: boolean
+        }
+        Update: {
+          account_email?: string | null
+          connected_at?: string
+          connected_by?: string
+          id?: number
+          refresh_token?: string
+          root_folder_id?: string | null
+          share_anyone_with_link?: boolean
+        }
+        Relationships: []
+      }
+      os_drive_folders: {
+        Row: {
+          created_at: string
+          folder_id: string
+          path: string
+        }
+        Insert: {
+          created_at?: string
+          folder_id: string
+          path: string
+        }
+        Update: {
+          created_at?: string
+          folder_id?: string
+          path?: string
+        }
+        Relationships: []
       }
       os_events: {
         Row: {
@@ -12905,6 +14053,56 @@ export type Database = {
           user_id?: string
         }
         Relationships: []
+      }
+      os_product_codes: {
+        Row: {
+          code: string
+          created_at: string
+          created_by: string
+          product_id: string
+        }
+        Insert: {
+          code: string
+          created_at?: string
+          created_by?: string
+          product_id: string
+        }
+        Update: {
+          code?: string
+          created_at?: string
+          created_by?: string
+          product_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "os_product_codes_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: true
+            referencedRelation: "inv_missing_cost"
+            referencedColumns: ["product_id"]
+          },
+          {
+            foreignKeyName: "os_product_codes_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: true
+            referencedRelation: "products"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "os_product_codes_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: true
+            referencedRelation: "v_combo_summary"
+            referencedColumns: ["combo_product_id"]
+          },
+          {
+            foreignKeyName: "os_product_codes_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: true
+            referencedRelation: "v_inv_drift"
+            referencedColumns: ["product_id"]
+          },
+        ]
       }
       os_profiles: {
         Row: {
@@ -15068,6 +16266,32 @@ export type Database = {
             columns: ["warehouse_id"]
             isOneToOne: false
             referencedRelation: "warehouses"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      storefront_site_brands: {
+        Row: {
+          brand_id: string
+          created_at: string
+          host: string
+        }
+        Insert: {
+          brand_id: string
+          created_at?: string
+          host: string
+        }
+        Update: {
+          brand_id?: string
+          created_at?: string
+          host?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "storefront_site_brands_brand_id_fkey"
+            columns: ["brand_id"]
+            isOneToOne: false
+            referencedRelation: "brands"
             referencedColumns: ["id"]
           },
         ]
@@ -17700,6 +18924,7 @@ export type Database = {
       _mkt_require_staff: { Args: never; Returns: undefined }
       _saados_finance_guard: { Args: { _brand_id: string }; Returns: undefined }
       _work_generate_reminders: { Args: { _only: string }; Returns: number }
+      abandoned_cart_step_rank: { Args: { s: string }; Returns: number }
       acquire_order_lock: {
         Args: { _force?: boolean; _order_id: string }
         Returns: {
@@ -18733,6 +19958,249 @@ export type Database = {
         Returns: undefined
       }
       imp_update_po: { Args: { _payload: Json; _po_id: string }; Returns: Json }
+      inbox_ad_report: {
+        Args: { _brand_ids: string[]; _from: string; _to: string }
+        Returns: {
+          ad_id: string
+          ad_name: string
+          brand_id: string
+          campaign_name: string
+          chats: number
+          delivered: number
+          median_reply_min: number
+          meta_chats: number
+          orders: number
+          replied: number
+          revenue: number
+          spend: number
+          thumbnail: string
+          unreplied: number
+        }[]
+      }
+      inbox_apply_ad_to_order: {
+        Args: {
+          _conv: string
+          o: Database["public"]["Tables"]["orders"]["Row"]
+        }
+        Returns: {
+          actual_shipping_breakdown: Json | null
+          actual_shipping_cost: number | null
+          actual_shipping_recorded_at: string | null
+          actual_shipping_source: string | null
+          admin_notes: string | null
+          advance_amount: number
+          advance_payment_number: string | null
+          advance_source: string | null
+          advance_txn_id: string | null
+          alternate_phone: string | null
+          assigned_to: string | null
+          attribution: Json | null
+          attribution_landing_page: string | null
+          auto_call_enabled: boolean | null
+          brand_id: string | null
+          call_attempt_count: number
+          call_status: Database["public"]["Enums"]["call_status"]
+          cancel_reason: string | null
+          cancellation_reason: string | null
+          cancelled_at: string | null
+          confirmation_status: Database["public"]["Enums"]["confirmation_status"]
+          confirmed_at: string | null
+          confirmed_by: string | null
+          coupon_code: string | null
+          courier_assigned_at: string | null
+          courier_bucket: string | null
+          courier_fee: number
+          courier_name: string | null
+          created_at: string
+          created_by: string | null
+          customer_ip: string | null
+          customer_note: string | null
+          delivered_at: string | null
+          delivery_area_id: string | null
+          delivery_city_id: string | null
+          delivery_method: string | null
+          delivery_zone_id: string | null
+          device_info: Json | null
+          discount_amount: number
+          duplicate_flag: boolean
+          expected_delivery_date: string | null
+          external_order_id: string | null
+          external_platform: string | null
+          fb_ad_id: string | null
+          fb_adset_id: string | null
+          fb_campaign_id: string | null
+          fbclid: string | null
+          guest_email: string | null
+          guest_name: string | null
+          guest_phone: string | null
+          hold_reason: string | null
+          hold_until: string | null
+          id: string
+          in_transit_at: string | null
+          inbox_conversation_id: string | null
+          internal_note: string | null
+          invoice_no: string | null
+          is_cross_sale: boolean
+          is_guest_order: boolean
+          is_preorder: boolean
+          last_call_at: string | null
+          last_called_by: string | null
+          latest_note: string | null
+          net_collected: number | null
+          notes: string | null
+          order_tags: string[]
+          packaged_at: string | null
+          packaged_by: string | null
+          paid_at: string | null
+          partial_amount: number | null
+          partial_amount_semantics: string | null
+          pathao_area_id: number | null
+          pathao_area_name: string | null
+          pathao_city_id: number | null
+          pathao_city_name: string | null
+          pathao_zone_id: number | null
+          pathao_zone_name: string | null
+          payment_method: string | null
+          payment_source: string | null
+          payment_status: Database["public"]["Enums"]["payment_status"]
+          pipeline_log: Json
+          preorder_converted_at: string | null
+          preorder_expected_date: string | null
+          preorder_ready_at: string | null
+          printed_at: string | null
+          priority: Database["public"]["Enums"]["order_priority"]
+          reconciliation_status: string | null
+          refund_amount: number
+          rejection_reason: string | null
+          return_condition: string | null
+          return_note: string | null
+          return_received_at: string | null
+          return_received_by: string | null
+          return_received_note: string | null
+          return_type: string | null
+          risk_flag: boolean
+          scheduled_date: string | null
+          shipped_at: string | null
+          shipped_by: string | null
+          shipping_address: string | null
+          shipping_city: string | null
+          shipping_district: string | null
+          shipping_fee: number
+          shipping_name: string | null
+          shipping_note: string | null
+          shipping_phone: string | null
+          shipping_thana: string | null
+          source: Database["public"]["Enums"]["order_source"] | null
+          source_platform: string | null
+          source_website: string | null
+          status: Database["public"]["Enums"]["order_status"]
+          status_log: Json
+          subtotal: number
+          tags: string[] | null
+          total: number
+          tracking_number: string | null
+          transaction_id: string | null
+          updated_at: string
+          user_id: string | null
+          utm_campaign: string | null
+          utm_content: string | null
+          utm_medium: string | null
+          utm_source: string | null
+          utm_term: string | null
+          verified_at: string | null
+          web_status: Database["public"]["Enums"]["web_order_status"] | null
+        }
+        SetofOptions: {
+          from: "*"
+          to: "orders"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
+      inbox_bump_quick_reply: { Args: { _id: string }; Returns: undefined }
+      inbox_can_access: { Args: { _brand: string }; Returns: boolean }
+      inbox_claim_ad_autoreply: {
+        Args: { _conversation_id: string }
+        Returns: {
+          body: string
+          id: string
+          image_url: string
+        }[]
+      }
+      inbox_extract_bd_phone: { Args: { _body: string }; Returns: string }
+      inbox_ingest_message: {
+        Args: {
+          _attachments: Json
+          _body: string
+          _channel_id: string
+          _contact_avatar?: string
+          _contact_name?: string
+          _contact_phone?: string
+          _contact_username?: string
+          _created_at: string
+          _direction: string
+          _external_message_id: string
+          _external_user_id: string
+          _msg_type: string
+          _sent_via?: string
+        }
+        Returns: string
+      }
+      inbox_is_admin: { Args: never; Returns: boolean }
+      inbox_is_complaint: { Args: { _body: string }; Returns: boolean }
+      inbox_phone_key: { Args: { _p: string }; Returns: string }
+      inbox_record_referral: {
+        Args: {
+          _ad_id: string
+          _ad_title: string
+          _at: string
+          _channel_id: string
+          _ctwa_clid: string
+          _external_user_id: string
+          _payload: Json
+          _photo: string
+          _post_id: string
+          _ref: string
+          _source: string
+        }
+        Returns: undefined
+      }
+      inbox_refresh_order_count: { Args: { _conv: string }; Returns: undefined }
+      inbox_staff: {
+        Args: never
+        Returns: {
+          display_name: string
+          id: string
+        }[]
+      }
+      inbox_staff_replies: {
+        Args: {
+          _brand_ids: string[]
+          _from: string
+          _limit?: number
+          _to: string
+          _user: string
+        }
+        Returns: {
+          attachments: Json
+          body: string
+          brand_id: string
+          contact_name: string
+          conversation_id: string
+          created_at: string
+          id: string
+          platform: string
+          response_min: number
+        }[]
+      }
+      inbox_team_report: {
+        Args: { _brand_ids: string[]; _from: string; _to: string }
+        Returns: Json
+      }
+      inbox_view_counts: {
+        Args: { _brand_ids: string[]; _platform?: string; _user?: string }
+        Returns: Json
+      }
       inv_backfill_opening_stock: { Args: never; Returns: number }
       inv_cost_drift: {
         Args: never
@@ -18832,11 +20300,71 @@ export type Database = {
         Args: { p_shipment_id: string }
         Returns: string
       }
+      kigb_adjust: {
+        Args: {
+          p_delta: number
+          p_note: string
+          p_part: string
+          p_reason: string
+          p_unit_cost: number
+        }
+        Returns: undefined
+      }
+      kigb_can_manage: { Args: never; Returns: boolean }
+      kigb_post_movement: {
+        Args: {
+          p_delta: number
+          p_idem: string
+          p_note: string
+          p_order_id: string
+          p_part: string
+          p_reason: string
+          p_ref_id: string
+          p_ref_type: string
+          p_unit_cost: number
+        }
+        Returns: string
+      }
+      kigb_receive_batch: {
+        Args: { p_id: string; p_lines: Json }
+        Returns: undefined
+      }
+      kigb_save_batch: { Args: { p: Json }; Returns: string }
+      kigb_set_batch_status: {
+        Args: { p_id: string; p_status: string }
+        Returns: undefined
+      }
+      kigb_stock_count: {
+        Args: { p_counts: Json; p_note: string }
+        Returns: number
+      }
+      kigb_sync_kit_cost: { Args: never; Returns: undefined }
+      kigb_update_settings: { Args: { p: Json }; Returns: undefined }
       list_staff_profiles: {
         Args: never
         Returns: {
           display_name: string
           id: string
+        }[]
+      }
+      live_sessions: {
+        Args: { _brand_ids?: string[]; _limit?: number; _since: string }
+        Returns: {
+          add_to_cart: boolean
+          brand_id: string
+          checkout: boolean
+          device_type: string
+          events: number
+          first_seen_at: string
+          last_seen_at: string
+          page_views: number
+          path: string
+          product_views: number
+          purchase: boolean
+          referrer: string
+          session_id: string
+          user_agent: string
+          utm_source: string
         }[]
       }
       log_order_view: { Args: { p_order_id: string }; Returns: undefined }
@@ -18872,6 +20400,7 @@ export type Database = {
           courier_fee: number
           courier_name: string | null
           created_at: string
+          created_by: string | null
           customer_ip: string | null
           customer_note: string | null
           delivered_at: string | null
@@ -18896,6 +20425,7 @@ export type Database = {
           hold_until: string | null
           id: string
           in_transit_at: string | null
+          inbox_conversation_id: string | null
           internal_note: string | null
           invoice_no: string | null
           is_cross_sale: boolean
@@ -19007,6 +20537,7 @@ export type Database = {
           courier_fee: number
           courier_name: string | null
           created_at: string
+          created_by: string | null
           customer_ip: string | null
           customer_note: string | null
           delivered_at: string | null
@@ -19031,6 +20562,7 @@ export type Database = {
           hold_until: string | null
           id: string
           in_transit_at: string | null
+          inbox_conversation_id: string | null
           internal_note: string | null
           invoice_no: string | null
           is_cross_sale: boolean
@@ -19605,8 +21137,10 @@ export type Database = {
         }[]
       }
       next_invoice_no: { Args: { _brand_id: string }; Returns: string }
+      normalize_bd_phone: { Args: { p: string }; Returns: string }
       normalize_mobile_bd: { Args: { p_phone: string }; Returns: string }
       normalize_phone_tail: { Args: { _phone: string }; Returns: string }
+      order_journey: { Args: { _order_id: string }; Returns: Json }
       order_return_is_restockable: {
         Args: { p_order_id: string }
         Returns: boolean
@@ -19742,6 +21276,7 @@ export type Database = {
         }[]
       }
       os_dhaka_today: { Args: never; Returns: string }
+      os_drive_status: { Args: never; Returns: Json }
       os_invite_member: {
         Args: {
           p_display_name: string
@@ -19937,6 +21472,18 @@ export type Database = {
         Returns: boolean
       }
       os_storage_ws_ok: { Args: { p_name: string }; Returns: boolean }
+      os_today_alerts: {
+        Args: { p_workspace_id?: string }
+        Returns: {
+          detail: string
+          entity_id: string
+          kind: string
+          link: string
+          severity: string
+          title: string
+          value: number
+        }[]
+      }
       os_upsert_member: {
         Args: {
           p_display_name: string
@@ -19946,6 +21493,14 @@ export type Database = {
         }
         Returns: string
       }
+      os_weekly_digest: {
+        Args: { p_week_start?: string; p_workspace_id?: string }
+        Returns: Json
+      }
+      pack__listed: {
+        Args: { o: Database["public"]["Tables"]["orders"]["Row"] }
+        Returns: boolean
+      }
       pack__row: {
         Args: { o: Database["public"]["Tables"]["orders"]["Row"] }
         Returns: Json
@@ -19954,10 +21509,12 @@ export type Database = {
         Args: { _brand?: string; _uid?: string }
         Returns: boolean
       }
+      pack_is_packer_only: { Args: { _uid?: string }; Returns: boolean }
       pack_lookup: { Args: { _code: string }; Returns: Json }
       pack_my_stats: { Args: { _brand_ids?: string[] }; Returns: Json }
       pack_queue: { Args: { _brand_ids?: string[] }; Returns: Json }
       pack_scan: { Args: { _mode?: string; _order_id: string }; Returns: Json }
+      pack_scan_code: { Args: { _code: string; _mode?: string }; Returns: Json }
       pack_undo: { Args: { _order_id: string }; Returns: Json }
       post_creator_payment: {
         Args: {
@@ -20099,6 +21656,7 @@ export type Database = {
         Args: { _order_id: string }
         Returns: undefined
       }
+      request_referer_host: { Args: never; Returns: string }
       reserve_stock: {
         Args: { _items?: Json; _order_id: string }
         Returns: undefined
@@ -20894,7 +22452,9 @@ export type Database = {
         Args: { _order_id: string }
         Returns: undefined
       }
+      staff_can_edit_order: { Args: { _order_id: string }; Returns: boolean }
       staff_can_work_order: { Args: { _order_id: string }; Returns: boolean }
+      staff_label: { Args: { _uid: string }; Returns: Json }
       supplier_scorecard: {
         Args: { p_brand_ids: string[] }
         Returns: {
@@ -20909,6 +22469,7 @@ export type Database = {
           total_bdt: number
         }[]
       }
+      tmp_header_probe: { Args: never; Returns: Json }
       track_order_public: {
         Args: { _order_prefix: string; _phone: string }
         Returns: Json
