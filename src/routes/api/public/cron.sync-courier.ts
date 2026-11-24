@@ -37,7 +37,10 @@ export const Route = createFileRoute("/api/public/cron/sync-courier")({
           /* empty body OK */
         }
         const limit = Math.min(Math.max(body.limit ?? 20, 1), 100);
-        const candidateLimit = Math.min(Math.max(limit * 5, 100), 500);
+        // Look at every in-flight order (a few hundred), then pick the stalest.
+        // A small fixed window (oldest 100 by shipped_at) meant newer parcels
+        // were never checked once more than 100 were in flight.
+        const candidateLimit = 3000;
 
         const { tryGetSupabaseAdmin } = await import("@/integrations/supabase/client.server");
         const supabaseAdmin = tryGetSupabaseAdmin();
@@ -155,8 +158,16 @@ export const Route = createFileRoute("/api/public/cron/sync-courier")({
           await Promise.all(
             batch.map(async (o) => {
               checked++;
+              const ship = shipMap.get(o.id) ?? null;
+              // Move this shipment to the back of the queue BEFORE calling the
+              // courier, so failures (404, rate limit) can't pin it to the front.
+              if (ship?.id) {
+                await supabaseAdmin
+                  .from("courier_shipments")
+                  .update({ updated_at: new Date().toISOString() })
+                  .eq("id", ship.id);
+              }
               try {
-                const ship = shipMap.get(o.id) ?? null;
                 let provider: CourierProvider | null = null;
                 let identifier: string | null = null;
                 if (ship) {
