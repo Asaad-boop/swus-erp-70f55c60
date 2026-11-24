@@ -145,13 +145,18 @@ export function agoLabel(iso: string | null) {
 /** Brand colours the team knows at a glance: Toyora red, HobbyShop black. */
 function brandTone(name: string) {
   const n = name.toLowerCase();
-  if (n.includes("toyora")) return "bg-[#E1251B] text-white";
-  if (n.includes("hobby")) return "bg-[#111111] text-white ring-1 ring-inset ring-white/10";
-  if (n.includes("florencia")) return "bg-[#B4236A] text-white";
-  return "bg-slate-600 text-white";
+  if (n.includes("toyora"))
+    return { text: "text-[#D3201A] dark:text-[#FF5A4E]", dot: "bg-[#E1251B]" };
+  if (n.includes("hobby"))
+    return {
+      text: "text-neutral-900 dark:text-neutral-100",
+      dot: "bg-neutral-900 dark:bg-neutral-100",
+    };
+  if (n.includes("florencia")) return { text: "text-[#B4236A]", dot: "bg-[#B4236A]" };
+  return { text: "text-slate-600 dark:text-slate-300", dot: "bg-slate-500" };
 }
 
-/** Full brand name as a small solid tag. */
+/** Full brand name as quiet coloured text — enough to tell whose message it is. */
 export function BrandTag({
   brandId,
   className,
@@ -164,16 +169,18 @@ export function BrandTag({
   const { brands } = useBrand();
   const brand = brands.find((b) => b.id === brandId);
   if (!brand) return null;
+  const tone = brandTone(brand.name);
   return (
     <span
       title={brand.name}
       className={cn(
-        "inline-flex shrink-0 items-center rounded-[5px] font-semibold leading-none tracking-[0.01em]",
-        size === "xs" ? "h-4 px-1.5 text-[9.5px]" : "h-[18px] px-1.5 text-[10.5px]",
-        brandTone(brand.name),
+        "inline-flex shrink-0 items-center gap-1 font-medium leading-none",
+        size === "xs" ? "text-[10.5px]" : "text-[12px]",
+        tone.text,
         className,
       )}
     >
+      <span className={cn("rounded-full", size === "xs" ? "h-1.5 w-1.5" : "h-2 w-2", tone.dot)} />
       {brand.name}
     </span>
   );

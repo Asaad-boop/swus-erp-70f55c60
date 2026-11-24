@@ -2,6 +2,7 @@ import {
   AlarmClock,
   AlertTriangle,
   ShoppingBag,
+  SlidersHorizontal,
   Check,
   CheckCircle2,
   ChevronDown,
@@ -24,13 +25,16 @@ import { cn } from "@/lib/utils";
 import {
   displayName,
   initials,
+  INBOX_LABELS,
   labelInfo,
+  PLATFORM_LABEL,
+  type InboxPlatform,
   type InboxConversation,
   type InboxStaff,
   type InboxView,
   type ViewCounts,
 } from "@/lib/erp/inbox/inbox";
-import { BrandTag, ContactAvatar, relTime } from "./shared";
+import { BrandTag, ContactAvatar, PlatformIcon, relTime } from "./shared";
 
 type ViewDef = { key: InboxView; label: string; hint: string };
 
@@ -79,6 +83,10 @@ type Props = {
   counts: ViewCounts;
   title: string;
   subtitle?: string;
+  platform: InboxPlatform | "all";
+  onPlatform: (p: InboxPlatform | "all") => void;
+  label: string | null;
+  onLabel: (l: string | null) => void;
   staff: InboxStaff[];
   searchRef?: React.Ref<HTMLInputElement>;
   showBrand: boolean;
@@ -162,11 +170,85 @@ export function ConversationList(p: Props) {
               </DropdownMenuContent>
             </DropdownMenu>
             {p.subtitle && <span className="ib-ink-3 tabular text-[12px]">{p.subtitle}</span>}
+            <div className="ml-auto" />
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <button
+                  type="button"
+                  className={cn(
+                    "flex h-6 items-center gap-1 rounded-md px-1.5 text-[11.5px] transition-colors",
+                    p.platform !== "all" || p.label
+                      ? "bg-[var(--ib-accent-soft)] font-medium text-primary"
+                      : "ib-ink-3 hover:bg-[var(--ib-hover)] hover:text-[var(--ib-ink)]",
+                  )}
+                  title="Channel / label diye filter"
+                >
+                  <SlidersHorizontal className="h-3 w-3" />
+                  {p.platform !== "all"
+                    ? PLATFORM_LABEL[p.platform]
+                    : p.label
+                      ? labelInfo(p.label).label
+                      : "Filter"}
+                </button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="w-52">
+                <DropdownMenuLabel className="text-xs">Channel</DropdownMenuLabel>
+                {(["all", "messenger", "instagram", "whatsapp"] as const).map((pl) => (
+                  <DropdownMenuItem
+                    key={pl}
+                    onClick={() => p.onPlatform(pl)}
+                    className="text-[13px]"
+                  >
+                    {pl === "all" ? (
+                      <span className="mr-2 w-4" />
+                    ) : (
+                      <PlatformIcon platform={pl} className="mr-2 h-3.5 w-3.5" />
+                    )}
+                    <span className="flex-1">
+                      {pl === "all" ? "Shob channel" : PLATFORM_LABEL[pl]}
+                    </span>
+                    {p.platform === pl && <Check className="h-3.5 w-3.5" />}
+                  </DropdownMenuItem>
+                ))}
+                <DropdownMenuSeparator />
+                <DropdownMenuLabel className="text-xs">Label</DropdownMenuLabel>
+                {INBOX_LABELS.map((l) => (
+                  <DropdownMenuItem
+                    key={l.key}
+                    onClick={() => p.onLabel(p.label === l.key ? null : l.key)}
+                    className="text-[13px]"
+                  >
+                    <span className={cn("mr-2.5 ml-1 h-2 w-2 rounded-full", l.dot)} />
+                    <span className="flex-1">{l.label}</span>
+                    {!!p.counts.labels?.[l.key] && (
+                      <span className="ib-ink-3 tabular mr-1 text-[11px]">
+                        {p.counts.labels[l.key]}
+                      </span>
+                    )}
+                    {p.label === l.key && <Check className="h-3.5 w-3.5" />}
+                  </DropdownMenuItem>
+                ))}
+                {(p.platform !== "all" || p.label) && (
+                  <>
+                    <DropdownMenuSeparator />
+                    <DropdownMenuItem
+                      onClick={() => {
+                        p.onPlatform("all");
+                        p.onLabel(null);
+                      }}
+                      className="text-[13px]"
+                    >
+                      Filter bad dao
+                    </DropdownMenuItem>
+                  </>
+                )}
+              </DropdownMenuContent>
+            </DropdownMenu>
             {p.conversations.length > 0 && (
               <button
                 type="button"
                 onClick={() => p.onPickAll(true)}
-                className="ib-ink-3 ml-auto rounded-md px-1.5 py-0.5 text-[11.5px] hover:bg-[var(--ib-hover)] hover:text-[var(--ib-ink)]"
+                className="ib-ink-3 rounded-md px-1.5 py-0.5 text-[11.5px] hover:bg-[var(--ib-hover)] hover:text-[var(--ib-ink)]"
                 title="List er shob select kore ekshathe reply / done"
               >
                 Select
@@ -406,7 +488,6 @@ function Row({
             >
               {name}
             </span>
-            {showBrand && <BrandTag brandId={c.brand_id} size="xs" />}
             {c.complaint_at && !c.complaint_resolved_at && (
               <AlertTriangle className="h-3 w-3 shrink-0 text-rose-500" aria-label="Complaint" />
             )}
@@ -465,8 +546,9 @@ function Row({
               </span>
             )}
           </div>
-          {(c.ad_id || c.snoozed_until || (c.tags?.length ?? 0) > 0) && (
-            <div className="mt-0.5 flex min-w-0 items-center gap-1">
+          {(showBrand || c.ad_id || c.snoozed_until || (c.tags?.length ?? 0) > 0) && (
+            <div className="mt-[3px] flex min-w-0 items-center gap-1.5">
+              {showBrand && <BrandTag brandId={c.brand_id} size="xs" />}
               {c.snoozed_until && <SnoozeChip at={c.snoozed_until} />}
               {c.ad_id && <AdChip c={c} />}
               {(c.tags ?? []).slice(0, 2).map((t) => {

@@ -1,10 +1,10 @@
 import { memo } from "react";
 import { Link } from "@tanstack/react-router";
-import { ChevronDown, Star } from "lucide-react";
+import { ChevronRight, Star } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import type { NavItem } from "@/lib/erp/nav";
-import { InboxUnreadBadge } from "@/components/erp/inbox/inbox-unread-badge";
+import { InboxQueueBadge } from "@/components/erp/inbox/inbox-unread-badge";
 
 export function favKey(i: { to: string; label: string; search?: Record<string, string> }) {
   return i.to + "|" + (i.search ? JSON.stringify(i.search) : "") + "|" + i.label;
@@ -23,8 +23,8 @@ export type LinkRowProps = {
 };
 
 /**
- * A single navigation row. Memoized: it only re-renders when its own
- * active/pinned/mode flags change, so route changes touch two rows, not 90.
+ * One navigation row. Memoized: it only re-renders when its own flags change,
+ * so a route change touches two rows, not ninety.
  */
 export const NavLinkRow = memo(function NavLinkRow({
   item,
@@ -37,40 +37,46 @@ export const NavLinkRow = memo(function NavLinkRow({
 }: LinkRowProps) {
   const Icon = item.icon;
   const row = (
-    <div className="relative group/row">
+    <div className="group/row relative">
       <Link
         to={item.to as never}
         search={item.search as never}
         onClick={onNavigate}
         aria-current={active ? "page" : undefined}
         className={cn(
-          "group/link relative flex items-center gap-2.5 rounded-xl outline-none",
-          "transition-all duration-200 ease-out",
-          "focus-visible:ring-2 focus-visible:ring-sidebar-ring focus-visible:ring-offset-0",
+          "relative flex items-center gap-2.5 rounded-lg outline-none transition-colors duration-150",
+          "focus-visible:ring-2 focus-visible:ring-sidebar-ring",
           mini
-            ? "justify-center h-9 w-9 mx-auto"
+            ? "mx-auto h-9 w-9 justify-center"
             : indented
-              ? "pl-9 pr-8 py-1.5 text-[13px] rounded-lg"
-              : "px-2.5 py-2 pr-8 text-[13.5px] font-medium",
+              ? "h-[30px] pl-[34px] pr-2 text-[13px]"
+              : "h-8 px-2 text-[13.5px]",
           active
-            ? "bg-sidebar-accent text-sidebar-accent-foreground font-semibold shadow-[inset_0_0_0_1px_var(--sidebar-border)]"
-            : "text-muted-foreground hover:bg-sidebar-accent/60 hover:text-sidebar-accent-foreground hover:translate-x-0.5",
+            ? "bg-sidebar-accent font-medium text-sidebar-accent-foreground"
+            : "text-sidebar-foreground/65 hover:bg-sidebar-accent/70 hover:text-sidebar-foreground",
         )}
       >
-        {!indented && (
+        {indented ? (
           <span
             aria-hidden
             className={cn(
-              "absolute left-0 top-1/2 h-4 w-[2px] -translate-y-1/2 rounded-r-full bg-primary transition-opacity duration-150",
-              active ? "opacity-100" : "opacity-0",
+              "absolute left-[15px] top-1/2 h-[14px] w-[2px] -translate-y-1/2 rounded-full transition-colors",
+              active ? "bg-primary" : "bg-transparent",
             )}
           />
-        )}
-        <Icon className={cn("h-4 w-4 shrink-0", active && "text-primary")} />
-        {!mini && <span className="truncate">{item.label}</span>}
-        {item.to === "/erp/inbox" && <InboxUnreadBadge mini={mini} />}
+        ) : null}
+        <Icon
+          className={cn(
+            "h-4 w-4 shrink-0",
+            active ? "text-primary" : "opacity-75",
+            indented && "h-[15px] w-[15px]",
+          )}
+          strokeWidth={1.85}
+        />
+        {!mini && <span className="min-w-0 flex-1 truncate">{item.label}</span>}
+        {item.badge && <InboxQueueBadge queue={item.badge} mini={mini} />}
       </Link>
-      {!mini && onPin && (
+      {!mini && onPin && !item.badge && (
         <button
           type="button"
           aria-label={pinned ? "Unpin" : "Pin"}
@@ -80,10 +86,9 @@ export const NavLinkRow = memo(function NavLinkRow({
             onPin(item);
           }}
           className={cn(
-            "absolute right-1 top-1/2 -translate-y-1/2 h-6 w-6 inline-flex items-center justify-center rounded",
-            "text-muted-foreground/60 hover:text-primary hover:bg-sidebar-accent",
-            "focus-visible:opacity-100 focus-visible:ring-2 focus-visible:ring-sidebar-ring outline-none",
-            pinned ? "opacity-100 text-primary" : "opacity-0 group-hover/row:opacity-100",
+            "absolute right-1 top-1/2 inline-flex h-6 w-6 -translate-y-1/2 items-center justify-center rounded-md outline-none",
+            "text-sidebar-foreground/40 hover:bg-background hover:text-primary focus-visible:opacity-100",
+            pinned ? "text-primary opacity-100" : "opacity-0 group-hover/row:opacity-100",
           )}
         >
           <Star className={cn("h-3.5 w-3.5", pinned && "fill-current")} />
@@ -109,6 +114,7 @@ export type SectionProps = {
   open: boolean;
   hasActive: boolean;
   onToggle: () => void;
+  badge?: NavItem["badge"];
 };
 
 export const SectionHeader = memo(function SectionHeader({
@@ -117,6 +123,7 @@ export const SectionHeader = memo(function SectionHeader({
   open,
   hasActive,
   onToggle,
+  badge,
 }: SectionProps) {
   return (
     <button
@@ -124,26 +131,23 @@ export const SectionHeader = memo(function SectionHeader({
       onClick={onToggle}
       aria-expanded={open}
       className={cn(
-        "w-full flex items-center gap-2.5 rounded-xl px-2.5 py-2 text-[13.5px] font-medium outline-none",
-        "transition-all duration-200 ease-out hover:bg-sidebar-accent/50",
-        "focus-visible:ring-2 focus-visible:ring-sidebar-ring",
-        hasActive ? "text-foreground" : "text-muted-foreground hover:text-foreground",
+        "group/sec flex h-8 w-full items-center gap-2.5 rounded-lg px-2 text-[13.5px] outline-none transition-colors duration-150",
+        "hover:bg-sidebar-accent/70 focus-visible:ring-2 focus-visible:ring-sidebar-ring",
+        hasActive
+          ? "font-medium text-sidebar-foreground"
+          : "text-sidebar-foreground/70 hover:text-sidebar-foreground",
       )}
     >
       <Icon
-        className={cn(
-          "h-4 w-4 shrink-0 transition-colors duration-200",
-          hasActive && "text-primary",
-        )}
+        className={cn("h-4 w-4 shrink-0", hasActive ? "text-primary" : "opacity-75")}
+        strokeWidth={1.85}
       />
-      <span className="flex-1 truncate text-left">{label}</span>
-      {!open && hasActive && (
-        <span className="h-1.5 w-1.5 rounded-full bg-primary motion-safe:animate-pulse" />
-      )}
-      <ChevronDown
+      <span className="min-w-0 flex-1 truncate text-left">{label}</span>
+      {badge && !open && <InboxQueueBadge queue={badge} />}
+      <ChevronRight
         className={cn(
-          "h-3.5 w-3.5 shrink-0 text-muted-foreground/70 transition-transform duration-300 ease-out",
-          open && "rotate-180",
+          "h-3.5 w-3.5 shrink-0 text-sidebar-foreground/35 transition-transform duration-200 ease-out group-hover/sec:text-sidebar-foreground/60",
+          open && "rotate-90",
         )}
       />
     </button>
@@ -152,8 +156,6 @@ export const SectionHeader = memo(function SectionHeader({
 
 export function GroupLabel({ children }: { children: React.ReactNode }) {
   return (
-    <div className="px-2.5 mb-1 text-[10px] font-semibold uppercase tracking-[0.12em] text-muted-foreground/60">
-      {children}
-    </div>
+    <div className="mb-1 px-2 text-[11.5px] font-medium text-sidebar-foreground/45">{children}</div>
   );
 }

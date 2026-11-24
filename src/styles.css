@@ -104,11 +104,11 @@
   --chart-3: oklch(0.7498 0.1407 87.06);
   --chart-4: oklch(0.6256 0.1933 23.03);
   --chart-5: oklch(0.6182 0.1531 275.92);
-  --sidebar: oklch(1 0 89.88);
+  --sidebar: oklch(0.982 0.0025 92);
   --sidebar-foreground: oklch(0.1875 0.0033 92);
   --sidebar-primary: oklch(0.511 0.2298 276.97);
   --sidebar-primary-foreground: oklch(1 0 89.88);
-  --sidebar-accent: oklch(0.9532 0.0035 92);
+  --sidebar-accent: oklch(0.938 0.004 92);
   --sidebar-accent-foreground: oklch(0.1875 0.0033 92);
   --sidebar-border: oklch(0.9295 0.0045 92);
   --sidebar-ring: oklch(0.5674 0.1585 275.21);
@@ -1440,3 +1440,7 @@ img { transition: opacity 220ms var(--ease-butter); }
 }
 .inbox-studio .overflow-x-auto { scrollbar-width: none; }
 .inbox-studio .overflow-x-auto::-webkit-scrollbar { display: none; }
+
+/* ERP sidebar: thin, quiet scrollbar */
+.erp-sidebar .erp-sidebar-scroll { scrollbar-width: thin; scrollbar-color: transparent transparent; }
+.erp-sidebar:hover .erp-sidebar-scroll { scrollbar-color: var(--sidebar-border) transparent; }

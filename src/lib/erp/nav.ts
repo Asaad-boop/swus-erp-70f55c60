@@ -18,6 +18,11 @@ import {
   Trophy,
   Gift,
   MessagesSquare,
+  Inbox,
+  UserCircle2,
+  AlertTriangle,
+  AlarmClock,
+  MessageCircle,
 } from "lucide-react";
 
 export type NavItem = {
@@ -29,9 +34,11 @@ export type NavItem = {
   /** Extra routes grouped under this item: highlight it there, and fall back to
    *  the first permitted one when the user cannot open `to` itself. */
   activeFor?: string[];
+  /** live count shown beside the item (inbox queues) */
+  badge?: "awaiting" | "mine_waiting" | "ads_waiting" | "complaint" | "followup_due" | "comments";
 };
 export type FlatGroup = { kind: "flat"; label: string; items: NavItem[] };
-export type AccordionGroup = { kind: "accordion"; label: string; sections: { key: string; label: string; icon: typeof LayoutDashboard; items: NavItem[] }[]; defaultClosed?: boolean };
+export type AccordionGroup = { kind: "accordion"; label: string; sections: { key: string; label: string; icon: typeof LayoutDashboard; items: NavItem[]; badge?: NavItem["badge"] }[]; defaultClosed?: boolean };
 export type Group = FlatGroup | AccordionGroup;
 
 export const NAV_GROUPS: Group[] = [
@@ -50,8 +57,18 @@ export const NAV_GROUPS: Group[] = [
         key: "inbox",
         label: "Inbox",
         icon: MessagesSquare,
+        badge: "awaiting",
         items: [
-          { to: "/erp/inbox", label: "Inbox", icon: MessagesSquare },
+          { to: "/erp/inbox", label: "Reply baki", icon: Inbox, search: { view: "awaiting" }, badge: "awaiting" },
+          { to: "/erp/inbox", label: "Amar chat", icon: UserCircle2, search: { view: "mine" }, badge: "mine_waiting" },
+          { to: "/erp/inbox", label: "Ad theke", icon: Megaphone, search: { view: "ads" }, badge: "ads_waiting" },
+          { to: "/erp/inbox", label: "Complaint", icon: AlertTriangle, search: { view: "complaint" }, badge: "complaint" },
+          { to: "/erp/inbox", label: "Follow-up", icon: AlarmClock, search: { view: "followup" }, badge: "followup_due" },
+          { to: "/erp/inbox", label: "Shob chat", icon: MessagesSquare, search: { view: "open" } },
+          { to: "/erp/inbox", label: "Comments", icon: MessageCircle, search: { tab: "comments" }, badge: "comments" },
+          { to: "/erp/inbox", label: "Ad report", icon: BarChart3, search: { tab: "ads" } },
+          { to: "/erp/inbox", label: "Team report", icon: Trophy, search: { tab: "report" } },
+          { to: "/erp/inbox", label: "Quick replies", icon: Zap, search: { tab: "replies" } },
         ],
       },
       {

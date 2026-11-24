@@ -29,7 +29,9 @@ export function ErpSidebar({
   onNavigate,
 }: { mobile?: boolean; onNavigate?: () => void } = {}) {
   const pathname = useRouterState({ select: (s) => s.location.pathname });
-  const searchParams = useRouterState({ select: (s) => s.location.search as Record<string, unknown> });
+  const searchParams = useRouterState({
+    select: (s) => s.location.search as Record<string, unknown>,
+  });
   const { openSearch } = useGlobalSearch();
   const [collapsed, setCollapsed] = useState(false);
   const [activeGroup, setActiveGroup] = useState<string | null>(null);
@@ -45,9 +47,7 @@ export function ErpSidebar({
       if (item.activeFor?.some((p) => matchPath(pathname, p))) return true;
       if (!matchPath(pathname, item.to, item.exact)) return false;
       if (item.search) {
-        return Object.entries(item.search).every(
-          ([k, v]) => String(searchParams?.[k] ?? "") === v,
-        );
+        return Object.entries(item.search).every(([k, v]) => String(searchParams?.[k] ?? "") === v);
       }
       return true;
     },
@@ -92,7 +92,10 @@ export function ErpSidebar({
         if (items.length) out.push({ ...g, items });
       } else {
         const sections = g.sections
-          .map((s) => ({ ...s, items: hit(s.label) ? s.items : s.items.filter((i) => hit(i.label)) }))
+          .map((s) => ({
+            ...s,
+            items: hit(s.label) ? s.items : s.items.filter((i) => hit(i.label)),
+          }))
           .filter((s) => s.items.length);
         if (sections.length) out.push({ ...g, sections });
       }
@@ -228,31 +231,29 @@ export function ErpSidebar({
       <aside
         data-collapsed={mini}
         className={cn(
-          "flex-col h-screen sticky top-0 shrink-0 border-r border-sidebar-border bg-sidebar",
+          "erp-sidebar sticky top-0 h-screen shrink-0 flex-col border-r border-sidebar-border bg-sidebar",
           mobile ? "flex w-full border-r-0" : "hidden md:flex",
           "transition-[width] duration-300 ease-[cubic-bezier(0.32,0.72,0,1)]",
-          mobile ? "" : mini ? "w-[60px]" : "w-[248px]",
+          mobile ? "" : mini ? "w-[60px]" : "w-[240px]",
         )}
       >
         {/* Brand */}
         <div
           className={cn(
-            "flex h-14 shrink-0 items-center border-b border-sidebar-border px-3",
+            "group/head flex h-14 shrink-0 items-center px-3",
             mini ? "justify-center" : "justify-between gap-2",
           )}
         >
           <div className="flex min-w-0 items-center gap-2.5">
-            <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-md bg-primary">
+            <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-gradient-to-br from-primary to-primary/75 shadow-sm ring-1 ring-inset ring-white/15">
               <Sparkles className="h-3.5 w-3.5 text-primary-foreground" />
             </div>
             {!mini && (
-              <div className="min-w-0">
-                <div className="truncate font-display text-[14px] font-semibold leading-tight tracking-tight">
+              <div className="min-w-0 leading-tight">
+                <div className="truncate text-[14px] font-semibold tracking-[-0.01em]">
                   SyncWithUs
                 </div>
-                <div className="text-[9.5px] uppercase tracking-[0.16em] text-muted-foreground">
-                  ERP Suite
-                </div>
+                <div className="text-[11px] text-sidebar-foreground/45">ERP</div>
               </div>
             )}
           </div>
@@ -262,7 +263,7 @@ export function ErpSidebar({
                 <button
                   onClick={toggleCollapsed}
                   aria-label="Collapse sidebar"
-                  className="inline-flex h-7 w-7 items-center justify-center rounded-md text-muted-foreground outline-none transition-colors hover:bg-sidebar-accent hover:text-foreground focus-visible:ring-2 focus-visible:ring-sidebar-ring"
+                  className="inline-flex h-7 w-7 items-center justify-center rounded-md text-sidebar-foreground/40 opacity-0 outline-none transition-all hover:bg-sidebar-accent hover:text-sidebar-foreground focus-visible:opacity-100 focus-visible:ring-2 focus-visible:ring-sidebar-ring group-hover/head:opacity-100"
                 >
                   <ChevronsLeft className="h-4 w-4" />
                 </button>
@@ -288,12 +289,7 @@ export function ErpSidebar({
         )}
 
         {/* Search */}
-        <div
-          className={cn(
-            "shrink-0 border-b border-sidebar-border",
-            mini ? "flex justify-center px-2 py-2" : "space-y-1.5 px-3 py-2.5",
-          )}
-        >
+        <div className={cn("shrink-0", mini ? "flex justify-center px-2 py-2" : "px-3 pb-2")}>
           {mini ? (
             <Tooltip delayDuration={60}>
               <TooltipTrigger asChild>
@@ -308,44 +304,23 @@ export function ErpSidebar({
               <TooltipContent side="right">Search (⌘K)</TooltipContent>
             </Tooltip>
           ) : (
-            <>
-              <button
-                onClick={openSearch}
-                className="flex w-full items-center gap-2 rounded-xl border border-sidebar-border bg-background/60 px-2.5 py-1.5 text-xs text-muted-foreground outline-none transition-all duration-200 hover:bg-sidebar-accent hover:text-foreground focus-visible:ring-2 focus-visible:ring-sidebar-ring"
-              >
-                <Search className="h-3.5 w-3.5" />
-                <span className="flex-1 text-left">Search anything…</span>
-                <kbd className="hidden rounded border border-sidebar-border bg-muted px-1.5 py-0.5 font-mono text-[10px] sm:inline-flex">
-                  ⌘K
-                </kbd>
-              </button>
-              <div className="relative">
-                <Filter className="pointer-events-none absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-muted-foreground/60" />
-                <input
-                  value={filter}
-                  onChange={(e) => setFilter(e.target.value)}
-                  placeholder="Filter menu"
-                  aria-label="Filter menu"
-                  className="w-full rounded-xl border border-sidebar-border bg-transparent py-1.5 pl-8 pr-7 text-xs outline-none transition-all duration-200 placeholder:text-muted-foreground/60 focus:border-primary/50 focus:bg-background"
-                />
-                {filter && (
-                  <button
-                    onClick={() => setFilter("")}
-                    aria-label="Clear filter"
-                    className="absolute right-1.5 top-1/2 inline-flex h-5 w-5 -translate-y-1/2 items-center justify-center rounded text-muted-foreground hover:text-foreground"
-                  >
-                    <X className="h-3.5 w-3.5" />
-                  </button>
-                )}
-              </div>
-            </>
+            <button
+              onClick={openSearch}
+              className="flex h-8 w-full items-center gap-2 rounded-lg border border-sidebar-border bg-background px-2.5 text-[12.5px] text-sidebar-foreground/50 shadow-[0_1px_0_rgba(0,0,0,0.02)] outline-none transition-colors hover:border-sidebar-foreground/15 hover:text-sidebar-foreground/80 focus-visible:ring-2 focus-visible:ring-sidebar-ring"
+            >
+              <Search className="h-3.5 w-3.5" />
+              <span className="flex-1 text-left">Search…</span>
+              <kbd className="hidden rounded border border-sidebar-border bg-sidebar px-1 font-sans text-[10px] text-sidebar-foreground/50 sm:inline-flex">
+                ⌘K
+              </kbd>
+            </button>
           )}
         </div>
 
         {/* Navigation */}
         <nav
           className={cn(
-            "erp-sidebar-scroll flex-1 py-3",
+            "erp-sidebar-scroll flex-1 pb-3 pt-1",
             mini ? "overflow-visible px-2" : "overflow-y-auto overflow-x-hidden px-2.5",
           )}
         >
@@ -369,7 +344,7 @@ export function ErpSidebar({
           {searchedGroups.map((group, gi) => (
             <div
               key={group.label}
-              className={cn(gi > 0 && (mini ? "mt-3 border-t border-sidebar-border pt-3" : "mt-4"))}
+              className={cn(gi > 0 && (mini ? "mt-3 border-t border-sidebar-border pt-3" : "mt-5"))}
             >
               {!mini && <GroupLabel>{group.label}</GroupLabel>}
               {group.kind === "flat" ? (
@@ -397,6 +372,7 @@ export function ErpSidebar({
                         <SectionHeader
                           label={s.label}
                           icon={s.icon}
+                          badge={s.badge}
                           open={open}
                           hasActive={hasActive}
                           onToggle={() => toggleGroup(s.key)}
@@ -405,18 +381,12 @@ export function ErpSidebar({
                           inert={!open}
                           aria-hidden={!open}
                           className={cn(
-                            "grid transition-all duration-300 ease-[cubic-bezier(0.32,0.72,0,1)]",
-                            open
-                              ? "grid-rows-[1fr] opacity-100"
-                              : "grid-rows-[0fr] opacity-0",
+                            "grid transition-[grid-template-rows,opacity] duration-250 ease-[cubic-bezier(0.32,0.72,0,1)]",
+                            open ? "grid-rows-[1fr] opacity-100" : "grid-rows-[0fr] opacity-0",
                           )}
                         >
                           <div className="min-h-0 overflow-hidden">
-                            <div className="relative space-y-0.5 pt-0.5">
-                              <span
-                                aria-hidden
-                                className="absolute bottom-1 left-[18px] top-1 w-px bg-sidebar-border"
-                              />
+                            <div className="relative space-y-px pb-1 pt-px">
                               {s.items.map((i) => renderRow(i, { indented: true }))}
                             </div>
                           </div>

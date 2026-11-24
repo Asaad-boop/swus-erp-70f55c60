@@ -39,13 +39,26 @@ import { BulkReplyDialog } from "@/components/erp/inbox/bulk-reply-dialog";
 import { toast } from "sonner";
 import { CommentsView } from "@/components/erp/inbox/comments-view";
 import { AdsView } from "@/components/erp/inbox/ads-view";
-import { InboxRail, type InboxTab } from "@/components/erp/inbox/inbox-rail";
+type InboxTab = "inbox" | "comments" | "ads" | "report" | "replies" | "channels";
+const VIEWS: InboxView[] = [
+  "awaiting",
+  "mine",
+  "ads",
+  "complaint",
+  "followup",
+  "unassigned",
+  "open",
+  "unread",
+  "ordered",
+  "done",
+  "all",
+];
 import { TeamReport } from "@/components/erp/inbox/team-report";
 import { db } from "@/lib/erp/inbox/inbox";
 import { Sheet, SheetContent } from "@/components/ui/sheet";
 
 type Tab = InboxTab;
-type InboxSearch = { tab?: Tab; c?: string; meta?: string };
+type InboxSearch = { tab?: Tab; c?: string; meta?: string; view?: InboxView };
 
 export const Route = createFileRoute("/_authenticated/erp/inbox")({
   head: () => ({ meta: [{ title: "Inbox — ERP" }] }),
@@ -60,6 +73,7 @@ export const Route = createFileRoute("/_authenticated/erp/inbox")({
         : undefined,
     c: typeof s.c === "string" ? s.c : undefined,
     meta: typeof s.meta === "string" ? s.meta : undefined,
+    view: VIEWS.includes(s.view as InboxView) ? (s.view as InboxView) : undefined,
   }),
   component: InboxPage,
 });
@@ -68,31 +82,31 @@ function InboxPage() {
   const search = Route.useSearch();
   const navigate = useNavigate({ from: "/erp/inbox" });
   const qc = useQueryClient();
-  const { brands } = useBrand();
+  const { brands, brandIds: ctxBrandIds, isAllBrands } = useBrand();
   const { isAdmin, userId } = useCurrentRole();
   const tab: Tab = search.tab ?? "inbox";
 
   // ── filters ─────────────────────────────────────────────────────────
-  const [brandFilter, setBrandFilter] = useState<string>("all");
   const [platform, setPlatform] = useState<InboxPlatform | "all">("all");
   const [label, setLabel] = useState<string | null>(null);
-  const [view, setViewState] = useState<InboxView>(() => {
-    try {
-      return (localStorage.getItem("inbox.view") as InboxView) || "open";
-    } catch {
-      return "open";
-    }
-  });
+  // The queue lives in the URL so the main sidebar can link straight to it.
+  const view: InboxView = search.view ?? "awaiting";
   const setView = (v: InboxView) => {
-    setViewState(v);
     setLimit(CONV_PAGE);
     setPicked(new Set());
-    try {
-      localStorage.setItem("inbox.view", v);
-    } catch {
-      /* storage blocked */
-    }
+    setLabel(null);
+    navigate({ search: (s: InboxSearch) => ({ ...s, view: v, tab: undefined }) });
   };
+  useEffect(() => {
+    setLimit(CONV_PAGE);
+    setPicked(new Set());
+  }, [view]);
+  // Plain /erp/inbox → open the default queue so the sidebar can highlight it.
+  useEffect(() => {
+    if (!search.view && !search.tab)
+      navigate({ search: (s: InboxSearch) => ({ ...s, view: "awaiting" }), replace: true });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [search.view, search.tab]);
   const searchRef = useRef<HTMLInputElement>(null);
   const [searchText, setSearchText] = useState("");
   const [debounced, setDebounced] = useState("");
@@ -104,8 +118,8 @@ function InboxPage() {
     return () => clearTimeout(t);
   }, [searchText]);
 
-  const allBrandIds = useMemo(() => brands.map((b) => b.id), [brands]);
-  const brandIds = brandFilter === "all" ? allBrandIds : [brandFilter];
+  const brandIds = ctxBrandIds;
+  const showBrand = isAllBrands && brands.length > 1;
 
   const filters = { brandIds, platform, view, label, userId, search: debounced };
   const convQ = useQuery({
@@ -135,7 +149,7 @@ function InboxPage() {
   const lastPick = useRef<string | null>(null);
   const [bulkOpen, setBulkOpen] = useState(false);
   const [bulkBusy, setBulkBusy] = useState(false);
-  useEffect(() => setPicked(new Set()), [brandFilter, platform]);
+  useEffect(() => setPicked(new Set()), [brandIds.join(","), platform]);
   const onPick = (id: string, on: boolean, range?: boolean) => {
     setPicked((prev) => {
       const next = new Set(prev);
@@ -432,86 +446,28 @@ function InboxPage() {
     navigate({
       search: (s: InboxSearch) => ({ ...s, tab: t === "inbox" ? undefined : t, meta: undefined }),
     });
-  const setBrand = (id: string) => {
-    setBrandFilter(id);
-    setLimit(CONV_PAGE);
-  };
 
   return (
     <div className="inbox-studio flex h-[calc(100dvh-3.5rem)] min-h-0">
-      <div className="hidden lg:flex">
-        <InboxRail
-          brands={brands}
-          brandFilter={brandFilter}
-          onBrand={setBrand}
-          tab={tab}
-          onTab={goTab}
-          view={view}
-          onView={setView}
-          platform={platform}
-          onPlatform={setPlatform}
-          label={label}
-          onLabel={(l) => {
-            setLabel(l);
-            setLimit(CONV_PAGE);
-            setPicked(new Set());
-          }}
-          counts={countsQ.data ?? {}}
-          commentCount={openComments ?? 0}
-          isAdmin={isAdmin}
-          alertsOn={soundOn}
-          onAlerts={() => {
-            setSoundOn(!soundOn);
-            savePref("inbox.sound", !soundOn);
-          }}
-        />
-      </div>
-
-      <main className="flex min-w-0 flex-1 flex-col py-2 pr-2 max-lg:pl-2">
-        {/* Small screens: page + brand switch (the rail covers this on desktop) */}
-        <div className="mb-2 flex items-center gap-1.5 overflow-x-auto lg:hidden">
-          {(
-            [
-              ["inbox", "Messages"],
-              ["comments", "Comments"],
-              ["ads", "Ad report"],
-              ["report", "Team"],
-              ["replies", "Quick replies"],
-            ] as Array<[Tab, string]>
-          ).map(([k, l]) => (
-            <FilterChip key={k} active={tab === k} onClick={() => goTab(k)}>
-              {l}
-            </FilterChip>
-          ))}
-          <span className="mx-1 h-4 w-px shrink-0 bg-[var(--ib-line)]" />
-          <FilterChip active={brandFilter === "all"} onClick={() => setBrand("all")}>
-            Shob
-          </FilterChip>
-          {brands.map((b) => (
-            <FilterChip key={b.id} active={brandFilter === b.id} onClick={() => setBrand(b.id)}>
-              <BrandTag brandId={b.id} size="xs" />
-            </FilterChip>
-          ))}
-        </div>
-
+      <main className="flex min-w-0 flex-1 flex-col p-2 md:p-3">
         {tab === "ads" ? (
           <AdsView
             brandIds={brandIds}
-            showBrand={brandFilter === "all" && brands.length > 1}
+            showBrand={showBrand}
             onOpenAdQueue={() => {
               setView("ads");
               goTab("inbox");
             }}
           />
         ) : tab === "report" ? (
-          <TeamReport brandIds={brandIds} showBrand={brandFilter === "all" && brands.length > 1} />
+          <TeamReport brandIds={brandIds} showBrand={showBrand} />
         ) : tab === "comments" ? (
           <CommentsView
             brandIds={brandIds}
             platform={
               platform === "messenger" ? "facebook" : platform === "instagram" ? "instagram" : "all"
             }
-            showBrand={brandFilter === "all" && brands.length > 1}
+            showBrand={showBrand}
             quickReplies={repliesQ.data ?? []}
             onOpenConversation={(id) => navigate({ search: { c: id } })}
           />
@@ -559,6 +515,17 @@ function InboxPage() {
                 onView={setView}
                 counts={countsQ.data ?? {}}
                 title={listTitle}
+                platform={platform}
+                onPlatform={(pl) => {
+                  setPlatform(pl);
+                  setLimit(CONV_PAGE);
+                }}
+                label={label}
+                onLabel={(l) => {
+                  setLabel(l);
+                  setLimit(CONV_PAGE);
+                  setPicked(new Set());
+                }}
                 subtitle={listCount ? String(listCount) : undefined}
                 picked={picked}
                 onPick={onPick}
@@ -571,7 +538,7 @@ function InboxPage() {
                 bulkBusy={bulkBusy}
                 staff={staff}
                 searchRef={searchRef}
-                showBrand={brandFilter === "all" && brands.length > 1}
+                showBrand={showBrand}
                 canLoadMore={conversations.length >= limit}
                 onLoadMore={() => setLimit((l) => l + CONV_PAGE)}
                 isFetchingMore={convQ.isFetching}
