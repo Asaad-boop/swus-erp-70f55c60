@@ -667,8 +667,8 @@ function InboxPage() {
                 </div>
                 <div>
                   <div className="font-display text-base font-semibold">
-                    {awaitingTotal > 0
-                      ? `${awaitingTotal}ta chat e reply baki`
+                    {(countsQ.data?.awaiting ?? awaitingTotal) > 0
+                      ? `${countsQ.data?.awaiting ?? awaitingTotal}ta chat e reply baki`
                       : unreadTotal > 0
                         ? `${unreadTotal}ta chat e notun message`
                         : "Kono chat kholo"}

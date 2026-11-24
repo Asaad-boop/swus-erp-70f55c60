@@ -121,13 +121,19 @@ export function ConversationList(p: Props) {
         {picking ? (
           <BulkBar {...p} allPicked={allPicked} />
         ) : (
-          <div className="flex items-center gap-0.5">
+          <div className="flex min-w-0 items-center gap-0.5">
             {PRIMARY.map((v) => (
               <ViewTab
                 key={v.key}
                 v={v}
                 on={p.view === v.key}
-                count={p.counts[v.key]}
+                count={
+                  v.key === "ads"
+                    ? p.counts.ads_waiting
+                    : v.key === "open"
+                      ? undefined
+                      : p.counts[v.key]
+                }
                 alert={
                   (v.key === "awaiting" && (p.counts.urgent ?? 0) > 0) ||
                   (v.key === "ads" && (p.counts.ads_waiting ?? 0) > 0)
@@ -245,7 +251,7 @@ function ViewTab({
       title={v.hint}
       onClick={onClick}
       className={cn(
-        "flex h-7 shrink-0 items-center gap-1.5 rounded-md px-2 text-[12px] transition-colors",
+        "flex h-7 shrink-0 items-center gap-1 whitespace-nowrap rounded-md px-1.5 text-[12px] transition-colors",
         on
           ? "bg-[var(--ib-ink)] font-medium text-[var(--ib-panel)]"
           : "ib-ink-2 hover:bg-[var(--ib-hover)] hover:text-[var(--ib-ink)]",
@@ -482,26 +488,23 @@ function Row({
               {c.last_message_direction === "out" && <span className="ib-ink-3">Apni: </span>}
               {c.last_message_preview ?? ""}
             </span>
+            {assignee && !unread && (
+              <span
+                title={`Assigned: ${assignee.display_name}`}
+                className="ib-ink-3 ml-auto flex h-4 w-4 shrink-0 items-center justify-center rounded-full bg-[var(--ib-canvas)] text-[7.5px] font-bold"
+              >
+                {initials(assignee.display_name)}
+              </span>
+            )}
             {unread && (
               <span className="tabular ml-auto flex h-4 min-w-4 shrink-0 items-center justify-center rounded-full bg-primary px-1 text-[9.5px] font-semibold text-primary-foreground">
                 {c.unread_count > 99 ? "99+" : c.unread_count}
               </span>
             )}
           </div>
-          {(c.ad_id || assignee) && (
-            <div className="mt-0.5 flex items-center gap-1.5">
-              {c.ad_id && <AdChip c={c} />}
-              {assignee && (
-                <span
-                  title={`Assigned: ${assignee.display_name}`}
-                  className="ib-ink-3 ml-auto flex items-center gap-1 text-[10.5px]"
-                >
-                  <span className="flex h-3.5 w-3.5 items-center justify-center rounded-full bg-[var(--ib-canvas)] text-[7.5px] font-bold">
-                    {initials(assignee.display_name)}
-                  </span>
-                  {assignee.display_name.split(" ")[0]}
-                </span>
-              )}
+          {c.ad_id && (
+            <div className="mt-0.5 flex items-center">
+              <AdChip c={c} />
             </div>
           )}
         </div>
