@@ -52,6 +52,13 @@ export type InboxConversation = {
   ad_first_at?: string | null;
   ad_count?: number;
   ad_autoreplied_at?: string | null;
+  complaint_at?: string | null;
+  complaint_resolved_at?: string | null;
+  complaint_text?: string | null;
+  snoozed_until?: string | null;
+  snooze_note?: string | null;
+  order_count?: number;
+  last_order_at?: string | null;
 };
 
 export type InboxAttachment = {
@@ -173,12 +180,37 @@ export function findBdPhone(text: string | null | undefined): string | null {
 }
 
 export type InboxView =
-  "open" | "awaiting" | "mine" | "unassigned" | "unread" | "ads" | "done" | "all";
+  | "open"
+  | "awaiting"
+  | "mine"
+  | "unassigned"
+  | "unread"
+  | "ads"
+  | "complaint"
+  | "followup"
+  | "ordered"
+  | "done"
+  | "all";
+
+/** Labels the team puts on chats (stored in inbox_conversations.tags). */
+export const INBOX_LABELS: Array<{ key: string; label: string; dot: string }> = [
+  { key: "price", label: "Dam jante chay", dot: "bg-sky-500" },
+  { key: "confirm", label: "Order confirm", dot: "bg-emerald-500" },
+  { key: "hold", label: "Hold / pore nibe", dot: "bg-amber-500" },
+  { key: "advance", label: "Advance lagbe", dot: "bg-orange-500" },
+  { key: "wholesale", label: "Paikari", dot: "bg-violet-500" },
+  { key: "vip", label: "VIP", dot: "bg-fuchsia-500" },
+  { key: "return", label: "Return / exchange", dot: "bg-rose-500" },
+  { key: "spam", label: "Fake / spam", dot: "bg-zinc-500" },
+];
+export const labelInfo = (key: string) =>
+  INBOX_LABELS.find((l) => l.key === key) ?? { key, label: key, dot: "bg-slate-400" };
 
 export type ConversationFilters = {
   brandIds: string[];
   platform: InboxPlatform | "all";
   view: InboxView;
+  label?: string | null;
   userId: string | null;
   search: string;
 };
@@ -217,29 +249,44 @@ export async function fetchConversations(
     .order("id", { ascending: false })
     .limit(limit);
   if (f.platform !== "all") q = q.eq("platform", f.platform);
+  const now = new Date().toISOString();
+  const awake = `snoozed_until.is.null,snoozed_until.lte.${now}`;
   switch (f.view) {
     case "open":
-      q = q.eq("status", "open");
+      q = q.eq("status", "open").or(awake);
       break;
     case "awaiting":
-      q = q.eq("status", "open").eq("last_message_direction", "in");
+      q = q
+        .eq("status", "open")
+        .or(`last_message_direction.eq.in,snoozed_until.lte.${now}`)
+        .or(awake);
       break;
     case "mine":
-      q = f.userId ? q.eq("status", "open").eq("assigned_to", f.userId) : q.limit(0);
+      q = f.userId ? q.eq("status", "open").eq("assigned_to", f.userId).or(awake) : q.limit(0);
       break;
     case "unassigned":
-      q = q.eq("status", "open").is("assigned_to", null);
+      q = q.eq("status", "open").is("assigned_to", null).or(awake);
       break;
     case "unread":
       q = q.gt("unread_count", 0);
       break;
     case "ads":
-      q = q.eq("status", "open").not("ad_id", "is", null);
+      q = q.eq("status", "open").not("ad_id", "is", null).or(awake);
+      break;
+    case "complaint":
+      q = q.not("complaint_at", "is", null).is("complaint_resolved_at", null);
+      break;
+    case "followup":
+      q = q.not("snoozed_until", "is", null);
+      break;
+    case "ordered":
+      q = q.gt("order_count", 0);
       break;
     case "done":
       q = q.eq("status", "done");
       break;
   }
+  if (f.label) q = q.contains("tags", [f.label]);
   const s = f.search.trim().replace(/[%,()]/g, "");
   if (s)
     q = q.or(
@@ -293,7 +340,16 @@ export async function updateConversation(
   patch: Partial<
     Pick<
       InboxConversation,
-      "status" | "unread_count" | "contact_phone" | "contact_name" | "tags" | "assigned_to"
+      | "status"
+      | "unread_count"
+      | "contact_phone"
+      | "contact_name"
+      | "tags"
+      | "assigned_to"
+      | "snoozed_until"
+      | "snooze_note"
+      | "complaint_at"
+      | "complaint_resolved_at"
     >
   >,
 ) {
@@ -554,7 +610,9 @@ export async function fetchBrandAds(brandId: string) {
 }
 
 // ── view counts + bulk reply ──────────────────────────────────────────
-export type ViewCounts = Partial<Record<InboxView | "ads_waiting" | "urgent", number>>;
+export type ViewCounts = Partial<
+  Record<InboxView | "ads_waiting" | "urgent" | "mine_waiting" | "followup_due", number>
+> & { labels?: Record<string, number> };
 
 export async function fetchViewCounts(
   brandIds: string[],
@@ -634,4 +692,102 @@ export async function runPool<T>(
   };
   await Promise.all(Array.from({ length: Math.min(limit, items.length) }, worker));
   return { done, failed, errors };
+}
+
+// ── team report ───────────────────────────────────────────────────────
+export type StaffStat = {
+  user_id: string;
+  name: string;
+  replies: number;
+  chats: number;
+  first_responses: number;
+  median_min: number | null;
+  avg_min: number | null;
+  within5_pct: number | null;
+  orders: number;
+  order_value: number;
+  complaint_chats: number;
+};
+export type TeamReport = {
+  totals: {
+    new_chats: number;
+    ad_chats: number;
+    inbound: number;
+    replies: number;
+    auto_replies: number;
+    app_replies: number;
+    waits: number;
+    unanswered: number;
+    median_min: number | null;
+    within5_pct: number | null;
+    orders: number;
+    order_value: number;
+    ad_orders: number;
+    chats_with_order: number;
+    complaints: number;
+    complaints_open: number;
+  };
+  staff: StaffStat[];
+  daily: Array<{ day: string; inbound: number; replies: number; orders: number; value: number }>;
+  hourly: Array<{ hour: number; inbound: number; median_min: number | null }>;
+};
+
+const num = (v: unknown) => (v == null ? null : Number(v));
+
+export async function fetchTeamReport(
+  brandIds: string[],
+  from: Date,
+  to: Date,
+): Promise<TeamReport | null> {
+  if (brandIds.length === 0) return null;
+  const { data, error } = await db.rpc("inbox_team_report", {
+    _brand_ids: brandIds,
+    _from: from.toISOString(),
+    _to: to.toISOString(),
+  });
+  if (error) throw error;
+  const r = data as any;
+  return {
+    totals: Object.fromEntries(
+      Object.entries(r.totals ?? {}).map(([k, v]) => [k, num(v)]),
+    ) as TeamReport["totals"],
+    staff: (r.staff ?? []).map((x: any) => ({
+      ...x,
+      median_min: num(x.median_min),
+      avg_min: num(x.avg_min),
+      within5_pct: num(x.within5_pct),
+      order_value: Number(x.order_value ?? 0),
+    })),
+    daily: (r.daily ?? []).map((d: any) => ({ ...d, value: Number(d.value ?? 0) })),
+    hourly: (r.hourly ?? []).map((h: any) => ({ ...h, median_min: num(h.median_min) })),
+  };
+}
+
+export type StaffReply = {
+  id: string;
+  conversation_id: string;
+  body: string | null;
+  attachments: InboxAttachment[];
+  created_at: string;
+  contact_name: string | null;
+  platform: InboxPlatform;
+  brand_id: string;
+  response_min: number | null;
+};
+
+export async function fetchStaffReplies(
+  brandIds: string[],
+  userId: string,
+  from: Date,
+  to: Date,
+): Promise<StaffReply[]> {
+  const { data, error } = await db.rpc("inbox_staff_replies", {
+    _brand_ids: brandIds,
+    _user: userId,
+    _from: from.toISOString(),
+    _to: to.toISOString(),
+    _limit: 150,
+  });
+  if (error) throw error;
+  return ((data ?? []) as any[]).map((r) => ({ ...r, response_min: num(r.response_min) }));
 }

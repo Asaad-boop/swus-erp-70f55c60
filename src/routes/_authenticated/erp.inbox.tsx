@@ -9,7 +9,7 @@ import {
   DropdownMenuLabel,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { displayName } from "@/lib/erp/inbox/inbox";
+import { displayName, labelInfo } from "@/lib/erp/inbox/inbox";
 import { supabase } from "@/integrations/supabase/client";
 import { useBrand } from "@/contexts/brand-context";
 import { useCurrentRole } from "@/hooks/use-current-role";
@@ -39,17 +39,23 @@ import { BulkReplyDialog } from "@/components/erp/inbox/bulk-reply-dialog";
 import { toast } from "sonner";
 import { CommentsView } from "@/components/erp/inbox/comments-view";
 import { AdsView } from "@/components/erp/inbox/ads-view";
+import { InboxRail, type InboxTab } from "@/components/erp/inbox/inbox-rail";
+import { TeamReport } from "@/components/erp/inbox/team-report";
 import { db } from "@/lib/erp/inbox/inbox";
 import { Sheet, SheetContent } from "@/components/ui/sheet";
 
-type Tab = "inbox" | "comments" | "ads" | "replies" | "channels";
+type Tab = InboxTab;
 type InboxSearch = { tab?: Tab; c?: string; meta?: string };
 
 export const Route = createFileRoute("/_authenticated/erp/inbox")({
   head: () => ({ meta: [{ title: "Inbox — ERP" }] }),
   validateSearch: (s: Record<string, unknown>): InboxSearch => ({
     tab:
-      s.tab === "replies" || s.tab === "channels" || s.tab === "comments" || s.tab === "ads"
+      s.tab === "replies" ||
+      s.tab === "channels" ||
+      s.tab === "comments" ||
+      s.tab === "ads" ||
+      s.tab === "report"
         ? s.tab
         : undefined,
     c: typeof s.c === "string" ? s.c : undefined,
@@ -69,6 +75,7 @@ function InboxPage() {
   // ── filters ─────────────────────────────────────────────────────────
   const [brandFilter, setBrandFilter] = useState<string>("all");
   const [platform, setPlatform] = useState<InboxPlatform | "all">("all");
+  const [label, setLabel] = useState<string | null>(null);
   const [view, setViewState] = useState<InboxView>(() => {
     try {
       return (localStorage.getItem("inbox.view") as InboxView) || "open";
@@ -100,7 +107,7 @@ function InboxPage() {
   const allBrandIds = useMemo(() => brands.map((b) => b.id), [brands]);
   const brandIds = brandFilter === "all" ? allBrandIds : [brandFilter];
 
-  const filters = { brandIds, platform, view, userId, search: debounced };
+  const filters = { brandIds, platform, view, label, userId, search: debounced };
   const convQ = useQuery({
     queryKey: ["inbox", "conversations", filters, limit],
     queryFn: () => fetchConversations(filters, limit),
@@ -406,329 +413,279 @@ function InboxPage() {
   const noChannels = channelsQ.isSuccess && channels.filter((c) => c.is_active).length === 0;
   const channelFor = (id: string) => channels.find((c) => c.id === id);
 
-  const tabs: Array<{ key: Tab; label: string; icon: typeof Zap; show: boolean }> = [
-    { key: "inbox", label: "Messages", icon: MessagesSquare, show: true },
-    { key: "comments", label: "Comments", icon: MessageCircle, show: true },
-    { key: "ads", label: "Ad report", icon: Megaphone, show: true },
-    { key: "replies", label: "Quick replies", icon: Zap, show: true },
-    { key: "channels", label: "Channels", icon: Plug, show: isAdmin },
-  ];
+  const VIEW_TITLE: Record<InboxView, string> = {
+    awaiting: "Reply baki",
+    mine: "Amar chat",
+    ads: "Ad theke",
+    complaint: "Complaint",
+    followup: "Follow-up",
+    unassigned: "Karo na",
+    open: "Open",
+    unread: "Unread",
+    ordered: "Order hoyeche",
+    done: "Done",
+    all: "Shob chat",
+  };
+  const listTitle = label ? labelInfo(label).label : VIEW_TITLE[view];
+  const listCount = label ? countsQ.data?.labels?.[label] : (countsQ.data as any)?.[view];
+  const goTab = (t: Tab) =>
+    navigate({
+      search: (s: InboxSearch) => ({ ...s, tab: t === "inbox" ? undefined : t, meta: undefined }),
+    });
+  const setBrand = (id: string) => {
+    setBrandFilter(id);
+    setLimit(CONV_PAGE);
+  };
 
   return (
-    <div className="inbox-studio flex h-[calc(100dvh-3.5rem)] min-h-0 flex-col">
-      {/* Top bar */}
-      <div className="flex flex-wrap items-center gap-2 px-3 pb-2 pt-3 md:px-4">
-        <div className="ib-seg flex items-center gap-0.5">
-          {tabs
-            .filter((t) => t.show)
-            .map((t) => (
-              <button
-                key={t.key}
-                type="button"
-                onClick={() =>
-                  navigate({
-                    search: (s: InboxSearch) => ({
-                      ...s,
-                      tab: t.key === "inbox" ? undefined : t.key,
-                      meta: undefined,
-                    }),
-                  })
-                }
-                data-on={tab === t.key}
-                className="ib-ink-2 inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-[13px] font-medium transition-colors hover:text-[var(--ib-ink)]"
-              >
-                <t.icon className="h-3.5 w-3.5" /> {t.label}
-                {t.key === "comments" && (openComments ?? 0) > 0 && (
-                  <span className="tabular ml-0.5 rounded-full bg-primary px-1.5 text-[10px] font-semibold leading-4 text-primary-foreground">
-                    {openComments! > 99 ? "99+" : openComments}
-                  </span>
-                )}
-                {t.key === "inbox" && unreadTotal > 0 && (
-                  <span className="tabular ml-0.5 rounded-full bg-primary px-1.5 text-[10px] font-semibold leading-4 text-primary-foreground">
-                    {unreadTotal > 99 ? "99+" : unreadTotal}
-                  </span>
-                )}
-              </button>
-            ))}
-        </div>
-
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <button
-              type="button"
-              title="Notification settings"
-              className="ib-ink-2 order-last ml-auto flex h-8 w-8 items-center justify-center rounded-lg transition-colors hover:bg-[var(--ib-panel)] hover:text-[var(--ib-ink)] hover:shadow-sm"
-            >
-              {soundOn || desktopOn ? (
-                <Bell className="h-4 w-4" />
-              ) : (
-                <BellOff className="h-4 w-4" />
-              )}
-            </button>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent align="end" className="w-56">
-            <DropdownMenuLabel className="text-xs">Notun message ashle</DropdownMenuLabel>
-            <DropdownMenuCheckboxItem
-              checked={soundOn}
-              onCheckedChange={(v) => {
-                setSoundOn(!!v);
-                savePref("inbox.sound", !!v);
-              }}
-            >
-              Sound
-            </DropdownMenuCheckboxItem>
-            <DropdownMenuCheckboxItem
-              checked={desktopOn}
-              onCheckedChange={() => void toggleDesktop()}
-              disabled={typeof Notification === "undefined"}
-            >
-              Desktop notification (onno tab e thakleo)
-            </DropdownMenuCheckboxItem>
-          </DropdownMenuContent>
-        </DropdownMenu>
-
-        {(tab === "inbox" || tab === "comments" || tab === "ads") && (
-          <>
-            <div className="mx-1 hidden h-5 w-px bg-[var(--ib-line)] md:block" />
-            <div className="flex items-center gap-1 overflow-x-auto">
-              <FilterChip
-                active={brandFilter === "all"}
-                onClick={() => {
-                  setBrandFilter("all");
-                  setLimit(CONV_PAGE);
-                }}
-              >
-                All brands
-              </FilterChip>
-              {brands.map((b) => (
-                <FilterChip
-                  key={b.id}
-                  active={brandFilter === b.id}
-                  onClick={() => {
-                    setBrandFilter(b.id);
-                    setLimit(CONV_PAGE);
-                  }}
-                >
-                  <BrandTag brandId={b.id} size="xs" />
-                </FilterChip>
-              ))}
-            </div>
-            {tab !== "ads" && (
-              <>
-                <div className="mx-1 hidden h-5 w-px bg-[var(--ib-line)] md:block" />
-                <div className="flex items-center gap-1">
-                  <FilterChip active={platform === "all"} onClick={() => setPlatform("all")}>
-                    All
-                  </FilterChip>
-                  {(tab === "comments"
-                    ? (["messenger", "instagram"] as const)
-                    : (["messenger", "instagram", "whatsapp"] as const)
-                  ).map((p) => (
-                    <FilterChip
-                      key={p}
-                      active={platform === p}
-                      onClick={() => setPlatform(p)}
-                      title={PLATFORM_LABEL[p]}
-                    >
-                      <PlatformIcon platform={p} className="h-3.5 w-3.5" />
-                      <span className="hidden lg:inline">
-                        {tab === "comments" && p === "messenger" ? "Facebook" : PLATFORM_LABEL[p]}
-                      </span>
-                    </FilterChip>
-                  ))}
-                </div>
-              </>
-            )}
-          </>
-        )}
-      </div>
-
-      {tab === "ads" ? (
-        <AdsView
-          brandIds={brandIds}
-          showBrand={brandFilter === "all" && brands.length > 1}
-          onOpenAdQueue={() => {
-            setView("ads");
-            navigate({ search: {} });
+    <div className="inbox-studio flex h-[calc(100dvh-3.5rem)] min-h-0">
+      <div className="hidden lg:flex">
+        <InboxRail
+          brands={brands}
+          brandFilter={brandFilter}
+          onBrand={setBrand}
+          tab={tab}
+          onTab={goTab}
+          view={view}
+          onView={setView}
+          platform={platform}
+          onPlatform={setPlatform}
+          label={label}
+          onLabel={(l) => {
+            setLabel(l);
+            setLimit(CONV_PAGE);
+            setPicked(new Set());
+          }}
+          counts={countsQ.data ?? {}}
+          commentCount={openComments ?? 0}
+          isAdmin={isAdmin}
+          alertsOn={soundOn}
+          onAlerts={() => {
+            setSoundOn(!soundOn);
+            savePref("inbox.sound", !soundOn);
           }}
         />
-      ) : tab === "comments" ? (
-        <CommentsView
-          brandIds={brandIds}
-          platform={
-            platform === "messenger" ? "facebook" : platform === "instagram" ? "instagram" : "all"
-          }
-          showBrand={brandFilter === "all" && brands.length > 1}
-          quickReplies={repliesQ.data ?? []}
-          onOpenConversation={(id) => navigate({ search: { c: id } })}
-        />
-      ) : tab === "replies" ? (
-        <div className="ib-panel ib-scroll mx-2 mb-2 min-h-0 flex-1 overflow-y-auto md:mx-3 md:mb-3">
-          <QuickRepliesManager replies={repliesQ.data ?? []} />
-        </div>
-      ) : tab === "channels" && isAdmin ? (
-        <div className="ib-panel ib-scroll mx-2 mb-2 min-h-0 flex-1 overflow-y-auto md:mx-3 md:mb-3">
-          <ChannelsSettings channels={channels} metaParam={search.meta} />
-        </div>
-      ) : (
-        <div className="flex min-h-0 flex-1 gap-2 px-2 pb-2 md:px-3 md:pb-3">
-          {/* List */}
-          <aside
-            className={cn(
-              "ib-panel w-full shrink-0 overflow-hidden md:w-[330px] lg:w-[350px]",
-              selected ? "hidden md:block" : "block",
-            )}
-          >
-            {noChannels && (
-              <div className="m-3 rounded-lg border border-dashed p-3 text-xs text-muted-foreground">
-                Kono page connect kora nai.{" "}
-                {isAdmin ? (
-                  <button
-                    type="button"
-                    className="font-medium text-primary underline"
-                    onClick={() => navigate({ search: { tab: "channels" } })}
-                  >
-                    Channels e giye connect koro
-                  </button>
-                ) : (
-                  "Admin ke bolo Channels connect korte."
-                )}
-              </div>
-            )}
-            <ConversationList
-              conversations={conversations}
-              isLoading={convQ.isLoading}
-              selectedId={selectedId}
-              onSelect={(id) => select(id)}
-              search={searchText}
-              onSearch={setSearchText}
-              view={view}
-              onView={setView}
-              counts={countsQ.data ?? {}}
-              picked={picked}
-              onPick={onPick}
-              onPickAll={onPickAll}
-              onBulkReply={() => setBulkOpen(true)}
-              onBulkDone={() => void bulkUpdate({ status: "done" }, "Done")}
-              onBulkAssign={(uid) =>
-                void bulkUpdate({ assigned_to: uid }, uid ? "assign holo" : "unassign holo")
-              }
-              bulkBusy={bulkBusy}
-              staff={staff}
-              searchRef={searchRef}
-              showBrand={brandFilter === "all" && brands.length > 1}
-              canLoadMore={conversations.length >= limit}
-              onLoadMore={() => setLimit((l) => l + CONV_PAGE)}
-              isFetchingMore={convQ.isFetching}
-            />
-          </aside>
+      </div>
 
-          {/* Thread */}
-          <section
-            className={cn(
-              "ib-panel min-w-0 flex-1 overflow-hidden",
-              selected ? "block" : "hidden md:block",
-            )}
-          >
-            {selected ? (
-              <Thread
-                conversation={selected}
-                channel={channelFor(selected.channel_id)}
-                quickReplies={repliesQ.data ?? []}
+      <main className="flex min-w-0 flex-1 flex-col py-2 pr-2 max-lg:pl-2">
+        {/* Small screens: page + brand switch (the rail covers this on desktop) */}
+        <div className="mb-2 flex items-center gap-1.5 overflow-x-auto lg:hidden">
+          {(
+            [
+              ["inbox", "Messages"],
+              ["comments", "Comments"],
+              ["ads", "Ad report"],
+              ["report", "Team"],
+              ["replies", "Quick replies"],
+            ] as Array<[Tab, string]>
+          ).map(([k, l]) => (
+            <FilterChip key={k} active={tab === k} onClick={() => goTab(k)}>
+              {l}
+            </FilterChip>
+          ))}
+          <span className="mx-1 h-4 w-px shrink-0 bg-[var(--ib-line)]" />
+          <FilterChip active={brandFilter === "all"} onClick={() => setBrand("all")}>
+            Shob
+          </FilterChip>
+          {brands.map((b) => (
+            <FilterChip key={b.id} active={brandFilter === b.id} onClick={() => setBrand(b.id)}>
+              <BrandTag brandId={b.id} size="xs" />
+            </FilterChip>
+          ))}
+        </div>
+
+        {tab === "ads" ? (
+          <AdsView
+            brandIds={brandIds}
+            showBrand={brandFilter === "all" && brands.length > 1}
+            onOpenAdQueue={() => {
+              setView("ads");
+              goTab("inbox");
+            }}
+          />
+        ) : tab === "report" ? (
+          <TeamReport brandIds={brandIds} showBrand={brandFilter === "all" && brands.length > 1} />
+        ) : tab === "comments" ? (
+          <CommentsView
+            brandIds={brandIds}
+            platform={
+              platform === "messenger" ? "facebook" : platform === "instagram" ? "instagram" : "all"
+            }
+            showBrand={brandFilter === "all" && brands.length > 1}
+            quickReplies={repliesQ.data ?? []}
+            onOpenConversation={(id) => navigate({ search: { c: id } })}
+          />
+        ) : tab === "replies" ? (
+          <div className="ib-panel ib-scroll min-h-0 flex-1 overflow-y-auto">
+            <QuickRepliesManager replies={repliesQ.data ?? []} />
+          </div>
+        ) : tab === "channels" && isAdmin ? (
+          <div className="ib-panel ib-scroll min-h-0 flex-1 overflow-y-auto">
+            <ChannelsSettings channels={channels} metaParam={search.meta} />
+          </div>
+        ) : (
+          <div className="ib-panel ib-shell flex min-h-0 flex-1 overflow-hidden">
+            {/* List */}
+            <aside
+              className={cn(
+                "w-full shrink-0 overflow-hidden border-[var(--ib-line)] md:w-[320px] md:border-r 2xl:w-[360px]",
+                selected ? "hidden md:block" : "block",
+              )}
+            >
+              {noChannels && (
+                <div className="m-3 rounded-lg border border-dashed p-3 text-xs text-muted-foreground">
+                  Kono page connect kora nai.{" "}
+                  {isAdmin ? (
+                    <button
+                      type="button"
+                      className="font-medium text-primary underline"
+                      onClick={() => navigate({ search: { tab: "channels" } })}
+                    >
+                      Channels e giye connect koro
+                    </button>
+                  ) : (
+                    "Admin ke bolo Channels connect korte."
+                  )}
+                </div>
+              )}
+              <ConversationList
+                conversations={conversations}
+                isLoading={convQ.isLoading}
+                selectedId={selectedId}
+                onSelect={(id) => select(id)}
+                search={searchText}
+                onSearch={setSearchText}
+                view={view}
+                onView={setView}
+                counts={countsQ.data ?? {}}
+                title={listTitle}
+                subtitle={listCount ? String(listCount) : undefined}
+                picked={picked}
+                onPick={onPick}
+                onPickAll={onPickAll}
+                onBulkReply={() => setBulkOpen(true)}
+                onBulkDone={() => void bulkUpdate({ status: "done" }, "Done")}
+                onBulkAssign={(uid) =>
+                  void bulkUpdate({ assigned_to: uid }, uid ? "assign holo" : "unassign holo")
+                }
+                bulkBusy={bulkBusy}
                 staff={staff}
-                currentUserId={userId}
-                onBack={() => select(null)}
-                onNext={() => {
-                  const idx = conversations.findIndex((x) => x.id === selected.id);
-                  const waiting = (x: InboxConversation) =>
-                    x.id !== selected.id &&
-                    x.status === "open" &&
-                    x.last_message_direction === "in";
-                  const next =
-                    conversations.slice(idx + 1).find(waiting) ??
-                    conversations.find(waiting) ??
-                    null;
-                  if (next) {
-                    select(next.id);
-                    document
-                      .querySelector(`[data-conv-id="${next.id}"]`)
-                      ?.scrollIntoView({ block: "nearest" });
-                  } else toast.success("Shob reply deya shesh 🎉");
-                }}
-                onTogglePanel={() => {
-                  if (typeof window !== "undefined" && window.innerWidth < 1280) setSheetOpen(true);
-                  else setPanelOpen((v) => !v);
-                }}
+                searchRef={searchRef}
+                showBrand={brandFilter === "all" && brands.length > 1}
+                canLoadMore={conversations.length >= limit}
+                onLoadMore={() => setLimit((l) => l + CONV_PAGE)}
+                isFetchingMore={convQ.isFetching}
               />
-            ) : (
-              <div className="flex h-full flex-col items-center justify-center gap-3 px-6 text-center">
-                <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-[var(--ib-accent-soft)] text-primary">
-                  <MessagesSquare className="h-6 w-6" />
-                </div>
-                <div>
-                  <div className="font-display text-base font-semibold">
-                    {(countsQ.data?.awaiting ?? awaitingTotal) > 0
-                      ? `${countsQ.data?.awaiting ?? awaitingTotal}ta chat e reply baki`
-                      : unreadTotal > 0
-                        ? `${unreadTotal}ta chat e notun message`
-                        : "Kono chat kholo"}
-                  </div>
-                  <div className="ib-ink-2 mt-1 text-sm">
-                    Bam pash theke ekta conversation kholo. Messenger, Instagram ar WhatsApp
-                    ekhanei.
-                  </div>
-                </div>
-                <div className="ib-ink-3 mt-2 flex flex-wrap justify-center gap-x-4 gap-y-1.5 text-xs">
-                  {[
-                    ["J / K", "next / prev"],
-                    ["/", "search"],
-                    ["R", "reply"],
-                    ["E", "done"],
-                  ].map(([k, l]) => (
-                    <span key={k}>
-                      <kbd className="rounded-md border border-[var(--ib-line)] bg-[var(--ib-panel)] px-1.5 py-0.5 text-[10px] font-semibold shadow-sm">
-                        {k}
-                      </kbd>{" "}
-                      {l}
-                    </span>
-                  ))}
-                </div>
-              </div>
-            )}
-          </section>
+            </aside>
 
-          {selected && (
-            <Sheet open={sheetOpen} onOpenChange={setSheetOpen}>
-              <SheetContent side="right" className="w-[320px] p-0 xl:hidden [&>button]:hidden">
+            {/* Thread */}
+            <section
+              className={cn(
+                "min-w-0 flex-1 overflow-hidden",
+                selected ? "block" : "hidden md:block",
+              )}
+            >
+              {selected ? (
+                <Thread
+                  conversation={selected}
+                  channel={channelFor(selected.channel_id)}
+                  quickReplies={repliesQ.data ?? []}
+                  staff={staff}
+                  currentUserId={userId}
+                  onBack={() => select(null)}
+                  onNext={() => {
+                    const idx = conversations.findIndex((x) => x.id === selected.id);
+                    const waiting = (x: InboxConversation) =>
+                      x.id !== selected.id &&
+                      x.status === "open" &&
+                      x.last_message_direction === "in";
+                    const next =
+                      conversations.slice(idx + 1).find(waiting) ??
+                      conversations.find(waiting) ??
+                      null;
+                    if (next) {
+                      select(next.id);
+                      document
+                        .querySelector(`[data-conv-id="${next.id}"]`)
+                        ?.scrollIntoView({ block: "nearest" });
+                    } else toast.success("Shob reply deya shesh 🎉");
+                  }}
+                  onTogglePanel={() => {
+                    if (typeof window !== "undefined" && window.innerWidth < 1536)
+                      setSheetOpen(true);
+                    else setPanelOpen((v) => !v);
+                  }}
+                />
+              ) : (
+                <div className="flex h-full flex-col items-center justify-center gap-3 px-6 text-center">
+                  <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-[var(--ib-accent-soft)] text-primary">
+                    <MessagesSquare className="h-6 w-6" />
+                  </div>
+                  <div>
+                    <div className="font-display text-base font-semibold">
+                      {(countsQ.data?.awaiting ?? awaitingTotal) > 0
+                        ? `${countsQ.data?.awaiting ?? awaitingTotal}ta chat e reply baki`
+                        : unreadTotal > 0
+                          ? `${unreadTotal}ta chat e notun message`
+                          : "Kono chat kholo"}
+                    </div>
+                    <div className="ib-ink-2 mt-1 text-sm">
+                      Bam pash theke ekta conversation kholo. Messenger, Instagram ar WhatsApp
+                      ekhanei.
+                    </div>
+                  </div>
+                  <div className="ib-ink-3 mt-2 flex flex-wrap justify-center gap-x-4 gap-y-1.5 text-xs">
+                    {[
+                      ["J / K", "next / prev"],
+                      ["/", "search"],
+                      ["R", "reply"],
+                      ["E", "done"],
+                    ].map(([k, l]) => (
+                      <span key={k}>
+                        <kbd className="rounded-md border border-[var(--ib-line)] bg-[var(--ib-panel)] px-1.5 py-0.5 text-[10px] font-semibold shadow-sm">
+                          {k}
+                        </kbd>{" "}
+                        {l}
+                      </span>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </section>
+
+            {selected && (
+              <Sheet open={sheetOpen} onOpenChange={setSheetOpen}>
+                <SheetContent side="right" className="w-[320px] p-0 2xl:hidden [&>button]:hidden">
+                  <ContactPanel
+                    conversation={selected}
+                    channel={channelFor(selected.channel_id)}
+                    onClose={() => setSheetOpen(false)}
+                  />
+                </SheetContent>
+              </Sheet>
+            )}
+
+            <BulkReplyDialog
+              open={bulkOpen}
+              onOpenChange={setBulkOpen}
+              conversations={pickedConvs}
+              quickReplies={repliesQ.data ?? []}
+              onFinished={() => setPicked(new Set())}
+            />
+
+            {/* Customer panel */}
+            {selected && panelOpen && (
+              <aside className="hidden w-[300px] shrink-0 overflow-hidden border-l border-[var(--ib-line)] 2xl:block">
                 <ContactPanel
                   conversation={selected}
                   channel={channelFor(selected.channel_id)}
-                  onClose={() => setSheetOpen(false)}
+                  onClose={() => setPanelOpen(false)}
                 />
-              </SheetContent>
-            </Sheet>
-          )}
-
-          <BulkReplyDialog
-            open={bulkOpen}
-            onOpenChange={setBulkOpen}
-            conversations={pickedConvs}
-            quickReplies={repliesQ.data ?? []}
-            onFinished={() => setPicked(new Set())}
-          />
-
-          {/* Customer panel */}
-          {selected && panelOpen && (
-            <aside className="ib-panel hidden w-[310px] shrink-0 overflow-hidden xl:block">
-              <ContactPanel
-                conversation={selected}
-                channel={channelFor(selected.channel_id)}
-                onClose={() => setPanelOpen(false)}
-              />
-            </aside>
-          )}
-        </div>
-      )}
+              </aside>
+            )}
+          </div>
+        )}
+      </main>
     </div>
   );
 }

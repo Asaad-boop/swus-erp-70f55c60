@@ -10,6 +10,10 @@ import {
 } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
+  AlarmClock,
+  AlertTriangle,
+  ShoppingBag,
+  Tag,
   AlertCircle,
   ArrowDown,
   ArrowLeft,
@@ -37,6 +41,7 @@ import {
 } from "lucide-react";
 import {
   DropdownMenu,
+  DropdownMenuCheckboxItem,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuLabel,
@@ -53,6 +58,8 @@ import {
   fillTemplate,
   inboxApi,
   initials,
+  INBOX_LABELS,
+  labelInfo,
   PLATFORM_LABEL,
   profileLinks,
   sendReply,
@@ -67,6 +74,7 @@ import {
   type QuickReply,
 } from "@/lib/erp/inbox/inbox";
 import { BrandTag, ContactAvatar, Lightbox, PlatformIcon } from "./shared";
+import { snoozeLabel } from "./conversation-list";
 import { WaTemplateDialog } from "./wa-template-dialog";
 import { PriceReplyDialog, type PriceImage } from "./price-reply-dialog";
 import { useConversationPresence } from "./use-conversation-presence";
@@ -801,6 +809,28 @@ export function Thread({
     onError: (e: Error) => toast.error(e.message),
   });
   const assignee = c.assigned_to ? staff.find((s) => s.id === c.assigned_to) : undefined;
+  const patch = useMutation({
+    mutationFn: (v: Parameters<typeof updateConversation>[1]) => updateConversation(c.id, v),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["inbox", "conversations"] });
+      qc.invalidateQueries({ queryKey: ["inbox", "counts"] });
+    },
+    onError: (e: Error) => toast.error(e.message),
+  });
+  const tags = c.tags ?? [];
+  const toggleLabel = (k: string) =>
+    patch.mutate({ tags: tags.includes(k) ? tags.filter((t) => t !== k) : [...tags, k] });
+  const snoozeTo = (d: Date, note?: string) => {
+    patch.mutate({ snoozed_until: d.toISOString(), snooze_note: note ?? null });
+    toast.success(`Follow-up: ${snoozeLabel(d.toISOString())}`);
+  };
+  const at = (h: number, m = 0, addDays = 0) => {
+    const d = new Date();
+    d.setDate(d.getDate() + addDays);
+    d.setHours(h, m, 0, 0);
+    return d;
+  };
+  const complaintOpen = !!c.complaint_at && !c.complaint_resolved_at;
 
   const [tplOpen, setTplOpen] = useState(false);
   const [priceImages, setPriceImages] = useState<PriceImage[] | null>(null);
@@ -1039,6 +1069,87 @@ export function Thread({
           <DropdownMenuTrigger asChild>
             <button
               type="button"
+              className={cn(iconBtn, tags.length && "text-primary")}
+              title="Label"
+            >
+              <Tag className="h-4 w-4" />
+            </button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end" className="w-52">
+            <DropdownMenuLabel className="text-xs">Label</DropdownMenuLabel>
+            {INBOX_LABELS.map((l) => (
+              <DropdownMenuCheckboxItem
+                key={l.key}
+                checked={tags.includes(l.key)}
+                onCheckedChange={() => toggleLabel(l.key)}
+                onSelect={(e) => e.preventDefault()}
+                className="text-[13px]"
+              >
+                <span className={cn("mr-2 h-2 w-2 rounded-full", l.dot)} />
+                {l.label}
+              </DropdownMenuCheckboxItem>
+            ))}
+            <DropdownMenuSeparator />
+            <DropdownMenuCheckboxItem
+              checked={complaintOpen}
+              onCheckedChange={() =>
+                patch.mutate(
+                  complaintOpen
+                    ? { complaint_resolved_at: new Date().toISOString() }
+                    : { complaint_at: new Date().toISOString(), complaint_resolved_at: null },
+                )
+              }
+              className="text-[13px]"
+            >
+              <AlertTriangle className="mr-2 h-3.5 w-3.5 text-rose-500" />
+              Complaint
+            </DropdownMenuCheckboxItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <button
+              type="button"
+              className={cn(iconBtn, c.snoozed_until && "text-amber-600")}
+              title="Follow-up (pore mone koriye dibe)"
+            >
+              <AlarmClock className="h-4 w-4" />
+            </button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end" className="w-56">
+            <DropdownMenuLabel className="text-xs">Kokhon abar dekhbo?</DropdownMenuLabel>
+            {(
+              [
+                ["1 ghonta pore", () => new Date(Date.now() + 3_600_000)],
+                ["3 ghonta pore", () => new Date(Date.now() + 3 * 3_600_000)],
+                ["Aaj rat 9 ta", () => at(21)],
+                ["Kal sokal 10 ta", () => at(10, 0, 1)],
+                ["Kal bikel 4 ta", () => at(16, 0, 1)],
+                ["2 din pore", () => at(10, 0, 2)],
+                ["1 soptaho pore", () => at(10, 0, 7)],
+              ] as Array<[string, () => Date]>
+            ).map(([label, fn]) => (
+              <DropdownMenuItem key={label} onClick={() => snoozeTo(fn())} className="text-[13px]">
+                {label}
+              </DropdownMenuItem>
+            ))}
+            {c.snoozed_until && (
+              <>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem
+                  onClick={() => patch.mutate({ snoozed_until: null, snooze_note: null })}
+                  className="text-[13px]"
+                >
+                  Follow-up bad dao
+                </DropdownMenuItem>
+              </>
+            )}
+          </DropdownMenuContent>
+        </DropdownMenu>
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <button
+              type="button"
               className="ib-ink-2 flex h-8 items-center gap-1.5 rounded-md px-2 text-[12.5px] transition-colors hover:bg-[var(--ib-hover)] hover:text-[var(--ib-ink)]"
               title={assignee ? `Assigned: ${assignee.display_name}` : "Assign"}
             >
@@ -1114,6 +1225,64 @@ export function Thread({
           <PanelRight className="h-4 w-4" />
         </button>
       </div>
+
+      {(complaintOpen || c.snoozed_until || (c.order_count ?? 0) > 0 || tags.length > 0) && (
+        <div className="flex shrink-0 flex-wrap items-center gap-1.5 border-b border-[var(--ib-line)] px-3 py-1.5 md:px-4">
+          {complaintOpen && (
+            <div className="flex min-w-0 max-w-full items-center gap-2 rounded-md bg-rose-500/[0.08] py-1 pl-2 pr-1 text-[12px] text-rose-700 dark:text-rose-300">
+              <AlertTriangle className="h-3.5 w-3.5 shrink-0" />
+              <span className="min-w-0 truncate">
+                <b className="font-semibold">Complaint</b>
+                {c.complaint_text ? ` — “${c.complaint_text.slice(0, 80)}”` : ""}
+              </span>
+              <button
+                type="button"
+                onClick={() => {
+                  patch.mutate({ complaint_resolved_at: new Date().toISOString() });
+                  toast.success("Complaint shomadhan holo");
+                }}
+                className="shrink-0 rounded bg-white px-2 py-0.5 text-[11px] font-medium text-rose-700 shadow-sm ring-1 ring-rose-500/20 hover:bg-rose-50 dark:bg-rose-950 dark:text-rose-200"
+              >
+                Shomadhan hoyeche
+              </button>
+            </div>
+          )}
+          {c.snoozed_until && (
+            <span className="inline-flex items-center gap-1 rounded-md bg-amber-500/10 px-2 py-1 text-[12px] text-amber-800 dark:text-amber-300">
+              <AlarmClock className="h-3.5 w-3.5" /> Follow-up: {snoozeLabel(c.snoozed_until)}
+              <button
+                type="button"
+                onClick={() => patch.mutate({ snoozed_until: null, snooze_note: null })}
+                className="ml-0.5 rounded p-0.5 hover:bg-amber-500/15"
+                title="Bad dao"
+              >
+                <X className="h-3 w-3" />
+              </button>
+            </span>
+          )}
+          {(c.order_count ?? 0) > 0 && (
+            <span className="inline-flex items-center gap-1 rounded-md bg-emerald-500/10 px-2 py-1 text-[12px] text-emerald-700 dark:text-emerald-300">
+              <ShoppingBag className="h-3.5 w-3.5" /> {c.order_count}ta order hoyeche
+            </span>
+          )}
+          {tags.map((t) => {
+            const l = labelInfo(t);
+            return (
+              <button
+                key={t}
+                type="button"
+                onClick={() => toggleLabel(t)}
+                title="Click = label shorao"
+                className="ib-ink-2 group inline-flex items-center gap-1.5 rounded-md bg-[var(--ib-canvas)] px-2 py-1 text-[12px] hover:text-[var(--ib-ink)]"
+              >
+                <span className={cn("h-2 w-2 rounded-full", l.dot)} />
+                {l.label}
+                <X className="h-3 w-3 opacity-0 group-hover:opacity-60" />
+              </button>
+            );
+          })}
+        </div>
+      )}
 
       {/* Messages */}
       <div

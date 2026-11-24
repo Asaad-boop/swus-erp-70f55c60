@@ -1299,6 +1299,7 @@ img { transition: opacity 220ms var(--ease-butter); }
   --ib-ink-2: oklch(0.49 0.018 264);          /* #5B6170 */
   --ib-ink-3: oklch(0.66 0.012 264);
   --ib-line: oklch(0.925 0.005 264);          /* #E6E8ED */
+  --ib-line-strong: oklch(0.86 0.008 264);
   --ib-hover: oklch(0.975 0.003 264);
   --ib-in: oklch(0.958 0.004 264);            /* customer bubble */
   --ib-out: var(--primary);                   /* our bubble */
@@ -1317,6 +1318,7 @@ img { transition: opacity 220ms var(--ease-butter); }
   --ib-ink-2: oklch(0.72 0.01 264);
   --ib-ink-3: oklch(0.56 0.01 264);
   --ib-line: oklch(0.26 0.006 264);
+  --ib-line-strong: oklch(0.34 0.008 264);
   --ib-hover: oklch(0.215 0.006 264);
   --ib-in: oklch(0.235 0.006 264);
   --ib-accent-soft: oklch(0.27 0.06 277);
@@ -1332,6 +1334,13 @@ img { transition: opacity 220ms var(--ease-butter); }
   box-shadow: var(--ib-shadow);
 }
 .inbox-studio .ib-line { border-color: var(--ib-line); }
+/* left queue rail: sits on the canvas, the active item lifts onto a panel chip */
+.inbox-studio .ib-rail-on {
+  background: var(--ib-panel);
+  color: var(--ib-ink);
+  box-shadow: var(--ib-shadow);
+}
+.inbox-studio .ib-shell { box-shadow: var(--ib-shadow-lift); }
 .inbox-studio .ib-ink-2 { color: var(--ib-ink-2); }
 .inbox-studio .ib-ink-3 { color: var(--ib-ink-3); }
 .inbox-studio .ib-hover:hover { background: var(--ib-hover); }

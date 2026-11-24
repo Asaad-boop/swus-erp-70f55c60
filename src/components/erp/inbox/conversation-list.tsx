@@ -1,4 +1,7 @@
 import {
+  AlarmClock,
+  AlertTriangle,
+  ShoppingBag,
   Check,
   CheckCircle2,
   ChevronDown,
@@ -21,6 +24,7 @@ import { cn } from "@/lib/utils";
 import {
   displayName,
   initials,
+  labelInfo,
   type InboxConversation,
   type InboxStaff,
   type InboxView,
@@ -35,11 +39,14 @@ const PRIMARY: ViewDef[] = [
   { key: "awaiting", label: "Reply baki", hint: "Customer er last message er reply hoy nai" },
   { key: "ads", label: "Ad theke", hint: "Message ad e click kore asha open chat" },
   { key: "mine", label: "Amar", hint: "Amake assign kora open chat" },
+  { key: "complaint", label: "Complaint", hint: "Obhijog" },
+  { key: "followup", label: "Follow-up", hint: "Pore dekhbo" },
   { key: "open", label: "Open", hint: "Shob open chat" },
 ];
 const MORE: ViewDef[] = [
   { key: "unread", label: "Unread", hint: "Pora hoy nai" },
   { key: "unassigned", label: "Karo na", hint: "Karo kache assign kora nai" },
+  { key: "ordered", label: "Order hoyeche", hint: "Ei chat theke order" },
   { key: "done", label: "Done", hint: "Shesh kora chat" },
   { key: "all", label: "Shob", hint: "Shob chat" },
 ];
@@ -70,6 +77,8 @@ type Props = {
   view: InboxView;
   onView: (v: InboxView) => void;
   counts: ViewCounts;
+  title: string;
+  subtitle?: string;
   staff: InboxStaff[];
   searchRef?: React.Ref<HTMLInputElement>;
   showBrand: boolean;
@@ -89,7 +98,6 @@ type Props = {
 export function ConversationList(p: Props) {
   const picking = p.picked.size > 0;
   const allPicked = p.conversations.length > 0 && p.conversations.every((c) => p.picked.has(c.id));
-  const moreActive = MORE.find((v) => v.key === p.view);
 
   return (
     <div className="flex h-full min-h-0 flex-col">
@@ -121,59 +129,49 @@ export function ConversationList(p: Props) {
         {picking ? (
           <BulkBar {...p} allPicked={allPicked} />
         ) : (
-          <div className="flex min-w-0 items-center gap-0.5">
-            {PRIMARY.map((v) => (
-              <ViewTab
-                key={v.key}
-                v={v}
-                on={p.view === v.key}
-                count={
-                  v.key === "ads"
-                    ? p.counts.ads_waiting
-                    : v.key === "open"
-                      ? undefined
-                      : p.counts[v.key]
-                }
-                alert={
-                  (v.key === "awaiting" && (p.counts.urgent ?? 0) > 0) ||
-                  (v.key === "ads" && (p.counts.ads_waiting ?? 0) > 0)
-                }
-                onClick={() => p.onView(v.key)}
-              />
-            ))}
+          <div className="flex h-7 items-center gap-2 px-0.5">
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <button
                   type="button"
-                  className={cn(
-                    "ml-auto flex h-7 shrink-0 items-center gap-0.5 rounded-md px-2 text-[12px] transition-colors",
-                    moreActive
-                      ? "bg-[var(--ib-ink)] font-medium text-[var(--ib-panel)]"
-                      : "ib-ink-2 hover:bg-[var(--ib-hover)] hover:text-[var(--ib-ink)]",
-                  )}
+                  className="flex min-w-0 items-center gap-1 rounded-md text-[14px] font-semibold tracking-[-0.01em] lg:pointer-events-none"
                 >
-                  {moreActive ? moreActive.label : "Aro"}
-                  <ChevronDown className="h-3 w-3 opacity-70" />
+                  <span className="truncate">{p.title}</span>
+                  <ChevronDown className="ib-ink-3 h-3.5 w-3.5 lg:hidden" />
                 </button>
               </DropdownMenuTrigger>
-              <DropdownMenuContent align="end" className="w-48">
-                {MORE.map((v) => (
+              <DropdownMenuContent align="start" className="w-52 lg:hidden">
+                {[...PRIMARY, ...MORE].map((v) => (
                   <DropdownMenuItem
                     key={v.key}
                     onClick={() => p.onView(v.key)}
                     className="text-[13px]"
                   >
                     <span className="flex-1">{v.label}</span>
-                    {p.counts[v.key] != null && v.key !== "done" && v.key !== "all" && (
-                      <span className="ib-ink-3 tabular text-[11px]">
-                        {fmtCount(p.counts[v.key])}
-                      </span>
-                    )}
+                    {!!p.counts[v.key] &&
+                      v.key !== "open" &&
+                      v.key !== "done" &&
+                      v.key !== "all" && (
+                        <span className="ib-ink-3 tabular text-[11px]">
+                          {fmtCount(p.counts[v.key])}
+                        </span>
+                      )}
                     {p.view === v.key && <Check className="ml-2 h-3.5 w-3.5" />}
                   </DropdownMenuItem>
                 ))}
               </DropdownMenuContent>
             </DropdownMenu>
+            {p.subtitle && <span className="ib-ink-3 tabular text-[12px]">{p.subtitle}</span>}
+            {p.conversations.length > 0 && (
+              <button
+                type="button"
+                onClick={() => p.onPickAll(true)}
+                className="ib-ink-3 ml-auto rounded-md px-1.5 py-0.5 text-[11.5px] hover:bg-[var(--ib-hover)] hover:text-[var(--ib-ink)]"
+                title="List er shob select kore ekshathe reply / done"
+              >
+                Select
+              </button>
+            )}
           </div>
         )}
       </div>
@@ -229,50 +227,6 @@ export function ConversationList(p: Props) {
         )}
       </div>
     </div>
-  );
-}
-
-function ViewTab({
-  v,
-  on,
-  count,
-  alert,
-  onClick,
-}: {
-  v: ViewDef;
-  on: boolean;
-  count?: number;
-  alert?: boolean;
-  onClick: () => void;
-}) {
-  return (
-    <button
-      type="button"
-      title={v.hint}
-      onClick={onClick}
-      className={cn(
-        "flex h-7 shrink-0 items-center gap-1 whitespace-nowrap rounded-md px-1.5 text-[12px] transition-colors",
-        on
-          ? "bg-[var(--ib-ink)] font-medium text-[var(--ib-panel)]"
-          : "ib-ink-2 hover:bg-[var(--ib-hover)] hover:text-[var(--ib-ink)]",
-      )}
-    >
-      {v.label}
-      {!!count && (
-        <span
-          className={cn(
-            "tabular rounded px-1 text-[10.5px] leading-4",
-            on
-              ? "bg-white/20"
-              : alert
-                ? "bg-rose-500/12 font-semibold text-rose-600 dark:text-rose-400"
-                : "bg-[var(--ib-canvas)]",
-          )}
-        >
-          {fmtCount(count)}
-        </span>
-      )}
-    </button>
   );
 }
 
@@ -453,6 +407,15 @@ function Row({
               {name}
             </span>
             {showBrand && <BrandTag brandId={c.brand_id} size="xs" />}
+            {c.complaint_at && !c.complaint_resolved_at && (
+              <AlertTriangle className="h-3 w-3 shrink-0 text-rose-500" aria-label="Complaint" />
+            )}
+            {(c.order_count ?? 0) > 0 && (
+              <ShoppingBag
+                className="h-3 w-3 shrink-0 text-emerald-600"
+                aria-label="Order hoyeche"
+              />
+            )}
             <span
               className={cn(
                 "tabular ml-auto shrink-0 text-[10.5px]",
@@ -502,14 +465,56 @@ function Row({
               </span>
             )}
           </div>
-          {c.ad_id && (
-            <div className="mt-0.5 flex items-center">
-              <AdChip c={c} />
+          {(c.ad_id || c.snoozed_until || (c.tags?.length ?? 0) > 0) && (
+            <div className="mt-0.5 flex min-w-0 items-center gap-1">
+              {c.snoozed_until && <SnoozeChip at={c.snoozed_until} />}
+              {c.ad_id && <AdChip c={c} />}
+              {(c.tags ?? []).slice(0, 2).map((t) => {
+                const l = labelInfo(t);
+                return (
+                  <span
+                    key={t}
+                    className="ib-ink-2 inline-flex items-center gap-1 rounded bg-[var(--ib-canvas)] px-1 text-[10px] leading-4"
+                  >
+                    <span className={cn("h-1.5 w-1.5 rounded-full", l.dot)} />
+                    <span className="max-w-[80px] truncate">{l.label}</span>
+                  </span>
+                );
+              })}
             </div>
           )}
         </div>
       </div>
     </li>
+  );
+}
+
+export function snoozeLabel(iso: string) {
+  const d = new Date(iso);
+  const now = new Date();
+  if (d.getTime() <= now.getTime()) return "Ekhon dekho";
+  const tmr = new Date(now);
+  tmr.setDate(now.getDate() + 1);
+  const t = d.toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" });
+  if (d.toDateString() === now.toDateString()) return `Aaj ${t}`;
+  if (d.toDateString() === tmr.toDateString()) return `Kal ${t}`;
+  return `${d.toLocaleDateString("en-GB", { day: "numeric", month: "short" })} ${t}`;
+}
+
+function SnoozeChip({ at }: { at: string }) {
+  const due = new Date(at).getTime() <= Date.now();
+  return (
+    <span
+      className={cn(
+        "inline-flex shrink-0 items-center gap-0.5 rounded px-1 text-[10px] leading-4",
+        due
+          ? "bg-amber-500/15 font-medium text-amber-700 dark:text-amber-300"
+          : "ib-ink-2 bg-[var(--ib-canvas)]",
+      )}
+    >
+      <AlarmClock className="h-2.5 w-2.5" />
+      {snoozeLabel(at)}
+    </span>
   );
 }
 
