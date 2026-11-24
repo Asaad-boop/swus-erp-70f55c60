@@ -61,6 +61,10 @@ function chunkArray<T>(items: T[], size: number): T[][] {
   return chunks;
 }
 
+/** A Meta campaign ID (long digit string) typed into search → campaign mode. */
+const isCampaignId = (v: string) => /^\d{12,}$/.test(v.trim());
+const dhakaDay = (d: string | Date) => new Date(d).toLocaleDateString("en-CA", { timeZone: "Asia/Dhaka" });
+
 const searchSchema = z.object({
   tab: fallback(
     z.enum(["processing", "incomplete", "good_but_no_response", "no_response", "advance_payment", "on_hold", "complete", "cancelled", "all"]),
@@ -866,6 +870,42 @@ function _WebOrdersPageBody() {
     },
   });
 
+  // Campaign ID search → how many orders this campaign brought (all statuses).
+  const campaignId = isCampaignId(debouncedSearch) ? debouncedSearch.trim() : null;
+  const campaignStats = useQuery({
+    queryKey: ["web-orders-campaign", brandsKey, campaignId],
+    enabled: !!campaignId && brandIds.length > 0,
+    staleTime: 30_000,
+    refetchInterval: 30_000,
+    queryFn: async () => {
+      const [ordersRes, campRes] = await Promise.all([
+        applyBrandScope(
+          supabase
+            .from("orders")
+            .select("id,created_at,web_status,total,mkt_order_attributions!inner(utm_campaign)")
+            .eq("mkt_order_attributions.utm_campaign" as never, campaignId as never),
+          brandIds,
+        ).range(0, 9999),
+        supabase.from("mkt_campaigns").select("name,status").eq("external_id" as never, campaignId as never).maybeSingle(),
+      ]);
+      if (ordersRes.error) throw ordersRes.error;
+      const list = (ordersRes.data ?? []) as Array<{ created_at: string; web_status: string | null; total: number | null }>;
+      const today = dhakaDay(new Date());
+      const yesterday = dhakaDay(new Date(Date.now() - 86_400_000));
+      const todays = list.filter((o) => dhakaDay(o.created_at) === today);
+      return {
+        name: (campRes.data as { name?: string; status?: string } | null)?.name ?? null,
+        status: (campRes.data as { name?: string; status?: string } | null)?.status ?? null,
+        today: todays.length,
+        todayValue: todays.reduce((a, o) => a + Number(o.total ?? 0), 0),
+        yesterday: list.filter((o) => dhakaDay(o.created_at) === yesterday).length,
+        total: list.length,
+        confirmed: list.filter((o) => o.web_status === "complete").length,
+        cancelled: list.filter((o) => o.web_status === "cancelled").length,
+      };
+    },
+  });
+
   // Infinite-scrolled orders — pages accumulate as the user scrolls
   const pageSize = search.pageSize ?? DEFAULT_PAGE_SIZE; // 0 = All
   const ordersQueryKey = ["web-orders-page", brandsKey, activeTab, debouncedSearch, sort, sourceFilter, paymentFilter, dateRange.from, dateRange.to, sourceOrderIds?.join(",") ?? "", pageSize] as const;
@@ -886,7 +926,8 @@ function _WebOrdersPageBody() {
         supabase
           .from("orders")
           .select(
-            "id,created_at,shipping_name,shipping_phone,shipping_address,shipping_city,shipping_district,guest_name,guest_phone,latest_note,customer_note,notes,tags,source_website,source_platform,source,confirmation_status,status,web_status,total,advance_amount,advance_txn_id,verified_at,payment_method,call_attempt_count,call_status,last_call_at,assigned_to,brand_id,is_preorder,preorder_expected_date,updated_at",
+            "id,created_at,shipping_name,shipping_phone,shipping_address,shipping_city,shipping_district,guest_name,guest_phone,latest_note,customer_note,notes,tags,source_website,source_platform,source,confirmation_status,status,web_status,total,advance_amount,advance_txn_id,verified_at,payment_method,call_attempt_count,call_status,last_call_at,assigned_to,brand_id,is_preorder,preorder_expected_date,updated_at" +
+              (isCampaignId(debouncedSearch) ? ",mkt_order_attributions!inner(utm_campaign)" : ""),
             { count: "exact" },
           ),
         brandIds,
@@ -905,7 +946,9 @@ function _WebOrdersPageBody() {
       if (paymentFilter && paymentFilter !== "all") {
         q = q.eq("payment_method", paymentFilter as never);
       }
-      if (debouncedSearch.trim()) {
+      if (isCampaignId(debouncedSearch)) {
+        q = q.eq("mkt_order_attributions.utm_campaign" as never, debouncedSearch.trim() as never);
+      } else if (debouncedSearch.trim()) {
         const s = debouncedSearch.trim();
         const esc = s.replace(/[,()]/g, " ");
         const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(s);
@@ -945,7 +988,7 @@ function _WebOrdersPageBody() {
 
       const { data, error, count } = await q;
       if (error) throw error;
-      let rows = (data ?? []) as WebOrderRow[];
+      let rows = (data ?? []) as unknown as WebOrderRow[];
 
       // fetch items + notes + attribution for this page
       const ids = rows.map((r) => r.id);
@@ -1439,7 +1482,7 @@ function _WebOrdersPageBody() {
         <div className="relative w-full sm:w-[380px]">
           <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground/80 pointer-events-none transition-colors" />
           <Input
-            placeholder="Search invoice, name, phone…"
+            placeholder="Invoice, নাম, ফোন বা Campaign ID…"
             value={searchInput}
             onChange={(e) => setSearchInput(e.target.value)}
             className="h-10 pl-11 pr-9 rounded-full border-transparent bg-muted/50 hover:bg-muted/70 focus:bg-background text-[14px] font-semibold tracking-tight placeholder:font-medium placeholder:text-muted-foreground/60 shadow-none transition-all duration-200 ease-out focus-visible:ring-2 focus-visible:ring-ring/25 focus-visible:border-border/60"
@@ -1455,6 +1498,55 @@ function _WebOrdersPageBody() {
           )}
         </div>
       </header>
+
+      {campaignId && (
+        <div className="mt-4 rounded-2xl border border-violet-500/30 bg-violet-500/5 p-4">
+          <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
+            <span className="text-[11px] font-bold uppercase tracking-wider text-violet-700">Campaign</span>
+            <span className="font-mono text-xs text-muted-foreground">{campaignId}</span>
+            {campaignStats.data?.name && (
+              <span className="truncate text-sm font-semibold">{campaignStats.data.name}</span>
+            )}
+            {campaignStats.data?.status && (
+              <span className="rounded bg-muted px-1.5 py-px text-[10px] font-semibold uppercase text-muted-foreground">
+                {campaignStats.data.status}
+              </span>
+            )}
+          </div>
+          {campaignStats.isLoading ? (
+            <div className="mt-3 flex items-center gap-2 text-xs text-muted-foreground">
+              <Loader2 className="h-3.5 w-3.5 animate-spin" /> গুনছি…
+            </div>
+          ) : campaignStats.error ? (
+            <div className="mt-2 text-xs text-rose-600">{(campaignStats.error as Error).message}</div>
+          ) : campaignStats.data ? (
+            <div className="mt-3 grid grid-cols-2 gap-2 sm:grid-cols-5">
+              {[
+                { label: "আজ", value: campaignStats.data.today, sub: `৳${Math.round(campaignStats.data.todayValue).toLocaleString()}`, strong: true },
+                { label: "গতকাল", value: campaignStats.data.yesterday },
+                { label: "মোট অর্ডার", value: campaignStats.data.total },
+                { label: "Complete", value: campaignStats.data.confirmed },
+                { label: "Cancelled", value: campaignStats.data.cancelled },
+              ].map((k) => (
+                <div key={k.label} className={cn("rounded-xl border bg-card px-3 py-2", k.strong && "border-violet-500/40")}>
+                  <div className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">{k.label}</div>
+                  <div className={cn("font-bold tabular-nums", k.strong ? "text-2xl text-violet-700" : "text-lg")}>{k.value}</div>
+                  {k.sub && <div className="text-[10px] tabular-nums text-muted-foreground">{k.sub}</div>}
+                </div>
+              ))}
+            </div>
+          ) : null}
+          {activeTab !== "all" && (
+            <button
+              type="button"
+              onClick={() => setActiveTab("all")}
+              className="mt-2 text-[11px] font-medium text-violet-700 underline-offset-2 hover:underline"
+            >
+              নিচের লিস্টে এখন শুধু এই tab-এর অর্ডার — এই campaign-এর সব অর্ডার দেখুন →
+            </button>
+          )}
+        </div>
+      )}
 
       {/* Tabs — segmented pills */}
       <div className="mt-6 overflow-x-auto [scrollbar-width:thin]">
