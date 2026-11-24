@@ -146,10 +146,11 @@ export function displayName(
     "contact_name" | "contact_username" | "contact_phone" | "external_user_id"
   >,
 ) {
+  const n = c.contact_name && !/^(undefined|null)$/i.test(c.contact_name) ? c.contact_name : null;
   return (
-    c.contact_name ||
+    n ||
     (c.contact_username ? `@${c.contact_username}` : null) ||
-    c.contact_phone ||
+    (c.contact_phone && c.contact_phone !== "undefined" ? c.contact_phone : null) ||
     `Customer ${c.external_user_id.slice(-4)}`
   );
 }

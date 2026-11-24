@@ -524,6 +524,7 @@ async function handleWhatsApp(ctx: Ctx, entry: any) {
       if (c?.wa_id) names.set(String(c.wa_id), c?.profile?.name ?? null);
 
     for (const m of v.messages ?? []) {
+      if (!m?.from) continue; // system / unsupported events carry no sender
       const from = String(m.from);
       if (m.type === "reaction" && m.reaction?.message_id) {
         await applyReaction(
