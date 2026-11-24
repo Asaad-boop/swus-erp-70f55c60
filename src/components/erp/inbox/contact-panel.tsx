@@ -18,7 +18,7 @@ import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
-import { BrandBadge } from "@/components/erp/brand-badge";
+import { BrandTag } from "./shared";
 import { useCurrentRole } from "@/hooks/use-current-role";
 import {
   addNote,
@@ -177,7 +177,7 @@ export function ContactPanel({
           )}
           <div className="mt-2 flex items-center gap-1.5">
             <PlatformChip platform={c.platform} />
-            <BrandBadge brandId={c.brand_id} variant="compact" />
+            <BrandTag brandId={c.brand_id} size="xs" />
           </div>
           <div className="mt-1.5 text-[11.5px] text-[var(--ib-ink-3,inherit)]">
             Prothom message {agoLabel(c.created_at)}

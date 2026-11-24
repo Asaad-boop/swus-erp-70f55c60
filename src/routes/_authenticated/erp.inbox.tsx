@@ -20,6 +20,8 @@ import {
   fetchChannels,
   fetchConversations,
   fetchInboxStaff,
+  fetchViewCounts,
+  runPool,
   fetchQuickReplies,
   updateConversation,
   type InboxView,
@@ -32,7 +34,9 @@ import { Thread } from "@/components/erp/inbox/thread";
 import { ContactPanel } from "@/components/erp/inbox/contact-panel";
 import { QuickRepliesManager } from "@/components/erp/inbox/quick-replies-manager";
 import { ChannelsSettings } from "@/components/erp/inbox/channels-settings";
-import { PlatformIcon } from "@/components/erp/inbox/shared";
+import { BrandTag, PlatformIcon } from "@/components/erp/inbox/shared";
+import { BulkReplyDialog } from "@/components/erp/inbox/bulk-reply-dialog";
+import { toast } from "sonner";
 import { CommentsView } from "@/components/erp/inbox/comments-view";
 import { AdsView } from "@/components/erp/inbox/ads-view";
 import { db } from "@/lib/erp/inbox/inbox";
@@ -75,6 +79,7 @@ function InboxPage() {
   const setView = (v: InboxView) => {
     setViewState(v);
     setLimit(CONV_PAGE);
+    setPicked(new Set());
     try {
       localStorage.setItem("inbox.view", v);
     } catch {
@@ -109,6 +114,51 @@ function InboxPage() {
         : undefined,
   });
   const conversations = convQ.data ?? [];
+
+  const countsQ = useQuery({
+    queryKey: ["inbox", "counts", brandIds, platform, userId],
+    queryFn: () => fetchViewCounts(brandIds, platform, userId),
+    enabled: brandIds.length > 0,
+    refetchInterval: 30_000,
+    staleTime: 5_000,
+  });
+
+  // ── bulk selection ──────────────────────────────────────────────────
+  const [picked, setPicked] = useState<Set<string>>(new Set());
+  const lastPick = useRef<string | null>(null);
+  const [bulkOpen, setBulkOpen] = useState(false);
+  const [bulkBusy, setBulkBusy] = useState(false);
+  useEffect(() => setPicked(new Set()), [brandFilter, platform]);
+  const onPick = (id: string, on: boolean, range?: boolean) => {
+    setPicked((prev) => {
+      const next = new Set(prev);
+      if (range && lastPick.current) {
+        const a = conversations.findIndex((x) => x.id === lastPick.current);
+        const b = conversations.findIndex((x) => x.id === id);
+        if (a >= 0 && b >= 0) {
+          for (let i = Math.min(a, b); i <= Math.max(a, b); i++) next.add(conversations[i]!.id);
+          return next;
+        }
+      }
+      if (on) next.add(id);
+      else next.delete(id);
+      return next;
+    });
+    lastPick.current = id;
+  };
+  const onPickAll = (on: boolean) =>
+    setPicked(on ? new Set(conversations.map((x) => x.id)) : new Set());
+  const pickedConvs = conversations.filter((x) => picked.has(x.id));
+  const bulkUpdate = async (patch: Parameters<typeof updateConversation>[1], label: string) => {
+    const list = [...picked];
+    setBulkBusy(true);
+    const r = await runPool(list, 6, (id) => updateConversation(id, patch));
+    setBulkBusy(false);
+    setPicked(new Set());
+    qc.invalidateQueries({ queryKey: ["inbox"] });
+    if (r.failed) toast.warning(`${r.done - r.failed}ta ${label}, ${r.failed}ta hoy nai`);
+    else toast.success(`${r.done}ta chat ${label}`);
+  };
 
   const channelsQ = useQuery({ queryKey: ["inbox", "channels"], queryFn: fetchChannels });
   const repliesQ = useQuery({ queryKey: ["inbox", "quick-replies"], queryFn: fetchQuickReplies });
@@ -172,6 +222,7 @@ function InboxPage() {
       const { conversations: list, selected: cur, select: go } = kbd.current;
       if (e.key === "Escape") {
         if (typing) (t as HTMLElement).blur();
+        else setPicked(new Set());
         return;
       }
       if (typing) return;
@@ -330,6 +381,7 @@ function InboxPage() {
         { event: "*", schema: "public", table: "inbox_conversations" },
         () => {
           qc.invalidateQueries({ queryKey: ["inbox", "conversations"] });
+          qc.invalidateQueries({ queryKey: ["inbox", "counts"] });
         },
       )
       .subscribe();
@@ -457,7 +509,7 @@ function InboxPage() {
                     setLimit(CONV_PAGE);
                   }}
                 >
-                  {b.name}
+                  <BrandTag brandId={b.id} size="xs" />
                 </FilterChip>
               ))}
             </div>
@@ -552,6 +604,16 @@ function InboxPage() {
               onSearch={setSearchText}
               view={view}
               onView={setView}
+              counts={countsQ.data ?? {}}
+              picked={picked}
+              onPick={onPick}
+              onPickAll={onPickAll}
+              onBulkReply={() => setBulkOpen(true)}
+              onBulkDone={() => void bulkUpdate({ status: "done" }, "Done")}
+              onBulkAssign={(uid) =>
+                void bulkUpdate({ assigned_to: uid }, uid ? "assign holo" : "unassign holo")
+              }
+              bulkBusy={bulkBusy}
               staff={staff}
               searchRef={searchRef}
               showBrand={brandFilter === "all" && brands.length > 1}
@@ -576,6 +638,23 @@ function InboxPage() {
                 staff={staff}
                 currentUserId={userId}
                 onBack={() => select(null)}
+                onNext={() => {
+                  const idx = conversations.findIndex((x) => x.id === selected.id);
+                  const waiting = (x: InboxConversation) =>
+                    x.id !== selected.id &&
+                    x.status === "open" &&
+                    x.last_message_direction === "in";
+                  const next =
+                    conversations.slice(idx + 1).find(waiting) ??
+                    conversations.find(waiting) ??
+                    null;
+                  if (next) {
+                    select(next.id);
+                    document
+                      .querySelector(`[data-conv-id="${next.id}"]`)
+                      ?.scrollIntoView({ block: "nearest" });
+                  } else toast.success("Shob reply deya shesh 🎉");
+                }}
                 onTogglePanel={() => {
                   if (typeof window !== "undefined" && window.innerWidth < 1280) setSheetOpen(true);
                   else setPanelOpen((v) => !v);
@@ -629,6 +708,14 @@ function InboxPage() {
               </SheetContent>
             </Sheet>
           )}
+
+          <BulkReplyDialog
+            open={bulkOpen}
+            onOpenChange={setBulkOpen}
+            conversations={pickedConvs}
+            quickReplies={repliesQ.data ?? []}
+            onFinished={() => setPicked(new Set())}
+          />
 
           {/* Customer panel */}
           {selected && panelOpen && (

@@ -552,3 +552,86 @@ export async function fetchBrandAds(brandId: string) {
     creative_thumbnail: string | null;
   }>;
 }
+
+// ── view counts + bulk reply ──────────────────────────────────────────
+export type ViewCounts = Partial<Record<InboxView | "ads_waiting" | "urgent", number>>;
+
+export async function fetchViewCounts(
+  brandIds: string[],
+  platform: InboxPlatform | "all",
+  userId: string | null,
+): Promise<ViewCounts> {
+  if (brandIds.length === 0) return {};
+  const { data, error } = await db.rpc("inbox_view_counts", {
+    _brand_ids: brandIds,
+    _platform: platform === "all" ? null : platform,
+    _user: userId,
+  });
+  if (error) throw error;
+  return (data ?? {}) as ViewCounts;
+}
+
+export type OutgoingAttachment = { url: string; type: "image" | "video" | "audio" | "file" };
+
+/**
+ * Send one reply (text and/or several attachments) to a conversation.
+ * Each attachment goes as its own message (Meta allows one per message);
+ * the text rides on the last one so the customer sees photos then words.
+ */
+export async function sendReply(
+  conversationId: string,
+  v: {
+    text: string | null;
+    attachments: OutgoingAttachment[];
+    replyToMessageId?: string | null;
+    quickReplyId?: string | null;
+  },
+) {
+  const atts = v.attachments;
+  if (atts.length === 0) {
+    return inboxApi("send", {
+      conversationId,
+      text: v.text,
+      replyToMessageId: v.replyToMessageId ?? null,
+      quickReplyId: v.quickReplyId ?? null,
+    });
+  }
+  for (let i = 0; i < atts.length; i++) {
+    const lastOne = i === atts.length - 1;
+    await inboxApi("send", {
+      conversationId,
+      text: lastOne ? v.text : null,
+      attachment: atts[i],
+      replyToMessageId: i === 0 ? (v.replyToMessageId ?? null) : null,
+      quickReplyId: lastOne ? (v.quickReplyId ?? null) : null,
+    });
+  }
+}
+
+/** Run `fn` over items with limited parallelism, reporting progress. */
+export async function runPool<T>(
+  items: T[],
+  limit: number,
+  fn: (item: T) => Promise<void>,
+  onProgress?: (done: number, failed: number) => void,
+) {
+  let i = 0;
+  let done = 0;
+  let failed = 0;
+  const errors: Array<{ item: T; error: string }> = [];
+  const worker = async () => {
+    while (i < items.length) {
+      const item = items[i++]!;
+      try {
+        await fn(item);
+      } catch (e: any) {
+        failed++;
+        errors.push({ item, error: String(e?.message ?? e) });
+      }
+      done++;
+      onProgress?.(done, failed);
+    }
+  };
+  await Promise.all(Array.from({ length: Math.min(limit, items.length) }, worker));
+  return { done, failed, errors };
+}

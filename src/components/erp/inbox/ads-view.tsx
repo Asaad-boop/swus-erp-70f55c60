@@ -29,7 +29,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { BrandBadge } from "@/components/erp/brand-badge";
+import { BrandTag } from "./shared";
 import { useBrand } from "@/contexts/brand-context";
 import { cn } from "@/lib/utils";
 import {
@@ -291,7 +291,7 @@ function AdRow({ r, showBrand }: { r: AdReportRow; showBrand: boolean }) {
           <div className="min-w-0">
             <div className="max-w-[280px] truncate font-medium">{r.ad_name}</div>
             <div className="ib-ink-3 flex items-center gap-1.5 text-[11.5px]">
-              {showBrand && <BrandBadge brandId={r.brand_id} variant="compact" />}
+              {showBrand && <BrandTag brandId={r.brand_id} size="xs" />}
               <span className="max-w-[240px] truncate">{r.campaign_name ?? "—"}</span>
             </div>
           </div>
@@ -449,7 +449,7 @@ function AutoReplies({ brandIds }: { brandIds: string[] }) {
             )}
             <div className="min-w-0 flex-1">
               <div className="flex flex-wrap items-center gap-1.5 text-[12.5px]">
-                <BrandBadge brandId={r.brand_id} variant="compact" />
+                <BrandTag brandId={r.brand_id} size="xs" />
                 <span className="font-medium">
                   {r.ad_id ? (r.ad_name ?? r.ad_id) : `${brandName(r.brand_id)} — shob ad`}
                 </span>

@@ -1,4 +1,14 @@
-import { Facebook, Instagram, MessageCircle } from "lucide-react";
+import { useEffect } from "react";
+import {
+  ChevronLeft,
+  ChevronRight,
+  Download,
+  Facebook,
+  Instagram,
+  MessageCircle,
+  X,
+} from "lucide-react";
+import { useBrand } from "@/contexts/brand-context";
 import { cn } from "@/lib/utils";
 import { PLATFORM_LABEL, PLATFORM_TONE, type InboxPlatform } from "@/lib/erp/inbox/inbox";
 
@@ -130,4 +140,137 @@ export function agoLabel(iso: string | null) {
   const r = relTime(iso);
   if (!r) return "";
   return r === "now" ? "just now" : /\d[mhd]$/.test(r) ? `${r} ago` : r;
+}
+
+/** Brand colours the team knows at a glance: Toyora red, HobbyShop black. */
+function brandTone(name: string) {
+  const n = name.toLowerCase();
+  if (n.includes("toyora")) return "bg-[#E1251B] text-white";
+  if (n.includes("hobby")) return "bg-[#111111] text-white ring-1 ring-inset ring-white/10";
+  if (n.includes("florencia")) return "bg-[#B4236A] text-white";
+  return "bg-slate-600 text-white";
+}
+
+/** Full brand name as a small solid tag. */
+export function BrandTag({
+  brandId,
+  className,
+  size = "sm",
+}: {
+  brandId: string | null | undefined;
+  className?: string;
+  size?: "xs" | "sm";
+}) {
+  const { brands } = useBrand();
+  const brand = brands.find((b) => b.id === brandId);
+  if (!brand) return null;
+  return (
+    <span
+      title={brand.name}
+      className={cn(
+        "inline-flex shrink-0 items-center rounded-[5px] font-semibold leading-none tracking-[0.01em]",
+        size === "xs" ? "h-4 px-1.5 text-[9.5px]" : "h-[18px] px-1.5 text-[10.5px]",
+        brandTone(brand.name),
+        className,
+      )}
+    >
+      {brand.name}
+    </span>
+  );
+}
+
+/** Full-screen photo viewer with arrow keys. */
+export function Lightbox({
+  images,
+  index,
+  onIndex,
+  onClose,
+}: {
+  images: string[];
+  index: number;
+  onIndex: (i: number) => void;
+  onClose: () => void;
+}) {
+  const url = images[index];
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") onClose();
+      else if (e.key === "ArrowLeft" && index > 0) onIndex(index - 1);
+      else if (e.key === "ArrowRight" && index < images.length - 1) onIndex(index + 1);
+    };
+    window.addEventListener("keydown", onKey, true);
+    return () => window.removeEventListener("keydown", onKey, true);
+  }, [index, images.length, onIndex, onClose]);
+  if (!url) return null;
+  const nav =
+    "absolute top-1/2 flex h-11 w-11 -translate-y-1/2 items-center justify-center rounded-full bg-white/10 text-white backdrop-blur transition-colors hover:bg-white/20 disabled:opacity-0";
+  return (
+    <div
+      className="fixed inset-0 z-[80] flex items-center justify-center bg-black/85 p-6 animate-in fade-in-0 duration-150"
+      onClick={onClose}
+      role="dialog"
+      aria-modal="true"
+    >
+      <img
+        src={url}
+        alt=""
+        referrerPolicy="no-referrer"
+        onClick={(e) => e.stopPropagation()}
+        className="max-h-full max-w-full rounded-lg object-contain shadow-2xl"
+      />
+      <div
+        className="absolute right-4 top-4 flex items-center gap-2"
+        onClick={(e) => e.stopPropagation()}
+      >
+        {images.length > 1 && (
+          <span className="rounded-full bg-white/10 px-3 py-1 text-xs font-medium text-white tabular-nums">
+            {index + 1} / {images.length}
+          </span>
+        )}
+        <a
+          href={url}
+          target="_blank"
+          rel="noreferrer"
+          className="flex h-9 w-9 items-center justify-center rounded-full bg-white/10 text-white hover:bg-white/20"
+          title="Notun tab e kholo"
+        >
+          <Download className="h-4 w-4" />
+        </a>
+        <button
+          type="button"
+          onClick={onClose}
+          className="flex h-9 w-9 items-center justify-center rounded-full bg-white/10 text-white hover:bg-white/20"
+          title="Bondho (Esc)"
+        >
+          <X className="h-4 w-4" />
+        </button>
+      </div>
+      {images.length > 1 && (
+        <>
+          <button
+            type="button"
+            className={cn(nav, "left-4")}
+            disabled={index === 0}
+            onClick={(e) => {
+              e.stopPropagation();
+              onIndex(index - 1);
+            }}
+          >
+            <ChevronLeft className="h-5 w-5" />
+          </button>
+          <button
+            type="button"
+            className={cn(nav, "right-4")}
+            disabled={index === images.length - 1}
+            onClick={(e) => {
+              e.stopPropagation();
+              onIndex(index + 1);
+            }}
+          >
+            <ChevronRight className="h-5 w-5" />
+          </button>
+        </>
+      )}
+    </div>
+  );
 }
