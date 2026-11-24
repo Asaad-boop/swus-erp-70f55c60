@@ -277,10 +277,10 @@ function PaymentDialogInner({ poId, brandId, grandTotal, dueAmount, onClose }: {
 }
 
 export function BulkReleaseDialog({
-  poId, brandId, cartons, poPaid, poSupplierTotal, onClose, onDone,
+  poId, brandId, cartons, poPaid, poSupplierTotal, poDue, onClose, onDone,
 }: {
   poId: string; brandId: string; cartons: any[];
-  poPaid: number; poSupplierTotal: number;
+  poPaid: number; poSupplierTotal: number; poDue?: number;
   onClose: () => void; onDone: () => void;
 }) {
   const fn = useServerFn(releaseCarton);
@@ -291,7 +291,11 @@ export function BulkReleaseDialog({
   const shipping = cartons.reduce((s, c) => s + Number(c.shipping_charge_bdt || 0), 0);
   const advanceShare = poSupplierTotal > 0 ? (poPaid * supplierCost) / poSupplierTotal : 0;
   const supplierDue = Math.max(0, supplierCost - advanceShare);
-  const defaultTotal = Math.round((supplierDue + shipping) * 100) / 100;
+  // PO-r actual due-er beshi bill kokhono chaibe na (fully paid PO = 0)
+  const rawBill = supplierDue + shipping;
+  const dueCap = poDue == null ? Infinity : Math.max(0, Math.abs(poDue) < 1 ? 0 : poDue);
+  const billScale = rawBill > 0 ? Math.min(1, dueCap / rawBill) : 0;
+  const defaultTotal = Math.round(rawBill * billScale * 100) / 100;
 
   const [amount, setAmount] = useState<number>(defaultTotal);
   const [walletId, setWalletId] = useState("");
@@ -302,14 +306,14 @@ export function BulkReleaseDialog({
     const sc = Number(c.supplier_cost_bdt || 0);
     const sh = Number(c.shipping_charge_bdt || 0);
     const adv = poSupplierTotal > 0 ? (poPaid * sc) / poSupplierTotal : 0;
-    const bill = Math.max(0, sc - adv) + sh;
+    const bill = (Math.max(0, sc - adv) + sh) * billScale;
     return { carton: c, bill };
   });
   const billSum = perCarton.reduce((s, r) => s + r.bill, 0);
 
   const mut = useMutation({
     mutationFn: async () => {
-      if (!withoutPay) {
+      if (!withoutPay && defaultTotal > 0) {
         if (amount <= 0) throw new Error("Pay amount required");
         if (!walletId) throw new Error("Pick a wallet");
       }

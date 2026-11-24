@@ -621,6 +621,7 @@ function PoDetailPage() {
           cartons={cartons}
           poItems={items}
           poPaid={poPaidForRelease}
+          poDue={Number(po.due_bdt ?? 0)}
           poSupplierTotal={poSupplierTotal}
         />
       )}
@@ -630,6 +631,7 @@ function PoDetailPage() {
           brandId={brandId}
           cartons={cartons.filter((c) => selectedCartons.has(c.id) && c.status === "arrived_bd")}
           poPaid={poPaidForRelease}
+          poDue={Number(po.due_bdt ?? 0)}
           poSupplierTotal={poSupplierTotal}
           onClose={() => setBulkReleaseOpen(false)}
           onDone={() => { setBulkReleaseOpen(false); setSelectedCartons(new Set()); }}

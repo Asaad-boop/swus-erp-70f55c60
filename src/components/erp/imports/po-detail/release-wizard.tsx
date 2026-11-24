@@ -48,7 +48,7 @@ function itemLabel(poItems: any[], cartonItem: any) {
  * Ek jaygay theke pura kaj — kono step miss hobe na.
  */
 export function ReleaseWizard({
-  open, onClose, poId, poNumber, brandId, cartons, poItems, poPaid, poSupplierTotal,
+  open, onClose, poId, poNumber, brandId, cartons, poItems, poPaid, poSupplierTotal, poDue,
 }: {
   open: boolean;
   onClose: () => void;
@@ -59,6 +59,8 @@ export function ReleaseWizard({
   poItems: any[];
   poPaid: number;
   poSupplierTotal: number;
+  /** PO-r actual due (DB) — release bill kokhono er beshi hobe na */
+  poDue?: number;
 }) {
   const qc = useQueryClient();
   const stageFn = useServerFn(updateCartonStage);
@@ -95,7 +97,10 @@ export function ReleaseWizard({
   const shipping = selected.reduce((s, c) => s + Number(c.shipping_charge_bdt || 0), 0);
   const advanceShare = poSupplierTotal > 0 ? (poPaid * supplierCost) / poSupplierTotal : 0;
   const supplierDue = Math.max(0, supplierCost - advanceShare);
-  const billTotal = Math.round((supplierDue + shipping) * 100) / 100;
+  const rawBill = supplierDue + shipping;
+  const dueCap = poDue == null ? Infinity : Math.max(0, Math.abs(poDue) < 1 ? 0 : poDue);
+  const billScale = rawBill > 0 ? Math.min(1, dueCap / rawBill) : 0;
+  const billTotal = Math.round(rawBill * billScale * 100) / 100;
 
   const defaultWarehouse = (warehouses as any[]).find((w) => w.is_default) ?? (warehouses as any[])[0];
   const effectiveWarehouse = warehouseId || defaultWarehouse?.id || "";
@@ -104,7 +109,7 @@ export function ReleaseWizard({
     const sc = Number(c.supplier_cost_bdt || 0);
     const sh = Number(c.shipping_charge_bdt || 0);
     const adv = poSupplierTotal > 0 ? (poPaid * sc) / poSupplierTotal : 0;
-    return { carton: c, bill: Math.max(0, sc - adv) + sh };
+    return { carton: c, bill: (Math.max(0, sc - adv) + sh) * billScale };
   });
   const billSum = perCartonBill.reduce((s, r) => s + r.bill, 0);
 
@@ -125,7 +130,7 @@ export function ReleaseWizard({
   const run = useMutation({
     mutationFn: async () => {
       const payAmount = skipPay ? 0 : amount;
-      if (!skipPay) {
+      if (!skipPay && billTotal > 0) {
         if (payAmount <= 0) throw new Error("Pay amount din, othoba 'Payment porey' select korun");
         if (!walletId) throw new Error("Wallet select korun");
       }

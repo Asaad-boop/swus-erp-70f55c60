@@ -93,7 +93,7 @@ export function CartonRow({ carton, poId, poNumber, poItems, brandId, poDue, poP
   // netDue(): pro-rata advance share-e ৳1 er kom rounding residue thakle
   // seta due hishebe dekhabo na — otherwise fully-paid carton-e phantom
   // "Due ৳0.04" chip + Pay form dekha Jay.
-  const cartonDue = netDue(Math.max(0, +(cartonBillable - cartonPaid).toFixed(2)));
+  const cartonDue = Math.min(netDue(Math.max(0, +(cartonBillable - cartonPaid).toFixed(2))), Math.max(0, netDue(poDue)));
   const hasDue = cartonDue > 0 && (status === "released" || status === "in_stock");
 
   const needsAction = status === "arrived_bd" || status === "released" || hasDue;
