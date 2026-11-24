@@ -20,6 +20,23 @@ export default defineConfig({
   },
   vite: {
     plugins: [mcpPlugin()],
+    environments: {
+      client: {
+        build: {
+          rollupOptions: {
+            output: {
+              // Lucide ships one module per icon; left alone each became its own
+              // ~1 KB chunk and the first paint waited on 100+ requests.
+              manualChunks(id: string) {
+                if (id.includes("node_modules/lucide-react")) return "icons";
+              },
+              // Fold remaining tiny shared chunks into their importers.
+              experimentalMinChunkSize: 8_000,
+            },
+          },
+        },
+      },
+    },
   },
   ...(isVercel
     ? {
