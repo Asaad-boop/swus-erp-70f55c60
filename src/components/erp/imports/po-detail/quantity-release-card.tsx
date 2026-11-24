@@ -253,14 +253,21 @@ export function QuantityReleaseCard({
   const previewMissing = previewLines.reduce((s, l) => s + l.missing, 0);
   const previewValue = previewLines.reduce((s, l) => s + l.value, 0);
   const previewDamagedValue = previewLines.reduce((s, l) => s + l.damagedValue, 0);
-  const previewGoodsDue = previewLines.reduce((s, l) => s + l.goodsDue, 0);
+  const rawGoodsDue = previewLines.reduce((s, l) => s + l.goodsDue, 0);
   // Shipment-wise mode-e ei release-er freight-i shipping due (PO-level pro-rata na)
-  const previewShipDue = shipmentWiseMode
+  const rawShipDue = shipmentWiseMode
     ? releaseFreight
     : previewLines.reduce((s, l) => s + l.shipDue, 0);
-  // Agher release-er baki (arrears) ekhane alada kore dekhano hoy — shudhu draft thakle
-  const arrearsGoods = previewLines.length > 0 ? goodsArrears : 0;
-  const arrearsShip = previewLines.length > 0 && !shipmentWiseMode ? shipArrears : 0;
+  const rawArrearsGoods = previewLines.length > 0 ? goodsArrears : 0;
+  const rawArrearsShip = previewLines.length > 0 && !shipmentWiseMode ? shipArrears : 0;
+  // PO-r actual due (DB) i shotti — PO puro paid hole release-e abar bill chaibe na.
+  const rawReleaseDue = rawGoodsDue + rawShipDue + rawArrearsGoods + rawArrearsShip;
+  const poDueCap = Math.max(0, netDue(po?.due_bdt));
+  const dueScale = rawReleaseDue > 0 ? Math.min(1, poDueCap / rawReleaseDue) : 0;
+  const previewGoodsDue = rawGoodsDue * dueScale;
+  const previewShipDue = rawShipDue * dueScale;
+  const arrearsGoods = rawArrearsGoods * dueScale;
+  const arrearsShip = rawArrearsShip * dueScale;
   const arrearsTotal = arrearsGoods + arrearsShip;
   const previewTotalDue = previewGoodsDue + previewShipDue + arrearsTotal;
   const previewPcs = previewLines.reduce((s, l) => s + l.qty + l.damaged + l.missing, 0);
@@ -823,7 +830,7 @@ export function QuantityReleaseCard({
               <TableBody>
                 {[
                   { k: "Goods (purchase) due", pu: effGoodsDuePerUnit, tot: previewGoodsDue },
-                  { k: "Shipping / overhead due", pu: shipDuePerUnit, tot: previewShipDue },
+                  { k: "Shipping / overhead due", pu: shipDuePerUnit * dueScale, tot: previewShipDue },
                   ...(arrearsTotal > 0
                     ? [{ k: "Agher release-er baki (arrears)", pu: 0, tot: arrearsTotal }]
                     : []),
@@ -838,10 +845,10 @@ export function QuantityReleaseCard({
                 <TableRow className="bg-muted/40">
                   <TableCell className="text-sm font-semibold">Total due</TableCell>
                   <TableCell className="text-right tabular-nums font-semibold">
-                    ৳{(effGoodsDuePerUnit + shipDuePerUnit).toFixed(4)}
+                    ৳{(effGoodsDuePerUnit + shipDuePerUnit * dueScale).toFixed(4)}
                   </TableCell>
                   <TableCell className="text-right tabular-nums font-semibold">
-                    {fmtBdt((effGoodsDuePerUnit + shipDuePerUnit) * 1000)}
+                    {fmtBdt((effGoodsDuePerUnit + shipDuePerUnit * dueScale) * 1000)}
                   </TableCell>
                   <TableCell className="text-right tabular-nums font-semibold text-orange-600">
                     {fmtBdt(previewTotalDue)}
