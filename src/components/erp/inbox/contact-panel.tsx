@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
-import { Link, useNavigate } from "@tanstack/react-router";
-import { extractOrderFn } from "@/lib/erp/inbox/inbox-ai.functions";
+import { Link } from "@tanstack/react-router";
+import { QuickOrderSheet } from "./quick-order-sheet";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   ExternalLink,
@@ -78,32 +78,7 @@ export function ContactPanel({
   }, [msgs, msgsQ.data]);
 
   const savedPhone = (c.contact_phone ?? "").replace(/\D/g, "").replace(/^88/, "");
-  const navigate = useNavigate();
-  const aiOrder = useMutation({
-    mutationFn: () => extractOrderFn({ data: { conversationId: c.id } }),
-    onSuccess: (r) => {
-      const got = [r.name && "naam", r.phone && "phone", r.address && "thikana"]
-        .filter(Boolean)
-        .join(", ");
-      toast.success(
-        `${got || "Kichu"} pawa geche${r.productIds.length ? ` + ${r.productIds.length}ta product` : ""} — check kore order dao`,
-      );
-      navigate({
-        to: "/erp/orders/new",
-        search: {
-          phone: r.phone || savedPhone || detectedPhone || undefined,
-          name: r.name || c.contact_name || undefined,
-          brand: c.brand_id,
-          source: PLATFORM_LABEL[c.platform],
-          address: r.address || undefined,
-          note: r.note || undefined,
-          items: r.productIds.length ? r.productIds.join(",") : undefined,
-          conv: c.id,
-        },
-      });
-    },
-    onError: (e: Error) => toast.error(e.message),
-  });
+  const [orderOpen, setOrderOpen] = useState(false);
   const ordersQ = useQuery({
     queryKey: ["inbox", "orders-by-phone", savedPhone],
     queryFn: () => fetchOrdersByPhone(savedPhone),
@@ -241,16 +216,11 @@ export function ContactPanel({
         <div className="space-y-2">
           <button
             type="button"
-            disabled={aiOrder.isPending}
-            onClick={() => aiOrder.mutate()}
-            title="Chat theke naam, phone, thikana ar product tule order form bhore dibe"
+            onClick={() => setOrderOpen(true)}
+            title="Chat theke naam, phone, thikana, product ar color tule order banabe — inbox theke na beriye"
             className="flex h-11 w-full items-center justify-center gap-2 rounded-xl bg-primary text-[13.5px] font-semibold text-primary-foreground shadow-sm transition-all hover:opacity-90 active:scale-[0.99] disabled:opacity-60"
           >
-            {aiOrder.isPending ? (
-              <Loader2 className="h-4 w-4 animate-spin" />
-            ) : (
-              <Sparkles className="h-4 w-4" />
-            )}
+            <Sparkles className="h-4 w-4" />
             Chat theke order banao
           </button>
           <Link
@@ -440,6 +410,7 @@ export function ContactPanel({
           </ul>
         </div>
       </div>
+      <QuickOrderSheet conversation={c} open={orderOpen} onOpenChange={setOrderOpen} />
     </div>
   );
 }

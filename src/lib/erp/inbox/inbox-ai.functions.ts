@@ -258,11 +258,22 @@ export const rewriteReplyFn = createServerFn({ method: "POST" })
   });
 
 /** Pull order details (name, phone, address, products) out of the chat for the order form. */
+export type ExtractedItem = {
+  productId: string;
+  title: string;
+  price: number;
+  image: string | null;
+  stock: number | null;
+  quantity: number;
+  /** colour the customer asked for, as written (matched to a variant in the form) */
+  color: string | null;
+};
+
 export const extractOrderFn = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((d) => z.object({ conversationId: z.string().uuid() }).parse(d))
   .handler(async ({ data, context }) => {
-    const { transcript, msgs, conv } = await loadChat(context.supabase, data.conversationId, 40);
+    const { transcript, msgs, conv } = await loadChat(context.supabase, data.conversationId, 60);
     // Products we already quoted with "দাম দাও" — newest first, unique.
     const quoted = Array.from(
       new Set(
@@ -273,36 +284,123 @@ export const extractOrderFn = createServerFn({ method: "POST" })
       ),
     ).slice(0, 10);
     const phoneRe = /(?:\+?88)?0?1[3-9]\d{8}/;
+    const bnDigits = (b: string) => b.replace(/[০-৯]/g, (d) => String("০১২৩৪৫৬৭৮৯".indexOf(d)));
     const fromText = [...msgs]
       .reverse()
       .filter((m) => m.direction === "in")
-      .map((m) => (m.body ?? "").replace(/[০-৯]/g, (d) => String("০১২৩৪৫৬৭৮৯".indexOf(d))))
+      .map((m) => bnDigits((m.body ?? "").replace(/[\s-]/g, "")))
       .find((b) => phoneRe.test(b))
       ?.match(phoneRe)?.[0];
     const norm = (p?: string | null) => {
-      const d = (p ?? "").replace(/\D/g, "").slice(-11);
+      const d = bnDigits(p ?? "")
+        .replace(/\D/g, "")
+        .slice(-11);
       return d.length === 11 && d.startsWith("01")
         ? d
         : d.length === 10 && d.startsWith("1")
           ? `0${d}`
           : "";
     };
+
+    // The brand's catalog (with its own prices) so the AI can name what was ordered.
+    const [{ data: own }, { data: listings }, { data: convAd }] = await Promise.all([
+      context.supabase
+        .from("products")
+        .select("id, title, price, image, available_stock")
+        .eq("brand_id", conv.brand_id)
+        .eq("is_active", true)
+        .neq("product_kind", "component")
+        .order("updated_at", { ascending: false })
+        .limit(250),
+      context.supabase
+        .from("product_brand_listings")
+        .select("product_id, price, title_override, image_override")
+        .eq("brand_id", conv.brand_id)
+        .eq("is_active", true)
+        .limit(500),
+      context.supabase
+        .from("inbox_conversations")
+        .select("ad_title")
+        .eq("id", conv.id)
+        .maybeSingle(),
+    ]);
+    type P = {
+      id: string;
+      title: string;
+      price: number | null;
+      image: string | null;
+      available_stock: number | null;
+    };
+    const ovr = new Map(
+      (
+        (listings ?? []) as Array<{
+          product_id: string;
+          price: number | null;
+          title_override: string | null;
+          image_override: string | null;
+        }>
+      ).map((l) => [l.product_id, l]),
+    );
+    const catalog = new Map<string, P>();
+    for (const p of (own ?? []) as P[]) catalog.set(p.id, p);
+    const missing = [...quoted, ...ovr.keys()].filter((id) => !catalog.has(id)).slice(0, 200);
+    if (missing.length) {
+      const { data: extra } = await context.supabase
+        .from("products")
+        .select("id, title, price, image, available_stock")
+        .in("id", missing)
+        .eq("is_active", true);
+      for (const p of (extra ?? []) as P[]) catalog.set(p.id, p);
+    }
+    const list = [...catalog.values()].map((p) => {
+      const o = ovr.get(p.id);
+      return {
+        id: p.id,
+        title: o?.title_override ?? p.title,
+        price: Number(o?.price ?? p.price ?? 0),
+        image: o?.image_override ?? p.image,
+        stock: p.available_stock,
+      };
+    });
+    const quotedSet = new Set(quoted);
+    const catalogText = list
+      .map(
+        (p, i) =>
+          `${i + 1}. ${p.title} — ৳${p.price}${quotedSet.has(p.id) ? " (price already sent in chat)" : ""}`,
+      )
+      .join("\n");
+
     let name = conv.contact_name ?? "";
     let phone = norm(fromText) || norm(conv.contact_phone);
     let address = "";
     let note = "";
-    const ai = await aiJson<{ name?: string; phone?: string; address?: string; note?: string }>(
+    let items: ExtractedItem[] = [];
+    const ai = await aiJson<{
+      name?: string;
+      phone?: string;
+      address?: string;
+      note?: string;
+      items?: Array<{ n?: number; qty?: number; color?: string }>;
+    }>(
       [
         {
           role: "system",
           content:
-            "Extract the customer's delivery details from this shop chat (Bangla/English mixed). " +
-            "name = recipient's name as the customer wrote it (else empty); phone = 11-digit BD mobile starting 01; " +
-            "address = full delivery address on one line (house/road, area, thana, district) exactly as given, else empty; " +
-            "note = special instructions (size, colour, delivery time) in short, else empty. " +
-            'Return JSON {"name":"","phone":"","address":"","note":""}. Never guess.',
+            "You read a Bangladeshi online-shop chat (Bangla, Banglish and English mixed) and fill the order form. " +
+            "name = the recipient's name exactly as the customer wrote it (else empty). " +
+            "phone = 11-digit BD mobile starting 01 (convert Bangla digits). " +
+            "address = the full delivery address on one line, in the customer's words and script: house/road, area, thana/upazila, district. Fix only obvious typos; never invent parts. " +
+            "items = what the customer wants to buy: catalog number n, qty (default 1), color as the customer wrote it (else empty). " +
+            "Use the ad title and products whose price was already sent as strong hints. Only include items you are fairly sure about. " +
+            "note = short special instructions (delivery time, gift wrap, size), else empty. " +
+            'Return JSON {"name":"","phone":"","address":"","note":"","items":[{"n":1,"qty":1,"color":""}]}. Never guess.',
         },
-        { role: "user", content: transcript || "(empty)" },
+        {
+          role: "user",
+          content:
+            `Ad the chat came from: ${(convAd as { ad_title?: string | null } | null)?.ad_title ?? "none"}\n\n` +
+            `Catalog:\n${catalogText || "(empty)"}\n\nChat (oldest first):\n${transcript || "(empty)"}`,
+        },
       ],
       false,
     );
@@ -311,13 +409,47 @@ export const extractOrderFn = createServerFn({ method: "POST" })
       phone = norm(ai.phone) || phone;
       address = (ai.address ?? "").trim();
       note = (ai.note ?? "").trim();
+      const seen = new Set<string>();
+      for (const it of ai.items ?? []) {
+        const p = Number.isInteger(it.n) ? list[(it.n as number) - 1] : undefined;
+        if (!p) continue;
+        const color = (it.color ?? "").trim() || null;
+        const key = `${p.id}|${color ?? ""}`;
+        if (seen.has(key)) continue;
+        seen.add(key);
+        items.push({
+          productId: p.id,
+          title: p.title,
+          price: p.price,
+          image: p.image,
+          stock: p.stock,
+          quantity: Math.min(50, Math.max(1, Math.round(Number(it.qty) || 1))),
+          color,
+        });
+      }
     }
+    // No AI pick: fall back to the products we quoted in the chat.
+    if (items.length === 0)
+      items = quoted
+        .map((id) => list.find((p) => p.id === id))
+        .filter((p): p is (typeof list)[number] => !!p)
+        .slice(0, 5)
+        .map((p) => ({
+          productId: p.id,
+          title: p.title,
+          price: p.price,
+          image: p.image,
+          stock: p.stock,
+          quantity: 1,
+          color: null,
+        }));
     return {
       name,
       phone,
       address,
       note,
-      productIds: quoted,
+      items,
+      productIds: items.map((i) => i.productId),
       brandId: conv.brand_id,
       platform: conv.platform,
     };

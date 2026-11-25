@@ -11,6 +11,7 @@ import {
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useInboxT } from "@/lib/erp/inbox/i18n";
 import { staffColor } from "./conversation-list";
+import { QuickOrderSheet } from "./quick-order-sheet";
 import {
   AlarmClock,
   ChevronDown,
@@ -512,6 +513,7 @@ export function Thread({
 }: Props) {
   const qc = useQueryClient();
   const { t: tr } = useInboxT();
+  const [orderOpen, setOrderOpen] = useState(false);
   const [text, setText] = useState("");
   const [drafts, setDrafts] = useState<Draft[]>([]);
   const [slashIndex, setSlashIndex] = useState(0);
@@ -1199,6 +1201,15 @@ export function Thread({
             )}
           </DropdownMenuContent>
         </DropdownMenu>
+        <button
+          type="button"
+          onClick={() => setOrderOpen(true)}
+          title="Chat theke order banao (naam, phone, thikana, product nije bhore dibe)"
+          className="flex h-8 items-center gap-1.5 rounded-lg bg-primary px-2.5 text-[12px] font-semibold text-primary-foreground shadow-sm transition hover:opacity-90"
+        >
+          <ShoppingBag className="h-3.5 w-3.5" />
+          <span className="hidden sm:inline">Order</span>
+        </button>
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
             <button
@@ -1847,6 +1858,7 @@ export function Thread({
           </div>
         </div>
       </div>
+      <QuickOrderSheet conversation={c} open={orderOpen} onOpenChange={setOrderOpen} />
     </div>
   );
 }
