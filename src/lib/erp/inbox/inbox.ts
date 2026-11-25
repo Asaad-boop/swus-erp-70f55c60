@@ -214,6 +214,8 @@ export type ConversationFilters = {
   label?: string | null;
   userId: string | null;
   search: string;
+  /** "all" | "me" | "none" (unassigned) | a staff user id */
+  owner?: string;
 };
 
 export type InboxStaff = { id: string; display_name: string };
@@ -288,6 +290,9 @@ export async function fetchConversations(
       break;
   }
   if (f.label) q = q.contains("tags", [f.label]);
+  if (f.owner === "me") q = f.userId ? q.eq("assigned_to", f.userId) : q.limit(0);
+  else if (f.owner === "none") q = q.is("assigned_to", null);
+  else if (f.owner && f.owner !== "all") q = q.eq("assigned_to", f.owner);
   const s = f.search.trim().replace(/[%,()]/g, "");
   if (s)
     q = q.or(
@@ -398,25 +403,61 @@ export async function deleteQuickReply(id: string) {
 }
 
 /** Upload a file from the composer to the public inbox-media bucket. */
+/**
+ * Shrink big photos before upload: phone pictures are 3–8 MB, and Meta has to
+ * download every byte before it answers us, so a 300 KB JPEG sends many times
+ * faster and looks the same in a chat.
+ */
+export async function compressImage(file: File, maxSide = 1600, quality = 0.82): Promise<File> {
+  if (!file.type.startsWith("image/") || /gif|svg/.test(file.type) || file.size < 350_000)
+    return file;
+  try {
+    const bmp = await createImageBitmap(file);
+    const scale = Math.min(1, maxSide / Math.max(bmp.width, bmp.height));
+    const w = Math.round(bmp.width * scale);
+    const h = Math.round(bmp.height * scale);
+    const canvas = document.createElement("canvas");
+    canvas.width = w;
+    canvas.height = h;
+    const ctx = canvas.getContext("2d");
+    if (!ctx) return file;
+    ctx.fillStyle = "#fff";
+    ctx.fillRect(0, 0, w, h);
+    ctx.drawImage(bmp, 0, 0, w, h);
+    bmp.close?.();
+    const blob = await new Promise<Blob | null>((r) => canvas.toBlob(r, "image/jpeg", quality));
+    if (!blob || blob.size >= file.size) return file;
+    return new File([blob], file.name.replace(/\.[^.]+$/, "") + ".jpg", { type: "image/jpeg" });
+  } catch {
+    return file;
+  }
+}
+
+export function attachmentKind(mime: string): OutgoingAttachment["type"] {
+  return mime.startsWith("image/")
+    ? "image"
+    : mime.startsWith("video/")
+      ? "video"
+      : mime.startsWith("audio/")
+        ? "audio"
+        : "file";
+}
+
 export async function uploadInboxMedia(
-  file: File,
+  original: File,
   brandId: string,
 ): Promise<{ url: string; type: "image" | "video" | "audio" | "file" }> {
-  if (file.size > 15 * 1024 * 1024) throw new Error("File 15MB er beshi");
+  const type = attachmentKind(original.type);
+  const file = type === "image" ? await compressImage(original) : original;
+  const cap = type === "video" ? 25 : 15;
+  if (file.size > cap * 1024 * 1024) throw new Error(`File ${cap}MB er beshi`);
   const ext = (file.name.split(".").pop() || "bin").toLowerCase().replace(/[^a-z0-9]/g, "");
   const path = `${brandId}/outgoing/${crypto.randomUUID()}.${ext}`;
   const { error } = await supabase.storage
     .from("inbox-media")
-    .upload(path, file, { contentType: file.type || undefined });
+    .upload(path, file, { contentType: file.type || undefined, cacheControl: "31536000" });
   if (error) throw error;
   const url = supabase.storage.from("inbox-media").getPublicUrl(path).data.publicUrl;
-  const type = file.type.startsWith("image/")
-    ? "image"
-    : file.type.startsWith("video/")
-      ? "video"
-      : file.type.startsWith("audio/")
-        ? "audio"
-        : "file";
   return { url, type };
 }
 
@@ -634,8 +675,9 @@ export type OutgoingAttachment = { url: string; type: "image" | "video" | "audio
 
 /**
  * Send one reply (text and/or several attachments) to a conversation.
- * Each attachment goes as its own message (Meta allows one per message);
- * the text rides on the last one so the customer sees photos then words.
+ * Each attachment goes as its own message (Meta allows one per message).
+ * The photos go out together in parallel; the last one carries the text,
+ * so the customer sees the photos and then the words.
  */
 export async function sendReply(
   conversationId: string,
@@ -655,16 +697,30 @@ export async function sendReply(
       quickReplyId: v.quickReplyId ?? null,
     });
   }
-  for (let i = 0; i < atts.length; i++) {
-    const lastOne = i === atts.length - 1;
-    await inboxApi("send", {
-      conversationId,
-      text: lastOne ? v.text : null,
-      attachment: atts[i],
-      replyToMessageId: i === 0 ? (v.replyToMessageId ?? null) : null,
-      quickReplyId: lastOne ? (v.quickReplyId ?? null) : null,
-    });
-  }
+  const head = atts.slice(0, -1);
+  const last = atts[atts.length - 1]!;
+  const firstErr: unknown[] = [];
+  await runPool(head, 4, async (a) => {
+    try {
+      await inboxApi("send", {
+        conversationId,
+        text: null,
+        attachment: a,
+        replyToMessageId: a === atts[0] ? (v.replyToMessageId ?? null) : null,
+      });
+    } catch (e) {
+      firstErr.push(e);
+      throw e;
+    }
+  });
+  await inboxApi("send", {
+    conversationId,
+    text: v.text,
+    attachment: last,
+    replyToMessageId: atts.length === 1 ? (v.replyToMessageId ?? null) : null,
+    quickReplyId: v.quickReplyId ?? null,
+  });
+  if (firstErr.length) throw firstErr[0];
 }
 
 /** Run `fn` over items with limited parallelism, reporting progress. */

@@ -1,6 +1,14 @@
 import {
   AlarmClock,
   AlertTriangle,
+  CheckCheck,
+  CircleDot,
+  CornerUpLeft,
+  List,
+  Megaphone,
+  MoreHorizontal,
+  User,
+  Users,
   ShoppingBag,
   SlidersHorizontal,
   Check,
@@ -35,25 +43,72 @@ import {
   type ViewCounts,
 } from "@/lib/erp/inbox/inbox";
 import { BrandTag, ContactAvatar, PlatformIcon, relTime } from "./shared";
+import { LANG_OPTIONS, useInboxT, type InboxStrKey } from "@/lib/erp/inbox/i18n";
 
-type ViewDef = { key: InboxView; label: string; hint: string };
+type ViewDef = {
+  key: InboxView;
+  label: InboxStrKey;
+  hint: InboxStrKey;
+  icon: typeof AlarmClock;
+  /** colour carries the meaning: staff learn queues by colour + icon + word */
+  tone: string;
+  count?: Exclude<keyof ViewCounts, "labels">;
+};
 
 /** Always visible — the queues people actually work from. */
 const PRIMARY: ViewDef[] = [
-  { key: "awaiting", label: "Reply baki", hint: "Customer er last message er reply hoy nai" },
-  { key: "ads", label: "Ad theke", hint: "Message ad e click kore asha open chat" },
-  { key: "mine", label: "Amar", hint: "Amake assign kora open chat" },
-  { key: "complaint", label: "Complaint", hint: "Obhijog" },
-  { key: "followup", label: "Follow-up", hint: "Pore dekhbo" },
-  { key: "open", label: "Open", hint: "Shob open chat" },
+  {
+    key: "awaiting",
+    label: "q_awaiting",
+    hint: "h_awaiting",
+    icon: CornerUpLeft,
+    tone: "#E11D48",
+    count: "awaiting",
+  },
+  {
+    key: "unread",
+    label: "q_unread",
+    hint: "h_unread",
+    icon: CircleDot,
+    tone: "#2563EB",
+    count: "unread",
+  },
+  { key: "mine", label: "q_mine", hint: "h_mine", icon: User, tone: "#4F46E5", count: "mine" },
+  {
+    key: "complaint",
+    label: "q_complaint",
+    hint: "h_complaint",
+    icon: AlertTriangle,
+    tone: "#EA580C",
+    count: "complaint",
+  },
+  {
+    key: "followup",
+    label: "q_followup",
+    hint: "h_followup",
+    icon: AlarmClock,
+    tone: "#CA8A04",
+    count: "followup_due",
+  },
+  { key: "all", label: "q_all", hint: "h_all", icon: List, tone: "#64748B" },
 ];
 const MORE: ViewDef[] = [
-  { key: "unread", label: "Unread", hint: "Pora hoy nai" },
-  { key: "unassigned", label: "Karo na", hint: "Karo kache assign kora nai" },
-  { key: "ordered", label: "Order hoyeche", hint: "Ei chat theke order" },
-  { key: "done", label: "Done", hint: "Shesh kora chat" },
-  { key: "all", label: "Shob", hint: "Shob chat" },
+  { key: "ads", label: "q_ads", hint: "h_ads", icon: Megaphone, tone: "#9333EA", count: "ads" },
+  {
+    key: "unassigned",
+    label: "q_unassigned",
+    hint: "h_unassigned",
+    icon: Users,
+    tone: "#64748B",
+    count: "unassigned",
+  },
+  { key: "ordered", label: "q_ordered", hint: "h_ordered", icon: ShoppingBag, tone: "#059669" },
+  { key: "open", label: "q_open", hint: "h_open", icon: InboxIcon, tone: "#64748B" },
+  { key: "done", label: "q_done", hint: "h_done", icon: CheckCircle2, tone: "#64748B" },
 ];
+const ALL_VIEWS = [...PRIMARY, ...MORE];
+
+export type OwnerFilter = "all" | "me" | "none" | string;
 
 function waitLabel(iso: string | null) {
   if (!iso) return null;
@@ -101,117 +156,165 @@ type Props = {
   onBulkDone: () => void;
   onBulkAssign: (userId: string | null) => void;
   bulkBusy: boolean;
+  owner: OwnerFilter;
+  onOwner: (o: OwnerFilter) => void;
+  currentUserId: string | null;
+  onMarkAllRead?: () => void;
 };
 
 export function ConversationList(p: Props) {
+  const { t, num } = useInboxT();
   const picking = p.picked.size > 0;
   const allPicked = p.conversations.length > 0 && p.conversations.every((c) => p.picked.has(c.id));
+  const activeView = ALL_VIEWS.find((v) => v.key === p.view) ?? PRIMARY[0]!;
+  const moreActive = MORE.some((v) => v.key === p.view);
+  const ownerStaff =
+    p.owner !== "all" && p.owner !== "me" && p.owner !== "none"
+      ? p.staff.find((s) => s.id === p.owner)
+      : undefined;
+  const ownerLabel =
+    p.owner === "all"
+      ? t("everyone")
+      : p.owner === "me"
+        ? t("me")
+        : p.owner === "none"
+          ? t("nobody")
+          : (ownerStaff?.display_name.split(" ")[0] ?? t("everyone"));
+  const hasUnread = p.conversations.some((c) => c.unread_count > 0);
 
   return (
     <div className="flex h-full min-h-0 flex-col">
-      <div className="space-y-2 border-b border-[var(--ib-line)] px-2.5 pb-2 pt-2.5">
-        <label className="group relative block">
-          <Search className="ib-ink-3 pointer-events-none absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2" />
-          <input
-            ref={p.searchRef}
-            value={p.search}
-            onChange={(e) => p.onSearch(e.target.value)}
-            placeholder="Naam, phone, message…"
-            className="h-8 w-full rounded-lg border border-transparent bg-[var(--ib-canvas)] pl-8 pr-8 text-[13px] outline-none transition-colors placeholder:text-[var(--ib-ink-3)] focus:border-[var(--ib-line)] focus:bg-[var(--ib-panel)]"
-          />
-          {p.search ? (
-            <button
-              type="button"
-              onClick={() => p.onSearch("")}
-              className="ib-ink-3 absolute right-1.5 top-1/2 -translate-y-1/2 rounded p-1 hover:text-[var(--ib-ink)]"
-            >
-              <X className="h-3 w-3" />
-            </button>
-          ) : (
-            <kbd className="ib-ink-3 pointer-events-none absolute right-2 top-1/2 -translate-y-1/2 rounded border border-[var(--ib-line)] bg-[var(--ib-panel)] px-1 text-[10px] group-focus-within:hidden">
-              /
-            </kbd>
-          )}
-        </label>
+      <div className="space-y-2 px-2.5 pb-2 pt-2.5">
+        <div className="flex items-center gap-1.5">
+          <label className="group relative block min-w-0 flex-1">
+            <Search className="ib-ink-3 pointer-events-none absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2" />
+            <input
+              ref={p.searchRef}
+              value={p.search}
+              onChange={(e) => p.onSearch(e.target.value)}
+              placeholder={t("search")}
+              className="h-8 w-full rounded-lg border border-transparent bg-[var(--ib-canvas)] pl-8 pr-8 text-[13px] outline-none transition-colors placeholder:text-[var(--ib-ink-3)] focus:border-[var(--ib-line)] focus:bg-[var(--ib-panel)]"
+            />
+            {p.search ? (
+              <button
+                type="button"
+                onClick={() => p.onSearch("")}
+                className="ib-ink-3 absolute right-1.5 top-1/2 -translate-y-1/2 rounded p-1 hover:text-[var(--ib-ink)]"
+              >
+                <X className="h-3 w-3" />
+              </button>
+            ) : (
+              <kbd className="ib-ink-3 pointer-events-none absolute right-2 top-1/2 -translate-y-1/2 rounded border border-[var(--ib-line)] bg-[var(--ib-panel)] px-1 text-[10px] group-focus-within:hidden">
+                /
+              </kbd>
+            )}
+          </label>
+          <LangSwitch />
+        </div>
 
         {picking ? (
           <BulkBar {...p} allPicked={allPicked} />
         ) : (
-          <div className="flex h-7 items-center gap-2 px-0.5">
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
+          <div className="flex h-7 items-center gap-1">
+            {(["all", "messenger", "instagram", "whatsapp"] as const).map((pl) => {
+              const on = p.platform === pl;
+              return (
                 <button
+                  key={pl}
                   type="button"
-                  className="flex min-w-0 items-center gap-1 rounded-md text-[14px] font-semibold tracking-[-0.01em] lg:pointer-events-none"
+                  onClick={() => p.onPlatform(pl)}
+                  title={pl === "all" ? t("allChannels") : PLATFORM_LABEL[pl]}
+                  aria-pressed={on}
+                  className={cn(
+                    "flex h-7 shrink-0 items-center justify-center rounded-full border text-[11.5px] font-medium transition-colors",
+                    pl === "all" ? "px-2.5" : "w-7",
+                    on
+                      ? pl === "all"
+                        ? "border-[var(--ib-ink)] bg-[var(--ib-ink)] text-[var(--ib-panel)]"
+                        : "border-[var(--ib-ink)] bg-[var(--ib-panel)] ring-1 ring-[var(--ib-ink)]"
+                      : "border-[var(--ib-line)] bg-[var(--ib-panel)] hover:bg-[var(--ib-hover)]",
+                  )}
                 >
-                  <span className="truncate">{p.title}</span>
-                  <ChevronDown className="ib-ink-3 h-3.5 w-3.5 lg:hidden" />
+                  {pl === "all" ? (
+                    t("allChannels")
+                  ) : (
+                    <PlatformIcon platform={pl} className="h-4 w-4" />
+                  )}
                 </button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="start" className="w-52 lg:hidden">
-                {[...PRIMARY, ...MORE].map((v) => (
-                  <DropdownMenuItem
-                    key={v.key}
-                    onClick={() => p.onView(v.key)}
-                    className="text-[13px]"
-                  >
-                    <span className="flex-1">{v.label}</span>
-                    {!!p.counts[v.key] &&
-                      v.key !== "open" &&
-                      v.key !== "done" &&
-                      v.key !== "all" && (
-                        <span className="ib-ink-3 tabular text-[11px]">
-                          {fmtCount(p.counts[v.key])}
-                        </span>
-                      )}
-                    {p.view === v.key && <Check className="ml-2 h-3.5 w-3.5" />}
-                  </DropdownMenuItem>
-                ))}
-              </DropdownMenuContent>
-            </DropdownMenu>
-            {p.subtitle && <span className="ib-ink-3 tabular text-[12px]">{p.subtitle}</span>}
+              );
+            })}
             <div className="ml-auto" />
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <button
                   type="button"
+                  title={t("showChatsOf")}
                   className={cn(
-                    "flex h-6 items-center gap-1 rounded-md px-1.5 text-[11.5px] transition-colors",
-                    p.platform !== "all" || p.label
-                      ? "bg-[var(--ib-accent-soft)] font-medium text-primary"
-                      : "ib-ink-3 hover:bg-[var(--ib-hover)] hover:text-[var(--ib-ink)]",
+                    "flex h-7 max-w-[110px] items-center gap-1 rounded-full border px-2 text-[11.5px] font-medium transition-colors",
+                    p.owner !== "all"
+                      ? "border-primary/40 bg-[var(--ib-accent-soft)] text-primary"
+                      : "border-[var(--ib-line)] bg-[var(--ib-panel)] hover:bg-[var(--ib-hover)]",
                   )}
-                  title="Channel / label diye filter"
                 >
-                  <SlidersHorizontal className="h-3 w-3" />
-                  {p.platform !== "all"
-                    ? PLATFORM_LABEL[p.platform]
-                    : p.label
-                      ? labelInfo(p.label).label
-                      : "Filter"}
+                  <Users className="h-3.5 w-3.5 shrink-0" />
+                  <span className="truncate">{ownerLabel}</span>
+                  <ChevronDown className="h-3 w-3 shrink-0 opacity-60" />
+                </button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="max-h-80 w-52 overflow-y-auto">
+                <DropdownMenuLabel className="text-xs">{t("showChatsOf")}</DropdownMenuLabel>
+                {(
+                  [
+                    ["all", t("everyone")],
+                    ["me", t("me")],
+                    ["none", t("nobody")],
+                  ] as const
+                ).map(([k, l]) => (
+                  <DropdownMenuItem key={k} onClick={() => p.onOwner(k)} className="text-[13px]">
+                    <span className="flex-1">{l}</span>
+                    {p.owner === k && <Check className="h-3.5 w-3.5" />}
+                  </DropdownMenuItem>
+                ))}
+                {p.staff.filter((s) => s.id !== p.currentUserId).length > 0 && (
+                  <DropdownMenuSeparator />
+                )}
+                {p.staff
+                  .filter((s) => s.id !== p.currentUserId)
+                  .map((s) => (
+                    <DropdownMenuItem
+                      key={s.id}
+                      onClick={() => p.onOwner(s.id)}
+                      className="text-[13px]"
+                    >
+                      <span
+                        className="mr-2 flex h-5 w-5 items-center justify-center rounded-full text-[9px] font-bold text-white"
+                        style={{ background: staffColor(s.id) }}
+                      >
+                        {initials(s.display_name)}
+                      </span>
+                      <span className="flex-1 truncate">{s.display_name}</span>
+                      {p.owner === s.id && <Check className="h-3.5 w-3.5" />}
+                    </DropdownMenuItem>
+                  ))}
+              </DropdownMenuContent>
+            </DropdownMenu>
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <button
+                  type="button"
+                  className={cn(
+                    "flex h-7 w-7 items-center justify-center rounded-full border transition-colors",
+                    p.label
+                      ? "border-primary/40 bg-[var(--ib-accent-soft)] text-primary"
+                      : "border-[var(--ib-line)] bg-[var(--ib-panel)] hover:bg-[var(--ib-hover)]",
+                  )}
+                  title={p.label ? `${t("label")}: ${labelInfo(p.label).label}` : t("label")}
+                >
+                  <SlidersHorizontal className="h-3.5 w-3.5" />
                 </button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end" className="w-52">
-                <DropdownMenuLabel className="text-xs">Channel</DropdownMenuLabel>
-                {(["all", "messenger", "instagram", "whatsapp"] as const).map((pl) => (
-                  <DropdownMenuItem
-                    key={pl}
-                    onClick={() => p.onPlatform(pl)}
-                    className="text-[13px]"
-                  >
-                    {pl === "all" ? (
-                      <span className="mr-2 w-4" />
-                    ) : (
-                      <PlatformIcon platform={pl} className="mr-2 h-3.5 w-3.5" />
-                    )}
-                    <span className="flex-1">
-                      {pl === "all" ? "Shob channel" : PLATFORM_LABEL[pl]}
-                    </span>
-                    {p.platform === pl && <Check className="h-3.5 w-3.5" />}
-                  </DropdownMenuItem>
-                ))}
-                <DropdownMenuSeparator />
-                <DropdownMenuLabel className="text-xs">Label</DropdownMenuLabel>
+                <DropdownMenuLabel className="text-xs">{t("label")}</DropdownMenuLabel>
                 {INBOX_LABELS.map((l) => (
                   <DropdownMenuItem
                     key={l.key}
@@ -222,23 +325,24 @@ export function ConversationList(p: Props) {
                     <span className="flex-1">{l.label}</span>
                     {!!p.counts.labels?.[l.key] && (
                       <span className="ib-ink-3 tabular mr-1 text-[11px]">
-                        {p.counts.labels[l.key]}
+                        {num(p.counts.labels[l.key]!)}
                       </span>
                     )}
                     {p.label === l.key && <Check className="h-3.5 w-3.5" />}
                   </DropdownMenuItem>
                 ))}
-                {(p.platform !== "all" || p.label) && (
+                {(p.platform !== "all" || p.label || p.owner !== "all") && (
                   <>
                     <DropdownMenuSeparator />
                     <DropdownMenuItem
                       onClick={() => {
                         p.onPlatform("all");
                         p.onLabel(null);
+                        p.onOwner("all");
                       }}
                       className="text-[13px]"
                     >
-                      Filter bad dao
+                      {t("clearFilter")}
                     </DropdownMenuItem>
                   </>
                 )}
@@ -248,13 +352,87 @@ export function ConversationList(p: Props) {
               <button
                 type="button"
                 onClick={() => p.onPickAll(true)}
-                className="ib-ink-3 rounded-md px-1.5 py-0.5 text-[11.5px] hover:bg-[var(--ib-hover)] hover:text-[var(--ib-ink)]"
-                title="List er shob select kore ekshathe reply / done"
+                className="flex h-7 w-7 items-center justify-center rounded-full border border-[var(--ib-line)] bg-[var(--ib-panel)] hover:bg-[var(--ib-hover)]"
+                title={t("selectHint")}
               >
-                Select
+                <CheckCheck className="h-3.5 w-3.5" />
               </button>
             )}
           </div>
+        )}
+      </div>
+
+      {/* queue tabs */}
+      <div
+        role="tablist"
+        className="ib-scroll flex shrink-0 items-stretch overflow-x-auto border-b border-[var(--ib-line)] px-1"
+      >
+        {PRIMARY.map((v) => (
+          <QueueTab
+            key={v.key}
+            v={v}
+            on={p.view === v.key}
+            count={v.count ? p.counts[v.count] : undefined}
+            onClick={() => p.onView(v.key)}
+          />
+        ))}
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <button
+              type="button"
+              className={cn(
+                "flex min-w-[46px] shrink-0 flex-col items-center justify-center gap-[3px] px-1.5 py-1.5 text-[10.5px] transition-colors",
+                moreActive
+                  ? "font-semibold text-[var(--ib-ink)] shadow-[inset_0_-2px_0_var(--ib-ink)]"
+                  : "ib-ink-3 hover:text-[var(--ib-ink)]",
+              )}
+            >
+              {moreActive ? (
+                <activeView.icon className="h-[15px] w-[15px]" style={{ color: activeView.tone }} />
+              ) : (
+                <MoreHorizontal className="h-[15px] w-[15px]" />
+              )}
+              <span className="whitespace-nowrap">
+                {moreActive ? t(activeView.label) : t("more")}
+              </span>
+            </button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end" className="w-56">
+            {MORE.map((v) => (
+              <DropdownMenuItem key={v.key} onClick={() => p.onView(v.key)} className="text-[13px]">
+                <v.icon className="mr-2 h-3.5 w-3.5" style={{ color: v.tone }} />
+                <span className="flex-1">{t(v.label)}</span>
+                {v.count && !!p.counts[v.count] && (
+                  <span className="ib-ink-3 tabular text-[11px]">
+                    {num(fmtCount(p.counts[v.count]))}
+                  </span>
+                )}
+                {p.view === v.key && <Check className="ml-2 h-3.5 w-3.5" />}
+              </DropdownMenuItem>
+            ))}
+          </DropdownMenuContent>
+        </DropdownMenu>
+      </div>
+      <div
+        className="flex shrink-0 items-center gap-2 border-b border-[var(--ib-line)] px-3 py-1.5 text-[11.5px] leading-snug"
+        style={{ background: `${activeView.tone}0D`, color: "var(--ib-ink-2)" }}
+      >
+        <activeView.icon className="h-3 w-3 shrink-0" style={{ color: activeView.tone }} />
+        <span className="min-w-0 flex-1">
+          <span className="font-semibold" style={{ color: activeView.tone }}>
+            {t(activeView.label)}
+          </span>
+          {" — "}
+          {t(activeView.hint)}
+        </span>
+        {p.onMarkAllRead && hasUnread && (
+          <button
+            type="button"
+            onClick={p.onMarkAllRead}
+            className="shrink-0 whitespace-nowrap font-semibold text-primary hover:underline"
+          >
+            {t("markAllRead")}
+          </button>
         )}
       </div>
 
@@ -268,15 +446,13 @@ export function ConversationList(p: Props) {
             </div>
             <div className="text-[13px] font-medium">
               {p.view === "awaiting" && !p.search
-                ? "Shob reply deya shesh 🎉"
+                ? t("emptyAwaiting")
                 : p.search
-                  ? `"${p.search}" diye kichu pai nai`
-                  : "Ei list khali"}
+                  ? `${t("noMatch")}: "${p.search}"`
+                  : t("emptyList")}
             </div>
             <div className="ib-ink-2 text-[12px]">
-              {p.view === "awaiting" && !p.search
-                ? "Notun message ashle ekhane chole ashbe."
-                : "Onno filter dekho ba search bodlao."}
+              {p.view === "awaiting" && !p.search ? t("emptyAwaitingSub") : t("emptyListSub")}
             </div>
           </div>
         ) : (
@@ -292,6 +468,7 @@ export function ConversationList(p: Props) {
                 onPick={p.onPick}
                 showBrand={p.showBrand}
                 assignee={c.assigned_to ? p.staff.find((s) => s.id === c.assigned_to) : undefined}
+                isMine={!!p.currentUserId && c.assigned_to === p.currentUserId}
               />
             ))}
           </ul>
@@ -304,11 +481,105 @@ export function ConversationList(p: Props) {
             className="ib-ink-2 mx-auto my-2 flex h-7 items-center gap-1.5 rounded-md px-3 text-[12px] font-medium hover:bg-[var(--ib-hover)]"
           >
             {p.isFetchingMore && <Loader2 className="h-3 w-3 animate-spin" />}
-            Aro dekhao
+            {t("loadMore")}
           </button>
         )}
       </div>
     </div>
+  );
+}
+
+function LangSwitch() {
+  const { lang, setLang, t } = useInboxT();
+  return (
+    <div
+      role="group"
+      aria-label={t("language")}
+      title={t("language")}
+      className="flex h-8 shrink-0 items-center rounded-lg bg-[var(--ib-canvas)] p-0.5"
+    >
+      {LANG_OPTIONS.map((o) => (
+        <button
+          key={o.value}
+          type="button"
+          aria-pressed={lang === o.value}
+          onClick={() => setLang(o.value)}
+          className={cn(
+            "h-7 rounded-md px-1.5 text-[11px] font-semibold transition-colors",
+            lang === o.value
+              ? "bg-[var(--ib-panel)] text-[var(--ib-ink)] shadow-sm"
+              : "text-[var(--ib-ink-3)] hover:text-[var(--ib-ink)]",
+          )}
+        >
+          {o.value === "bn" ? "বাং" : o.label}
+        </button>
+      ))}
+    </div>
+  );
+}
+
+const STAFF_COLORS = [
+  "#0D9488",
+  "#D97706",
+  "#DB2777",
+  "#0891B2",
+  "#7C3AED",
+  "#65A30D",
+  "#DC2626",
+  "#2563EB",
+];
+/** Same colour for the same person everywhere in the inbox. */
+export function staffColor(id: string) {
+  let h = 0;
+  for (let i = 0; i < id.length; i++) h = (h * 31 + id.charCodeAt(i)) >>> 0;
+  return STAFF_COLORS[h % STAFF_COLORS.length]!;
+}
+
+function QueueTab({
+  v,
+  on,
+  count,
+  onClick,
+}: {
+  v: ViewDef;
+  on: boolean;
+  count?: number;
+  onClick: () => void;
+}) {
+  const { t, num } = useInboxT();
+  return (
+    <button
+      type="button"
+      role="tab"
+      aria-selected={on}
+      onClick={onClick}
+      title={t(v.hint)}
+      className={cn(
+        "flex min-w-0 flex-1 shrink-0 flex-col items-center justify-center gap-[3px] px-1 py-1.5 transition-colors",
+        on ? "text-[var(--ib-ink)]" : "ib-ink-3 hover:text-[var(--ib-ink)]",
+      )}
+      style={on ? { boxShadow: `inset 0 -2px 0 ${v.tone}` } : undefined}
+    >
+      <span className="flex items-center gap-1">
+        <span
+          className="flex h-[17px] w-[17px] items-center justify-center rounded-[5px]"
+          style={{ background: `${v.tone}1F`, color: v.tone }}
+        >
+          <v.icon className="h-[11px] w-[11px]" strokeWidth={2.4} />
+        </span>
+        {!!count && (
+          <span
+            className="tabular text-[12px] font-bold"
+            style={{ color: on ? v.tone : "var(--ib-ink)" }}
+          >
+            {num(fmtCount(count))}
+          </span>
+        )}
+      </span>
+      <span className={cn("whitespace-nowrap text-[10.5px]", on ? "font-semibold" : "font-medium")}>
+        {t(v.label)}
+      </span>
+    </button>
   );
 }
 
@@ -414,6 +685,7 @@ function Row({
   onPick,
   showBrand,
   assignee,
+  isMine,
 }: {
   c: InboxConversation;
   active: boolean;
@@ -423,7 +695,9 @@ function Row({
   onPick: (id: string, on: boolean, range?: boolean) => void;
   showBrand: boolean;
   assignee?: InboxStaff;
+  isMine: boolean;
 }) {
+  const { t, num } = useInboxT();
   const name = displayName(c);
   const unread = c.unread_count > 0;
   const awaiting = c.status === "open" && c.last_message_direction === "in";
@@ -451,8 +725,14 @@ function Row({
             onPick(c.id, !picked);
           }
         }}
-        className="ib-row group/row flex w-full cursor-pointer items-center gap-2.5 px-2 py-[7px] text-left outline-none focus-visible:ring-2 focus-visible:ring-primary/40"
+        className="ib-row group/row relative flex w-full cursor-pointer items-center gap-2.5 py-[7px] pl-3 pr-2 text-left outline-none focus-visible:ring-2 focus-visible:ring-primary/40"
       >
+        {unread && (
+          <span
+            className="absolute left-[3px] top-1/2 h-1.5 w-1.5 -translate-y-1/2 rounded-full bg-blue-600"
+            aria-label={t("q_unread")}
+          />
+        )}
         <div className="relative">
           <div
             className={cn(
@@ -503,12 +783,10 @@ function Row({
                 urgent
                   ? "font-medium text-rose-600 dark:text-rose-400"
                   : unread
-                    ? "font-medium text-primary"
+                    ? "font-medium text-blue-600 dark:text-blue-400"
                     : "ib-ink-3",
               )}
-              title={
-                awaiting ? `${waitLabel(c.last_message_at)} dhore reply er opekkhay` : undefined
-              }
+              title={awaiting ? `${waitLabel(c.last_message_at)} — ${t("waitingFor")}` : undefined}
             >
               {relTime(c.last_message_at)}
             </span>
@@ -520,7 +798,7 @@ function Row({
                   "h-1.5 w-1.5 shrink-0 rounded-full",
                   urgent ? "bg-rose-500" : "bg-amber-500",
                 )}
-                title="Reply baki"
+                title={t("q_awaiting")}
               />
             )}
             <span
@@ -529,24 +807,18 @@ function Row({
                 unread ? "text-[var(--ib-ink)]" : "ib-ink-2",
               )}
             >
-              {c.last_message_direction === "out" && <span className="ib-ink-3">Apni: </span>}
+              {c.last_message_direction === "out" && (
+                <CornerUpLeft className="ib-ink-3 mr-0.5 inline h-3 w-3 align-[-2px]" />
+              )}
               {c.last_message_preview ?? ""}
             </span>
-            {assignee && !unread && (
-              <span
-                title={`Assigned: ${assignee.display_name}`}
-                className="ib-ink-3 ml-auto flex h-4 w-4 shrink-0 items-center justify-center rounded-full bg-[var(--ib-canvas)] text-[7.5px] font-bold"
-              >
-                {initials(assignee.display_name)}
-              </span>
-            )}
             {unread && (
-              <span className="tabular ml-auto flex h-4 min-w-4 shrink-0 items-center justify-center rounded-full bg-primary px-1 text-[9.5px] font-semibold text-primary-foreground">
-                {c.unread_count > 99 ? "99+" : c.unread_count}
+              <span className="tabular ml-auto flex h-4 min-w-4 shrink-0 items-center justify-center rounded-full bg-blue-600 px-1 text-[9.5px] font-semibold text-white">
+                {c.unread_count > 99 ? "99+" : num(c.unread_count)}
               </span>
             )}
           </div>
-          {(showBrand || c.ad_id || c.snoozed_until || (c.tags?.length ?? 0) > 0) && (
+          {
             <div className="mt-[3px] flex min-w-0 items-center gap-1.5">
               {showBrand && <BrandTag brandId={c.brand_id} size="xs" />}
               {c.snoozed_until && <SnoozeChip at={c.snoozed_until} />}
@@ -563,11 +835,55 @@ function Row({
                   </span>
                 );
               })}
+              <OwnerChip assignee={assignee} isMine={isMine} assigned={!!c.assigned_to} />
             </div>
-          )}
+          }
         </div>
       </div>
     </li>
+  );
+}
+
+/** Who is handling the chat — always shown so nobody has to guess. */
+function OwnerChip({
+  assignee,
+  isMine,
+  assigned,
+}: {
+  assignee?: InboxStaff;
+  isMine: boolean;
+  assigned: boolean;
+}) {
+  const { t } = useInboxT();
+  if (!assigned)
+    return (
+      <span
+        title={t("nobody")}
+        className="ml-auto flex shrink-0 items-center gap-1 text-[10px] text-[var(--ib-ink-3)]"
+      >
+        <span className="h-3.5 w-3.5 rounded-full border border-dashed border-current" />
+        {t("nobody")}
+      </span>
+    );
+  const label = isMine ? t("you") : (assignee?.display_name.split(" ")[0] ?? "—");
+  return (
+    <span
+      title={`${t("handledBy")}: ${isMine ? t("you") : (assignee?.display_name ?? "—")}`}
+      className={cn(
+        "ml-auto flex max-w-[90px] shrink-0 items-center gap-1 text-[10px] font-medium",
+        isMine ? "text-primary" : "text-[var(--ib-ink-2)]",
+      )}
+    >
+      <span
+        className="flex h-3.5 w-3.5 shrink-0 items-center justify-center rounded-full text-[7px] font-bold text-white"
+        style={{
+          background: isMine ? "var(--primary)" : assignee ? staffColor(assignee.id) : "#94A3B8",
+        }}
+      >
+        {assignee ? initials(assignee.display_name).slice(0, 1) : "?"}
+      </span>
+      <span className="truncate">{label}</span>
+    </span>
   );
 }
 

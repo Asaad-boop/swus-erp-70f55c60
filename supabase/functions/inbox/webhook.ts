@@ -385,12 +385,8 @@ async function handleMetaMessaging(ctx: Ctx, platform: "messenger" | "instagram"
         if (a?.type !== "story_mention") continue;
       }
       if (!url) continue;
-      const type = mapMetaAttachmentType(a?.type, a?.payload);
-      const stored =
-        type === "sticker"
-          ? null
-          : await copyToStorage(ctx.admin, url, `${channel.brand_id}/${platform}`);
-      attachments.push({ type, url: stored ?? url });
+      // Show Meta's own link right away; our copy replaces it a moment later.
+      attachments.push({ type: mapMetaAttachmentType(a?.type, a?.payload), url });
     }
 
     let body: string | null = msg.text ?? null;
@@ -398,19 +394,9 @@ async function handleMetaMessaging(ctx: Ctx, platform: "messenger" | "instagram"
     if (shareNote) body = body ? `${body}\n${shareNote}` : shareNote;
     const type = attachments[0]?.type ?? "text";
 
-    // First message from a new customer → fetch name/photo once.
-    let profile: ContactProfile | null = null;
+    // Save the message first so staff see it instantly; everything else
+    // (our media copies, the customer's name/photo, ad info) follows after.
     const existing = await conversationExists(ctx, channel.id, userId);
-    const avatarDue =
-      !!existing &&
-      !existing.contact_avatar &&
-      (!existing.avatar_checked_at ||
-        Date.now() - new Date(existing.avatar_checked_at).getTime() > AVATAR_RETRY_MS);
-    if (!existing || !existing.contact_name || !existing.thread_url || avatarDue) {
-      const token = await getToken(ctx, channel.id);
-      if (token) profile = await fetchContactProfile(platform, userId, token, channel.page_id);
-    }
-
     await ingest(ctx, {
       channel,
       userId,
@@ -420,14 +406,58 @@ async function handleMetaMessaging(ctx: Ctx, platform: "messenger" | "instagram"
       body,
       attachments,
       at,
-      contactName: profile?.name,
-      contactUsername: profile?.username,
       sentVia: isEcho ? "platform" : null,
     });
-    if (!isEcho) {
-      if (referral) await recordReferral(ctx, channel, userId, referral, at);
-      await maybeAdAutoReply(ctx, channel, userId);
-    }
+
+    const copyMedia = async () => {
+      if (!msg.mid || !attachments.some((a) => a.type !== "sticker")) return;
+      const copied = await Promise.all(
+        attachments.map(async (a) =>
+          a.type === "sticker"
+            ? a
+            : {
+                ...a,
+                url:
+                  (await copyToStorage(ctx.admin, a.url, `${channel.brand_id}/${platform}`)) ??
+                  a.url,
+              },
+        ),
+      );
+      if (copied.some((a, i) => a.url !== attachments[i]!.url))
+        await ctx.admin
+          .from("inbox_messages")
+          .update({ attachments: copied })
+          .eq("external_message_id", String(msg.mid));
+    };
+
+    // First message from a new customer → fetch name/photo once.
+    const avatarDue =
+      !!existing &&
+      !existing.contact_avatar &&
+      (!existing.avatar_checked_at ||
+        Date.now() - new Date(existing.avatar_checked_at).getTime() > AVATAR_RETRY_MS);
+    const loadProfile = async (): Promise<ContactProfile | null> => {
+      if (existing && existing.contact_name && existing.thread_url && !avatarDue) return null;
+      const token = await getToken(ctx, channel.id);
+      return token ? await fetchContactProfile(platform, userId, token, channel.page_id) : null;
+    };
+    const [profile] = await Promise.all([
+      loadProfile().catch(() => null),
+      copyMedia().catch(() => {}),
+      isEcho
+        ? Promise.resolve()
+        : (async () => {
+            if (referral) await recordReferral(ctx, channel, userId, referral, at);
+            await maybeAdAutoReply(ctx, channel, userId);
+          })(),
+    ]);
+    if (profile?.name && (!existing || !existing.contact_name))
+      await ctx.admin
+        .from("inbox_conversations")
+        .update({ contact_name: profile.name })
+        .eq("channel_id", channel.id)
+        .eq("external_user_id", userId)
+        .is("contact_name", null);
     if (profile && (!existing || avatarDue || !existing.contact_avatar)) {
       const conv = await conversationExists(ctx, channel.id, userId);
       if (conv && !conv.contact_avatar)
@@ -537,20 +567,32 @@ async function handleWhatsApp(ctx: Ctx, entry: any) {
         continue;
       }
       const parsed = waBody(m);
+      // WhatsApp media needs a download first. Save the message now (the chat
+      // shows a "photo coming" box) and attach the file once it's copied.
       const attachments: InboxAttachment[] = [];
-      if (parsed.mediaId && parsed.mediaType) {
-        const token = await getToken(ctx, channel.id);
-        const url = token
-          ? await copyWhatsAppMedia(
-              ctx.admin,
-              parsed.mediaId,
-              token,
-              `${channel.brand_id}/whatsapp`,
-            )
+      const pendingMedia =
+        parsed.mediaId && parsed.mediaType
+          ? async () => {
+              const token = await getToken(ctx, channel.id);
+              const url = token
+                ? await copyWhatsAppMedia(
+                    ctx.admin,
+                    parsed.mediaId!,
+                    token,
+                    `${channel.brand_id}/whatsapp`,
+                  )
+                : null;
+              if (url && m.id)
+                await ctx.admin
+                  .from("inbox_messages")
+                  .update({
+                    attachments: [
+                      { type: parsed.mediaType, url, name: m.document?.filename ?? null },
+                    ],
+                  })
+                  .eq("external_message_id", String(m.id));
+            }
           : null;
-        if (url)
-          attachments.push({ type: parsed.mediaType, url, name: m.document?.filename ?? null });
-      }
       await ingest(ctx, {
         channel,
         userId: from,
@@ -565,8 +607,13 @@ async function handleWhatsApp(ctx: Ctx, entry: any) {
       });
       const ref = waReferral(m);
       const at = new Date((Number(m.timestamp) || Date.now() / 1000) * 1000);
-      if (ref) await recordReferral(ctx, channel, from, ref, at);
-      await maybeAdAutoReply(ctx, channel, from);
+      await Promise.all([
+        pendingMedia ? pendingMedia().catch(() => {}) : Promise.resolve(),
+        (async () => {
+          if (ref) await recordReferral(ctx, channel, from, ref, at);
+          await maybeAdAutoReply(ctx, channel, from);
+        })(),
+      ]);
     }
 
     // Coexistence: replies typed in the WhatsApp Business app on the phone.

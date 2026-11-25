@@ -293,12 +293,53 @@ async function handleOAuthCallback(url: URL) {
 // ════════════════════════════════════════════════════════════════════
 type Caller = { userId: string; isAdmin: boolean; db: any };
 
+// Channel + token rarely change; keep them warm in this worker for a minute so
+// a send doesn't wait on two extra database trips.
+const channelCache = new Map<string, { at: number; channel: any; token: string | null }>();
+async function channelWithToken(channelId: string) {
+  const hit = channelCache.get(channelId);
+  if (hit && Date.now() - hit.at < 60_000) return hit;
+  const [{ data: channel }, { data: secret }] = await Promise.all([
+    admin
+      .from("inbox_channels")
+      .select("id, platform, external_id, page_id, is_active")
+      .eq("id", channelId)
+      .maybeSingle(),
+    admin
+      .from("inbox_channel_secrets")
+      .select("access_token")
+      .eq("channel_id", channelId)
+      .maybeSingle(),
+  ]);
+  const v = {
+    at: Date.now(),
+    channel,
+    token: (secret?.access_token as string | undefined) ?? null,
+  };
+  channelCache.set(channelId, v);
+  return v;
+}
+
 async function getCaller(req: Request): Promise<Caller> {
   const jwt = (req.headers.get("authorization") ?? "").replace(/^Bearer\s+/i, "");
   if (!jwt) throw new Error("Unauthorized");
-  const { data, error } = await admin.auth.getUser(jwt);
+  // Look up roles alongside the token check instead of after it (saves a round trip).
+  let claimedSub: string | null = null;
+  try {
+    const part = jwt.split(".")[1] ?? "";
+    claimedSub = JSON.parse(atob(part.replace(/-/g, "+").replace(/_/g, "/")))?.sub ?? null;
+  } catch {
+    claimedSub = null;
+  }
+  const rolesP = claimedSub
+    ? admin.from("user_roles").select("role").eq("user_id", claimedSub)
+    : Promise.resolve({ data: [] as any[] });
+  const [{ data, error }, rolesRes] = await Promise.all([admin.auth.getUser(jwt), rolesP]);
   if (error || !data?.user) throw new Error("Unauthorized");
-  const { data: roles } = await admin.from("user_roles").select("role").eq("user_id", data.user.id);
+  const roles =
+    claimedSub === data.user.id
+      ? rolesRes.data
+      : (await admin.from("user_roles").select("role").eq("user_id", data.user.id)).data;
   const isAdmin = (roles ?? []).some((r: any) => r.role === "admin" || r.role === "owner");
   const db = createClient(SUPABASE_URL, ANON_KEY, {
     global: { headers: { Authorization: `Bearer ${jwt}` } },
@@ -977,6 +1018,7 @@ const actions: Record<string, (c: Caller, p: any) => Promise<unknown>> = {
   async disconnect(c, p) {
     needAdmin(c);
     if (!isUuid(p?.channelId)) throw new Error("Bad channel");
+    channelCache.delete(p.channelId);
     await admin.from("inbox_channel_secrets").delete().eq("channel_id", p.channelId);
     const { error } = await admin
       .from("inbox_channels")
@@ -1022,33 +1064,26 @@ const actions: Record<string, (c: Caller, p: any) => Promise<unknown>> = {
     if (cErr) throw cErr;
     if (!conv) throw new Error("Conversation not found");
 
-    const [{ data: channel }, { data: secret }] = await Promise.all([
-      admin
-        .from("inbox_channels")
-        .select("id, platform, external_id, page_id, is_active")
-        .eq("id", conv.channel_id)
-        .maybeSingle(),
-      admin
-        .from("inbox_channel_secrets")
-        .select("access_token")
-        .eq("channel_id", conv.channel_id)
-        .maybeSingle(),
+    const [{ channel, token }, quoted] = await Promise.all([
+      channelWithToken(conv.channel_id),
+      replyTo
+        ? admin
+            .from("inbox_messages")
+            .select("external_message_id")
+            .eq("id", replyTo)
+            .eq("conversation_id", conv.id)
+            .maybeSingle()
+        : Promise.resolve({ data: null as any }),
     ]);
-    if (!channel || !channel.is_active)
+    if (!channel || !channel.is_active) {
+      channelCache.delete(conv.channel_id);
       throw new Error("Ei channel ta disconnected — Channels tab theke abar connect koro");
-    if (!secret?.access_token)
-      throw new Error("Channel token nai — Channels tab theke abar connect koro");
-
-    let replyToExternalId: string | null = null;
-    if (replyTo) {
-      const { data: q } = await admin
-        .from("inbox_messages")
-        .select("external_message_id")
-        .eq("id", replyTo)
-        .eq("conversation_id", conv.id)
-        .maybeSingle();
-      replyToExternalId = q?.external_message_id ?? null;
     }
+    if (!token) {
+      channelCache.delete(conv.channel_id);
+      throw new Error("Channel token nai — Channels tab theke abar connect koro");
+    }
+    const replyToExternalId: string | null = quoted?.data?.external_message_id ?? null;
 
     const attachments = att ? [att] : [];
     const msgType = att?.type ?? "text";
@@ -1061,7 +1096,7 @@ const actions: Record<string, (c: Caller, p: any) => Promise<unknown>> = {
           channel.platform === "whatsapp"
             ? channel.external_id
             : (channel.page_id ?? channel.external_id),
-        token: secret.access_token,
+        token,
         recipientId: conv.external_user_id,
         text,
         attachment: att,
@@ -1070,6 +1105,7 @@ const actions: Record<string, (c: Caller, p: any) => Promise<unknown>> = {
       messageId = r.messageId;
     } catch (e: any) {
       const msg = String(e?.message ?? e).slice(0, 500);
+      if (/token|OAuth|session/i.test(msg)) channelCache.delete(conv.channel_id);
       if (retryOf) {
         await admin.from("inbox_messages").update({ error: msg }).eq("id", retryOf);
       } else {
@@ -1089,43 +1125,52 @@ const actions: Record<string, (c: Caller, p: any) => Promise<unknown>> = {
       throw new Error(msg);
     }
 
-    const { error: insErr } = await admin.from("inbox_messages").insert({
-      conversation_id: conv.id,
-      brand_id: conv.brand_id,
-      direction: "out",
-      external_message_id: messageId,
-      msg_type: msgType,
-      body: text,
-      attachments,
-      sent_by: c.userId,
-      sent_via: "erp",
-      status: "sent",
-      reply_to: replyTo,
-      meta,
-    });
-    if (insErr) {
-      // The platform echo got here first — claim that row as ours.
-      if ((insErr as any).code === "23505" && messageId) {
-        await admin
-          .from("inbox_messages")
-          .update({ sent_by: c.userId, sent_via: "erp" })
-          .eq("external_message_id", messageId);
-      } else throw insErr;
-    }
-    if (retryOf)
-      await admin.from("inbox_messages").delete().eq("id", retryOf).eq("status", "failed");
-    await admin
-      .from("inbox_conversations")
-      .update({
-        last_message_at: new Date().toISOString(),
-        last_message_preview: previewFor(text, att?.type),
-        last_message_direction: "out",
-        unread_count: 0,
-        // First staff to reply owns an unassigned conversation.
-        ...(conv.assigned_to ? {} : { assigned_to: c.userId }),
-      })
-      .eq("id", conv.id);
-    if (isUuid(p?.quickReplyId)) await c.db.rpc("inbox_bump_quick_reply", { _id: p.quickReplyId });
+    // The message row, the chat summary and the template counter don't depend
+    // on each other — write them together.
+    const insertRow = async () => {
+      const { error: insErr } = await admin.from("inbox_messages").insert({
+        conversation_id: conv.id,
+        brand_id: conv.brand_id,
+        direction: "out",
+        external_message_id: messageId,
+        msg_type: msgType,
+        body: text,
+        attachments,
+        sent_by: c.userId,
+        sent_via: "erp",
+        status: "sent",
+        reply_to: replyTo,
+        meta,
+      });
+      if (insErr) {
+        // The platform echo got here first — claim that row as ours.
+        if ((insErr as any).code === "23505" && messageId) {
+          await admin
+            .from("inbox_messages")
+            .update({ sent_by: c.userId, sent_via: "erp" })
+            .eq("external_message_id", messageId);
+        } else throw insErr;
+      }
+      if (retryOf)
+        await admin.from("inbox_messages").delete().eq("id", retryOf).eq("status", "failed");
+    };
+    await Promise.all([
+      insertRow(),
+      admin
+        .from("inbox_conversations")
+        .update({
+          last_message_at: new Date().toISOString(),
+          last_message_preview: previewFor(text, att?.type),
+          last_message_direction: "out",
+          unread_count: 0,
+          // First staff to reply owns an unassigned conversation.
+          ...(conv.assigned_to ? {} : { assigned_to: c.userId }),
+        })
+        .eq("id", conv.id),
+      isUuid(p?.quickReplyId)
+        ? c.db.rpc("inbox_bump_quick_reply", { _id: p.quickReplyId })
+        : Promise.resolve(null),
+    ]);
     return { ok: true, messageId };
   },
 };

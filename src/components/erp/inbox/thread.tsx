@@ -9,8 +9,11 @@ import {
   type KeyboardEvent,
 } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useInboxT } from "@/lib/erp/inbox/i18n";
+import { staffColor } from "./conversation-list";
 import {
   AlarmClock,
+  ChevronDown,
   AlertTriangle,
   ShoppingBag,
   Tag,
@@ -65,6 +68,7 @@ import {
   sendReply,
   updateConversation,
   uploadInboxMedia,
+  attachmentKind,
   windowHoursLeft,
   type InboxChannel,
   type InboxConversation,
@@ -83,7 +87,7 @@ import { EmojiPicker } from "./emoji-picker";
 import { rewriteReplyFn, suggestRepliesFn } from "@/lib/erp/inbox/inbox-ai.functions";
 
 const QUICK_REACTIONS = ["❤️", "👍", "😊", "🙏", "😂", "😮"];
-const MAX_FILES = 10;
+const MAX_FILES = 20;
 
 type Props = {
   conversation: InboxConversation;
@@ -104,6 +108,12 @@ type Draft = {
   type: OutgoingAttachment["type"];
   url?: string;
   failed?: boolean;
+};
+
+type PendingAtt = {
+  preview: string;
+  type: OutgoingAttachment["type"];
+  ready: Promise<OutgoingAttachment>;
 };
 
 function dayLabel(d: Date) {
@@ -317,6 +327,21 @@ function Bubble({
           </button>
         )}
 
+        {atts.length === 0 && ["image", "video", "audio", "file"].includes(m.msg_type) && (
+          <div
+            className={cn(
+              "flex h-28 w-40 animate-pulse items-center justify-center bg-[var(--ib-in)] text-[11px] text-[var(--ib-ink-3)]",
+              shape,
+            )}
+          >
+            {m.msg_type === "video"
+              ? "Video ashche…"
+              : m.msg_type === "image"
+                ? "Chobi ashche…"
+                : "File ashche…"}
+          </div>
+        )}
+
         {images.length > 0 && (
           <div
             className={cn(
@@ -365,7 +390,9 @@ function Bubble({
               key={i}
               src={a.url}
               controls
-              className={cn("max-h-72 max-w-[300px] bg-black", shape)}
+              playsInline
+              preload="metadata"
+              className={cn("max-h-80 max-w-[300px] bg-black", shape, temp && "opacity-70")}
             />
           ) : a.type === "audio" ? (
             <audio key={i} src={a.url} controls className="h-9 max-w-[250px]" />
@@ -484,6 +511,7 @@ export function Thread({
   onNext,
 }: Props) {
   const qc = useQueryClient();
+  const { t: tr } = useInboxT();
   const [text, setText] = useState("");
   const [drafts, setDrafts] = useState<Draft[]>([]);
   const [slashIndex, setSlashIndex] = useState(0);
@@ -592,12 +620,22 @@ export function Thread({
   // ── sending ──────────────────────────────────────────────────────────
   const [replyTo, setReplyTo] = useState<InboxMessage | null>(null);
   const send = useMutation({
-    mutationFn: (v: {
+    // Photos may still be uploading when Send is pressed: the bubble shows at
+    // once with the local preview, and goes out the moment the upload lands.
+    mutationFn: async (v: {
       text: string | null;
-      attachments: OutgoingAttachment[];
+      attachments: PendingAtt[];
       quickReplyId?: string | null;
       replyToMessageId?: string | null;
-    }) => sendReply(c.id, v),
+    }) => {
+      const settled = await Promise.allSettled(v.attachments.map((a) => a.ready));
+      const ok = settled.flatMap((r) => (r.status === "fulfilled" ? [r.value] : []));
+      if (ok.length < settled.length && ok.length === 0 && !v.text)
+        throw new Error("Chobi upload hoyni — abar try koro");
+      if (ok.length < settled.length)
+        toast.error(`${settled.length - ok.length}ta file upload hoyni`);
+      return sendReply(c.id, { ...v, attachments: ok });
+    },
     onMutate: async (v) => {
       await qc.cancelQueries({ queryKey: ["inbox", "messages", c.id] });
       const now = Date.now();
@@ -629,7 +667,7 @@ export function Thread({
               id: `temp-${now}-${i}`,
               msg_type: a.type,
               body: i === v.attachments.length - 1 ? v.text : null,
-              attachments: [a],
+              attachments: [{ url: a.preview, type: a.type }],
               created_at: new Date(now + i).toISOString(),
               reply_to: i === 0 ? (v.replyToMessageId ?? null) : null,
             }));
@@ -662,9 +700,17 @@ export function Thread({
     onSettled: () => qc.invalidateQueries({ queryKey: ["inbox", "messages", c.id] }),
   });
 
-  const uploading = drafts.some((d) => !d.url && !d.failed);
-  const readyAtts = drafts.filter((d) => d.url).map((d) => ({ url: d.url!, type: d.type }));
-  const canSubmit = !uploading && (text.trim().length > 0 || readyAtts.length > 0);
+  const uploadsRef = useRef(new Map<string, Promise<OutgoingAttachment>>());
+  const liveDrafts = drafts.filter((d) => !d.failed);
+  const canSubmit = text.trim().length > 0 || liveDrafts.length > 0;
+  const pendingFromDrafts = (): PendingAtt[] =>
+    liveDrafts.map((d) => ({
+      preview: d.url ?? d.preview,
+      type: d.type,
+      ready: d.url
+        ? Promise.resolve({ url: d.url, type: d.type })
+        : (uploadsRef.current.get(d.key) ?? Promise.reject(new Error("upload missing"))),
+    }));
 
   const afterSend = () => {
     if (autoNext && onNext) setTimeout(onNext, 120);
@@ -673,7 +719,11 @@ export function Thread({
   const submit = () => {
     if (!canSubmit) return;
     const t = text.trim();
-    send.mutate({ text: t || null, attachments: readyAtts, replyToMessageId: replyTo?.id ?? null });
+    send.mutate({
+      text: t || null,
+      attachments: pendingFromDrafts(),
+      replyToMessageId: replyTo?.id ?? null,
+    });
     setText("");
     setDrafts([]);
     setReplyTo(null);
@@ -683,7 +733,15 @@ export function Thread({
   const sendQuick = (q: QuickReply) => {
     send.mutate({
       text: fillTemplate(q.body, c),
-      attachments: q.image_url ? [{ url: q.image_url, type: "image" }] : [],
+      attachments: q.image_url
+        ? [
+            {
+              preview: q.image_url,
+              type: "image" as const,
+              ready: Promise.resolve({ url: q.image_url, type: "image" as const }),
+            },
+          ]
+        : [],
       quickReplyId: q.id,
       replyToMessageId: replyTo?.id ?? null,
     });
@@ -708,22 +766,16 @@ export function Thread({
     if (list.length > room) toast.message(`Ekbare ${MAX_FILES}ta porjonto`);
     for (const file of arr) {
       const key = crypto.randomUUID();
-      const type: OutgoingAttachment["type"] = file.type.startsWith("image/")
-        ? "image"
-        : file.type.startsWith("video/")
-          ? "video"
-          : file.type.startsWith("audio/")
-            ? "audio"
-            : "file";
+      const type = attachmentKind(file.type);
       setDrafts((d) => [...d, { key, name: file.name, preview: URL.createObjectURL(file), type }]);
-      uploadInboxMedia(file, c.brand_id)
-        .then((r) =>
-          setDrafts((d) => d.map((x) => (x.key === key ? { ...x, url: r.url, type: r.type } : x))),
-        )
-        .catch((e) => {
-          toast.error(e?.message ?? "Upload failed");
-          setDrafts((d) => d.map((x) => (x.key === key ? { ...x, failed: true } : x)));
-        });
+      const up = uploadInboxMedia(file, c.brand_id);
+      uploadsRef.current.set(key, up);
+      up.then((r) =>
+        setDrafts((d) => d.map((x) => (x.key === key ? { ...x, url: r.url, type: r.type } : x))),
+      ).catch((e) => {
+        toast.error(e?.message ?? "Upload failed");
+        setDrafts((d) => d.map((x) => (x.key === key ? { ...x, failed: true } : x)));
+      });
     }
     requestAnimationFrame(() => inputRef.current?.focus());
   };
@@ -809,6 +861,7 @@ export function Thread({
     onError: (e: Error) => toast.error(e.message),
   });
   const assignee = c.assigned_to ? staff.find((s) => s.id === c.assigned_to) : undefined;
+  const mine = !!currentUserId && c.assigned_to === currentUserId;
   const patch = useMutation({
     mutationFn: (v: Parameters<typeof updateConversation>[1]) => updateConversation(c.id, v),
     onSuccess: () => {
@@ -1150,33 +1203,51 @@ export function Thread({
           <DropdownMenuTrigger asChild>
             <button
               type="button"
-              className="ib-ink-2 flex h-8 items-center gap-1.5 rounded-md px-2 text-[12.5px] transition-colors hover:bg-[var(--ib-hover)] hover:text-[var(--ib-ink)]"
-              title={assignee ? `Assigned: ${assignee.display_name}` : "Assign"}
+              className={cn(
+                "flex h-8 items-center gap-1.5 rounded-lg border px-1.5 pr-2 text-[12px] font-medium transition-colors",
+                mine
+                  ? "border-primary/30 bg-[var(--ib-accent-soft)] text-primary"
+                  : assignee
+                    ? "border-[var(--ib-line)] text-[var(--ib-ink)] hover:bg-[var(--ib-hover)]"
+                    : "border-dashed border-[var(--ib-ink-3)] text-[var(--ib-ink-2)] hover:bg-[var(--ib-hover)]",
+              )}
+              title={assignee ? `${tr("assignedTo")}: ${assignee.display_name}` : tr("takeChat")}
             >
               {assignee ? (
-                <span className="flex h-5 w-5 items-center justify-center rounded-full bg-[var(--ib-accent-soft)] text-[9px] font-bold text-primary">
+                <span
+                  className="flex h-5 w-5 items-center justify-center rounded-full text-[9px] font-bold text-white"
+                  style={{ background: mine ? "var(--primary)" : staffColor(assignee.id) }}
+                >
                   {initials(assignee.display_name)}
                 </span>
               ) : (
                 <UserPlus className="h-4 w-4" />
               )}
-              <span className="hidden max-w-[90px] truncate lg:inline">
-                {assignee ? assignee.display_name.split(" ")[0] : "Assign"}
+              <span className="hidden max-w-[130px] truncate sm:inline">
+                {mine
+                  ? tr("assignedYou")
+                  : assignee
+                    ? `${tr("assignedTo")}: ${assignee.display_name.split(" ")[0]}`
+                    : tr("nobody")}
               </span>
+              <ChevronDown className="h-3 w-3 opacity-60" />
             </button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end" className="max-h-80 w-56 overflow-y-auto">
-            <DropdownMenuLabel className="text-xs">Kar kache dibe?</DropdownMenuLabel>
+            <DropdownMenuLabel className="text-xs">{tr("handOver")}</DropdownMenuLabel>
             {currentUserId && c.assigned_to !== currentUserId && (
               <DropdownMenuItem onClick={() => assign.mutate(currentUserId)}>
-                Amake dao
+                {tr("takeChat")}
               </DropdownMenuItem>
             )}
             {staff
               .filter((x) => x.id !== currentUserId)
               .map((x) => (
                 <DropdownMenuItem key={x.id} onClick={() => assign.mutate(x.id)}>
-                  <span className="mr-2 flex h-5 w-5 items-center justify-center rounded-full bg-muted text-[9px] font-bold">
+                  <span
+                    className="mr-2 flex h-5 w-5 items-center justify-center rounded-full text-[9px] font-bold text-white"
+                    style={{ background: staffColor(x.id) }}
+                  >
                     {initials(x.display_name)}
                   </span>
                   <span className="truncate">{x.display_name}</span>
@@ -1186,7 +1257,9 @@ export function Thread({
             {c.assigned_to && (
               <>
                 <DropdownMenuSeparator />
-                <DropdownMenuItem onClick={() => assign.mutate(null)}>Unassign</DropdownMenuItem>
+                <DropdownMenuItem onClick={() => assign.mutate(null)}>
+                  {tr("unassign")}
+                </DropdownMenuItem>
               </>
             )}
           </DropdownMenuContent>
@@ -1582,6 +1655,21 @@ export function Thread({
                       >
                         <img src={d.preview} alt="" className="h-full w-full object-cover" />
                       </button>
+                    ) : d.type === "video" ? (
+                      <div className="relative h-full w-full bg-black">
+                        <video
+                          src={d.preview}
+                          muted
+                          playsInline
+                          preload="metadata"
+                          className="h-full w-full object-cover"
+                        />
+                        <span className="absolute inset-0 flex items-center justify-center">
+                          <span className="flex h-6 w-6 items-center justify-center rounded-full bg-white/90 text-[9px] text-black">
+                            ▶
+                          </span>
+                        </span>
+                      </div>
                     ) : (
                       <div className="ib-ink-2 flex h-full flex-col items-center justify-center gap-0.5 px-1 text-center text-[9.5px]">
                         <FileText className="h-4 w-4" />
@@ -1636,7 +1724,7 @@ export function Thread({
               onKeyDown={onKeyDown}
               onPaste={onPaste}
               rows={1}
-              placeholder={replyTo ? "Reply likho…" : `${firstName} ke likho… ( / = template )`}
+              placeholder={replyTo ? tr("writeReply") : tr("writeTo", { name: firstName ?? "" })}
               className="block w-full resize-none bg-transparent px-3 pb-1 pt-2.5 text-[13.5px] leading-relaxed outline-none placeholder:text-[var(--ib-ink-3)]"
             />
 
@@ -1646,7 +1734,7 @@ export function Thread({
                 type="file"
                 multiple
                 className="hidden"
-                accept="image/*,video/mp4,audio/*,application/pdf"
+                accept="image/*,video/mp4,video/quicktime,video/webm,audio/*,application/pdf"
                 onChange={(e) => {
                   if (e.target.files) addFiles(e.target.files);
                   e.target.value = "";
@@ -1656,7 +1744,7 @@ export function Thread({
                 type="button"
                 className={iconBtn}
                 onClick={() => fileRef.current?.click()}
-                title="Chobi / file (ekshathe onekgula, paste ba drag-drop o kora jay)"
+                title={tr("addFiles")}
               >
                 <ImagePlus className="h-4 w-4" />
               </button>
@@ -1752,12 +1840,8 @@ export function Thread({
                   !onNext && "ml-auto",
                 )}
               >
-                {uploading ? (
-                  <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                ) : (
-                  <Send className="h-3.5 w-3.5" />
-                )}
-                {readyAtts.length > 1 ? `${readyAtts.length}ta pathao` : "Pathao"}
+                <Send className="h-3.5 w-3.5" />
+                {liveDrafts.length > 1 ? tr("sendN", { n: liveDrafts.length }) : tr("send")}
               </button>
             </div>
           </div>

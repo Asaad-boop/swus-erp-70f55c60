@@ -47,6 +47,8 @@ export function ErpSidebar({
       if (item.activeFor?.some((p) => matchPath(pathname, p))) return true;
       if (!matchPath(pathname, item.to, item.exact)) return false;
       if (item.search) {
+        // Inbox "Chats" covers every queue (they're tabs inside the page).
+        if ("view" in item.search) return !searchParams?.tab;
         return Object.entries(item.search).every(([k, v]) => String(searchParams?.[k] ?? "") === v);
       }
       return true;

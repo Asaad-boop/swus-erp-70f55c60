@@ -27,9 +27,10 @@ import {
   type InboxView,
   PLATFORM_LABEL,
   type InboxConversation,
+  type InboxMessage,
   type InboxPlatform,
 } from "@/lib/erp/inbox/inbox";
-import { ConversationList } from "@/components/erp/inbox/conversation-list";
+import { ConversationList, type OwnerFilter } from "@/components/erp/inbox/conversation-list";
 import { Thread } from "@/components/erp/inbox/thread";
 import { ContactPanel } from "@/components/erp/inbox/contact-panel";
 import { QuickRepliesManager } from "@/components/erp/inbox/quick-replies-manager";
@@ -89,6 +90,7 @@ function InboxPage() {
   // ── filters ─────────────────────────────────────────────────────────
   const [platform, setPlatform] = useState<InboxPlatform | "all">("all");
   const [label, setLabel] = useState<string | null>(null);
+  const [owner, setOwner] = useState<OwnerFilter>("all");
   // The queue lives in the URL so the main sidebar can link straight to it.
   const view: InboxView = search.view ?? "awaiting";
   const setView = (v: InboxView) => {
@@ -121,7 +123,7 @@ function InboxPage() {
   const brandIds = ctxBrandIds;
   const showBrand = isAllBrands && brands.length > 1;
 
-  const filters = { brandIds, platform, view, label, userId, search: debounced };
+  const filters = { brandIds, platform, view, label, userId, search: debounced, owner };
   const convQ = useQuery({
     queryKey: ["inbox", "conversations", filters, limit],
     queryFn: () => fetchConversations(filters, limit),
@@ -179,6 +181,23 @@ function InboxPage() {
     qc.invalidateQueries({ queryKey: ["inbox"] });
     if (r.failed) toast.warning(`${r.done - r.failed}ta ${label}, ${r.failed}ta hoy nai`);
     else toast.success(`${r.done}ta chat ${label}`);
+  };
+
+  const markAllRead = async () => {
+    const ids = conversations.filter((x) => x.unread_count > 0).map((x) => x.id);
+    if (!ids.length) return;
+    qc.setQueriesData({ queryKey: ["inbox", "conversations"] }, (old: any) =>
+      Array.isArray(old)
+        ? old.map((x) => (ids.includes(x?.id) ? { ...x, unread_count: 0 } : x))
+        : old,
+    );
+    const { error } = await db
+      .from("inbox_conversations")
+      .update({ unread_count: 0 })
+      .in("id", ids);
+    if (error) toast.error(error.message);
+    qc.invalidateQueries({ queryKey: ["inbox", "counts"] });
+    qc.invalidateQueries({ queryKey: ["inbox", "conversations"] });
   };
 
   const channelsQ = useQuery({ queryKey: ["inbox", "channels"], queryFn: fetchChannels });
@@ -325,6 +344,53 @@ function InboxPage() {
   const selectedRef = useRef<string | null>(selectedId);
   selectedRef.current = selectedId;
   useEffect(() => {
+    // Write realtime rows straight into the cache (no refetch round trip), so a
+    // customer's message shows the instant it lands. Lists are re-pulled at
+    // most once a second to keep order and counts right.
+    let listTimer: ReturnType<typeof setTimeout> | null = null;
+    const refreshLists = () => {
+      if (listTimer) return;
+      listTimer = setTimeout(() => {
+        listTimer = null;
+        qc.invalidateQueries({ queryKey: ["inbox", "conversations"] });
+        qc.invalidateQueries({ queryKey: ["inbox", "counts"] });
+        qc.invalidateQueries({ queryKey: ["inbox", "unread-badge"] });
+      }, 900);
+    };
+    const upsertMsg = (m: InboxMessage) =>
+      qc.setQueryData<InboxMessage[]>(["inbox", "messages", m.conversation_id], (old) => {
+        if (!old) return old;
+        const i = old.findIndex((x) => x.id === m.id);
+        if (i >= 0) {
+          const next = old.slice();
+          next[i] = { ...old[i]!, ...m };
+          return next;
+        }
+        if (m.direction === "out") {
+          // Our own send coming back: swap out its placeholder bubble.
+          const j = old.findIndex(
+            (x) =>
+              x.id.startsWith("temp-") &&
+              x.msg_type === m.msg_type &&
+              (x.body ?? null) === (m.body ?? null),
+          );
+          if (j >= 0) {
+            const next = old.slice();
+            next.splice(j, 1, m);
+            return next;
+          }
+        }
+        return [...old, m];
+      });
+    const patchConv = (row: any) =>
+      qc.setQueriesData({ queryKey: ["inbox", "conversations"] }, (old: any) => {
+        if (Array.isArray(old))
+          return old.some((x) => x?.id === row.id)
+            ? old.map((x) => (x?.id === row.id ? { ...x, ...row } : x))
+            : old;
+        if (old && typeof old === "object" && old.id === row.id) return { ...old, ...row };
+        return old;
+      });
     const ch = supabase
       .channel("inbox-live")
       .on(
@@ -332,9 +398,8 @@ function InboxPage() {
         { event: "INSERT", schema: "public", table: "inbox_messages" },
         (payload: any) => {
           const m = payload.new;
-          qc.invalidateQueries({ queryKey: ["inbox", "messages", m.conversation_id] });
-          qc.invalidateQueries({ queryKey: ["inbox", "conversations"] });
-          qc.invalidateQueries({ queryKey: ["inbox", "unread-badge"] });
+          upsertMsg(m);
+          refreshLists();
           if (
             m.direction === "in" &&
             (document.hidden || selectedRef.current !== m.conversation_id)
@@ -373,9 +438,7 @@ function InboxPage() {
       .on(
         "postgres_changes" as any,
         { event: "UPDATE", schema: "public", table: "inbox_messages" },
-        (payload: any) => {
-          qc.invalidateQueries({ queryKey: ["inbox", "messages", payload.new.conversation_id] });
-        },
+        (payload: any) => upsertMsg(payload.new),
       )
       .on(
         "postgres_changes" as any,
@@ -400,13 +463,14 @@ function InboxPage() {
       .on(
         "postgres_changes" as any,
         { event: "*", schema: "public", table: "inbox_conversations" },
-        () => {
-          qc.invalidateQueries({ queryKey: ["inbox", "conversations"] });
-          qc.invalidateQueries({ queryKey: ["inbox", "counts"] });
+        (payload: any) => {
+          if (payload.new?.id) patchConv(payload.new);
+          refreshLists();
         },
       )
       .subscribe();
     return () => {
+      if (listTimer) clearTimeout(listTimer);
       supabase.removeChannel(ch);
     };
   }, [qc]);
@@ -484,7 +548,7 @@ function InboxPage() {
             {/* List */}
             <aside
               className={cn(
-                "w-full shrink-0 overflow-hidden border-[var(--ib-line)] md:w-[320px] md:border-r 2xl:w-[360px]",
+                "w-full shrink-0 overflow-hidden border-[var(--ib-line)] md:w-[360px] md:border-r 2xl:w-[390px]",
                 selected ? "hidden md:block" : "block",
               )}
             >
@@ -542,6 +606,14 @@ function InboxPage() {
                 canLoadMore={conversations.length >= limit}
                 onLoadMore={() => setLimit((l) => l + CONV_PAGE)}
                 isFetchingMore={convQ.isFetching}
+                owner={owner}
+                onOwner={(o) => {
+                  setOwner(o);
+                  setLimit(CONV_PAGE);
+                  setPicked(new Set());
+                }}
+                currentUserId={userId ?? null}
+                onMarkAllRead={() => void markAllRead()}
               />
             </aside>
 
