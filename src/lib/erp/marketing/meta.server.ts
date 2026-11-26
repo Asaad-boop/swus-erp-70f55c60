@@ -84,11 +84,7 @@ export async function verifyAdAccount(actId: string, token: string) {
     currency: string;
     timezone_name: string;
     account_status: number;
-  }>(
-    path,
-    { fields: "id,name,currency,timezone_name,account_status" },
-    token,
-  );
+  }>(path, { fields: "id,name,currency,timezone_name,account_status" }, token);
   let business: { id: string; name: string } | null = null;
   try {
     const b = await metaGet<{ business?: { id: string; name: string } }>(
@@ -182,8 +178,7 @@ export async function listAdsets(actId: string, token = getMetaToken()) {
   return metaGetAll<MetaAdset>(
     `/${actId}/adsets`,
     {
-      fields:
-        "id,name,campaign_id,status,effective_status,daily_budget,lifetime_budget,targeting",
+      fields: "id,name,campaign_id,status,effective_status,daily_budget,lifetime_budget,targeting",
     },
     token,
   );
@@ -227,7 +222,10 @@ export async function getDailyInsights(
 
 /** Extract purchase / lead / add-to-cart counts from insight actions. */
 export function extractMetaConversions(insight: MetaInsight) {
-  const sumAction = (list: Array<{ action_type: string; value: string }> | undefined, types: string[]) => {
+  const sumAction = (
+    list: Array<{ action_type: string; value: string }> | undefined,
+    types: string[],
+  ) => {
     if (!list) return 0;
     let total = 0;
     for (const a of list) {
@@ -275,7 +273,12 @@ export function extractMetaConversions(insight: MetaInsight) {
     "offsite_conversion.fb_pixel_lead",
     "onsite_conversion.lead_grouped",
   ]);
-  return { purchases, purchase_value, add_to_cart, initiate_checkout, leads };
+  // Message campaigns: Ads Manager "Results" = messaging conversations started.
+  const messages = pickFirst(insight.actions, [
+    "onsite_conversion.messaging_conversation_started_7d",
+    "onsite_conversion.total_messaging_connection",
+  ]);
+  return { purchases, purchase_value, add_to_cart, initiate_checkout, leads, messages };
 }
 
 export function isMetaConfigured(): boolean {

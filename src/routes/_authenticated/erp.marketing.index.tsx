@@ -799,6 +799,12 @@ function CampaignDecisions({
                 >
                   Orders B · C · D · ✕
                 </th>
+                <th
+                  className="px-2 py-2 text-right font-medium"
+                  title="Message lead: Meta-র গোনা conversation (inbox-এ ধরা পড়া chat) · প্রতি message খরচ"
+                >
+                  Message lead
+                </th>
                 <th className="px-2 py-2 text-right font-medium">Meta › Booked › Conf › Deliv</th>
                 <th
                   className="px-2 py-2 text-right font-medium"
@@ -833,6 +839,25 @@ function CampaignDecisions({
                     <td className="px-2 py-2 text-right tabular-nums">
                       {r.booked_order_count} · {r.confirmed_count} · <b>{r.delivered_count}</b> ·{" "}
                       <span className="text-muted-foreground">{r.cancelled_count}</span>
+                    </td>
+                    <td className="px-2 py-2 text-right tabular-nums">
+                      {r.meta_messages || r.chats ? (
+                        <span
+                          title={`Meta: ${r.meta_messages ?? 0} conversation · Inbox: ${r.chats ?? 0} chat${
+                            r.chat_to_order != null ? ` · chat → order ${r.chat_to_order}%` : ""
+                          }`}
+                        >
+                          <b>{r.meta_messages ?? 0}</b>
+                          <span className="text-muted-foreground"> ({r.chats ?? 0})</span>
+                          {r.cost_per_message != null && (
+                            <span className="block text-[10px] text-muted-foreground">
+                              {bdt(r.cost_per_message)}/msg
+                            </span>
+                          )}
+                        </span>
+                      ) : (
+                        <span className="text-muted-foreground">—</span>
+                      )}
                     </td>
                     <td className="px-2 py-2 text-right">
                       <LadderInline ladder={ladder} breakeven={r.breakeven_roas} />

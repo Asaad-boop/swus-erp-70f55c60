@@ -372,6 +372,7 @@ export async function runInsightsSync(
             meta_add_to_cart: conv.add_to_cart,
             meta_initiate_checkout: conv.initiate_checkout,
             meta_leads: conv.leads,
+            meta_messages: conv.messages,
             raw: ins as any,
           };
         });

@@ -303,7 +303,9 @@ async function handleMetaMessaging(ctx: Ctx, platform: "messenger" | "instagram"
 
   for (const ev of entry.messaging ?? []) {
     const msg = ev.message;
-    const at = new Date(Number(ev.timestamp) || Date.now());
+    // Meta sends most timestamps in ms, but messaging_referrals in seconds.
+    const ts = Number(ev.timestamp) || Date.now();
+    const at = new Date(ts < 1e12 ? ts * 1000 : ts);
 
     // Read receipts → mark our outbound messages read.
     if (ev.read?.watermark && ev.sender?.id) {

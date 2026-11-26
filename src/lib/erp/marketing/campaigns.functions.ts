@@ -704,6 +704,13 @@ export type CampaignTruthRow = {
   meta_purchases: number;
   meta_purchase_value: number;
   meta_roas: number;
+  /** Message ads: conversations started, as Meta counts them */
+  meta_messages?: number;
+  /** Message ads: chats our inbox saw start from this campaign's ads */
+  chats?: number;
+  cost_per_message?: number | null;
+  /** % of inbox chats that became an order */
+  chat_to_order?: number | null;
   orders: number;
   attributed_orders: number;
   explicit_attributed_orders: number;
