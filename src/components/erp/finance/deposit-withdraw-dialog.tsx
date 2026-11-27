@@ -10,6 +10,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { cn } from "@/lib/utils";
+import { toastSavedWithUndo, useTxnGuard } from "@/components/erp/finance/txn-guard";
 import { fmtBdt, type Account } from "@/lib/erp/finance";
 
 type Mode = "deposit" | "withdraw";
@@ -42,6 +43,7 @@ export function DepositWithdrawDialog({ open, onClose, mode, account, brandId }:
   const insufficient = mode === "withdraw" && amt > 0 && amt > balance;
 
   const isDeposit = mode === "deposit";
+  const guard = useTxnGuard();
   const Icon = isDeposit ? ArrowDownToLine : ArrowUpFromLine;
   const tone = isDeposit
     ? { bar: "bg-emerald-500/10 text-emerald-700 dark:text-emerald-300 border-emerald-500/30", btn: "bg-emerald-600 hover:bg-emerald-700 text-white" }
@@ -57,7 +59,7 @@ export function DepositWithdrawDialog({ open, onClose, mode, account, brandId }:
       const signed = isDeposit ? amt : -amt;
       const desc = (note?.trim() || (isDeposit ? "Deposit" : "Withdraw")) +
         ` · ${isDeposit ? "deposit" : "withdraw"} (balance only, not P&L)`;
-      const { error } = await supabase.from("erp_transactions").insert({
+      const { data: saved, error } = await supabase.from("erp_transactions").insert({
         brand_id: useBrand,
         txn_type: "adjustment",
         amount: signed,
@@ -66,11 +68,18 @@ export function DepositWithdrawDialog({ open, onClose, mode, account, brandId }:
         category_id: null,
         transaction_date: date,
         description: desc,
-      });
+      }).select("id").single();
       if (error) throw error;
+      return saved?.id as string | undefined;
     },
-    onSuccess: () => {
-      toast.success(isDeposit ? "Deposit recorded" : "Withdrawal recorded");
+    onSuccess: (savedId) => {
+      toastSavedWithUndo(isDeposit ? "Deposit recorded" : "Withdrawal recorded", savedId, () => {
+        qc.invalidateQueries({ queryKey: ["wallets"] });
+        qc.invalidateQueries({ queryKey: ["wallets_today"] });
+        qc.invalidateQueries({ queryKey: ["erp_accounts"] });
+        qc.invalidateQueries({ queryKey: ["erp_transactions"] });
+      });
+      qc.invalidateQueries({ queryKey: ["wallet_statement"] });
       qc.invalidateQueries({ queryKey: ["wallets"] });
       qc.invalidateQueries({ queryKey: ["wallets_today"] });
       qc.invalidateQueries({ queryKey: ["erp_accounts"] });
@@ -140,12 +149,24 @@ export function DepositWithdrawDialog({ open, onClose, mode, account, brandId }:
           <Button variant="outline" onClick={onClose}>Cancel</Button>
           <Button
             className={tone.btn}
-            disabled={mut.isPending || amt <= 0 || insufficient}
-            onClick={() => mut.mutate()}
+            disabled={mut.isPending || guard.checking || amt <= 0 || insufficient}
+            onClick={() =>
+              guard.run(
+                {
+                  txnType: "adjustment",
+                  amount: amt,
+                  accountId: account?.id ?? null,
+                  date,
+                  summary: `${fmtBdt(amt)} · ${isDeposit ? "Deposit" : "Withdraw"} · ${account?.name ?? ""} · ${date}`,
+                },
+                () => mut.mutate(),
+              )
+            }
           >
             {mut.isPending ? "Saving…" : isDeposit ? "Deposit" : "Withdraw"}
           </Button>
         </DialogFooter>
+        {guard.dialog}
       </DialogContent>
     </Dialog>
   );

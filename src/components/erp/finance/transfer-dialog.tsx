@@ -12,6 +12,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { AccountCombobox } from "@/components/erp/finance/account-combobox";
 import { fmtBdt, type Account } from "@/lib/erp/finance";
+import { toastSavedWithUndo, useTxnGuard } from "@/components/erp/finance/txn-guard";
 import type { Brand } from "@/contexts/brand-context";
 
 type Props = {
@@ -62,6 +63,7 @@ export function TransferDialog({ open, onClose, brandId, accounts, defaultFromId
   const canPick = Boolean(effectiveBrandId) || isShared;
   const amt = Number(amount || 0);
   const insufficient = from && amt > Number(from.current_balance);
+  const guard = useTxnGuard();
 
   const mut = useMutation({
     mutationFn: async () => {
@@ -76,7 +78,7 @@ export function TransferDialog({ open, onClose, brandId, accounts, defaultFromId
       const txnBrandId =
         effectiveBrandId ?? from?.brand_id ?? to?.brand_id ?? brands[0]?.id ?? null;
       if (!txnBrandId) throw new Error("Selected accounts have no brand. Pick a brand.");
-      const { error } = await supabase.from("erp_transactions").insert({
+      const { data: saved, error } = await supabase.from("erp_transactions").insert({
         brand_id: txnBrandId,
         txn_type: "transfer",
         account_id: fromId,
@@ -84,11 +86,17 @@ export function TransferDialog({ open, onClose, brandId, accounts, defaultFromId
         amount: amt,
         transaction_date: date,
         description: note || `Transfer: ${from?.name} → ${to?.name}`,
-      });
+      }).select("id").single();
       if (error) throw error;
+      return saved?.id as string | undefined;
     },
-    onSuccess: () => {
-      toast.success("Transfer recorded");
+    onSuccess: (savedId) => {
+      toastSavedWithUndo("Transfer recorded", savedId, () => {
+        qc.invalidateQueries({ queryKey: ["erp_accounts"] });
+        qc.invalidateQueries({ queryKey: ["wallets"] });
+        qc.invalidateQueries({ queryKey: ["wallet_statement"] });
+        qc.invalidateQueries({ queryKey: ["erp_transactions"] });
+      });
       qc.invalidateQueries({ queryKey: ["erp_accounts"] });
       qc.invalidateQueries({ queryKey: ["wallets"] });
       qc.invalidateQueries({ queryKey: ["wallet_statement"] });
@@ -173,13 +181,24 @@ export function TransferDialog({ open, onClose, brandId, accounts, defaultFromId
                 });
                 return;
               }
-              mut.mutate();
+              guard.run(
+                {
+                  txnType: "transfer",
+                  amount: amt,
+                  accountId: fromId,
+                  toAccountId: toId,
+                  date,
+                  summary: `${fmtBdt(amt)} · ${from?.name ?? "—"} → ${to?.name ?? "—"} · ${date}`,
+                },
+                () => mut.mutate(),
+              );
             }}
-            disabled={mut.isPending || !fromId || !toId || !amt || !!insufficient}
+            disabled={mut.isPending || guard.checking || !fromId || !toId || !amt || !!insufficient}
           >
             {mut.isPending ? "Saving…" : "Transfer"}
           </Button>
         </DialogFooter>
+        {guard.dialog}
       </DialogContent>
     </Dialog>
   );

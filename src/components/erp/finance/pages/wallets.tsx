@@ -1,14 +1,12 @@
 import { dhakaToday } from "@/lib/erp/finance";
 import { useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { Link } from "@tanstack/react-router";
 import { ArrowRightLeft, Banknote, Building2, Coins, Landmark, Plus, Smartphone, Truck, Wallet as WalletIcon, FileText, Pencil, ArrowDownToLine, ArrowUpFromLine } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useBrand } from "@/contexts/brand-context";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { fmtBdt, type Account } from "@/lib/erp/finance";
 import { ArrowDownRight, ArrowUpRight } from "lucide-react";
@@ -16,6 +14,7 @@ import { TransferDialog } from "@/components/erp/finance/transfer-dialog";
 import { AccountForm } from "@/components/erp/finance/account-form";
 import { TransactionForm } from "@/components/erp/finance/transaction-form";
 import { DepositWithdrawDialog } from "@/components/erp/finance/deposit-withdraw-dialog";
+import { AccountStatement } from "@/components/erp/finance/account-statement";
 import { useCategories } from "@/hooks/erp/use-finance-query";
 import { cn } from "@/lib/utils";
 import { applyBrandScope } from "@/lib/erp/apply-brand-scope";
@@ -117,6 +116,21 @@ export function WalletsPage() {
     return map;
   }, [todayTxQ.data]);
 
+  // Accounts whose stored balance ≠ opening + all entries (a past manual edit or bug).
+  const checkQ = useQuery({
+    queryKey: ["wallets_balance_check", brandIds],
+    enabled: brandIds.length > 0,
+    staleTime: 60_000,
+    queryFn: async () => {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const { data, error } = await (supabase as any).rpc("finance_balance_check");
+      if (error) return new Map<string, number>();
+      return new Map<string, number>(
+        ((data ?? []) as Array<{ account_id: string; difference: number }>).map((r) => [r.account_id, Number(r.difference)]),
+      );
+    },
+  });
+
   const wallets = walletsQ.data ?? [];
   const brandMap = useMemo(() => new Map(brands.map((b) => [b.id, b.name])), [brands]);
   const totals = useMemo(() => {
@@ -205,6 +219,14 @@ export function WalletsPage() {
                     <div className={cn("text-xl font-bold tabular-nums", Number(w.current_balance) < 0 && "text-red-600")}>
                       {fmtBdt(w.current_balance)}
                     </div>
+                    {checkQ.data?.has(w.id) && (
+                      <button
+                        onClick={() => setStatementFor(w)}
+                        className="flex w-full items-center gap-1 rounded-md bg-rose-50 px-2 py-1 text-left text-[11px] font-medium text-rose-700 dark:bg-rose-950/40 dark:text-rose-300"
+                      >
+                        ⚠ হিসাব মিলছে না ({fmtBdt(checkQ.data.get(w.id))}) — দেখুন
+                      </button>
+                    )}
                     {today && (today.in > 0 || today.out > 0) ? (
                       <div className="flex gap-2 text-[11px]">
                         {today.in > 0 && <span className="text-emerald-700 dark:text-emerald-400 inline-flex items-center gap-0.5"><ArrowDownRight className="h-3 w-3" />{fmtBdt(today.in)}</span>}
@@ -224,7 +246,7 @@ export function WalletsPage() {
                     </div>
                     <div className="flex gap-1.5">
                       <Button variant="ghost" size="sm" className="h-7 px-2 text-xs flex-1" onClick={() => setStatementFor(w)}>
-                        <FileText className="h-3 w-3 mr-1" />Statement
+                        <FileText className="h-3 w-3 mr-1" />History / খুঁজুন
                       </Button>
                       <Button variant="outline" size="sm" className="h-7 px-2 text-xs" onClick={() => setEditWallet(w)} title="Edit / Delete">
                         <Pencil className="h-3 w-3" />
@@ -266,7 +288,7 @@ export function WalletsPage() {
           defaultAccountId={txnDialog.accountId}
         />
       )}
-      <StatementDialog wallet={statementFor} onClose={() => setStatementFor(null)} />
+      <AccountStatement wallet={statementFor} accounts={wallets} onClose={() => setStatementFor(null)} />
       <DepositWithdrawDialog
         open={dwDialog.open}
         onClose={() => setDwDialog((s) => ({ ...s, open: false }))}
@@ -275,154 +297,5 @@ export function WalletsPage() {
         brandId={isAllBrands ? null : brandId}
       />
     </div>
-  );
-}
-
-function StatementDialog({ wallet, onClose }: { wallet: Wallet | null; onClose: () => void }) {
-  const stmtQ = useQuery({
-    queryKey: ["wallet_statement", wallet?.id],
-    enabled: !!wallet,
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from("erp_transactions")
-        .select("id, txn_type, amount, transaction_date, description, account_id, to_account_id, reference_type, reference_id")
-        .or(`account_id.eq.${wallet!.id},to_account_id.eq.${wallet!.id}`)
-        .order("transaction_date", { ascending: false })
-        .order("created_at", { ascending: false })
-        .limit(200);
-      if (error) throw error;
-      return data ?? [];
-    },
-  });
-
-  const rows = stmtQ.data ?? [];
-
-  const orderIds = useMemo(
-    () =>
-      Array.from(
-        new Set(
-          rows
-            .filter((r) => (r.reference_type ?? "").startsWith("order") && r.reference_id)
-            .map((r) => r.reference_id as string),
-        ),
-      ),
-    [rows],
-  );
-
-  const ordersQ = useQuery({
-    queryKey: ["wallet_statement_orders", wallet?.id, orderIds.length],
-    enabled: orderIds.length > 0,
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from("orders")
-        .select("id, invoice_no, status")
-        .in("id", orderIds);
-      if (error) throw error;
-      return data ?? [];
-    },
-  });
-
-  const orderMap = useMemo(() => {
-    const m = new Map<string, { id: string; invoice_no: string | null; status: string }>();
-    for (const o of ordersQ.data ?? []) m.set(o.id, o as never);
-    return m;
-  }, [ordersQ.data]);
-
-  const VOID_STATUSES = new Set(["cancelled", "fake", "returned", "unpaid_return", "paid_return"]);
-
-  const effective = useMemo(
-    () =>
-      rows.reduce((sum, r) => {
-        const order = r.reference_id ? orderMap.get(r.reference_id) : undefined;
-        if (order && VOID_STATUSES.has(order.status)) return sum;
-        const inflow =
-          r.txn_type === "income" ||
-          (r.txn_type === "transfer" && r.to_account_id === wallet?.id) ||
-          (r.txn_type === "adjustment" && Number(r.amount) > 0);
-        return sum + (inflow ? Math.abs(Number(r.amount)) : -Math.abs(Number(r.amount)));
-      }, 0),
-    [rows, orderMap, wallet?.id],
-  );
-  const voidCount = rows.filter((r) => {
-    const o = r.reference_id ? orderMap.get(r.reference_id) : undefined;
-    return o && VOID_STATUSES.has(o.status);
-  }).length;
-
-  return (
-    <Dialog open={!!wallet} onOpenChange={(o) => !o && onClose()}>
-      <DialogContent className="max-w-3xl max-h-[80vh] overflow-hidden flex flex-col">
-        <DialogHeader>
-          <DialogTitle>
-            {wallet?.name} · <span className="font-mono">{fmtBdt(wallet?.current_balance ?? 0)}</span>
-          </DialogTitle>
-          {voidCount > 0 && (
-            <p className="text-xs text-muted-foreground">
-              {voidCount} টি entry cancel/return হওয়া order-এর — বাদ ধরে net{" "}
-              <span className="font-mono font-semibold text-foreground">{fmtBdt(effective)}</span>
-            </p>
-          )}
-        </DialogHeader>
-        <div className="overflow-auto flex-1">
-          {stmtQ.isLoading && <p className="text-sm text-muted-foreground p-4">Loading…</p>}
-          {!stmtQ.isLoading && rows.length === 0 && (
-            <p className="text-sm text-muted-foreground p-4 text-center">No transactions yet.</p>
-          )}
-          {rows.length > 0 && (
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Date</TableHead>
-                  <TableHead>Type</TableHead>
-                  <TableHead>Description</TableHead>
-                  <TableHead className="text-right">Amount</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {rows.map((r) => {
-                  const inflow = r.txn_type === "income" || (r.txn_type === "transfer" && r.to_account_id === wallet?.id) || (r.txn_type === "adjustment" && Number(r.amount) > 0);
-                  const signed = inflow ? Math.abs(Number(r.amount)) : -Math.abs(Number(r.amount));
-                  const order = r.reference_id ? orderMap.get(r.reference_id) : undefined;
-                  const voided = !!order && VOID_STATUSES.has(order.status);
-                  return (
-                    <TableRow key={r.id} className={cn(voided && "opacity-60")}>
-                      <TableCell className="text-xs whitespace-nowrap">{r.transaction_date}</TableCell>
-                      <TableCell><Badge variant="outline" className="text-[10px] uppercase">{r.txn_type}</Badge></TableCell>
-                      <TableCell className="text-sm">
-                        <div>{r.description ?? "—"}</div>
-                        {order && (
-                          <div className="mt-0.5 flex flex-wrap items-center gap-1.5 text-[11px]">
-                            <Link
-                              to="/erp/orders/$orderId"
-                              params={{ orderId: order.id }}
-                              className="font-mono font-semibold text-indigo-600 hover:underline dark:text-indigo-400"
-                            >
-                              {order.invoice_no ?? `#${order.id.slice(0, 8)}`}
-                            </Link>
-                            <span className="font-mono text-muted-foreground">{order.id.slice(0, 8)}</span>
-                            <Badge
-                              variant="outline"
-                              className={cn(
-                                "text-[10px] uppercase",
-                                voided && "border-rose-300 bg-rose-50 text-rose-700 dark:border-rose-900 dark:bg-rose-950 dark:text-rose-300",
-                              )}
-                            >
-                              {order.status}
-                            </Badge>
-                            {voided && <span className="font-semibold text-rose-600">বাদ — টাকা পাওয়া যায়নি</span>}
-                          </div>
-                        )}
-                      </TableCell>
-                      <TableCell className={cn("text-right tabular-nums font-medium", voided ? "text-muted-foreground line-through" : signed >= 0 ? "text-emerald-600" : "text-red-600")}>
-                        {signed >= 0 ? "+" : ""}{fmtBdt(signed)}
-                      </TableCell>
-                    </TableRow>
-                  );
-                })}
-              </TableBody>
-            </Table>
-          )}
-        </div>
-      </DialogContent>
-    </Dialog>
   );
 }

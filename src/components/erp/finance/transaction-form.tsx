@@ -15,6 +15,7 @@ import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, Command
 import { cn } from "@/lib/utils";
 import { fmtBdt, type Account, type Category, type TxnType } from "@/lib/erp/finance";
 import type { Brand } from "@/contexts/brand-context";
+import { toastSavedWithUndo, useTxnGuard } from "@/components/erp/finance/txn-guard";
 
 type Props = {
   open: boolean;
@@ -58,6 +59,7 @@ export function TransactionForm({ open, onClose, brandId, accounts, categories, 
   const [description, setDescription] = useState("");
   const [pickedBrandId, setPickedBrandId] = useState<string>("");
   const [addAnother, setAddAnother] = useState(false);
+  const guard = useTxnGuard();
 
   const showBrandPicker = !brandId && brands.length > 1;
   const isShared = pickedBrandId === "shared";
@@ -145,11 +147,20 @@ export function TransactionForm({ open, onClose, brandId, accounts, categories, 
         transaction_date: date,
         description: description || null,
       };
-      const { error } = await supabase.from("erp_transactions").insert(payload);
+      const { data: saved, error } = await supabase.from("erp_transactions").insert(payload).select("id").single();
       if (error) throw error;
+      return saved?.id as string | undefined;
     },
-    onSuccess: () => {
-      toast.success("Transaction saved");
+    onSuccess: (savedId) => {
+      toastSavedWithUndo("Transaction saved", savedId, () => {
+        qc.invalidateQueries({ queryKey: ["erp_transactions"] });
+        qc.invalidateQueries({ queryKey: ["erp_accounts"] });
+        qc.invalidateQueries({ queryKey: ["wallets"] });
+        qc.invalidateQueries({ queryKey: ["erp_pnl"] });
+      });
+      qc.invalidateQueries({ queryKey: ["wallets"] });
+      qc.invalidateQueries({ queryKey: ["wallets_today"] });
+      qc.invalidateQueries({ queryKey: ["wallet_statement"] });
       // Remember last-used picks for faster next entry
       if (pickedBrandId) localStorage.setItem("txn_last_brand", pickedBrandId);
       if (accountId) localStorage.setItem(`txn_last_account_${type}`, accountId);
@@ -187,7 +198,18 @@ export function TransactionForm({ open, onClose, brandId, accounts, categories, 
       });
       return;
     }
-    mut.mutate();
+    const fromName = selectedFrom?.name ?? "—";
+    guard.run(
+      {
+        txnType: type,
+        amount: Math.abs(amt),
+        accountId: accountId || null,
+        toAccountId: type === "transfer" ? toAccountId : null,
+        date,
+        summary: `${fmtBdt(amt)} · ${meta.label} · ${type === "transfer" ? `${fromName} → ${selectedTo?.name ?? "—"}` : fromName} · ${date}`,
+      },
+      () => mut.mutate(),
+    );
   };
 
   return (
@@ -367,18 +389,19 @@ export function TransactionForm({ open, onClose, brandId, accounts, categories, 
           <Button
             variant="outline"
             onClick={() => { setAddAnother(true); handleSave(); }}
-            disabled={mut.isPending || !amount || !!insufficient || ((type === "income" || type === "expense") && !categoryId)}
+            disabled={mut.isPending || guard.checking || !amount || !!insufficient || ((type === "income" || type === "expense") && !categoryId)}
           >
             Save &amp; add another
           </Button>
           <Button
             onClick={handleSave}
-            disabled={mut.isPending || !amount || !!insufficient || ((type === "income" || type === "expense") && !categoryId)}
+            disabled={mut.isPending || guard.checking || !amount || !!insufficient || ((type === "income" || type === "expense") && !categoryId)}
             className="min-w-[140px]"
           >
             {mut.isPending ? "Saving…" : meta.verb}
           </Button>
         </DialogFooter>
+        {guard.dialog}
       </DialogContent>
     </Dialog>
   );
