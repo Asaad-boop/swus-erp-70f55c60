@@ -30,7 +30,11 @@ import {
   type InboxMessage,
   type InboxPlatform,
 } from "@/lib/erp/inbox/inbox";
-import { ConversationList, type OwnerFilter } from "@/components/erp/inbox/conversation-list";
+import {
+  ConversationList,
+  prefetchThread,
+  type OwnerFilter,
+} from "@/components/erp/inbox/conversation-list";
 import { Thread } from "@/components/erp/inbox/thread";
 import { ContactPanel } from "@/components/erp/inbox/contact-panel";
 import { QuickRepliesManager } from "@/components/erp/inbox/quick-replies-manager";
@@ -136,7 +140,7 @@ function InboxPage() {
         ? prev
         : undefined,
   });
-  const conversations = convQ.data ?? [];
+  const conversations = useMemo(() => convQ.data ?? [], [convQ.data]);
 
   const countsQ = useQuery({
     queryKey: ["inbox", "counts", brandIds, platform, userId],
@@ -230,6 +234,19 @@ function InboxPage() {
   // Selected conversation may be outside the current filter (e.g. just marked done) — fetch it on its own.
   const selectedId = search.c ?? null;
   const selectedFromList = conversations.find((c) => c.id === selectedId) ?? null;
+  // Remember the open chat (and where it sat in the list). After a reply it
+  // leaves "Needs reply"; keeping it on screen stops the thread from blanking
+  // out and reloading, and the list from jumping, until you move on.
+  const stickyRef = useRef<{ conv: InboxConversation; index: number } | null>(null);
+  if (selectedFromList) {
+    stickyRef.current = {
+      conv: selectedFromList,
+      index: conversations.findIndex((c) => c.id === selectedId),
+    };
+  } else if (stickyRef.current && stickyRef.current.conv.id !== selectedId) {
+    stickyRef.current = null;
+  }
+  const sticky = stickyRef.current;
   const selectedQ = useQuery({
     queryKey: ["inbox", "conversations", "one", selectedId],
     queryFn: async () => {
@@ -242,8 +259,33 @@ function InboxPage() {
       return data as InboxConversation | null;
     },
     enabled: !!selectedId && !selectedFromList,
+    placeholderData: () => (sticky?.conv.id === selectedId ? sticky.conv : undefined),
   });
-  const selected = selectedFromList ?? selectedQ.data ?? null;
+  const selected =
+    selectedFromList ??
+    (selectedQ.data && sticky?.conv.id === selectedQ.data.id
+      ? { ...sticky.conv, ...selectedQ.data }
+      : selectedQ.data) ??
+    (sticky?.conv.id === selectedId ? sticky.conv : null);
+  // Warm up the next chats in the list so "next" opens with no wait.
+  useEffect(() => {
+    if (!selectedId) return;
+    const i = conversations.findIndex((c) => c.id === selectedId);
+    const t = setTimeout(() => {
+      conversations
+        .slice(Math.max(0, i + 1), Math.max(0, i + 1) + 3)
+        .forEach((c) => prefetchThread(qc, c.id));
+    }, 800);
+    return () => clearTimeout(t);
+  }, [selectedId, conversations, qc]);
+  // The list keeps the open chat in its old place while it's open.
+  const listConversations = useMemo(() => {
+    if (!selected || selectedFromList || !sticky || sticky.conv.id !== selected.id)
+      return conversations;
+    const next = conversations.slice();
+    next.splice(Math.min(sticky.index, next.length), 0, selected);
+    return next;
+  }, [conversations, selected, selectedFromList, sticky]);
 
   const select = (id: string | null) =>
     navigate({ search: (s: InboxSearch) => ({ ...s, c: id ?? undefined }) });
@@ -569,7 +611,7 @@ function InboxPage() {
                 </div>
               )}
               <ConversationList
-                conversations={conversations}
+                conversations={listConversations}
                 isLoading={convQ.isLoading}
                 selectedId={selectedId}
                 onSelect={(id) => select(id)}

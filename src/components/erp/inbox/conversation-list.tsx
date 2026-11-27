@@ -32,6 +32,7 @@ import {
 import { cn } from "@/lib/utils";
 import {
   displayName,
+  fetchMessages,
   initials,
   INBOX_LABELS,
   labelInfo,
@@ -43,6 +44,16 @@ import {
   type ViewCounts,
 } from "@/lib/erp/inbox/inbox";
 import { BrandTag, ContactAvatar, PlatformIcon, relTime } from "./shared";
+import { useQueryClient, type QueryClient } from "@tanstack/react-query";
+
+/** Start loading a chat when the pointer reaches it, so it opens instantly. */
+export function prefetchThread(qc: QueryClient, id: string) {
+  void qc.prefetchQuery({
+    queryKey: ["inbox", "messages", id],
+    queryFn: () => fetchMessages(id),
+    staleTime: 60_000,
+  });
+}
 import { LANG_OPTIONS, useInboxT, type InboxStrKey } from "@/lib/erp/inbox/i18n";
 
 type ViewDef = {
@@ -698,6 +709,7 @@ function Row({
   isMine: boolean;
 }) {
   const { t, num } = useInboxT();
+  const qc = useQueryClient();
   const name = displayName(c);
   const unread = c.unread_count > 0;
   const awaiting = c.status === "open" && c.last_message_direction === "in";
@@ -713,6 +725,8 @@ function Row({
         data-conv-id={c.id}
         data-active={active}
         data-picked={picked}
+        onMouseEnter={() => prefetchThread(qc, c.id)}
+        onTouchStart={() => prefetchThread(qc, c.id)}
         onClick={(e) => {
           if (picking || e.metaKey || e.ctrlKey) onPick(c.id, !picked, e.shiftKey);
           else if (e.shiftKey) onPick(c.id, true, true);

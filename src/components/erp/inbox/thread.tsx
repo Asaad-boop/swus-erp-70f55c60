@@ -532,7 +532,9 @@ export function Thread({
   const msgsQ = useQuery({
     queryKey: ["inbox", "messages", c.id],
     queryFn: () => fetchMessages(c.id),
-    refetchInterval: 60_000,
+    // Realtime keeps it fresh; don't re-download 200 messages on every visit.
+    staleTime: 60_000,
+    refetchInterval: 120_000,
   });
   const messages = useMemo(() => msgsQ.data ?? [], [msgsQ.data]);
 
@@ -678,13 +680,24 @@ export function Thread({
         ...(old ?? []),
         ...temps,
       ]);
+      return { convId: c.id };
     },
-    onError: (e: Error) => toast.error(e.message),
-    onSettled: () => {
-      qc.invalidateQueries({ queryKey: ["inbox", "messages", c.id] });
-      qc.invalidateQueries({ queryKey: ["inbox", "conversations"] });
-      qc.invalidateQueries({ queryKey: ["inbox", "counts"] });
-      qc.invalidateQueries({ queryKey: ["inbox", "quick-replies"] });
+    onError: (e: Error, _v, ctx) => {
+      toast.error(e.message);
+      qc.invalidateQueries({ queryKey: ["inbox", "messages", ctx?.convId ?? c.id] });
+    },
+    onSuccess: (_d, v, ctx) => {
+      const convId = ctx?.convId ?? c.id;
+      // The sent rows arrive by realtime and replace the bubbles in place — no
+      // reload. Only if they haven't shown up after a while (bad network,
+      // dropped socket) fetch the thread once.
+      setTimeout(() => {
+        const left = (qc.getQueryData<InboxMessage[]>(["inbox", "messages", convId]) ?? []).some(
+          (m) => m.id.startsWith("temp-"),
+        );
+        if (left) qc.invalidateQueries({ queryKey: ["inbox", "messages", convId] });
+      }, 6000);
+      if (v.quickReplyId) qc.invalidateQueries({ queryKey: ["inbox", "quick-replies"] });
     },
   });
   const retry = useMutation({
