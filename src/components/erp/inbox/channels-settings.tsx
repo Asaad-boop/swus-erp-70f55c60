@@ -50,6 +50,7 @@ type MetaPage = {
 type PagesResult = { connected: boolean; pages: MetaPage[] };
 type ConnectResult = { results: Array<{ pageId: string; ok: boolean; error?: string }> };
 import { ContactAvatar, PlatformChip } from "./shared";
+import { AiKeyCard } from "./ai-key-card";
 
 function CopyRow({ label, value }: { label: string; value: string | null }) {
   return (
@@ -226,6 +227,8 @@ export function ChannelsSettings({
           Kon page / Instagram / WhatsApp number theke message ashbe, ar seta kon brand er.
         </p>
       </div>
+
+      <AiKeyCard />
 
       {/* Connected */}
       <section className="space-y-2">

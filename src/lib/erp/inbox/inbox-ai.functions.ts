@@ -1,25 +1,9 @@
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
+import { aiChat, parseAiJson } from "@/lib/erp/ai-chat";
 
 type Candidate = { id: string; title: string; sku: string | null; price: number | null };
-
-function aiEndpoint() {
-  const gemini = process.env.GEMINI_API_KEY;
-  const key = gemini || process.env.LOVABLE_API_KEY;
-  if (!key) return null;
-  return gemini
-    ? {
-        key,
-        url: "https://generativelanguage.googleapis.com/v1beta/openai/chat/completions",
-        model: "gemini-2.5-flash",
-      }
-    : {
-        key,
-        url: "https://ai.gateway.lovable.dev/v1/chat/completions",
-        model: "google/gemini-2.5-flash",
-      };
-}
 
 /**
  * Look at a customer's photo and pick the matching products from the brand's catalog.
@@ -37,9 +21,7 @@ export const suggestProductsForImageFn = createServerFn({ method: "POST" })
       .parse(d),
   )
   .handler(async ({ data, context }) => {
-    const ai = aiEndpoint();
-    if (!ai) return { ids: [] as string[], reason: "AI key nai" };
-    if (!/^https:\/\//.test(data.imageUrl)) return { ids: [], reason: "Bad image" };
+    if (!/^https:\/\//.test(data.imageUrl)) return { ids: [] as string[], reason: "Bad image" };
 
     // RLS on the caller's client decides which products they can see.
     const { data: rows, error } = await context.supabase
@@ -63,39 +45,27 @@ export const suggestProductsForImageFn = createServerFn({ method: "POST" })
       'Reply ONLY with JSON: {"matches":[{"n":<catalog number>,"confidence":<0..1>}]} ' +
       "with at most 3 matches, best first. Return an empty list if nothing fits.";
 
-    let content = "";
-    try {
-      const res = await fetch(ai.url, {
-        method: "POST",
-        headers: { "Content-Type": "application/json", Authorization: `Bearer ${ai.key}` },
-        body: JSON.stringify({
-          model: ai.model,
-          temperature: 0,
-          response_format: { type: "json_object" },
-          messages: [
-            { role: "system", content: system },
+    const content = await aiChat(
+      context.supabase,
+      [
+        { role: "system", content: system },
+        {
+          role: "user",
+          content: [
             {
-              role: "user",
-              content: [
-                {
-                  type: "text",
-                  text: `Catalog:\n${catalog}${data.hint ? `\n\nCustomer's message: ${data.hint}` : ""}`,
-                },
-                { type: "image_url", image_url: { url: data.imageUrl } },
-              ],
+              type: "text",
+              text: `Catalog:\n${catalog}${data.hint ? `\n\nCustomer's message: ${data.hint}` : ""}`,
             },
+            { type: "image_url", image_url: { url: data.imageUrl } },
           ],
-        }),
-      });
-      if (!res.ok) return { ids: [], reason: `AI ${res.status}` };
-      const j = (await res.json()) as { choices?: Array<{ message?: { content?: string } }> };
-      content = j?.choices?.[0]?.message?.content ?? "";
-    } catch {
-      return { ids: [], reason: "AI error" };
-    }
+        },
+      ],
+      { temperature: 0 },
+    );
+    if (content === null) return { ids: [], reason: "AI kaj korche na — Settings e AI key dao" };
     let matches: Array<{ n: number; confidence?: number }> = [];
     try {
-      matches = JSON.parse(content.replace(/^```(?:json)?|```$/g, "").trim())?.matches ?? [];
+      matches = parseAiJson<{ matches?: typeof matches }>(content)?.matches ?? [];
     } catch {
       matches = [];
     }
@@ -110,28 +80,8 @@ export const suggestProductsForImageFn = createServerFn({ method: "POST" })
 // ── text helpers ──────────────────────────────────────────────────────
 type ChatMsg = { role: "system" | "user"; content: string };
 
-async function aiJson<T>(messages: ChatMsg[], fast = true): Promise<T | null> {
-  const ai = aiEndpoint();
-  if (!ai) return null;
-  const model = fast ? ai.model.replace("gemini-2.5-flash", "gemini-2.5-flash-lite") : ai.model;
-  try {
-    const res = await fetch(ai.url, {
-      method: "POST",
-      headers: { "Content-Type": "application/json", Authorization: `Bearer ${ai.key}` },
-      body: JSON.stringify({
-        model,
-        temperature: 0.4,
-        response_format: { type: "json_object" },
-        messages,
-      }),
-    });
-    if (!res.ok) return null;
-    const j = (await res.json()) as { choices?: Array<{ message?: { content?: string } }> };
-    const content = j?.choices?.[0]?.message?.content ?? "";
-    return JSON.parse(content.replace(/^```(?:json)?|```$/g, "").trim()) as T;
-  } catch {
-    return null;
-  }
+async function aiJson<T>(supabase: any, messages: ChatMsg[], fast = true): Promise<T | null> {
+  return parseAiJson<T>(await aiChat(supabase, messages, { fast, temperature: 0.4 }));
 }
 
 type ConvRow = {
@@ -190,7 +140,6 @@ export const suggestRepliesFn = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((d) => z.object({ conversationId: z.string().uuid() }).parse(d))
   .handler(async ({ data, context }) => {
-    if (!aiEndpoint()) return { replies: [] as string[], reason: "AI key nai" };
     const { transcript, brandName, conv } = await loadChat(context.supabase, data.conversationId);
     const { data: qrs } = await context.supabase
       .from("inbox_quick_replies" as never)
@@ -199,7 +148,7 @@ export const suggestRepliesFn = createServerFn({ method: "POST" })
     const kb = ((qrs ?? []) as Array<{ title: string; body: string }>)
       .map((q) => `- ${q.title}: ${q.body}`)
       .join("\n");
-    const out = await aiJson<{ replies?: string[] }>([
+    const out = await aiJson<{ replies?: string[] }>(context.supabase, [
       {
         role: "system",
         content:
@@ -218,7 +167,10 @@ export const suggestRepliesFn = createServerFn({ method: "POST" })
     const replies = (out?.replies ?? [])
       .filter((r) => typeof r === "string" && r.trim())
       .slice(0, 3);
-    return { replies, reason: replies.length ? null : "AI reply dite pareni" };
+    return {
+      replies,
+      reason: replies.length ? null : "AI reply dite pareni — Settings e AI key ache kina dekho",
+    };
   });
 
 const REWRITE: Record<string, string> = {
@@ -241,9 +193,8 @@ export const rewriteReplyFn = createServerFn({ method: "POST" })
       })
       .parse(d),
   )
-  .handler(async ({ data }) => {
-    if (!aiEndpoint()) return { text: null, reason: "AI key nai" };
-    const out = await aiJson<{ text?: string }>([
+  .handler(async ({ data, context }) => {
+    const out = await aiJson<{ text?: string }>(context.supabase, [
       {
         role: "system",
         content:
@@ -382,6 +333,7 @@ export const extractOrderFn = createServerFn({ method: "POST" })
       note?: string;
       items?: Array<{ n?: number; qty?: number; color?: string }>;
     }>(
+      context.supabase,
       [
         {
           role: "system",

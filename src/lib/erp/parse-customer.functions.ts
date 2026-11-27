@@ -1,5 +1,6 @@
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
+import { aiChat } from "@/lib/erp/ai-chat";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 
 function parseLocalCustomer(text: string) {
@@ -29,15 +30,9 @@ function parseLocalCustomer(text: string) {
  */
 export const parseCustomerTextFn = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((d) =>
-    z.object({ text: z.string().min(3).max(4000) }).parse(d),
-  )
-  .handler(async ({ data }) => {
+  .inputValidator((d) => z.object({ text: z.string().min(3).max(4000) }).parse(d))
+  .handler(async ({ data, context }) => {
     const local = parseLocalCustomer(data.text);
-    const apiKey = process.env.GEMINI_API_KEY || process.env.LOVABLE_API_KEY;
-    if (!apiKey) return local;
-    const useGemini = !!process.env.GEMINI_API_KEY;
-
     const system =
       "You parse a customer shipping block (Bangla/English mixed, messy formatting) " +
       "and return STRICT JSON with three fields: name, phone, address. " +
@@ -48,33 +43,18 @@ export const parseCustomerTextFn = createServerFn({ method: "POST" })
       "without the name or phone. " +
       'Respond ONLY with JSON: {"name": string, "phone": string, "address": string}. ' +
       "Use empty string for any field you cannot confidently extract.";
-
-    const url = useGemini
-      ? "https://generativelanguage.googleapis.com/v1beta/openai/chat/completions"
-      : "https://ai.gateway.lovable.dev/v1/chat/completions";
-    let json: any = null;
-    try {
-      const res = await fetch(url, {
-        method: "POST",
-        headers: { "Content-Type": "application/json", Authorization: `Bearer ${apiKey}` },
-        body: JSON.stringify({
-          model: useGemini ? "gemini-2.5-flash-lite" : "google/gemini-2.5-flash-lite",
-          messages: [
-            { role: "system", content: system },
-            { role: "user", content: data.text },
-          ],
-          response_format: { type: "json_object" },
-          temperature: 0,
-        }),
-      });
-      if (!res.ok) return local;
-      json = await res.json();
-    } catch {
-      return local;
-    }
+    const content = await aiChat(
+      context.supabase,
+      [
+        { role: "system", content: system },
+        { role: "user", content: data.text },
+      ],
+      { fast: true, temperature: 0 },
+    );
+    if (content === null) return local;
     let parsed: { name?: string; phone?: string; address?: string } = {};
     try {
-      parsed = JSON.parse(json?.choices?.[0]?.message?.content ?? "{}");
+      parsed = JSON.parse(content || "{}");
     } catch {
       parsed = {};
     }

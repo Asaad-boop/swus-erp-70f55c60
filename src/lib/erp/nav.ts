@@ -64,6 +64,7 @@ export const NAV_GROUPS: Group[] = [
           { to: "/erp/inbox", label: "Ad report", icon: BarChart3, search: { tab: "ads" } },
           { to: "/erp/inbox", label: "Team report", icon: Trophy, search: { tab: "report" } },
           { to: "/erp/inbox", label: "Quick replies", icon: Zap, search: { tab: "replies" } },
+          { to: "/erp/inbox", label: "Channels & AI key", icon: Plug, search: { tab: "channels" } },
         ],
       },
       {
